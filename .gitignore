@@ -1,0 +1,30 @@
+# Build directories
+build/
+out/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+*.sln.docstates
+Debug/
+Release/
+x64/
+x86/
+
+# Executables and libraries
+*.exe
+*.dll
+*.lib
+*.a
+*.so
+*.obj
+*.o
