@@ -1,6 +1,7 @@
 # Build directories
 build/
 out/
+bin/
 
 # CMake
 CMakeCache.txt
@@ -12,6 +13,9 @@ Makefile
 
 # Visual Studio
 .vs/
+*.vcxproj
+*.vcxproj.filters
+*.sln
 *.vcxproj.user
 *.suo
 *.sln.docstates
@@ -28,3 +32,12 @@ x86/
 *.so
 *.obj
 *.o
+*.pdb
+*.ilk
+*.exp
+
+# Additional common patterns
+*.log
+*.tmp
+*.temp
+*~
