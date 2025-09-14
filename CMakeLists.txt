@@ -29,7 +29,7 @@ file(GLOB_RECURSE APP_SRC
 # ======================= Target Creation =========================
 
 # Create executable
-add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} "engine/platform.h")
+add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC})
 
 # ======================= Linking =========================
 
