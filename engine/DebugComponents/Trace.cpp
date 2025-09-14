@@ -1,6 +1,5 @@
 #include "Trace.h"
 #include "PerfViewer.h"
-#include <chrono>
 
 namespace eng::debug {
 
@@ -10,8 +9,8 @@ namespace eng::debug {
 
 	ScopeTimer::~ScopeTimer() noexcept {
 		using namespace std::chrono;
-		const double sec = duration_cast<duration<double>>(clock::now() - m_start).count();
-		PerfViewer::Record(m_sys, sec);
+		const auto sec = duration_cast<duration<double>>(clock::now() - m_start).count();
+		PerfViewer::record(m_sys, sec);
 	}
 
 } // namespace eng::debug

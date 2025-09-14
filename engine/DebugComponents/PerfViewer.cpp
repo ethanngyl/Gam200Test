@@ -14,11 +14,11 @@ namespace eng::debug {
     PerfViewer::clock::time_point PerfViewer::s_lastPrint_{};
     double PerfViewer::s_printIntervalSec_ = 1.0;
 
-    void PerfViewer::SetPrintInterval(double seconds) noexcept {
+    void PerfViewer::set_print_interval(double seconds) noexcept {
         s_printIntervalSec_ = (seconds <= 0.0) ? 1.0 : seconds;
     }
 
-    void PerfViewer::ensureInit_() noexcept {
+    void PerfViewer::ensure_init_() noexcept {
         static bool inited = false;
         if (!inited) {
             s_head_ = 0;
@@ -32,9 +32,9 @@ namespace eng::debug {
         }
     }
 
-    void PerfViewer::BeginFrame() noexcept {
-        ensureInit_();
-        if (s_inFrame_) EndFrame(); // Fault tolerance: End the frame even if the previous frame did not end normally
+    void PerfViewer::begin_frame() noexcept {
+        ensure_init_();
+        if (s_inFrame_) end_frame(); // Fault tolerance: End the frame even if the previous frame did not end normally
 
         s_inFrame_ = true;
         s_frameStart_ = clock::now();
@@ -45,7 +45,7 @@ namespace eng::debug {
         std::fill(f.sysSec.begin(), f.sysSec.end(), 0.0);
     }
 
-    void PerfViewer::EndFrame() noexcept {
+    void PerfViewer::end_frame() noexcept {
         if (!s_inFrame_) return;
         using namespace std::chrono;
 
@@ -53,14 +53,14 @@ namespace eng::debug {
         f.frameSec = duration_cast<duration<double>>(clock::now() - s_frameStart_).count();
 
         // Print (if time is up)
-        printIfDue_();
+        print_if_due_();
 
         // Circular Advance
         s_head_ = (s_head_ + 1) % kBuffer;
         s_inFrame_ = false;
     }
 
-    void PerfViewer::Record(Subsystem sys, double seconds) noexcept {
+    void PerfViewer::record(Subsystem sys, double seconds) noexcept {
         if (!s_inFrame_) return;
         auto& f = s_ring_[s_head_];
         const auto idx = static_cast<size_t>(sys);
@@ -69,7 +69,7 @@ namespace eng::debug {
         }
     }
 
-    const char* PerfViewer::sysName_(Subsystem s) noexcept {
+    const char* PerfViewer::sys_name_(Subsystem s) noexcept {
         switch (s) {
         case Subsystem::Graphics: return "Graphics";
         case Subsystem::Physics:  return "Physics";
@@ -81,18 +81,21 @@ namespace eng::debug {
         }
     }
 
-    void PerfViewer::printIfDue_() noexcept {
+    void PerfViewer::print_if_due_() noexcept {
         using namespace std::chrono;
         const auto now = clock::now();
-        if (duration_cast<duration<double>>(now - s_lastPrint_).count() < s_printIntervalSec_) return;
+        const auto due = duration_cast<duration<double>>(now - s_lastPrint_).count() >= s_printIntervalSec_;
+        if (!due) return;
         s_lastPrint_ = now;
 
+        // Take the last completed frame as a snapshot
         const int last = (s_head_ - 1 + kBuffer) % kBuffer;
         const auto& f = s_ring_[last];
         if (f.frameSec <= 0.0) return;
 
         std::ostringstream oss;
-        oss << std::fixed << std::setprecision(1) << "Perf %: ";
+        oss << std::fixed << std::setprecision(1);
+        oss << "Perf %: ";
         bool first = true;
         for (int i = 0; i < (int)Subsystem::COUNT; ++i) {
             const double sec = f.sysSec[(size_t)i];
@@ -100,22 +103,23 @@ namespace eng::debug {
             const double pct = std::clamp(sec / f.frameSec * 100.0, 0.0, 100.0);
             if (!first) oss << " | ";
             first = false;
-            oss << sysName_((Subsystem)i) << " " << pct << "%";
+            oss << sys_name_((Subsystem)i) << " " << pct << "%";
         }
-        if (first) oss << "(no subsystems measured)";
+        if (first) { // No subsystem records
+            oss << "(no subsystems measured)";
+        }
 
-        Log::Write(LogLevel::Info, "PERF", "", 0, oss.str());
+        // Output message
+        Log::write(LogLevel::Info, "PERF", "", 0, oss.str());
     }
 
-
-    bool PerfViewer::ExportCSV(const std::string& path) {
+    bool PerfViewer::export_csv(const std::string& path) {
         std::FILE* fp = std::fopen(path.c_str(), "w");
         if (!fp) return false;
 
-        // Header
         std::fprintf(fp, "frame,frame_ms");
         for (int i = 0; i < (int)Subsystem::COUNT; ++i) {
-            std::fprintf(fp, ",%s_ms", sysName_((Subsystem)i));
+            std::fprintf(fp, ",%s_ms", sys_name_((Subsystem)i));
         }
         std::fprintf(fp, "\n");
 
@@ -134,8 +138,7 @@ namespace eng::debug {
         }
 
         std::fclose(fp);
-        Log::Writef(LogLevel::Info, "PERF", __FILE__, __LINE__,
-            "Exported CSV: %s", path.c_str());
+        Log::writef(LogLevel::Info, "PERF", "", 0, "Exported CSV: %s", path.c_str());
         return true;
     }
 

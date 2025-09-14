@@ -16,14 +16,14 @@ int main() {
     using namespace eng::debug;
 
     // Initializing Logs
-    LogConfig logCfg;
-    logCfg.level = LogLevel::Info;       
-    logCfg.filePath = "engine.log";      // Output Files
-    logCfg.showSourceInfo = false;       // Off (file:line)
-    logCfg.useConsole = true;            // Console(stderr)
-    logCfg.useFile = true;               
-    logCfg.usePlatformOutput = true;     // VS Output
-    Log::Init(logCfg);
+    LogConfig cfg;
+    cfg.level = LogLevel::Info;
+    cfg.filePath = "engine.log";      // Output Files
+    cfg.showSourceInfo = false;       // Off (file:line)
+    cfg.useConsole = true;            // Console(stderr)
+    cfg.useFile = true;
+    cfg.usePlatformOutput = true;     // VS Output
+    Log::init(cfg);
 
     LOG_INFO0("CORE", "Starting OpenGL ES 3.0 Triangle Demo on Windows");
 
@@ -44,23 +44,23 @@ int main() {
     //Title Updater: Write FPS to window title
     GLFWwindow* wnd = renderer.getWindow();
     if (wnd) {
-        fps.SetTitleUpdater([wnd](const char* title) {
+        fps.set_title_updater([wnd](const char* title) {
             glfwSetWindowTitle(wnd, title);
             });
     }
 
     // Make smooth FPS more responsive (adjustable from 0 to 1, the larger the value, the responsiveer it is)
-    fps.SetSmoothingAlpha(0.25);
+    fps.set_smoothing_alpha(0.25);
 
 
     // Main render loop
     while (!glfwWindowShouldClose(renderer.getWindow())) {
 
         // Statistics start
-        fps.BeginFrame();
+        fps.begin_frame();
 
         // Frame Start
-        eng::debug::PerfViewer::BeginFrame();
+        eng::debug::PerfViewer::begin_frame();
         
         {
             DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics);
@@ -70,14 +70,14 @@ int main() {
         }
 
         // End of frame (will print "Perf %: Graphics 30% | ..." once per second)
-        eng::debug::PerfViewer::EndFrame();
+        eng::debug::PerfViewer::end_frame();
 
         // End of statistics
-        fps.EndFrame();       
+        fps.end_frame();
 
         // Press F2 to export CSV (recent frames)
         if (glfwGetKey(renderer.getWindow(), GLFW_KEY_F2) == GLFW_PRESS) {
-            eng::debug::PerfViewer::ExportCSV("perf_recent.csv");
+            eng::debug::PerfViewer::export_csv("perf_recent.csv");
         }
 
         // Check for ESC key to exit
@@ -90,7 +90,7 @@ int main() {
     renderer.cleanup();
 
     LOG_INFO0("CORE", "Application closed successfully");
-    Log::Shutdown();
+    Log::shutdown();
 
 
     return 0;

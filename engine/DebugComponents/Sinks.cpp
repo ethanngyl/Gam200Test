@@ -19,12 +19,12 @@ namespace eng::debug {
     void ConsoleSink::write(LogLevel lvl, const char* tag, const char* msg) {
         std::fprintf(stderr, "[%s][%s] %s\n", lvl_to_cstr(lvl), tag, msg);
         std::fflush(stderr);
-    #if defined(_WIN32)
+#if defined(_WIN32)
         if (m_usePlatformOutput) {
             std::string line = "[" + std::string(lvl_to_cstr(lvl)) + "][" + tag + "] " + msg + "\n";
             OutputDebugStringA(line.c_str());
         }
-    #endif
+#endif
     }
 
     FileSink::FileSink(const std::string& path) : m_out(path, std::ios::out | std::ios::app) {}

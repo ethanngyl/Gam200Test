@@ -48,7 +48,7 @@ namespace eng::debug {
         }
     } // namespace
 
-    void Log::Init(const LogConfig& cfg) {
+    void Log::init(const LogConfig& cfg) {
         auto& S = state();
         std::scoped_lock lk(S.mtx);
         S.level = cfg.level;
@@ -58,23 +58,25 @@ namespace eng::debug {
         if (cfg.useFile)          S.sinks.emplace_back(std::make_unique<FileSink>(cfg.filePath));
     }
 
-    void Log::Shutdown() {
+    void Log::shutdown() {
         auto& S = state();
         std::scoped_lock lk(S.mtx);
         S.sinks.clear();
     }
 
-    void Log::SetLevel(LogLevel lvl) { state().level = lvl; }
-    LogLevel Log::GetLevel() { return state().level; }
+    void Log::set_level(LogLevel lvl) { state().level = lvl; }
+    LogLevel Log::get_level() { return state().level; }
 
-    void Log::AddSink(std::unique_ptr<ILogSink> sink) {
+    void Log::add_sink(std::unique_ptr<ILogSink> sink) {
         auto& S = state();
         std::scoped_lock lk(S.mtx);
         S.sinks.emplace_back(std::move(sink));
     }
 
-    void Log::Writef(LogLevel lvl, const char* tag, const char* file, int line, const char* fmt, ...) noexcept {
-        if (lvl > GetLevel()) return;
+    void Log::set_show_source_info(bool enabled) { state().showSource = enabled; }
+
+    void Log::writef(LogLevel lvl, const char* tag, const char* file, int line, const char* fmt, ...) noexcept {
+        if (lvl > get_level()) return;
 
         char buf[2048];
         va_list ap;
@@ -82,7 +84,7 @@ namespace eng::debug {
     #if defined(_WIN32)
         _vsnprintf_s(buf, sizeof(buf), _TRUNCATE, fmt, ap);
     #else
-        vsnprintf(buf, sizeof(buf), _TRUNCATE, fmt, ap); 
+        vsnprintf(buf, sizeof(buf), _TRUNCATE, fmt, ap);
     #endif
         va_end(ap);
 
@@ -90,26 +92,29 @@ namespace eng::debug {
         oss << "[" << time_now_str() << "]"
             << "[" << level_to_cstr(lvl) << "]"
             << "[" << (tag ? tag : "LOG") << "] "
-            << buf
-            << " (" << file << ":" << line << ")";
+            << buf;
 
-        dispatch(lvl, tag ? tag : "LOG", oss.str().c_str());
+        if (state().showSource) {
+            oss << " (" << file << ":" << line << ")";
+        }
+
+        dispatch_(lvl, tag ? tag : "LOG", oss.str().c_str());
     }
 
-    void Log::Write(LogLevel lvl, const char* tag, const char* file, int line, const std::string& message) noexcept {
-        if (lvl > GetLevel()) return;
+    void Log::write(LogLevel lvl, const char* tag, const char* file, int line, const std::string& message) noexcept {
+        if (lvl > get_level()) return;
         std::ostringstream oss;
         oss << "[" << time_now_str() << "]"
             << "[" << level_to_cstr(lvl) << "]"
             << "[" << (tag ? tag : "LOG") << "] "
             << message;
-            if (state().showSource) {
-                oss << " (" << file << ":" << line << ")";
-            }
-        dispatch(lvl, tag ? tag : "LOG", oss.str().c_str());
+        if (state().showSource) {
+            oss << " (" << file << ":" << line << ")";
+        }
+        dispatch_(lvl, tag ? tag : "LOG", oss.str().c_str());
     }
 
-    void Log::dispatch(LogLevel lvl, const char* tag, const char* formatted) noexcept {
+    void Log::dispatch_(LogLevel lvl, const char* tag, const char* formatted) noexcept {
         auto& S = state();
         std::scoped_lock lk(S.mtx);
         for (auto& s : S.sinks) s->write(lvl, tag, formatted);

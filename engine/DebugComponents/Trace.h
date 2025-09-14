@@ -4,7 +4,7 @@
 
 namespace eng::debug {
 
-	// Can be expand£ºPhysics/AI/Audio/Gameplay/IO/Other¡­
+	// can expand as needed: Physics/AI/Audio/Gameplay/IO/Other...
 	enum class Subsystem : unsigned char {
 		Graphics = 0,
 		Physics,
@@ -30,7 +30,7 @@ namespace eng::debug {
 		clock::time_point m_start;
 	};
 
-	// Convenient macros
+	// Count the time consumed within a scope and automatically report it to PerfViewer
 #define DBG_SCOPE_SYS(NAME, SUBSYS) ::eng::debug::ScopeTimer _dbg_scope_##__LINE__{NAME, SUBSYS}
 
 } // namespace eng::debug

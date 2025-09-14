@@ -4,6 +4,7 @@
 
 namespace eng::debug {
 
+	// // Console (stderr) + Windows Output window (optional)
 	class ConsoleSink final : public ILogSink {
 	public:
 		explicit ConsoleSink(bool usePlatformOutput = true) : m_usePlatformOutput(usePlatformOutput) {}
@@ -12,6 +13,7 @@ namespace eng::debug {
 		bool m_usePlatformOutput = true;
 	};
 
+	// Append to file
 	class FileSink final : public ILogSink {
 	public:
 		explicit FileSink(const std::string& path);
