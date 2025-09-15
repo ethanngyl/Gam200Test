@@ -1,40 +1,35 @@
-#include "Platform.h"
-// [IMPORTANT] This main entry file is only for Desktop Based applications support Window, Ubuntu, Mac etc
-#ifdef PLATFORM_WINDOWS
+//
 
-#include "GLRenderer.h"
+#include "Precompiled.h"
+#include "Core.h"
+#include "WindowSystem.h"
 #include <iostream>
 
-int main() {
-    std::cout << "Starting OpenGL ES 3.0 Triangle Demo on Windows" << std::endl;
+int main()
+{
+    std::cout << "Starting Game Engine...\n";
 
-    // Create renderer
-    GLRenderer renderer;
+    // Create the core engine
+    Framework::CoreEngine engine;
 
-    // Initialize
-    if (!renderer.initialize()) {
-        std::cerr << "Failed to initialize renderer" << std::endl;
-        return -1;
-    }
+    // Create and add systems
+    WindowSystem* windowSys = new WindowSystem();
+    engine.AddSystem(windowSys);
 
-    std::cout << "Renderer initialized successfully" << std::endl;
-    std::cout << "Press ESC to exit" << std::endl;
+    // Initialize all systems
+    engine.Initialize();
 
-    // Main render loop
-    while (!glfwWindowShouldClose(renderer.getWindow())) {
-        // Render frame
-        renderer.render();
+    std::cout << "Engine initialized. Starting game loop...\n";
 
-        // Check for ESC key to exit
-        if (glfwGetKey(renderer.getWindow(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-            glfwSetWindowShouldClose(renderer.getWindow(), GLFW_TRUE);
-        }
-    }
+    // Run the main game loop
+    engine.GameLoop();
 
-    // Cleanup
-    renderer.cleanup();
+    std::cout << "Game loop ended. Cleaning up...\n";
 
-    std::cout << "Application closed successfully" << std::endl;
+    // Cleanup systems
+    engine.DestroySystems();
+
+    std::cout << "Engine shutdown complete.\n";
+
     return 0;
 }
-#endif
