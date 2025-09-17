@@ -40,7 +40,7 @@ namespace Framework
         if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE))
         {
             std::cout << "InputSystem: Quit key pressed!\n";
-            Message quitMsg(Mid::Quit);
+            Message quitMsg(Status::Quit);
             Framework::CORE->BroadcastMessage(&quitMsg);
         }
 
@@ -55,7 +55,7 @@ namespace Framework
     void InputSystem::SendMessage(Message* message)
     {
         // Handle messages sent to input system
-        if (message->MessageId == Mid::Quit)
+        if (message->MessageId == Status::Quit)
         {
             std::cout << "InputSystem: Received quit message\n";
         }

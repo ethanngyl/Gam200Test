@@ -47,7 +47,7 @@ namespace Framework
     void WindowSystem::SendMessage(Message* message)
     {
         // Handle any messages sent to the window system
-        if (message->MessageId == Mid::Quit)
+        if (message->MessageId == Status::Quit)
         {
             std::cout << "WindowSystem: Received quit message, closing window.\n";
             WindowOpen = false;
