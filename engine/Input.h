@@ -14,7 +14,9 @@ namespace Framework
         KEY_M = 'M', KEY_N = 'N', KEY_O = 'O', KEY_P = 'P',
         KEY_Q = 'Q', KEY_R = 'R', KEY_S = 'S', KEY_T = 'T',
         KEY_U = 'U', KEY_V = 'V', KEY_W = 'W', KEY_X = 'X',
-        KEY_Y = 'Y', KEY_Z = 'Z',
+        KEY_Y = 'Y', KEY_Z = 'Z', KEY_1 = '1', KEY_2 = '2',
+        KEY_3 = '3', KEY_4 = '4', KEY_5 = '5', KEY_6 = '6', 
+        KEY_7 = '7', KEY_8 = '8', KEY_9 = '9', KEY_0 = '0',
 
         KEY_SPACE = ' ',
         KEY_ENTER = 13,

@@ -32,6 +32,10 @@ namespace Framework
         UpdateKeyState(KEY_S, GetAsyncKeyState(KEY_S));
         UpdateKeyState(KEY_D, GetAsyncKeyState(KEY_D));
         UpdateKeyState(KEY_Q, GetAsyncKeyState(KEY_Q));
+        UpdateKeyState(KEY_1, GetAsyncKeyState(KEY_1));
+        UpdateKeyState(KEY_2, GetAsyncKeyState(KEY_2));
+        UpdateKeyState(KEY_3, GetAsyncKeyState(KEY_3));
+        UpdateKeyState(KEY_4, GetAsyncKeyState(KEY_4));
         UpdateKeyState(KEY_ESCAPE, GetAsyncKeyState(KEY_ESCAPE));
         UpdateKeyState(KEY_SPACE, GetAsyncKeyState(KEY_SPACE));
         UpdateKeyState(KEY_ENTER, GetAsyncKeyState(KEY_ENTER));
@@ -50,6 +54,10 @@ namespace Framework
         if (IsKeyPressed(KEY_S)) std::cout << "S pressed - Move Down!\n";
         if (IsKeyPressed(KEY_D)) std::cout << "D pressed - Move Right!\n";
         if (IsKeyPressed(KEY_SPACE)) std::cout << "SPACE pressed - Jump!\n";
+        if (IsKeyPressed(KEY_1)) std::cout << "1 pressed - Slot 1!\n";
+        if (IsKeyPressed(KEY_2)) std::cout << "2 pressed - Slot 2!\n";
+        if (IsKeyPressed(KEY_3)) std::cout << "3 pressed - Slot 3!\n";
+        if (IsKeyPressed(KEY_4)) std::cout << "4 pressed - Slot 4!\n";
     }
 
     void InputSystem::SendMessage(Message* message)
