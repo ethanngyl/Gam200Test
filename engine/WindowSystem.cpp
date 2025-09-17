@@ -36,7 +36,7 @@ void WindowSystem::Update(float dt)
         if (key == 'q' || key == 'Q')
         {
             // Send quit message
-            Message quitMsg(Mid::Quit);
+            Message quitMsg(Status::Quit);
             Framework::CORE->BroadcastMessage(&quitMsg);
         }
     }

@@ -45,7 +45,7 @@ namespace Framework
     void CoreEngine::BroadcastMessage(Message* message)
     {
         // Handle quit message
-        if (message->MessageId == Mid::Quit)
+        if (message->MessageId == Status::Quit)
             GameActive = false;
 
         // Send to all systems
