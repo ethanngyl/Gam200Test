@@ -1,8 +1,7 @@
-//
-
 #include "Precompiled.h"
 #include "Core.h"
 #include "WindowSystem.h"
+#include "Input.h"
 #include <iostream>
 
 int main()
@@ -13,8 +12,11 @@ int main()
     Framework::CoreEngine engine;
 
     // Create and add systems
-    WindowSystem* windowSys = new WindowSystem();
+    Framework::WindowSystem* windowSys = new Framework::WindowSystem();
+    Framework::InputSystem* inputSys = new Framework::InputSystem();
+
     engine.AddSystem(windowSys);
+    engine.AddSystem(inputSys);
 
     // Initialize all systems
     engine.Initialize();
