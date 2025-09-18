@@ -12,6 +12,9 @@
 #include "DebugComponents/Trace.h"      
 #include "DebugComponents/PerfViewer.h"
 
+#include "DebugComponents/CrashLogger.h"
+
+
 int main() {
     using namespace eng::debug;
 
@@ -26,6 +29,9 @@ int main() {
     Log::init(cfg);
 
     LOG_INFO0("CORE", "Starting OpenGL ES 3.0 Triangle Demo on Windows");
+
+	// Install crash handlers
+    eng::debug::CrashLogger::install_handlers();
 
     // Create renderer
     GLRenderer renderer;
@@ -78,6 +84,17 @@ int main() {
         // Press F2 to export CSV (recent frames)
         if (glfwGetKey(renderer.getWindow(), GLFW_KEY_F2) == GLFW_PRESS) {
             eng::debug::PerfViewer::export_csv("perf_recent.csv");
+        }
+
+        // Press Ctrl+Shift+C to force a crash (test CrashLogger)
+        if ((glfwGetKey(renderer.getWindow(), GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+            glfwGetKey(renderer.getWindow(), GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS) &&
+            (glfwGetKey(renderer.getWindow(), GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+                glfwGetKey(renderer.getWindow(), GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS) &&
+            glfwGetKey(renderer.getWindow(), GLFW_KEY_C) == GLFW_PRESS) {
+            eng::debug::Log::write(eng::debug::LogLevel::Warn, "CRASH", "", 0,
+                "Crash test requested (Ctrl+Shift+C).");
+            eng::debug::CrashLogger::force_crash_for_test();
         }
 
         // Check for ESC key to exit
