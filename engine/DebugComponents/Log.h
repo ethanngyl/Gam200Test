@@ -3,35 +3,35 @@
 #include <memory>
 #include <string>
 #include <vector>
-//
-// ============================================================================================
-//  Simple logging API for the engine (header)
-//
-//  What this gives you:
-//    • Log levels (Error / Warn / Info / Debug)
-//    • Multiple “sinks” (where the log lines go): console, file, VS Output
-//    • Optional source info at the end of a line: "(file:line)"
-//    • Easy macros so you can write: LOG_INFO("CORE", "Hello %d", 123);
-//
-//  Quick start (typical flow):
-//    1) At startup:
-//         eng::debug::LogConfig cfg;
-//         cfg.level = eng::debug::LogLevel::Info;
-//         cfg.filePath = "engine.log";
-//         cfg.showSourceInfo = false;  // normal logs stay clean
-//         eng::debug::Log::init(cfg);
-//    2) Use anywhere:
-//         LOG_INFO("CORE", "Window created: %dx%d", w, h);
-//    3) At shutdown:
-//         eng::debug::Log::shutdown();
-//
-//  Notes:
-//    • "tag" is a short category like "CORE", "PERF", "AI".
-//    • If you pass empty file/line to write()/writef(), no "(file:line)" is appended.
-//    • Whether "(file:line)" is printed for normal logs is controlled by
-//      LogConfig::showSourceInfo (we keep it off by default to keep output clean).
-// ============================================================================================
-//
+/*
+============================================================================================
+  Simple logging API for the engine (header)
+
+  What this gives you:
+    • Log levels (Error / Warn / Info / Debug)
+    • Multiple “sinks” (where the log lines go): console, file, VS Output
+    • Optional source info at the end of a line: "(file:line)"
+    • Easy macros so you can write: LOG_INFO("CORE", "Hello %d", 123);
+
+  Quick start (typical flow):
+    1) At startup:
+         eng::debug::LogConfig cfg;
+         cfg.level = eng::debug::LogLevel::Info;
+         cfg.filePath = "engine.log";
+         cfg.showSourceInfo = false;  // normal logs stay clean
+         eng::debug::Log::init(cfg);
+    2) Use anywhere:
+         LOG_INFO("CORE", "Window created: %dx%d", w, h);
+    3) At shutdown:
+         eng::debug::Log::shutdown();
+
+  Notes:
+    • "tag" is a short category like "CORE", "PERF", "AI".
+    • If you pass empty file/line to write()/writef(), no "(file:line)" is appended.
+    • Whether "(file:line)" is printed for normal logs is controlled by
+      LogConfig::showSourceInfo (we keep it off by default to keep output clean).
+============================================================================================
+*/
 namespace eng::debug {
 
     // Logging severity. Lower number = more severe.
