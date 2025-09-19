@@ -11,15 +11,15 @@
 //  Simple logging API for the engine (implementation)
 //
 //  Design notes (plain English):
-//    • We keep a single global LogState (level + list of sinks).
-//    • All public methods are static and thread-safe where needed.
-//    • We format the final line once (with timestamp/level/tag/message)
+//     We keep a single global LogState (level + list of sinks).
+//     All public methods are static and thread-safe where needed.
+//     We format the final line once (with timestamp/level/tag/message)
 //      then broadcast it to each sink via dispatch_().
-//    • The "(file:line)" appendix is controlled by state().showSource.
+//     The "(file:line)" appendix is controlled by state().showSource.
 //
 //  Thread-safety:
-//    • A single mutex protects the sink list and dispatch.
-//    • If you need extremely high throughput, you can later swap the sinks
+//     A single mutex protects the sink list and dispatch.
+//     If you need extremely high throughput, you can later swap the sinks
 //      for an async queue without changing the Log API.
 // ============================================================================================
 //

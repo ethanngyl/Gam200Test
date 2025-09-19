@@ -8,10 +8,10 @@
   Simple logging API for the engine (header)
 
   What this gives you:
-    • Log levels (Error / Warn / Info / Debug)
-    • Multiple “sinks” (where the log lines go): console, file, VS Output
-    • Optional source info at the end of a line: "(file:line)"
-    • Easy macros so you can write: LOG_INFO("CORE", "Hello %d", 123);
+     Log levels (Error / Warn / Info / Debug)
+     Multiple sinks (where the log lines go): console, file, VS Output
+     Optional source info at the end of a line: "(file:line)"
+     Easy macros so you can write: LOG_INFO("CORE", "Hello %d", 123);
 
   Quick start (typical flow):
     1) At startup:
@@ -26,10 +26,10 @@
          eng::debug::Log::shutdown();
 
   Notes:
-    • "tag" is a short category like "CORE", "PERF", "AI".
-    • If you pass empty file/line to write()/writef(), no "(file:line)" is appended.
-    • Whether "(file:line)" is printed for normal logs is controlled by
-      LogConfig::showSourceInfo (we keep it off by default to keep output clean).
+     "tag" is a short category like "CORE", "PERF", "AI".
+     If you pass empty file/line to write()/writef(), no "(file:line)" is appended.
+     Whether "(file:line)" is printed for normal logs is controlled by
+    LogConfig::showSourceInfo (we keep it off by default to keep output clean).
 ============================================================================================
 */
 namespace eng::debug {
@@ -94,7 +94,7 @@ namespace eng::debug {
 // ================================ Convenience macros ================================
 // These macros automatically capture __FILE__ and __LINE__ so your log can
 // include them when showSourceInfo==true (or you can read them in sinks).
-// Use the *0 macros if you already have a std::string and don’t need printf.
+// Use the *0 macros if you already have a std::string and donï¿½t need printf.
 
 #define LOG_ERROR(TAG, FMT, ...) ::eng::debug::Log::writef(::eng::debug::LogLevel::Error, TAG, __FILE__, __LINE__, FMT, __VA_ARGS__)
 #define LOG_WARN(TAG,  FMT, ...) ::eng::debug::Log::writef(::eng::debug::LogLevel::Warn,  TAG, __FILE__, __LINE__, FMT, __VA_ARGS__)
