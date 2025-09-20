@@ -49,7 +49,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 # Include directories for the project (fixed to use directory, not files)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
-    ${SRC_DIR}/Graphics   
+    
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -73,14 +73,4 @@ elseif(UNIX)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE GL X11 pthread dl)
 endif()
 
-# ======================= Runtime Data Copy =========================
 
-# Copy shaders folder
-add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-          "${CMAKE_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/shaders")
-
-# Copy assets folder
-add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-          "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/assets")
