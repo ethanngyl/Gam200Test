@@ -160,9 +160,20 @@ namespace eng::debug {
     // The CSV contains:
     //   frame, frame_ms, Graphics_ms, Physics_ms, ...
     // Only frames with frameSec > 0 are written.
+    // Export the ring buffer contents to a CSV file.
     bool PerfViewer::export_csv(const std::string& path) {
-        std::FILE* fp = std::fopen(path.c_str(), "w");
+        std::FILE* fp = nullptr;
+
+    #if defined(_WIN32)
+        // MSVC secure variant (eliminates C4996 warning)
+        if (fopen_s(&fp, path.c_str(), "w") != 0 || !fp) {
+            return false;
+        }
+    #else
+        // Portable fallback (POSIX, Linux, macOS, MinGW, etc.)
+        fp = std::fopen(path.c_str(), "w");
         if (!fp) return false;
+    #endif
 
         // Header row
         std::fprintf(fp, "frame,frame_ms");
@@ -171,15 +182,14 @@ namespace eng::debug {
         }
         std::fprintf(fp, "\n");
 
-        // Walk the ring starting from the current head (oldest to newest).
+        // Walk the ring buffer...
         int frameId = 0;
         for (int i = 0; i < kBuffer; ++i) {
             const int idx = (s_head_ + i) % kBuffer;
             const auto& f = s_ring_[idx];
-            if (f.frameSec <= 0.0) continue; // Skip empty frames
+            if (f.frameSec <= 0.0) continue;
 
             std::fprintf(fp, "%d,%.3f", frameId++, f.frameSec * 1000.0);
-
             for (int j = 0; j < (int)Subsystem::COUNT; ++j) {
                 std::fprintf(fp, ",%.3f", f.sysSec[(size_t)j] * 1000.0);
             }
@@ -192,5 +202,6 @@ namespace eng::debug {
         Log::writef(LogLevel::Info, "PERF", "", 0, "Exported CSV: %s", path.c_str());
         return true;
     }
+
 
 } // namespace eng::debug

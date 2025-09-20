@@ -164,12 +164,13 @@ namespace eng::debug {
         const std::string filename = std::string("crash_") + timestamp_() + ".txt";
         const std::string fullpath = exe_dir_() + "/" + filename;
 
-        if (std::FILE* fp = std::fopen(fullpath.c_str(), "w")) {
+        if (std::FILE* fp = nullptr; fopen_s(&fp, fullpath.c_str(), "w") == 0 && fp) {
             std::fprintf(fp, "%s\n", title ? title : "Crash");
             std::fprintf(fp, "--------------------------------------------------\n");
             std::fprintf(fp, "%s\n", detail ? detail : "(no details)");
             std::fclose(fp);
         }
+
 
         // Mirror one concise line into our logging system.
         Log::write(LogLevel::Error, "CRASH", "", 0, std::string("Crash report written: ") + fullpath);
