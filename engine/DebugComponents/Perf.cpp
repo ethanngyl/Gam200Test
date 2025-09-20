@@ -98,12 +98,9 @@ namespace eng::debug {
         // 1) Log one line per second (optional). We intentionally pass empty
         //    file/line so normal logs stay clean and do not show "(file:line)".
         if (m_logEnabled) {
-            char buf[256];
-            std::snprintf(buf, sizeof(buf),
+            Log::writef(LogLevel::Info, "PERF", __FILE__, __LINE__,
                 "FPS(avg): %.1f, frame(avg): %.2f ms, FPS(smooth): %.1f",
                 m_lastFps, m_lastAvgMs, m_smoothFps);
-
-            Log::write(LogLevel::Info, "PERF", "", 0, buf);
         }
 
         // 2) Update the window title if the user provided a callback.

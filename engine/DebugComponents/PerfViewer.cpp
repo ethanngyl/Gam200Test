@@ -153,7 +153,7 @@ namespace eng::debug {
 
         // Send a single clean line to the logging system.
         // We intentionally pass empty file/line so normal logs stay clean.
-        Log::write(LogLevel::Info, "PERF", "", 0, oss.str());
+        Log::write(LogLevel::Info, "PERF", __FILE__, __LINE__, oss.str());
     }
 
     // Export the ring buffer contents to a CSV file.
