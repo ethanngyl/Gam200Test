@@ -26,10 +26,6 @@ int main()
 
     std::cout << "Engine initialized. Starting game loop...\n";
 
-    while (!graphicsSys->ShouldClose()) {
-        graphicsSys->Update(0.0f);
-    }
-
     // Run the main game loop
     engine.GameLoop();
 

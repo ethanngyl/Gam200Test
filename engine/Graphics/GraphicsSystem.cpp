@@ -19,7 +19,7 @@ namespace Framework {
     }
 
     GraphicsSystem::~GraphicsSystem() {
-        std::cout << "[GraphicsSystem] Cleaning up...\n";
+        std::cout << "GraphicsSystem: Cleaning up...\n";
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
         delete shader;
@@ -31,7 +31,7 @@ namespace Framework {
     }
 
     void GraphicsSystem::Initialize() {
-        std::cout << "[GraphicsSystem] Initializing...\n";
+        std::cout << "GraphicsSystem: Initializing...\n";
 
         if (!glfwInit()) {
             std::cerr << "GLFW init failed\n";
@@ -42,7 +42,7 @@ namespace Framework {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        window = glfwCreateWindow(800, 600, "GraphicsSystem", nullptr, nullptr);
+        window = glfwCreateWindow(800, 600, "Graphics System", nullptr, nullptr);
         if (!window) {
             std::cerr << "Window creation failed\n";
             glfwTerminate();
@@ -55,10 +55,6 @@ namespace Framework {
             std::cerr << "GLAD init failed\n";
             return;
         }
-
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_DEPTH_TEST);
-        glClearColor(1.0f, 0.0f, 0.0f, 1.0f);  // bright red
 
         glViewport(0, 0, 800, 600);
 
@@ -80,14 +76,26 @@ namespace Framework {
         BeginFrame();
 
         shader->Bind();
+
+        // Move the top vertex up and down over time
+        vertices[1] = 0.5f + static_cast<float>(sin(glfwGetTime())) * 0.25f;
+
+        // Re-upload new vertex data to GPU
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
         EndFrame();
     }
 
-    void Framework::GraphicsSystem::SendMessage(Message* message) {
-        // Handle any incoming messages (if used)
+    void GraphicsSystem::SendMessage(Message* message) {
+            if (message->MessageId == Status::Quit)
+            {
+                std::cout << "GraphicsSystem: Received quit message\n";
+                glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }
     }
 
     void GraphicsSystem::BeginFrame() {
