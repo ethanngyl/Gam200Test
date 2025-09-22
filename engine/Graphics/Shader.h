@@ -1,14 +1,21 @@
 #pragma once
 #include <string>
-#include <gl/glew.h>
 
-class Shader {
-public:
-    Shader(const char* vertexPath, const char* fragmentPath);
-    void Use() const;
-    GLuint ID;
+namespace Framework {
 
-private:
-    std::string LoadFile(const char* path);
-    void CheckCompileErrors(GLuint shader, std::string type);
-};
+    class Shader {
+    public:
+        Shader(const std::string& vertexPath, const std::string& fragmentPath);
+        ~Shader();
+
+        void Bind() const;
+        void Unbind() const;
+
+    private:
+        unsigned int id;
+
+        std::string LoadFile(const std::string& path);
+        unsigned int Compile(unsigned int type, const std::string& source);
+    };
+
+}

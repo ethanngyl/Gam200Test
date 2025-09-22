@@ -33,14 +33,21 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 "engine/platform.h" 
 "engine/WindowSystem.h"
 "engine/Core.cpp"
-"engine/Main.cpp" "engine/Input.h" "engine/Input.cpp")
+"engine/Main.cpp"
+"engine/Input.h"
+"engine/Input.cpp"
+"engine/Graphics/GraphicsSystem.cpp"
+"engine/Graphics/GraphicsSystem.h"
+"engine/Graphics/Shader.cpp"
+"engine/Graphics/Shader.h")
 
 # ======================= Linking =========================
 
 # Link libraries (fixed syntax)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
+    glad    
     glfw
-    libglew_static
+    #libglew_static
     imgui
 )
 
@@ -51,6 +58,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
     ${SRC_DIR}/Graphics   
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${glad_SOURCE_DIR}/include
 )
 
 # ======================= Compiler Settings =========================

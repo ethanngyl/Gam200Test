@@ -1,61 +1,83 @@
 #include "Shader.h"
+#include <glad/glad.h>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 
-Shader::Shader(const char* vertexPath, const char* fragmentPath) {
-    std::string vertCode = LoadFile(vertexPath);
-    std::string fragCode = LoadFile(fragmentPath);
-    const char* vShaderCode = vertCode.c_str();
-    const char* fShaderCode = fragCode.c_str();
+namespace Framework {
 
-    GLuint vertex = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex, 1, &vShaderCode, nullptr);
-    glCompileShader(vertex);
-    CheckCompileErrors(vertex, "VERTEX");
+    Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
+        std::string vertexSrc = LoadFile(vertexPath);
+        std::cout << "Vertex Shader Source:\n" << vertexSrc << "\n";
 
-    GLuint fragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment, 1, &fShaderCode, nullptr);
-    glCompileShader(fragment);
-    CheckCompileErrors(fragment, "FRAGMENT");
+        std::string fragmentSrc = LoadFile(fragmentPath);
+        std::cout << "Fragment Shader Source:\n" << fragmentSrc << "\n";
 
-    ID = glCreateProgram();
-    glAttachShader(ID, vertex);
-    glAttachShader(ID, fragment);
-    glLinkProgram(ID);
-    CheckCompileErrors(ID, "PROGRAM");
 
-    glDeleteShader(vertex);
-    glDeleteShader(fragment);
-}
+        unsigned int vs = Compile(GL_VERTEX_SHADER, vertexSrc);
+        unsigned int fs = Compile(GL_FRAGMENT_SHADER, fragmentSrc);
 
-void Shader::Use() const {
-    glUseProgram(ID);
-}
+        id = glCreateProgram();
+        glAttachShader(id, vs);
+        glAttachShader(id, fs);
+        glLinkProgram(id);
 
-std::string Shader::LoadFile(const char* path) {
-    std::ifstream file(path);
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
-}
+        int success;
+        glGetProgramiv(id, GL_LINK_STATUS, &success);
+        if (!success) {
+            char infoLog[512];
+            glGetProgramInfoLog(id, 512, nullptr, infoLog);
+            std::cerr << "Shader link failed:\n" << infoLog << "\n";
+        }
 
-void Shader::CheckCompileErrors(GLuint shader, std::string type) {
-    GLint success;
-    char infoLog[1024];
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+    }
 
-    if (type != "PROGRAM") {
+    Shader::~Shader() {
+        glDeleteProgram(id);
+    }
+
+    void Shader::Bind() const {
+        glUseProgram(id);
+    }
+
+    void Shader::Unbind() const {
+        glUseProgram(0);
+    }
+
+    std::string Shader::LoadFile(const std::string& path) {
+        std::ifstream file(path);
+        if (!file) {
+            std::cerr << "ERROR: Failed to open shader file: " << path << std::endl;
+            return "";
+        }
+
+        std::stringstream ss;
+        ss << file.rdbuf();
+        return ss.str();
+    }
+
+    unsigned int Shader::Compile(unsigned int type, const std::string& source) {
+        unsigned int shader = glCreateShader(type);
+        const char* src = source.c_str();
+        glShaderSource(shader, 1, &src, nullptr);
+        glCompileShader(shader);
+
+        int success;
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
         if (!success) {
-            glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-            std::cerr << "Shader Compilation Error [" << type << "]\n" << infoLog << "\n";
+            char infoLog[512];
+            glGetShaderInfoLog(shader, 512, nullptr, infoLog);
+            std::cerr << (type == GL_VERTEX_SHADER ? "Vertex" : "Fragment")
+                << " shader compile error:\n" << infoLog << "\n";
         }
-    }
-    else {
-        glGetProgramiv(shader, GL_LINK_STATUS, &success);
-        if (!success) {
-            glGetProgramInfoLog(shader, 1024, nullptr, infoLog);
-            std::cerr << "Shader Linking Error [" << type << "]\n" << infoLog << "\n";
+        else {
+            std::cout << (type == GL_VERTEX_SHADER ? "Vertex" : "Fragment")
+                << " shader compiled successfully\n";
         }
+
+        return shader;
     }
+
 }
