@@ -1,5 +1,6 @@
 #include "Precompiled.h"
 #include "Core.h"
+#include "WindowSystem.h"
 
 namespace Framework
 {
@@ -20,7 +21,7 @@ namespace Framework
 
     void CoreEngine::Initialize()
     {
-        for (unsigned i = 0; i < Systems.size(); ++i)
+        for (size_t i = 0; i < Systems.size(); ++i)
             Systems[i]->Initialize();
     }
 
@@ -31,6 +32,16 @@ namespace Framework
 
         while (GameActive)
         {
+            // Check if window should close
+            for (auto system : Systems) {
+                if (auto windowSystem = dynamic_cast<WindowSystem*>(system)) {
+                    if (windowSystem->ShouldClose()) {
+                        Message quitMsg(Status::Quit);
+                        BroadcastMessage(&quitMsg);
+                    }
+                }
+            }
+
             // Calculate delta time
             unsigned currenttime = timeGetTime();
             float dt = (currenttime - LastTime) / 1000.0f;

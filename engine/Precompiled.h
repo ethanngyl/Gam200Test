@@ -18,11 +18,11 @@
 #endif
 
 // OpenGL headers (since you have GLRenderer)
-#ifdef USE_OPENGL
+//#ifdef USE_OPENGL
 //#include <GL/gl.h>
 //#include <GL/glu.h>
-#include <glad/glad.h>
-#endif
+//#include <glad/glad.h>
+//#endif
 
 // Useful debug macros
 #ifdef _DEBUG
