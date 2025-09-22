@@ -47,9 +47,6 @@ namespace Framework {
 
         glViewport(0, 0, 800, 600);
 
-        // Enable depth testing (though not strictly needed for 2D)
-        glEnable(GL_DEPTH_TEST);
-
         // Load shaders with better error handling
         try {
             shader = new Shader("shaders/basic.vert", "shaders/basic.frag");
