@@ -5,6 +5,7 @@
 #include "Core.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "MeshFactory.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -18,7 +19,11 @@ namespace Framework {
 
     GraphicsSystem::~GraphicsSystem() {
         std::cout << "GraphicsSystem: Cleaning up...\n";
-        delete triangleMesh;
+        for (auto mesh : meshes) {
+            if (mesh) {
+                delete mesh;
+            }
+        }
         delete shader;
     }
 
@@ -57,21 +62,21 @@ namespace Framework {
             return;
         }
 
-        // Create triangle mesh with larger, more visible triangle
-        std::vector<float> vertices = {
-            // Larger triangle that should be clearly visible
-             0.0f,  0.8f, 0.0f,  // top (larger Y value)
-            -0.8f, -0.8f, 0.0f,  // bottom left  
-             0.8f, -0.8f, 0.0f   // bottom right
-        };
+        // Create multiple meshes
+        meshes.push_back(CreateTriangle());
+        meshes.push_back(CreateQuad());
+        meshes.push_back(CreateLine());
 
-        triangleMesh = new Mesh(vertices);
-        std::cout << "Triangle mesh created successfully\n";
+        currentMeshIndex = 0;  // start with first mesh
 
-        // Test immediate rendering to verify everything works
+        std::cout << "Multiple meshes created successfully\n";
+
+        // Just draw the first mesh on init
         BeginFrame();
         shader->Bind();
-        triangleMesh->Draw();
+        if (!meshes.empty()) {
+            meshes[currentMeshIndex]->Draw();
+        }
         EndFrame();
 
         std::cout << "GraphicsSystem: Initialized successfully - test frame rendered\n";
@@ -87,6 +92,7 @@ namespace Framework {
             return;
         }
 
+        // Rendering
         BeginFrame();
 
         if (!shader) {
@@ -94,26 +100,12 @@ namespace Framework {
             return;
         }
 
-        if (!triangleMesh) {
-            std::cerr << "GraphicsSystem: No triangle mesh!\n";
-            return;
-        }
-
         shader->Bind();
 
-        // Animate the triangle with simpler, more visible movement
-        static float time = 0.0f;
-        time += dt;
-
-        // Create new vertices with animation
-        std::vector<float> vertices = {
-            0.0f, 0.8f + sinf(time) * 0.2f, 0.0f,  // animated top vertex
-            -0.8f, -0.8f, 0.0f,
-            0.8f, -0.8f, 0.0f
-        };
-
-        triangleMesh->UpdateVertices(vertices);
-        triangleMesh->Draw();
+        if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
+            if (meshes[currentMeshIndex])
+                meshes[currentMeshIndex]->Draw();
+        }
 
         // Check for OpenGL errors
         GLenum error = glGetError();
@@ -122,6 +114,8 @@ namespace Framework {
         }
 
         EndFrame();
+
+        ProcessInput();
     }
 
     void GraphicsSystem::SendMessage(Message* message) {
@@ -139,5 +133,54 @@ namespace Framework {
     void GraphicsSystem::EndFrame() {
         glfwSwapBuffers(window);
         glfwPollEvents();  // Important: poll events here too
+    }
+
+    void GraphicsSystem::ProcessInput() {
+        static bool dPressedLastFrame = false;
+        bool dPressedNow = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+
+        if (dPressedNow && !dPressedLastFrame) {
+            std::cout << "Enter press! Next mesh displayed.\n";
+
+            if (meshes.empty()) return;
+
+            // Delete current mesh if valid
+            if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
+                if (meshes[currentMeshIndex]) {
+                    delete meshes[currentMeshIndex];
+                    meshes[currentMeshIndex] = nullptr;
+                }
+            }
+
+            // Check if all meshes are deleted
+            bool allDeleted = true;
+            for (auto m : meshes) {
+                if (m != nullptr) {
+                    allDeleted = false;
+                    break;
+                }
+            }
+
+            if (allDeleted) {
+                // Recreate all meshes since all are deleted (reset)
+                meshes.clear();
+                meshes.push_back(CreateTriangle());
+                meshes.push_back(CreateQuad());
+                meshes.push_back(CreateLine());
+
+                currentMeshIndex = 0;
+            }
+            else {
+                // Move to next valid mesh (skip deleted ones)
+                int nextIndex = currentMeshIndex;
+                do {
+                    nextIndex = (nextIndex + 1) % (int)meshes.size();
+                } while (meshes[nextIndex] == nullptr);
+
+                currentMeshIndex = nextIndex;
+            }
+        }
+
+        dPressedLastFrame = dPressedNow;
     }
 }

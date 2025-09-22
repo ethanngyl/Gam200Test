@@ -39,7 +39,11 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 "engine/Graphics/GraphicsSystem.cpp"
 "engine/Graphics/GraphicsSystem.h"
 "engine/Graphics/Shader.cpp"
-"engine/Graphics/Shader.h")
+"engine/Graphics/Shader.h"
+"engine/Graphics/Mesh.cpp"
+"engine/Graphics/Mesh.h"
+"engine/Graphics/MeshFactory.cpp"
+"engine/Graphics/MeshFactory.h")
 
 # ======================= Linking =========================
 

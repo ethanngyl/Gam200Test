@@ -24,9 +24,12 @@ namespace Framework {
     private:
         void BeginFrame();
         void EndFrame();
+        void ProcessInput();
 
         GLFWwindow* window;
         Shader* shader;
         Mesh* triangleMesh;
+        std::vector<Mesh*> meshes;
+        int currentMeshIndex = 0;
     };
 }
