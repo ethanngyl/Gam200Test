@@ -1,8 +1,10 @@
 #pragma once
 
 // Message IDs - these identify what type of message it is
-enum Mid
+enum Status
 {
+    Success,
+    Error,
     Quit,
     // We'll add more message types later as needed
 };
@@ -10,8 +12,8 @@ enum Mid
 class Message
 {
 public:
-    Mid MessageId;
+    Status MessageId;
 
     // Constructor to make creating messages easier
-    Message(Mid id) : MessageId(id) {}
+    Message(Status id) : MessageId(id) {}
 };
