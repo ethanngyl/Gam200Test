@@ -10,6 +10,8 @@
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
 
+#include "MathTestSystem.h"
+
 int main()
 {
     std::cout << "Starting Game Engine...\n";
@@ -36,6 +38,8 @@ int main()
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
+    Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
+    engine.AddSystem(mathSys);
     engine.AddSystem(windowSys);
     engine.AddSystem(inputSys);
     collisionSys->SetInput(inputSys);
