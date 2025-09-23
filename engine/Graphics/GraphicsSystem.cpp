@@ -66,6 +66,7 @@ namespace Framework {
         meshes.push_back(CreateTriangle());
         meshes.push_back(CreateQuad());
         meshes.push_back(CreateLine());
+        meshes.push_back(CreateCircle(40, 0.5f));
 
         currentMeshIndex = 0;  // start with first mesh
 

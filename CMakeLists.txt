@@ -51,6 +51,7 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     glad    
     glfw
+    glm
     #libglew_static
     imgui
 )
