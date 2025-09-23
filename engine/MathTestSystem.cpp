@@ -85,7 +85,7 @@ namespace Framework {
         // This system does not need per-frame updates.
     }
 
-    void MathTestSystem::SendMessage(Message* message)
+    void MathTestSystem::SendEngineMessage(Message* message)
     {
         // This system does not need to handle messages.
     }

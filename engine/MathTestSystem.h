@@ -15,11 +15,11 @@ namespace Framework {
         ~MathTestSystem() override = default;
 
         // The tests will be executed inside the Initialize() method.
-        void Initialize() override;
+        virtual void Initialize() override;
 
         // These methods are required but will be empty for this test system.
-        void Update(float dt) override;
-        void SendMessage(Message* message) override;
+        virtual void Update(float dt) override;
+        virtual void SendEngineMessage(Message* message) override;
     };
 
 } // namespace Framework

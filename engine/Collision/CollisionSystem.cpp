@@ -85,7 +85,7 @@ void CollisionSystem::Update(float dt)
   // if (point_in_collider(probe, circle) || point_in_collider(probe, rect)) { ... }
 }
 
-void CollisionSystem::SendMessage(Message* message)
+void CollisionSystem::SendEngineMessage(Message* message)
 {
   if (message->MessageId == Status::Quit) {
     std::cout << "CollisionSystem: Received quit message\n";

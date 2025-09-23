@@ -92,7 +92,7 @@ namespace Framework
 
         // Send to all systems
         for (unsigned i = 0; i < Systems.size(); ++i)
-            Systems[i]->SendMessage(message);
+            Systems[i]->SendEngineMessage(message);
     }
 
     void CoreEngine::AddSystem(InterfaceSystem* system)

@@ -15,7 +15,7 @@ namespace Framework {
 
     void Initialize() override;
     void Update(float dt) override;
-    void SendMessage(Message* message) override;
+    void SendEngineMessage(Message* message) override;
 
     void SetInput(InputSystem* input) { m_input = input; }
   private:
