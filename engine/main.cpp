@@ -1,7 +1,7 @@
 #include "Precompiled.h"
 #include "Core.h"
 #include "WindowSystem.h"
-#include "CollisionSystem.h"
+#include "Collision/CollisionSystem.h"
 #include "Input.h"
 #include <iostream>
 
