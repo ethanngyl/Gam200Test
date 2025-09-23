@@ -1,4 +1,3 @@
-#include "Precompiled.h"
 #include "CollisionSystem.h"
 #include "Message.h"
 

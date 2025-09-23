@@ -8,6 +8,11 @@
 #include <cassert>
 #include <cmath>
 
+//Components
+#include "WindowSystem.h"
+#include "Input.h"
+#include "MathTestSystem.h"
+#include "Vector2D.h"
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

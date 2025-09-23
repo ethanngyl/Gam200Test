@@ -1,8 +1,6 @@
 #include "Precompiled.h"
 #include "Core.h"
-#include "WindowSystem.h"
 #include "Collision/CollisionSystem.h"
-#include "Input.h"
 #include <iostream>
 
 #include "DebugComponents/Log.h"
@@ -10,7 +8,6 @@
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
 
-#include "MathTestSystem.h"
 
 int main()
 {
