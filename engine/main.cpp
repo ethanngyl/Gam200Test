@@ -5,9 +5,29 @@
 #include "Input.h"
 #include <iostream>
 
+#include "DebugComponents/Log.h"
+#include "DebugComponents/Sinks.h"
+#include "DebugComponents/CrashLogger.h"
+#include "DebugComponents/PerfViewer.h"
+
 int main()
 {
     std::cout << "Starting Game Engine...\n";
+
+    // ------------ Debug tools bootstrap ------------//
+    eng::debug::LogConfig logCfg;
+    logCfg.level = eng::debug::LogLevel::Info;
+    logCfg.filePath = "engine.log";     
+    logCfg.useConsole = true;          
+    logCfg.useFile = true;            
+    logCfg.usePlatformOutput = true;    
+    logCfg.showSourceInfo = false;     
+    eng::debug::Log::init(logCfg);     
+
+    eng::debug::PerfViewer::set_print_interval(1.0);
+
+    eng::debug::CrashLogger::install_handlers();
+    // --------- End Of Debug tools bootstrap ---------//
 
     // Create the core engine
     Framework::CoreEngine engine;
@@ -34,6 +54,10 @@ int main()
     engine.DestroySystems();
 
     std::cout << "Engine shutdown complete.\n";
+
+	// Shutdown debug tools
+    eng::debug::Log::shutdown(); 
+
 
     return 0;
 }
