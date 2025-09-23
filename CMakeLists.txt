@@ -33,7 +33,7 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 "engine/platform.h" 
 "engine/WindowSystem.h"
 "engine/Core.cpp"
-"engine/Main.cpp" "engine/Input.h" "engine/Input.cpp")
+"engine/Main.cpp" "engine/Input.h" "engine/Input.cpp" "engine/Matrix3x3.cpp" "engine/Matrix3x3.h" "engine/Vector2D.h" "engine/Vector2D.cpp")
 
 # ======================= Linking =========================
 
