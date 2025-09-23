@@ -1,6 +1,7 @@
 #include "Precompiled.h"
 #include "Core.h"
 #include "WindowSystem.h"
+#include "CollisionSystem.h"
 #include "Input.h"
 #include <iostream>
 
@@ -14,10 +15,11 @@ int main()
     // Create and add systems
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
-
+    Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     engine.AddSystem(windowSys);
     engine.AddSystem(inputSys);
-
+    collisionSys->SetInput(inputSys);
+    engine.AddSystem(collisionSys);
     // Initialize all systems
     engine.Initialize();
 
