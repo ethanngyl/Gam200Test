@@ -9,5 +9,5 @@ public:
     virtual ~InterfaceSystem() {}
     virtual void Initialize() = 0;
     virtual void Update(float dt) = 0;
-    virtual void SendMessage(Message* message) = 0;
+    virtual void SendEngineMessage(Message* message) = 0;
 };

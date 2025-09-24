@@ -44,7 +44,7 @@ namespace Framework
         //}
     }
 
-    void WindowSystem::SendMessage(Message* message)
+    void WindowSystem::SendEngineMessage(Message* message)
     {
         // Handle any messages sent to the window system
         if (message->MessageId == Status::Quit)

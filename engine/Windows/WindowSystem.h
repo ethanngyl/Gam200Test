@@ -11,7 +11,7 @@ namespace Framework {
         // ISystem interface
         virtual void Initialize() override;
         virtual void Update(float dt) override;
-        virtual void SendMessage(Message* message) override;
+        virtual void SendEngineMessage(Message* message) override;
 
     private:
         bool WindowOpen;

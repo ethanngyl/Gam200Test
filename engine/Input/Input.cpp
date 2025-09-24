@@ -60,7 +60,7 @@ namespace Framework
         if (IsKeyPressed(KEY_4)) std::cout << "4 pressed - Slot 4!\n";
     }
 
-    void InputSystem::SendMessage(Message* message)
+    void InputSystem::SendEngineMessage(Message* message)
     {
         // Handle messages sent to input system
         if (message->MessageId == Status::Quit)
