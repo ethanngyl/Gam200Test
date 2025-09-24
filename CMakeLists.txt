@@ -57,7 +57,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 # Include directories for the project (fixed to use directory, not files)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
-    ${SRC_DIR}/Graphics   
     ${CMAKE_SOURCE_DIR}/engine
     ${CMAKE_SOURCE_DIR}/engine/Collision
     ${CMAKE_SOURCE_DIR}/engine/Graphics  
@@ -66,7 +65,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/engine/Systems
     ${CMAKE_SOURCE_DIR}/engine/Windows
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${glad_SOURCE_DIR}/include
 )
 
 # ======================= Compiler Settings =========================
