@@ -1,18 +1,19 @@
+#include "Precompiled.h"
 #include "Shader.h"
 #include <glad/glad.h>
-#include <fstream>
-#include <sstream>
-#include <iostream>
 
 namespace Framework {
 
     Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
+        std::cout << "\n\n==============================================\n";
+        std::cout << "    VERTEX & FRAGMENT SHADER SRC FILES\n";
+        std::cout << "==============================================\n\n";
+
         std::string vertexSrc = LoadFile(vertexPath);
         std::cout << "Vertex Shader Source:\n" << vertexSrc << "\n";
 
         std::string fragmentSrc = LoadFile(fragmentPath);
         std::cout << "Fragment Shader Source:\n" << fragmentSrc << "\n";
-
 
         unsigned int vs = Compile(GL_VERTEX_SHADER, vertexSrc);
         unsigned int fs = Compile(GL_FRAGMENT_SHADER, fragmentSrc);
@@ -69,11 +70,11 @@ namespace Framework {
         if (!success) {
             char infoLog[512];
             glGetShaderInfoLog(shader, 512, nullptr, infoLog);
-            std::cerr << (type == GL_VERTEX_SHADER ? "Vertex" : "Fragment")
+            std::cerr << (type == GL_VERTEX_SHADER ? "\nVertex" : "Fragment")
                 << " shader compile error:\n" << infoLog << "\n";
         }
         else {
-            std::cout << (type == GL_VERTEX_SHADER ? "Vertex" : "Fragment")
+            std::cout << (type == GL_VERTEX_SHADER ? "\nVertex" : "Fragment")
                 << " shader compiled successfully\n";
         }
 

@@ -1,23 +1,22 @@
 #include "Precompiled.h"
 #include "GraphicsSystem.h"
-#include "WindowSystem.h"
 #include "Message.h"
-#include "Core.h"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+
 #include "Shader.h"
 #include "Mesh.h"
 #include "MeshFactory.h"
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <iostream>
 
-namespace Framework {
-
+namespace Framework
+{
     GraphicsSystem::GraphicsSystem()
         : window(nullptr), shader(nullptr), triangleMesh(nullptr)
     {
     }
 
-    GraphicsSystem::~GraphicsSystem() {
+    GraphicsSystem::~GraphicsSystem()
+    {
         std::cout << "GraphicsSystem: Cleaning up...\n";
         for (auto mesh : meshes) {
             if (mesh) {
@@ -27,7 +26,8 @@ namespace Framework {
         delete shader;
     }
 
-    void GraphicsSystem::Initialize() {
+    void GraphicsSystem::Initialize()
+    {
         std::cout << "GraphicsSystem: Initializing...\n";
 
         if (!window) {
@@ -45,11 +45,15 @@ namespace Framework {
         }
 
         // Print OpenGL information for debugging
+        std::cout << "\n\n==============================================\n";
+        std::cout << "        PRINTING OPENGL INFORMATION\n";
+        std::cout << "==============================================\n\n";
         std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << "\n";
         std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << "\n";
         std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
         std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
 
+        // Viewport
         glViewport(0, 0, 800, 600);
 
         // Load shaders with better error handling
@@ -73,17 +77,14 @@ namespace Framework {
         std::cout << "Multiple meshes created successfully\n";
 
         // Just draw the first mesh on init
-        BeginFrame();
         shader->Bind();
         if (!meshes.empty()) {
             meshes[currentMeshIndex]->Draw();
         }
-        EndFrame();
-
-        std::cout << "GraphicsSystem: Initialized successfully - test frame rendered\n";
     }
 
-    void GraphicsSystem::Update(float dt) {
+    void GraphicsSystem::Update(float dt)
+    {
         if (!window) {
             std::cerr << "GraphicsSystem: No window in Update!\n";
             return;
@@ -119,19 +120,22 @@ namespace Framework {
         ProcessInput();
     }
 
-    void GraphicsSystem::SendMessage(Message* message) {
+    void GraphicsSystem::SendEngineMessage(Message* message)
+    {
         if (message->MessageId == Status::Quit) {
             std::cout << "GraphicsSystem: Received quit message\n";
         }
     }
 
-    void GraphicsSystem::BeginFrame() {
+    void GraphicsSystem::BeginFrame()
+    {
         // Use a brighter background color for debugging
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);  // Bright blue instead of dark
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    void GraphicsSystem::EndFrame() {
+    void GraphicsSystem::EndFrame()
+    {
         glfwSwapBuffers(window);
         glfwPollEvents();  // Important: poll events here too
     }

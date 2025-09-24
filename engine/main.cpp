@@ -1,16 +1,14 @@
 #include "Precompiled.h"
 #include "Core.h"
-#include "WindowSystem.h"
-#include "GraphicsSystem.h"
-#include "Input.h"
+#include "Windows/WindowSystem.h"
+#include "Graphics/GraphicsSystem.h"
+#include "Input/Input.h"
 #include "Collision/CollisionSystem.h"
-#include <iostream>
 
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
-
 
 int main()
 {
@@ -34,12 +32,8 @@ int main()
     // Create the core engine
     Framework::CoreEngine engine;
 
-    // Create and add systems
+    // Create window system first
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
-    Framework::InputSystem* inputSys = new Framework::InputSystem();
-    Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
-
-    std::cout << "Systems created. Initializing WindowSystem...\n";
 
     // Initialize WindowSystem first to create the window
     windowSys->Initialize();
@@ -49,22 +43,28 @@ int main()
         return -1;
     }
 
-    std::cout << "Window created. Setting up GraphicsSystem...\n";
+    std::cout << "Systems created. Initializing WindowSystem...\n";
+
+    // Create other systems
+    Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
+    Framework::InputSystem* inputSys = new Framework::InputSystem();
+    Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
+    Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
+
+    engine.AddSystem(graphicsSys);
+    engine.AddSystem(inputSys);
+    engine.AddSystem(collisionSys);
+    engine.AddSystem(mathSys);
+
+    collisionSys->SetInput(inputSys);
 
     // Then set the window for GraphicsSystem
     graphicsSys->SetWindow(windowSys->GetWindow());
 
-    engine.AddSystem(graphicsSys);
-    Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
-    Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
-    engine.AddSystem(mathSys);
-    engine.AddSystem(windowSys);
-    engine.AddSystem(inputSys);
+    std::cout << "Window created. Setting up GraphicsSystem...\n";
 
     std::cout << "Systems added. Initializing engine...\n";
 
-    collisionSys->SetInput(inputSys);
-    engine.AddSystem(collisionSys);
     // Initialize all systems
     engine.Initialize();
 
@@ -82,7 +82,6 @@ int main()
 
 	// Shutdown debug tools
     eng::debug::Log::shutdown(); 
-
 
     return 0;
 }

@@ -30,20 +30,13 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
-"engine/Windows/WindowSystem.cpp"
 "engine/Core.cpp"
 "engine/Main.cpp"
-"engine/Input.h"
-"engine/Input.cpp"
+"engine/Windows/WindowSystem.cpp"
 "engine/Graphics/GraphicsSystem.cpp"
-"engine/Graphics/GraphicsSystem.h"
 "engine/Graphics/Shader.cpp"
-"engine/Graphics/Shader.h"
 "engine/Graphics/Mesh.cpp"
-"engine/Graphics/Mesh.h"
 "engine/Graphics/MeshFactory.cpp"
-"engine/Graphics/MeshFactory.h")
-"engine/Main.cpp" 
 "engine/Input/Input.cpp" 
 "engine/Math/Matrix3x3.cpp"
 "engine/Math/Vector2D.cpp")

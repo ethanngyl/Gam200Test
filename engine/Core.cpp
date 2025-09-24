@@ -93,8 +93,6 @@ namespace Framework
         }
     }
 
-
-
     void CoreEngine::BroadcastMessage(Message* message)
     {
         // Handle quit message
