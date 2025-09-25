@@ -2,29 +2,33 @@
 #include "Core.h"
 #include "Collision/CollisionSystem.h"
 #include <iostream>
-
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
 
-
-int main()
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+    // Allocate console for debug output in debug builds
+#ifdef _DEBUG
+    AllocConsole();
+    freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
+    freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
+    freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
+#endif
+
     std::cout << "Starting Game Engine...\n";
 
     // ------------ Debug tools bootstrap ------------//
     eng::debug::LogConfig logCfg;
     logCfg.level = eng::debug::LogLevel::Info;
-    logCfg.filePath = "engine.log";     
-    logCfg.useConsole = true;          
-    logCfg.useFile = true;            
-    logCfg.usePlatformOutput = true;    
-    logCfg.showSourceInfo = false;     
-    eng::debug::Log::init(logCfg);     
-
+    logCfg.filePath = "engine.log";
+    logCfg.useConsole = true;
+    logCfg.useFile = true;
+    logCfg.usePlatformOutput = true;
+    logCfg.showSourceInfo = false;
+    eng::debug::Log::init(logCfg);
     eng::debug::PerfViewer::set_print_interval(1.0);
-
     eng::debug::CrashLogger::install_handlers();
     // --------- End Of Debug tools bootstrap ---------//
 
@@ -36,13 +40,13 @@ int main()
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
-    Framework::RenderSystem* renderSys = new Framework::RenderSystem();
+
     engine.AddSystem(mathSys);
     engine.AddSystem(windowSys);
     engine.AddSystem(inputSys);
     collisionSys->SetInput(inputSys);
     engine.AddSystem(collisionSys);
-    engine.AddSystem(renderSys);
+
     // Initialize all systems
     engine.Initialize();
 
@@ -58,9 +62,12 @@ int main()
 
     std::cout << "Engine shutdown complete.\n";
 
-	// Shutdown debug tools
-    eng::debug::Log::shutdown(); 
+    // Shutdown debug tools
+    eng::debug::Log::shutdown();
 
+#ifdef _DEBUG
+    FreeConsole();
+#endif
 
     return 0;
 }

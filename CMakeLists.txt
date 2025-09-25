@@ -72,7 +72,9 @@ elseif (MSVC)
 endif()
 
 # ======================= Platform-Specific Linking =========================
-
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
+    WIN32_EXECUTABLE TRUE  # This makes it a Windows GUI app
+)
 # Add platform-specific OpenGL libraries
 if(WIN32)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE opengl32)
