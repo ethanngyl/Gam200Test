@@ -31,7 +31,7 @@ file(GLOB_RECURSE APP_SRC
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
 "engine/Core.cpp"
-"engine/Main.cpp"
+"engine/main.cpp"
 "engine/Windows/WindowSystem.cpp"
 "engine/Graphics/GraphicsSystem.cpp"
 "engine/Graphics/Shader.cpp"
