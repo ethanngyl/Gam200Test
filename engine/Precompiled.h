@@ -7,6 +7,8 @@
 #include <memory>
 #include <cassert>
 #include <cmath>
+#include <fstream>
+#include <sstream>
 
 //Components
 #include "WindowSystem.h"
@@ -24,10 +26,11 @@
 #endif
 
 // OpenGL headers (since you have GLRenderer)
-#ifdef USE_OPENGL
-#include <GL/gl.h>
-#include <GL/glu.h>
-#endif
+//#ifdef USE_OPENGL
+//#include <GL/gl.h>
+//#include <GL/glu.h>
+//#include <glad/glad.h>
+//#endif
 
 // Useful debug macros
 #ifdef _DEBUG

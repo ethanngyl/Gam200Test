@@ -1,7 +1,7 @@
 #pragma once
+#include "Precompiled.h"
 #include "Interface.h"
 #include "Message.h"
-#include <vector>
 
 namespace Framework
 {

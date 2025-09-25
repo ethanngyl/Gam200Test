@@ -77,6 +77,21 @@ macro(import_glew)
     endif()
 endmacro()
 
+# Macro to import GLAD
+macro(import_glad)
+    if(NOT TARGET glad)
+        message(STATUS "Importing GLAD...")
+        FetchContent_Declare(
+            glad
+            GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+            GIT_TAG master
+        )
+        FetchContent_MakeAvailable(glad)
+        message(STATUS "GLAD imported successfully")
+    endif()
+endmacro()
+
+
 # Macro to import ImGui
 macro(import_imgui)
     if(NOT TARGET imgui)
@@ -107,8 +122,11 @@ macro(import_imgui)
         )
         
         # ImGui needs GLFW and OpenGL
-        target_link_libraries(imgui PUBLIC glfw libglew_static)
-        target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLEW)
+        #target_link_libraries(imgui PUBLIC glfw libglew_static)
+        #target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLEW)
+        target_link_libraries(imgui PUBLIC glfw glad)
+        target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLAD)
+
         
         message(STATUS "ImGui imported successfully")
     endif()
@@ -119,9 +137,10 @@ function(importDependencies)
     message(STATUS "=== Importing Dependencies ===")
     
     # Import dependencies in correct order (dependencies first)
+    import_glad()
     import_glfw()
     import_glm() 
-    import_glew()
+    #import_glew()
     import_imgui()
     
     message(STATUS "=== All Dependencies Imported ===")

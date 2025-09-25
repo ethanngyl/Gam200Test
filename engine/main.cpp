@@ -1,12 +1,15 @@
 #include "Precompiled.h"
 #include "Core.h"
+#include "Windows/WindowSystem.h"
+#include "Graphics/GraphicsSystem.h"
+#include "Input/Input.h"
 #include "Collision/CollisionSystem.h"
-#include <iostream>
+
+
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
-
 int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPSTR lpCmdLine,
@@ -19,6 +22,7 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
     freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
 #endif
+
 
     std::cout << "Starting Game Engine...\n";
 
@@ -38,17 +42,37 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     // Create the core engine
     Framework::CoreEngine engine;
 
-    // Create and add systems
+    // Create window system first
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
+
+    // Initialize WindowSystem first to create the window
+    windowSys->Initialize();
+
+    if (!windowSys->GetWindow()) {
+        std::cerr << "Failed to create window!\n";
+        return -1;
+    }
+
+    std::cout << "Systems created. Initializing WindowSystem...\n";
+
+    // Create other systems
+    Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
 
-    engine.AddSystem(mathSys);
-    engine.AddSystem(windowSys);
+    engine.AddSystem(graphicsSys);
     engine.AddSystem(inputSys);
-    collisionSys->SetInput(inputSys);
     engine.AddSystem(collisionSys);
+    engine.AddSystem(mathSys);
+
+
+    // Then set the window for GraphicsSystem
+    graphicsSys->SetWindow(windowSys->GetWindow());
+
+    std::cout << "Window created. Setting up GraphicsSystem...\n";
+
+    std::cout << "Systems added. Initializing engine...\n";
 
     // Initialize all systems
     engine.Initialize();
@@ -67,10 +91,10 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
 
     // Shutdown debug tools
     eng::debug::Log::shutdown();
-
 #ifdef _DEBUG
     FreeConsole();
 #endif
+
 
     return 0;
 }
