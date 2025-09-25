@@ -5,11 +5,11 @@
 #include "Input/Input.h"
 #include "Collision/CollisionSystem.h"
 
-
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
+
 int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPSTR lpCmdLine,
@@ -22,7 +22,6 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
     freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
 #endif
-
 
     std::cout << "Starting Game Engine...\n";
 
@@ -66,7 +65,6 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
 
-
     // Then set the window for GraphicsSystem
     graphicsSys->SetWindow(windowSys->GetWindow());
 
@@ -94,7 +92,6 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
 #ifdef _DEBUG
     FreeConsole();
 #endif
-
 
     return 0;
 }
