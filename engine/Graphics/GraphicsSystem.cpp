@@ -1,7 +1,8 @@
 #include "Precompiled.h"
 #include "GraphicsSystem.h"
 #include "Message.h"
-#include <glad/glad.h>
+#include "GL/glew.h"
+#include "GL/gl.h"
 #include <GLFW/glfw3.h>
 
 #include "Shader.h"
@@ -38,10 +39,11 @@ namespace Framework
         // Make the window's context current
         glfwMakeContextCurrent(window);
 
-        // Initialize GLAD
-        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-            std::cerr << "GLAD init failed\n";
-            return;
+        // After OpenGL context creation
+        glewExperimental = GL_TRUE; // Ensures access to modern features
+        if (glewInit() != GLEW_OK) {
+            std::cerr << "GLEW Initialization failed!" << std::endl;
+           // return -1;
         }
 
         // Print OpenGL information for debugging

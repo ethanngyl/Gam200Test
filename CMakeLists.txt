@@ -45,10 +45,9 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 
 # Link libraries (fixed syntax)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
-    glad    
     glfw
     glm
-    #libglew_static
+    libglew_static
     imgui
 )
 
