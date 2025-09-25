@@ -3,10 +3,10 @@
 #include "Collision.h"
 #include <iostream>
 #include "Input.h"
-
+#include "Math/Vector2D.h"
 
 namespace Framework {
-
+    
   // A tiny demo/test harness around your Collision utilities.
   class CollisionSystem : public InterfaceSystem
   {
@@ -28,10 +28,10 @@ namespace Framework {
     Collider rectBottom;
 
     float moveSpeed = 120.0f; //px per sec
-
+    
     // Simple velocities for the demo
-    Vec2 velCircle{ +30.0f, 0.0f };  // px/sec to the right
-    Vec2 velRect  { -30.0f, 0.0f };  // px/sec to the left
+    Vector2D velCircle{ +30.0f, 0.0f };  // px/sec to the right
+    Vector2D velRect  { -30.0f, 0.0f };  // px/sec to the left
 
     bool collidedLastFrame{false};
     InputSystem* m_input{ nullptr };

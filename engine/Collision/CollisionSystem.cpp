@@ -1,17 +1,17 @@
 #include "CollisionSystem.h"
 #include "Message.h"
-
+#include "Math/Vector2D.h"
 namespace Framework {
 
 void CollisionSystem::Initialize()
 {
   // Start them apart horizontally; y = 0
-  circle = Collider::create_circle(/*radius*/ 20.0f, /*pos*/ Vec2{-150.0f, 0.0f});
-  rectRight   = Collider::create_rect(/*w*/ 60.0f, /*h*/ 40.0f, /*pos*/ Vec2{+150.0f, 0.0f});
-  rectLeft = Collider::create_rect(60.0f, 40.0f, Vec2{ -300.0f, 0.0f });
-  rectTop = Collider::create_rect(60.0f, 40.0f, Vec2{ -150.0f,  150.0f });
-  rectBottom = Collider::create_rect(60.0f, 40.0f, Vec2{ -150.0f,  -150.0f});
-
+  circle = Collider::create_circle(/*radius*/ 20.0f, /*pos*/ Vector2D{ -150.0f, 0.0f });
+  rectRight   = Collider::create_rect(/*w*/ 60.0f, /*h*/ 40.0f, /*pos*/ Vector2D{150.0f, 0.0f});
+  rectLeft = Collider::create_rect(60.0f, 40.0f, Vector2D{ -300.0f, 0.0f });
+  rectTop = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f,  150.0f });
+  rectBottom = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f,  -150.0f});
+  
   std::cout << "CollisionSystem: Initialized (WASD to move circle; 4 static rects)\n";
   printCollider("Circle", circle);
   printCollider("RectRight", rectRight);
@@ -28,7 +28,7 @@ void CollisionSystem::Update(float dt)
   //move(circle, velCircle, dt);
   //move(rect,   velRect,   dt);
 
-      // 1) Continuous movement while keys are held (InputSystem already prints one-shot ¡°pressed¡± logs)
+      // 1) Continuous movement while keys are held (InputSystem already prints one-shot ï¿½ï¿½pressedï¿½ï¿½ logs)
     float dx = 0.0f, dy = 0.0f;
     if (m_input->IsKeyDown(KEY_D)) dx += moveSpeed * dt;
     if (m_input->IsKeyDown(KEY_A)) dx -= moveSpeed * dt;

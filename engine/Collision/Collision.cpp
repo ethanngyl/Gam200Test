@@ -1,7 +1,7 @@
 #include "Collision.h"
 //#include <cmath>
 //#include <algorithm>
-
+#include "Math/Vector2D.h"
 
 bool circle_to_circle (const Collider& a, const Collider& b) {
     float dx = a.position.x - b.position.x;
@@ -50,7 +50,7 @@ bool circle_to_rect (const Collider& circle, const Collider& rect){
 	return distanceSquared <= (circle.circle.radius * circle.circle.radius);
 }
 
-bool point_in_circle(const Vec2& point, const Collider& circle) {
+bool point_in_circle(const Framework::Vector2D point, const Collider& circle) {
     
     float dx = point.x - circle.position.x;
     float dy = point.y - circle.position.y;
@@ -59,7 +59,7 @@ bool point_in_circle(const Vec2& point, const Collider& circle) {
     return distance <= radiusSqaured; 
 }
 
-bool point_in_rect(const Vec2& point, const Collider& rect) {
+bool point_in_rect(const Framework::Vector2D point, const Collider& rect) {
     // centered AABB with y-up: top = y - h/2, bottom = y + h/2 (matches your rect_to_rect)
     float left   = rect.position.x - rect.rect.width  * 0.5f;
     float right  = rect.position.x + rect.rect.width  * 0.5f;
@@ -71,7 +71,7 @@ bool point_in_rect(const Vec2& point, const Collider& rect) {
 }
 
 
-bool point_in_collider(const Vec2& point, const Collider& c) {
+bool point_in_collider(const Framework::Vector2D point, const Collider& c) {
     if (c.shapeType == ShapeType::Circle) return point_in_circle(point, c);
     // else Rect
     return point_in_rect(point, c);
