@@ -25,18 +25,7 @@ macro(import_glfw)
 endmacro()
 
 # Macro to import GLM
-macro(import_glm)
-    if(NOT TARGET glm)
-        message(STATUS "Importing GLM...")
-        FetchContent_Declare(
-            glm
-            GIT_REPOSITORY https://github.com/g-truc/glm.git
-            GIT_TAG 0.9.9.8
-        )
-        FetchContent_MakeAvailable(glm)
-        message(STATUS "GLM imported successfully")
-    endif()
-endmacro()
+
 
 # Macro to import GLEW
 macro(import_glew)
@@ -120,7 +109,7 @@ function(importDependencies)
     
     # Import dependencies in correct order (dependencies first)
     import_glfw()
-    import_glm() 
+    # import_glm() 
     import_glew()
     import_imgui()
     
