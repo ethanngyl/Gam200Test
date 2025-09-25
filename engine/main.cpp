@@ -90,6 +90,8 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     // Shutdown debug tools
     eng::debug::Log::shutdown();
 #ifdef _DEBUG
+    std::cout << "Press Enter to close console...\n";
+    std::cin.get(); // Wait for actual Enter key
     FreeConsole();
 #endif
 
