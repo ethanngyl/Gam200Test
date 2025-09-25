@@ -11,6 +11,8 @@ namespace Framework {
         void Bind() const;
         void Unbind() const;
 
+        unsigned int GetID() const;
+
     private:
         unsigned int id;
 

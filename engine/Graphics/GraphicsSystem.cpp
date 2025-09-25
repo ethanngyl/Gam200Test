@@ -9,6 +9,7 @@
 #include "Mesh.h"
 #include "MeshFactory.h"
 
+
 namespace Framework
 {
     GraphicsSystem::GraphicsSystem()
@@ -74,6 +75,11 @@ namespace Framework
         meshes.push_back(CreateLine());
         meshes.push_back(CreateCircle(40, 0.5f));
 
+        meshColors.push_back(glm::vec3(1.0f, 0.0f, 0.0f)); // Red
+        meshColors.push_back(glm::vec3(0.0f, 1.0f, 0.0f)); // Green
+        meshColors.push_back(glm::vec3(0.0f, 0.0f, 1.0f)); // Blue
+        meshColors.push_back(glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow
+
         currentMeshIndex = 0;  // start with first mesh
 
         std::cout << "Multiple meshes created successfully\n";
@@ -105,6 +111,8 @@ namespace Framework
         }
 
         shader->Bind();
+
+        SetCurrentMeshColor();
 
         if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
             if (meshes[currentMeshIndex])
@@ -171,10 +179,17 @@ namespace Framework
             if (allDeleted) {
                 // Recreate all meshes since all are deleted (reset)
                 meshes.clear();
+                meshColors.clear();
+
                 meshes.push_back(CreateTriangle());
                 meshes.push_back(CreateQuad());
                 meshes.push_back(CreateLine());
                 meshes.push_back(CreateCircle(40, 0.5f));
+
+                meshColors.push_back(glm::vec3(1.0f, 0.0f, 0.0f)); // Red
+                meshColors.push_back(glm::vec3(0.0f, 1.0f, 0.0f)); // Green
+                meshColors.push_back(glm::vec3(0.0f, 0.0f, 1.0f)); // Blue
+                meshColors.push_back(glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow
 
                 currentMeshIndex = 0;
             }
@@ -190,5 +205,17 @@ namespace Framework
         }
 
         dPressedLastFrame = dPressedNow;
+    }
+
+    void GraphicsSystem::SetCurrentMeshColor() {
+        if (!shader) return;
+
+        unsigned int shaderID = shader->GetID();  // Ensure this method exists
+        int colorLoc = glGetUniformLocation(shaderID, "uColor");
+
+        if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshColors.size()) {
+            glm::vec3 color = meshColors[currentMeshIndex];
+            glUniform3f(colorLoc, color.r, color.g, color.b);
+        }
     }
 }

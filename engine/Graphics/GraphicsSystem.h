@@ -1,5 +1,6 @@
 #pragma once
 #include "Interface.h"
+#include <glm/glm.hpp>
 
 // Forward declarations
 struct GLFWwindow;
@@ -26,10 +27,15 @@ namespace Framework {
         void EndFrame();
         void ProcessInput();
 
+        void SetCurrentMeshColor();
+
         GLFWwindow* window;
+
         Shader* shader;
+
         Mesh* triangleMesh;
         std::vector<Mesh*> meshes;
+        std::vector<glm::vec3> meshColors;
         int currentMeshIndex = 0;
     };
 }

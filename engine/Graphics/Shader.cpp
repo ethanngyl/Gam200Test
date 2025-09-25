@@ -48,6 +48,10 @@ namespace Framework {
         glUseProgram(0);
     }
 
+    unsigned int Shader::GetID() const {
+        return id;
+    }
+
     std::string Shader::LoadFile(const std::string& path) {
         std::ifstream file(path);
         if (!file) {
