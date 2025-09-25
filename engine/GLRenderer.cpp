@@ -1,3 +1,4 @@
+/*
 #include "GLRenderer.h"
 #include <cstring>
 #include "Graphics/Shader.h"
@@ -92,4 +93,10 @@ void GLRenderer::cleanup() {
         glDeleteVertexArrays(1, &vao);
         vao = 0;
     }
+    glfwTerminate();
+#endif
+
+    LOGI("OpenGL resources cleaned up");
 }
+
+*/

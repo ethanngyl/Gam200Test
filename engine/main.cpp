@@ -1,12 +1,14 @@
 #include "Precompiled.h"
 #include "Core.h"
+#include "Windows/WindowSystem.h"
+#include "Graphics/GraphicsSystem.h"
+#include "Input/Input.h"
 #include "Collision/CollisionSystem.h"
-#include <iostream>
+
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
-#include "RenderSystem.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 
@@ -37,19 +39,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Create the core engine
     Framework::CoreEngine engine;
 
-    // Create and add systems
+    // Create window system first
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
+
+    // Initialize WindowSystem first to create the window
+    windowSys->Initialize();
+
+    if (!windowSys->GetWindow()) {
+        std::cerr << "Failed to create window!\n";
+        return -1;
+    }
+
+    std::cout << "Systems created. Initializing WindowSystem...\n";
+
+    // Create other systems
+    Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
-    Framework::RenderSystem* renderSys = new Framework::RenderSystem();
 
+    engine.AddSystem(graphicsSys);
+    engine.AddSystem(inputSys);
+    engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
     engine.AddSystem(windowSys);
-    engine.AddSystem(inputSys);
-    collisionSys->SetInput(inputSys);
-    engine.AddSystem(collisionSys);
-    engine.AddSystem(renderSys);
+    // Then set the window for GraphicsSystem
+    graphicsSys->SetWindow(windowSys->GetWindow());
+
+    std::cout << "Window created. Setting up GraphicsSystem...\n";
+
+    std::cout << "Systems added. Initializing engine...\n";
 
     // Initialize all systems
     engine.Initialize();
@@ -68,7 +87,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Shutdown debug tools
     eng::debug::Log::shutdown();
-
 #ifdef _DEBUG
     FreeConsole();
 #endif

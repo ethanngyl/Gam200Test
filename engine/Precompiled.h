@@ -16,18 +16,29 @@
 #include <memory>
 #include <cassert>
 #include <cmath>
+#include <fstream>
+#include <sstream>
 
 //Components
 #include "WindowSystem.h"
 #include "Input.h"
 #include "MathTestSystem.h"
 #include "Vector2D.h"
+// Windows-specific headers (for timing and input)
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <mmsystem.h>    // For timeGetTime()
+#include <conio.h>       // For _kbhit() and _getch()
+#pragma comment(lib, "winmm.lib")  // Link timing library
+#endif
 
 // OpenGL headers (since you have GLRenderer)
-#ifdef USE_OPENGL
-#include <GL/gl.h>
-#include <GL/glu.h>
-#endif
+//#ifdef USE_OPENGL
+//#include <GL/gl.h>
+//#include <GL/glu.h>
+//#include <glad/glad.h>
+//#endif
 
 // Useful debug macros
 #ifdef _DEBUG

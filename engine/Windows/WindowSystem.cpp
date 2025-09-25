@@ -2,19 +2,20 @@
 #include "WindowSystem.h"
 #include "Message.h"
 #include "Core.h"
-#include <iostream>
-
+#include <GLFW/glfw3.h>
 
 namespace Framework
 {
-    WindowSystem::WindowSystem() : WindowOpen(false), window(nullptr)
+    WindowSystem::WindowSystem() : window(nullptr), WindowOpen(false)
     {
-        //WindowOpen = false;
     }
 
     WindowSystem::~WindowSystem()
     {
-        // Cleanup will go here later
+        if (window) {
+            glfwDestroyWindow(window);
+            glfwTerminate();
+        }
     }
 
     void WindowSystem::Initialize()
@@ -28,17 +29,17 @@ namespace Framework
         std::cout << "WindowSystem: Initializing...\n";
 
         if (!glfwInit()) {
-            std::cerr << "Failed to initialize GLFW!\n";
+            std::cerr << "GLFW init failed\n";
             return;
         }
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        // Create the window
-        window = glfwCreateWindow(800, 600, "My Engine Window", nullptr, nullptr);
+        window = glfwCreateWindow(800, 600, "Struct Squad Game Engine", nullptr, nullptr);
         if (!window) {
-            std::cerr << "Failed to create GLFW window!\n";
+            std::cerr << "Window creation failed\n";
             glfwTerminate();
             return;
         }
@@ -58,7 +59,8 @@ namespace Framework
         }
 
         WindowOpen = true;
-        std::cout << "WindowSystem: Window created!\n";
+
+        std::cout << "WindowSystem: Window created! Press 'q' + Enter to quit.\n";
     }
 
     void WindowSystem::Update(float dt)
@@ -100,5 +102,13 @@ namespace Framework
             }
             glfwTerminate();
         }
+        if (window) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+    }
+
+    bool WindowSystem::ShouldClose() const
+    {
+        return window ? glfwWindowShouldClose(window) : true;
     }
 }

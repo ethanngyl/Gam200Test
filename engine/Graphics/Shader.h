@@ -1,25 +1,21 @@
 #pragma once
-#include <string>
-#include <gl/glew.h>
+#include "Precompiled.h"
 
-class Shader {
-public:
-    Shader() = default;
-    Shader(const std::string& vsPath, const std::string& fsPath);
-    ~Shader();
+namespace Framework {
 
-    Shader(const Shader&) = delete;
-    Shader& operator=(const Shader&) = delete;
-    Shader(Shader&&) noexcept;
-    Shader& operator=(Shader&&) noexcept;
+    class Shader {
+    public:
+        Shader(const std::string& vertexPath, const std::string& fragmentPath);
+        ~Shader();
 
-    void use() const;
-    GLint uniformLoc(const char* name) const;
-    GLuint id() const { return m_prog; }
+        void Bind() const;
+        void Unbind() const;
 
-private:
-    GLuint m_prog = 0;
+    private:
+        unsigned int id;
 
-    static std::string readFile(const std::string& path);
-    static GLuint compile(GLenum type, const std::string& src);
-};
+        std::string LoadFile(const std::string& path);
+        unsigned int Compile(unsigned int type, const std::string& source);
+    };
+
+}
