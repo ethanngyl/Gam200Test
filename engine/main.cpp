@@ -36,11 +36,13 @@ int main()
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
+    Framework::RenderSystem* renderSys = new Framework::RenderSystem();
     engine.AddSystem(mathSys);
     engine.AddSystem(windowSys);
     engine.AddSystem(inputSys);
     collisionSys->SetInput(inputSys);
     engine.AddSystem(collisionSys);
+    engine.AddSystem(renderSys);
     // Initialize all systems
     engine.Initialize();
 

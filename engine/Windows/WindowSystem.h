@@ -1,5 +1,7 @@
 #pragma once
 #include "Interface.h"
+#include <GL/glew.h>  
+#include <GLFW/glfw3.h> 
 
 namespace Framework {
     class WindowSystem : public InterfaceSystem
@@ -15,5 +17,6 @@ namespace Framework {
 
     private:
         bool WindowOpen;
+        GLFWwindow* window;
     };
 }

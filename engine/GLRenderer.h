@@ -2,6 +2,7 @@
 #define GLRENDERER_H
 
 #include "Platform.h"
+#include "Graphics/Shader.h"
 
 class GLRenderer {
 public:
@@ -24,9 +25,10 @@ private:
     bool createBuffers();
 
     // OpenGL variables
-    GLuint program;
-    GLuint vertexShader;
-    GLuint fragmentShader;
+    //GLuint program;
+    //GLuint vertexShader;
+    //GLuint fragmentShader;
+    Shader shader;
     GLuint vbo;
     GLuint vao;
 
