@@ -246,10 +246,8 @@ namespace Framework {
     void TextSystem::ensure_demo_once() {
         if (m_demoShown) return;
 
-        // OPTION B: auto-load fonts from folder; pick first as default if any
         LoadFontsFromFolder("Fonts"); // drop your .ttf/.otf here
         if (!m_activeFont.has_value()) {
-            // If nothing found, set a placeholder logical name
             m_activeFont = "Default";
         }
 

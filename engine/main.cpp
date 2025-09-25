@@ -6,6 +6,7 @@
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
+#include "Text/TextSystem.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -40,12 +41,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
+	Framework::TextSystem* textSys = new Framework::TextSystem();
 
     engine.AddSystem(mathSys);
     engine.AddSystem(windowSys);
     engine.AddSystem(inputSys);
     collisionSys->SetInput(inputSys);
     engine.AddSystem(collisionSys);
+	engine.AddSystem(textSys);
 
     // Initialize all systems
     engine.Initialize();
