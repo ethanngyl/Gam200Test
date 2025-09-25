@@ -208,14 +208,23 @@ namespace Framework
     }
 
     void GraphicsSystem::SetCurrentMeshColor() {
-        if (!shader) return;
+        if (!shader || currentMeshIndex < 0 || currentMeshIndex >= (int)meshColors.size()) return;
 
-        unsigned int shaderID = shader->GetID();  // Ensure this method exists
-        int colorLoc = glGetUniformLocation(shaderID, "uColor");
+        GLuint shaderID = shader->GetID();
+        GLint colorLoc = glGetUniformLocation(shaderID, "uColor");
 
-        if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshColors.size()) {
-            glm::vec3 color = meshColors[currentMeshIndex];
-            glUniform3f(colorLoc, color.r, color.g, color.b);
+        glm::vec3 baseColor = meshColors[currentMeshIndex];
+        glm::vec3 targetColor = glm::vec3(1.0f) - baseColor; // Invert color as a target, just for demo
+
+        if (interpolateColor) {
+            colorLerpTime += colorLerpSpeed * 0.016f; // assuming 60 FPS or pass dt
+            if (colorLerpTime > 1.0f) colorLerpTime = 0.0f;
+
+            glm::vec3 result = glm::mix(baseColor, targetColor, colorLerpTime);
+            glUniform3f(colorLoc, result.r, result.g, result.b);
+        }
+        else {
+            glUniform3f(colorLoc, baseColor.r, baseColor.g, baseColor.b);
         }
     }
 }

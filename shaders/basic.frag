@@ -1,7 +1,8 @@
 #version 450 core
+
+in vec3 vertexColor;
 out vec4 FragColor;
-uniform vec3 uColor;
 
 void main() {
-    FragColor = vec4(uColor, 1.0);  // Use passed-in color
+    FragColor = vec4(vertexColor, 1.0);  // Use interpolated color
 }

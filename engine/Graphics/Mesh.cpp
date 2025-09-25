@@ -5,7 +5,8 @@ namespace Framework {
     Mesh::Mesh(const std::vector<float>& vertices, GLenum drawMode)
         : VAO(0), VBO(0), vertices(vertices), drawMode(drawMode)
     {
-        vertexCount = static_cast<unsigned int>(vertices.size() / 3); // 3 = vec3 pos
+        // Now each vertex is 6 floats (3 position + 3 color)
+        vertexCount = static_cast<unsigned int>(vertices.size() / 6);
 
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
@@ -13,9 +14,15 @@ namespace Framework {
         Bind();
 
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
-            vertices.data(), GL_DYNAMIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+            vertices.data(), GL_STATIC_DRAW);
+
+        // Position attribute (location = 0)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
+
+        // Color attribute (location = 1)
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
 
         Unbind();
     }

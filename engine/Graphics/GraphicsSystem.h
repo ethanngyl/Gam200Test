@@ -37,5 +37,10 @@ namespace Framework {
         std::vector<Mesh*> meshes;
         std::vector<glm::vec3> meshColors;
         int currentMeshIndex = 0;
+
+        // Interpolation
+        float colorLerpTime = 0.0f;
+        float colorLerpSpeed = 0.25f;
+        bool interpolateColor = true; // Toggle if you want
     };
 }
