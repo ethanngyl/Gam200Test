@@ -101,8 +101,8 @@ namespace Framework
             {
                 // Tag systems (adjust to your actual system types/order)
                 eng::debug::Subsystem tag =
-                    (i == 0) ? eng::debug::Subsystem::Graphics :
-                    (i == 1) ? eng::debug::Subsystem::Gameplay :
+                    (i == 0) ? eng::debug::Subsystem::Gameplay :
+                    (i == 1) ? eng::debug::Subsystem::Graphics :
                     eng::debug::Subsystem::Other;
 
                 DBG_SCOPE_SYS("SystemUpdate", tag);
