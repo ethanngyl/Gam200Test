@@ -7,6 +7,9 @@
 #include "DebugComponents/Log.h"
 #include "DebugComponents/CrashLogger.h"
 
+#include <GLFW/glfw3.h>
+
+
 namespace Framework
 {
     // Define the global pointer
@@ -69,16 +72,26 @@ namespace Framework
 
     void CoreEngine::GameLoop()
     {
-        // Initialize timing for first frame
-        LastTime = timeGetTime();  // original timing anchor
+        LastTime = timeGetTime();
 
-        // Debug tools
         eng::debug::FpsCounter fps;
         fps.set_enable_logging(true);
 
+        // Attach window title updater
+        for (auto system : Systems)
+        {
+            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
+            {
+                GLFWwindow* win = windowSystem->GetWindow();
+                fps.set_title_updater([win](const char* title) {
+                    glfwSetWindowTitle(win, title);
+                    });
+            }
+        }
+
         while (GameActive)
         {
-            // Check if window should close
+            // Check for quit requests from the window system
             for (auto system : Systems) {
                 if (auto windowSystem = dynamic_cast<WindowSystem*>(system)) {
                     if (windowSystem->ShouldClose()) {
@@ -88,18 +101,17 @@ namespace Framework
                 }
             }
 
-            // Calculate delta time
+            // Delta time calculation
             unsigned currenttime = timeGetTime();
             float dt = (currenttime - LastTime) / 1000.0f;
             LastTime = currenttime;
 
-            // --- begin perf frame ---
+            // Begin profiling frame
             eng::debug::PerfViewer::begin_frame();
 
-            // --- per-system updates with scoped timers ---
+            // Update all systems with scoped timers
             for (unsigned i = 0; i < Systems.size(); ++i)
             {
-                // Tag systems (adjust to your actual system types/order)
                 eng::debug::Subsystem tag =
                     (i == 0) ? eng::debug::Subsystem::Graphics :
                     (i == 1) ? eng::debug::Subsystem::Gameplay :
@@ -109,23 +121,22 @@ namespace Framework
                 Systems[i]->Update(dt);
             }
 
-            // --- end perf frame ---
+            // End profiling frame
             eng::debug::PerfViewer::end_frame();
 
-            // --- FPS (uses your dt directly; logs once/sec) ---
+            // FPS counter (updates log + window title)
             fps.tick_with_dt(static_cast<double>(dt));
 
-            // --- CSV export when F2 is pressed (edge-triggered) ---
-            // 0x0001 bit = key transitioned from up to down since last call.
+            // Export CSV when F2 is pressed
             if (GetAsyncKeyState(VK_F2) & 0x0001)
             {
                 eng::debug::PerfViewer::export_csv("perf_recent.csv");
             }
-            // Crash-on-demand (F3). Fires once per key press.
+
+            // Crash on demand when F3 is pressed
             if (GetAsyncKeyState(VK_F3) & 0x0001) {
                 eng::debug::CrashLogger::force_crash_for_test();
             }
-
         }
     }
 
