@@ -13,6 +13,8 @@
 //Components
 #include "WindowSystem.h"
 #include "Input.h"
+#include "GraphicsSystem.h"
+#include "CollisionSystem.h"
 #include "MathTestSystem.h"
 #include "Vector2D.h"
 

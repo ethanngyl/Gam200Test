@@ -1,9 +1,5 @@
 #include "Precompiled.h"
 #include "Core.h"
-#include "Windows/WindowSystem.h"
-#include "Graphics/GraphicsSystem.h"
-#include "Input/Input.h"
-#include "Collision/CollisionSystem.h"
 
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
@@ -41,34 +37,18 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     // Create the core engine
     Framework::CoreEngine engine;
 
-    // Create window system first
+    // Create systems
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
-
-    // Initialize WindowSystem first to create the window
-    windowSys->Initialize();
-
-    if (!windowSys->GetWindow()) {
-        std::cerr << "Failed to create window!\n";
-        return -1;
-    }
-
-    std::cout << "Systems created. Initializing WindowSystem...\n";
-
-    // Create other systems
     Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
 
+    engine.AddSystem(windowSys);
     engine.AddSystem(graphicsSys);
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
-
-    // Then set the window for GraphicsSystem
-    graphicsSys->SetWindow(windowSys->GetWindow());
-
-    std::cout << "Window created. Setting up GraphicsSystem...\n";
 
     std::cout << "Systems added. Initializing engine...\n";
 
@@ -90,6 +70,8 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     // Shutdown debug tools
     eng::debug::Log::shutdown();
 #ifdef _DEBUG
+    std::cout << "Press Enter to close console...\n";
+    std::cin.get(); // Wait for actual Enter key
     FreeConsole();
 #endif
 

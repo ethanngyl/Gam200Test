@@ -1,6 +1,5 @@
 #include "Precompiled.h"
 #include "Core.h"
-#include "WindowSystem.h"
 
 #include "DebugComponents/PerfViewer.h"
 #include "DebugComponents/Trace.h"
@@ -27,8 +26,45 @@ namespace Framework
 
     void CoreEngine::Initialize()
     {
-        for (size_t i = 0; i < Systems.size(); ++i)
-            Systems[i]->Initialize();
+        //for (size_t i = 0; i < Systems.size(); ++i)
+        //    Systems[i]->Initialize();
+
+        // 1. First initialize WindowSystem (ensures window exists)
+        for (auto system : Systems)
+        {
+            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
+            {
+                windowSystem->Initialize();
+            }
+        }
+
+        // 2. Now set window for GraphicsSystem (after window is created)
+        GLFWwindow* glfwWin = nullptr;
+        for (auto system : Systems)
+        {
+            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
+            {
+                glfwWin = windowSystem->GetWindow();
+                break;
+            }
+        }
+
+        for (auto system : Systems)
+        {
+            if (auto graphicsSystem = dynamic_cast<GraphicsSystem*>(system))
+            {
+                graphicsSystem->SetWindow(glfwWin);
+            }
+        }
+
+        // 3. Initialize all systems (skip WindowSystem if already initialized)
+        for (auto system : Systems)
+        {
+            if (dynamic_cast<WindowSystem*>(system) == nullptr)
+            {
+                system->Initialize();
+            }
+        }
     }
 
     void CoreEngine::GameLoop()
