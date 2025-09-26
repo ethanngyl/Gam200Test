@@ -44,8 +44,8 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
 
-    engine.AddSystem(windowSys);
     engine.AddSystem(graphicsSys);
+    engine.AddSystem(windowSys);
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
