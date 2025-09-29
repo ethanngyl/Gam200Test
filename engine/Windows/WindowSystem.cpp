@@ -2,42 +2,25 @@
 #include "WindowSystem.h"
 #include "Message.h"
 #include "Core.h"
-#include <GLFW/glfw3.h>
+#include <iostream>
 
 namespace Framework
 {
-    WindowSystem::WindowSystem() : window(nullptr), WindowOpen(false)
+    WindowSystem::WindowSystem()
     {
+        WindowOpen = false;
     }
 
     WindowSystem::~WindowSystem()
     {
-        if (window) {
-            glfwDestroyWindow(window);
-            glfwTerminate();
-        }
+        // Cleanup will go here later
     }
 
     void WindowSystem::Initialize()
     {
         std::cout << "WindowSystem: Initializing...\n";
 
-        if (!glfwInit()) {
-            std::cerr << "GLFW init failed\n";
-            return;
-        }
-
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-        window = glfwCreateWindow(800, 600, "Struct Squad Game Engine", nullptr, nullptr);
-        if (!window) {
-            std::cerr << "Window creation failed\n";
-            glfwTerminate();
-            return;
-        }
-        
+        // For now, just simulate creating a window
         WindowOpen = true;
 
         std::cout << "WindowSystem: Window created! Press 'q' + Enter to quit.\n";
@@ -59,9 +42,6 @@ namespace Framework
         //        Framework::CORE->BroadcastMessage(&quitMsg);
         //    }
         //}
-
-        // Poll events here to keep window responsive
-        glfwPollEvents();
     }
 
     void WindowSystem::SendEngineMessage(Message* message)
@@ -72,13 +52,5 @@ namespace Framework
             std::cout << "WindowSystem: Received quit message, closing window.\n";
             WindowOpen = false;
         }
-        if (window) {
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-        }
-    }
-
-    bool WindowSystem::ShouldClose() const
-    {
-        return window ? glfwWindowShouldClose(window) : true;
     }
 }

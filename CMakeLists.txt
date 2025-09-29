@@ -30,13 +30,9 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
-"engine/Core.cpp"
-"engine/main.cpp"
 "engine/Windows/WindowSystem.cpp"
-"engine/Graphics/GraphicsSystem.cpp"
-"engine/Graphics/Shader.cpp"
-"engine/Graphics/Mesh.cpp"
-"engine/Graphics/MeshFactory.cpp"
+"engine/Core.cpp"
+"engine/Main.cpp" 
 "engine/Input/Input.cpp" 
 "engine/Math/Matrix3x3.cpp"
 "engine/Math/Vector2D.cpp")
@@ -46,7 +42,6 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 # Link libraries (fixed syntax)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     glfw
-    glm
     libglew_static
     imgui
 )
@@ -56,6 +51,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 # Include directories for the project (fixed to use directory, not files)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
+    ${SRC_DIR}/Graphics   
     ${CMAKE_SOURCE_DIR}/engine
     ${CMAKE_SOURCE_DIR}/engine/Collision
     ${CMAKE_SOURCE_DIR}/engine/Graphics  
