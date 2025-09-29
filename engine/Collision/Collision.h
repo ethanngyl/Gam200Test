@@ -11,6 +11,15 @@ enum class ShapeType { Circle, Rect };
 struct Circle { float radius {0.0f};};
 struct Rect   { float width{0.0f}, height{0.0f};};
 
+// ---- Window Bounds------------------------------------
+struct Bounds {
+    float left{ -320.0f };
+    float right{ 320.0f };
+    float bottom{ -240.0f };
+    float top{ 240.0f };
+};
+
+
 struct Collider {
     ShapeType shapeType{ShapeType::Circle};
     Framework::Vector2D position{};
@@ -44,3 +53,8 @@ bool point_in_rect    (const Framework::Vector2D point, const Collider& rect);
 bool point_in_collider(const Framework::Vector2D point, const Collider& c);
 
 bool check_collision (const Collider& a, const Collider& b);
+
+//check boundry for shapes
+bool circle_out_of_bounds(const Collider& c, const Bounds& b);
+bool rect_out_of_bounds(const Collider& r, const Bounds& b);
+bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b);

@@ -90,3 +90,23 @@ bool check_collision (const Collider& a, const Collider& b) {
     }
     return false; // Fallback case
 }
+
+bool circle_out_of_bounds(const Collider& c, const Bounds& b) {
+    float r = c.circle.radius;
+    return (c.position.x - r < b.left) || (c.position.x + r > b.right) ||
+        (c.position.y - r < b.bottom) || (c.position.y + r > b.top);
+}
+
+bool rect_out_of_bounds(const Collider& r, const Bounds& b) {
+    float halfW = r.rect.width * 0.5f;
+    float halfH = r.rect.height * 0.5f;
+    float left = r.position.x - halfW;
+    float right = r.position.x + halfW;
+    float bottom = r.position.y - halfH;
+    float top = r.position.y + halfH;
+    return (left < b.left) || (right > b.right) || (bottom < b.bottom) || (top > b.top);
+}
+
+bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b) {
+    return (p.x < b.left) || (p.x > b.right) || (p.y < b.bottom) || (p.y > b.top);
+}
