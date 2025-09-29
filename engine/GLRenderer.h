@@ -1,3 +1,4 @@
+/*
 #ifndef GLRENDERER_H
 #define GLRENDERER_H
 
@@ -69,3 +70,4 @@ void main() {
 };
 
 #endif // GLRENDERER_H 
+*/
