@@ -1,14 +1,16 @@
 #include "Precompiled.h"
 #include "Core.h"
-#include "Collision/CollisionSystem.h"
-#include <iostream>
+
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
 #include "Text/TextSystem.h"
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI WinMain(    _In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPSTR lpCmdLine,
+    _In_ int nShowCmd)
 {
     // Allocate console for debug output in debug builds
 #ifdef _DEBUG
@@ -36,19 +38,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Create the core engine
     Framework::CoreEngine engine;
 
-    // Create and add systems
+    // Create systems
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
+    Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
 	Framework::TextSystem* textSys = new Framework::TextSystem();
 
-    engine.AddSystem(mathSys);
     engine.AddSystem(windowSys);
+    engine.AddSystem(graphicsSys);
     engine.AddSystem(inputSys);
-    collisionSys->SetInput(inputSys);
     engine.AddSystem(collisionSys);
-	engine.AddSystem(textSys);
+    engine.AddSystem(mathSys);
+
+    std::cout << "Systems added. Initializing engine...\n";
 
     // Initialize all systems
     engine.Initialize();
@@ -67,8 +71,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // Shutdown debug tools
     eng::debug::Log::shutdown();
-
 #ifdef _DEBUG
+    std::cout << "Press Enter to close console...\n";
+    std::cin.get(); // Wait for actual Enter key
     FreeConsole();
 #endif
 

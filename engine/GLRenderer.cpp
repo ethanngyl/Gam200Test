@@ -1,3 +1,4 @@
+/*
 #include "GLRenderer.h"
 #include <cstring>
 
@@ -300,3 +301,5 @@ void GLRenderer::cleanup() {
 
     LOGI("OpenGL resources cleaned up");
 }
+
+*/

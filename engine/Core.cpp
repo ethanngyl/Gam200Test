@@ -26,8 +26,45 @@ namespace Framework
 
     void CoreEngine::Initialize()
     {
-        for (unsigned i = 0; i < Systems.size(); ++i)
-            Systems[i]->Initialize();
+        //for (size_t i = 0; i < Systems.size(); ++i)
+        //    Systems[i]->Initialize();
+
+        // 1. First initialize WindowSystem (ensures window exists)
+        for (auto system : Systems)
+        {
+            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
+            {
+                windowSystem->Initialize();
+            }
+        }
+
+        // 2. Now set window for GraphicsSystem (after window is created)
+        GLFWwindow* glfwWin = nullptr;
+        for (auto system : Systems)
+        {
+            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
+            {
+                glfwWin = windowSystem->GetWindow();
+                break;
+            }
+        }
+
+        for (auto system : Systems)
+        {
+            if (auto graphicsSystem = dynamic_cast<GraphicsSystem*>(system))
+            {
+                graphicsSystem->SetWindow(glfwWin);
+            }
+        }
+
+        // 3. Initialize all systems (skip WindowSystem if already initialized)
+        for (auto system : Systems)
+        {
+            if (dynamic_cast<WindowSystem*>(system) == nullptr)
+            {
+                system->Initialize();
+            }
+        }
     }
 
     void CoreEngine::GameLoop()
@@ -41,7 +78,17 @@ namespace Framework
 
         while (GameActive)
         {
-            // --- dt (seconds) ---
+            // Check if window should close
+            for (auto system : Systems) {
+                if (auto windowSystem = dynamic_cast<WindowSystem*>(system)) {
+                    if (windowSystem->ShouldClose()) {
+                        Message quitMsg(Status::Quit);
+                        BroadcastMessage(&quitMsg);
+                    }
+                }
+            }
+
+            // Calculate delta time
             unsigned currenttime = timeGetTime();
             float dt = (currenttime - LastTime) / 1000.0f;
             LastTime = currenttime;
@@ -81,8 +128,6 @@ namespace Framework
 
         }
     }
-
-
 
     void CoreEngine::BroadcastMessage(Message* message)
     {
