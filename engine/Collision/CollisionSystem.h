@@ -5,6 +5,33 @@
 #include "Input.h"
 #include "Math/Vector2D.h"
 
+/*
+===============================================================================
+ CollisionSystem.h
+------------------------------------------------------------------------------
+ Test cases for collision functions with simple interactive modes.
+
+ Controls
+   - T: toggle test mode
+   - 1 to 5: select mode (Circle-Rect, Rect-Rect, Circle-Circle, Point-Circle, Point-Rect)
+   - R: reset current test
+   - WASD: move active object/point
+
+ Responsibilities
+   - Spawn simple scenes for each test
+   - Step movement from input and run collision checks
+   - Track last-frame collision flag
+   
+
+ Notes
+   - y-up math, centered AABBs
+   - No dependency on debug HUD (console prints only)
+
+ Author: jiahao.zhou@digipen.edu
+ Date:   2025-09-30
+===============================================================================
+*/
+
 namespace Framework {
   
 

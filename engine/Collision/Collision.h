@@ -1,10 +1,26 @@
 #pragma once
 #include "Math/Vector2D.h"
 
-/*struct Vec2 {
-    float x{0.0f};
-    float y{0.0f};
-};*/
+/*
+===============================================================================
+ Collision.h
+------------------------------------------------------------------------------
+ Collider shapes, test helpers, and boundary utilities for collision system.
+
+ What¡¯s here
+   - Data: ShapeType, Circle, Rect, Collider (centered AABB for rect)
+   - Tests: circle_to_circle, rect_to_rect, circle_to_rect
+            point_in_circle, point_in_rect, point_in_collider, check_collision
+   - Bounds: Bounds struct + out_of_bounds and clamp helpers (y-up)
+
+ Notes
+   - Coordinate system: y-up (top = y + h/2, bottom = y - h/2)
+   - Rects are centered at position with width/height
+
+ Author: jiahao.zhou@digipen.edu
+ Date:   2025-09-30
+===============================================================================
+*/
 
 enum class ShapeType { Circle, Rect };
 

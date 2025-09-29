@@ -2,6 +2,33 @@
 #include "Message.h"
 #include "Math/Vector2D.h"
 //#include "input.h"
+
+/*
+===============================================================================
+ CollisionSystem.cpp
+------------------------------------------------------------------------------
+ Implementation of the interactive collision test harness.
+
+ Flow
+   - Initialize: show key help, no shapes until a mode is chosen
+   - Update:
+       * If T toggled: enable/disable test mode (clears scene)
+       * If active and no mode: lock to the first 1..5 pressed
+       * If mode running:
+           - WASD moves the active subject
+           - Run collision checks and print results
+       * R clears scene and unlocks mode selection
+
+ Implementation notes
+   - y-up coordinates (top = y + h/2)
+   - Console output only (no on-screen HUD)
+   
+
+ Author: jiahao.zhou@digipen.edu
+ Date:   2025-09-30
+===============================================================================
+*/
+
 namespace Framework {
 
 void CollisionSystem::Initialize()
