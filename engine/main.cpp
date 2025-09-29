@@ -52,6 +52,10 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
 
     std::cout << "Systems added. Initializing engine...\n";
 
+    // Pass a pointer of InputSystem to CollisionSystem.
+// This lets CollisionSystem call IsKeyDown() to move the circle for collider testing.
+    collisionSys->SetInput(inputSys);
+
     // Initialize all systems
     engine.Initialize();
 

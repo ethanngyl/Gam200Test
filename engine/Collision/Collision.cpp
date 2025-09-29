@@ -3,6 +3,7 @@
 //#include <algorithm>
 #include "Math/Vector2D.h"
 
+
 bool circle_to_circle (const Collider& a, const Collider& b) {
     float dx = a.position.x - b.position.x;
     float dy = a.position.y - b.position.y;
