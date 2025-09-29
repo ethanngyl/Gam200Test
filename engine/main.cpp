@@ -51,9 +51,6 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
-	engine.AddSystem(textSys);
-
-
 
     std::cout << "Systems added. Initializing engine...\n";
 
