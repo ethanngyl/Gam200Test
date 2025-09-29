@@ -6,6 +6,7 @@ uniform mat4 uModel;
 out vec3 vertexColor; // passed to fragment shader
 
 void main() {
+    gl_Position = vec4(aPos, 1.0);
     gl_Position = uModel * vec4(aPos, 1.0);;
     vertexColor = aColor;  // Pass color along
 }

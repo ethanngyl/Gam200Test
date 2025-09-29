@@ -48,6 +48,14 @@ namespace Framework {
         glUseProgram(0);
     }
 
+    void Shader::SetUniform3f(const std::string& name, float x, float y, float z) const {
+        int location = glGetUniformLocation(id, name.c_str());
+        if (location == -1) {
+            std::cerr << "Warning: uniform '" << name << "' not found!" << std::endl;
+        }
+        glUniform3f(location, x, y, z);
+    }
+
     unsigned int Shader::GetID() const {
         return id;
     }
