@@ -51,13 +51,14 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     movementSys->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
     movementSys->SetInputSystem(inputSys);
+	collisionSys->SetInput(inputSys);
 
     engine.AddSystem(windowSys);
     engine.AddSystem(movementSys);
     engine.AddSystem(graphicsSys);
     engine.AddSystem(inputSys);
-    //engine.AddSystem(collisionSys);
-    //engine.AddSystem(mathSys);
+    engine.AddSystem(collisionSys);
+    engine.AddSystem(mathSys);
 
     std::cout << "Systems added. Initializing engine...\n";
 
