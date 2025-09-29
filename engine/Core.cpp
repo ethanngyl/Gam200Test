@@ -91,7 +91,18 @@ namespace Framework
             // Calculate delta time
             unsigned currenttime = timeGetTime();
             float dt = (currenttime - LastTime) / 1000.0f;
+            // Ensure minimum dt to prevent zero
+            if (dt < 0.001f) dt = 0.016f;  // Default to ~60 FPS if too fast
+
+            // Debug timing
+            static int frameCount = 0;
+            if (frameCount++ % 60 == 0) {  // Print every 60 frames
+                std::cout << "LastTime: " << LastTime
+                    << ", CurrentTime: " << currenttime
+                    << ", dt: " << dt << "\n";
+            }
             LastTime = currenttime;
+
 
             // --- begin perf frame ---
             eng::debug::PerfViewer::begin_frame();
@@ -105,7 +116,7 @@ namespace Framework
                     (i == 1) ? eng::debug::Subsystem::Gameplay :
                     eng::debug::Subsystem::Other;
 
-                DBG_SCOPE_SYS("SystemUpdate", tag);
+                //DBG_SCOPE_SYS("SystemUpdate", tag);
                 Systems[i]->Update(dt);
             }
 
