@@ -54,6 +54,8 @@ namespace Framework
             if (auto graphicsSystem = dynamic_cast<GraphicsSystem*>(system))
             {
                 graphicsSystem->SetWindow(glfwWin);
+                graphicsSystem->AddViewport(0, 0, 400, 600);      // Left half
+                graphicsSystem->AddViewport(400, 0, 400, 600);    // Right half
             }
         }
 

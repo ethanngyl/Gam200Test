@@ -31,7 +31,7 @@ namespace Framework
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        window = glfwCreateWindow(800, 600, "Struct Squad Game Engine", nullptr, nullptr);
+        window = glfwCreateWindow(1000, 800, "Struct Squad Game Engine", nullptr, nullptr); // 800 x 600
         if (!window) {
             std::cerr << "Window creation failed\n";
             glfwTerminate();

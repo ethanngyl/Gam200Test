@@ -1,6 +1,7 @@
 #pragma once
 #include "Interface.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 // Forward declarations
 struct GLFWwindow;
@@ -22,6 +23,8 @@ namespace Framework {
 
         void SetWindow(GLFWwindow* window) { this->window = window; }
 
+        void AddViewport(int x, int y, int width, int height);
+
     private:
         void BeginFrame();
         void EndFrame();
@@ -42,5 +45,11 @@ namespace Framework {
         float colorLerpTime = 0.0f;
         float colorLerpSpeed = 0.25f;
         bool interpolateColor = true; // Toggle if you want
+
+        struct Viewport {
+            int x, y;
+            int width, height;
+        };
+        std::vector<Viewport> viewports;
     };
 }

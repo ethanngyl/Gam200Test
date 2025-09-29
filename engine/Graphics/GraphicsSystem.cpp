@@ -40,6 +40,16 @@ namespace Framework
         // Make the window's context current
         glfwMakeContextCurrent(window);
 
+        // Query framebuffer size from the window
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+
+        // Divide window into 4 equal quadrants
+        AddViewport(0, height / 2, width / 2, height / 2);         // Top-left
+        AddViewport(width / 2, height / 2, width / 2, height / 2); // Top-right
+        AddViewport(0, 0, width / 2, height / 2);                  // Bottom-left
+        AddViewport(width / 2, 0, width / 2, height / 2);          // Bottom-right
+
         // After OpenGL context creation
         glewExperimental = GL_TRUE; // Ensures access to modern features
         if (glewInit() != GLEW_OK) {
@@ -55,9 +65,6 @@ namespace Framework
         std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << "\n";
         std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
         std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
-
-        // Viewport
-        glViewport(0, 0, 800, 600);
 
         // Load shaders with better error handling
         try {
@@ -83,12 +90,6 @@ namespace Framework
         currentMeshIndex = 0;  // start with first mesh
 
         std::cout << "Multiple meshes created successfully\n";
-
-        // Just draw the first mesh on init
-        shader->Bind();
-        if (!meshes.empty()) {
-            meshes[currentMeshIndex]->Draw();
-        }
     }
 
     void GraphicsSystem::Update(float dt)
@@ -112,9 +113,17 @@ namespace Framework
 
         shader->Bind();
 
-        SetCurrentMeshColor();
+        // Loop over viewports
+        for (const auto& vp : viewports) {
+            glViewport(vp.x, vp.y, vp.width, vp.height);
 
-        if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
+            // Optional: Clear only this viewport (good for debugging)
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(vp.x, vp.y, vp.width, vp.height);
+            glClear(GL_COLOR_BUFFER_BIT);
+            glDisable(GL_SCISSOR_TEST);
+
+            SetCurrentMeshColor();
             if (meshes[currentMeshIndex])
                 meshes[currentMeshIndex]->Draw();
         }
@@ -210,21 +219,24 @@ namespace Framework
     void GraphicsSystem::SetCurrentMeshColor() {
         if (!shader || currentMeshIndex < 0 || currentMeshIndex >= (int)meshColors.size()) return;
 
-        GLuint shaderID = shader->GetID();
-        GLint colorLoc = glGetUniformLocation(shaderID, "uColor");
+        unsigned int shaderID = shader->GetID();
+        int colorLoc = glGetUniformLocation(shaderID, "uColor");
 
         glm::vec3 baseColor = meshColors[currentMeshIndex];
-        glm::vec3 targetColor = glm::vec3(1.0f) - baseColor; // Invert color as a target, just for demo
 
         if (interpolateColor) {
-            colorLerpTime += colorLerpSpeed * 0.016f; // assuming 60 FPS or pass dt
+            glm::vec3 targetColor = glm::vec3(1.0f) - baseColor;
+            colorLerpTime += colorLerpSpeed * 0.016f;
             if (colorLerpTime > 1.0f) colorLerpTime = 0.0f;
-
             glm::vec3 result = glm::mix(baseColor, targetColor, colorLerpTime);
             glUniform3f(colorLoc, result.r, result.g, result.b);
         }
         else {
             glUniform3f(colorLoc, baseColor.r, baseColor.g, baseColor.b);
         }
+    }
+
+    void GraphicsSystem::AddViewport(int x, int y, int width, int height) {
+        viewports.emplace_back(x, y, width, height);
     }
 }
