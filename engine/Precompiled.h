@@ -7,12 +7,17 @@
 #include <memory>
 #include <cassert>
 #include <cmath>
+#include <fstream>
+#include <sstream>
 
 //Components
 #include "WindowSystem.h"
 #include "Input.h"
+#include "GraphicsSystem.h"
+#include "CollisionSystem.h"
 #include "MathTestSystem.h"
 #include "Vector2D.h"
+
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -23,10 +28,11 @@
 #endif
 
 // OpenGL headers (since you have GLRenderer)
-#ifdef USE_OPENGL
-#include <GL/gl.h>
-#include <GL/glu.h>
-#endif
+//#ifdef USE_OPENGL
+//#include <GL/gl.h>
+//#include <GL/glu.h>
+//#include <glad/glad.h>
+//#endif
 
 // Useful debug macros
 #ifdef _DEBUG
