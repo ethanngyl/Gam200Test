@@ -10,6 +10,7 @@ namespace Framework {
 
         void Bind() const;
         void Unbind() const;
+        void SetUniform3f(const std::string& name, float x, float y, float z) const;
 
         unsigned int GetID() const;
 

@@ -1,4 +1,4 @@
-#include "Precompiled.h"
+﻿#include "Precompiled.h"
 #include "GraphicsSystem.h"
 #include "Message.h"
 #include "GL/glew.h"
@@ -9,11 +9,14 @@
 #include "Mesh.h"
 #include "MeshFactory.h"
 
-
 namespace Framework
 {
     GraphicsSystem::GraphicsSystem()
-        : window(nullptr), shader(nullptr), triangleMesh(nullptr)
+        : window(nullptr), shader(nullptr), triangleMesh(nullptr),
+        currentMeshIndex(0),
+        interpolateColor(true),    // 🔹 enable color animation by default
+        colorLerpTime(0.0f),
+        colorLerpSpeed(1.0f)
     {
     }
 
@@ -21,9 +24,7 @@ namespace Framework
     {
         std::cout << "GraphicsSystem: Cleaning up...\n";
         for (auto mesh : meshes) {
-            if (mesh) {
-                delete mesh;
-            }
+            if (mesh) delete mesh;
         }
         delete shader;
     }
@@ -37,17 +38,13 @@ namespace Framework
             return;
         }
 
-        // Make the window's context current
         glfwMakeContextCurrent(window);
 
-        // After OpenGL context creation
-        glewExperimental = GL_TRUE; // Ensures access to modern features
+        glewExperimental = GL_TRUE;
         if (glewInit() != GLEW_OK) {
             std::cerr << "GLEW Initialization failed!" << std::endl;
-           // return -1;
         }
 
-        // Print OpenGL information for debugging
         std::cout << "\n\n==============================================\n";
         std::cout << "        PRINTING OPENGL INFORMATION\n";
         std::cout << "==============================================\n\n";
@@ -56,10 +53,8 @@ namespace Framework
         std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
         std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
 
-        // Viewport
         glViewport(0, 0, 800, 600);
 
-        // Load shaders with better error handling
         try {
             shader = new Shader("shaders/basic.vert", "shaders/basic.frag");
             std::cout << "Shaders loaded successfully\n";
@@ -69,40 +64,28 @@ namespace Framework
             return;
         }
 
-        // Create multiple meshes
+        // Create meshes
         meshes.push_back(CreateTriangle());
         meshes.push_back(CreateQuad());
         meshes.push_back(CreateLine());
         meshes.push_back(CreateCircle(40, 0.5f));
 
+        // Initial static colors (used if interpolateColor = false)
         meshColors.push_back(glm::vec3(1.0f, 0.0f, 0.0f)); // Red
         meshColors.push_back(glm::vec3(0.0f, 1.0f, 0.0f)); // Green
         meshColors.push_back(glm::vec3(0.0f, 0.0f, 1.0f)); // Blue
         meshColors.push_back(glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow
 
-        currentMeshIndex = 0;  // start with first mesh
+        currentMeshIndex = 0;
 
-        std::cout << "Multiple meshes created successfully\n";
-
-        // Just draw the first mesh on init
-        shader->Bind();
-        if (!meshes.empty()) {
-            meshes[currentMeshIndex]->Draw();
-        }
+        std::cout << "Meshes and colors initialized successfully\n";
     }
 
     void GraphicsSystem::Update(float dt)
     {
-        if (!window) {
-            std::cerr << "GraphicsSystem: No window in Update!\n";
-            return;
-        }
+        if (!window) return;
+        if (glfwWindowShouldClose(window)) return;
 
-        if (glfwWindowShouldClose(window)) {
-            return;
-        }
-
-        // Rendering
         BeginFrame();
 
         if (!shader) {
@@ -111,7 +94,6 @@ namespace Framework
         }
 
         shader->Bind();
-
         SetCurrentMeshColor();
 
         if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
@@ -119,14 +101,12 @@ namespace Framework
                 meshes[currentMeshIndex]->Draw();
         }
 
-        // Check for OpenGL errors
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
             std::cerr << "OpenGL error in Update: " << error << "\n";
         }
 
         EndFrame();
-
         ProcessInput();
     }
 
@@ -139,91 +119,61 @@ namespace Framework
 
     void GraphicsSystem::BeginFrame()
     {
-        // Use a brighter background color for debugging
-        glClearColor(0.2f, 0.3f, 0.4f, 1.0f);  // Bright blue instead of dark
+        glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     void GraphicsSystem::EndFrame()
     {
         glfwSwapBuffers(window);
-        glfwPollEvents();  // Important: poll events here too
+        glfwPollEvents();
     }
 
-    void GraphicsSystem::ProcessInput() {
-        static bool dPressedLastFrame = false;
-        bool dPressedNow = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+    void GraphicsSystem::ProcessInput()
+    {
+        static bool enterPressedLast = false;
+        static bool spacePressedLast = false;
 
-        if (dPressedNow && !dPressedLastFrame) {
-            std::cout << "Enter press! Next mesh displayed.\n";
-
-            if (meshes.empty()) return;
-
-            // Delete current mesh if valid
-            if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
-                if (meshes[currentMeshIndex]) {
-                    delete meshes[currentMeshIndex];
-                    meshes[currentMeshIndex] = nullptr;
-                }
-            }
-
-            // Check if all meshes are deleted
-            bool allDeleted = true;
-            for (auto m : meshes) {
-                if (m != nullptr) {
-                    allDeleted = false;
-                    break;
-                }
-            }
-
-            if (allDeleted) {
-                // Recreate all meshes since all are deleted (reset)
-                meshes.clear();
-                meshColors.clear();
-
-                meshes.push_back(CreateTriangle());
-                meshes.push_back(CreateQuad());
-                meshes.push_back(CreateLine());
-                meshes.push_back(CreateCircle(40, 0.5f));
-
-                meshColors.push_back(glm::vec3(1.0f, 0.0f, 0.0f)); // Red
-                meshColors.push_back(glm::vec3(0.0f, 1.0f, 0.0f)); // Green
-                meshColors.push_back(glm::vec3(0.0f, 0.0f, 1.0f)); // Blue
-                meshColors.push_back(glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow
-
-                currentMeshIndex = 0;
-            }
-            else {
-                // Move to next valid mesh (skip deleted ones)
-                int nextIndex = currentMeshIndex;
-                do {
-                    nextIndex = (nextIndex + 1) % (int)meshes.size();
-                } while (meshes[nextIndex] == nullptr);
-
-                currentMeshIndex = nextIndex;
+        // --- handle ENTER: cycle through meshes ---
+        bool enterNow = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
+        if (enterNow && !enterPressedLast) {
+            if (!meshes.empty()) {
+                currentMeshIndex = (currentMeshIndex + 1) % (int)meshes.size();
+                std::cout << "Switched to mesh index: " << currentMeshIndex << "\n";
             }
         }
+        enterPressedLast = enterNow;
 
-        dPressedLastFrame = dPressedNow;
+        // --- handle SPACE: toggle rainbow/static color ---
+        bool spaceNow = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        if (spaceNow && !spacePressedLast) {
+            interpolateColor = !interpolateColor;
+            std::cout << "Space pressed → interpolateColor = " << interpolateColor << "\n";
+        }
+        spacePressedLast = spaceNow;
     }
 
-    void GraphicsSystem::SetCurrentMeshColor() {
-        if (!shader || currentMeshIndex < 0 || currentMeshIndex >= (int)meshColors.size()) return;
+    void GraphicsSystem::SetCurrentMeshColor()
+    {
+        if (!shader || currentMeshIndex < 0 || currentMeshIndex >= (int)meshColors.size())
+            return;
 
         GLuint shaderID = shader->GetID();
         GLint colorLoc = glGetUniformLocation(shaderID, "uColor");
 
-        glm::vec3 baseColor = meshColors[currentMeshIndex];
-        glm::vec3 targetColor = glm::vec3(1.0f) - baseColor; // Invert color as a target, just for demo
-
         if (interpolateColor) {
-            colorLerpTime += colorLerpSpeed * 0.016f; // assuming 60 FPS or pass dt
-            if (colorLerpTime > 1.0f) colorLerpTime = 0.0f;
-
-            glm::vec3 result = glm::mix(baseColor, targetColor, colorLerpTime);
-            glUniform3f(colorLoc, result.r, result.g, result.b);
+            // 🔹 rainbow animation
+            float t = glfwGetTime();
+            glm::vec3 rainbow = glm::vec3(
+                (sin(t * 1.0f) * 0.5f) + 0.5f,
+                (sin(t * 1.3f) * 0.5f) + 0.5f,
+                (sin(t * 1.7f) * 0.5f) + 0.5f
+            );
+            glUniform3f(colorLoc, rainbow.r, rainbow.g, rainbow.b);
         }
         else {
+            // 🔹 fallback: use the base mesh color
+            glm::vec3 baseColor = meshColors[currentMeshIndex];
             glUniform3f(colorLoc, baseColor.r, baseColor.g, baseColor.b);
         }
     }
