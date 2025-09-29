@@ -14,7 +14,6 @@ namespace Framework {
         void UpdateVertices(const std::vector<float>& newVertices);
         void Bind() const;
         void Unbind() const;
-
         unsigned int GetVertexCount() const { return vertexCount; }
 
     private:

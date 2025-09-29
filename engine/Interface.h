@@ -10,4 +10,5 @@ public:
     virtual void Initialize() = 0;
     virtual void Update(float dt) = 0;
     virtual void SendEngineMessage(Message* message) = 0;
+
 };

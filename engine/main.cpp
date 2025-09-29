@@ -1,6 +1,10 @@
 #include "Precompiled.h"
 #include "Core.h"
-
+#include "GraphicsSystem.h"
+#include "ECSEntityManager.h"
+#include "ECSEntity.h"
+#include "Component.h"
+#include "MovementSystem.h"
 #include "DebugComponents/Log.h"
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
@@ -36,19 +40,24 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
 
     // Create the core engine
     Framework::CoreEngine engine;
-
+    Framework::EntityManager entityManager;
     // Create systems
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
     Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
+    Framework::MovementSystem* movementSys = new Framework::MovementSystem();
+    movementSys->SetEntityManager(&entityManager);
+    graphicsSys->SetEntityManager(&entityManager);
+    movementSys->SetInputSystem(inputSys);
 
     engine.AddSystem(windowSys);
+    engine.AddSystem(movementSys);
     engine.AddSystem(graphicsSys);
     engine.AddSystem(inputSys);
-    engine.AddSystem(collisionSys);
-    engine.AddSystem(mathSys);
+    //engine.AddSystem(collisionSys);
+    //engine.AddSystem(mathSys);
 
     std::cout << "Systems added. Initializing engine...\n";
 
@@ -60,6 +69,34 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     engine.Initialize();
 
     std::cout << "Engine initialized. Starting game loop...\n";
+    // CREATE TEST ENTITIES AFTER INITIALIZATION
+    std::cout << "\n=== Creating ECS Test Entities ===\n";
+
+    // Test entity 1: Triangle
+    Framework::Entity triangleEntity = entityManager.CreateEntity();
+    entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.5f, 0.0f));
+    entityManager.AddComponent<Framework::Sprite>(triangleEntity);
+    entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
+    entityManager.AddComponent<Framework::Movement>(triangleEntity);  // Add this
+    entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 1.0f;  // Set speed
+    //entityManager.GetComponent<Framework::Movement>(triangleEntity).direction = Framework::Vector2D(1.0f, 0.0f);  // Move right
+    std::cout << "Created triangle entity with movement\n";
+
+    //// Test entity 2: Quad
+    //Framework::Entity quadEntity = entityManager.CreateEntity();
+    //entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.0f, 0.0f));
+    //entityManager.AddComponent<Framework::Sprite>(quadEntity);
+    //entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
+    //std::cout << "Created quad entity\n";
+
+    //// Test entity 3: Circle
+    //Framework::Entity circleEntity = entityManager.CreateEntity();
+    //entityManager.AddComponent<Framework::Transform>(circleEntity, Framework::Vector2D(-1.0f, -1.5f));
+    //entityManager.AddComponent<Framework::Sprite>(circleEntity);
+    //entityManager.GetComponent<Framework::Sprite>(circleEntity).texturePath = "circle";
+    //std::cout << "Created circle entity\n";
+
+    std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
 
     // Run the main game loop
     engine.GameLoop();

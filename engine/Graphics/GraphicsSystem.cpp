@@ -4,7 +4,10 @@
 #include "GL/glew.h"
 #include "GL/gl.h"
 #include <GLFW/glfw3.h>
-
+#include "ECSComponent.h"
+#include "ECSEntity.h"
+#include "ECSEntityManager.h"
+#include "Component.h"
 #include "Shader.h"
 #include "Mesh.h"
 #include "MeshFactory.h"
@@ -17,6 +20,7 @@ namespace Framework
         interpolateColor(true),    // 🔹 enable color animation by default
         colorLerpTime(0.0f),
         colorLerpSpeed(1.0f)
+        : window(nullptr), shader(nullptr), triangleMesh(nullptr), entityManager(nullptr)
     {
     }
 
@@ -53,7 +57,8 @@ namespace Framework
         std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
         std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
 
-        glViewport(0, 0, 800, 600);
+        // Viewport
+        glViewport(0, 0, 1600, 800);
 
         try {
             shader = new Shader("shaders/basic.vert", "shaders/basic.frag");
@@ -94,12 +99,13 @@ namespace Framework
         }
 
         shader->Bind();
+        RenderEntities();
         SetCurrentMeshColor();
 
-        if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
-            if (meshes[currentMeshIndex])
-                meshes[currentMeshIndex]->Draw();
-        }
+        //if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
+        //    if (meshes[currentMeshIndex])
+        //        meshes[currentMeshIndex]->Draw();
+        //}
 
         GLenum error = glGetError();
         if (error != GL_NO_ERROR) {
@@ -108,6 +114,54 @@ namespace Framework
 
         EndFrame();
         ProcessInput();
+    }
+
+    void GraphicsSystem::RenderEntities()
+    {
+        if (!entityManager) return;
+
+        for (Entity entity : entityManager->GetAllEntities())
+        {
+            // Only render entities with both Transform and Sprite
+            if (entityManager->HasComponent<Transform>(entity) &&
+                entityManager->HasComponent<Sprite>(entity))
+            {
+                 
+                auto& transform = entityManager->GetComponent<Transform>(entity);
+                std::cout << "Drawing at: " << transform.position.x << ", " << transform.position.y << "\n";
+                auto& sprite = entityManager->GetComponent<Sprite>(entity);
+
+                // Create transform matrix
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(transform.position.x, transform.position.y, 0.0f));
+                model = glm::rotate(model, glm::radians(transform.rotation), glm::vec3(0, 0, 1));
+                model = glm::scale(model, glm::vec3(transform.scale.x, transform.scale.y, 1.0f));
+
+                // Set uniform
+                GLint modelLoc = glGetUniformLocation(shader->GetID(), "uModel");
+                glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+                // Get mesh based on sprite name and draw
+                Mesh* mesh = GetMeshForSprite(sprite.texturePath);
+                if (mesh) mesh->Draw();
+            }
+        }
+    }
+
+    Mesh* GraphicsSystem::GetMeshForSprite(const std::string& spriteName)
+    {
+        // Map sprite names to your existing mesh indices
+        if (spriteName == "triangle" && meshes.size() > 0)
+            return meshes[0];
+        if (spriteName == "quad" && meshes.size() > 1)
+            return meshes[1];
+        if (spriteName == "line" && meshes.size() > 2)
+            return meshes[2];
+        if (spriteName == "circle" && meshes.size() > 3)
+            return meshes[3];
+
+        // Default: return first mesh if available
+        return meshes.empty() ? nullptr : meshes[0];
     }
 
     void GraphicsSystem::SendEngineMessage(Message* message)
