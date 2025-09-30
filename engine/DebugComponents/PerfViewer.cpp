@@ -7,7 +7,11 @@
 
 /*
 ===============================================================================
- PerfViewer.cpp
+ File:          PerfViewer.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
  ------------------------------------------------------------------------------
  Implementation details for PerfViewer.
 

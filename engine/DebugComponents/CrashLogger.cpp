@@ -14,11 +14,13 @@
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib") // link dbghelp automatically
 #endif
-
-
 /*
 ===============================================================================
- CrashLogger.cpp
+ File:          CrashLogger.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
  ------------------------------------------------------------------------------
  Implementation of CrashLogger.
 

@@ -4,7 +4,11 @@
 
 /*
 ===============================================================================
- Trace.h
+ File:          Trace.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
  ------------------------------------------------------------------------------
  Purpose
    Provide a tiny RAII timer (ScopeTimer) to measure how long a block of code
