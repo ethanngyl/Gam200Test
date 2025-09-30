@@ -6,14 +6,13 @@
 ===============================================================================
  Collision.cpp
 ------------------------------------------------------------------------------
- Implementations for primitive collision tests and boundary clamps.
+ Implementations for primitive collision tests.
 
  Key ideas
    - circle to circle: center distance vs (r1 + r2)
    - rect to rect (AABB): overlap on X and Y with y-up convention
    - circle to rect: clamp circle center to rect and compare distance to radius
    - point tests: reuse the same rect/circle rules
-   - Bounds clamp: keep center shapes fully inside (respecting radius/half extents)
 
  Assumptions
    - All sizes/positions in same world units as the test harness

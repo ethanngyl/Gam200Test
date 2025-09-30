@@ -5,13 +5,13 @@
 ===============================================================================
  Collision.h
 ------------------------------------------------------------------------------
- Collider shapes, test helpers, and boundary utilities for collision system.
+ Collider shapes and test helpers for collision system.
 
  What¡¯s here
    - Data: ShapeType, Circle, Rect, Collider (centered AABB for rect)
    - Tests: circle_to_circle, rect_to_rect, circle_to_rect
             point_in_circle, point_in_rect, point_in_collider, check_collision
-   - Bounds: Bounds struct + out_of_bounds and clamp helpers (y-up)
+   - Bounds: Bounds struct + out_of_bounds
 
  Notes
    - Coordinate system: y-up (top = y + h/2, bottom = y - h/2)
