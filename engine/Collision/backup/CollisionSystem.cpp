@@ -19,7 +19,7 @@
    - Initialize: show key help, no shapes until a mode is chosen
    - Update:
        * If T toggled: enable/disable test mode (clears scene)
-       * If active and no mode: lock to the first 1 to 7 pressed
+       * If active and no mode: lock to the first 1..5 pressed
        * If mode running:
            - WASD moves the active subject
            - Run collision checks and print results
@@ -35,7 +35,7 @@
 ===============================================================================
 */
 
-/*// ===== Collision Debug Draw (private to this .cpp) ===================
+// ===== Collision Debug Draw (private to this .cpp) ===================
 namespace {
     struct CollDebugGfx {
         Framework::Shader* shader = nullptr;
@@ -146,7 +146,7 @@ namespace {
         SetColor(r, g, b);
         DrawCircle(x, y, 0.01f, r, g, b, true); // tiny dot
     }
-} // namespace*/
+} // namespace
 
 namespace Framework {
 
@@ -161,8 +161,6 @@ void CollisionSystem::Initialize()
   std::cout << "CollisionSystem: Initialized\n";
   std::cout << "[T] toggle Collision Test Mode. Type [1,2,3,4,5] choose test when active:\n"
                " 1) circle-rect  2) rect-rect  3) circle-circle  4) point-circle  5) point-rect\n"
-               " 6) circle-triangle 7) rect-triangle\n"
-               " 8) circle vs bounds  9) rect vs bounds  0) point vs bounds\n"
                " [R] reset from current test scene.\n WASD moves the active object.\n"
                "Press [T] to start the test!\n";
 }
@@ -181,7 +179,7 @@ void CollisionSystem::Update(float dt)
         }
         else {
             clearScene();        // enabled -> start fresh, wait for 1..5
-            std::cout << "[CollisionTest] is ENABLED  press [1,2,3,4,5,6,7,8,9,0] to choose a test.\n";
+            std::cout << "[CollisionTest] is ENABLED  press [1,2,3,4,5] to choose a test.\n";
         }
     }
 
@@ -194,28 +192,22 @@ void CollisionSystem::Update(float dt)
         else if (m_input->IsKeyPressed(KEY_3)) { mode = CollTest::CircleToCircle; setupScene(mode);  std::cout << "Mode: Circle to Circle\n"; }
         else if (m_input->IsKeyPressed(KEY_4)) { mode = CollTest::PointToCircle;  setupScene(mode);  std::cout << "Mode: Point to Circle (WASD moves point)\n"; }
         else if (m_input->IsKeyPressed(KEY_5)) { mode = CollTest::PointToRect;    setupScene(mode);  std::cout << "Mode: Point to Rect (WASD moves point)\n"; }
-        else if (m_input->IsKeyPressed(KEY_6)) { mode = CollTest::TriCircle;      setupScene(mode);  std::cout << "Mode: Circle to Triangle\n"; }
-        else if (m_input->IsKeyPressed(KEY_7)) { mode = CollTest::TriRect;        setupScene(mode);  std::cout << "Mode: Rect to Triangle\n"; }
-        else if (m_input->IsKeyPressed(KEY_8)) { mode = CollTest::BoundsCircle;   setupScene(mode); std::cout << "Mode: Circle vs Bounds\n"; }
-        else if (m_input->IsKeyPressed(KEY_9)) { mode = CollTest::BoundsRect;     setupScene(mode); std::cout << "Mode: Rect vs Bounds\n"; }
-        else if (m_input->IsKeyPressed(KEY_0)) { mode = CollTest::BoundsPoint;    setupScene(mode); std::cout << "Mode: Point vs Bounds\n"; }
+
         return;
     }
 
     // Mode is locked now. Ignore further 1..5 until reset.
     if (m_input->IsKeyPressed(KEY_1) || m_input->IsKeyPressed(KEY_2) ||
         m_input->IsKeyPressed(KEY_3) || m_input->IsKeyPressed(KEY_4) ||
-        m_input->IsKeyPressed(KEY_5) || m_input->IsKeyPressed(KEY_6) || 
-        m_input->IsKeyPressed(KEY_7) || m_input->IsKeyPressed(KEY_8) || 
-        m_input->IsKeyPressed(KEY_9) || m_input->IsKeyPressed(KEY_0))
+        m_input->IsKeyPressed(KEY_5))
     {
         std::cout << "[Info] A test is already running. Press [R] to reset, then pick a new mode.\n";
     }
 
-    // Reset current test and go back to waiting for 1 to 7
+    // Reset current test and go back to waiting for 1..5
     if (m_input->IsKeyPressed(KEY_R)) {
         clearScene();
-        std::cout << "[Reset] Cleared. Press [1,2,3,4,5,6,7] to start a new test.\n";
+        std::cout << "[Reset] Cleared. Press [1,2,3,4,5] to start a new test.\n";
         return;
     }
 
@@ -292,60 +284,6 @@ void CollisionSystem::Update(float dt)
             collidedLastFrame = hitAny;
         } break;
 
-        case CollTest::TriCircle: {
-            if (dx || dy) {
-                circle.position.x += dx; circle.position.y += dy;
-                std::cout << "Circle -> (" << circle.position.x << ", " << circle.position.y << ")\n";
-            }
-            bool hit = circle_to_triangle(circle, sTriangle.triangle);
-            if (hit) std::cout << "Hit Triangle\n";
-            collidedLastFrame = hit;
-        } break;
-
-        // --- NEW: rect (AABB) vs triangle (mode 7) -------------------------
-        case CollTest::TriRect: {
-            if (dx || dy) {
-                rect.position.x += dx; rect.position.y += dy;
-                std::cout << "Rect -> (" << rect.position.x << ", " << rect.position.y << ")\n";
-            }
-            bool hit = rect_to_triangle(rect, sTriangle.triangle);
-            if (hit) std::cout << "Hit Triangle\n";
-            collidedLastFrame = hit;
-        } break;
-
-        case CollTest::BoundsCircle: {
-            if (dx || dy) {
-                circle.position.x += dx; circle.position.y += dy;
-                std::cout << "Circle -> (" << circle.position.x << ", " << circle.position.y << ")\n";
-            }
-            bool outNow = circle_out_of_bounds(circle, world);
-            //std::cout << outNow;
-            if (outNow) std::cout << "OUT OF BOUNDS\n";
-            if (!outNow) std::cout << "Back inside bounds\n";
-            collidedLastFrame = outNow;
-        } break;
-
-        case CollTest::BoundsRect: {
-            if (dx || dy) {
-                rect.position.x += dx; rect.position.y += dy;
-                std::cout << "Rect -> (" << rect.position.x << ", " << rect.position.y << ")\n";
-            }
-            bool outNow = rect_out_of_bounds(rect, world);
-            if (outNow) std::cout << "OUT OF BOUNDS\n";
-            if (!outNow) std::cout << "Back inside bounds\n";
-            collidedLastFrame = outNow;
-        } break;
-
-        case CollTest::BoundsPoint: {
-            if (dx || dy) {
-                point.x += dx; point.y += dy;
-                std::cout << "Point -> (" << point.x << "," << point.y << ")\n";
-            }
-            bool outNow = point_out_of_bounds(point, world);
-            if (outNow) std::cout << "OUT OF BOUNDS\n";
-            if (!outNow) std::cout << "Back inside bounds\n";
-            collidedLastFrame = outNow;
-        } break;
         case CollTest::None:
         default:
             // in test mode but no test chosen: do nothing
@@ -370,15 +308,9 @@ void CollisionSystem::printCollider(const char* name, const Collider& c)
   if (c.shapeType == ShapeType::Circle) {
     std::cout << name << " (Circle) pos=(" << c.position.x << "," << c.position.y
               << ") r=" << c.circle.radius << "\n";
-  } else if (c.shapeType == ShapeType::Rect) {
+  } else {
     std::cout << name << " (Rect)   pos=(" << c.position.x << "," << c.position.y
               << ") w=" << c.rect.width << " h=" << c.rect.height << "\n";
-  }
-  else {
-      std::cout << name << " (Triangle)/n"
-          << " v0=(" << c.triangle.v0.x << "," << c.triangle.v0.y << ")\n"
-          << " v1=(" << c.triangle.v1.x << "," << c.triangle.v1.y << ")\n"
-		  << " v2=(" << c.triangle.v2.x << "," << c.triangle.v2.y << ")\n";
   }
 }
 
@@ -458,61 +390,6 @@ void CollisionSystem::setupScene(CollTest m)
         std::cout << "Point starts at (-150,0).\n";
     } break;
 
-    case CollTest::TriCircle: {
-        circle = Collider::create_circle(20.0f, Vector2D{ -150.0f, 0.0f });
-        sTriangle = Collider::create_triangle(
-            Vector2D{ -20.0f, -40.0f },
-            Vector2D{ 60.0f, -40.0f },
-            Vector2D{ 20.0f,  70.0f }
-        );
-
-        printCollider("Circle", circle);
-        printCollider("Triangle", sTriangle);
-    } break;
-
-    case CollTest::TriRect: {
-        rect = Collider::create_rect(60.0f, 40.0f, Vector2D{ -170.0f, 0.0f });
-        sTriangle = Collider::create_triangle(
-            Vector2D{ -20.0f, -40.0f },
-            Vector2D{ 60.0f, -40.0f },
-            Vector2D{ 20.0f,  70.0f }
-        );
-
-        printCollider("Rect", rect);
-        printCollider("Triangle", sTriangle);
-    } break;
-
-    case CollTest::BoundsCircle: {
-        // One circle we can move around; checked against 'world'
-        world.left = -120.0f; world.right = 120.0f;
-        world.bottom = -90.0f; world.top = 90.0f;
-        circle = Collider::create_circle(30.0f, Vector2D{ 0.0f, 0.0f });
-        printCollider("Circle", circle);
-        std::cout << "World bounds: L=" << world.left << " R=" << world.right
-            << " B=" << world.bottom << " T=" << world.top << "\n";
-
-        collidedLastFrame = circle_out_of_bounds(circle, world);
-        if (!collidedLastFrame) std::cout << "Inside bounds\n";
-    } break;
-
-    case CollTest::BoundsRect: {
-        world.left = -120.0f; world.right = 120.0f;
-        world.bottom = -90.0f; world.top = 90.0f;
-
-        rect = Collider::create_rect(60.0f, 40.0f, Vector2D{ 0.0f, 0.0f });
-        printCollider("Rect", rect);
-        std::cout << "World bounds: L=" << world.left << " R=" << world.right
-            << " B=" << world.bottom << " T=" << world.top << "\n";
-    } break;
-
-    case CollTest::BoundsPoint: {
-        world.left = -120.0f; world.right = 120.0f;
-        world.bottom = -90.0f; world.top = 90.0f;
-        point = Vector2D{ 0.0f, 0.0f };
-        std::cout << "Point starts at (0,0)\n";
-        std::cout << "World bounds: L=" << world.left << " R=" << world.right
-            << " B=" << world.bottom << " T=" << world.top << "\n";
-    } break;
     case CollTest::None:
     default:
         std::cout << "[setupScene] Invalid mode.\n";

@@ -22,7 +22,7 @@
 ===============================================================================
 */
 
-enum class ShapeType { Circle, Rect, Triangle };
+enum class ShapeType { Circle, Rect };
 
 struct Circle { float radius {0.0f};};
 struct Rect   { float width{0.0f}, height{0.0f};};
@@ -47,7 +47,6 @@ struct Collider {
     
     Circle circle{};
     Rect rect{};
-    Triangle triangle{};
 
     static Collider create_circle (float radius, Framework::Vector2D position){
         Collider c;
@@ -64,20 +63,6 @@ struct Collider {
         c.position = position;
         return c;
     }
-    static Collider create_triangle(Framework::Vector2D v0,
-        Framework::Vector2D v1,
-        Framework::Vector2D v2) {
-        Collider c;
-        c.shapeType = ShapeType::Triangle;
-        c.triangle.v0 = v0;
-        c.triangle.v1 = v1;
-        c.triangle.v2 = v2;
-        // store a simple center so logging looks same style as others
-        c.position.x = (v0.x + v1.x + v2.x) / 3.0f;
-        c.position.y = (v0.y + v1.y + v2.y) / 3.0f;
-        return c;
-    }
-
 };
 
 bool circle_to_circle (const Collider& a, const Collider& b);

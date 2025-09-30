@@ -42,6 +42,11 @@ namespace Framework
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_5, GetAsyncKeyState(KEY_5));
+        UpdateKeyState(KEY_6, GetAsyncKeyState(KEY_6));
+        UpdateKeyState(KEY_7, GetAsyncKeyState(KEY_7));
+        UpdateKeyState(KEY_8, GetAsyncKeyState(KEY_8));
+        UpdateKeyState(KEY_9, GetAsyncKeyState(KEY_9));
+        UpdateKeyState(KEY_0, GetAsyncKeyState(KEY_0));
 
         // Check for quit conditions
         if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE))

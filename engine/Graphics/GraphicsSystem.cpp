@@ -128,7 +128,7 @@ namespace Framework
             {
                  
                 auto& transform = entityManager->GetComponent<Transform>(entity);
-                std::cout << "Drawing at: " << transform.position.x << ", " << transform.position.y << "\n";
+                //std::cout << "Drawing at: " << transform.position.x << ", " << transform.position.y << "\n";
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
 
                 // Create transform matrix

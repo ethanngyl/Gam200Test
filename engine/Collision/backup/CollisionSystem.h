@@ -41,12 +41,7 @@ namespace Framework {
         RectToRect = 2,
         CircleToCircle = 3,
         PointToCircle = 4,
-        PointToRect = 5,
-        TriCircle = 6,
-        TriRect = 7,
-        BoundsCircle = 8,
-	    BoundsRect = 9,
-        BoundsPoint = 10
+        PointToRect = 5
     };
   // A tiny demo/test harness around your Collision utilities.
   class CollisionSystem : public InterfaceSystem
@@ -72,13 +67,10 @@ namespace Framework {
     Collider circleRight;
     Collider circleBottom;
     Collider circleLeft;
-    Collider sTriangle;
     Framework::Vector2D point; // a movable point for point tests
 
     float moveSpeed = 120.0f; //px per sec
-    bool autoMove{ false };                          // toggle with [M]
-    Framework::Vector2D autoVel{ 120.0f, 90.0f };    // px/s
-    Bounds world;  // {-320..320, -240..240} by default                                  // uses default {-320..320, -240..240}
+    
     /* Simple velocities for the demo
     Vector2D velCircle{ +30.0f, 0.0f };  // px/sec to the right
     Vector2D velRect  { -30.0f, 0.0f };  // px/sec to the left*/
