@@ -5,9 +5,9 @@ namespace Framework {
     Mesh* CreateTriangle() {
         std::vector<float> vertices = {
              // Position          // Color
-             0.0f,  0.8f, 0.0f,   1.0f, 0.0f, 0.0f,  // red
-            -0.8f, -0.8f, 0.0f,   0.0f, 1.0f, 0.0f,  // green
-             0.8f, -0.8f, 0.0f,   0.0f, 0.0f, 1.0f   // blue
+             0.0f,  0.1f, 0.0f,   0.0f, 0.0f, 0.0f,  // red
+            -0.1f, -0.1f, 0.0f,   0.0f, 0.0f, 0.0f,  // green
+             0.1f, -0.1f, 0.0f,   0.0f, 0.0f, 1.0f   // blue
         };
         return new Mesh(vertices, GL_TRIANGLES);
     }

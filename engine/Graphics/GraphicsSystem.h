@@ -1,6 +1,7 @@
 #pragma once
 #include "Interface.h"
 #include <glm/glm.hpp>
+#include "ECSEntityManager.h"
 #include <glm/gtc/matrix_transform.hpp>
 
 // Forward declarations
@@ -19,8 +20,9 @@ namespace Framework {
 
         virtual void Initialize() override;
         virtual void Update(float dt) override;
+        virtual void RenderEntities();
         virtual void SendEngineMessage(Message* message) override;
-
+        void SetEntityManager(EntityManager* em) { entityManager = em; }
         void SetWindow(GLFWwindow* window) { this->window = window; }
 
         void AddViewport(int x, int y, int width, int height);
@@ -35,12 +37,12 @@ namespace Framework {
         GLFWwindow* window;
 
         Shader* shader;
-
+        Mesh* GetMeshForSprite(const std::string& spriteName);
         Mesh* triangleMesh;
+        EntityManager* entityManager;
         std::vector<Mesh*> meshes;
         std::vector<glm::vec3> meshColors;
         int currentMeshIndex = 0;
-
         // Interpolation
         float colorLerpTime = 0.0f;
         float colorLerpSpeed = 0.25f;

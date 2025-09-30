@@ -1,5 +1,7 @@
 #include "Precompiled.h"
 #include "Core.h"
+#include "MovementSystem.h"
+
 
 #include "DebugComponents/PerfViewer.h"
 #include "DebugComponents/Trace.h"
@@ -93,23 +95,41 @@ namespace Framework
             // Calculate delta time
             unsigned currenttime = timeGetTime();
             float dt = (currenttime - LastTime) / 1000.0f;
+            // Ensure minimum dt to prevent zero
+            if (dt < 0.001f) dt = 0.016f;  // Default to ~60 FPS if too fast
+
+            // Debug timing
+            static int frameCount = 0;
+            if (frameCount++ % 60 == 0) {  // Print every 60 frames
+                std::cout << "LastTime: " << LastTime
+                    << ", CurrentTime: " << currenttime
+                    << ", dt: " << dt << "\n";
+            }
             LastTime = currenttime;
+
 
             // --- begin perf frame ---
             eng::debug::PerfViewer::begin_frame();
 
             // --- per-system updates with scoped timers ---
-            for (unsigned i = 0; i < Systems.size(); ++i)
-            {
-                // Tag systems (adjust to your actual system types/order)
-                eng::debug::Subsystem tag =
-                    (i == 0) ? eng::debug::Subsystem::Gameplay :
-                    (i == 1) ? eng::debug::Subsystem::Graphics :
-                    eng::debug::Subsystem::Other;
+            for (unsigned i = 0; i < Systems.size(); ++i) {
+                using eng::debug::Subsystem;
+                Subsystem tag = Subsystem::Other;
 
-                DBG_SCOPE_SYS("SystemUpdate", tag);
-                Systems[i]->Update(dt);
+                if (dynamic_cast<GraphicsSystem*>(Systems[i]))        tag = Subsystem::Graphics;
+                else if (dynamic_cast<MovementSystem*>(Systems[i]))   tag = Subsystem::IO;
+                else if (dynamic_cast<CollisionSystem*>(Systems[i]))  tag = Subsystem::Physics;
+
+                // else if (dynamic_cast<AudioSystem*>(Systems[i]))   tag = Subsystem::Audio;
+                // else if (dynamic_cast<IOSystem*>(Systems[i]))      tag = Subsystem::IO;
+                    
+
+                { // ensure destructor runs before end_frame()
+                    DBG_SCOPE_SYS("SystemUpdate", tag);
+                    Systems[i]->Update(dt);
+                }
             }
+
 
             // --- end perf frame ---
             eng::debug::PerfViewer::end_frame();

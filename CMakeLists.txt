@@ -63,6 +63,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/engine/Math
     ${CMAKE_SOURCE_DIR}/engine/Systems
     ${CMAKE_SOURCE_DIR}/engine/Windows
+    ${CMAKE_SOURCE_DIR}/engine/Components
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -72,7 +73,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra)
 elseif (MSVC)
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W3)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
 endif()
 
 # ======================= Platform-Specific Linking =========================

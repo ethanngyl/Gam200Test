@@ -6,7 +6,11 @@
 
 namespace Framework
 {
-    WindowSystem::WindowSystem() : window(nullptr), WindowOpen(false)
+    WindowSystem::WindowSystem() : window(nullptr),
+        WindowOpen(false),
+        windowWidth(1800),         // default width
+        windowHeight(900),         // default height
+        windowTitle("Struct Squad Game Engine") // default title
     {
     }
 
@@ -31,7 +35,8 @@ namespace Framework
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-        window = glfwCreateWindow(1000, 800, "Struct Squad Game Engine", nullptr, nullptr); // 800 x 600
+        // use configurable values here
+        window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), nullptr, nullptr);
         if (!window) {
             std::cerr << "Window creation failed\n";
             glfwTerminate();
