@@ -10,7 +10,6 @@ namespace Framework {
 		Vector2D();                 // (0,0)
 		Vector2D(float _x, float _y);
 
-		// Do not change (kept as in your original)
 		Vector2D& operator=(Vector2D const&) = default;
 		Vector2D(Vector2D const&) = default;
 

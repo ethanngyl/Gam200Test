@@ -51,7 +51,7 @@ namespace Framework {
         friend Matrix3x3 operator*(Matrix3x3 const& a, Matrix3x3 const& b);
     };
 
-    // ----- free functions (compat with your old API) -----
+    // ----- free functions -----
     Matrix3x3 operator*(Matrix3x3 const& a, Matrix3x3 const& b);
     Vector2D  operator*(Matrix3x3 const& M, Vector2D const& v);
 
