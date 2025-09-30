@@ -26,7 +26,12 @@ enum class ShapeType { Circle, Rect };
 
 struct Circle { float radius {0.0f};};
 struct Rect   { float width{0.0f}, height{0.0f};};
-
+//struct for triangle, but not implemented in shapetype first
+struct Triangle {
+    Framework::Vector2D v0;
+    Framework::Vector2D v1;
+    Framework::Vector2D v2;
+};
 // ---- Window Bounds------------------------------------
 struct Bounds {
     float left{ -320.0f };
@@ -74,3 +79,8 @@ bool check_collision (const Collider& a, const Collider& b);
 bool circle_out_of_bounds(const Collider& c, const Bounds& b);
 bool rect_out_of_bounds(const Collider& r, const Bounds& b);
 bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b);
+
+// Triangle collision function, not implement yet
+bool point_in_triangle(Framework::Vector2D const& p, Triangle const& tri);
+bool circle_to_triangle(const Collider& circle, Triangle const& tri);
+bool rect_to_triangle(const Collider& rectAABB, Triangle const& tri);

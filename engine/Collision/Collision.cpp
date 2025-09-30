@@ -132,3 +132,4 @@ bool rect_out_of_bounds(const Collider& r, const Bounds& b) {
 bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b) {
     return (p.x < b.left) || (p.x > b.right) || (p.y < b.bottom) || (p.y > b.top);
 }
+
