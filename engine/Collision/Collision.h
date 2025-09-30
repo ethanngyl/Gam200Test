@@ -11,12 +11,13 @@
    - Data: ShapeType, Circle, Rect, Collider (centered AABB for rect)
    - Tests: circle_to_circle, rect_to_rect, circle_to_rect
             point_in_circle, point_in_rect, point_in_collider, check_collision
-   - Bounds: Bounds struct + out_of_bounds
+   - Bounds checks: circle_out_of_bounds, rect_out_of_bounds, point_out_of_bounds
+   - Triangle support: point_in_triangle, circle_to_triangle, rect_to_triangle
 
  Notes
    - Coordinate system: y-up (top = y + h/2, bottom = y - h/2)
    - Rects are centered at position with width/height
-
+   - Designed for use with CollisionSystem test harness
  Author: jiahao.zhou@digipen.edu
  Date:   2025-09-30
 ===============================================================================

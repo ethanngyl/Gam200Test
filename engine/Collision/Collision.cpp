@@ -15,6 +15,8 @@
    - rect to rect (AABB): overlap on X and Y with y-up convention
    - circle to rect: clamp circle center to rect and compare distance to radius
    - point tests: reuse the same rect/circle rules
+   - bounds checks: compare shape extents vs world bounds
+   - triangle tests: barycentric + edge intersection methods
 
  Assumptions
    - All sizes/positions in same world units as the test harness

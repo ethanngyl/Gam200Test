@@ -13,7 +13,7 @@
 
  Controls
    - T: toggle test mode
-   - 1 to 5: select mode (Circle-Rect, Rect-Rect, Circle-Circle, Point-Circle, Point-Rect)
+   - 1,2,3,4,5,6,7,8,9,0: select mode (Circle-Rect, Rect-Rect, Circle-Circle, Point-Circle, Point-Rect)
    - R: reset current test
    - WASD: move active object/point
 
@@ -26,6 +26,8 @@
  Notes
    - y-up math, centered AABBs
    - No dependency on debug HUD (console prints only)
+   - For debugging / verification only
+
 
  Author: jiahao.zhou@digipen.edu
  Date:   2025-09-30
