@@ -7,7 +7,11 @@
 
 /*
 ===============================================================================
- Sinks.cpp
+ File:          Sinks.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
  ------------------------------------------------------------------------------
  Implements two concrete sinks for the logging system:
 
