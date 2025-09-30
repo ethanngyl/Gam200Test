@@ -1,3 +1,10 @@
+// ======================= main.cpp =======================
+// Enable CRT leak detection in Debug builds
+#ifdef _DEBUG
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#endif
+
 #include "Precompiled.h"
 #include "Core.h"
 #include "GraphicsSystem.h"
@@ -10,20 +17,36 @@
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
 
-int WINAPI WinMain(    _In_ HINSTANCE hInstance,
+int WINAPI WinMain(
+    _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
     _In_ LPSTR lpCmdLine,
     _In_ int nShowCmd)
 {
-    // Allocate console for debug output in debug builds
 #ifdef _DEBUG
+    // Allocate console for debug output in Debug builds
     AllocConsole();
     freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
     freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
     freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
+
+    // === Set up CRT debug heap leak checking ===
+    // Send reports to debugger AND stdout
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
+
+    // Enable leak check at process exit + allocation tracking
+    int flags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+    flags |= _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF;
+    // Optional (slower): validate heap on every alloc/free
+    // flags |= _CRTDBG_CHECK_ALWAYS_DF;
+    _CrtSetDbgFlag(flags);
 #endif
 
-    
     // ------------ Debug tools bootstrap ------------//
     eng::debug::LogConfig logCfg;
     logCfg.level = eng::debug::LogLevel::Info;
@@ -42,6 +65,7 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     // Create the core engine
     Framework::CoreEngine engine;
     Framework::EntityManager entityManager;
+
     // Create systems
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
     Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
@@ -52,7 +76,7 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     movementSys->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
     movementSys->SetInputSystem(inputSys);
-	collisionSys->SetInput(inputSys);
+    collisionSys->SetInput(inputSys);
 
     engine.AddSystem(windowSys);
     engine.AddSystem(movementSys);
@@ -61,12 +85,7 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
 
-    LOG_INFO("CORE", "Systems added.Initializing engine...");
-
-
-    // Pass a pointer of InputSystem to CollisionSystem.
-// This lets CollisionSystem call IsKeyDown() to move the circle for collider testing.
-    collisionSys->SetInput(inputSys);
+    LOG_INFO("CORE", "Systems added. Initializing engine...");
 
     // Initialize all systems
     engine.Initialize();
@@ -76,31 +95,14 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     // CREATE TEST ENTITIES AFTER INITIALIZATION
     LOG_INFO("CORE", "=== Creating ECS Test Entities ===");
 
-
     // Test entity 1: Triangle
     Framework::Entity triangleEntity = entityManager.CreateEntity();
     entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.5f, 0.0f));
     entityManager.AddComponent<Framework::Sprite>(triangleEntity);
     entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
-    entityManager.AddComponent<Framework::Movement>(triangleEntity);  // Add this
-    entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 1.0f;  // Set speed
-    //entityManager.GetComponent<Framework::Movement>(triangleEntity).direction = Framework::Vector2D(1.0f, 0.0f);  // Move right
+    entityManager.AddComponent<Framework::Movement>(triangleEntity);
+    entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 1.0f;
     LOG_INFO("CORE", "Created triangle entity with movement");
-
-
-    //// Test entity 2: Quad
-    //Framework::Entity quadEntity = entityManager.CreateEntity();
-    //entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.0f, 0.0f));
-    //entityManager.AddComponent<Framework::Sprite>(quadEntity);
-    //entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
-    //std::cout << "Created quad entity\n";
-
-    //// Test entity 3: Circle
-    //Framework::Entity circleEntity = entityManager.CreateEntity();
-    //entityManager.AddComponent<Framework::Transform>(circleEntity, Framework::Vector2D(-1.0f, -1.5f));
-    //entityManager.AddComponent<Framework::Sprite>(circleEntity);
-    //entityManager.GetComponent<Framework::Sprite>(circleEntity).texturePath = "circle";
-    //std::cout << "Created circle entity\n";
 
     std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
 
@@ -113,15 +115,15 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
 
     LOG_INFO("CORE", "Engine shutdown complete.");
 
-
     // Shutdown debug tools
     eng::debug::Log::shutdown();
+
 #ifdef _DEBUG
     std::cout << "Press Enter to close console...\n";
-
-    std::cin.get(); // Wait for actual Enter key
+    std::cin.get(); // Wait for Enter key
     FreeConsole();
 #endif
 
     return 0;
 }
+// ======================= end main.cpp =======================
