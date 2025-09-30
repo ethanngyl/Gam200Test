@@ -23,8 +23,7 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
 #endif
 
-    std::cout << "Starting Game Engine...\n";
-
+    
     // ------------ Debug tools bootstrap ------------//
     eng::debug::LogConfig logCfg;
     logCfg.level = eng::debug::LogLevel::Info;
@@ -37,6 +36,8 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     eng::debug::PerfViewer::set_print_interval(1.0);
     eng::debug::CrashLogger::install_handlers();
     // --------- End Of Debug tools bootstrap ---------//
+
+    LOG_INFO("CORE", "Starting Game Engine...");
 
     // Create the core engine
     Framework::CoreEngine engine;
@@ -60,7 +61,8 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
 
-    std::cout << "Systems added. Initializing engine...\n";
+    LOG_INFO("CORE", "Systems added.Initializing engine...");
+
 
     // Pass a pointer of InputSystem to CollisionSystem.
 // This lets CollisionSystem call IsKeyDown() to move the circle for collider testing.
@@ -69,9 +71,11 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     // Initialize all systems
     engine.Initialize();
 
-    std::cout << "Engine initialized. Starting game loop...\n";
+    LOG_INFO("CORE", "Engine initialized. Starting game loop...");
+
     // CREATE TEST ENTITIES AFTER INITIALIZATION
-    std::cout << "\n=== Creating ECS Test Entities ===\n";
+    LOG_INFO("CORE", "=== Creating ECS Test Entities ===");
+
 
     // Test entity 1: Triangle
     Framework::Entity triangleEntity = entityManager.CreateEntity();
@@ -81,7 +85,8 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     entityManager.AddComponent<Framework::Movement>(triangleEntity);  // Add this
     entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 1.0f;  // Set speed
     //entityManager.GetComponent<Framework::Movement>(triangleEntity).direction = Framework::Vector2D(1.0f, 0.0f);  // Move right
-    std::cout << "Created triangle entity with movement\n";
+    LOG_INFO("CORE", "Created triangle entity with movement");
+
 
     //// Test entity 2: Quad
     //Framework::Entity quadEntity = entityManager.CreateEntity();
@@ -101,18 +106,19 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
 
     // Run the main game loop
     engine.GameLoop();
-
-    std::cout << "Game loop ended. Cleaning up...\n";
+    LOG_INFO("CORE", "Game loop ended. Cleaning up...");
 
     // Cleanup systems
     engine.DestroySystems();
 
-    std::cout << "Engine shutdown complete.\n";
+    LOG_INFO("CORE", "Engine shutdown complete.");
+
 
     // Shutdown debug tools
     eng::debug::Log::shutdown();
 #ifdef _DEBUG
     std::cout << "Press Enter to close console...\n";
+
     std::cin.get(); // Wait for actual Enter key
     FreeConsole();
 #endif
