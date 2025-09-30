@@ -60,7 +60,8 @@ namespace Framework {
     void Initialize() override;
     void Update(float dt) override;
     void SendEngineMessage(Message* message) override;
-
+    void CheckECSCollisions();
+    void SetEntityManager(EntityManager* em) { entityManager = em; }
     void SetInput(InputSystem* input) { m_input = input; }
   private:
     // Demo scene: one circle and one rect move toward each other until they collide.
@@ -92,8 +93,10 @@ namespace Framework {
     //test gate + current selection
     bool      testActive{ false };
     bool      sceneReady{ false };
+    EntityManager* entityManager;
     CollTest  mode{ CollTest::None };
 
+    
     void printCollider(const char* name, const Collider& c);
     void setupScene(CollTest m);      // spawn & place shapes for selected test
     void clearScene();                // despawn (logically) and unlock mode

@@ -1,7 +1,4 @@
-#include "MathTestSystem.h"   // Include the header for our new system
-#include "Vector2D.h"         // Include your math library headers
-#include "Matrix3x3.h"
-#include <iomanip>            // For formatting the output nicely
+#include "Precompiled.h"
 
 namespace Framework {
 

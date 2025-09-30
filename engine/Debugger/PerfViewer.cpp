@@ -1,10 +1,4 @@
-#include "PerfViewer.h"
-#include "Log.h"
-#include <algorithm>
-#include <cstdio>
-#include <sstream>
-#include <iomanip>
-
+#include "Precompiled.h"
 /*
 ===============================================================================
  File:          PerfViewer.cpp

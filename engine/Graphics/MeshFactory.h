@@ -1,7 +1,6 @@
 #pragma once
-#include "Mesh.h"
-#include <glm/gtc/constants.hpp>
-#include <glm/trigonometric.hpp>
+#include "Precompiled.h"
+
 
 namespace Framework {
 

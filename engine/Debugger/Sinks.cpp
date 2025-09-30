@@ -1,5 +1,4 @@
-#include "Sinks.h"
-#include <cstdio>
+#include "Precompiled.h"
 
 #if defined(_WIN32)
 #include <windows.h>

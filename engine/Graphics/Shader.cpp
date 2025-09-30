@@ -1,7 +1,4 @@
 #include "Precompiled.h"
-#include "Shader.h"
-#include "GL/glew.h"
-#include "GL/gl.h"
 
 namespace Framework {
 

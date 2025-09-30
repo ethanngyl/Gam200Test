@@ -1,8 +1,6 @@
 #pragma once
-#include <array>
-#include <chrono>
-#include <cstdint>
-#include <string>
+#include "Precompiled.h"
+
 #include "Trace.h" 
 
 /*
