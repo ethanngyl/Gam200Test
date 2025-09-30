@@ -19,8 +19,8 @@ namespace Framework
         currentMeshIndex(0),
         interpolateColor(true),    // 🔹 enable color animation by default
         colorLerpTime(0.0f),
-        colorLerpSpeed(1.0f)
-        : window(nullptr), shader(nullptr), triangleMesh(nullptr), entityManager(nullptr)
+        colorLerpSpeed(1.0f),
+        entityManager(nullptr)
     {
     }
 
