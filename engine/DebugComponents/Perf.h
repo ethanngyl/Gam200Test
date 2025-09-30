@@ -4,7 +4,11 @@
 
 /*
 ===============================================================================
- Perf.h
+ File:          Perf.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
  ------------------------------------------------------------------------------
  Purpose
    FpsCounter measures frame timing during runtime. It can:

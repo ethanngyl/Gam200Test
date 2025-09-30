@@ -5,7 +5,11 @@
 
 /*
 ===============================================================================
- Perf.cpp
+ File:          Perf.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
  ------------------------------------------------------------------------------
  Implementation details for FpsCounter.
 
@@ -19,6 +23,7 @@
      FPS (1 / dt). This makes the displayed number less jumpy.
 ===============================================================================
 */
+
 
 namespace eng::debug {
 
