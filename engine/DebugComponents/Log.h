@@ -4,7 +4,13 @@
 #include <string>
 #include <vector>
 /*
-============================================================================================
+===============================================================================
+ File:          Log.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
+ ------------------------------------------------------------------------------
   Simple logging API for the engine (header)
 
   What this gives you:
@@ -30,7 +36,7 @@
      If you pass empty file/line to write()/writef(), no "(file:line)" is appended.
      Whether "(file:line)" is printed for normal logs is controlled by
     LogConfig::showSourceInfo (we keep it off by default to keep output clean).
-============================================================================================
+===============================================================================
 */
 namespace eng::debug {
 

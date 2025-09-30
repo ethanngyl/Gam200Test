@@ -4,7 +4,11 @@
 
 /*
 ===============================================================================
- Sinks.h
+ File:          Sinks.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-09-30
+ Contribution:  100%
  ------------------------------------------------------------------------------
  Purpose
    A "sink" is a destination where a formatted log line is written to.

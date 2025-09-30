@@ -34,6 +34,10 @@
 //#include <glad/glad.h>
 //#endif
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 // Useful debug macros
 #ifdef _DEBUG
 #define ASSERT(condition) assert(condition)
