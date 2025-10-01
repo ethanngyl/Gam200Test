@@ -44,6 +44,7 @@ namespace Framework
 
         glfwMakeContextCurrent(window);
 
+        /*
         // Query framebuffer size from the window
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
@@ -53,6 +54,7 @@ namespace Framework
         AddViewport(width / 2, height / 2, width / 2, height / 2); // Top-right
         AddViewport(0, 0, width / 2, height / 2);                  // Bottom-left
         AddViewport(width / 2, 0, width / 2, height / 2);          // Bottom-right
+        */
 
         // After OpenGL context creation
         glewExperimental = GL_TRUE; // Ensures access to modern features
