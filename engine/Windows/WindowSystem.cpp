@@ -1,4 +1,12 @@
+<<<<<<< HEAD
 #include "Precompiled.h"
+=======
+﻿#include "Precompiled.h"
+#include "WindowSystem.h"
+#include "Message.h"
+#include "Core.h"
+#include <GLFW/glfw3.h>
+>>>>>>> parent of 88546ef (Rearranged files)
 
 namespace Framework
 {
