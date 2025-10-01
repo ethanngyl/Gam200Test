@@ -30,16 +30,7 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
-"engine/Core.cpp"
-"engine/main.cpp"
-"engine/Windows/WindowSystem.cpp"
-"engine/Graphics/GraphicsSystem.cpp"
-"engine/Graphics/Shader.cpp"
-"engine/Graphics/Mesh.cpp"
-"engine/Graphics/MeshFactory.cpp"
-"engine/Input/Input.cpp" 
-"engine/Math/Matrix3x3.cpp"
-"engine/Math/Vector2D.cpp")
+"engine/main.cpp")
 
 # ======================= Linking =========================
 
@@ -57,7 +48,11 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
     ${CMAKE_SOURCE_DIR}/engine
+    ${CMAKE_SOURCE_DIR}/engine/Core
+    ${CMAKE_SOURCE_DIR}/engine/ECS
     ${CMAKE_SOURCE_DIR}/engine/Collision
+    ${CMAKE_SOURCE_DIR}/engine/Movement
+    ${CMAKE_SOURCE_DIR}/engine/Debugger
     ${CMAKE_SOURCE_DIR}/engine/Graphics  
     ${CMAKE_SOURCE_DIR}/engine/Input
     ${CMAKE_SOURCE_DIR}/engine/Math
@@ -73,7 +68,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra)
 elseif (MSVC)
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W3)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
 endif()
 
 # ======================= Platform-Specific Linking =========================
