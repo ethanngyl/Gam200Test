@@ -95,6 +95,7 @@
 
 //GLFW
 #include <GLFW/glfw3.h>
+#include <stb_image.h>
 
 // Useful debug macros
 #ifdef _DEBUG
