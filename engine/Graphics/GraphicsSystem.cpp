@@ -125,23 +125,21 @@ namespace Framework
             glScissor(vp.x, vp.y, vp.width, vp.height);
             glClear(GL_COLOR_BUFFER_BIT);
             glDisable(GL_SCISSOR_TEST);
+        RenderEntities();
+        SetCurrentMeshColor();
 
-            RenderEntities();
-            SetCurrentMeshColor();
+        //if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
+        //    if (meshes[currentMeshIndex])
+        //        meshes[currentMeshIndex]->Draw();
+        //}
 
-            //if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
-            //    if (meshes[currentMeshIndex])
-            //        meshes[currentMeshIndex]->Draw();
-            //}
-
-            GLenum error = glGetError();
-            if (error != GL_NO_ERROR) {
-                std::cerr << "OpenGL error in Update: " << error << "\n";
-            }
-
-            EndFrame();
-            ProcessInput();
+        GLenum error = glGetError();
+        if (error != GL_NO_ERROR) {
+            std::cerr << "OpenGL error in Update: " << error << "\n";
         }
+
+        EndFrame();
+        ProcessInput();
     }
 
     void GraphicsSystem::RenderEntities()
@@ -244,11 +242,7 @@ namespace Framework
         int colorLoc = glGetUniformLocation(shaderID, "uColor");
 
         glm::vec3 baseColor = meshColors[currentMeshIndex];
-
-        if (interpolateColor) {
-            glm::vec3 targetColor = glm::vec3(1.0f) - baseColor;
-            colorLerpTime += colorLerpSpeed * 0.016f;
-            if (colorLerpTime > 1.0f) colorLerpTime = 0.0f;
+        glm::vec3 targetColor = glm::vec3(1.0f) - baseColor; // Invert color as a target, just for demo
 
             // 🔹 rainbow animation
             float t = glfwGetTime();
@@ -261,7 +255,6 @@ namespace Framework
             glm::vec3 result = glm::mix(baseColor, targetColor, colorLerpTime);
             glUniform3f(colorLoc, result.r, result.g, result.b);
         }
-
         else {
             // 🔹 fallback: use the base mesh color
             glm::vec3 baseColor = meshColors[currentMeshIndex];
