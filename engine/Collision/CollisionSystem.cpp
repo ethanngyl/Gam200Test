@@ -1,14 +1,6 @@
-#include "CollisionSystem.h"
-#include "Message.h"
-#include "Math/Vector2D.h"
-#include "Shader.h"
-#include "Mesh.h"
-#include "MeshFactory.h"
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include "Precompiled.h"
 //#include "input.h"
-
+#include "ECSEntityManager.h"
 /*
 ===============================================================================
  CollisionSystem.cpp
@@ -169,6 +161,7 @@ void CollisionSystem::Initialize()
 
 void CollisionSystem::Update(float dt)
 {
+    CheckECSCollisions();
     // If input system is not wired, do nothing
     if (!m_input) return;
 
@@ -353,8 +346,9 @@ void CollisionSystem::Update(float dt)
         }
        
         //collidedLastFrame = hitAny;
+
         return;
-    
+        
 }
 
 
@@ -521,6 +515,69 @@ void CollisionSystem::setupScene(CollTest m)
 
     collidedLastFrame = false;
     sceneReady = true;
+}
+
+void CollisionSystem::CheckECSCollisions()
+{
+    if (!entityManager) return;
+    // Get entities with BoxCollider (your moving rectangle)
+    std::vector<Entity> rects;
+    for (Entity e : entityManager->GetAllEntities())
+    {
+        bool hasTransform = entityManager->HasComponent<Transform>(e);
+        bool hasBox = entityManager->HasComponent<BoxCollider>(e);
+        if (entityManager->HasComponent<Transform>(e) &&
+            entityManager->HasComponent<BoxCollider>(e))
+        {
+            rects.push_back(e);
+        }
+    }
+
+    // Get entities with TriangleCollider
+    std::vector<Entity> triangles;
+    for (Entity e : entityManager->GetAllEntities())
+    {
+        bool hasTri = entityManager->HasComponent<TriangleCollider>(e);
+        if (entityManager->HasComponent<Transform>(e) &&
+            entityManager->HasComponent<TriangleCollider>(e))
+        {
+            triangles.push_back(e);
+        }
+    }
+
+    // Check rect vs triangle collisions
+    for (Entity rectEnt : rects)
+    {
+        for (Entity triEnt : triangles)
+        {
+            auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
+            auto& rectColl = entityManager->GetComponent<BoxCollider>(rectEnt);
+
+            auto& triTransform = entityManager->GetComponent<Transform>(triEnt);
+            auto& triColl = entityManager->GetComponent<TriangleCollider>(triEnt);
+            //std::cout << "Rect pos: (" << rectTransform.position.x << "," << rectTransform.position.y << ")\n";
+            //std::cout << "Triangle pos: (" << triTransform.position.x << "," << triTransform.position.y << ")\n";
+            // Convert to collision system format
+            Collider rect = Collider::create_rect(
+                rectColl.size.x,
+                rectColl.size.y,
+                rectTransform.position
+            );
+
+            // Triangle vertices in world space
+            Triangle tri;
+            tri.v0 = triTransform.position + triColl.v0;
+            tri.v1 = triTransform.position + triColl.v1;
+            tri.v2 = triTransform.position + triColl.v2;
+
+            // Use your existing rect_to_triangle function
+            if (rect_to_triangle(rect, tri))
+            {
+                std::cout << "Collision: Rect entity " << rectEnt.GetID()
+                    << " hit Triangle entity " << triEnt.GetID() << "\n";
+            }
+        }
+    }
 }
 
 // Clear current test and unlock mode selection

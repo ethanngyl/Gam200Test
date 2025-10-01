@@ -1,16 +1,4 @@
 ﻿#include "Precompiled.h"
-#include "GraphicsSystem.h"
-#include "Message.h"
-#include "GL/glew.h"
-#include "GL/gl.h"
-#include <GLFW/glfw3.h>
-#include "ECSComponent.h"
-#include "ECSEntity.h"
-#include "ECSEntityManager.h"
-#include "Component.h"
-#include "Shader.h"
-#include "Mesh.h"
-#include "MeshFactory.h"
 
 namespace Framework
 {

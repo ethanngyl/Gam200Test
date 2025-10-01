@@ -1,8 +1,6 @@
 #pragma once
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <vector>
+#include "Precompiled.h"
+
 /*
 ===============================================================================
  File:          Log.cpp

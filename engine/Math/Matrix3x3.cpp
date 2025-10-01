@@ -1,7 +1,4 @@
-#include "Matrix3x3.h"
 #include "Precompiled.h"
-#include <algorithm>
-#include <cmath>
 
 namespace Framework {
 

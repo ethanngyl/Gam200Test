@@ -1,14 +1,4 @@
 #include "Precompiled.h"
-#include "Core.h"
-#include "MovementSystem.h"
-
-
-#include "DebugComponents/PerfViewer.h"
-#include "DebugComponents/Trace.h"
-#include "DebugComponents/Perf.h"
-#include "DebugComponents/Log.h"
-#include "DebugComponents/CrashLogger.h"
-
 namespace Framework
 {
     // Define the global pointer
@@ -100,11 +90,11 @@ namespace Framework
 
             // Debug timing
             static int frameCount = 0;
-            if (frameCount++ % 60 == 0) {  // Print every 60 frames
-                std::cout << "LastTime: " << LastTime
-                    << ", CurrentTime: " << currenttime
-                    << ", dt: " << dt << "\n";
-            }
+            //if (frameCount++ % 60 == 0) {  // Print every 60 frames
+                //std::cout << "LastTime: " << LastTime
+                    //<< ", CurrentTime: " << currenttime
+                    //<< ", dt: " << dt << "\n";
+            //}
             LastTime = currenttime;
 
 

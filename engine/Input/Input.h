@@ -1,12 +1,12 @@
 #pragma once
-#include "../Interface.h"
-#include <map>
+#include "Precompiled.h"
 
 namespace Framework
 {
     // Key codes for common keys
     enum KeyCode
     {
+        // Alphanumeric Keys
         KEY_UNKNOWN = 0,
         KEY_A = 'A', KEY_B = 'B', KEY_C = 'C', KEY_D = 'D',
         KEY_E = 'E', KEY_F = 'F', KEY_G = 'G', KEY_H = 'H',
@@ -26,7 +26,11 @@ namespace Framework
         KEY_LEFT = 37,
         KEY_UP = 38,
         KEY_RIGHT = 39,
-        KEY_DOWN = 40
+        KEY_DOWN = 40,
+
+        // Mouse Buttons
+        MOUSE_LEFT = VK_LBUTTON,
+        MOUSE_RIGHT = VK_RBUTTON
     };
 
     class InputSystem : public InterfaceSystem
@@ -44,7 +48,7 @@ namespace Framework
         bool IsKeyDown(KeyCode key);
         bool IsKeyPressed(KeyCode key);  // True only on the frame key was pressed
         bool IsKeyReleased(KeyCode key); // True only on the frame key was released
-
+        void GetMousePosition(float& x, float& y);
     private:
         std::map<KeyCode, bool> CurrentKeys;     // Keys down this frame
         std::map<KeyCode, bool> PreviousKeys;    // Keys down last frame
