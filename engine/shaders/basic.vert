@@ -2,11 +2,13 @@
 
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aColor;
-uniform mat4 uModel; 
-out vec3 vertexColor; // passed to fragment shader
+layout(location = 2) in vec2 aTexCoord;  // <--- new
+
+out vec3 vertexColor;
+out vec2 TexCoord;
 
 void main() {
     gl_Position = vec4(aPos, 1.0);
-    gl_Position = uModel * vec4(aPos, 1.0);;
-    vertexColor = aColor;  // Pass color along
+    vertexColor = aColor;
+    TexCoord = aTexCoord; // pass to fragment
 }
