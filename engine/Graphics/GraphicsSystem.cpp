@@ -1,16 +1,4 @@
 ﻿#include "Precompiled.h"
-#include "GraphicsSystem.h"
-#include "Message.h"
-#include "GL/glew.h"
-#include "GL/gl.h"
-#include <GLFW/glfw3.h>
-#include "ECSComponent.h"
-#include "ECSEntity.h"
-#include "ECSEntityManager.h"
-#include "Component.h"
-#include "Shader.h"
-#include "Mesh.h"
-#include "MeshFactory.h"
 
 namespace Framework
 {
@@ -44,18 +32,7 @@ namespace Framework
 
         glfwMakeContextCurrent(window);
 
-        // Query framebuffer size from the window
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-
-        // Divide window into 4 equal quadrants
-        AddViewport(0, height / 2, width / 2, height / 2);         // Top-left
-        AddViewport(width / 2, height / 2, width / 2, height / 2); // Top-right
-        AddViewport(0, 0, width / 2, height / 2);                  // Bottom-left
-        AddViewport(width / 2, 0, width / 2, height / 2);          // Bottom-right
-
-        // After OpenGL context creation
-        glewExperimental = GL_TRUE; // Ensures access to modern features
+        glewExperimental = GL_TRUE;
         if (glewInit() != GLEW_OK) {
             std::cerr << "GLEW Initialization failed!" << std::endl;
         }
@@ -71,7 +48,6 @@ namespace Framework
         // Viewport
         glViewport(0, 0, 1600, 800);
 
-        // Load shaders with better error handling
         try {
             shader = new Shader("shaders/basic.vert", "shaders/basic.frag");
             std::cout << "Shaders loaded successfully\n";
@@ -103,8 +79,6 @@ namespace Framework
         if (!window) return;
         if (glfwWindowShouldClose(window)) return;
 
-
-        // Rendering
         BeginFrame();
 
         if (!shader) {
@@ -113,16 +87,6 @@ namespace Framework
         }
 
         shader->Bind();
-
-        // Loop over viewports
-        for (const auto& vp : viewports) {
-            glViewport(vp.x, vp.y, vp.width, vp.height);
-
-            // Optional: Clear only this viewport (good for debugging)
-            glEnable(GL_SCISSOR_TEST);
-            glScissor(vp.x, vp.y, vp.width, vp.height);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glDisable(GL_SCISSOR_TEST);
         RenderEntities();
         SetCurrentMeshColor();
 
@@ -236,12 +200,10 @@ namespace Framework
         if (!shader || currentMeshIndex < 0 || currentMeshIndex >= (int)meshColors.size())
             return;
 
-        unsigned int shaderID = shader->GetID();
-        int colorLoc = glGetUniformLocation(shaderID, "uColor");
+        GLuint shaderID = shader->GetID();
+        GLint colorLoc = glGetUniformLocation(shaderID, "uColor");
 
-        glm::vec3 baseColor = meshColors[currentMeshIndex];
-        glm::vec3 targetColor = glm::vec3(1.0f) - baseColor; // Invert color as a target, just for demo
-
+        if (interpolateColor) {
             // 🔹 rainbow animation
             float t = glfwGetTime();
             glm::vec3 rainbow = glm::vec3(
@@ -250,17 +212,11 @@ namespace Framework
                 (sin(t * 1.7f) * 0.5f) + 0.5f
             );
             glUniform3f(colorLoc, rainbow.r, rainbow.g, rainbow.b);
-            glm::vec3 result = glm::mix(baseColor, targetColor, colorLerpTime);
-            glUniform3f(colorLoc, result.r, result.g, result.b);
         }
         else {
             // 🔹 fallback: use the base mesh color
             glm::vec3 baseColor = meshColors[currentMeshIndex];
             glUniform3f(colorLoc, baseColor.r, baseColor.g, baseColor.b);
         }
-    }
-
-    void GraphicsSystem::AddViewport(int x, int y, int width, int height) {
-        viewports.emplace_back(x, y, width, height);
     }
 }

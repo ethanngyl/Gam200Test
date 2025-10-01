@@ -1,5 +1,4 @@
-#include "Trace.h"
-#include "PerfViewer.h"
+#include "Precompiled.h"
 
 /*
 ===============================================================================
