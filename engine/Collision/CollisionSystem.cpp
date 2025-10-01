@@ -419,9 +419,9 @@ void CollisionSystem::CheckECSCollisions()
             auto& t = entityManager->GetComponent<Transform>(e);
             auto& c = entityManager->GetComponent<BoxCollider>(e);
 
-            std::cout << "Entity " << e.GetID()
-                << " pos=(" << t.position.x << "," << t.position.y << ")"
-                << " size=(" << c.size.x << "," << c.size.y << ")\n";
+            //std::cout << "Entity " << e.GetID()
+                //<< " pos=(" << t.position.x << "," << t.position.y << ")"
+                //<< " size=(" << c.size.x << "," << c.size.y << ")\n";
             rects.push_back(e);
         }
         
