@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Precompiled.h"
+#include "Interface.h"
 
 // Forward declaration
 struct GLFWwindow;

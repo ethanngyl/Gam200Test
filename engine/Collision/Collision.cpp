@@ -1,4 +1,9 @@
-#include "Precompiled.h"
+#include "Collision.h"
+//#include <cmath>
+//#include <algorithm>
+#include "Math/Matrix3x3.h"
+#include <cmath>
+#include <iostream>
 /*
 ===============================================================================
  Collision.cpp
@@ -21,6 +26,9 @@
  Date:   2025-09-30
 ===============================================================================
 */
+
+#include "Math/Vector2D.h"
+
 
 bool circle_to_circle (const Collider& a, const Collider& b) {
     float dx = a.position.x - b.position.x;
@@ -263,11 +271,8 @@ bool rect_to_triangle(const Collider& rectAABB, Triangle const& tri)
 
     // 2) Any rect corner inside triangle?
     if (point_in_triangle(bl, tri) || point_in_triangle(br, tri) ||
-        point_in_triangle(tr, tri) || point_in_triangle(tl, tri)) {
-        std::cout << "Collision Detected\n";
+        point_in_triangle(tr, tri) || point_in_triangle(tl, tri))
         return true;
-    }
-        
 
     // 3) Any edge intersection between triangle and rect?
     const Vector2D triPts[3] = { tri.v0, tri.v1, tri.v2 };

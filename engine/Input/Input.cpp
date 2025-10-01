@@ -1,5 +1,8 @@
 #include "Precompiled.h"
-
+#include "Input.h"
+#include "Message.h"
+#include "Core.h"
+#include <iostream>
 namespace Framework
 {
     InputSystem::InputSystem()
@@ -44,9 +47,6 @@ namespace Framework
         UpdateKeyState(KEY_8, GetAsyncKeyState(KEY_8));
         UpdateKeyState(KEY_9, GetAsyncKeyState(KEY_9));
         UpdateKeyState(KEY_0, GetAsyncKeyState(KEY_0));
-        UpdateKeyState(MOUSE_LEFT, GetAsyncKeyState(MOUSE_LEFT));
-        UpdateKeyState(MOUSE_RIGHT, GetAsyncKeyState(MOUSE_RIGHT));
-
 
         // Check for quit conditions
         if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE))
@@ -56,33 +56,18 @@ namespace Framework
             Framework::CORE->BroadcastMessage(&quitMsg);
         }
 
-        //Movement and Input Testing
-
-        if (IsKeyPressed(KEY_W)) std::cout << "W pressed - Move Up\n";
-        if (IsKeyPressed(KEY_A)) std::cout << "A pressed - Move Left\n";
-        if (IsKeyPressed(KEY_S)) std::cout << "S pressed - Move Down\n";
-        if (IsKeyPressed(KEY_D)) std::cout << "D pressed - Move Right\n";
-        if (IsKeyPressed(KEY_SPACE)) std::cout << "Key Space pressed\n";
-        if (IsKeyPressed(KEY_1)) std::cout << "Key 1 pressed\n";
-        if (IsKeyPressed(KEY_2)) std::cout << "Key 2 pressed\n";
-        if (IsKeyPressed(KEY_3)) std::cout << "Key 3 pressed\n";
-        if (IsKeyPressed(KEY_4)) std::cout << "Key 4 pressed\n";
-        if (IsKeyPressed(MOUSE_LEFT)) std::cout << "Left Mouse Key Pressed\n";
-        if (IsKeyPressed(MOUSE_RIGHT)) std::cout << "Right Mouse Key Pressed\n";
+        // Example: Print when WASD keys are pressed
+        if (IsKeyPressed(KEY_W)) std::cout << "W pressed - Move Up!\n";
+        if (IsKeyPressed(KEY_A)) std::cout << "A pressed - Move Left!\n";
+        if (IsKeyPressed(KEY_S)) std::cout << "S pressed - Move Down!\n";
+        if (IsKeyPressed(KEY_D)) std::cout << "D pressed - Move Right!\n";
+        if (IsKeyPressed(KEY_SPACE)) std::cout << "SPACE pressed - Jump!\n";
+        if (IsKeyPressed(KEY_1)) std::cout << "1 pressed - Slot 1!\n";
+        if (IsKeyPressed(KEY_2)) std::cout << "2 pressed - Slot 2!\n";
+        if (IsKeyPressed(KEY_3)) std::cout << "3 pressed - Slot 3!\n";
+        if (IsKeyPressed(KEY_4)) std::cout << "4 pressed - Slot 4!\n";
     }
 
-    void InputSystem::GetMousePosition(float& x, float& y)
-    {
-#ifdef _WIN32
-        POINT point;
-        GetCursorPos(&point);
-
-        // Convert screen coordinates to your game coordinates
-        // You'll need the window handle to convert properly
-        x = static_cast<float>(point.x);
-        y = static_cast<float>(point.y);
-#endif
-    }
     void InputSystem::SendEngineMessage(Message* message)
     {
         // Handle messages sent to input system

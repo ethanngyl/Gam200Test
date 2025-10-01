@@ -1,6 +1,14 @@
-#include "Precompiled.h"
+#include "CollisionSystem.h"
+#include "Message.h"
+#include "Math/Vector2D.h"
+#include "Shader.h"
+#include "Mesh.h"
+#include "MeshFactory.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 //#include "input.h"
-#include "ECSEntityManager.h"
+
 /*
 ===============================================================================
  CollisionSystem.cpp
@@ -161,7 +169,6 @@ void CollisionSystem::Initialize()
 
 void CollisionSystem::Update(float dt)
 {
-    CheckECSCollisions();
     // If input system is not wired, do nothing
     if (!m_input) return;
 
@@ -346,9 +353,8 @@ void CollisionSystem::Update(float dt)
         }
        
         //collidedLastFrame = hitAny;
-
         return;
-        
+    
 }
 
 

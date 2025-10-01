@@ -1,4 +1,12 @@
-#include "Precompiled.h"
+#include "DebugComponents/CrashLogger.h"
+#include "DebugComponents/Log.h"
+
+#include <cstdio>
+#include <exception>
+#include <sstream>
+#include <iomanip>
+#include <chrono>
+#include <string>
 
 #if defined(_WIN32)
 #define NOMINMAX

@@ -1,5 +1,5 @@
 #pragma once
-#include "Precompiled.h"
+#include <cstddef>
 
 namespace Framework {
 
