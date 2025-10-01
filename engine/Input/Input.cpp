@@ -69,6 +69,16 @@ namespace Framework
         if (IsKeyPressed(KEY_4)) std::cout << "Key 4 pressed\n";
         if (IsKeyPressed(MOUSE_LEFT)) std::cout << "Left Mouse Key Pressed\n";
         if (IsKeyPressed(MOUSE_RIGHT)) std::cout << "Right Mouse Key Pressed\n";
+
+        if (IsKeyPressed(MOUSE_LEFT)) {
+            float mouseX, mouseY;
+            GetMousePosition(mouseX, mouseY);
+
+            std::cout << "Left click at: " << mouseX << ", " << mouseY << "\n";
+        }
+        if (IsKeyDown(MOUSE_RIGHT)) {
+            std::cout << "Right mouse button held down\n";
+        }
     }
 
     void InputSystem::GetMousePosition(float& x, float& y)
