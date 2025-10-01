@@ -1,4 +1,8 @@
 #include "Precompiled.h"
+#include "WindowSystem.h"
+#include "Message.h"
+#include "Core.h"
+#include <GLFW/glfw3.h>
 
 namespace Framework
 {
