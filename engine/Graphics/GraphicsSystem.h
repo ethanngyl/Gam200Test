@@ -21,7 +21,7 @@ namespace Framework {
         virtual void RenderEntities();
         virtual void SendEngineMessage(Message* message) override;
         void SetEntityManager(EntityManager* em) { entityManager = em; }
-        void SetWindow(GLFWwindow* window) { this->window = window; }
+        void SetWindow(GLFWwindow* win) { window = win; }
 
     private:
         void BeginFrame();

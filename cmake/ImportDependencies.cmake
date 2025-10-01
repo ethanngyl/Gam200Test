@@ -34,6 +34,8 @@ macro(import_glm)
             GIT_TAG 0.9.9.8
         )
         FetchContent_MakeAvailable(glm)
+        target_include_directories(glm SYSTEM INTERFACE 
+            ${glm_SOURCE_DIR})
         message(STATUS "GLM imported successfully")
     endif()
 endmacro()
