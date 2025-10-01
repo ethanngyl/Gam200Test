@@ -6,6 +6,10 @@
 
 namespace Framework {
 
+    void TextSystem::SetConsoleOverlay(bool enabled) {
+        m_useOverlay = enabled;
+    }
+
     // -------- Utility: word wrapping --------
     std::vector<std::string> TextSystem::wrap_text(std::string const& s, int maxWidth) {
         std::vector<std::string> lines;
@@ -46,14 +50,18 @@ namespace Framework {
     // -------- Utility: print at console position (simple) --------
     void TextSystem::print_at(int x, int y, std::string const& s) {
 #ifdef _WIN32
-        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-        if (hOut == INVALID_HANDLE_VALUE) { std::cout << s << "\n"; return; }
-        COORD pos; pos.X = static_cast<SHORT>(x); pos.Y = static_cast<SHORT>(y);
-        SetConsoleCursorPosition(hOut, pos);
-        DWORD written = 0;
-        WriteConsoleA(hOut, s.c_str(), static_cast<DWORD>(s.size()), &written, nullptr);
-#else
+    if (!m_useOverlay) {
         std::cout << s << "\n";
+        return;
+    }
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) { std::cout << s << "\n"; return; }
+    COORD pos; pos.X = static_cast<SHORT>(x); pos.Y = static_cast<SHORT>(y);
+    SetConsoleCursorPosition(hOut, pos);
+    DWORD written = 0;
+    WriteConsoleA(hOut, s.c_str(), static_cast<DWORD>(s.size()), &written, nullptr);
+#else
+    std::cout << s << "\n";
 #endif
     }
 

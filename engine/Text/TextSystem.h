@@ -61,7 +61,11 @@ namespace Framework {
         bool   SetStyle(size_t handle, TextStyle const& style);
 
         void   DialogueClear();
-        void   DialogueQueue(std::vector<std::string> const& lines, TextStyle const& style, int width = 50, int x = 0, int y = 0);
+        void   DialogueQueue(std::vector<std::string> const& lines, TextStyle const& style, 
+                                                     int width = 50, int x = 0, int y = 0);
+
+        void   SetConsoleOverlay(bool enabled);
+
         bool   DialogueNext();
 
         bool   LoadFontsFromFolder(std::string const& folder);
@@ -80,12 +84,13 @@ namespace Framework {
 
         // Internal helpers
         static std::vector<std::string> wrap_text(std::string const& s, int maxWidth);
-        static void print_at(int x, int y, std::string const& s);
-        static void print_box(int x, int y, int width, std::vector<std::string> const& lines, TextStyle const& style);
+        void print_at(int x, int y, std::string const& s); 
+        void print_box(int x, int y, int width, std::vector<std::string> const& lines, TextStyle const& style); 
         void render_dirty();
         void ensure_demo_once();   // shows a demo once at startup
 
         bool m_demoShown = false;
+        bool m_useOverlay = false;
     };
 
 } // namespace Framework

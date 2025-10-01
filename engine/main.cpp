@@ -9,6 +9,7 @@
 #include "DebugComponents/Sinks.h"
 #include "DebugComponents/CrashLogger.h"
 #include "DebugComponents/PerfViewer.h"
+#include "Text/TextSystem.h"
 
 int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -49,6 +50,8 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
     Framework::MovementSystem* movementSys = new Framework::MovementSystem();
+	Framework::TextSystem* textSys = new Framework::TextSystem();
+
     movementSys->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
     movementSys->SetInputSystem(inputSys);
@@ -60,6 +63,7 @@ int WINAPI WinMain(    _In_ HINSTANCE hInstance,
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
+	engine.AddSystem(textSys);
 
     LOG_INFO("CORE", "Systems added.Initializing engine...");
 
