@@ -95,6 +95,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     // Test entity 1: Triangle
     Framework::Entity triangleEntity = entityManager.CreateEntity();
     entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.5f, 0.0f));
+    auto& transform1 = entityManager.GetComponent<Framework::Transform>(triangleEntity);
+    transform1.scale = Framework::Vector2D(0.5f, 0.5f);
     entityManager.AddComponent<Framework::Sprite>(triangleEntity);
     entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
     entityManager.AddComponent<Framework::TriangleCollider>(triangleEntity);
@@ -106,13 +108,15 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
 
     // Test entity 2: Quad
     Framework::Entity quadEntity = entityManager.CreateEntity();
-    entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.0f, 0.0f));
+    entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.1f, 0.1f));
+    auto& transform = entityManager.GetComponent<Framework::Transform>(quadEntity);
+    transform.scale = Framework::Vector2D(0.1f, 0.1f); // Add this line to change visual size
     entityManager.AddComponent<Framework::Sprite>(quadEntity);
     entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
     entityManager.AddComponent<Framework::Movement>(quadEntity);  // Add this
     entityManager.GetComponent<Framework::Movement>(quadEntity).moveSpeed = 0.1f;  // Set speed
     entityManager.AddComponent<Framework::BoxCollider>(quadEntity);
-    entityManager.GetComponent<Framework::BoxCollider>(quadEntity).size = Framework::Vector2D(0.3f, 0.2f);
+    entityManager.GetComponent<Framework::BoxCollider>(quadEntity).size = Framework::Vector2D(0.1f, 0.1f);
     LOG_INFO("CORE", "Created quantity entity with movement");
 
     //// Test entity 3: Circle

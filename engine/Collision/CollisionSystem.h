@@ -98,7 +98,7 @@ namespace Framework {
 
     
     void printCollider(const char* name, const Collider& c);
-    void setupScene(CollTest m);      // spawn & place shapes for selected test
+    //void setupScene(CollTest m);      // spawn & place shapes for selected test
     void clearScene();                // despawn (logically) and unlock mode
   };
 
