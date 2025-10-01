@@ -30,8 +30,16 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
+"engine/Core.cpp"
 "engine/main.cpp"
-)
+"engine/Windows/WindowSystem.cpp"
+"engine/Graphics/GraphicsSystem.cpp"
+"engine/Graphics/Shader.cpp"
+"engine/Graphics/Mesh.cpp"
+"engine/Graphics/MeshFactory.cpp"
+"engine/Input/Input.cpp" 
+"engine/Math/Matrix3x3.cpp"
+"engine/Math/Vector2D.cpp")
 
 # ======================= Linking =========================
 
@@ -56,10 +64,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/engine/Systems
     ${CMAKE_SOURCE_DIR}/engine/Windows
     ${CMAKE_SOURCE_DIR}/engine/Components
-    ${CMAKE_SOURCE_DIR}/engine/Movement
-    ${CMAKE_SOURCE_DIR}/engine/ECS
-    ${CMAKE_SOURCE_DIR}/engine/Debugger
-    ${CMAKE_SOURCE_DIR}/engine/Core
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

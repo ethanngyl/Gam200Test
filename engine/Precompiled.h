@@ -1,4 +1,5 @@
 #pragma once
+
 // Standard C++ libraries
 #include <vector>
 #include <string>
@@ -8,70 +9,14 @@
 #include <cmath>
 #include <fstream>
 #include <sstream>
-#include <cstdio>
-#include <exception>
-#include <iomanip>
-#include <chrono>
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <map>
-#include <cstdint>
-#include <unordered_map>
-#include <typeindex>
-#include <cstdarg>
-#include <mutex>
-#include <string_view>
-#include <functional>
+
 //Components
-
-//Core
-#include "Core.h"
-
-//Window
 #include "WindowSystem.h"
-#include "Windows.h"
-
-//Input
 #include "Input.h"
-
-//Interface
-#include "Interface.h" // The base class for all your engine systems
-
-//Graphics
 #include "GraphicsSystem.h"
-#include "Mesh.h"
-#include "MeshFactory.h"
-#include "Shader.h"
-
-//Collision
 #include "CollisionSystem.h"
-#include "Collision.h"
-
-//Math
 #include "MathTestSystem.h"
 #include "Vector2D.h"
-#include "Matrix3x3.h"
-
-//Movement
-#include "MovementSystem.h"
-
-//Debugger
-#include "CrashLogger.h"
-#include "Log.h"
-#include "Perf.h"
-#include "PerfViewer.h"
-#include "Sinks.h"
-#include "Trace.h"
-
-//ECS
-#include "ECSComponent.h"
-#include "ECSEntity.h"
-#include "ECSEntityManager.h"
-#include "Component.h"
-
-//Message
-#include "Message.h"
 
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32
@@ -82,19 +27,16 @@
 #pragma comment(lib, "winmm.lib")  // Link timing library
 #endif
 
-//GLM
+// OpenGL headers (since you have GLRenderer)
+//#ifdef USE_OPENGL
+//#include <GL/gl.h>
+//#include <GL/glu.h>
+//#include <glad/glad.h>
+//#endif
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/constants.hpp>
-#include <glm/trigonometric.hpp>
-
-//GLEW
-#include <GL/glew.h>
-#include "GL/gl.h"
-
-//GLFW
-#include <GLFW/glfw3.h>
 
 // Useful debug macros
 #ifdef _DEBUG

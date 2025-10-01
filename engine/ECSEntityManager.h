@@ -1,8 +1,10 @@
 #pragma once
 #include "ECSEntity.h"
 #include "ECSComponent.h"
-#include "Precompiled.h"
-
+#include <vector>
+#include <unordered_map>
+#include <memory>
+#include <typeindex>
 
 namespace Framework
 {
@@ -10,7 +12,6 @@ namespace Framework
     {
     public:
         EntityManager() : nextEntityID(1) {}
-
 
         Entity CreateEntity();
         void DestroyEntity(Entity entity);
