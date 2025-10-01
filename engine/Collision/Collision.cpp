@@ -204,9 +204,10 @@ bool point_in_triangle(Framework::Vector2D const& p, Triangle const& tri)
     return (u >= 0.0f) && (v >= 0.0f) && (u + v <= 1.0f);
 }
 
-bool circle_to_triangle(const Collider& circle, Triangle const& tri)
+bool circle_to_triangle(const Collider& circle, const Collider& triCol)
 {
     using Framework::Vector2D;
+    const Triangle& tri = triCol.triangle;
     const Vector2D C = circle.position;
     const float r = circle.circle.radius;
     const float r2 = r * r;
@@ -223,28 +224,26 @@ bool circle_to_triangle(const Collider& circle, Triangle const& tri)
 
     // 3) Any triangle edge within radius of circle center?
     {
-        Vector2D q;
+        auto closest_point_on_segment = [](const Vector2D& a, const Vector2D& b, const Vector2D& p) {
+            Vector2D ab = b - a; Vector2D ap = p - a;
+            float abLen2 = Vector2D::dot(ab, ab); if (abLen2 <= 1e-12f) return a;
+            float t = Vector2D::dot(ap, ab) / abLen2; if (t < 0) t = 0; else if (t > 1) t = 1;
+            return a + ab * t;
+            };
 
-        q = closest_point_on_segment(tri.v0, tri.v1, C);
-        Vector2D dq = q - C;
-        if (Vector2D::dot(dq, dq) <= r2) return true;
-
-        q = closest_point_on_segment(tri.v1, tri.v2, C);
-        dq = q - C;
-        if (Vector2D::dot(dq, dq) <= r2) return true;
-
-        q = closest_point_on_segment(tri.v2, tri.v0, C);
-        dq = q - C;
-        if (Vector2D::dot(dq, dq) <= r2) return true;
+        Vector2D q, dq;
+        q = closest_point_on_segment(tri.v0, tri.v1, C); dq = q - C; if (Vector2D::dot(dq, dq) <= r2) return true;
+        q = closest_point_on_segment(tri.v1, tri.v2, C); dq = q - C; if (Vector2D::dot(dq, dq) <= r2) return true;
+        q = closest_point_on_segment(tri.v2, tri.v0, C); dq = q - C; if (Vector2D::dot(dq, dq) <= r2) return true;
     }
 
     return false;
 }
 
-bool rect_to_triangle(const Collider& rectAABB, Triangle const& tri)
+bool rect_to_triangle(const Collider& rectAABB, const Collider& triCol)
 {
     using Framework::Vector2D;
-
+    const Triangle& tri = triCol.triangle;
     const float hw = rectAABB.rect.width * 0.5f;
     const float hh = rectAABB.rect.height * 0.5f;
 
@@ -267,21 +266,36 @@ bool rect_to_triangle(const Collider& rectAABB, Triangle const& tri)
         std::cout << "Collision Detected\n";
         return true;
     }
-        
+    
+    //if (point_in_triangle(rectAABB.position, tri))
+       // return true;
+
 
     // 3) Any edge intersection between triangle and rect?
+    auto segments_intersect = [](const Vector2D& p1, const Vector2D& p2,
+        const Vector2D& q1, const Vector2D& q2)->bool
+        {
+            auto cross2 = [](const Vector2D& a, const Vector2D& b) {
+                return a.x * b.y - a.y * b.x;
+                };
+            Vector2D r = p2 - p1, s = q2 - q1;
+            float rxs = cross2(r, s);
+            if (std::fabs(rxs) < 1e-6f) return false; // parallel/collinear treated as no-hit here
+            float t = cross2(q1 - p1, s) / rxs;
+            float u = cross2(q1 - p1, r) / rxs;
+            return (t >= 0.f && t <= 1.f && u >= 0.f && u <= 1.f);
+        };
+
     const Vector2D triPts[3] = { tri.v0, tri.v1, tri.v2 };
     const Vector2D rectPts[4] = { bl, br, tr, tl };
 
     for (int i = 0; i < 3; ++i) {
         Vector2D a = triPts[i];
         Vector2D b = triPts[(i + 1) % 3];
-
         for (int j = 0; j < 4; ++j) {
             Vector2D c = rectPts[j];
             Vector2D d = rectPts[(j + 1) % 4];
-            if (segments_intersect(a, b, c, d))
-                return true;
+            if (segments_intersect(a, b, c, d)) return true;
         }
     }
 

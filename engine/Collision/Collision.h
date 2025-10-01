@@ -98,5 +98,5 @@ bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b);
 
 // Triangle collision function, not implement yet
 bool point_in_triangle(Framework::Vector2D const& p, Triangle const& tri);
-bool circle_to_triangle(const Collider& circle, Triangle const& tri);
-bool rect_to_triangle(const Collider& rectAABB, Triangle const& tri);
+bool circle_to_triangle(const Collider& circle, const Collider& triCol);
+bool rect_to_triangle(const Collider& rectAABB, const Collider& triCol);
