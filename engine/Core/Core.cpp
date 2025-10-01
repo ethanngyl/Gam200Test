@@ -1,11 +1,30 @@
 #include "Precompiled.h"
 #include <GLFW/glfw3.h>
 
+/**
+ * @file Core.cpp
+ * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
+ * @brief Core engine implementation providing game loop and system management
+ * @date 2025-09-30
+ *
+ * @copyright Copyright (c) 2025
+ *
+ * This file implements the CoreEngine class which serves as the central
+ * orchestrator for the game engine. It manages the main game loop, system
+ * initialization and updates, message broadcasting, and frame timing.
+ */
+
 namespace Framework
 {
-    // Define the global pointer
+    // Global pointer to the core engine instance
     CoreEngine* CORE = nullptr;
 
+    /**
+     * @brief Constructs the CoreEngine and initializes the global pointer
+     *
+     * Initializes timing to zero, sets the game to active state, and
+     * assigns the global CORE pointer for system-wide access.
+     */
     CoreEngine::CoreEngine()
     {
         LastTime = 0;
@@ -13,16 +32,28 @@ namespace Framework
         CORE = this; // Set the global pointer
     }
 
+    /**
+     * @brief Destructor for CoreEngine
+     *
+     * @note Actual cleanup is handled by DestroySystems()
+     */
     CoreEngine::~CoreEngine()
     {
         // Destructor - cleanup handled in DestroySystems()
     }
 
+    /**
+     * @brief Initializes all registered systems in dependency order
+     *
+     * This function performs a three-phase initialization:
+     * 1. WindowSystem is initialized first to create the window
+     * 2. GraphicsSystem receives the window handle
+     * 3. All remaining systems are initialized
+     *
+     * @note Systems are initialized using dynamic_cast to identify types
+     */
     void CoreEngine::Initialize()
     {
-        //for (size_t i = 0; i < Systems.size(); ++i)
-        //    Systems[i]->Initialize();
-
         // 1. First initialize WindowSystem (ensures window exists)
         for (auto system : Systems)
         {
@@ -61,6 +92,19 @@ namespace Framework
         }
     }
 
+    /**
+     * @brief Main game loop that runs until GameActive is false
+     *
+     * Executes the following operations each frame:
+     * - Calculates delta time between frames
+     * - Checks for window close requests
+     * - Updates all registered systems with delta time
+     * - Monitors performance metrics and FPS
+     * - Handles debug hotkeys (F2 for CSV export, F3 for crash test)
+     *
+     * @note Uses timeGetTime() for frame timing with 60 FPS fallback
+     * @note Integrates with eng::debug::PerfViewer for performance monitoring
+     */
     void CoreEngine::GameLoop()
     {
         // Initialize timing for first frame
@@ -153,6 +197,15 @@ namespace Framework
         }
     }
 
+    /**
+     * @brief Broadcasts a message to all registered systems
+     *
+     * Special handling for Quit messages:
+     * - Sets GameActive to false to terminate the game loop
+     *
+     * @param message Pointer to the message to broadcast
+     * @note All systems receive the message via SendEngineMessage()
+     */
     void CoreEngine::BroadcastMessage(Message* message)
     {
         // Handle quit message
@@ -164,11 +217,25 @@ namespace Framework
             Systems[i]->SendEngineMessage(message);
     }
 
+    /**
+     * @brief Adds a system to the engine's system list
+     *
+     * @param system Pointer to the system to add
+     * @note Systems are updated in the order they are added
+     */
     void CoreEngine::AddSystem(InterfaceSystem* system)
     {
         Systems.push_back(system);
     }
 
+    /**
+     * @brief Destroys all registered systems in reverse order
+     *
+     * Deletes systems in reverse order of addition to minimize
+     * dependency issues during cleanup.
+     *
+     * @note Clears the Systems vector after deletion
+     */
     void CoreEngine::DestroySystems()
     {
         // Delete in reverse order
