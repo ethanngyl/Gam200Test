@@ -1,6 +1,4 @@
-#include "Vector2D.h"
-#include <cmath>
-#include <cassert>
+#include "Precompiled.h"
 
 namespace Framework {
 

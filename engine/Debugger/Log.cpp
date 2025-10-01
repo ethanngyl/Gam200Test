@@ -1,11 +1,5 @@
-#include "Log.h"
-#include "Sinks.h"
+#include "Precompiled.h"
 
-#include <chrono>
-#include <cstdarg>
-#include <mutex>
-#include <sstream>
-#include <iomanip>
 /*
 ===============================================================================
  File:          Log.cpp

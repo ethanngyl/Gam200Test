@@ -4,16 +4,6 @@
 #endif
 
 #include "Precompiled.h"
-#include "Core.h"
-#include "GraphicsSystem.h"
-#include "ECSEntityManager.h"
-#include "ECSEntity.h"
-#include "Component.h"
-#include "MovementSystem.h"
-#include "DebugComponents/Log.h"
-#include "DebugComponents/Sinks.h"
-#include "DebugComponents/CrashLogger.h"
-#include "DebugComponents/PerfViewer.h"
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -63,6 +53,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     // Create the core engine
     Framework::CoreEngine engine;
     Framework::EntityManager entityManager;
+
     // Create systems
     Framework::WindowSystem* windowSys = new Framework::WindowSystem();
     Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
@@ -70,8 +61,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
     Framework::MovementSystem* movementSys = new Framework::MovementSystem();
+
     movementSys->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
+    collisionSys->SetEntityManager(&entityManager);
+
     movementSys->SetInputSystem(inputSys);
     collisionSys->SetInput(inputSys);
 
@@ -86,7 +80,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
 
 
     // Pass a pointer of InputSystem to CollisionSystem.
-// This lets CollisionSystem call IsKeyDown() to move the circle for collider testing.
+    // This lets CollisionSystem call IsKeyDown() to move the circle for collider testing.
     collisionSys->SetInput(inputSys);
 
     // Initialize all systems
@@ -101,20 +95,29 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     // Test entity 1: Triangle
     Framework::Entity triangleEntity = entityManager.CreateEntity();
     entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.5f, 0.0f));
+    auto& transform1 = entityManager.GetComponent<Framework::Transform>(triangleEntity);
+    transform1.scale = Framework::Vector2D(0.5f, 0.5f);
     entityManager.AddComponent<Framework::Sprite>(triangleEntity);
     entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
-    entityManager.AddComponent<Framework::Movement>(triangleEntity);  // Add this
-    entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 1.0f;  // Set speed
+    entityManager.AddComponent<Framework::TriangleCollider>(triangleEntity);
+    //entityManager.AddComponent<Framework::Movement>(triangleEntity);  // Add this
+    //entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 0.1f;  // Set speed
     //entityManager.GetComponent<Framework::Movement>(triangleEntity).direction = Framework::Vector2D(1.0f, 0.0f);  // Move right
-    LOG_INFO("CORE", "Created triangle entity with movement");
+    LOG_INFO("CORE", "Created triangle entity");
 
 
-    //// Test entity 2: Quad
-    //Framework::Entity quadEntity = entityManager.CreateEntity();
-    //entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.0f, 0.0f));
-    //entityManager.AddComponent<Framework::Sprite>(quadEntity);
-    //entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
-    //std::cout << "Created quad entity\n";
+    // Test entity 2: Quad
+    Framework::Entity quadEntity = entityManager.CreateEntity();
+    entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.1f, 0.1f));
+    auto& transform = entityManager.GetComponent<Framework::Transform>(quadEntity);
+    transform.scale = Framework::Vector2D(0.1f, 0.1f); // Add this line to change visual size
+    entityManager.AddComponent<Framework::Sprite>(quadEntity);
+    entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
+    entityManager.AddComponent<Framework::Movement>(quadEntity);  // Add this
+    entityManager.GetComponent<Framework::Movement>(quadEntity).moveSpeed = 0.1f;  // Set speed
+    entityManager.AddComponent<Framework::BoxCollider>(quadEntity);
+    entityManager.GetComponent<Framework::BoxCollider>(quadEntity).size = Framework::Vector2D(0.1f, 0.1f);
+    LOG_INFO("CORE", "Created quantity entity with movement");
 
     //// Test entity 3: Circle
     //Framework::Entity circleEntity = entityManager.CreateEntity();

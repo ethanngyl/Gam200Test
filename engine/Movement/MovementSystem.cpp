@@ -1,7 +1,4 @@
 #include "Precompiled.h"
-#include "MovementSystem.h"
-#include "Component.h"
-#include <iostream>
 
 namespace Framework
 {
@@ -18,30 +15,6 @@ namespace Framework
         std::cout << "MovementSystem: Initialized\n";
     }
 
-    //void MovementSystem::Update(float dt)
-    //{
-    //    if (!entityManager) return;
-
-    //    // Process all entities with Transform + Movement
-    //    for (Entity entity : entityManager->GetAllEntities())
-    //    {
-    //        if (entityManager->HasComponent<Transform>(entity) &&
-    //            entityManager->HasComponent<Movement>(entity))
-    //        {
-    //            auto& transform = entityManager->GetComponent<Transform>(entity);
-    //            auto& movement = entityManager->GetComponent<Movement>(entity);
-
-    //            // Update position based on direction and speed
-    //            transform.position += movement.direction * movement.moveSpeed * dt;
-
-    //            // Optional: Wrap around screen edges
-    //            //if (transform.position.x > 1.0f) transform.position.x = -1.0f;
-    //            //if (transform.position.x < -1.0f) transform.position.x = 1.0f;
-    //            //if (transform.position.y > 1.0f) transform.position.y = -1.0f;
-    //            //if (transform.position.y < -1.0f) transform.position.y = 1.0f;
-    //        }
-    //    }
-    //}
     void MovementSystem::Update(float dt)
     {
         if (!entityManager || !inputSystem) return;

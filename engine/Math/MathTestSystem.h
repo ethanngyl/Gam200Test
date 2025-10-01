@@ -1,8 +1,5 @@
 #pragma once
-
-#pragma once
-#include "Interface.h" // The base class for all your engine systems
-#include <iostream>
+#include "Precompiled.h" // The base class for all your engine systems
 
 namespace Framework {
 
