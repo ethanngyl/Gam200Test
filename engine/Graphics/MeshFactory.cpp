@@ -14,17 +14,20 @@ namespace Framework {
 
     Mesh* CreateQuad() {
         std::vector<float> vertices = {
-             // Position           // Color
-            -0.5f,  0.5f, 0.0f,    1.0f, 0.0f, 0.0f,  // Top Left - Red
-             0.5f,  0.5f, 0.0f,    0.0f, 1.0f, 0.0f,  // Top Right - Green
-            -0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,  // Bottom Left - Blue
+            // pos.xyz           color.rgb       uv
+            -1.0f, -1.0f, 0.0f,  1,1,1,          0.0f, 0.0f, // bottom-left
+             1.0f, -1.0f, 0.0f,  1,1,1,          1.0f, 0.0f, // bottom-right
+             1.0f,  1.0f, 0.0f,  1,1,1,          1.0f, 1.0f, // top-right
 
-             0.5f,  0.5f, 0.0f,    0.0f, 1.0f, 0.0f,  // Top Right - Green
-             0.5f, -0.5f, 0.0f,    1.0f, 1.0f, 0.0f,  // Bottom Right - Yellow
-            -0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f   // Bottom Left - Blue
+            -1.0f, -1.0f, 0.0f,  1,1,1,          0.0f, 0.0f, // bottom-left
+             1.0f,  1.0f, 0.0f,  1,1,1,          1.0f, 1.0f, // top-right
+            -1.0f,  1.0f, 0.0f,  1,1,1,          0.0f, 1.0f  // top-left
         };
-        return new Mesh(vertices, GL_TRIANGLES);
+
+        // pass hasTexCoords = true
+        return new Mesh(vertices, GL_TRIANGLES, true);
     }
+
 
     Mesh* CreateLine() {
         std::vector<float> vertices = {

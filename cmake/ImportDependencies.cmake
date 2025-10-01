@@ -114,20 +114,19 @@ macro(import_imgui)
     endif()
 endmacro()
 
-# Macro to import stb_image
-macro(import_stb_image)
-    if(NOT TARGET stb_image)
+macro(import_stb)
+    if(NOT TARGET stb)
         message(STATUS "Importing stb_image...")
         FetchContent_Declare(
-            stb_image
+            stb
             GIT_REPOSITORY https://github.com/nothings/stb.git
             GIT_TAG master
         )
-        FetchContent_Populate(stb_image)
-
-        # Create an INTERFACE library for stb_image (header-only)
-        add_library(stb_image INTERFACE)
-        target_include_directories(stb_image INTERFACE ${stb_image_SOURCE_DIR})
+        FetchContent_Populate(stb)
+        
+        # stb is header-only, just create an interface library
+        add_library(stb INTERFACE)
+        target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
         
         message(STATUS "stb_image imported successfully")
     endif()
@@ -142,7 +141,6 @@ function(importDependencies)
     import_glm() 
     import_glew()
     import_imgui()
-    import_stb_image() 
-    
+    import_stb()
     message(STATUS "=== All Dependencies Imported ===")
 endfunction()

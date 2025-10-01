@@ -7,7 +7,7 @@ namespace Framework {
 
     class Mesh {
     public:
-        Mesh(const std::vector<float>& vertices, GLenum drawMode = GL_TRIANGLES);
+        Mesh(const std::vector<float>& vertices, GLenum drawMode = GL_TRIANGLES, bool hasTexCoords = false);
         ~Mesh();
 
         void Draw() const;
@@ -21,6 +21,7 @@ namespace Framework {
         std::vector<float> vertices;
         unsigned int vertexCount;
         GLenum drawMode;
+        bool hasTexCoords; 
     };
 
 }
