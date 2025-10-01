@@ -1,4 +1,6 @@
 #include "Precompiled.h"
+#include <GLFW/glfw3.h>
+
 namespace Framework
 {
     // Define the global pointer
@@ -67,6 +69,18 @@ namespace Framework
         // Debug tools
         eng::debug::FpsCounter fps;
         fps.set_enable_logging(true);
+
+        // Attach window title updater
+        for (auto system : Systems)
+        {
+            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
+            {
+                GLFWwindow* win = windowSystem->GetWindow();
+                fps.set_title_updater([win](const char* title) {
+                    glfwSetWindowTitle(win, title);
+                    });
+            }
+        }
 
         while (GameActive)
         {
