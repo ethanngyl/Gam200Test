@@ -30,16 +30,14 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
-"engine/platform.h" 
-"engine/WindowSystem.h"
-"engine/Core.cpp"
-"engine/Main.cpp" "engine/Input.h" "engine/Input.cpp" "engine/Matrix3x3.cpp" "engine/Matrix3x3.h" "engine/Vector2D.h" "engine/Vector2D.cpp")
+"engine/main.cpp")
 
 # ======================= Linking =========================
 
 # Link libraries (fixed syntax)
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     glfw
+    glm
     libglew_static
     imgui
 )
@@ -49,7 +47,18 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 # Include directories for the project (fixed to use directory, not files)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
-    ${SRC_DIR}/Graphics   
+    ${CMAKE_SOURCE_DIR}/engine
+    ${CMAKE_SOURCE_DIR}/engine/Core
+    ${CMAKE_SOURCE_DIR}/engine/ECS
+    ${CMAKE_SOURCE_DIR}/engine/Collision
+    ${CMAKE_SOURCE_DIR}/engine/Movement
+    ${CMAKE_SOURCE_DIR}/engine/Debugger
+    ${CMAKE_SOURCE_DIR}/engine/Graphics  
+    ${CMAKE_SOURCE_DIR}/engine/Input
+    ${CMAKE_SOURCE_DIR}/engine/Math
+    ${CMAKE_SOURCE_DIR}/engine/Systems
+    ${CMAKE_SOURCE_DIR}/engine/Windows
+    ${CMAKE_SOURCE_DIR}/engine/Components
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -59,11 +68,13 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra)
 elseif (MSVC)
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W3)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
 endif()
 
 # ======================= Platform-Specific Linking =========================
-
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
+    WIN32_EXECUTABLE TRUE  # This makes it a Windows GUI app
+)
 # Add platform-specific OpenGL libraries
 if(WIN32)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE opengl32)
