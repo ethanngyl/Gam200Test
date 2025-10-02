@@ -33,8 +33,8 @@ namespace Framework {
         virtual void Initialize() override;
 
         // These methods are required but will be empty for this test system.
-        //virtual void Update(float dt) override;
-        //virtual void SendEngineMessage(Message* message) override;
+        virtual void Update(float dt) override;
+        virtual void SendEngineMessage(Message* message) override;
     };
 
 } // namespace Framework
