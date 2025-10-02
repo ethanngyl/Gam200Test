@@ -364,7 +364,7 @@ void CollisionSystem::CheckECSCollisions()
                 rectTransform.position
             );
 
-            Collider circle = Collider::create_circle(
+            Collider ecscircle = Collider::create_circle(
                 circColl.radius /** circTransform.scale.x*/,  // Scale the radius
                 circTransform.position + circColl.offset
             );
