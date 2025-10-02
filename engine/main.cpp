@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file main.cpp
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
  * @brief Core engine implementation providing game loop and system management
@@ -97,6 +97,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     //Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
     Framework::MovementSystem* movementSys = new Framework::MovementSystem();
+	Framework::TextSystem* textSys = new Framework::TextSystem();
 
     movementSys->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
@@ -111,6 +112,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     //engine.AddSystem(mathSys);
+	engine.AddSystem(textSys);
 
     LOG_INFO("CORE", "Systems added.Initializing engine...");
 
@@ -130,19 +132,21 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
 
     // Test entity 1: Triangle
     Framework::Entity triangleEntity = entityManager.CreateEntity();
-    entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.1f, 0.0f));
+    entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.5f, 0.0f));
     auto& transform = entityManager.GetComponent<Framework::Transform>(triangleEntity);
     transform.scale = Framework::Vector2D(0.5f, 0.5f);
     entityManager.AddComponent<Framework::Sprite>(triangleEntity);
     entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
     entityManager.AddComponent<Framework::TriangleCollider>(triangleEntity);
     //entityManager.AddComponent<Framework::Movement>(triangleEntity);  // Add this
-    //entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 0.1f;  // Set speed
+    //entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 0.5f;  // Set speed
     //entityManager.GetComponent<Framework::Movement>(triangleEntity).direction = Framework::Vector2D(1.0f, 0.0f);  // Move right
     auto& triCol = entityManager.GetComponent<Framework::TriangleCollider>(triangleEntity);
-    triCol.v0 = Framework::Vector2D(0.0f, 0.05f);
-    triCol.v1 = Framework::Vector2D(-0.05f, -0.05f);
-    triCol.v2 = Framework::Vector2D(0.05f, -0.05f);
+    float halfW = transform.scale.x * 0.1f;
+    float halfH = transform.scale.y * 0.1f;
+    triCol.v0 = Framework::Vector2D(0.0f, halfH);
+    triCol.v1 = Framework::Vector2D(-halfW, -halfH);
+    triCol.v2 = Framework::Vector2D(halfW, -halfH);
     LOG_INFO("CORE", "Created triangle entity");
 
 
@@ -150,26 +154,32 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     Framework::Entity quadEntity = entityManager.CreateEntity();
     entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.1f, 0.1f));
     auto& transform1 = entityManager.GetComponent<Framework::Transform>(quadEntity);
-    transform1.scale = Framework::Vector2D(0.1f, 0.1f); // Add this line to change visual size
+    entityManager.AddComponent<Framework::BoxCollider>(quadEntity);
+    auto& box = entityManager.GetComponent<Framework::BoxCollider>(quadEntity);
+    box.size = Framework::Vector2D(0.1f, 0.1f);
+
+	transform1.scale = Framework::Vector2D(0.1f, 0.1f); // Match visual size to collider
+
     entityManager.AddComponent<Framework::Sprite>(quadEntity);
     entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
     entityManager.AddComponent<Framework::Movement>(quadEntity);  // Add this
-    entityManager.GetComponent<Framework::Movement>(quadEntity).moveSpeed = 0.1f;  // Set speed
-    entityManager.AddComponent<Framework::BoxCollider>(quadEntity);
-    entityManager.GetComponent<Framework::BoxCollider>(quadEntity).size = Framework::Vector2D(0.1f, 0.1f);
+    entityManager.GetComponent<Framework::Movement>(quadEntity).moveSpeed = 0.5f;  // Set speed
     LOG_INFO("CORE", "Created quantity entity with movement");
 
     //// Test entity 3: Circle
     Framework::Entity circleEntity = entityManager.CreateEntity();
     entityManager.AddComponent<Framework::Transform>(circleEntity, Framework::Vector2D(0.5f, 0.5f));//Coordinates
     auto& transform2 = entityManager.GetComponent<Framework::Transform>(circleEntity);
+    // Collider (author radius once; everything else reads from here)
+    entityManager.AddComponent<Framework::CircleCollider>(circleEntity);
+    auto& cc = entityManager.GetComponent<Framework::CircleCollider>(circleEntity);
+    cc.radius = 0.05f;  // true collision radius
     transform2.scale = Framework::Vector2D(0.1f, 0.1f); //Visual size
     entityManager.AddComponent<Framework::Sprite>(circleEntity);
     entityManager.GetComponent<Framework::Sprite>(circleEntity).texturePath = "circle";
-    entityManager.AddComponent<Framework::CircleCollider>(circleEntity);
-    entityManager.GetComponent<Framework::CircleCollider>(circleEntity).radius = 0.1f; //Collision Radius
+    //entityManager.AddComponent<Framework::Movement>(circleEntity);  // Add this
+    //entityManager.GetComponent<Framework::Movement>(circleEntity).moveSpeed = 0.5f;  // Set speed
     std::cout << "Created circle entity\n";
-
     std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
 
     // Run the main game loop

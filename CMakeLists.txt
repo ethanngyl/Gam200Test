@@ -36,21 +36,7 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
-"shaders/basic.vert"
-"shaders/basic.frag"
 "engine/main.cpp")
-
-if(MSVC)
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE 
-        /W4
-        /wd4201    # nameless struct/union (GLM)
-        /wd4458    # declaration hides class member
-        /external:W0  # Suppress all warnings from external/system headers
-    )
-    
-    # Treat GLM as external to suppress its warnings
-    target_compile_options(glm INTERFACE /external:I)
-endif()
 
 # ======================= Linking =========================
 
@@ -101,6 +87,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 elseif (MSVC)
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
 endif()
+
+
 
 # ======================= Platform-Specific Linking =========================
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES

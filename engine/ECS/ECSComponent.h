@@ -1,5 +1,5 @@
 #pragma once
-#include "Precompiled.h"
+#include <cstdint>
 /**
  * @file ECSComponent.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)

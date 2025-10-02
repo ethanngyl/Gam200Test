@@ -1,5 +1,11 @@
 #include "Precompiled.h"
-#include <GLFW/glfw3.h>
+#include "Core.h"
+#include "MovementSystem.h"
+#include "PerfViewer.h"
+#include "Trace.h"
+#include "Perf.h"
+#include "Log.h"
+#include "CrashLogger.h"
 
 /**
  * @file Core.cpp

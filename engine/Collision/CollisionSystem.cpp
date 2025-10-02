@@ -1,29 +1,43 @@
-#include "Precompiled.h"
-//#include "input.h"
+﻿#include "CollisionSystem.h"
+#include "Message.h"
+#include "Math/Vector2D.h"
+#include "Shader.h"
+#include "Mesh.h"
+#include "MeshFactory.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "ECSEntityManager.h"
 /*
 ===============================================================================
- CollisionSystem.cpp
-------------------------------------------------------------------------------
- Implementation of the interactive collision test harness.
+File:        CollisionSystem.h
+Author:      Jiahao Zhou
+Co-Author:   Ethan Ng
+Email:       jiahao.zhou@digipen.edu, n.ethanyongle@digipen.edu
+Date:        2025-09-30
+Contribution: 85%(Jiahao), 15%(Ethan)
+-------------------------------------------------------------------------------
+Test harness interface for running interactive collision cases.
 
- Flow
-   - Initialize: show key help, no shapes until a mode is chosen
-   - Update:
-       * If T toggled: enable/disable test mode (clears scene)
-       * If active and no mode: lock to the first 1 to 7 pressed
-       * If mode running:
-           - WASD moves the active subject
-           - Run collision checks and print results
-       * R clears scene and unlocks mode selection
+Responsibilities:
+- Initialize CollTest modes (circle–rect, rect–rect, circle–circle, point tests,
+  triangle tests, bounds checks).
+- (Before render system is done)Create a simple test scenes and routes input to test all collision functions.
+- (After render system is done)Create ECS ...
 
- Implementation notes
-   - y-up coordinates (top = y + h/2)
-   - Console output only (no on-screen HUD)
-   
+Controls for:
+- T: toggle test mode
+- 1 to 0: pick a test mode (locked until reset)
+- R: reset current test
+- WASD: move the active subject/point
 
- Author: jiahao.zhou@digipen.edu
- Date:   2025-09-30
+Notes:
+- y-up coordinates; centered AABB rectangles.
+- simple test scenes is Console-only output; no HUD required.
+
+Safety:
+- Guard against null input system/entity manager.
+- Keep state flags (testActive, sceneReady, collidedLastFrame) consistent on reset.
 ===============================================================================
 */
 
@@ -39,6 +53,9 @@ void CollisionSystem::Initialize()
   mode = CollTest::None;
   collidedLastFrame = false;
 
+  //test instructions for user in console, use it to test before render system is done
+  //after render system is done, we are using checkECSCollisions() to test collisions in ECS
+  //but still keep this for reference
   std::cout << "CollisionSystem: Initialized\n";
   std::cout << "[T] toggle Collision Test Mode. Type [1,2,3,4,5] choose test when active:\n"
                " 1) circle-rect  2) rect-rect  3) circle-circle  4) point-circle  5) point-rect\n"
@@ -69,6 +86,9 @@ void CollisionSystem::Update(float dt)
 
     if (!testActive) return;
 
+    //test instructions for user in console, use it to test before render system is done
+    //after render system is done, we are using checkECSCollisions() to test collisions in ECS
+    //but still keep this for reference
     // Allow picking a mode only when active
     /*if (mode == CollTest::None) {
         if (m_input->IsKeyPressed(KEY_1)) { mode = CollTest::CircleToRect;   setupScene(mode);  std::cout << "Mode: Circle to Rect\n"; }
@@ -111,6 +131,9 @@ void CollisionSystem::Update(float dt)
         if (m_input->IsKeyDown(KEY_W)) dy += moveSpeed * dt;
         if (m_input->IsKeyDown(KEY_S)) dy -= moveSpeed * dt;
 
+		//base on the mode it activated, move the active object and check collisions
+        //after render system is done, we are using checkECSCollisions() to test collisions in ECS
+        //but still keep this for reference
         switch (mode) {
         case CollTest::CircleToRect: {
             if (dx || dy) {
@@ -184,7 +207,7 @@ void CollisionSystem::Update(float dt)
             collidedLastFrame = hit;
         } break;
 
-        // --- NEW: rect (AABB) vs triangle (mode 7) -------------------------
+        
         case CollTest::TriRect: {
             if (dx || dy) {
                 rect.position.x += dx; rect.position.y += dy;
@@ -248,6 +271,7 @@ void CollisionSystem::SendEngineMessage(Message* message)
   }
 }
 
+// Simple console logging of a collider's type, position, and size
 void CollisionSystem::printCollider(const char* name, const Collider& c)
 {
   if (c.shapeType == ShapeType::Circle) {
@@ -305,7 +329,7 @@ void CollisionSystem::CheckECSCollisions()
             auto& triTransform = entityManager->GetComponent<Transform>(triEnt);
             auto& triColl = entityManager->GetComponent<TriangleCollider>(triEnt);
             // Convert to collision system format
-            Collider rect = Collider::create_rect(
+            Collider ecsRect = Collider::create_rect(
                 rectColl.size.x /** rectTransform.scale.x*/,
                 rectColl.size.y /** rectTransform.scale.y*/,
 				rectTransform.position 
@@ -319,7 +343,7 @@ void CollisionSystem::CheckECSCollisions()
                 triTransform.position + triColl.v2
             );
             // Use your existing rect_to_triangle function
-            if (rect_to_triangle(rect, triCol))
+            if (rect_to_triangle(ecsRect, triCol))
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Triangle entity " << triEnt.GetID() << "\n";
@@ -334,22 +358,51 @@ void CollisionSystem::CheckECSCollisions()
             auto& circColl = entityManager->GetComponent<CircleCollider>(circEnt);
 
             // Convert to collision system format
-            Collider rect = Collider::create_rect(
+            Collider ecsRect = Collider::create_rect(
                 rectColl.size.x,
                 rectColl.size.y,
                 rectTransform.position
             );
 
             Collider circle = Collider::create_circle(
-                circColl.radius * circTransform.scale.x,  // Scale the radius
+                circColl.radius /** circTransform.scale.x*/,  // Scale the radius
                 circTransform.position + circColl.offset
             );
 
             // Use your existing check_collision function
-            if (check_collision(circle, rect))
+            if (check_collision(circle, ecsRect))
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Circle entity " << circEnt.GetID() << "\n";
+            }
+        }
+
+        for (Entity circEnt : circles)
+        {
+            // Build circle collider (radius is truth; no /2 hack)
+            auto& cT = entityManager->GetComponent<Transform>(circEnt);
+            auto& cC = entityManager->GetComponent<CircleCollider>(circEnt);
+            Collider ecsCircle = Collider::create_circle(
+                cC.radius,
+                cT.position + cC.offset
+            );
+
+            // Test this circle against every triangle
+            for (Entity triEnt : triangles)
+            {
+                auto& tT = entityManager->GetComponent<Transform>(triEnt);
+                auto& tC = entityManager->GetComponent<TriangleCollider>(triEnt);
+
+                Collider triCol = Collider::create_triangle(
+                    tT.position + tC.v0,
+                    tT.position + tC.v1,
+                    tT.position + tC.v2
+                );
+
+                if (circle_to_triangle(ecsCircle, triCol)) {
+                    std::cout << "Collision: Circle entity " << circEnt.GetID()
+                        << " hit Triangle entity " << triEnt.GetID() << "\n";
+                }
             }
         }
     }

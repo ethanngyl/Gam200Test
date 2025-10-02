@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Interface.h"
 #include "Collision.h"
 #include <iostream>
@@ -7,30 +7,33 @@
 
 /*
 ===============================================================================
- CollisionSystem.h
-------------------------------------------------------------------------------
- Test cases for collision functions with simple interactive modes.
+File:        CollisionSystem.h
+Author:      Jiahao Zhou
+Co-Author:   Ethan Ng
+Email:       jiahao.zhou@digipen.edu, n.ethanyongle@digipen.edu
+Date:        2025-09-30
+Contribution: 85%(Jiahao), 15%(Ethan)
+-------------------------------------------------------------------------------
+Test harness interface for running interactive collision cases.
 
- Controls
-   - T: toggle test mode
-   - 1,2,3,4,5,6,7,8,9,0: select mode (Circle-Rect, Rect-Rect, Circle-Circle, Point-Circle, Point-Rect)
-   - R: reset current test
-   - WASD: move active object/point
+Responsibilities:
+- Declare CollTest modes (circle–rect, rect–rect, circle–circle, point tests,
+  triangle tests, bounds checks).
+- (Before render system is done)Create a simple test scenes and routes input to test all collision functions.
+- (After render system is done)Create ECS ...
 
- Responsibilities
-   - Spawn simple scenes for each test
-   - Step movement from input and run collision checks
-   - Track last-frame collision flag
-   
+Controls for(runtime, handled in .cpp):
+- T: toggle test mode
+- 1 to 0: pick a test mode (locked until reset)
+- R: reset current test
+- WASD: move the active subject/point
 
- Notes
-   - y-up math, centered AABBs
-   - No dependency on debug HUD (console prints only)
-   - For debugging / verification only
+Notes:
+- y-up coordinates; centered AABB rectangles.
+- Console-only output; no HUD required.
 
-
- Author: jiahao.zhou@digipen.edu
- Date:   2025-09-30
+Safety:
+- No dynamic allocations here; data lives on the system object.
 ===============================================================================
 */
 
@@ -63,6 +66,7 @@ namespace Framework {
     void CheckECSCollisions();
     void SetEntityManager(EntityManager* em) { entityManager = em; }
     void SetInput(InputSystem* input) { m_input = input; }
+
   private:
     // Demo scene: one circle and one rect move toward each other until they collide.
     Collider circle;

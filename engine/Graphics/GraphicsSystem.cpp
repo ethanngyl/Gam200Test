@@ -105,7 +105,7 @@ namespace Framework
         glm::mat4 projection = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
         shader->Bind();
         GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
-        std::cout << "Projection uniform location: " << projLoc << "\n";
+        //std::cout << "Projection uniform location: " << projLoc << "\n";
         if (projLoc == -1) {
             std::cerr << "WARNING: uProjection uniform not found in shader!\n";
         }

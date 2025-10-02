@@ -1,28 +1,42 @@
-#include "Precompiled.h"
+﻿#include "Precompiled.h"
+#include "Collision.h"
+//#include <cmath>
+//#include <algorithm>
+#include "Math/Matrix3x3.h"
+#include <cmath>
+#include <iostream>
+
 /*
 ===============================================================================
- Collision.cpp
-------------------------------------------------------------------------------
- Implementations for primitive collision tests.
+File:        Collision.cpp
+Author:      Jiahao Zhou
+Email:       jiahao.zhou@digipen.edu
+Date:        2025-09-30
+Contribution: 100%
+-------------------------------------------------------------------------------
+Implementations for primitive collision/bounds/triangle tests.
 
- Key ideas
-   - circle to circle: center distance vs (r1 + r2)
-   - rect to rect (AABB): overlap on X and Y with y-up convention
-   - circle to rect: clamp circle center to rect and compare distance to radius
-   - point tests: reuse the same rect/circle rules
-   - bounds checks: compare shape extents vs world bounds
-   - triangle tests: barycentric + edge intersection methods
+Key ideas:
+- Circle–circle: center distance vs (r1 + r2).
+- Rect–rect (AABB): overlap test on X and Y (y-up).
+- Circle–rect: clamp circle center to rect; compare to radius.
+- Point tests: follow circle/rect rules.
+- Bounds checks: compare shape extents to world bounds.
+- Triangle: barycentric point-in-tri + segment–segment edge checks.
 
- Assumptions
-   - All sizes/positions in same world units as the test harness
-   - Touching edges count as collision (<= checks)
+Notes:
+- World units are consistent with the harness.
+- Edge-touch counts as collision (<= comparisons).
 
- Author: jiahao.zhou@digipen.edu
- Date:   2025-09-30
+Safety:
+- Float math only; short-circuit on degenerate triangles.
+- No allocations; all inputs are by const ref/value.
 ===============================================================================
 */
 
-bool circle_to_circle (const Collider& a, const Collider& b) {
+/// Returns true if two circles intersect or touch.
+/// Touching edges count as collision.
+bool circle_to_circle(const Collider& a, const Collider& b) {
     float dx = a.position.x - b.position.x;
     float dy = a.position.y - b.position.y;
     float distanceSquared = dx * dx + dy * dy;
@@ -30,7 +44,8 @@ bool circle_to_circle (const Collider& a, const Collider& b) {
     return distanceSquared <= radiusSum * radiusSum;
 }
 
-bool rect_to_rect (const Collider& a, const Collider& b) { 
+/// return true if overlap exists on both X and Y axes
+bool rect_to_rect(const Collider& a, const Collider& b) {
     float aLeft = a.position.x - a.rect.width / 2;
     float aRight = a.position.x + a.rect.width / 2;
     float aTop = a.position.y + a.rect.height / 2;
@@ -42,53 +57,75 @@ bool rect_to_rect (const Collider& a, const Collider& b) {
     float bBottom = b.position.y - b.rect.height / 2;
 
     return (aLeft <= bRight && aRight >= bLeft &&
-            aTop >= bBottom && aBottom <= bTop);
+        aTop >= bBottom && aBottom <= bTop);
 }
 
-bool circle_to_rect (const Collider& circle, const Collider& rect){
-    float rectLeft = rect.position.x - rect.rect.width / 2;
-	float rectRight = rect.position.x + rect.rect.width / 2;
-	float rectTop = rect.position.y + rect.rect.height / 2;
-	float rectBottom = rect.position.y - rect.rect.height / 2;
+/// Clamp-and-check circle vs AABB (y-up). True if intersect or touch.
+bool circle_to_rect (const Collider& A, const Collider& B){
+
+    const Collider* circle = nullptr;
+    const Collider* rect = nullptr;
+
+    if (A.shapeType == ShapeType::Circle && B.shapeType == ShapeType::Rect) { circle = &A; rect = &B; }
+    else if (A.shapeType == ShapeType::Rect && B.shapeType == ShapeType::Circle) { circle = &B; rect = &A; }
+    else { return false; } // not a circle-rect pair
+
+    float rectLeft = rect->position.x - rect->rect.width / 2;
+	float rectRight = rect->position.x + rect->rect.width / 2;
+	float rectTop = rect->position.y + rect->rect.height / 2;
+	float rectBottom = rect->position.y - rect->rect.height / 2;
 
 	// Find the most closest point on the rectangle to the circle
-	float closestX = (circle.position.x < rectLeft) ? rectLeft :
-		(circle.position.x > rectRight) ? rectRight :
-		circle.position.x;
+	float closestX = (circle->position.x < rectLeft) ? rectLeft :
+		(circle->position.x > rectRight) ? rectRight :
+		circle->position.x;
 
-	float closestY = (circle.position.y < rectBottom) ? rectBottom :
-		(circle.position.y > rectTop) ? rectTop :
-		circle.position.y;
+	float closestY = (circle->position.y < rectBottom) ? rectBottom :
+		(circle->position.y > rectTop) ? rectTop :
+		circle->position.y;
 
 	// calculte distance between the circle's center and the closest point
-	float distanceX = circle.position.x - closestX;
-	float distanceY = circle.position.y - closestY;
+	float distanceX = circle->position.x - closestX;
+	float distanceY = circle->position.y - closestY;
 
 	// calculte squared distance and compare with squared radius
 	float distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
-	return distanceSquared <= (circle.circle.radius * circle.circle.radius);
+    /*std::cout
+        << "rect w=" << rect->rect.width
+        << " h=" << rect->rect.height
+        << " r=" << circle->circle.radius << "\n"
+        << "L=" << rectLeft << " R=" << rectRight
+        << " B=" << rectBottom << " T=" << rectTop << "\n"
+        << "closest=(" << closestX << "," << closestY << ") "
+        << "dx=" << distanceX << " dy=" << distanceY
+        << " d2=" << distanceSquared
+        << " r2=" << (circle->circle.radius * circle->circle.radius) << "\n";*/
+	return distanceSquared <= (circle->circle.radius * circle->circle.radius);
 }
 
+/// True if point lies inside centered AABB (y-up). Edges are included.
 bool point_in_circle(const Framework::Vector2D point, const Collider& circle) {
-    
+
     float dx = point.x - circle.position.x;
     float dy = point.y - circle.position.y;
     float distance = dx * dx + dy * dy;
     float radiusSqaured = circle.circle.radius * circle.circle.radius;
-    return distance <= radiusSqaured; 
+    return distance <= radiusSqaured;
 }
 
 bool point_in_rect(const Framework::Vector2D point, const Collider& rect) {
     // centered AABB with y-up: top = y - h/2, bottom = y + h/2 (matches your rect_to_rect)
-    float left   = rect.position.x - rect.rect.width  * 0.5f;
-    float right  = rect.position.x + rect.rect.width  * 0.5f;
-    float top    = rect.position.y + rect.rect.height * 0.5f;
+    float left = rect.position.x - rect.rect.width * 0.5f;
+    float right = rect.position.x + rect.rect.width * 0.5f;
+    float top = rect.position.y + rect.rect.height * 0.5f;
     float bottom = rect.position.y - rect.rect.height * 0.5f;
 
-    return (point.x >= left  && point.x <= right &&
-            point.y <= top   && point.y >= bottom); // touch = hit
+    return (point.x >= left && point.x <= right &&
+        point.y <= top && point.y >= bottom); // touch = hit
 }
 
+
+/// decide which point collision fucntion to use based on collider type
 
 bool point_in_collider(const Framework::Vector2D point, const Collider& c) {
     if (c.shapeType == ShapeType::Circle) return point_in_circle(point, c);
@@ -96,29 +133,37 @@ bool point_in_collider(const Framework::Vector2D point, const Collider& c) {
     return point_in_rect(point, c);
 }
 
-bool check_collision (const Collider& a, const Collider& b) {
+
+/// decide which collision function to use based on collider types
+
+bool check_collision(const Collider& a, const Collider& b) {
     if (a.shapeType == ShapeType::Circle && b.shapeType == ShapeType::Circle) {
         return circle_to_circle(a, b);
-    } else if (a.shapeType == ShapeType::Rect && b.shapeType == ShapeType::Rect) {
+    }
+    else if (a.shapeType == ShapeType::Rect && b.shapeType == ShapeType::Rect) {
         return rect_to_rect(a, b);
-    } else if (a.shapeType == ShapeType::Circle && b.shapeType == ShapeType::Rect) {
+    }
+    else if (a.shapeType == ShapeType::Circle && b.shapeType == ShapeType::Rect) {
         return circle_to_rect(a, b);
-    } else if (a.shapeType == ShapeType::Rect && b.shapeType == ShapeType::Circle) {
+    }
+    else if (a.shapeType == ShapeType::Rect && b.shapeType == ShapeType::Circle) {
         return circle_to_rect(b, a); // Swap order for Circle-To-Rect
     }
     return false; // Fallback case
 }
 
+/// return true if circle is out of bounds
 bool circle_out_of_bounds(const Collider& c, const Bounds& b) {
     //std::cout << "circle out of bounds check\n";
-	//std::cout << "circle position: (" << c.position.x << ", " << c.position.y << ")\n";
+    //std::cout << "circle position: (" << c.position.x << ", " << c.position.y << ")\n";
     //std::cout << "bounds left: " << b.left << ", right: " << b.right
-		//<< ", bottom: " << b.bottom << ", top: " << b.top << "\n";
+        //<< ", bottom: " << b.bottom << ", top: " << b.top << "\n";
     float r = c.circle.radius;
     return (c.position.x - r < b.left) || (c.position.x + r > b.right) ||
         (c.position.y - r < b.bottom) || (c.position.y + r > b.top);
 }
 
+/// return true if rect is out of bounds
 bool rect_out_of_bounds(const Collider& r, const Bounds& b) {
     float halfW = r.rect.width * 0.5f;
     float halfH = r.rect.height * 0.5f;
@@ -134,47 +179,8 @@ bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b) {
 }
 
 
-///below are all functions for triangle collision, these are temperary and have not polished
-///also not creating test cases for these first
-
-// ---------- local helpers (internal to this .cpp) ----------
-static inline Framework::Vector2D closest_point_on_segment(const Framework::Vector2D& a,
-    const Framework::Vector2D& b,
-    const Framework::Vector2D& p)
-{
-    using Framework::Vector2D;
-    Vector2D ab = b - a;
-    Vector2D ap = p - a;
-    float abLen2 = Vector2D::dot(ab, ab);
-    if (abLen2 <= 1e-12f) return a;
-    float t = Vector2D::dot(ap, ab) / abLen2;
-    if (t < 0.0f) t = 0.0f;
-    else if (t > 1.0f) t = 1.0f;
-    return a + ab * t;
-}
-
-static inline float cross2(const Framework::Vector2D& a, const Framework::Vector2D& b) {
-    return a.x * b.y - a.y * b.x;
-}
-
-static bool segments_intersect(const Framework::Vector2D& p1, const Framework::Vector2D& p2,
-    const Framework::Vector2D& q1, const Framework::Vector2D& q2)
-{
-    using Framework::Vector2D;
-    Vector2D r = p2 - p1;
-    Vector2D s = q2 - q1;
-    float rxs = cross2(r, s);
-    float qpxr = cross2(q1 - p1, r);
-
-    // Parallel / collinear (we skip collinear overlap as "no intersection" here)
-    if (std::fabs(rxs) < 1e-6f) return false;
-
-    float t = cross2(q1 - p1, s) / rxs;
-    float u = qpxr / rxs;
-    return (t >= 0.f && t <= 1.f && u >= 0.f && u <= 1.f);
-}
-
-// ---------- required functions (match Collision.h) ----------
+///below are all functions for triangle collision
+// ---------- required functions ----------
 
 // Barycentric test
 bool point_in_triangle(Framework::Vector2D const& p, Triangle const& tri)
@@ -204,13 +210,26 @@ bool point_in_triangle(Framework::Vector2D const& p, Triangle const& tri)
     return (u >= 0.0f) && (v >= 0.0f) && (u + v <= 1.0f);
 }
 
-bool circle_to_triangle(const Collider& circle, const Collider& triCol)
+
+/// Check if circle intersects triangle (point-in-tri OR edge distance).
+/// return true/false
+bool circle_to_triangle(const Collider& A, const Collider& B)
 {
     using Framework::Vector2D;
-    const Triangle& tri = triCol.triangle;
-    const Vector2D C = circle.position;
-    const float r = circle.circle.radius;
+
+    const Collider* circle = nullptr;
+    const Collider* triCol = nullptr;
+
+    if (A.shapeType == ShapeType::Circle && B.shapeType == ShapeType::Triangle) { circle = &A; triCol = &B; }
+    else if (A.shapeType == ShapeType::Triangle && B.shapeType == ShapeType::Circle) { circle = &B; triCol = &A; }
+    else { return false; }
+
+    const Triangle& tri = triCol->triangle;
+    const Vector2D C = circle->position;
+    const float r = circle->circle.radius;
     const float r2 = r * r;
+
+
 
     // 1) Any vertex of triangle inside circle?
     {
@@ -224,6 +243,7 @@ bool circle_to_triangle(const Collider& circle, const Collider& triCol)
 
     // 3) Any triangle edge within radius of circle center?
     {
+        // Helper: closest point on segment (triangle edge) to circle center (scoped lambda).
         auto closest_point_on_segment = [](const Vector2D& a, const Vector2D& b, const Vector2D& p) {
             Vector2D ab = b - a; Vector2D ap = p - a;
             float abLen2 = Vector2D::dot(ab, ab); if (abLen2 <= 1e-12f) return a;
@@ -240,6 +260,9 @@ bool circle_to_triangle(const Collider& circle, const Collider& triCol)
     return false;
 }
 
+
+/// Check if rect intersects triangle (by edges and point tests).
+/// return true/false
 bool rect_to_triangle(const Collider& rectAABB, const Collider& triCol)
 {
     using Framework::Vector2D;
@@ -266,12 +289,13 @@ bool rect_to_triangle(const Collider& rectAABB, const Collider& triCol)
         std::cout << "Collision Detected\n";
         return true;
     }
-    
+
     //if (point_in_triangle(rectAABB.position, tri))
        // return true;
 
 
-    // 3) Any edge intersection between triangle and rect?
+    //to check any edge intersection between triangle and rect?
+    // Helper: segment–segment intersection using 2D cross products.
     auto segments_intersect = [](const Vector2D& p1, const Vector2D& p2,
         const Vector2D& q1, const Vector2D& q2)->bool
         {
