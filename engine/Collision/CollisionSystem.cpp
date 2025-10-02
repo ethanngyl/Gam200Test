@@ -370,7 +370,7 @@ void CollisionSystem::CheckECSCollisions()
             );
 
             // Use your existing check_collision function
-            if (check_collision(circle, ecsRect))
+            if (check_collision(ecsCircle, ecsRect))
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Circle entity " << circEnt.GetID() << "\n";
