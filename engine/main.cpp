@@ -97,6 +97,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
     //Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
     Framework::MovementSystem* movementSys = new Framework::MovementSystem();
+	Framework::TextSystem* textSys = new Framework::TextSystem();
 
     movementSys->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
@@ -111,6 +112,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     //engine.AddSystem(mathSys);
+	engine.AddSystem(textSys);
 
     LOG_INFO("CORE", "Systems added.Initializing engine...");
 

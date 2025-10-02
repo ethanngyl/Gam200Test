@@ -1,5 +1,5 @@
 #pragma once
-#include "Precompiled.h"
+#include <cstdint>
 /**
  * @file ECSEntity.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)

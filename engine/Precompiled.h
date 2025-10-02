@@ -47,7 +47,6 @@
 
 //Collision
 #include "CollisionSystem.h"
-#include "Collision.h"
 
 //Math
 #include "MathTestSystem.h"
@@ -104,6 +103,8 @@
 #else
 #define ASSERT(condition) ((void)0)
 #endif
+
+#include <Text/TextSystem.h>
 
 // Safe deletion macros
 #define SAFE_DELETE(p) { if(p) { delete (p); (p) = nullptr; } }
