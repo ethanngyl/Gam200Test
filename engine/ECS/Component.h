@@ -1,5 +1,7 @@
 #pragma once
-#include "Precompiled.h"
+#include "ECSComponent.h"
+#include "Vector2D.h"
+#include <string>
 /**
  * @file Component.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)

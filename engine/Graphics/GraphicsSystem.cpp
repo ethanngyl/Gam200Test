@@ -1,4 +1,16 @@
 ﻿#include "Precompiled.h"
+#include "GraphicsSystem.h"
+#include "Message.h"
+#include "GL/glew.h"
+#include "GL/gl.h"
+#include <GLFW/glfw3.h>
+#include "ECSComponent.h"
+#include "ECSEntity.h"
+#include "ECSEntityManager.h"
+#include "Component.h"
+#include "Shader.h"
+#include "Mesh.h"
+#include "MeshFactory.h"
 
 namespace Framework
 {
@@ -91,7 +103,7 @@ namespace Framework
 
         shader->Bind();
         GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
-        std::cout << "Projection uniform location: " << projLoc << "\n";
+        //std::cout << "Projection uniform location: " << projLoc << "\n";
         if (projLoc == -1) {
             std::cerr << "WARNING: uProjection uniform not found in shader!\n";
         }

@@ -1,25 +1,29 @@
-#pragma once
+ï»¿#pragma once
 #include "Math/Vector2D.h"
 
 /*
 ===============================================================================
- Collision.h
-------------------------------------------------------------------------------
- Collider shapes and test helpers for collision system.
+File:        Collision.h
+Author:      Jiahao Zhou
+Email:       jiahao.zhou@digipen.edu
+Date:        2025-09-30
+Contribution: 100%
+-------------------------------------------------------------------------------
+Collider shapes and primitive tests (headers only).
 
- What¡¯s here
-   - Data: ShapeType, Circle, Rect, Collider (centered AABB for rect)
-   - Tests: circle_to_circle, rect_to_rect, circle_to_rect
-            point_in_circle, point_in_rect, point_in_collider, check_collision
-   - Bounds checks: circle_out_of_bounds, rect_out_of_bounds, point_out_of_bounds
-   - Triangle support: point_in_triangle, circle_to_triangle, rect_to_triangle
+Responsibilities:
+- Data: ShapeType, Circle, Rect, Triangle, Bounds, Collider factory helpers.
+- Tests: circle_to_circle, rect_to_rect, circle_to_rect,
+         point_in_circle/rect/collider, check_collision.
+- Bounds: circle_out_of_bounds, rect_out_of_bounds, point_out_of_bounds.
+- Triangle: point_in_triangle, circle_to_triangle, rect_to_triangle.
 
- Notes
-   - Coordinate system: y-up (top = y + h/2, bottom = y - h/2)
-   - Rects are centered at position with width/height
-   - Designed for use with CollisionSystem test harness
- Author: jiahao.zhou@digipen.edu
- Date:   2025-09-30
+Notes:
+- y-up coordinates; rects are centered at position with width/height.
+- Touching edges count as collision.
+
+Safety:
+- Pure functions; no ownership or allocations.
 ===============================================================================
 */
 
