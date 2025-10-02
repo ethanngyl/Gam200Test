@@ -57,7 +57,6 @@ namespace Framework {
 	float Vector2DDotProduct(Vector2D const& pVec0, Vector2D const& pVec1);
 	float Vector2DCrossProductMag(Vector2D const& pVec0, Vector2D const& pVec1);
 
-	// Optional aliases to match your typedefs
 	using Vec2 = Vector2D;
 	using Point2D = Vector2D;
 	using Pt2 = Vector2D;
