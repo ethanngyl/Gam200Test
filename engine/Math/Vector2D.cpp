@@ -8,7 +8,7 @@
  ------------------------------------------------------------------------------
  Implementation of the Vector2D class.
 
-  Design notes (plain English):
+  Design notes:
   This file implements the functionality declared in Vector2D.h.
   Constructors use member initializer lists for efficiency. The binary
   operators (like operator+) are implemented by reusing their corresponding
@@ -65,14 +65,14 @@ namespace Framework {
 	float Vector2D::distanceSq(Vector2D const& a, Vector2D const& b) { return (a - b).lengthSq(); }
 	float Vector2D::distance(Vector2D const& a, Vector2D const& b) { return std::sqrt(distanceSq(a, b)); }
 
-	// ---- free binary operators ----
+	// ---- non-member binary operators ----
 	Vector2D operator+(Vector2D lhs, Vector2D const& rhs) { lhs += rhs; return lhs; }
 	Vector2D operator-(Vector2D lhs, Vector2D const& rhs) { lhs -= rhs; return lhs; }
 	Vector2D operator*(Vector2D lhs, float rhs) { lhs *= rhs; return lhs; }
 	Vector2D operator*(float lhs, Vector2D rhs) { rhs *= lhs; return rhs; }
 	Vector2D operator/(Vector2D lhs, float rhs) { lhs /= rhs; return lhs; }
 
-	// ---- legacy wrappers ----
+
 	void  Vector2DNormalize(Vector2D& pResult, Vector2D const& pVec0) { pResult = pVec0; pResult.normalize(); }
 	float Vector2DLength(Vector2D const& pVec0) { return pVec0.length(); }
 	float Vector2DSquareLength(Vector2D const& pVec0) { return pVec0.lengthSq(); }

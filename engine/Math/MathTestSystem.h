@@ -8,7 +8,7 @@ Contribution : 100 %
 ------------------------------------------------------------------------------
 Header file for the MathTestSystem class.
 
-Design notes(plain English) :
+Design notes:
     This file declares the MathTestSystem.It's a simple, one-shot system that
     inherits from the engine's base InterfaceSystem. Its only purpose is to run
     a series of checks on the math library during engine initialization to ensure

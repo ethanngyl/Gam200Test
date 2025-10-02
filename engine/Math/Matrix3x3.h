@@ -8,7 +8,7 @@
  ------------------------------------------------------------------------------
  Header file for the Matrix3x3 class, used for 2D affine transformations.
 
-  Design notes (plain English):
+  Design notes:
   This class defines a 3x3 matrix, primarily for 2D graphics transformations
   like translation, rotation, and scaling.
 
@@ -79,7 +79,7 @@ namespace Framework {
         friend Matrix3x3 operator*(Matrix3x3 const& a, Matrix3x3 const& b);
     };
 
-    // ----- free functions -----
+    // ----- non-member functions -----
     Matrix3x3 operator*(Matrix3x3 const& a, Matrix3x3 const& b);
     Vector2D  operator*(Matrix3x3 const& M, Vector2D const& v);
 

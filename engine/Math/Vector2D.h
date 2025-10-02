@@ -6,9 +6,9 @@
  Date:           2025-09-22
  Contribution:   100%
  ------------------------------------------------------------------------------
- Header file for the Vector2D class, a 2D vector utility.
+ Header file for the Vector2D class.
 
-  Design notes (plain English):
+  Design notes:
   This class represents a 2D vector or point with float components (x, y).
   It provides a modern C++ interface with overloaded operators for intuitive
   mathematical expressions (e.g., v1 + v2, v * scalar).
@@ -20,7 +20,6 @@
 	  are provided for flexibility.
   -   Static functions for operations involving two vectors, like dot().
   -   Type aliases (Vec2, Point2D) for convenience.
-  -   Legacy C-style free functions are included for backward compatibility.
 ===============================================================================
 */
 #pragma once
@@ -66,14 +65,14 @@ namespace Framework {
 		static float distance(Vector2D const& a, Vector2D const& b);
 	};
 
-	// Binary operators (free functions)
+	// Binary operators (non-member functions)
 	Vector2D operator+(Vector2D lhs, Vector2D const& rhs);
 	Vector2D operator-(Vector2D lhs, Vector2D const& rhs);
 	Vector2D operator*(Vector2D lhs, float rhs);
 	Vector2D operator*(float lhs, Vector2D rhs);
 	Vector2D operator/(Vector2D lhs, float rhs);
 
-	// Legacy-style free functions (backward compatible names)
+	// non-member functions
 	void  Vector2DNormalize(Vector2D& pResult, Vector2D const& pVec0);
 	float Vector2DLength(Vector2D const& pVec0);
 	float Vector2DSquareLength(Vector2D const& pVec0);
