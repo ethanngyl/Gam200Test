@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 #include "Interface.h"
 #include "ECSEntityManager.h"
+
 
 namespace Framework
 {
@@ -16,6 +17,7 @@ namespace Framework
         virtual void SendEngineMessage(Message* message) override;
         void SetInputSystem(InputSystem* input) { inputSystem = input; }
         void SetEntityManager(EntityManager* em) { entityManager = em; }
+
 
     private:
         EntityManager* entityManager;

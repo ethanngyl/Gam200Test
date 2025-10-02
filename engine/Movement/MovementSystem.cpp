@@ -1,4 +1,4 @@
-#include "Precompiled.h"
+﻿#include "Precompiled.h"
 
 namespace Framework
 {
@@ -44,7 +44,12 @@ namespace Framework
                 movement.direction = inputDir;
 
                 // Apply movement
-                transform.position += movement.direction * movement.moveSpeed * dt;
+                if (!movement.blocked) {
+                    transform.position += movement.direction * movement.moveSpeed * dt;
+                }
+                else {
+                    transform.position -= movement.direction * movement.moveSpeed * dt*10;
+                }
 
                 // Optional: Keep on screen
                 if (transform.position.x > 1.0f) transform.position.x = 1.0f;

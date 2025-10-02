@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "ECSComponent.h"
 #include "Vector2D.h"
 #include <string>
@@ -42,6 +42,7 @@ namespace Framework
     {
         float moveSpeed = 100.0f;
         Vector2D direction;
+        bool blocked = false;
     };
 
     /**
