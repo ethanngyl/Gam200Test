@@ -1,5 +1,3 @@
-#include "ECSEntityManager.h"
-
 /**
  * @file EntityManager.cpp
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
@@ -12,6 +10,8 @@
  * component attachment/detachment, and component storage/retrieval.
  * This is the central coordination point for the ECS system.
  */
+
+#include "ECSEntityManager.h"
 
 namespace Framework
 {

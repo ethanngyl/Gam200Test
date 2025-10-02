@@ -106,11 +106,13 @@ namespace Framework {
     void MathTestSystem::Update(float dt)
     {
     //    // This system does not need per-frame updates.
+        (void)dt;
     }
 
     void MathTestSystem::SendEngineMessage(Message* message)
     {
-    //    // This system does not need to handle messages.
+     // This system does not need to handle messages.
+        (void)message;
     }
 
 } // namespace Framework

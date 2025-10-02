@@ -94,23 +94,9 @@ namespace Framework {
 
     // Updates the window system, called every frame to keep the window responsive
     void WindowSystem::Update(float dt) {
-        // For now, just check for basic input to quit
-        // Placeholder for future input handling (e.g., quitting)
-        // (We'll make this more sophisticated later)
-
-        // Simple console input check
-        //if (_kbhit()) // Windows-specific for now
-        //{
-        //    char key = _getch();
-        //    if (key == 'q' || key == 'Q')
-        //    {
-        //        // Send quit message
-        //        Message quitMsg(Mid::Quit);
-        //        Framework::CORE->BroadcastMessage(&quitMsg);
-        //    }
-        //}
 
         // Poll events (such as key presses, window resize, etc.)
+        (void)dt;
         glfwPollEvents();  // Ensures the window responds to user interactions
     }
 

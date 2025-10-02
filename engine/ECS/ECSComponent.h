@@ -1,17 +1,17 @@
-#pragma once
-#include <cstdint>
 /**
  * @file ECSComponent.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
+ * @brief Base component system for ECS architecture
  * @date 2025-09-30
- *
- * @copyright Copyright (c) 2025
  *
  * Provides the foundational component base classes and type identification
  * system for the Entity Component System. Components are pure data containers
  * that systems operate on.
  */
+
+#pragma once
+#include <cstdint>
+
 namespace Framework
 {
     using ComponentTypeID = uint32_t;

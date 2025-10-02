@@ -1,7 +1,7 @@
 ﻿/**
  * @file main.cpp
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
+ * @brief Application entry point and engine initialization
  * @date 2025-09-30
  *
  * @copyright Copyright (c) 2025
@@ -41,10 +41,11 @@
   * 7. Cleanup and shutdown
   */
 
-int WINAPI WinMain(_In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPSTR lpCmdLine,
-    _In_ int nShowCmd)
+int WINAPI WinMain(_In_ HINSTANCE /*hInstance*/,
+    _In_opt_ HINSTANCE /*hPrevInstance*/,
+    _In_ LPSTR /*lpCmdLine*/,
+    _In_ int /*nShowCmd*/
+)
 {
 #ifdef _DEBUG
     // Allocate console for debug output in Debug builds
@@ -163,7 +164,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     entityManager.AddComponent<Framework::Sprite>(quadEntity);
     entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
     entityManager.AddComponent<Framework::Movement>(quadEntity);  // Add this
-    entityManager.GetComponent<Framework::Movement>(quadEntity).moveSpeed = 0.5f;  // Set speed
+    entityManager.GetComponent<Framework::Movement>(quadEntity).moveSpeed = 0.1f;  // Set speed
     LOG_INFO("CORE", "Created quantity entity with movement");
 
     //// Test entity 3: Circle

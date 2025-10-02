@@ -1,9 +1,3 @@
-#pragma once
-#include <array>
-#include <chrono>
-#include <cstdint>
-#include <string>
-#include "Trace.h" 
 /*
 ===============================================================================
  File:          PerfViewer.h
@@ -48,6 +42,13 @@
    - The ring buffer length (kBuffer) defines how many recent frames are kept.
 ===============================================================================
 */
+
+#pragma once
+#include <array>
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include "Trace.h" 
 
 namespace eng::debug {
 

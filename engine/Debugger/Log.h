@@ -1,12 +1,6 @@
-#pragma once
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <vector>
-
 /*
 ===============================================================================
- File:          Log.cpp
+ File:          Log.h
  Author:        GE YONGQI
  Email:         yongqi.ge@digipen.edu
  Date:          2025-09-30
@@ -39,6 +33,13 @@
     LogConfig::showSourceInfo (we keep it off by default to keep output clean).
 ===============================================================================
 */
+
+#pragma once
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace eng::debug {
 
     // Logging severity. Lower number = more severe.

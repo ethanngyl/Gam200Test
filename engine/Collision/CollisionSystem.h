@@ -1,11 +1,4 @@
-﻿#pragma once
-#include "Interface.h"
-#include "Collision.h"
-#include <iostream>
-#include "Input.h"
-#include "Math/Vector2D.h"
-
-/*
+﻿/*
 ===============================================================================
 File:        CollisionSystem.h
 Author:      Jiahao Zhou
@@ -36,6 +29,13 @@ Safety:
 - No dynamic allocations here; data lives on the system object.
 ===============================================================================
 */
+#pragma once
+#include "Interface.h"
+#include "Collision.h"
+#include <iostream>
+#include "Input.h"
+#include "Math/Vector2D.h"
+
 
 namespace Framework {
   
@@ -57,7 +57,7 @@ namespace Framework {
   class CollisionSystem : public InterfaceSystem
   {
   public:
-    CollisionSystem() = default;
+    CollisionSystem() : entityManager(nullptr) { };
     ~CollisionSystem() override = default;
 
     void Initialize() override;
@@ -97,7 +97,7 @@ namespace Framework {
     //test gate + current selection
     bool      testActive{ false };
     bool      sceneReady{ false };
-    EntityManager* entityManager;
+    EntityManager* entityManager{ nullptr };
     CollTest  mode{ CollTest::None };
 
     

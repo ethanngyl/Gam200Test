@@ -1,28 +1,40 @@
+/**
+ * @file 
+ recompiled.h
+ * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
+ * @brief Precompiled header for the StructSquad game engine
+ * @date 2025-09-30
+ *
+ * Central include file that precompiles commonly-used headers to improve
+ * compilation times. All .cpp files in the project should include this
+ * as their first include.
+ *
+ */
 #pragma once
 // Standard C++ libraries
-#include <vector>
-#include <string>
-#include <iostream>
-#include <memory>
-#include <cassert>
-#include <cmath>
-#include <fstream>
-#include <sstream>
-#include <cstdio>
-#include <exception>
-#include <iomanip>
-#include <chrono>
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <map>
-#include <cstdint>
-#include <unordered_map>
-#include <typeindex>
-#include <cstdarg>
-#include <mutex>
-#include <string_view>
-#include <functional>
+#include <vector> //Dynamic Array
+#include <string> //String Handling
+#include <iostream> //Console I/O
+#include <memory> //Smart pointer
+#include <cassert> //Assertions
+#include <cmath> //Math functions
+#include <fstream> //File I/O
+#include <sstream> //String streams
+#include <cstdio> //C-style I/O
+#include <exception> //Exception handling
+#include <iomanip> //I/O formatting
+#include <chrono> //Timing utilities 
+#include <algorithm> //STL Algorithms
+#include <array> //Fixed-size array
+#include <cstddef> //Standard definitions
+#include <map> //Sorted associative containers
+#include <cstdint> //Fixed-width integer types
+#include <unordered_map> //Hash maps
+#include <typeindex> //Type identification
+#include <cstdarg> //Variable Arguements
+#include <mutex> //Thread synchronization
+#include <string_view> //Non-owning string references
+#include <functional> //Function objects
 
 //Components
 

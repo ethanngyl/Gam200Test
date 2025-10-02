@@ -1,12 +1,3 @@
-#include "Log.h"
-#include "Sinks.h"
-
-#include <chrono>
-#include <cstdarg>
-#include <mutex>
-#include <sstream>
-#include <iomanip>
-
 /*
 ===============================================================================
  File:          Log.cpp
@@ -29,6 +20,16 @@ Thread-safety:
     for an async queue without changing the Log API.
 ===============================================================================
 */
+
+#include "Log.h"
+#include "Sinks.h"
+
+#include <chrono>
+#include <cstdarg>
+#include <mutex>
+#include <sstream>
+#include <iomanip>
+
 namespace eng::debug {
 
     namespace {

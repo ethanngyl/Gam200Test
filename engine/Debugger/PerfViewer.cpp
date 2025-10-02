@@ -1,4 +1,3 @@
-#include "Precompiled.h"
 /*
 ===============================================================================
  File:          PerfViewer.cpp
@@ -26,6 +25,8 @@
      end_frame() to close it (helps during development).
 ===============================================================================
 */
+
+#include "Precompiled.h"
 
 namespace eng::debug {
 
@@ -125,8 +126,9 @@ namespace eng::debug {
         s_lastPrint_ = now;
 
         // Snapshot the most recently completed frame:
-        const int last = (s_head_ - 1 + kBuffer) % kBuffer;
-        const auto& f = s_ring_[last];
+        const int lastFrameIdx = (s_head_ - 1 + kBuffer) % kBuffer;
+        const auto& f = s_ring_[lastFrameIdx];
+
         if (f.frameSec <= 0.0) return;  // nothing meaningful to print
 
         std::ostringstream oss;

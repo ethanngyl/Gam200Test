@@ -1,9 +1,7 @@
-#pragma once
-#include <cstdint>
 /**
  * @file ECSEntity.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
+ * @brief Entity identifier and wrapper for ECS architecture
  * @date 2025-09-30
  *
  * @copyright Copyright (c) 2025
@@ -12,6 +10,10 @@
  * for game objects in the Entity Component System. Entities are just
  * IDs - the actual data lives in components.
  */
+
+#pragma once
+#include <cstdint>
+
 namespace Framework
 {
     using EntityID = uint32_t;

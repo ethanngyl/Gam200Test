@@ -1,7 +1,4 @@
-﻿#pragma once
-#include "Math/Vector2D.h"
-
-/*
+﻿/*
 ===============================================================================
 File:        Collision.h
 Author:      Jiahao Zhou
@@ -26,6 +23,8 @@ Safety:
 - Pure functions; no ownership or allocations.
 ===============================================================================
 */
+#pragma once
+#include "Math/Vector2D.h"
 
 enum class ShapeType { Circle, Rect, Triangle };
 

@@ -1,12 +1,4 @@
-﻿#include "Precompiled.h"
-#include "Collision.h"
-//#include <cmath>
-//#include <algorithm>
-#include "Math/Matrix3x3.h"
-#include <cmath>
-#include <iostream>
-
-/*
+﻿/*
 ===============================================================================
 File:        Collision.cpp
 Author:      Jiahao Zhou
@@ -33,6 +25,14 @@ Safety:
 - No allocations; all inputs are by const ref/value.
 ===============================================================================
 */
+
+#include "Precompiled.h"
+#include "Collision.h"
+//#include <cmath>
+//#include <algorithm>
+#include "Math/Matrix3x3.h"
+#include <cmath>
+#include <iostream>
 
 /// Returns true if two circles intersect or touch.
 /// Touching edges count as collision.

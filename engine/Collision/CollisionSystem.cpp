@@ -1,14 +1,4 @@
-﻿#include "CollisionSystem.h"
-#include "Message.h"
-#include "Math/Vector2D.h"
-#include "Shader.h"
-#include "Mesh.h"
-#include "MeshFactory.h"
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include "ECSEntityManager.h"
-/*
+﻿/*
 ===============================================================================
 File:        CollisionSystem.h
 Author:      Jiahao Zhou
@@ -41,7 +31,16 @@ Safety:
 ===============================================================================
 */
 
-
+#include "CollisionSystem.h"
+#include "Message.h"
+#include "Math/Vector2D.h"
+#include "Shader.h"
+#include "Mesh.h"
+#include "MeshFactory.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "ECSEntityManager.h"
 
 namespace Framework {
 

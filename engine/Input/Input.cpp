@@ -1,25 +1,60 @@
+/**
+ * @file Input.h
+ * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
+ * @brief Input system for keyboard and mouse handling
+ * @date 2025-09-30
+ *
+ * Implements frame-accurate input detection using double-buffered state tracking.
+ * Polls keyboard and mouse states each frame and provides query methods for
+ * continuous (IsKeyDown), pressed (IsKeyPressed), and released (IsKeyReleased) events.
+ */
+
 #include "Precompiled.h"
 
 namespace Framework
 {
+    /**
+     * @brief Constructs the InputSystem
+     *
+     * Initializes empty key state maps.
+     */
     InputSystem::InputSystem()
     {
-        // Constructor - nothing special needed
     }
 
+    /**
+     * @brief Destructor for InputSystem
+     */
     InputSystem::~InputSystem()
     {
-        // Destructor - cleanup if needed
     }
 
+    /**
+     * @brief Initializes the input system
+     *
+     * Prints initialization message and control instructions to console.
+     */
     void InputSystem::Initialize()
     {
         std::cout << "InputSystem: Initializing...\n";
         std::cout << "InputSystem: Use WASD to move, ESC to quit\n";
     }
 
+    /**
+     * @brief Updates input state for the current frame
+     * @param dt Delta time (unused)
+     *
+     * Performs the following operations:
+     * 1. Copies current frame states to previous frame buffer
+     * 2. Polls all registered keys using platform-specific APIs
+     * 3. Detects quit conditions (Q or ESC key pressed)
+     * 4. Outputs debug information for key presses
+     *
+     * @note This runs every frame before other systems update
+     */
     void InputSystem::Update(float dt)
     {
+        (void)dt;
         // Store previous frame's key states
         PreviousKeys = CurrentKeys;
 
@@ -81,6 +116,14 @@ namespace Framework
         }
     }
 
+    /**
+     * @brief Gets the current mouse cursor position
+     * @param[out] x Mouse X coordinate in screen space
+     * @param[out] y Mouse Y coordinate in screen space
+     *
+     * @note Windows-only implementation using GetCursorPos
+     * @note Returns screen coordinates, not game world coordinates
+     */
     void InputSystem::GetMousePosition(float& x, float& y)
     {
 #ifdef _WIN32
@@ -93,6 +136,13 @@ namespace Framework
         y = static_cast<float>(point.y);
 #endif
     }
+
+    /**
+     * @brief Handles engine messages
+     * @param message Pointer to the message to process
+     *
+     * Currently only handles Quit messages for debug output.
+     */
     void InputSystem::SendEngineMessage(Message* message)
     {
         // Handle messages sent to input system
@@ -102,12 +152,25 @@ namespace Framework
         }
     }
 
+    /**
+     * @brief Checks if a key is currently held down
+     * @param key Key to check
+     * @return True if the key is down this frame
+     */
     bool InputSystem::IsKeyDown(KeyCode key)
     {
         auto it = CurrentKeys.find(key);
         return (it != CurrentKeys.end()) ? it->second : false;
     }
 
+    /**
+     * @brief Checks if a key was just pressed this frame
+     * @param key Key to check
+     * @return True only if the key is down this frame and was up last frame
+     *
+     * This provides frame-accurate "on press" detection for actions
+     * that should only trigger once per key press (like jumping).
+     */
     bool InputSystem::IsKeyPressed(KeyCode key)
     {
         // Key is pressed if it's down this frame but wasn't down last frame
@@ -118,6 +181,11 @@ namespace Framework
         return currentlyDown && !wasDown;
     }
 
+    /**
+     * @brief Checks if a key was just released this frame
+     * @param key Key to check
+     * @return True only if the key is up this frame and was down last frame
+     */
     bool InputSystem::IsKeyReleased(KeyCode key)
     {
         // Key is released if it was down last frame but isn't down this frame
@@ -128,11 +196,28 @@ namespace Framework
         return !currentlyDown && wasDown;
     }
 
+    /**
+     * @brief Updates the current frame state for a specific key
+     * @param key Key to update
+     * @param isDown True if the key is currently pressed
+     *
+     * Stores the key state in the CurrentKeys map for this frame.
+     */
     void InputSystem::UpdateKeyState(KeyCode key, bool isDown)
     {
         CurrentKeys[key] = isDown;
     }
 
+    /**
+     * @brief Platform-specific key state query
+     * @param key Key to check
+     * @return True if the key is currently pressed according to the OS
+     *
+     * Windows implementation uses GetAsyncKeyState to check the
+     * high-order bit (0x8000) which indicates if the key is down.
+     *
+     * @note Returns false on non-Windows platforms (stub implementation)
+     */
     bool InputSystem::GetAsyncKeyState(KeyCode key)
     {
         // Windows-specific key checking

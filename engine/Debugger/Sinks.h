@@ -1,8 +1,3 @@
-#pragma once
-#include "Log.h"
-#include <fstream>
-
-
 /*
 ===============================================================================
  File:          Sinks.h
@@ -35,6 +30,11 @@
 
 ===============================================================================
 */
+
+#pragma once
+#include "Log.h"
+#include <fstream>
+
 namespace eng::debug {
 
 	// ConsoleSink

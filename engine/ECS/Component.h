@@ -1,11 +1,7 @@
-#pragma once
-#include "ECSComponent.h"
-#include "Vector2D.h"
-#include <string>
 /**
  * @file Component.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
+ * @brief Base component system for ECS architecture
  * @date 2025-09-30
  *
  * @copyright Copyright (c) 2025
@@ -13,6 +9,11 @@
  * Contains all component data structures used in the Entity Component System.
  * Components are pure data containers with no behavior - systems operate on them.
  */
+
+#pragma once
+#include "ECSComponent.h"
+#include "Vector2D.h"
+#include <string>
 
 namespace Framework
 {

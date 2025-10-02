@@ -1,6 +1,3 @@
-#pragma once
-#include <string>
-
 /*
 ===============================================================================
  File:          CrashLogger.h
@@ -33,6 +30,9 @@
    - Guarantees a file is written before process termination.
 ===============================================================================
 */
+
+#pragma once
+#include <string>
 
 namespace eng::debug {
 	class CrashLogger {

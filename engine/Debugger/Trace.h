@@ -1,7 +1,3 @@
-#pragma once
-#include <chrono>
-#include <string_view>
-
 /*
 ===============================================================================
  File:          Trace.h
@@ -42,6 +38,10 @@
 	 plus an atomic-like accumulation inside PerfViewer.
 ===============================================================================
 */
+
+#pragma once
+#include <chrono>
+#include <string_view>
 
 namespace eng::debug {
 

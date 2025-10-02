@@ -172,6 +172,7 @@ namespace Framework {
      * @param dt Delta time, representing the time passed since the last update (used for animation or time-based changes).
      */
     void GraphicsSystem::Update(float dt) {
+        (void)dt;
         if (!window) return;  // Ensure window exists
 
         if (glfwWindowShouldClose(window)) return;  // Check if the window should close
@@ -337,7 +338,7 @@ namespace Framework {
         if (spaceNow && !spacePressedLast) {
             // Toggle color interpolation mode
             interpolateColor = !interpolateColor;
-            std::cout << "Space pressed → interpolateColor = " << interpolateColor << "\n";
+            std::cout << "Space pressed -> interpolateColor = " << interpolateColor << "\n";
         }
         spacePressedLast = spaceNow;
     }
@@ -358,7 +359,7 @@ namespace Framework {
 
         // If interpolation is enabled, use a dynamic rainbow color
         if (interpolateColor) {
-            float t = glfwGetTime();
+            float t = static_cast<float>(glfwGetTime());
             glm::vec3 rainbow = glm::vec3(
                 (sin(t * 1.0f) * 0.5f) + 0.5f,  // Red component
                 (sin(t * 1.3f) * 0.5f) + 0.5f,  // Green component

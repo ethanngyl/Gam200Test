@@ -1,5 +1,3 @@
-#include "Trace.h"
-#include "PerfViewer.h"
 /*
 ===============================================================================
  File:          Trace.cpp
@@ -27,6 +25,9 @@
 	 the timer will still record the time on scope exit.
 ===============================================================================
 */
+
+#include "Trace.h"
+#include "PerfViewer.h"
 
 namespace eng::debug {
 

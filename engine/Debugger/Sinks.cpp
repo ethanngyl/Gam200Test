@@ -1,10 +1,3 @@
-#include "Sinks.h"
-#include <cstdio>
-
-#if defined(_WIN32)
-#include <windows.h>
-#endif
-
 /*
 ===============================================================================
  File:          Sinks.cpp
@@ -29,6 +22,14 @@
    - FileSink uses std::ofstream opened in append mode and flushes per write.
 ===============================================================================
 */
+
+#include "Sinks.h"
+#include <cstdio>
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
 namespace eng::debug {  
 
     // Small helper: convert enum LogLevel to a short text label.

@@ -1,14 +1,7 @@
-#pragma once
-#include "ECSEntity.h"
-#include "ECSComponent.h"
-#include <vector>
-#include <unordered_map>
-#include <memory>
-#include <typeindex>
 /**
  * @file ECSEntityManager.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
+ * @brief Entity and component management for ECS architecture
  * @date 2025-09-30
  *
  * @copyright Copyright (c) 2025
@@ -17,6 +10,14 @@
  * component attachment/detachment, and component storage/retrieval.
  * This is the central coordination point for the ECS system.
  */
+
+#pragma once
+#include "ECSEntity.h"
+#include "ECSComponent.h"
+#include <vector>
+#include <unordered_map>
+#include <memory>
+#include <typeindex>
 
 namespace Framework
 {

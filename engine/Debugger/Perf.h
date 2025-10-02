@@ -1,7 +1,3 @@
-#pragma once
-#include <chrono>
-#include <functional>
-
 /*
 ===============================================================================
  File:          Perf.h
@@ -36,6 +32,10 @@
    - This class only owns counters; it does not own any window or renderer.
 ===============================================================================
 */
+
+#pragma once
+#include <chrono>
+#include <functional>
 
 namespace eng::debug {
 

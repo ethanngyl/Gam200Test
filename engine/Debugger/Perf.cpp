@@ -1,8 +1,3 @@
-#include "Perf.h"
-#include "Log.h"
-#include <chrono>
-#include <cstdio>
-
 /*
 ===============================================================================
  File:          Perf.cpp
@@ -24,6 +19,10 @@
 ===============================================================================
 */
 
+#include "Perf.h"
+#include "Log.h"
+#include <chrono>
+#include <cstdio>
 
 namespace eng::debug {
 
