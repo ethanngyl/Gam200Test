@@ -1,5 +1,7 @@
 #pragma once
-#include "Precompiled.h"
+#include "Log.h"
+#include <fstream>
+
 
 /*
 ===============================================================================

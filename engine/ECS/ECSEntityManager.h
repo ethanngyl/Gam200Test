@@ -1,7 +1,10 @@
 #pragma once
 #include "ECSEntity.h"
 #include "ECSComponent.h"
-#include "Precompiled.h"
+#include <vector>
+#include <unordered_map>
+#include <memory>
+#include <typeindex>
 /**
  * @file ECSEntityManager.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
