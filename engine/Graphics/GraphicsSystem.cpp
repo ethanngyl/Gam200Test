@@ -1,14 +1,17 @@
 ﻿#include "Precompiled.h"
+#include "Texture.h"
 
 namespace Framework
 {
     GraphicsSystem::GraphicsSystem()
         : window(nullptr), shader(nullptr), triangleMesh(nullptr),
         currentMeshIndex(0),
-        interpolateColor(true),    // 🔹 enable color animation by default
+        interpolateColor(true),
         colorLerpTime(0.0f),
         colorLerpSpeed(1.0f),
-        entityManager(nullptr)
+        entityManager(nullptr),
+        backgroundTexture(nullptr),
+        backgroundQuad(nullptr)
     {
     }
 
@@ -19,6 +22,8 @@ namespace Framework
             if (mesh) delete mesh;
         }
         delete shader;
+        delete backgroundTexture;
+        delete backgroundQuad;
     }
 
     void GraphicsSystem::Initialize()
@@ -48,6 +53,7 @@ namespace Framework
         // Viewport
         glViewport(0, 0, 1600, 800);
 
+
         try {
             shader = new Shader("shaders/basic.vert", "shaders/basic.frag");
             std::cout << "Shaders loaded successfully\n";
@@ -56,6 +62,16 @@ namespace Framework
             std::cerr << "Failed to load shaders: " << e.what() << "\n";
             return;
         }
+
+        // load background texture
+        backgroundTexture = new Texture();
+        if (!backgroundTexture->LoadFromFile("./assets/background.jpg")) {
+            std::cerr << "Failed to load background image\n";
+        }
+        else {
+            std::cout << "Background texture loaded successfully\n";
+        }
+        backgroundQuad = CreateQuad(); // fullscreen quad with UVs
 
         // Create meshes
         meshes.push_back(CreateTriangle());
@@ -85,10 +101,8 @@ namespace Framework
             std::cerr << "GraphicsSystem: No shader!\n";
             return;
         }
-
         float aspectRatio = 1600.0f / 800.0f;  // 2.0
         glm::mat4 projection = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
-
         shader->Bind();
         GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
         std::cout << "Projection uniform location: " << projLoc << "\n";
@@ -96,8 +110,30 @@ namespace Framework
             std::cerr << "WARNING: uProjection uniform not found in shader!\n";
         }
         glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-        RenderEntities();
+        // Draw background first
+        if (backgroundTexture && backgroundQuad) {
+            // Create transform matrix
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+
+            // Set uniform
+            GLint modelLoc = glGetUniformLocation(shader->GetID(), "uModel");
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+            glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+            glUniform1i(glGetUniformLocation(shader->GetID(), "uTexture"), 0);
+
+            backgroundTexture->Bind(0);
+            backgroundQuad->Draw();
+            backgroundTexture->Unbind();
+        }
+
+        // Then draw entities/meshes
+        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
+
         SetCurrentMeshColor();
+        RenderEntities();
+ 
 
         //if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
         //    if (meshes[currentMeshIndex])
@@ -123,7 +159,7 @@ namespace Framework
             if (entityManager->HasComponent<Transform>(entity) &&
                 entityManager->HasComponent<Sprite>(entity))
             {
-                 
+
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 //std::cout << "Drawing at: " << transform.position.x << ", " << transform.position.y << "\n";
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);

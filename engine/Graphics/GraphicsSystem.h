@@ -8,6 +8,7 @@ struct GLFWwindow;
 namespace Framework {
     class Shader;
     class Mesh;
+    class Texture;
 }
 
 namespace Framework {
@@ -27,13 +28,12 @@ namespace Framework {
         void BeginFrame();
         void EndFrame();
         void ProcessInput();
-
         void SetCurrentMeshColor();
+        Mesh* GetMeshForSprite(const std::string& spriteName);
 
         GLFWwindow* window;
 
         Shader* shader;
-        Mesh* GetMeshForSprite(const std::string& spriteName);
         Mesh* triangleMesh;
         EntityManager* entityManager;
         std::vector<Mesh*> meshes;
@@ -43,5 +43,8 @@ namespace Framework {
         float colorLerpTime = 0.0f;
         float colorLerpSpeed = 0.25f;
         bool interpolateColor = true; // Toggle if you want
+
+        Texture* backgroundTexture = nullptr;
+        Mesh* backgroundQuad = nullptr;
     };
 }

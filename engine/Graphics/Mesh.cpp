@@ -4,8 +4,10 @@
 
 namespace Framework {
 
+    // ---------------- Non-indexed constructor ----------------
     Mesh::Mesh(const std::vector<float>& vertices, GLenum drawMode, bool hasTexCoords)
-        : VAO(0), VBO(0), vertices(vertices), drawMode(drawMode), hasTexCoords(hasTexCoords)
+        : VAO(0), VBO(0), EBO(0), vertices(vertices),
+        drawMode(drawMode), hasTexCoords(hasTexCoords), useIndices(false)
     {
         int stride = hasTexCoords ? 8 : 6;
         vertexCount = static_cast<unsigned int>(vertices.size() / stride);
@@ -35,17 +37,70 @@ namespace Framework {
         Unbind();
     }
 
-    Mesh::~Mesh() {
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);
+    // ---------------- Empty constructor for Initialize() ----------------
+    Mesh::Mesh()
+        : VAO(0), VBO(0), EBO(0), vertexCount(0), indexCount(0),
+        drawMode(GL_TRIANGLES), hasTexCoords(false), useIndices(false)
+    {
     }
 
+    // ---------------- Destructor ----------------
+    Mesh::~Mesh() {
+        if (VAO) glDeleteVertexArrays(1, &VAO);
+        if (VBO) glDeleteBuffers(1, &VBO);
+        if (EBO) glDeleteBuffers(1, &EBO);
+    }
+
+    // ---------------- Initialize with indices ----------------
+    void Mesh::Initialize(const std::vector<float>& vertices,
+        const std::vector<unsigned int>& indices,
+        const std::vector<int>& attribSizes)
+    {
+        this->vertices = vertices;
+        vertexCount = static_cast<unsigned int>(vertices.size());
+        indexCount = static_cast<unsigned int>(indices.size());
+        useIndices = true;
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+
+        glBindVertexArray(VAO);
+
+        // VBO
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+        // EBO
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+        // Attribute setup
+        int stride = 0;
+        for (int size : attribSizes) stride += size;
+        stride *= sizeof(float);
+
+        size_t offset = 0;
+        for (GLuint i = 0; i < attribSizes.size(); i++) {
+            glVertexAttribPointer(i, attribSizes[i], GL_FLOAT, GL_FALSE, stride, (void*)offset);
+            glEnableVertexAttribArray(i);
+            offset += attribSizes[i] * sizeof(float);
+        }
+
+        glBindVertexArray(0);
+    }
+
+    // ---------------- Draw ----------------
     void Mesh::Draw() const {
         Bind();
-        glDrawArrays(drawMode, 0, vertexCount);
+        if (useIndices)
+            glDrawElements(drawMode, indexCount, GL_UNSIGNED_INT, 0);
+        else
+            glDrawArrays(drawMode, 0, vertexCount);
         Unbind();
     }
 
+    // ---------------- Update vertices ----------------
     void Mesh::UpdateVertices(const std::vector<float>& newVertices) {
         if (newVertices.size() != vertices.size()) {
             std::cerr << "Mesh::UpdateVertices: size mismatch\n";
@@ -58,14 +113,17 @@ namespace Framework {
         Unbind();
     }
 
+    // ---------------- Bind / Unbind ----------------
     void Mesh::Bind() const {
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     }
 
     void Mesh::Unbind() const {
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
 }

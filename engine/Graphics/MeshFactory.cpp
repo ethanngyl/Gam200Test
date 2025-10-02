@@ -2,74 +2,86 @@
 
 namespace Framework {
 
+    // =====================================================
+  // Create a simple triangle (position + color + texcoord)
+  // =====================================================
     Mesh* CreateTriangle() {
         std::vector<float> vertices = {
-             // Position          // Color
-             0.0f,  0.1f, 0.0f,   0.0f, 0.0f, 0.0f,  // red
-            -0.1f, -0.1f, 0.0f,   0.0f, 0.0f, 0.0f,  // green
-             0.1f, -0.1f, 0.0f,   0.0f, 0.0f, 1.0f   // blue
-        };
-        return new Mesh(vertices, GL_TRIANGLES);
-    }
-
-    Mesh* CreateQuad() {
-        std::vector<float> vertices = {
-            // pos.xyz           color.rgb       uv
-            -1.0f, -1.0f, 0.0f,  1,1,1,          0.0f, 0.0f, // bottom-left
-             1.0f, -1.0f, 0.0f,  1,1,1,          1.0f, 0.0f, // bottom-right
-             1.0f,  1.0f, 0.0f,  1,1,1,          1.0f, 1.0f, // top-right
-
-            -1.0f, -1.0f, 0.0f,  1,1,1,          0.0f, 0.0f, // bottom-left
-             1.0f,  1.0f, 0.0f,  1,1,1,          1.0f, 1.0f, // top-right
-            -1.0f,  1.0f, 0.0f,  1,1,1,          0.0f, 1.0f  // top-left
+            // pos         // color        // texcoord
+             0.0f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.5f, 1.0f,  // top
+            -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,  // bottom left
+             0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f   // bottom right
         };
 
-        // pass hasTexCoords = true
         return new Mesh(vertices, GL_TRIANGLES, true);
     }
 
-
-    Mesh* CreateLine() {
+    // =====================================================
+    // Create a quad using indices (position + color + texcoord)
+    // =====================================================
+    Mesh* CreateQuad() {
         std::vector<float> vertices = {
-            // Position         // Color
-           -0.5f, 0.0f, 0.0f,   1.0f, 0.0f, 1.0f,  // Magenta
-            0.5f, 0.0f, 0.0f,   0.0f, 1.0f, 1.0f   // Cyan
+            // pos            // color           // texcoord
+            -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // bottom left
+             0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+             0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // top right
+            -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
         };
-        return new Mesh(vertices, GL_LINES);
+
+        std::vector<unsigned int> indices = {
+            0, 1, 2,   // first triangle
+            2, 3, 0    // second triangle
+        };
+
+        std::vector<int> attribSizes = { 3, 3, 2 }; // pos, color, tex
+
+        Mesh* quad = new Mesh();
+        quad->Initialize(vertices, indices, attribSizes);
+        return quad;
     }
 
+    // =====================================================
+    // Create a line (two points, with color + dummy texcoords)
+    // =====================================================
+    Mesh* CreateLine() {
+        std::vector<float> vertices = {
+            // pos          // color        // texcoord
+            -0.5f, 0.0f, 0.0f,   1.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+             0.5f, 0.0f, 0.0f,   0.0f, 1.0f, 1.0f,   1.0f, 0.0f
+        };
+
+        return new Mesh(vertices, GL_LINES, true);
+    }
+
+    // =====================================================
+    // Create a circle (triangle fan, with color + texcoords)
+    // =====================================================
     Mesh* CreateCircle(int segments, float radius) {
         std::vector<float> vertices;
 
-        // Center of the circle (white)
-        vertices.push_back(0.0f); // x
-        vertices.push_back(0.0f); // y
-        vertices.push_back(0.0f); // z
-        vertices.push_back(1.0f); // r
-        vertices.push_back(1.0f); // g
-        vertices.push_back(1.0f); // b
+        // center point
+        vertices.insert(vertices.end(),
+            { 0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.5f, 0.5f });
 
+        // perimeter points
+        for (int i = 0; i <= segments; i++) {
+            float theta = (2.0f * 3.1415926f * i) / segments;
+            float x = radius * cos(theta);
+            float y = radius * sin(theta);
 
-        // Circle edge points with rainbow gradient
-        for (int i = 0; i <= segments; ++i) {
-            float angle = glm::two_pi<float>() * static_cast<float>(i) / segments;
-            float x = radius * glm::cos(angle);
-            float y = radius * glm::sin(angle);
+            // rainbow colors for fun
+            float r = (cos(theta) + 1.0f) * 0.5f;
+            float g = (sin(theta) + 1.0f) * 0.5f;
+            float b = 1.0f - r;
 
-            // Generate color based on angle (HSL to RGB approximation)
-            float r = (glm::cos(angle) + 1.0f) / 2.0f;
-            float g = (glm::cos(angle + glm::two_pi<float>() / 3.0f) + 1.0f) / 2.0f;
-            float b = (glm::cos(angle + 2.0f * glm::two_pi<float>() / 3.0f) + 1.0f) / 2.0f;
+            // texcoords mapped into [0,1]
+            float u = (x / radius + 1.0f) * 0.5f;
+            float v = (y / radius + 1.0f) * 0.5f;
 
-            vertices.push_back(x);
-            vertices.push_back(y);
-            vertices.push_back(0.0f);
-            vertices.push_back(r);
-            vertices.push_back(g);
-            vertices.push_back(b);
+            vertices.insert(vertices.end(), { x, y, 0.0f,  r, g, b,  u, v });
         }
 
-        return new Mesh(vertices, GL_TRIANGLE_FAN);
+        return new Mesh(vertices, GL_TRIANGLE_FAN, true);
     }
 
 }

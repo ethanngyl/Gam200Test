@@ -27,6 +27,7 @@ namespace Framework {
             char infoLog[512];
             glGetProgramInfoLog(id, 512, nullptr, infoLog);
             std::cerr << "Shader link failed:\n" << infoLog << "\n";
+            throw std::runtime_error("Shader Link failed");
         }
 
         glDeleteShader(vs);

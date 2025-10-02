@@ -9,16 +9,16 @@ namespace Framework {
     Texture::Texture() : id(0), width(0), height(0), nrChannels(0) {}
 
     Texture::~Texture() {
-        if (id != 0) {
+        if (id) {
             glDeleteTextures(1, &id);
         }
     }
 
     bool Texture::LoadFromFile(const std::string& path) {
-        stbi_set_flip_vertically_on_load(true);
+        stbi_set_flip_vertically_on_load(true);//flip so it matches OpenGL coords
         unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
         if (!data) {
-            std::cerr << "Failed to load texture: " << path << std::endl;
+            std::cerr << "Failed to load texture: " << path << "\n";
             return false;
         }
 
