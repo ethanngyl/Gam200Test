@@ -1,3 +1,31 @@
+/*
+===============================================================================
+ File:           Matrix3x3.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Header file for the Matrix3x3 class, used for 2D affine transformations.
+
+  Design notes (plain English):
+  This class defines a 3x3 matrix, primarily for 2D graphics transformations
+  like translation, rotation, and scaling.
+
+  Key features include:
+  -   Data is stored in a row-major float array. A `constexpr` helper
+      `idx(r, c)` is provided for clean, 2D-style element access.
+  -   A dual API is offered for creating transformation matrices:
+      1.  Mutating "set" methods (e.g., `setIdentity()`) modify the object in-place.
+      2.  Static "factory" methods (e.g., `Identity()`) return a new matrix object.
+  -   Core matrix algebra functions are provided: multiplication, in-place
+      transpose, determinant, and in-place inversion.
+  -   The `invert()` method returns a boolean to indicate if the matrix was
+      successfully inverted (i.e., not singular).
+  -   A forward declaration of Vector2D is used to define the matrix-vector
+      multiplication operator, preventing circular header dependencies.
+===============================================================================
+*/
 #pragma once
 #include "Precompiled.h"
 

@@ -1,3 +1,28 @@
+/*
+===============================================================================
+ File:           Vector2D.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Header file for the Vector2D class, a 2D vector utility.
+
+  Design notes (plain English):
+  This class represents a 2D vector or point with float components (x, y).
+  It provides a modern C++ interface with overloaded operators for intuitive
+  mathematical expressions (e.g., v1 + v2, v * scalar).
+
+  Key features include:
+  -   Constructors for creating zero and initialized vectors.
+  -   Member functions for vector properties like length() and normalization.
+	  Both mutating (normalize()) and non-mutating (normalized()) versions
+	  are provided for flexibility.
+  -   Static functions for operations involving two vectors, like dot().
+  -   Type aliases (Vec2, Point2D) for convenience.
+  -   Legacy C-style free functions are included for backward compatibility.
+===============================================================================
+*/
 #pragma once
 
 namespace Framework {

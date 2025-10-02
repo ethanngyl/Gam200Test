@@ -1,3 +1,25 @@
+/*
+===============================================================================
+ File:           Vector2D.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the Vector2D class.
+
+  Design notes (plain English):
+  This file implements the functionality declared in Vector2D.h.
+  Constructors use member initializer lists for efficiency. The binary
+  operators (like operator+) are implemented by reusing their corresponding
+  assignment operators (like operator+=) to avoid code duplication.
+
+  The normalization methods include a check for non-zero length to prevent
+  division-by-zero errors, returning a zero vector if the original length is
+  zero. An assertion is also used in the division operator to catch division
+  by zero during development.
+===============================================================================
+*/
 #include "Precompiled.h"
 
 namespace Framework {

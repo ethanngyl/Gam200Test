@@ -1,3 +1,28 @@
+/*
+===============================================================================
+ File:           Matrix3x3.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the Matrix3x3 class.
+
+  Design notes (plain English):
+  This file implements the matrix operations declared in Matrix3x3.h.
+
+  -   Matrix multiplication is implemented with standard nested loops.
+  -   The `invert()` method calculates the inverse using the adjugate matrix
+      method. It checks if the determinant is close to zero to avoid numerical
+      instability and returns false for singular matrices.
+  -   The matrix-vector multiplication operator correctly applies the affine
+      transformation by assuming a homogeneous coordinate `w=1` for the input
+      2D vector. It also performs the perspective divide by the resulting `w`
+      component to handle potential non-affine transformations.
+  -   Rotation functions handle both radians and degrees, with the degree
+      version simply converting to radians before computation.
+===============================================================================
+*/
 #include "Precompiled.h"
 
 namespace Framework {

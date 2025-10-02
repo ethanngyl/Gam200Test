@@ -1,3 +1,29 @@
+/*
+===============================================================================
+ File:           MathTestSystem.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the MathTestSystem class.
+
+  Design notes (plain English):
+  This file contains the implementation for the math library validation tests.
+  The core logic resides in the Initialize() method, which is called once when
+  the engine starts.
+
+  The tests are divided into three main sections:
+  1.  Vector2D operations (length, normalization, addition, dot product).
+  2.  Matrix3x3 creation (identity, rotation).
+  3.  Combined 2D transformations (scale, rotate, then translate).
+
+  Helper functions `printVector` and `printMatrix` are defined locally
+  (as static) to format and print the results to the console. Each test
+  output includes the expected result for easy verification.
+===============================================================================
+*/
+
 #include "Precompiled.h"
 
 namespace Framework {
