@@ -77,14 +77,14 @@ namespace Framework {
         std::cout << "==============================================\n\n";
     }
 
-    void MathTestSystem::Update(float dt)
-    {
-        // This system does not need per-frame updates.
-    }
+    //void MathTestSystem::Update()
+    //{
+    //    // This system does not need per-frame updates.
+    //}
 
-    void MathTestSystem::SendEngineMessage(Message* message)
-    {
-        // This system does not need to handle messages.
-    }
+    //void MathTestSystem::SendEngineMessage()
+    //{
+    //    // This system does not need to handle messages.
+    //}
 
 } // namespace Framework

@@ -1,9 +1,45 @@
+/**
+ * @file main.cpp
+ * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
+ * @brief Core engine implementation providing game loop and system management
+ * @date 2025-09-30
+ *
+ * @copyright Copyright (c) 2025
+ *
+ * Sets up the game engine, creates systems and entities, runs the main loop,
+ * and handles cleanup. Includes debug features like memory leak detection
+ * and crash logging in debug builds.
+ */
+
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #endif
-
 #include "Precompiled.h"
+
+ /**
+  * @brief Windows application entry point
+  * @param hInstance Handle to current application instance
+  * @param hPrevInstance Always NULL in modern Windows
+  * @param lpCmdLine Command line arguments
+  * @param nShowCmd Window display mode
+  * @return Exit code (0 for success)
+  *
+  * Initializes:
+  * - Debug console and memory leak detection (debug builds only)
+  * - Logging and crash reporting systems
+  * - Core engine and all subsystems
+  * - ECS entities for demonstration
+  *
+  * Execution flow:
+  * 1. Debug setup (console, heap tracking)
+  * 2. Initialize logging and crash handlers
+  * 3. Create and wire up engine systems
+  * 4. Initialize all systems
+  * 5. Create test entities (triangle, quad)
+  * 6. Run game loop until quit
+  * 7. Cleanup and shutdown
+  */
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -59,7 +95,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     Framework::GraphicsSystem* graphicsSys = new Framework::GraphicsSystem();
     Framework::InputSystem* inputSys = new Framework::InputSystem();
     Framework::CollisionSystem* collisionSys = new Framework::CollisionSystem();
-    Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
+    //Framework::MathTestSystem* mathSys = new Framework::MathTestSystem();
     Framework::MovementSystem* movementSys = new Framework::MovementSystem();
 
     movementSys->SetEntityManager(&entityManager);
@@ -74,7 +110,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     engine.AddSystem(graphicsSys);
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
-    engine.AddSystem(mathSys);
+    //engine.AddSystem(mathSys);
 
     LOG_INFO("CORE", "Systems added.Initializing engine...");
 
@@ -95,8 +131,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     // Test entity 1: Triangle
     Framework::Entity triangleEntity = entityManager.CreateEntity();
     entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.1f, 0.0f));
-    auto& transform1 = entityManager.GetComponent<Framework::Transform>(triangleEntity);
-    transform1.scale = Framework::Vector2D(0.5f, 0.5f);
+    auto& transform = entityManager.GetComponent<Framework::Transform>(triangleEntity);
+    transform.scale = Framework::Vector2D(0.5f, 0.5f);
     entityManager.AddComponent<Framework::Sprite>(triangleEntity);
     entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
     entityManager.AddComponent<Framework::TriangleCollider>(triangleEntity);
@@ -113,8 +149,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     // Test entity 2: Quad
     Framework::Entity quadEntity = entityManager.CreateEntity();
     entityManager.AddComponent<Framework::Transform>(quadEntity, Framework::Vector2D(0.1f, 0.1f));
-    auto& transform = entityManager.GetComponent<Framework::Transform>(quadEntity);
-    transform.scale = Framework::Vector2D(0.1f, 0.1f); // Add this line to change visual size
+    auto& transform1 = entityManager.GetComponent<Framework::Transform>(quadEntity);
+    transform1.scale = Framework::Vector2D(0.1f, 0.1f); // Add this line to change visual size
     entityManager.AddComponent<Framework::Sprite>(quadEntity);
     entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
     entityManager.AddComponent<Framework::Movement>(quadEntity);  // Add this
@@ -124,11 +160,15 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     LOG_INFO("CORE", "Created quantity entity with movement");
 
     //// Test entity 3: Circle
-    //Framework::Entity circleEntity = entityManager.CreateEntity();
-    //entityManager.AddComponent<Framework::Transform>(circleEntity, Framework::Vector2D(-1.0f, -1.5f));
-    //entityManager.AddComponent<Framework::Sprite>(circleEntity);
-    //entityManager.GetComponent<Framework::Sprite>(circleEntity).texturePath = "circle";
-    //std::cout << "Created circle entity\n";
+    Framework::Entity circleEntity = entityManager.CreateEntity();
+    entityManager.AddComponent<Framework::Transform>(circleEntity, Framework::Vector2D(0.5f, 0.5f));//Coordinates
+    auto& transform2 = entityManager.GetComponent<Framework::Transform>(circleEntity);
+    transform2.scale = Framework::Vector2D(0.1f, 0.1f); //Visual size
+    entityManager.AddComponent<Framework::Sprite>(circleEntity);
+    entityManager.GetComponent<Framework::Sprite>(circleEntity).texturePath = "circle";
+    entityManager.AddComponent<Framework::CircleCollider>(circleEntity);
+    entityManager.GetComponent<Framework::CircleCollider>(circleEntity).radius = 0.1f; //Collision Radius
+    std::cout << "Created circle entity\n";
 
     std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
 

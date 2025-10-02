@@ -13,6 +13,12 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(ImportDependencies)
 importDependencies()
 
+# Suppress warning level overrides from dependencies
+if(MSVC)
+    string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    string(REGEX REPLACE "/W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+endif()
+
 # Global compile flags and macros
 add_definitions(-DGLEW_STATIC)
 add_definitions(-DUSE_CSD3151_AUTOMATION=0) # Used for instructor's automation
@@ -34,6 +40,18 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 "shaders/basic.frag"
 "engine/main.cpp")
 
+if(MSVC)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE 
+        /W4
+        /wd4201    # nameless struct/union (GLM)
+        /wd4458    # declaration hides class member
+        /external:W0  # Suppress all warnings from external/system headers
+    )
+    
+    # Treat GLM as external to suppress its warnings
+    target_compile_options(glm INTERFACE /external:I)
+endif()
+
 # ======================= Linking =========================
 
 # Link libraries (fixed syntax)
@@ -42,6 +60,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     glm
     libglew_static
     imgui
+    stb
 )
 
 # Mark shaders as non-compiled

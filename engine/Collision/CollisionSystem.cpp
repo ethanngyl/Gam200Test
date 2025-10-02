@@ -265,184 +265,37 @@ void CollisionSystem::printCollider(const char* name, const Collider& c)
   }
 }
 
-// Create/place shapes for the chosen test (runs once per selection)
-//void CollisionSystem::setupScene(CollTest m)
-//{
-//    sceneReady = false;            // in case we early-exit
-//
-//    switch (m) {
-//    case CollTest::CircleToRect: {
-//        circle = Collider::create_circle(20.0f, Vector2D{ -150.0f, 0.0f });
-//        rectRight = Collider::create_rect(60.0f, 40.0f, Vector2D{ 150.0f,   0.0f });
-//        rectLeft = Collider::create_rect(60.0f, 40.0f, Vector2D{ -300.0f,  0.0f });
-//        rectTop = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f, 150.0f });
-//        rectBottom = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f,-150.0f });
-//      
-//        printCollider("Circle", circle);
-//        printCollider("RectRight", rectRight);
-//        printCollider("RectLeft", rectLeft);
-//        printCollider("RectTop", rectTop);
-//        printCollider("RectBottom", rectBottom);
-//    } break;
-//
-//    case CollTest::RectToRect: {
-//        rect = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f, 0.0f });
-//		rectRight = Collider::create_rect(60.0f, 40.0f, Vector2D{ 150.0f, 0.0f });
-//        rectLeft = Collider::create_rect(60.0f, 40.0f, Vector2D{ -300.0f, 0.0f });
-//		rectTop = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f, 150.0f });
-//		rectBottom = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f, -150.0f });
-//        printCollider("Rect", rect);
-//        printCollider("RectRight", rectRight);
-//        printCollider("RectLeft", rectLeft);
-//        printCollider("RectTop", rectTop);
-//        printCollider("RectBottom", rectBottom);
-//    } break;
-//
-//    case CollTest::CircleToCircle: {
-//        circle = Collider::create_circle(20.0f, Vector2D{ -150.0f, 0.0f });
-//		circleLeft = Collider::create_circle(30.0f, Vector2D{ -270.0f, 0.0f });
-//        circleRight = Collider::create_circle(30.0f, Vector2D{ 120.0f, 0.0f });
-//		circleTop = Collider::create_circle(30.0f, Vector2D{ -150.0f, 120.0f });
-//		circleBottom = Collider::create_circle(30.0f, Vector2D{ -150.0f, -120.0f });
-//        printCollider("Circle", circle);
-//        printCollider("CircleRight", circleRight);
-//		printCollider("CircleLeft", circleLeft);
-//		printCollider("CircleTop", circleTop);
-//		printCollider("CircleBottom", circleBottom);
-//
-//    } break;
-//
-//    case CollTest::PointToCircle: {
-//        
-//        circleLeft = Collider::create_circle(30.0f, Vector2D{ -270.0f, 0.0f });
-//        circleRight = Collider::create_circle(30.0f, Vector2D{ 120.0f, 0.0f });
-//        circleTop = Collider::create_circle(30.0f, Vector2D{ -150.0f, 120.0f });
-//        circleBottom = Collider::create_circle(30.0f, Vector2D{ -150.0f, -120.0f });
-//        point = Vector2D{ -150.0f, 0.0f };
-//        printCollider("Circle", circle);
-//        printCollider("CircleRight", circleRight);
-//        printCollider("CircleLeft", circleLeft);
-//        printCollider("CircleTop", circleTop);
-//        printCollider("CircleBottom", circleBottom);
-//        std::cout << "Point starts at (-150,0).\n";
-//    } break;
-//
-//    case CollTest::PointToRect: {
-//        rectRight = Collider::create_rect(60.0f, 40.0f, Vector2D{ 150.0f, 0.0f });
-//        rectLeft = Collider::create_rect(60.0f, 40.0f, Vector2D{ -300.0f, 0.0f });
-//        rectTop = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f, 150.0f });
-//        rectBottom = Collider::create_rect(60.0f, 40.0f, Vector2D{ -150.0f, -150.0f });
-//        point = Vector2D{ -150.0f, 0.0f };
-//        printCollider("RectRight", rectRight);
-//        printCollider("RectRight", rectRight);
-//        printCollider("RectLeft", rectLeft);
-//        printCollider("RectTop", rectTop);
-//        printCollider("RectBottom", rectBottom);
-//        std::cout << "Point starts at (-150,0).\n";
-//    } break;
-//
-//    case CollTest::TriCircle: {
-//        circle = Collider::create_circle(20.0f, Vector2D{ -150.0f, 0.0f });
-//        sTriangle = Collider::create_triangle(
-//            Vector2D{ -20.0f, -40.0f },
-//            Vector2D{ 60.0f, -40.0f },
-//            Vector2D{ 20.0f,  70.0f }
-//        );
-//
-//        printCollider("Circle", circle);
-//        printCollider("Triangle", sTriangle);
-//    } break;
-//
-//    case CollTest::TriRect: {
-//        rect = Collider::create_rect(60.0f, 40.0f, Vector2D{ -170.0f, 0.0f });
-//        sTriangle = Collider::create_triangle(
-//            Vector2D{ -20.0f, -40.0f },
-//            Vector2D{ 60.0f, -40.0f },
-//            Vector2D{ 20.0f,  70.0f }
-//        );
-//
-//        printCollider("Rect", rect);
-//        printCollider("Triangle", sTriangle);
-//    } break;
-//
-//    case CollTest::BoundsCircle: {
-//        // One circle we can move around; checked against 'world'
-//        world.left = -120.0f; world.right = 120.0f;
-//        world.bottom = -90.0f; world.top = 90.0f;
-//        circle = Collider::create_circle(30.0f, Vector2D{ 0.0f, 0.0f });
-//        printCollider("Circle", circle);
-//        std::cout << "World bounds: L=" << world.left << " R=" << world.right
-//            << " B=" << world.bottom << " T=" << world.top << "\n";
-//
-//        collidedLastFrame = circle_out_of_bounds(circle, world);
-//        if (!collidedLastFrame) std::cout << "Inside bounds\n";
-//    } break;
-//
-//    case CollTest::BoundsRect: {
-//        world.left = -120.0f; world.right = 120.0f;
-//        world.bottom = -90.0f; world.top = 90.0f;
-//
-//        rect = Collider::create_rect(60.0f, 40.0f, Vector2D{ 0.0f, 0.0f });
-//        printCollider("Rect", rect);
-//        std::cout << "World bounds: L=" << world.left << " R=" << world.right
-//            << " B=" << world.bottom << " T=" << world.top << "\n";
-//    } break;
-//
-//    case CollTest::BoundsPoint: {
-//        world.left = -120.0f; world.right = 120.0f;
-//        world.bottom = -90.0f; world.top = 90.0f;
-//        point = Vector2D{ 0.0f, 0.0f };
-//        std::cout << "Point starts at (0,0)\n";
-//        std::cout << "World bounds: L=" << world.left << " R=" << world.right
-//            << " B=" << world.bottom << " T=" << world.top << "\n";
-//    } break;
-//    case CollTest::None:
-//    default:
-//        std::cout << "[setupScene] Invalid mode.\n";
-//        return;
-//    }
-//
-//    collidedLastFrame = false;
-//    sceneReady = true;
-//}
-
 void CollisionSystem::CheckECSCollisions()
 {
     if (!entityManager) return;
-    // Get entities with BoxCollider (your moving rectangle)
-    std::vector<Entity> rects;
+    // Get entities collider entities
+    std::vector<Entity> rects, triangles, circles;
     for (Entity e : entityManager->GetAllEntities())
     {
         if (entityManager->HasComponent<Transform>(e) &&
             entityManager->HasComponent<BoxCollider>(e))
         {
-            auto& t = entityManager->GetComponent<Transform>(e);
-            auto& c = entityManager->GetComponent<BoxCollider>(e);
-
-            //std::cout << "Entity " << e.GetID()
-                //<< " pos=(" << t.position.x << "," << t.position.y << ")"
-                //<< " size=(" << c.size.x << "," << c.size.y << ")\n";
             rects.push_back(e);
+        }
+
+        if (entityManager->HasComponent<Transform>(e) &&
+            entityManager->HasComponent<TriangleCollider>(e))
+        {
+            triangles.push_back(e);
+        }
+
+        if (entityManager->HasComponent<Transform>(e) &&
+            entityManager->HasComponent<CircleCollider>(e))
+        {
+            circles.push_back(e);
         }
         
     }
 
-    // Get entities with TriangleCollider
-    std::vector<Entity> triangles;
-    for (Entity e : entityManager->GetAllEntities())
-    {
-        bool hasTri = entityManager->HasComponent<TriangleCollider>(e);
-        if (entityManager->HasComponent<Transform>(e) &&
-            entityManager->HasComponent<TriangleCollider>(e))
-        {
-
-            triangles.push_back(e);
-        }
-    }
-
-    // Check rect vs triangle collisions
+    
     for (Entity rectEnt : rects)
     {
+        // Check rect vs triangle collisions
         for (Entity triEnt : triangles)
         {
             auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
@@ -451,16 +304,12 @@ void CollisionSystem::CheckECSCollisions()
 
             auto& triTransform = entityManager->GetComponent<Transform>(triEnt);
             auto& triColl = entityManager->GetComponent<TriangleCollider>(triEnt);
-            //std::cout << "Rect pos: (" << rectTransform.position.x << "," << rectTransform.position.y << ")\n";
-            //std::cout << "Triangle pos: (" << triTransform.position.x << "," << triTransform.position.y << ")\n";
             // Convert to collision system format
             Collider rect = Collider::create_rect(
                 rectColl.size.x /** rectTransform.scale.x*/,
                 rectColl.size.y /** rectTransform.scale.y*/,
 				rectTransform.position 
             );
-            //std::cout << "Rect posX: " << rect.position.x * rectTransform.scale.x;
-            //std::cout << "Rect posY: " << rect.position.y * rectTransform.scale.y;
 
 
             // Triangle vertices in world space
@@ -469,16 +318,38 @@ void CollisionSystem::CheckECSCollisions()
                 triTransform.position + triColl.v1,
                 triTransform.position + triColl.v2
             );
-            /*Vector2D(triColl.v0.x * triTransform.scale.x * / , triColl.v0.y * triTransform.scale.y * / )*/
-            /*Vector2D(triColl.v1.x * triTransform.scale.x, triColl.v1.y * triTransform.scale.y)*/
-            /*Vector2D(triColl.v2.x * triTransform.scale.x, triColl.v2.y * triTransform.scale.y)*/
-            //std::cout << "Rect Transform.scale=(" << rectTransform.scale.x << "," << rectTransform.scale.y << ")\n";
-            //std::cout << "Tri  Transform.scale=(" << triTransform.scale.x << "," << triTransform.scale.y << ")\n";
             // Use your existing rect_to_triangle function
             if (rect_to_triangle(rect, triCol))
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Triangle entity " << triEnt.GetID() << "\n";
+            }
+        }
+
+        for (Entity circEnt : circles)
+        {
+            auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
+            auto& rectColl = entityManager->GetComponent<BoxCollider>(rectEnt);
+            auto& circTransform = entityManager->GetComponent<Transform>(circEnt);
+            auto& circColl = entityManager->GetComponent<CircleCollider>(circEnt);
+
+            // Convert to collision system format
+            Collider rect = Collider::create_rect(
+                rectColl.size.x,
+                rectColl.size.y,
+                rectTransform.position
+            );
+
+            Collider circle = Collider::create_circle(
+                circColl.radius * circTransform.scale.x,  // Scale the radius
+                circTransform.position + circColl.offset
+            );
+
+            // Use your existing check_collision function
+            if (check_collision(circle, rect))
+            {
+                std::cout << "Collision: Rect entity " << rectEnt.GetID()
+                    << " hit Circle entity " << circEnt.GetID() << "\n";
             }
         }
     }
