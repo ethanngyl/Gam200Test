@@ -1,3 +1,28 @@
+/*
+===============================================================================
+ File:           Vector2D.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Header file for the Vector2D class, a 2D vector utility.
+
+  Design notes (plain English):
+  This class represents a 2D vector or point with float components (x, y).
+  It provides a modern C++ interface with overloaded operators for intuitive
+  mathematical expressions (e.g., v1 + v2, v * scalar).
+
+  Key features include:
+  -   Constructors for creating zero and initialized vectors.
+  -   Member functions for vector properties like length() and normalization.
+	  Both mutating (normalize()) and non-mutating (normalized()) versions
+	  are provided for flexibility.
+  -   Static functions for operations involving two vectors, like dot().
+  -   Type aliases (Vec2, Point2D) for convenience.
+  -   Legacy C-style free functions are included for backward compatibility.
+===============================================================================
+*/
 #pragma once
 
 namespace Framework {
@@ -10,7 +35,6 @@ namespace Framework {
 		Vector2D();                 // (0,0)
 		Vector2D(float _x, float _y);
 
-		// Do not change (kept as in your original)
 		Vector2D& operator=(Vector2D const&) = default;
 		Vector2D(Vector2D const&) = default;
 
@@ -58,7 +82,6 @@ namespace Framework {
 	float Vector2DDotProduct(Vector2D const& pVec0, Vector2D const& pVec1);
 	float Vector2DCrossProductMag(Vector2D const& pVec0, Vector2D const& pVec1);
 
-	// Optional aliases to match your typedefs
 	using Vec2 = Vector2D;
 	using Point2D = Vector2D;
 	using Pt2 = Vector2D;
