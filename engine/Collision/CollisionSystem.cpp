@@ -292,6 +292,14 @@ void CollisionSystem::CheckECSCollisions()
 {
     if (!entityManager) return;
     // Get entities collider entities
+
+    for (Entity e : entityManager->GetAllEntities()) {
+        if (entityManager->HasComponent<Movement>(e)) {
+            auto& mv = entityManager->GetComponent<Movement>(e);
+            mv.blocked = false;
+        }
+    }
+
     std::vector<Entity> rects, triangles, circles;
     for (Entity e : entityManager->GetAllEntities())
     {
@@ -346,6 +354,11 @@ void CollisionSystem::CheckECSCollisions()
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Triangle entity " << triEnt.GetID() << "\n";
+
+                if (entityManager->HasComponent<Movement>(rectEnt)) {
+                    auto& mv = entityManager->GetComponent<Movement>(rectEnt);
+                    mv.blocked = true;
+                }
             }
         }
 
@@ -373,6 +386,11 @@ void CollisionSystem::CheckECSCollisions()
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Circle entity " << circEnt.GetID() << "\n";
+
+                if (entityManager->HasComponent<Movement>(rectEnt)) {
+                    auto& mv = entityManager->GetComponent<Movement>(rectEnt);
+                    mv.blocked = true;
+                }
             }
         }
 
@@ -401,6 +419,11 @@ void CollisionSystem::CheckECSCollisions()
                 if (circle_to_triangle(ecsCircle, triCol)) {
                     std::cout << "Collision: Circle entity " << circEnt.GetID()
                         << " hit Triangle entity " << triEnt.GetID() << "\n";
+
+                    if (entityManager->HasComponent<Movement>(circEnt)) {
+                        auto& mv = entityManager->GetComponent<Movement>(circEnt);
+                        mv.blocked = true;
+                    }
                 }
             }
         }

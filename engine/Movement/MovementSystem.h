@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file MovementSystem.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
  * @brief Movement system for keyboard-controlled entity motion
@@ -11,6 +11,7 @@
 #pragma once
 #include "Interface.h"
 #include "ECSEntityManager.h"
+
 
 namespace Framework
 {
@@ -74,6 +75,7 @@ namespace Framework
          * @param em Pointer to the EntityManager instance
          */
         void SetEntityManager(EntityManager* em) { entityManager = em; }
+
 
     private:
         EntityManager* entityManager; //Entity component database

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Component.h
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
  * @brief Base component system for ECS architecture
@@ -43,6 +43,7 @@ namespace Framework
     {
         float moveSpeed = 100.0f;
         Vector2D direction;
+        bool blocked = false;
     };
 
     /**

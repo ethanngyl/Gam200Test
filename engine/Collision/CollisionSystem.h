@@ -67,6 +67,7 @@ namespace Framework {
     void SetEntityManager(EntityManager* em) { entityManager = em; }
     void SetInput(InputSystem* input) { m_input = input; }
 
+    
   private:
     // Demo scene: one circle and one rect move toward each other until they collide.
     Collider circle;
@@ -83,9 +84,10 @@ namespace Framework {
     Framework::Vector2D point; // a movable point for point tests
 
     float moveSpeed = 120.0f; //px per sec
-    bool autoMove{ false };                          // toggle with [M]
+    //ool autoMove{ false };                          // toggle with [M]
     Framework::Vector2D autoVel{ 120.0f, 90.0f };    // px/s
-    Bounds world;  // {-320..320, -240..240} by default                                  // uses default {-320..320, -240..240}
+    Bounds world;  // {-320..320, -240..240} by default  
+    
     /* Simple velocities for the demo
     Vector2D velCircle{ +30.0f, 0.0f };  // px/sec to the right
     Vector2D velRect  { -30.0f, 0.0f };  // px/sec to the left*/

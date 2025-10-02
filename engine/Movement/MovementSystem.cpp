@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file MovementSystem.cpp
  * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
  * @brief Movement system implementation for entity motion control
@@ -79,7 +79,12 @@ namespace Framework
                 movement.direction = inputDir;
 
                 // Apply movement
-                transform.position += movement.direction * movement.moveSpeed * dt;
+                if (!movement.blocked) {
+                    transform.position += movement.direction * movement.moveSpeed * dt;
+                }
+                else {
+                    transform.position -= movement.direction * movement.moveSpeed * dt*10;
+                }
 
                 //// Optional: Keep on screen
                 if (transform.position.x > 1.0f) transform.position.x = 1.0f;
