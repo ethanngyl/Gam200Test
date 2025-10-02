@@ -1,13 +1,39 @@
+/*
+===============================================================================
+ File:           MathTestSystem.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the MathTestSystem class.
+
+  Design notes:
+  This file contains the implementation for the math library validation tests.
+  The core logic resides in the Initialize() method, which is called once when
+  the engine starts.
+
+  The tests are divided into three main sections:
+  Vector2D operations (length, normalization, addition, dot product).
+  Matrix3x3 creation (identity, rotation).
+  Combined 2D transformations (scale, rotate, then translate).
+
+  Helper functions `printVector` and `printMatrix` are defined locally
+  (as static) to format and print the results to the console. Each test
+  output includes the expected result for easy verification.
+===============================================================================
+*/
+
 #include "Precompiled.h"
 
 namespace Framework {
 
-    // Helper function to print a Vector2D (local to this file)
+    // Helper function to print a Vector2D 
     static void printVector(const Vector2D& v, const char* name) {
         std::cout << name << ": (" << v.x << ", " << v.y << ")\n";
     }
 
-    // Helper function to print a Matrix3x3 (local to this file)
+    // Helper function to print a Matrix3x3
     static void printMatrix(const Matrix3x3& m, const char* name) {
         std::cout << "--- " << name << " ---\n";
         for (int r = 0; r < 3; ++r) {
@@ -77,14 +103,14 @@ namespace Framework {
         std::cout << "==============================================\n\n";
     }
 
-    //void MathTestSystem::Update()
-    //{
+    void MathTestSystem::Update(float dt)
+    {
     //    // This system does not need per-frame updates.
-    //}
+    }
 
-    //void MathTestSystem::SendEngineMessage()
-    //{
+    void MathTestSystem::SendEngineMessage(Message* message)
+    {
     //    // This system does not need to handle messages.
-    //}
+    }
 
 } // namespace Framework

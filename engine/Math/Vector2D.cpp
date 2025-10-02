@@ -1,3 +1,25 @@
+/*
+===============================================================================
+ File:           Vector2D.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the Vector2D class.
+
+  Design notes:
+  This file implements the functionality declared in Vector2D.h.
+  Constructors use member initializer lists for efficiency. The binary
+  operators (like operator+) are implemented by reusing their corresponding
+  assignment operators (like operator+=) to avoid code duplication.
+
+  The normalization methods include a check for non-zero length to prevent
+  division-by-zero errors, returning a zero vector if the original length is
+  zero. An assertion is also used in the division operator to catch division
+  by zero during development.
+===============================================================================
+*/
 #include "Precompiled.h"
 
 namespace Framework {
@@ -43,14 +65,14 @@ namespace Framework {
 	float Vector2D::distanceSq(Vector2D const& a, Vector2D const& b) { return (a - b).lengthSq(); }
 	float Vector2D::distance(Vector2D const& a, Vector2D const& b) { return std::sqrt(distanceSq(a, b)); }
 
-	// ---- free binary operators ----
+	// ---- non-member binary operators ----
 	Vector2D operator+(Vector2D lhs, Vector2D const& rhs) { lhs += rhs; return lhs; }
 	Vector2D operator-(Vector2D lhs, Vector2D const& rhs) { lhs -= rhs; return lhs; }
 	Vector2D operator*(Vector2D lhs, float rhs) { lhs *= rhs; return lhs; }
 	Vector2D operator*(float lhs, Vector2D rhs) { rhs *= lhs; return rhs; }
 	Vector2D operator/(Vector2D lhs, float rhs) { lhs /= rhs; return lhs; }
 
-	// ---- legacy wrappers ----
+
 	void  Vector2DNormalize(Vector2D& pResult, Vector2D const& pVec0) { pResult = pVec0; pResult.normalize(); }
 	float Vector2DLength(Vector2D const& pVec0) { return pVec0.length(); }
 	float Vector2DSquareLength(Vector2D const& pVec0) { return pVec0.lengthSq(); }

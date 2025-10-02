@@ -364,13 +364,13 @@ void CollisionSystem::CheckECSCollisions()
                 rectTransform.position
             );
 
-            Collider ecscircle = Collider::create_circle(
+            Collider ecsCircle = Collider::create_circle(
                 circColl.radius /** circTransform.scale.x*/,  // Scale the radius
                 circTransform.position + circColl.offset
             );
 
             // Use your existing check_collision function
-            if (check_collision(circle, ecsRect))
+            if (check_collision(ecsCircle, ecsRect))
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Circle entity " << circEnt.GetID() << "\n";
