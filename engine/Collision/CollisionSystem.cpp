@@ -27,118 +27,7 @@
 ===============================================================================
 */
 
-/*// ===== Collision Debug Draw (private to this .cpp) ===================
-namespace {
-    struct CollDebugGfx {
-        Framework::Shader* shader = nullptr;
-        Framework::Mesh* quad = nullptr;
-        Framework::Mesh* tri = nullptr;
-        Framework::Mesh* line = nullptr;
-        Framework::Mesh* circle = nullptr;
-        bool               ok = false;
-    };
 
-    CollDebugGfx& G() { static CollDebugGfx g; return g; }
-
-    bool InitCollDebugGfx()
-    {
-        if (G().ok) return true;
-
-        // Use the same shader paths your GraphicsSystem uses
-        G().shader = new Framework::Shader("shaders/basic.vert", "shaders/basic.frag");
-        G().quad = Framework::CreateQuad();
-        G().tri = Framework::CreateTriangle();
-        G().line = Framework::CreateLine();
-        G().circle = Framework::CreateCircle(40, 0.5f);
-
-        G().ok = (G().shader && G().quad && G().tri && G().line && G().circle);
-        return G().ok;
-    }
-
-    // color as float rgb (0..1)
-    void SetColor(float r, float g, float b)
-    {
-        GLint colorLoc = glGetUniformLocation(G().shader->GetID(), "uColor");
-        glUniform3f(colorLoc, r, g, b);
-    }
-
-    void SetModel(const glm::mat4& M)
-    {
-        GLint modelLoc = glGetUniformLocation(G().shader->GetID(), "uModel");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(M));
-    }
-
-    // Helpers assume your collision positions are in the same space your
-    // GraphicsSystem uses (e.g., normalized -1..1). Adjust scale if needed.
-    void DrawRect(float cx, float cy, float w, float h, float r, float g, float b, bool filled = false)
-    {
-        glm::mat4 M(1.0f);
-        M = glm::translate(M, glm::vec3(cx, cy, 0.0f));
-        M = glm::scale(M, glm::vec3(w * 0.5f, h * 0.5f, 1.0f)); // quad is [-0.5,0.5]
-        SetModel(M);
-        SetColor(r, g, b);
-        G().quad->Draw();
-
-        if (!filled) {
-            // draw outline using 4 lines
-            const float hw = w * 0.5f, hh = h * 0.5f;
-            auto L = [&](float x1, float y1, float x2, float y2) {
-                glm::mat4 ML(1.0f);
-                // Build a line segment by translating/rotating/scaling the unit line
-                // Simpler: draw the stored line mesh scaled + translated
-                // The line mesh is from (-0.5,0) to (0.5,0): scale to length and rotate
-                float dx = x2 - x1, dy = y2 - y1;
-                float len = std::sqrt(dx * dx + dy * dy);
-                float ang = std::atan2(dy, dx);
-                ML = glm::translate(ML, glm::vec3(x1, y1, 0));
-                ML = glm::rotate(ML, ang, glm::vec3(0, 0, 1));
-                ML = glm::scale(ML, glm::vec3(len, 1.0f, 1.0f));
-                SetModel(ML);
-                G().line->Draw();
-                };
-            L(cx - hw, cy - hh, cx + hw, cy - hh);
-            L(cx + hw, cy - hh, cx + hw, cy + hh);
-            L(cx + hw, cy + hh, cx - hw, cy + hh);
-            L(cx - hw, cy + hh, cx - hw, cy - hh);
-        }
-    }
-
-    void DrawCircle(float cx, float cy, float radius, float r, float g, float b, bool filled = true)
-    {
-        glm::mat4 M(1.0f);
-        M = glm::translate(M, glm::vec3(cx, cy, 0.0f));
-        M = glm::scale(M, glm::vec3(radius, radius, 1.0f));
-        SetModel(M);
-        SetColor(r, g, b);
-        G().circle->Draw(); // GL_TRIANGLE_FAN from MeshFactory
-    }
-
-    void DrawTriangle(float ax, float ay, float bx, float by, float cx, float cy,
-        float r, float g, float b)
-    {
-        // We’ll reuse the triangle mesh and place it by building a model from its AABB.
-        // Simpler: draw three lines between the points.
-        auto L = [&](float x1, float y1, float x2, float y2) {
-            glm::mat4 ML(1.0f);
-            float dx = x2 - x1, dy = y2 - y1, len = std::sqrt(dx * dx + dy * dy), ang = std::atan2(dy, dx);
-            ML = glm::translate(ML, glm::vec3(x1, y1, 0));
-            ML = glm::rotate(ML, ang, glm::vec3(0, 0, 1));
-            ML = glm::scale(ML, glm::vec3(len, 1.0f, 1.0f));
-            SetModel(ML);
-            G().line->Draw();
-            };
-        SetColor(r, g, b);
-        L(ax, ay, bx, by);
-        L(bx, by, cx, cy);
-        L(cx, cy, ax, ay);
-    }
-
-    void DrawPoint(float x, float y, float r, float g, float b)
-    {
-        SetColor(r, g, b);
-        DrawCircle(x, y, 0.01f, r, g, b, true); // tiny dot
-    }
-} // namespace*/
 
 namespace Framework {
 
@@ -290,7 +179,7 @@ void CollisionSystem::Update(float dt)
                 circle.position.x += dx; circle.position.y += dy;
                 std::cout << "Circle -> (" << circle.position.x << ", " << circle.position.y << ")\n";
             }
-            bool hit = circle_to_triangle(circle, sTriangle.triangle);
+            bool hit = circle_to_triangle(circle, sTriangle);
             if (hit) std::cout << "Hit Triangle\n";
             collidedLastFrame = hit;
         } break;
@@ -301,7 +190,7 @@ void CollisionSystem::Update(float dt)
                 rect.position.x += dx; rect.position.y += dy;
                 std::cout << "Rect -> (" << rect.position.x << ", " << rect.position.y << ")\n";
             }
-            bool hit = rect_to_triangle(rect, sTriangle.triangle);
+            bool hit = rect_to_triangle(rect, sTriangle);
             if (hit) std::cout << "Hit Triangle\n";
             collidedLastFrame = hit;
         } break;
@@ -530,11 +419,12 @@ void CollisionSystem::CheckECSCollisions()
             auto& t = entityManager->GetComponent<Transform>(e);
             auto& c = entityManager->GetComponent<BoxCollider>(e);
 
-            std::cout << "Entity " << e.GetID()
-                << " pos=(" << t.position.x << "," << t.position.y << ")"
-                << " size=(" << c.size.x << "," << c.size.y << ")\n";
+            //std::cout << "Entity " << e.GetID()
+                //<< " pos=(" << t.position.x << "," << t.position.y << ")"
+                //<< " size=(" << c.size.x << "," << c.size.y << ")\n";
             rects.push_back(e);
         }
+        
     }
 
     // Get entities with TriangleCollider
@@ -565,19 +455,27 @@ void CollisionSystem::CheckECSCollisions()
             //std::cout << "Triangle pos: (" << triTransform.position.x << "," << triTransform.position.y << ")\n";
             // Convert to collision system format
             Collider rect = Collider::create_rect(
-                rectColl.size.x,
-                rectColl.size.y,
-                rectTransform.position
+                rectColl.size.x /** rectTransform.scale.x*/,
+                rectColl.size.y /** rectTransform.scale.y*/,
+				rectTransform.position 
             );
+            //std::cout << "Rect posX: " << rect.position.x * rectTransform.scale.x;
+            //std::cout << "Rect posY: " << rect.position.y * rectTransform.scale.y;
+
 
             // Triangle vertices in world space
-            Triangle tri;
-            tri.v0 = triTransform.position + triColl.v0;
-            tri.v1 = triTransform.position + triColl.v1;
-            tri.v2 = triTransform.position + triColl.v2;
-
+            Collider triCol = Collider::create_triangle(
+                triTransform.position + triColl.v0,
+                triTransform.position + triColl.v1,
+                triTransform.position + triColl.v2
+            );
+            /*Vector2D(triColl.v0.x * triTransform.scale.x * / , triColl.v0.y * triTransform.scale.y * / )*/
+            /*Vector2D(triColl.v1.x * triTransform.scale.x, triColl.v1.y * triTransform.scale.y)*/
+            /*Vector2D(triColl.v2.x * triTransform.scale.x, triColl.v2.y * triTransform.scale.y)*/
+            //std::cout << "Rect Transform.scale=(" << rectTransform.scale.x << "," << rectTransform.scale.y << ")\n";
+            //std::cout << "Tri  Transform.scale=(" << triTransform.scale.x << "," << triTransform.scale.y << ")\n";
             // Use your existing rect_to_triangle function
-            if (rect_to_triangle(rect, tri))
+            if (rect_to_triangle(rect, triCol))
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Triangle entity " << triEnt.GetID() << "\n";

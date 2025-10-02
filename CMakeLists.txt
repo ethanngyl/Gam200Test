@@ -30,6 +30,8 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
+"shaders/basic.vert"
+"shaders/basic.frag"
 "engine/main.cpp")
 
 # ======================= Linking =========================
@@ -42,6 +44,16 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     imgui
 )
 
+# Mark shaders as non-compiled
+set_source_files_properties(
+    "shaders/basic.vert"
+    "shaders/basic.frag"
+    PROPERTIES HEADER_FILE_ONLY TRUE
+)
+
+# Copy shaders to build directory
+file(COPY ${CMAKE_SOURCE_DIR}/engine/shaders
+     DESTINATION ${CMAKE_BINARY_DIR})
 # ======================= Include Directories =========================
 
 # Include directories for the project (fixed to use directory, not files)
@@ -89,7 +101,7 @@ endif()
 # Copy shaders folder
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
-          "${CMAKE_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/shaders")
+          "${CMAKE_SOURCE_DIR}/engine/shaders" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/shaders")
 
 # Copy assets folder
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD

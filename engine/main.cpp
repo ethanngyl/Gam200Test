@@ -94,7 +94,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
 
     // Test entity 1: Triangle
     Framework::Entity triangleEntity = entityManager.CreateEntity();
-    entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.5f, 0.0f));
+    entityManager.AddComponent<Framework::Transform>(triangleEntity, Framework::Vector2D(-0.1f, 0.0f));
     auto& transform1 = entityManager.GetComponent<Framework::Transform>(triangleEntity);
     transform1.scale = Framework::Vector2D(0.5f, 0.5f);
     entityManager.AddComponent<Framework::Sprite>(triangleEntity);
@@ -103,6 +103,10 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance,
     //entityManager.AddComponent<Framework::Movement>(triangleEntity);  // Add this
     //entityManager.GetComponent<Framework::Movement>(triangleEntity).moveSpeed = 0.1f;  // Set speed
     //entityManager.GetComponent<Framework::Movement>(triangleEntity).direction = Framework::Vector2D(1.0f, 0.0f);  // Move right
+    auto& triCol = entityManager.GetComponent<Framework::TriangleCollider>(triangleEntity);
+    triCol.v0 = Framework::Vector2D(0.0f, 0.05f);
+    triCol.v1 = Framework::Vector2D(-0.05f, -0.05f);
+    triCol.v2 = Framework::Vector2D(0.05f, -0.05f);
     LOG_INFO("CORE", "Created triangle entity");
 
 
