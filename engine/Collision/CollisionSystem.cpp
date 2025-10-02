@@ -268,8 +268,8 @@ void CollisionSystem::printCollider(const char* name, const Collider& c)
 void CollisionSystem::CheckECSCollisions()
 {
     if (!entityManager) return;
-    // Get entities with BoxCollider (your moving rectangle)
-    std::vector<Entity> rects;
+    // Get entities collider entities
+    std::vector<Entity> rects, triangles, circles;
     for (Entity e : entityManager->GetAllEntities())
     {
         if (entityManager->HasComponent<Transform>(e) &&
@@ -277,23 +277,25 @@ void CollisionSystem::CheckECSCollisions()
         {
             rects.push_back(e);
         }
-        
-    }
 
-    // Get entities with TriangleCollider
-    std::vector<Entity> triangles;
-    for (Entity e : entityManager->GetAllEntities())
-    {
         if (entityManager->HasComponent<Transform>(e) &&
             entityManager->HasComponent<TriangleCollider>(e))
         {
             triangles.push_back(e);
         }
+
+        if (entityManager->HasComponent<Transform>(e) &&
+            entityManager->HasComponent<CircleCollider>(e))
+        {
+            circles.push_back(e);
+        }
+        
     }
 
-    // Check rect vs triangle collisions
+    
     for (Entity rectEnt : rects)
     {
+        // Check rect vs triangle collisions
         for (Entity triEnt : triangles)
         {
             auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
@@ -321,6 +323,33 @@ void CollisionSystem::CheckECSCollisions()
             {
                 std::cout << "Collision: Rect entity " << rectEnt.GetID()
                     << " hit Triangle entity " << triEnt.GetID() << "\n";
+            }
+        }
+
+        for (Entity circEnt : circles)
+        {
+            auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
+            auto& rectColl = entityManager->GetComponent<BoxCollider>(rectEnt);
+            auto& circTransform = entityManager->GetComponent<Transform>(circEnt);
+            auto& circColl = entityManager->GetComponent<CircleCollider>(circEnt);
+
+            // Convert to collision system format
+            Collider rect = Collider::create_rect(
+                rectColl.size.x,
+                rectColl.size.y,
+                rectTransform.position
+            );
+
+            Collider circle = Collider::create_circle(
+                circColl.radius * circTransform.scale.x,  // Scale the radius
+                circTransform.position + circColl.offset
+            );
+
+            // Use your existing check_collision function
+            if (check_collision(circle, rect))
+            {
+                std::cout << "Collision: Rect entity " << rectEnt.GetID()
+                    << " hit Circle entity " << circEnt.GetID() << "\n";
             }
         }
     }
