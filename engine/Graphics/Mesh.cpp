@@ -1,22 +1,67 @@
-#include "Precompiled.h"
+﻿#include "Precompiled.h"
 #include "Mesh.h"
 #include <iostream>
+/*
+===============================================================================
+File:        Mesh.cpp
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-10-02
+Contribution: 30%(kah yan)
+-------------------------------------------------------------------------------
+Brief:
+Implementation of the Mesh class, which encapsulates OpenGL buffer objects and
+vertex array setup for both indexed and non-indexed geometry. This class allows
+easy creation, updating, and drawing of renderable primitives using VAOs, VBOs,
+and optional EBOs.
 
+Details:
+- The quick constructor supports non-indexed meshes for simple shapes (e.g., triangle, line).
+- The Initialize() method sets up indexed meshes with flexible attribute layouts.
+- Meshes support runtime vertex buffer updates through UpdateVertices().
+- Draw() binds the VAO and issues the correct draw call (arrays or elements).
+- Proper cleanup of GPU buffers is performed in the destructor.
+
+Notes:
+- Vertex attributes are expected to be interleaved.
+- Attribute locations follow this convention:
+    0 → Position (x,y,z)
+    1 → Color (r,g,b)
+    2 → TexCoords (u,v) [optional]
+- Requires a valid OpenGL context before construction or drawing.
+
+Safety:
+- Checks for buffer existence before deletion.
+- UpdateVertices() performs a size check to avoid buffer overruns.
+- No heap allocations; only GPU buffers are managed.
+
+===============================================================================
+*/
 namespace Framework {
 
+    /*
+    ------------------------------------------------------------------------------
+    Constructor (Non-indexed):
+    Initializes a VAO and VBO for a mesh defined only by vertices.
+    This is used for simple primitives (triangle, line, circle).
+    Texcoords can be included if present.
+    ------------------------------------------------------------------------------
+    */
     // ---------------- Non-indexed constructor ----------------
     Mesh::Mesh(const std::vector<float>& vertices, GLenum drawMode, bool hasTexCoords)
         : VAO(0), VBO(0), EBO(0), vertices(vertices),
         drawMode(drawMode), hasTexCoords(hasTexCoords), useIndices(false)
     {
+        // Determine vertex stride (pos+color=6, pos+color+tex=8)
         int stride = hasTexCoords ? 8 : 6;
         vertexCount = static_cast<unsigned int>(vertices.size() / stride);
 
+        // Generate and bind VAO + VBO
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
 
         Bind();
-
+        // Upload vertex data to GPU
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
             vertices.data(), GL_STATIC_DRAW);
 

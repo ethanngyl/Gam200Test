@@ -2,6 +2,41 @@
 #include "Precompiled.h"
 #include <glm/glm.hpp>
 #include "ECSEntityManager.h"
+
+/*
+===============================================================================
+File:        GraphicsSystem.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-10-02
+Contribution: 70%(kah yan)
+-------------------------------------------------------------------------------
+Brief:
+Declaration of the GraphicsSystem class, responsible for initializing and
+managing the rendering pipeline. This includes OpenGL context setup, shader
+management, background rendering, mesh creation, and per-frame entity drawing.
+
+Details:
+- Sets up viewport, shaders, meshes, and background textures during initialization.
+- Handles input for toggling mesh modes and color interpolation effects.
+- Draws both static background and dynamic entities with Transform and Sprite
+  components from the ECS.
+- Provides utility functions to manage current mesh color and map sprites to meshes.
+- Acts as the rendering backend for the game engine.
+
+Notes:
+- Requires GLFW, GLEW, and GLM for rendering.
+- Uses a y-up coordinate system with fixed viewport size (1600x800).
+- Uses orthographic projection for 2D rendering.
+- Assumes EntityManager is set externally before Update() is called.
+
+Safety:
+- Checks pointers before usage (shader, texture, meshes).
+- Proper cleanup in destructor to release GPU resources.
+- Input handling uses state tracking to prevent key repeat glitches.
+
+===============================================================================
+*/
 // Forward declarations
 struct GLFWwindow;
 
@@ -12,39 +47,66 @@ namespace Framework {
 }
 
 namespace Framework {
+    /**
+     * @class GraphicsSystem
+     * @brief Core rendering system responsible for setting up OpenGL state and
+     *        drawing both static background and ECS entities each frame.
+     *
+     * This class is part of the engine's system architecture. It encapsulates
+     * the rendering loop, OpenGL initialization, mesh management, shader usage,
+     * and per-frame entity rendering. It also provides features like rainbow
+     * color interpolation and background texture rendering.
+     */
     class GraphicsSystem : public InterfaceSystem {
     public:
+        // Constructor: Initializes member variables.
          GraphicsSystem();
+
+        // Destructor: Cleans up dynamically allocated resources and GPU objects.
         virtual ~GraphicsSystem();
 
+        // Initializes OpenGL context, shaders, meshes, and background texture.
         virtual void Initialize() override;
+        // Main per-frame update. Handles rendering and input.
         virtual void Update(float dt) override;
+        // Renders all ECS entities with Transform + Sprite components.
         virtual void RenderEntities();
+        // Receives and processes engine-wide messages (e.g., Quit).
         virtual void SendEngineMessage(Message* message) override;
+        // Sets the ECS EntityManager for this GraphicsSystem.
         void SetEntityManager(EntityManager* em) { entityManager = em; }
+        // Sets the active GLFW window pointer.
         void SetWindow(GLFWwindow* win) { window = win; }
 
     private:
+        // Clears the frame buffer at the start of each frame.
         void BeginFrame();
+        // Swaps buffers and polls events at the end of each frame.
         void EndFrame();
+        // Handles keyboard input for mesh switching and color toggling.
         void ProcessInput();
+        // Sets the current mesh color (rainbow or static) in the shader.
         void SetCurrentMeshColor();
+        // Returns a mesh pointer corresponding to a given sprite name.
         Mesh* GetMeshForSprite(const std::string& spriteName);
 
-        GLFWwindow* window;
+        // Rendering context and systems
+        GLFWwindow* window;// Pointer to active GLFW window.
 
-        Shader* shader;
-        Mesh* triangleMesh;
-        EntityManager* entityManager;
-        std::vector<Mesh*> meshes;
-        std::vector<glm::vec3> meshColors;
-        int currentMeshIndex = 0;
+        Shader* shader;    // Main shader program.
+        Mesh* triangleMesh;// (Legacy) single triangle mesh.
+        EntityManager* entityManager;// ECS entity manager.
+
+        std::vector<Mesh*> meshes;        // All available meshes (triangle, quad, line, circle).
+        std::vector<glm::vec3> meshColors;// Base colors for each mesh.
+        int currentMeshIndex = 0;         // Index of currently selected mesh.
         // Interpolation
-        float colorLerpTime = 0.0f;
-        float colorLerpSpeed = 0.25f;
-        bool interpolateColor = true; // Toggle if you want
+        float colorLerpTime = 0.0f;   // Timer for color interpolation.
+        float colorLerpSpeed = 0.25f; // Speed of rainbow effect.
+        bool interpolateColor = true; // Toggle between rainbow/static color
 
-        Texture* backgroundTexture = nullptr;
-        Mesh* backgroundQuad = nullptr;
+        // Background rendering
+        Texture* backgroundTexture = nullptr; // Texture used for fullscreen background.
+        Mesh* backgroundQuad = nullptr;       // Fullscreen quad mesh for background.
     };
 }
