@@ -5,8 +5,8 @@ namespace Framework
 {
     WindowSystem::WindowSystem() : window(nullptr),
         WindowOpen(false),
-        windowWidth(1800),         // default width
-        windowHeight(900),         // default height
+        windowWidth(1600),         // default width
+        windowHeight(800),         // default height
         windowTitle("Struct Squad Game Engine") // default title
     {
     }

@@ -86,4 +86,24 @@ namespace Framework
         }
     };
 
+    /**
+     * @struct CircleCollider
+     * @brief Circular collision shape
+     *
+     * Radius-based collider for circular collision detection.
+     */
+    struct CircleCollider : public Component<CircleCollider>
+    {
+        float radius;       ///< Collision circle radius
+        Vector2D offset;    ///< Offset from the transform position
+
+        /**
+         * @brief Constructs a circle collider
+         * @param r Radius of the collision circle
+         * @param off Offset from entity position
+         */
+        CircleCollider(float r = 0.5f, Vector2D off = Vector2D(0.0f, 0.0f))
+            : radius(r), offset(off) {
+        }
+    };
 }
