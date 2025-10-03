@@ -1,43 +1,36 @@
-/*
+﻿/*
 ===============================================================================
  File:          Mesh.cpp
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
+ Author:        Sim Kah Yan, TAN WEI LEONG
+ Email:         kahyan.sim@digipen.edu, weileong.tan@digipen.edu
  Date:          2025-10-02
- Contribution:  100%
+ Contribution:  30%(kah yan), 70%(TAN WEI LEONG)
  ------------------------------------------------------------------------------
- Implementation of the Mesh class, which encapsulates the OpenGL logic required
- to render mesh objects with vertex data.
+ Brief:
+ Implementation of the Mesh class, which encapsulates OpenGL buffer objects and
+ vertex array setup for both indexed and non-indexed geometry. This class allows
+ easy creation, updating, and drawing of renderable primitives using VAOs, VBOs,
+ and optional EBOs.
 
- Description:
- -------------
- This file implements the methods of the `Mesh` class, responsible for managing 
- vertex data and interacting with OpenGL to render 3D (or 2D) objects. The class 
- handles creating OpenGL buffers (VAO and VBO), updating vertices, and drawing the 
- mesh on screen. This code also ensures proper resource management (buffer deletion, 
- etc.) to prevent memory leaks.
+ Details:
+ - The quick constructor supports non-indexed meshes for simple shapes (e.g., triangle, line).
+ - The Initialize() method sets up indexed meshes with flexible attribute layouts.
+ - Meshes support runtime vertex buffer updates through UpdateVertices().
+ - Draw() binds the VAO and issues the correct draw call (arrays or elements).
+ - Proper cleanup of GPU buffers is performed in the destructor.
 
- Responsibilities:
- -----------------
- - `Mesh()`: Initializes a mesh with vertex data and an optional drawing mode.
- - `~Mesh()`: Cleans up OpenGL buffers when the mesh is destroyed.
- - `Draw()`: Renders the mesh to the screen using OpenGL commands.
- - `UpdateVertices()`: Updates the vertex data of the mesh in OpenGL.
- - `Bind()`: Binds the mesh's OpenGL resources (VAO and VBO) for rendering.
- - `Unbind()`: Unbinds the OpenGL resources after rendering.
+ Notes:
+- Vertex attributes are expected to be interleaved.
+- Attribute locations follow this convention:
+    0 -> Position (x,y,z)
+    1 -> Color (r,g,b)
+    2 -> TexCoords (u,v) [optional]
+- Requires a valid OpenGL context before construction or drawing.
 
- Platform-specific Notes:
- -------------------------
- - The class uses OpenGL (with GLEW) for rendering and assumes the necessary 
-   OpenGL setup is done in the main application.
- - Ensure proper OpenGL context setup before using the `Mesh` class.
-
- Safety:
- --------
- - Proper OpenGL resource cleanup is ensured with the destructor to avoid memory 
-   leaks.
- - Buffer updates and draws are wrapped in functions that bind/unbind OpenGL 
-   resources safely.
+Safety:
+- Checks for buffer existence before deletion.
+- UpdateVertices() performs a size check to avoid buffer overruns.
+- No heap allocations; only GPU buffers are managed.
 ===============================================================================
 */
 
@@ -45,24 +38,22 @@
 
 namespace Framework {
 
-    /**
-     * @brief Constructs a Mesh object with provided vertex data.
-     *
-     * The constructor generates and initializes OpenGL resources (Vertex Array Object
-     * and Vertex Buffer Object) with the given vertex data. The vertex data is expected
-     * to contain positions and colors for each vertex. The drawing mode (GL_TRIANGLES by
-     * default) determines how the mesh is rendered (as triangles, lines, etc.).
-     *
-     * @param vertices A vector of floats containing vertex data (position + color).
-     * @param drawMode The OpenGL drawing mode (default is GL_TRIANGLES).
-     */
+    /*
+    ------------------------------------------------------------------------------
+    Constructor (Non-indexed):
+    Initializes a VAO and VBO for a mesh defined only by vertices.
+    This is used for simple primitives (triangle, line, circle).
+    Texcoords can be included if present.
+    ------------------------------------------------------------------------------
+    */
+    // ---------------- Non-indexed constructor ----------------
     Mesh::Mesh(const std::vector<float>& vertices, GLenum drawMode)
         : VAO(0), VBO(0), vertices(vertices), drawMode(drawMode) {
 
         // Each vertex consists of 6 floats: 3 for position, 3 for color
         vertexCount = static_cast<unsigned int>(vertices.size() / 6);
 
-        // Generate OpenGL Vertex Array Object (VAO) and Vertex Buffer Object (VBO)
+        // Generate and bind VAO + VBO
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
 
@@ -85,25 +76,14 @@ namespace Framework {
         Unbind();
     }
 
-    /**
-     * @brief Destructor for the Mesh class.
-     *
-     * Ensures that the OpenGL buffers (VAO and VBO) are properly deleted when
-     * the Mesh object is destroyed, preventing memory leaks.
-     */
+    // ---------------- Destructor ----------------
     Mesh::~Mesh() {
         // Delete the OpenGL buffers (VAO and VBO) associated with this mesh
         glDeleteVertexArrays(1, &VAO);
         glDeleteBuffers(1, &VBO);
     }
 
-    /**
-     * @brief Renders the mesh to the screen.
-     *
-     * This function binds the VAO and VBO, issues an OpenGL draw call using the specified
-     * drawing mode (e.g., GL_TRIANGLES), and then unbinds the OpenGL resources after
-     * rendering to ensure the mesh is drawn correctly.
-     */
+    // ---------------- Draw ----------------
     void Mesh::Draw() const {
         // Bind the mesh resources for rendering
         Bind();
@@ -115,17 +95,7 @@ namespace Framework {
         Unbind();
     }
 
-    /**
-     * @brief Updates the vertex data for the mesh.
-     *
-     * This function updates the vertex buffer with new vertex data. The new data must
-     * have the same size as the original vertex data. It is efficient because it
-     * only updates the existing buffer rather than recreating it.
-     *
-     * @param newVertices A vector of floats containing the new vertex data. This should
-     *                    contain positions and colors for each vertex in the same format
-     *                    as the original data.
-     */
+    // ---------------- Update vertices ----------------
     void Mesh::UpdateVertices(const std::vector<float>& newVertices) {
         // Ensure the new vertex data matches the size of the original data
         if (newVertices.size() != vertices.size()) {
@@ -144,24 +114,14 @@ namespace Framework {
         Unbind();
     }
 
-    /**
-     * @brief Binds the OpenGL resources (VAO and VBO).
-     *
-     * This function binds the vertex array object (VAO) and vertex buffer object (VBO)
-     * to the OpenGL context, making them active for subsequent drawing operations.
-     */
+    // ---------------- Bind / Unbind ----------------
     void Mesh::Bind() const {
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
     }
 
 
-    /**
-     * @brief Unbinds the OpenGL resources (VAO and VBO).
-     *
-     * This function unbinds the VAO and VBO, ensuring that no OpenGL state changes
-     * accidentally affect other parts of the program.
-     */
+    
     void Mesh::Unbind() const {
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);

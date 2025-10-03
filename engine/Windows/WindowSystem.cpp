@@ -1,41 +1,31 @@
-/*
+﻿/*
 ===============================================================================
  File:          WindowSystem.cpp
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
+ Author:        Sim Kah Yan, TAN WEI LEONG
+ Email:         kahyan.sim@digipen.edu, weileong.tan@digipen.edu
  Date:          2025-10-02
- Contribution:  20% (TAN WEI LEONG)
+ Contribution:  20%(Kah Yan), 80% (TAN WEI LEONG)
  ------------------------------------------------------------------------------
- Implementation of the WindowSystem class, which handles the creation and
- management of a GLFW window. This class facilitates the interaction between
- the application and the windowing system (using GLFW) for rendering, input,
- and window lifecycle management.
+ Brief:
+ Implementation of the WindowSystem class. Handles the creation and management
+ of the main application window using GLFW. Provides initialization, cleanup,
+ and basic engine message handling to support quitting.
 
- Description:
- -------------
- This file implements the methods of the `WindowSystem` class, responsible for 
- initializing, updating, and closing the window. The class also handles events 
- like window resizing and user input to keep the window responsive.
+ Details:
+ - Initializes GLFW and creates a window with configurable width, height, and title.
+ - Destroys the window and terminates GLFW on shutdown.
+ - Responds to engine messages such as Quit.
+ - Checks for window close events and polls system events.
 
- Responsibilities:
- -----------------
- - `WindowSystem()`: Initializes the window with default values (width, height, title).
- - `~WindowSystem()`: Cleans up resources by destroying the window and terminating GLFW.
- - `Initialize()`: Initializes GLFW and creates a window with the specified width, height, and title.
- - `Update()`: Polls events to keep the window responsive and checks for updates each frame.
- - `SendEngineMessage()`: Handles messages, such as the quit message, and responds by closing the window.
- - `ShouldClose()`: Checks if the window should close (useful for the main loop to decide when to terminate).
-
- Platform-specific Notes:
- -------------------------
- - The class relies on GLFW for window management and OpenGL for rendering, assuming the 
-   necessary OpenGL context setup is done elsewhere in the application.
- - Ensure that the OpenGL context is correctly set up before using this class.
+Notes:
+- Default window size: 1600x800.
+- Default title: "Struct Squad Game Engine".
+- GLFW must be initialized successfully before creating a window.
 
  Safety:
- --------
- - Proper GLFW resource cleanup is ensured with the destructor to avoid memory leaks.
- - Event polling and window management functions are wrapped in checks to ensure proper execution.
+- All GLFW calls are wrapped with null checks.
+- Properly destroys window and terminates GLFW to avoid resource leaks.
+- Graceful fallback if initialization fails.
 
 ===============================================================================
 */
@@ -44,7 +34,11 @@
 
 namespace Framework {
 
-    // Constructor for the WindowSystem class
+    /*
+    ------------------------------------------------------------------------------
+    Constructor: Sets default window configuration and initializes member variables.
+    ------------------------------------------------------------------------------
+    */
     WindowSystem::WindowSystem()
         : window(nullptr),                      // Initialize the window pointer to nullptr
         WindowOpen(false),                      // Flag indicating whether the window is open
@@ -54,7 +48,12 @@ namespace Framework {
     {
     }
 
-    // Destructor for the WindowSystem class
+    /*
+    ------------------------------------------------------------------------------
+    Destructor: Cleans up GLFW resources by destroying the window and terminating
+                the GLFW library.
+    ------------------------------------------------------------------------------
+    */
     WindowSystem::~WindowSystem() {
         // If the window exists, destroy it and terminate the GLFW library
         if (window) {
@@ -63,7 +62,12 @@ namespace Framework {
         }
     }
 
-    // Initializes the window system by setting up GLFW and creating the window
+    /*
+    ------------------------------------------------------------------------------
+    Initialize: Initializes the GLFW library and creates the main application
+                window using the configured size and title.
+    ------------------------------------------------------------------------------
+    */
     void WindowSystem::Initialize() {
         std::cout << "WindowSystem: Initializing...\n";  // Output initialization message
 
@@ -92,7 +96,12 @@ namespace Framework {
         std::cout << "WindowSystem: Window created! Press 'q' + Enter to quit.\n";
     }
 
-    // Updates the window system, called every frame to keep the window responsive
+    /*
+    ------------------------------------------------------------------------------
+    Update: Called once per frame to process OS window events.
+            Keeps the window responsive to input and window manager actions.
+    ------------------------------------------------------------------------------
+    */
     void WindowSystem::Update(float dt) {
 
         // Poll events (such as key presses, window resize, etc.)
@@ -100,7 +109,12 @@ namespace Framework {
         glfwPollEvents();  // Ensures the window responds to user interactions
     }
 
-    // Handles engine messages sent to the window system, such as quit messages
+    /*
+    ------------------------------------------------------------------------------
+    SendEngineMessage: Responds to engine-level messages such as Quit.
+    Closes the window gracefully when a quit message is received.
+    ------------------------------------------------------------------------------
+    */
     void WindowSystem::SendEngineMessage(Message* message) {
         // If the quit message is received, close the window
         if (message->MessageId == Status::Quit) {
@@ -114,7 +128,12 @@ namespace Framework {
         }
     }
 
-    // Checks if the window should close (useful for controlling the main loop exit condition)
+    /*
+   ------------------------------------------------------------------------------
+   ShouldClose: Returns true if the GLFW window should close.
+                This is checked each frame by the engine's main loop.
+   ------------------------------------------------------------------------------
+   */
     bool WindowSystem::ShouldClose() const
     {
         // If the window is valid, check if it should close based on GLFW's internal state

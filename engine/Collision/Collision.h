@@ -44,7 +44,7 @@ struct Bounds {
     float top{ 240.0f };
 };
 
-
+// ---- Collider wrapper------------------------------------
 struct Collider {
     ShapeType shapeType{ShapeType::Circle};
     Framework::Vector2D position{};
@@ -52,7 +52,7 @@ struct Collider {
     Circle circle{};
     Rect rect{};
     Triangle triangle{};
-
+	// create a circle collider, radius, position(center)
     static Collider create_circle (float radius, Framework::Vector2D position){
         Collider c;
         c.shapeType = ShapeType::Circle;
@@ -60,6 +60,7 @@ struct Collider {
         c.position = position;
         return c;
     }
+	// create a rectangle collider, width, height, position(center)
     static Collider create_rect (float width, float height, Framework::Vector2D position){
         Collider c;
         c.shapeType = ShapeType::Rect;
@@ -68,6 +69,7 @@ struct Collider {
         c.position = position;
         return c;
     }
+	// create a triangle collider, three vertex
     static Collider create_triangle(Framework::Vector2D v0,
         Framework::Vector2D v1,
         Framework::Vector2D v2) {
@@ -84,6 +86,7 @@ struct Collider {
 
 };
 
+// ---- Collision Test Functions --------------------------
 bool circle_to_circle (const Collider& a, const Collider& b);
 bool rect_to_rect     (const Collider& a, const Collider& b);
 bool circle_to_rect   (const Collider& circle, const Collider& rect);

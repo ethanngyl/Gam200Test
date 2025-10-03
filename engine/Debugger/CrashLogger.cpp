@@ -1,4 +1,4 @@
-#include "CrashLogger.h"
+﻿#include "CrashLogger.h"
 #include "Log.h"
 
 #include <cstdio>

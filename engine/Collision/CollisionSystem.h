@@ -5,7 +5,7 @@ Author:      Jiahao Zhou
 Co-Author:   Ethan Ng
 Email:       jiahao.zhou@digipen.edu, n.ethanyongle@digipen.edu
 Date:        2025-09-30
-Contribution: 85%(Jiahao), 15%(Ethan)
+Contribution: 85%(Jiahao),  15%(Ethan)
 -------------------------------------------------------------------------------
 Test harness interface for running interactive collision cases.
 
@@ -39,7 +39,7 @@ Safety:
 
 namespace Framework {
   
-
+	// Enumeration of different collision test modes.
     enum class CollTest {
         None = 0,
         CircleToRect = 1,
@@ -57,14 +57,21 @@ namespace Framework {
   class CollisionSystem : public InterfaceSystem
   {
   public:
+	  // Constructor & Destructor
     CollisionSystem() : entityManager(nullptr) { };
     ~CollisionSystem() override = default;
 
+	// InterfaceSystem overrides
     void Initialize() override;
+	// Update system state each frame
     void Update(float dt) override;
+	//  Handle messages (e.g., Quit)
     void SendEngineMessage(Message* message) override;
+	// (Done by Ethan!) Check all entities with colliders and test for collisions, logging results.
     void CheckECSCollisions();
+	// Setters for dependencies
     void SetEntityManager(EntityManager* em) { entityManager = em; }
+	// Set the input system dependency
     void SetInput(InputSystem* input) { m_input = input; }
 
     
@@ -98,8 +105,10 @@ namespace Framework {
     //void move(Collider& c, const Vec2& v, float dt);
     //test gate + current selection
     bool      testActive{ false };
+	// bool for is the test scene set up and ready?
     bool      sceneReady{ false };
     EntityManager* entityManager{ nullptr };
+	// current test mode
     CollTest  mode{ CollTest::None };
 
     

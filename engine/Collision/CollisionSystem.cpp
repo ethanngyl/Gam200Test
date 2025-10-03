@@ -13,7 +13,9 @@ Responsibilities:
 - Initialize CollTest modes (circle–rect, rect–rect, circle–circle, point tests,
   triangle tests, bounds checks).
 - (Before render system is done)Create a simple test scenes and routes input to test all collision functions.
-- (After render system is done)Create ECS ...
+- (Done by Ethan!)(After render system is done)Create checkECScollision function: iterate entities with Transform +
+  BoxCollider/CircleCollider/TriangleCollider, build lightweight Collider wrappers, run
+  rect_to_triangle, circle_to_triangle, and circle/rect pair checks each frame, and log hits.
 
 Controls for:
 - T: toggle test mode
@@ -287,6 +289,11 @@ void CollisionSystem::printCollider(const char* name, const Collider& c)
 		  << " v2=(" << c.triangle.v2.x << "," << c.triangle.v2.y << ")\n";
   }
 }
+
+
+// -------------------------------------------------------------------------
+//(Done by Ethan!)(Check ECS entities with Transform + BoxCollider/CircleCollider/TriangleCollider each frame for collisions)
+// -------------------------------------------------------------------------
 
 void CollisionSystem::CheckECSCollisions()
 {

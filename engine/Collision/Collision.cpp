@@ -34,8 +34,10 @@ Safety:
 #include <cmath>
 #include <iostream>
 
-/// Returns true if two circles intersect or touch.
-/// Touching edges count as collision.
+// -------------------------------------------------------------------------
+// Returns true if two circles intersect or touch.
+// Touching edges count as collision.
+// -------------------------------------------------------------------------
 bool circle_to_circle(const Collider& a, const Collider& b) {
     float dx = a.position.x - b.position.x;
     float dy = a.position.y - b.position.y;
@@ -44,7 +46,10 @@ bool circle_to_circle(const Collider& a, const Collider& b) {
     return distanceSquared <= radiusSum * radiusSum;
 }
 
-/// return true if overlap exists on both X and Y axes
+
+// -------------------------------------------------------------------------
+// return true if overlap exists on both X and Y axes
+// -------------------------------------------------------------------------
 bool rect_to_rect(const Collider& a, const Collider& b) {
     float aLeft = a.position.x - a.rect.width / 2;
     float aRight = a.position.x + a.rect.width / 2;

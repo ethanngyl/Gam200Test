@@ -1,40 +1,33 @@
-/*
+﻿/*
 ===============================================================================
  File:          Shader.cpp
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
+ Author:        Sim Kah Yan, TAN WEI LEONG
+ Email:         kahyan.sim@digipen.edu, weileong.tan@digipen.edu
  Date:          2025-10-02
- Contribution:  100%
+ Contribution:  60%(kah yan), 40%(TAN WEI LEONG)
  ------------------------------------------------------------------------------
- Implementation of the `Shader` class, which encapsulates the OpenGL logic required
- to manage and use shader programs for rendering.
+ Brief:
+ Implementation of the Shader class, which handles loading, compiling, linking,
+ and managing OpenGL GLSL shader programs. This includes reading source files
+ from disk, compiling vertex and fragment shaders, linking them into a program,
+ and providing utility functions for binding and setting uniforms.
 
- Description:
- -------------
- This file implements the methods of the `Shader` class, responsible for loading,
- compiling, linking, and using OpenGL shader programs (both vertex and fragment shaders).
- The class provides functions to bind and unbind shaders, set uniforms, and manage
- the shader program lifecycle.
+ Details:
+ - Reads shader source code from text files.
+ - Compiles vertex and fragment shaders, checking for compilation errors.
+ - Links shaders into a complete program and validates link status.
+ - Deletes intermediate shader objects after linking.
+ - Provides functions to bind/unbind the shader and set vec3 uniforms.
 
- Responsibilities:
- -----------------
- - `Shader()`: Loads, compiles, and links vertex and fragment shaders to create an OpenGL shader program.
- - `~Shader()`: Cleans up the shader program from OpenGL memory when the shader is destroyed.
- - `Bind()`: Activates the shader program for rendering in OpenGL.
- - `Unbind()`: Deactivates the shader program.
- - `SetUniform3f()`: Sets a 3D vector (`vec3`) uniform in the shader program.
- - `GetID()`: Returns the OpenGL ID of the shader program.
-
- Platform-specific Notes:
- -------------------------
- - The class requires a valid OpenGL context and proper paths to the shader files.
- - The shader files should be compiled and linked with the OpenGL program, which this
-   class helps manage.
+ Notes:
+ - Requires a valid OpenGL context prior to shader creation.
+ - Uses GLSL version 4.5 Core Profile.
+ - Prints shader sources and compile/link results to console for debugging.
 
  Safety:
- --------
- - Shader programs are properly cleaned up using `glDeleteProgram` in the destructor.
- - The methods provide necessary error handling for shader compilation and linking.
+ - Compilation and linking errors are logged to stderr.
+ - Throws std::runtime_error on linking failure to prevent undefined behavior.
+ - Gracefully handles missing shader files.
 ===============================================================================
 */
 
@@ -42,18 +35,12 @@
 
 namespace Framework {
 
-    /**
-     * @brief Constructs the Shader program by loading, compiling, and linking
-     *        vertex and fragment shaders from the given file paths.
-     *
-     * This constructor reads shader source code from the provided file paths,
-     * compiles the shaders, links them into a program, and stores the program's
-     * OpenGL ID. If the shaders cannot be compiled or linked, error messages
-     * will be displayed.
-     *
-     * @param vertexPath The file path to the vertex shader source code.
-     * @param fragmentPath The file path to the fragment shader source code.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    Constructor: Loads, compiles, and links a vertex and fragment shader program.
+                 Prints shader sources and logs compilation/linking results.
+    ------------------------------------------------------------------------------
+    */
     Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath) {
         std::cout << "\n\n==============================================\n";
         std::cout << "    VERTEX & FRAGMENT SHADER SRC FILES\n";
@@ -90,46 +77,26 @@ namespace Framework {
         glDeleteShader(fs);
     }
 
-    /**
-     * @brief Destructor that cleans up the shader program.
-     *
-     * This destructor deletes the shader program to free the OpenGL resources when
-     * the Shader object is destroyed.
-     */
+    // Destructor: Deletes the compiled shader program from GPU memory.
     Shader::~Shader() {
         glDeleteProgram(id);
     }
 
-    /**
-     * @brief Binds the shader program for use in OpenGL rendering.
-     *
-     * This function activates the shader program, making it the current program
-     * for subsequent OpenGL rendering calls.
-     */
+    // Bind: Activates this shader program for subsequent draw calls.
     void Shader::Bind() const {
         glUseProgram(id);
     }
 
-    /**
-     * @brief Unbinds the currently active shader program.
-     *
-     * This function deactivates the shader program and returns OpenGL to its default
-     * state (no program bound).
-     */
+    // Unbind: Deactivates any currently bound shader program.
     void Shader::Unbind() const {
         glUseProgram(0);
     }
 
-    /**
-    * @brief Sets a 3D vector (`vec3`) uniform in the shader program.
-    *
-    * This function sets the value of a `vec3` uniform in the shader, typically used
-    * for properties like colors, light positions, or other 3D vector attributes.
-    *
-    * @param name The name of the uniform variable in the shader.
-    * @param x The x-component of the vector.
-    * @param y The y-component of the vector.
-    * @param z The z-component of the vector.
+    /*
+    ------------------------------------------------------------------------------
+    SetUniform3f: Uploads a vec3 uniform variable to the shader program.
+    Logs a warning if the uniform location is not found.
+    ------------------------------------------------------------------------------
     */
     void Shader::SetUniform3f(const std::string& name, float x, float y, float z) const {
         // Retrieve the location of the uniform variable in the shader program
@@ -144,27 +111,21 @@ namespace Framework {
         glUniform3f(location, x, y, z);
     }
 
-    /**
-     * @brief Retrieves the OpenGL ID of the shader program.
-     *
-     * This function returns the OpenGL program ID associated with this shader.
-     * The ID can be useful for debugging or managing multiple shader programs.
-     *
-     * @return The OpenGL ID of the shader program.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    GetID: Returns the OpenGL shader program ID.
+    ------------------------------------------------------------------------------
+    */
     unsigned int Shader::GetID() const {
         return id;
     }
 
-    /**
-     * @brief Loads the shader source code from a file.
-     *
-     * This function reads the content of a shader file and returns the source code
-     * as a string.
-     *
-     * @param path The path to the shader file.
-     * @return The source code as a string.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    LoadFile: Reads the contents of a text file (GLSL source) into a string.
+    Returns an empty string and logs an error if the file cannot be opened.
+    ------------------------------------------------------------------------------
+    */
     std::string Shader::LoadFile(const std::string& path) {
         // Open the shader file at the given path
         std::ifstream file(path);
@@ -183,17 +144,12 @@ namespace Framework {
         return ss.str();
     }
 
-    /**
-     * @brief Compiles a shader from source code.
-     *
-     * This function compiles a shader (either vertex or fragment) from the provided
-     * source code and returns the OpenGL ID of the compiled shader. Compilation errors
-     * will be logged.
-     *
-     * @param type The type of shader (GL_VERTEX_SHADER or GL_FRAGMENT_SHADER).
-     * @param source The source code of the shader.
-     * @return The OpenGL ID of the compiled shader.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    Compile: Compiles a shader of the specified type (vertex or fragment) from
+             its source code. Logs errors to stderr if compilation fails.
+    ------------------------------------------------------------------------------
+    */
     unsigned int Shader::Compile(unsigned int type, const std::string& source) {
         // Create a new shader object of the specified type
         unsigned int shader = glCreateShader(type);
