@@ -78,7 +78,7 @@ namespace Framework
          * @param system Pointer to the system to register
          * @note Systems are updated in the order they are added
          */
-        void AddSystem(InterfaceSystem* system);
+        void AddSystem(EngineSystem* system);
         /**
          * @brief Destroys all registered systems
          *
@@ -98,7 +98,7 @@ namespace Framework
 
     private:
         // Systems collection
-        std::vector<InterfaceSystem*> Systems;
+        std::vector<EngineSystem*> Systems;
 
         // Timing
         unsigned LastTime;

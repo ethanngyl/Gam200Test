@@ -178,6 +178,9 @@ namespace Framework
 
                 //DBG_SCOPE_SYS("SystemUpdate", tag);
                 Systems[i]->Update(dt);
+                
+                //For future use
+                (void)tag;
             }
 
             // --- end perf frame ---
@@ -226,7 +229,7 @@ namespace Framework
      * @param system Pointer to the system to add
      * @note Systems are updated in the order they are added
      */
-    void CoreEngine::AddSystem(InterfaceSystem* system)
+    void CoreEngine::AddSystem(EngineSystem* system)
     {
         Systems.push_back(system);
     }

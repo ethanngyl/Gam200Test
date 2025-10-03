@@ -107,6 +107,7 @@ namespace Framework
     */
     void WindowSystem::Update(float dt)
     {
+        (void)dt;
         // Poll events here to keep window responsive
         glfwPollEvents();
     }

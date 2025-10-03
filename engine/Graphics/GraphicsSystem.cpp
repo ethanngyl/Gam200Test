@@ -163,6 +163,7 @@ namespace Framework
     */
     void GraphicsSystem::Update(float dt)
     {
+        (void)dt;
         // If the window doesn't exist or is closing, skip rendering
         if (!window) return;
         if (glfwWindowShouldClose(window)) return;
@@ -343,7 +344,7 @@ namespace Framework
         if (spaceNow && !spacePressedLast) {
             // Toggle color interpolation mode
             interpolateColor = !interpolateColor;
-            std::cout << "Space pressed → interpolateColor = " << interpolateColor << "\n";
+            std::cout << "Space pressed-> interpolateColor = " << interpolateColor << "\n";
         }
         spacePressedLast = spaceNow;
     }
@@ -366,7 +367,7 @@ namespace Framework
         // If interpolation is enabled, use a dynamic rainbow color
         if (interpolateColor) {
             // Generate rainbow color based on elapsed time
-            float t = glfwGetTime();
+            float t = static_cast<float>(glfwGetTime());
             glm::vec3 rainbow = glm::vec3(
                 (sin(t * 1.0f) * 0.5f) + 0.5f, // Red component
                 (sin(t * 1.3f) * 0.5f) + 0.5f, // Green component

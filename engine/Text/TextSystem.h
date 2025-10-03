@@ -60,7 +60,7 @@ namespace Framework {
         bool dirty = true;        // Reprint when changed
     };
 
-    class TextSystem : public InterfaceSystem
+    class TextSystem : public EngineSystem
     {
     public:
         TextSystem();            // Initialize the system           

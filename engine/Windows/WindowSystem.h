@@ -49,7 +49,7 @@ namespace Framework {
     by implementing Initialize(), Update(), and SendEngineMessage().
     ------------------------------------------------------------------------------*/
     
-    class WindowSystem : public InterfaceSystem
+    class WindowSystem : public EngineSystem
     {
     public:
         // Constructor: Initializes default window configuration.

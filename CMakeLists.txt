@@ -32,6 +32,10 @@ file(GLOB_RECURSE APP_SRC
    "${SRC_DIR}/*.hpp"
 )
 
+# Copy assets at configure time (happens when CMake runs)
+file(COPY "${CMAKE_SOURCE_DIR}/assets" 
+     DESTINATION "${CMAKE_BINARY_DIR}")
+
 # ======================= Target Creation =========================
 
 # Create executable

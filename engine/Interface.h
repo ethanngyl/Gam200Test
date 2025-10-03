@@ -44,7 +44,7 @@ class Message;
  * };
  * @endcode
  */
-class InterfaceSystem
+class EngineSystem
 {
 public:
     /**
@@ -53,7 +53,7 @@ public:
      * Ensures derived system destructors are called correctly
      * when deleting through base class pointer.
      */
-    virtual ~InterfaceSystem() {}
+    virtual ~EngineSystem() {}
 
     /**
      * @brief Initializes the system
