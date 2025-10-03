@@ -5,10 +5,11 @@
 /*
 ===============================================================================
 File:        Mesh.h
-Author:      Sim Kah Yan
-Email:       kahyan.sim@digipen.edu
+Author:      TAN WEI LEONG
+co-Author:   Sim Kah Yan
+Email:       weileong.tan@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-10-02
-Contribution: 30%(kah yan)
+Contribution: 70%(TAN WEI LEONG), 30%(Sim Kah Yan)
 -------------------------------------------------------------------------------
 Brief:
 Declaration of the Mesh class, which encapsulates OpenGL Vertex Array Objects

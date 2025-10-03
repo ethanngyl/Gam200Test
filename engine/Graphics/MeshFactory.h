@@ -3,10 +3,11 @@
 /*
 ===============================================================================
 File:        MeshFactory.h
-Author:      Sim Kah Yan
-Email:       kahyan.sim@digipen.edu
+Author:      TAN WEI LEONG
+co-Author:   Sim Kah Yan
+Email:       weileong.tan@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-10-02
-Contribution: 10%(kah yan)
+Contribution: 90%(TAN WEI LEONG), 10%(kah yan)
 -------------------------------------------------------------------------------
 Brief:
 Declaration of mesh creation helper functions that generate basic geometric

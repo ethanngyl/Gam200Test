@@ -2,10 +2,11 @@
 /*
 ===============================================================================
 File:        Shader.cpp
-Author:      Sim Kah Yan
-Email:       kahyan.sim@digipen.edu
+Author:      TAN WEI LEONG
+co-Author:   Sim Kah Yan
+Email:       weileong.tan@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-10-02
-Contribution: 60%(kah yan)
+Contribution: 50%(WEI LEONG), 50%(kah yan)
 -------------------------------------------------------------------------------
 Brief:
 Implementation of the Shader class, which handles loading, compiling, linking,
