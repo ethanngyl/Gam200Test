@@ -31,7 +31,7 @@ namespace Framework
      * @note Both SetEntityManager() and SetInputSystem() must be called
      *       before Update() will function properly
      */
-    class MovementSystem : public InterfaceSystem
+    class MovementSystem : public EngineSystem
     {
     public:
         /**

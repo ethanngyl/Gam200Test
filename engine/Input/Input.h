@@ -71,7 +71,7 @@ namespace Framework
      * }
      * @endcode
      */
-    class InputSystem : public InterfaceSystem
+    class InputSystem : public EngineSystem
     {
     public:
         /**

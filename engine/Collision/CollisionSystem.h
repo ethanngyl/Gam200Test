@@ -54,7 +54,7 @@ namespace Framework {
         BoundsPoint = 10
     };
   // A tiny demo/test harness around your Collision utilities.
-  class CollisionSystem : public InterfaceSystem
+  class CollisionSystem : public EngineSystem
   {
   public:
     CollisionSystem() : entityManager(nullptr) { };

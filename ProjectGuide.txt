@@ -6,6 +6,12 @@ Recommended Platform: Visual Studio 2022
 - During the installation process, tick "Deskstop Development with C++" under workloads, and under Individual Components, tick "C++ CMake tools for windows"
 - This will allow for C++ capabilities and standard libraries along with CMake utilities
 
+Additional Applications Required:
+- GIT SCM
+GIT SCM is required to import some of the external libraries found in ImportDependencies.cmake
+- Download: https://git-scm.com/downloads
+- Run the installer and just tick all of the default options
+
 Set Up:
 - Once the relevant tools are installed
 - Open the folder with Visual Studio

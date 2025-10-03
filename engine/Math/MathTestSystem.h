@@ -23,7 +23,7 @@ namespace Framework {
 
     // This system runs a one-time check of the math library
     // and prints the results during engine initialization.
-    class MathTestSystem : public InterfaceSystem
+    class MathTestSystem : public EngineSystem
     {
     public:
         MathTestSystem() = default;

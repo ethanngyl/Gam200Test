@@ -50,7 +50,7 @@ namespace Framework {
     */
     // ---------------- Non-indexed constructor ----------------
     Mesh::Mesh(const std::vector<float>& vertices, GLenum drawMode, bool hasTexCoords)
-        : VAO(0), VBO(0), EBO(0), vertices(vertices),
+        : VAO(0), VBO(0), EBO(0), vertice(vertices),
         drawMode(drawMode), hasTexCoords(hasTexCoords), useIndices(false)
     {
         // Determine vertex stride (pos+color=6, pos+color+tex=8)
@@ -103,7 +103,7 @@ namespace Framework {
         const std::vector<unsigned int>& indices,
         const std::vector<int>& attribSizes)
     {
-        this->vertices = vertices;
+        this->vertice = vertices;
         vertexCount = static_cast<unsigned int>(vertices.size());
         indexCount = static_cast<unsigned int>(indices.size());
         useIndices = true;
@@ -162,17 +162,17 @@ namespace Framework {
      */
     void Mesh::UpdateVertices(const std::vector<float>& newVertices) {
         // Ensure the new vertex data matches the size of the original data
-        if (newVertices.size() != vertices.size()) {
+        if (newVertices.size() != vertice.size()) {
             std::cerr << "Mesh::UpdateVertices: size mismatch\n";
             return;  // If size doesn't match, exit the function
         }
 
         // Update the vertices with the new data
-        vertices = newVertices;
+        vertice = newVertices;
 
         // Bind the VAO and VBO to update the buffer data
         Bind();
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertice.size() * sizeof(float), vertice.data());
         
         // Unbind after updating to avoid accidental changes
         Unbind();

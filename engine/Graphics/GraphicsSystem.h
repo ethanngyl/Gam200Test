@@ -58,7 +58,7 @@ namespace Framework {
      * and per-frame entity rendering. It also provides features like rainbow
      * color interpolation and background texture rendering.
      */
-    class GraphicsSystem : public InterfaceSystem {
+    class GraphicsSystem : public EngineSystem {
     public:
         // Constructor: Initializes member variables.
          GraphicsSystem();

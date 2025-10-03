@@ -138,7 +138,7 @@ namespace Framework {
         GLuint VAO = 0, VBO = 0, EBO = 0;// Vertex Array Object, Buffer Object, and Element Buffer Object (optional)
         
         // Mesh data
-        std::vector<float> vertices;
+        std::vector<float> vertice;
         unsigned int vertexCount = 0;
         unsigned int indexCount = 0;
         GLenum drawMode = GL_TRIANGLES;
