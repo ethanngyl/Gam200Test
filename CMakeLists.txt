@@ -85,6 +85,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra)
 elseif (MSVC)
+    #Warning level 4
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
 endif()
 
