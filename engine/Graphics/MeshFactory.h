@@ -1,54 +1,40 @@
+#pragma once
+#include "Precompiled.h"
 /*
 ===============================================================================
- File:          MeshFactory.h
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
- Date:          2025-10-02
- Contribution:  100%
- ------------------------------------------------------------------------------
- Declaration of the MeshFactory functions for mesh creation.
+File:        MeshFactory.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-10-02
+Contribution: 10%(kah yan)
+-------------------------------------------------------------------------------
+Brief:
+Declaration of mesh creation helper functions that generate basic geometric
+primitives (triangle, quad, line, and circle) as Mesh objects. These functions
+are used to create simple renderable shapes at engine initialization.
 
- Description:
- -------------
- This file provides declarations for functions used in the creation of basic
- geometric meshes such as triangles, quads, lines, and circles. These meshes
- are intended to be rendered by the `GraphicsSystem`. The functions in this 
- header simplify the creation of these shapes for rendering in an OpenGL context.
- Each mesh creation function returns a pointer to a `Mesh` object, which can then
- be configured with appropriate transformations, shaders, and colors.
+Details:
+- Provides functions that allocate and initialize Mesh objects for basic shapes.
+- Each mesh is configured with appropriate vertex positions, colors, and UVs.
+- Useful for testing, debugging, and rendering basic geometry without importing
+  external model files.
 
- Responsibilities:
- -----------------
- - `CreateTriangle()`: Creates a mesh object representing a triangle.
- - `CreateQuad()`: Creates a mesh object representing a square or rectangular quad.
- - `CreateLine()`: Creates a mesh object representing a line.
- - `CreateCircle(int segments, float radius)`: Creates a mesh object representing
-   a circle, approximated by line segments. The number of segments and radius
-   can be specified.
+Notes:
+- The caller is responsible for managing the lifetime of the returned Mesh
+  pointers (they are allocated on the heap).
+- Coordinate system used is y-up (OpenGL standard).
+- Circle generation uses a configurable segment count to approximate the shape.
 
- Platform-specific Notes:
- -------------------------
- - This header is part of a graphics system that interacts with OpenGL.
- - The mesh creation functions return dynamically allocated `Mesh` objects, which
-   will need to be managed (deallocated) by the calling system.
- - The functions assume that the necessary OpenGL context and resources (e.g., shaders)
-   are already initialized when these meshes are created and used.
+Safety:
+- Functions return nullptr if mesh creation fails.
+- Ensure proper deletion of returned Mesh objects to avoid memory leaks.
 
- Safety:
- --------
- - As part of a broader graphics system, the functions declared here do not include
-   internal error handling for allocation or OpenGL issues. Error handling is expected
-   to be managed elsewhere in the system.
- - This header is intended for use in systems that ensure the proper setup and teardown
-   of OpenGL contexts, and functions like `CreateCircle()` should be used with the
-   understanding that dynamic memory allocation is involved.
 ===============================================================================
 */
 
-#pragma once
-#include "Precompiled.h"  // Includes essential precompiled headers for the graphics system.
-
 namespace Framework {
+    // Forward declaration to avoid circular include
+    class Mesh;
 
     /**
     * @brief Creates a mesh object representing a triangle.

@@ -1,44 +1,37 @@
+#include "Precompiled.h"
 /*
 ===============================================================================
- File:          Shader.cpp
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
- Date:          2025-10-02
- Contribution:  100%
- ------------------------------------------------------------------------------
- Implementation of the `Shader` class, which encapsulates the OpenGL logic required
- to manage and use shader programs for rendering.
+File:        Shader.cpp
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-10-02
+Contribution: 60%(kah yan)
+-------------------------------------------------------------------------------
+Brief:
+Implementation of the Shader class, which handles loading, compiling, linking,
+and managing OpenGL GLSL shader programs. This includes reading source files
+from disk, compiling vertex and fragment shaders, linking them into a program,
+and providing utility functions for binding and setting uniforms.
 
- Description:
- -------------
- This file implements the methods of the `Shader` class, responsible for loading,
- compiling, linking, and using OpenGL shader programs (both vertex and fragment shaders).
- The class provides functions to bind and unbind shaders, set uniforms, and manage
- the shader program lifecycle.
+Details:
+- Reads shader source code from text files.
+- Compiles vertex and fragment shaders, checking for compilation errors.
+- Links shaders into a complete program and validates link status.
+- Deletes intermediate shader objects after linking.
+- Provides functions to bind/unbind the shader and set vec3 uniforms.
 
- Responsibilities:
- -----------------
- - `Shader()`: Loads, compiles, and links vertex and fragment shaders to create an OpenGL shader program.
- - `~Shader()`: Cleans up the shader program from OpenGL memory when the shader is destroyed.
- - `Bind()`: Activates the shader program for rendering in OpenGL.
- - `Unbind()`: Deactivates the shader program.
- - `SetUniform3f()`: Sets a 3D vector (`vec3`) uniform in the shader program.
- - `GetID()`: Returns the OpenGL ID of the shader program.
+Notes:
+- Requires a valid OpenGL context prior to shader creation.
+- Uses GLSL version 4.5 Core Profile.
+- Prints shader sources and compile/link results to console for debugging.
 
- Platform-specific Notes:
- -------------------------
- - The class requires a valid OpenGL context and proper paths to the shader files.
- - The shader files should be compiled and linked with the OpenGL program, which this
-   class helps manage.
+Safety:
+- Compilation and linking errors are logged to stderr.
+- Throws std::runtime_error on linking failure to prevent undefined behavior.
+- Gracefully handles missing shader files.
 
- Safety:
- --------
- - Shader programs are properly cleaned up using `glDeleteProgram` in the destructor.
- - The methods provide necessary error handling for shader compilation and linking.
 ===============================================================================
 */
-
-#include "Precompiled.h"  // Includes precompiled headers necessary for the graphics system.
 
 namespace Framework {
 
@@ -59,63 +52,49 @@ namespace Framework {
         std::cout << "    VERTEX & FRAGMENT SHADER SRC FILES\n";
         std::cout << "==============================================\n\n";
 
-        // Load vertex and fragment shader source code
+        // Load shader source code from external files
         std::string vertexSrc = LoadFile(vertexPath);
         std::cout << "Vertex Shader Source:\n" << vertexSrc << "\n";
 
         std::string fragmentSrc = LoadFile(fragmentPath);
         std::cout << "Fragment Shader Source:\n" << fragmentSrc << "\n";
 
-        // Compile the shaders
+        // Compile vertex and fragment shaders separately
         unsigned int vs = Compile(GL_VERTEX_SHADER, vertexSrc);
         unsigned int fs = Compile(GL_FRAGMENT_SHADER, fragmentSrc);
 
-        // Create shader program, attach shaders, and link the program
+        // Create a new shader program and attach the compiled shaders
         id = glCreateProgram();
         glAttachShader(id, vs);
         glAttachShader(id, fs);
         glLinkProgram(id);
 
-        // Check for linking errors
+        // Check if program linking succeeded
         int success;
         glGetProgramiv(id, GL_LINK_STATUS, &success);
         if (!success) {
             char infoLog[512];
             glGetProgramInfoLog(id, 512, nullptr, infoLog);
             std::cerr << "Shader link failed:\n" << infoLog << "\n";
+            throw std::runtime_error("Shader Link failed");
         }
 
-        // Clean up shaders after linking
+        // Shaders are now linked into the program, so we can delete the originals
         glDeleteShader(vs);
         glDeleteShader(fs);
     }
 
-    /**
-     * @brief Destructor that cleans up the shader program.
-     *
-     * This destructor deletes the shader program to free the OpenGL resources when
-     * the Shader object is destroyed.
-     */
+    // Destructor: Deletes the compiled shader program from GPU memory.
     Shader::~Shader() {
         glDeleteProgram(id);
     }
 
-    /**
-     * @brief Binds the shader program for use in OpenGL rendering.
-     *
-     * This function activates the shader program, making it the current program
-     * for subsequent OpenGL rendering calls.
-     */
+    // Bind: Activates this shader program for subsequent draw calls.
     void Shader::Bind() const {
         glUseProgram(id);
     }
 
-    /**
-     * @brief Unbinds the currently active shader program.
-     *
-     * This function deactivates the shader program and returns OpenGL to its default
-     * state (no program bound).
-     */
+    // Unbind: Deactivates any currently bound shader program.
     void Shader::Unbind() const {
         glUseProgram(0);
     }
@@ -195,7 +174,7 @@ namespace Framework {
      * @return The OpenGL ID of the compiled shader.
      */
     unsigned int Shader::Compile(unsigned int type, const std::string& source) {
-        // Create a new shader object of the specified type
+        // Create a new shader object of the requested type
         unsigned int shader = glCreateShader(type);
 
         // Convert the shader source code to a C-style string
@@ -207,7 +186,7 @@ namespace Framework {
         // Compile the shader
         glCompileShader(shader);
 
-        // Check if the shader compiled successfully
+        // Check compilation result
         int success;
         glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
 

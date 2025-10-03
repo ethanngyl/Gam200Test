@@ -1,120 +1,154 @@
+﻿#include "Precompiled.h"
+#include "Mesh.h"
+#include <iostream>
 /*
 ===============================================================================
- File:          Mesh.cpp
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
- Date:          2025-10-02
- Contribution:  100%
- ------------------------------------------------------------------------------
- Implementation of the Mesh class, which encapsulates the OpenGL logic required
- to render mesh objects with vertex data.
+File:        Mesh.cpp
+Author:      Sim Kah Yan
+co-Author:   TAN WEI LEONG
+Email:       kahyan.sim@digipen.edu, weileong.tan@digipen.edu
+Date:        2025-10-02
+Contribution: 30%(kah yan), 70%(WEI LEONG)
+-------------------------------------------------------------------------------
+Brief:
+Implementation of the Mesh class, which encapsulates OpenGL buffer objects and
+vertex array setup for both indexed and non-indexed geometry. This class allows
+easy creation, updating, and drawing of renderable primitives using VAOs, VBOs,
+and optional EBOs.
 
- Description:
- -------------
- This file implements the methods of the `Mesh` class, responsible for managing 
- vertex data and interacting with OpenGL to render 3D (or 2D) objects. The class 
- handles creating OpenGL buffers (VAO and VBO), updating vertices, and drawing the 
- mesh on screen. This code also ensures proper resource management (buffer deletion, 
- etc.) to prevent memory leaks.
+Details:
+- The quick constructor supports non-indexed meshes for simple shapes (e.g., triangle, line).
+- The Initialize() method sets up indexed meshes with flexible attribute layouts.
+- Meshes support runtime vertex buffer updates through UpdateVertices().
+- Draw() binds the VAO and issues the correct draw call (arrays or elements).
+- Proper cleanup of GPU buffers is performed in the destructor.
 
- Responsibilities:
- -----------------
- - `Mesh()`: Initializes a mesh with vertex data and an optional drawing mode.
- - `~Mesh()`: Cleans up OpenGL buffers when the mesh is destroyed.
- - `Draw()`: Renders the mesh to the screen using OpenGL commands.
- - `UpdateVertices()`: Updates the vertex data of the mesh in OpenGL.
- - `Bind()`: Binds the mesh's OpenGL resources (VAO and VBO) for rendering.
- - `Unbind()`: Unbinds the OpenGL resources after rendering.
+Notes:
+- Vertex attributes are expected to be interleaved.
+- Attribute locations follow this convention:
+    0 → Position (x,y,z)
+    1 → Color (r,g,b)
+    2 → TexCoords (u,v) [optional]
+- Requires a valid OpenGL context before construction or drawing.
 
- Platform-specific Notes:
- -------------------------
- - The class uses OpenGL (with GLEW) for rendering and assumes the necessary 
-   OpenGL setup is done in the main application.
- - Ensure proper OpenGL context setup before using the `Mesh` class.
+Safety:
+- Checks for buffer existence before deletion.
+- UpdateVertices() performs a size check to avoid buffer overruns.
+- No heap allocations; only GPU buffers are managed.
 
- Safety:
- --------
- - Proper OpenGL resource cleanup is ensured with the destructor to avoid memory 
-   leaks.
- - Buffer updates and draws are wrapped in functions that bind/unbind OpenGL 
-   resources safely.
 ===============================================================================
 */
-
-#include "Precompiled.h"  // Includes necessary precompiled headers for graphics system.
-
 namespace Framework {
 
-    /**
-     * @brief Constructs a Mesh object with provided vertex data.
-     *
-     * The constructor generates and initializes OpenGL resources (Vertex Array Object
-     * and Vertex Buffer Object) with the given vertex data. The vertex data is expected
-     * to contain positions and colors for each vertex. The drawing mode (GL_TRIANGLES by
-     * default) determines how the mesh is rendered (as triangles, lines, etc.).
-     *
-     * @param vertices A vector of floats containing vertex data (position + color).
-     * @param drawMode The OpenGL drawing mode (default is GL_TRIANGLES).
-     */
-    Mesh::Mesh(const std::vector<float>& vertices, GLenum drawMode)
-        : VAO(0), VBO(0), vertices(vertices), drawMode(drawMode) {
+    /*
+    ------------------------------------------------------------------------------
+    Constructor (Non-indexed):
+    Initializes a VAO and VBO for a mesh defined only by vertices.
+    This is used for simple primitives (triangle, line, circle).
+    Texcoords can be included if present.
+    ------------------------------------------------------------------------------
+    */
+    // ---------------- Non-indexed constructor ----------------
+    Mesh::Mesh(const std::vector<float>& vertices, GLenum drawMode, bool hasTexCoords)
+        : VAO(0), VBO(0), EBO(0), vertices(vertices),
+        drawMode(drawMode), hasTexCoords(hasTexCoords), useIndices(false)
+    {
+        // Determine vertex stride (pos+color=6, pos+color+tex=8)
+        int stride = hasTexCoords ? 8 : 6;
+        vertexCount = static_cast<unsigned int>(vertices.size() / stride);
 
-        // Each vertex consists of 6 floats: 3 for position, 3 for color
-        vertexCount = static_cast<unsigned int>(vertices.size() / 6);
-
-        // Generate OpenGL Vertex Array Object (VAO) and Vertex Buffer Object (VBO)
+        // Generate and bind VAO + VBO
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
 
         // Bind VAO and VBO to set up their configurations
         Bind();
-
-        // Send vertex data to the GPU
+        // Upload vertex data to GPU
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
             vertices.data(), GL_STATIC_DRAW);
 
         // Position attribute (location = 0)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);  // Enable the position attribute
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
 
         // Color attribute (location = 1)
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1); // Enable the color attribute
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
 
+        if (hasTexCoords) {
+            // TexCoord attribute (location = 2)
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride * sizeof(float), (void*)(6 * sizeof(float)));
+            glEnableVertexAttribArray(2);
+        }
         // Unbind to avoid accidental modifications
         Unbind();
     }
 
-    /**
-     * @brief Destructor for the Mesh class.
-     *
-     * Ensures that the OpenGL buffers (VAO and VBO) are properly deleted when
-     * the Mesh object is destroyed, preventing memory leaks.
-     */
-    Mesh::~Mesh() {
-        // Delete the OpenGL buffers (VAO and VBO) associated with this mesh
-        glDeleteVertexArrays(1, &VAO);
-        glDeleteBuffers(1, &VBO);
+    // ---------------- Empty constructor for Initialize() ----------------
+    Mesh::Mesh()
+        : VAO(0), VBO(0), EBO(0), vertexCount(0), indexCount(0),
+        drawMode(GL_TRIANGLES), hasTexCoords(false), useIndices(false)
+    {
     }
 
-    /**
-     * @brief Renders the mesh to the screen.
-     *
-     * This function binds the VAO and VBO, issues an OpenGL draw call using the specified
-     * drawing mode (e.g., GL_TRIANGLES), and then unbinds the OpenGL resources after
-     * rendering to ensure the mesh is drawn correctly.
-     */
+    // ---------------- Destructor ----------------
+    Mesh::~Mesh() {
+        if (VAO) glDeleteVertexArrays(1, &VAO);
+        if (VBO) glDeleteBuffers(1, &VBO);
+        if (EBO) glDeleteBuffers(1, &EBO);
+    }
+
+    // ---------------- Initialize with indices ----------------
+    void Mesh::Initialize(const std::vector<float>& vertices,
+        const std::vector<unsigned int>& indices,
+        const std::vector<int>& attribSizes)
+    {
+        this->vertices = vertices;
+        vertexCount = static_cast<unsigned int>(vertices.size());
+        indexCount = static_cast<unsigned int>(indices.size());
+        useIndices = true;
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+
+        glBindVertexArray(VAO);
+
+        // VBO
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+
+        // EBO
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+        // Attribute setup
+        int stride = 0;
+        for (int size : attribSizes) stride += size;
+        stride *= sizeof(float);
+
+        size_t offset = 0;
+        for (GLuint i = 0; i < attribSizes.size(); i++) {
+            glVertexAttribPointer(i, attribSizes[i], GL_FLOAT, GL_FALSE, stride, (void*)offset);
+            glEnableVertexAttribArray(i);
+            offset += attribSizes[i] * sizeof(float);
+        }
+
+        glBindVertexArray(0);
+    }
+
+    // ---------------- Draw ----------------
     void Mesh::Draw() const {
         // Bind the mesh resources for rendering
         Bind();
-
-        // Execute the draw call (using the specified draw mode)
-        glDrawArrays(drawMode, 0, vertexCount);  // Draw vertices starting from index 0
-
-        // Unbind after drawing
+        if (useIndices)
+            glDrawElements(drawMode, indexCount, GL_UNSIGNED_INT, 0);
+        else
+            glDrawArrays(drawMode, 0, vertexCount);
         Unbind();
     }
 
+    // ---------------- Update vertices ----------------
     /**
      * @brief Updates the vertex data for the mesh.
      *
@@ -153,6 +187,7 @@ namespace Framework {
     void Mesh::Bind() const {
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     }
 
 
@@ -165,5 +200,7 @@ namespace Framework {
     void Mesh::Unbind() const {
         glBindVertexArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+        if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
+
 }

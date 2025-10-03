@@ -1,98 +1,86 @@
+#pragma once
+#include "Precompiled.h"
 /*
 ===============================================================================
- File:          WindowSystem.h
- Author:        
- Email:         
- Date:          2025-10-02
- Contribution:  100%
- ------------------------------------------------------------------------------
- Declaration of the `WindowSystem` class, responsible for managing the creation,
- management, and destruction of a GLFW-based window. This class encapsulates the
- logic for handling window-specific operations in a game engine or graphical
- application.
+File:        WindowSystem.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-10-02
+Contribution: 10%(Kah Yan)
+-------------------------------------------------------------------------------
+Brief:
+Declares the WindowSystem class, which is responsible for creating and managing
+the application window using GLFW. It provides basic configuration such as
+window size and title, handles initialization and cleanup, and communicates
+window-related messages to the engine.
 
- Description:
- -------------
- This header file defines the `WindowSystem` class, which is part of a larger 
- framework that handles window creation, interaction, and destruction using the 
- GLFW library. The class manages a window, provides basic functions to update 
- window state, and handles shutdown messages.
+Details:
+- Wraps GLFW window creation and management in a system-style interface.
+- Exposes getters and setters for window configuration.
+- Integrates with the engine messaging system through SendEngineMessage().
+- Provides basic checks to determine if the window should close.
 
- Responsibilities:
- -----------------
- - `WindowSystem()`: Constructor initializes the window with default values such 
-   as width, height, and title.
- - `~WindowSystem()`: Destructor ensures that the GLFW window is properly destroyed 
-   and GLFW is terminated.
- - `Initialize()`: Initializes GLFW, sets OpenGL context version, and creates 
-   the window.
- - `Update()`: Polls for window events (e.g., user input, window state changes) 
-   and keeps the window responsive.
- - `SendEngineMessage(Message* message)`: Processes engine messages (e.g., quit 
-   messages), controlling window state (e.g., closing the window).
- - `ShouldClose()`: Checks if the window should be closed, useful for controlling 
-   the game loop.
- - `GetWindow()`: Returns the `GLFWwindow` pointer, which is used to interact with 
-   the underlying window.
- - `SetWindowSize(int w, int h)`: Sets the window's size to the specified width 
-   and height.
- - `SetWindowTitle(const std::string& title)`: Sets the window's title to the 
-   provided string.
+Notes:
+- This class must be initialized before rendering systems that depend on the
+  window context (e.g., GraphicsSystem).
+- WindowSystem follows the InterfaceSystem pattern used by the engine.
 
- Platform-specific Notes:
- -------------------------
- - The class depends on the GLFW library for window management and OpenGL context 
-   handling.
- - The class assumes that the OpenGL context and necessary setups (such as GLEW) 
-   are done elsewhere in the application.
+Safety:
+- Uses forward declaration of GLFWwindow to avoid heavy includes.
+- Properly cleans up window resources in destructor.
+- Ensures window pointer is valid before returning or using it.
 
- Safety:
- --------
- - The class ensures proper cleanup of OpenGL resources by destroying the GLFW 
-   window and terminating GLFW in the destructor.
- - It also provides safe handling for window size and title changes, ensuring 
-   that the system remains stable throughout the application lifecycle.
 ===============================================================================
 */
 
-#pragma once
-#include "Precompiled.h"  // Includes essential precompiled headers for the graphics system.
-
-// Forward declaration
+// Forward declaration to avoid including <GLFW/glfw3.h> here
 struct GLFWwindow;
 
 namespace Framework {
-
-    // WindowSystem class manages a GLFW window and integrates it into the engine framework.
-    class WindowSystem : public InterfaceSystem {
+    /*
+    ------------------------------------------------------------------------------
+    WindowSystem:
+    Manages the application window using GLFW, including configuration,
+    initialization, updating, and cleanup.
+    @brief Manages the application window using GLFW.
+    WindowSystem handles the creation, configuration, and lifetime
+    of the main GLFW window. It provides basic setters for size
+    and title, and participates in the engine's system interface
+    by implementing Initialize(), Update(), and SendEngineMessage().
+    ------------------------------------------------------------------------------*/
+    
+    class WindowSystem : public InterfaceSystem
+    {
     public:
-        // Constructor: Initializes default values for the window system
+        // Constructor: Initializes default window configuration.
         WindowSystem();
-
-        // Destructor: Ensures proper cleanup and termination of the GLFW window and context
+        // Destructor: Cleans up and closes the GLFW window.
         virtual ~WindowSystem();
 
-        // ISystem interface method overrides for initialization and updates
-        virtual void Initialize() override;      // Initializes GLFW, creates window
-        virtual void Update(float dt) override;  // Polls window events, updates state
-        virtual void SendEngineMessage(Message* message) override;  // Handles system messages (e.g., quit)
+        // Initialize: Creates the GLFW window with the specified configuration.
+        virtual void Initialize() override;
+        // Update: Called once per frame to poll window events and update state.
+        virtual void Update(float dt) override;
+        // SendEngineMessage: Receives engine-wide messages (e.g. Quit).
+        virtual void SendEngineMessage(Message* message) override;
 
-        // Getters
-        GLFWwindow* GetWindow() const { return window; }  // Accessor for GLFW window handle
-        bool ShouldClose() const;  // Checks if the window should close (i.e., if user initiated close)
+        // GetWindow: Returns the raw GLFWwindow pointer for rendering systems.
+        GLFWwindow* GetWindow() const { return window; }
+        // ShouldClose: Returns true if the window should close (user pressed X).
+        bool ShouldClose() const;
 
-        // Setters for window size and title
-        void SetWindowSize(int w, int h) { windowWidth = w; windowHeight = h; }  // Set window width and height
-        void SetWindowTitle(const std::string& title) { windowTitle = title; }  // Set window title
+        // SetWindowSize / SetWindowTitle: Configure window before initialization.
+        void SetWindowSize(int w, int h) { windowWidth = w; windowHeight = h; }
+        void SetWindowTitle(const std::string& title) { windowTitle = title; }
 
     private:
-        GLFWwindow* window;  // Pointer to the GLFW window object
-        bool WindowOpen;     // Flag indicating whether the window is open or closed
+        GLFWwindow* window;// Pointer to GLFW window instance
+        bool WindowOpen;// True if the window is currently open
 
-        // Configuration variables
-        int windowWidth;  // Window width in pixels
-        int windowHeight; // Window height in pixels
-        std::string windowTitle;  // Window title string
+        // new config variables
+        int windowWidth; // Configured window width
+        int windowHeight; // Configured window height
+        std::string windowTitle; // Configured window title
     };
 
 }  // End of Framework namespace

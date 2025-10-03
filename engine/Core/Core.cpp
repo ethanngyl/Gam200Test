@@ -162,24 +162,17 @@ namespace Framework
             eng::debug::PerfViewer::begin_frame();
 
             // --- per-system updates with scoped timers ---
-            for (unsigned i = 0; i < Systems.size(); ++i) {
-                using eng::debug::Subsystem;
-                Subsystem tag = Subsystem::Other;
+            for (unsigned i = 0; i < Systems.size(); ++i)
+            {
+                // Tag systems (adjust to your actual system types/order)
+                eng::debug::Subsystem tag =
+                    (i == 0) ? eng::debug::Subsystem::Graphics :
+                    (i == 1) ? eng::debug::Subsystem::Gameplay :
+                    eng::debug::Subsystem::Other;
 
-                if (dynamic_cast<GraphicsSystem*>(Systems[i]))        tag = Subsystem::Graphics;
-                else if (dynamic_cast<MovementSystem*>(Systems[i]))   tag = Subsystem::IO;
-                else if (dynamic_cast<CollisionSystem*>(Systems[i]))  tag = Subsystem::Physics;
-
-                // else if (dynamic_cast<AudioSystem*>(Systems[i]))   tag = Subsystem::Audio;
-                // else if (dynamic_cast<IOSystem*>(Systems[i]))      tag = Subsystem::IO;
-                    
-
-                { // ensure destructor runs before end_frame()
-                    DBG_SCOPE_SYS("SystemUpdate", tag);
-                    Systems[i]->Update(dt);
-                }
+                //DBG_SCOPE_SYS("SystemUpdate", tag);
+                Systems[i]->Update(dt);
             }
-
 
             // --- end perf frame ---
             eng::debug::PerfViewer::end_frame();

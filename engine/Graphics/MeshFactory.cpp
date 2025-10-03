@@ -1,50 +1,36 @@
+#include "Precompiled.h"
+
 /*
 ===============================================================================
- File:          MeshFactory.cpp
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
- Date:          2025-10-02
- Contribution:  100%
- ------------------------------------------------------------------------------
- Implementation of the MeshFactory functions for mesh creation.
+File:        MeshFactory.cpp
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-10-02
+Contribution: 10%(kah yan)
+-------------------------------------------------------------------------------
+Brief:
+Implementation of mesh creation helper functions for generating basic geometric
+primitives (triangle, quad, line, and circle) as Mesh objects. These are used
+by the engine to create simple renderable shapes without external model files.
 
- Description:
- -------------
- This file implements functions that create basic geometric meshes (triangle,
- quad, line, and circle) for the graphics system. These meshes are returned as
- dynamically allocated `Mesh` objects that are ready to be rendered by the
- graphics system using OpenGL.
+Details:
+- Each function constructs vertex data (and indices where needed) with positions,
+  per-vertex colors, and texture coordinates.
+- Primitives are centered at the origin and use the y-up coordinate system.
+- Circle meshes are generated procedurally using a triangle fan with rainbow colors.
+- Mesh objects are created on the heap and returned to the caller.
 
- Each mesh creation function initializes a vector of vertices, which define
- the geometry and color of the shape. These vertices are then passed to the
- `Mesh` constructor to create the corresponding mesh for rendering.
+Notes:
+- Caller is responsible for managing the lifetime of returned Mesh pointers.
+- Vertex format used: position (3), color (3), texcoord (2) = 8 floats per vertex.
+- Used mainly during GraphicsSystem initialization to populate the mesh list.
 
- Responsibilities:
- -----------------
- - `CreateTriangle()`: Creates a triangle mesh with 3 vertices and color attributes.
- - `CreateQuad()`: Creates a quadrilateral mesh (square or rectangle) with 6 vertices and color attributes.
- - `CreateLine()`: Creates a simple line mesh with 2 vertices and color attributes.
- - `CreateCircle(int segments, float radius)`: Creates a circle mesh approximated with a given number of line segments.
-   The color of the circle's edge is dynamically calculated with a rainbow gradient.
+Safety:
+- All functions assume a valid OpenGL context for Mesh initialization.
+- Returns valid Mesh pointers; caller must delete to avoid leaks.
 
- Platform-specific Notes:
- -------------------------
- - This implementation assumes that OpenGL is correctly set up in the system.
- - The `Mesh` class used here is expected to handle the rendering of the mesh
-   based on the passed vertex data and primitive type (e.g., `GL_TRIANGLES`, `GL_LINES`).
- - The `glm` library is used for mathematical operations such as trigonometric calculations.
-
- Safety:
- --------
- - Memory allocation is done dynamically when creating meshes. The caller
-   must ensure proper memory management by deleting the meshes when they
-   are no longer needed.
- - The color generation for the circle assumes a simple HSL-to-RGB color 
-   conversion approach based on angle, which results in a smooth rainbow gradient.
 ===============================================================================
 */
-
-#include "Precompiled.h"  // Includes necessary precompiled headers for the graphics system.
 
 namespace Framework {
 
@@ -60,12 +46,13 @@ namespace Framework {
     Mesh* CreateTriangle() {
         // Define vertices for a triangle with positions and colors
         std::vector<float> vertices = {
-            // Position          // Color
-            0.0f,  0.1f, 0.0f,   0.0f, 0.0f, 0.0f,  // Red vertex
-           -0.1f, -0.1f, 0.0f,   0.0f, 0.0f, 0.0f,  // Green vertex
-            0.1f, -0.1f, 0.0f,   0.0f, 0.0f, 1.0f   // Blue vertex
+            // pos         // color        // texcoord
+             0.0f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.5f, 1.0f,  // top
+            -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,  // bottom left
+             0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f   // bottom right
         };
-        return new Mesh(vertices, GL_TRIANGLES);
+
+        return new Mesh(vertices, GL_TRIANGLES, true);
     }
 
     /**
@@ -78,18 +65,28 @@ namespace Framework {
      * @return A pointer to the created `Mesh` object representing a quad.
      */
     Mesh* CreateQuad() {
-        // Define vertices for a quad with positions and colors
+        // Interleaved vertex data: pos, color, texcoord
         std::vector<float> vertices = {
-            // Position           // Color
-           -0.5f,  0.5f, 0.0f,    1.0f, 0.0f, 0.0f,  // Top Left - Red
-            0.5f,  0.5f, 0.0f,    0.0f, 1.0f, 0.0f,  // Top Right - Green
-           -0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,  // Bottom Left - Blue
-
-            0.5f,  0.5f, 0.0f,    0.0f, 1.0f, 0.0f,  // Top Right - Green
-            0.5f, -0.5f, 0.0f,    1.0f, 1.0f, 0.0f,  // Bottom Right - Yellow
-           -0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f   // Bottom Left - Blue
+            // pos             // color           // texcoord
+            -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // bottom left
+             0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+             0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // top right
+            -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
         };
-        return new Mesh(vertices, GL_TRIANGLES);
+
+        // Two triangles forming a quad
+        std::vector<unsigned int> indices = {
+            0, 1, 2,  // first triangle
+            2, 3, 0   // second triangle
+        };
+
+        // Attribute layout sizes: position(3), color(3), texcoord(2)
+        std::vector<int> attribSizes = { 3, 3, 2 };
+
+        // Create the mesh using indexed drawing
+        Mesh* quad = new Mesh();
+        quad->Initialize(vertices, indices, attribSizes);
+        return quad;
     }
 
     /**
@@ -103,11 +100,12 @@ namespace Framework {
     Mesh* CreateLine() {
         // Define vertices for a line with positions and colors
         std::vector<float> vertices = {
-            // Position         // Color
-           -0.5f, 0.0f, 0.0f,   1.0f, 0.0f, 1.0f,  // Magenta color
-            0.5f, 0.0f, 0.0f,   0.0f, 1.0f, 1.0f   // Cyan color
+            // pos          // color        // texcoord
+            -0.5f, 0.0f, 0.0f,   1.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+             0.5f, 0.0f, 0.0f,   0.0f, 1.0f, 1.0f,   1.0f, 0.0f
         };
-        return new Mesh(vertices, GL_LINES);
+
+        return new Mesh(vertices, GL_LINES, true);
     }
 
     /**
@@ -126,37 +124,29 @@ namespace Framework {
     Mesh* CreateCircle(int segments, float radius) {
         std::vector<float> vertices;
 
-        // Add the center of the circle (white color)
-        vertices.push_back(0.0f); // x
-        vertices.push_back(0.0f); // y
-        vertices.push_back(0.0f); // z
-        vertices.push_back(1.0f); // r
-        vertices.push_back(1.0f); // g
-        vertices.push_back(1.0f); // b
+        // center point
+        vertices.insert(vertices.end(),
+            { 0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,   0.5f, 0.5f });
 
-        // Add the circle edge points with a rainbow gradient
-        for (int i = 0; i <= segments; ++i) {
-            // Angle around the circle
-            float angle = glm::two_pi<float>() * static_cast<float>(i) / segments;
-            float x = radius * glm::cos(angle);  // X position on the circle
-            float y = radius * glm::sin(angle);  // Y position on the circle
+        // perimeter points
+        for (int i = 0; i <= segments; i++) {
+            float theta = (2.0f * 3.1415926f * i) / segments;
+            float x = radius * cos(theta);
+            float y = radius * sin(theta);
 
-            // Generate color based on angle (simple HSL-to-RGB approximation)
-            float r = (glm::cos(angle) + 1.0f) / 2.0f;
-            float g = (glm::cos(angle + glm::two_pi<float>() / 3.0f) + 1.0f) / 2.0f;
-            float b = (glm::cos(angle + 2.0f * glm::two_pi<float>() / 3.0f) + 1.0f) / 2.0f;
+            // rainbow colors for fun
+            float r = (cos(theta) + 1.0f) * 0.5f;
+            float g = (sin(theta) + 1.0f) * 0.5f;
+            float b = 1.0f - r;
 
-            // Add the vertex data for the edge of the circle
-            vertices.push_back(x);
-            vertices.push_back(y);
-            vertices.push_back(0.0f);  // z position (flat circle)
-            vertices.push_back(r);
-            vertices.push_back(g);
-            vertices.push_back(b);
+            // texcoords mapped into [0,1]
+            float u = (x / radius + 1.0f) * 0.5f;
+            float v = (y / radius + 1.0f) * 0.5f;
+
+            vertices.insert(vertices.end(), { x, y, 0.0f,  r, g, b,  u, v });
         }
 
-        // Return the mesh representing the circle
-        return new Mesh(vertices, GL_TRIANGLE_FAN);
+        return new Mesh(vertices, GL_TRIANGLE_FAN, true);
     }
 
 }  // namespace Framework
