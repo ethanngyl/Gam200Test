@@ -87,8 +87,10 @@ namespace Framework
                 }
 
                 //// Optional: Keep on screen
-                if (transform.position.x > 1.0f) transform.position.x = 1.0f;
-                if (transform.position.x < -1.0f) transform.position.x = -1.0f;
+				std::cout << "position X is : " << transform.position.x << std::endl;
+				std::cout << "position Y is : " << transform.position.y << std::endl;
+                if (transform.position.x > 2.0f) transform.position.x = 2.0f;
+                if (transform.position.x < -2.0f) transform.position.x = -2.0f;
                 if (transform.position.y > 1.0f) transform.position.y = 1.0f;
                 if (transform.position.y < -1.0f) transform.position.y = -1.0f;
             }
