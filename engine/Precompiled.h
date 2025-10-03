@@ -1,14 +1,17 @@
 /**
- * @file 
- recompiled.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Precompiled header for the StructSquad game engine
- * @date 2025-09-30
- *
- * Central include file that precompiles commonly-used headers to improve
+===============================================================================
+ File:           Precompiled.h
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+  Design notes:
+  Central include file that precompiles commonly-used headers to improve
  * compilation times. All .cpp files in the project should include this
  * as their first include.
- *
+===============================================================================
  */
 #pragma once
 // Standard C++ libraries

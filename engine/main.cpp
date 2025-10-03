@@ -1,14 +1,17 @@
 ﻿/**
- * @file main.cpp
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Application entry point and engine initialization
- * @date 2025-09-30
- *
- * @copyright Copyright (c) 2025
- *
- * Sets up the game engine, creates systems and entities, runs the main loop,
+===============================================================================
+ File:           main.cpp
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   [Percentage, e.g., 100%]
+ ------------------------------------------------------------------------------
+ 
+  Design notes:
+  Sets up the game engine, creates systems and entities, runs the main loop,
  * and handles cleanup. Includes debug features like memory leak detection
  * and crash logging in debug builds.
+===============================================================================
  */
 
 #ifdef _DEBUG

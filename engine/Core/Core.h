@@ -1,12 +1,17 @@
 /**
- * @file Core.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
- * @date 2025-09-30
- *
- * Defines the CoreEngine class which serves as the central orchestrator
+===============================================================================
+ File:           Core.h
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ 
+  Design notes:
+    Defines the CoreEngine class which serves as the central orchestrator
  * for the game engine, managing the game loop, system lifecycle, and
  * inter-system messaging.
+===============================================================================
  */
 
 #pragma once

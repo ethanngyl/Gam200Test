@@ -1,14 +1,18 @@
 /**
- * @file ECSEntityManager.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Entity and component management for ECS architecture
- * @date 2025-09-30
- *
- * @copyright Copyright (c) 2025
- *
- * Provides the EntityManager class which handles entity lifecycle,
+===============================================================================
+ File:           ECSEntityManager.h
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ [A brief, one-sentence description of the file's primary purpose.]
+ 
+  Design notes:
+  Provides the EntityManager class which handles entity lifecycle,
  * component attachment/detachment, and component storage/retrieval.
  * This is the central coordination point for the ECS system.
+===============================================================================
  */
 
 #pragma once

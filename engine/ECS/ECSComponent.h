@@ -1,12 +1,18 @@
 /**
- * @file ECSComponent.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Base component system for ECS architecture
- * @date 2025-09-30
- *
- * Provides the foundational component base classes and type identification
+===============================================================================
+ File:           ECSComponent.h
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ [A brief, one-sentence description of the file's primary purpose.]
+ 
+  Design notes:
+  Provides the foundational component base classes and type identification
  * system for the Entity Component System. Components are pure data containers
  * that systems operate on.
+===============================================================================
  */
 
 #pragma once

@@ -1,11 +1,24 @@
 /**
- * @file Input.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Input system implementation for keyboard and mouse handling
- * @date 2025-09-30
- *
- * Provides real-time input detection with frame-accurate pressed/released events.
- * Supports keyboard keys, arrow keys, and mouse buttons through a unified interface.
+ ===============================================================================
+ File:           Input.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Header file for the InputSystem class.
+ 
+  Design notes:
+  This file declares the InputSystem, which handles real-time keyboard and
+  mouse input. It uses a KeyCode enum to provide a unified interface for all
+  supported keys and buttons.
+ 
+  The system is designed to provide frame-accurate input events. It does this
+  by maintaining the input state for both the current and previous frames.
+  This "double-buffering" allows it to distinguish between a key being held
+  down (IsKeyDown), a key being pressed for the first time (IsKeyPressed),
+  and a key being released (IsKeyReleased).
+===============================================================================
  */
 #pragma once
 #include "Precompiled.h"

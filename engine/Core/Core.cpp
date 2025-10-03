@@ -1,12 +1,18 @@
 /**
- * @file Core.cpp
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
- * @date 2025-09-30
- *
- * This file implements the CoreEngine class which serves as the central
+
+===============================================================================
+ File:           Core.cpp
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ 
+  Design notes:
+  This file implements the CoreEngine class which serves as the central
  * orchestrator for the game engine. It manages the main game loop, system
  * initialization and updates, message broadcasting, and frame timing.
+===============================================================================
  */
  
 #include "Precompiled.h"

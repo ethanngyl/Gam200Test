@@ -1,13 +1,16 @@
 ﻿/**
- * @file Component.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Base component system for ECS architecture
- * @date 2025-09-30
- *
- * @copyright Copyright (c) 2025
- *
- * Contains all component data structures used in the Entity Component System.
+===============================================================================
+ File:           Component.h
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ 
+  Design notes:
+  Contains all component data structures used in the Entity Component System.
  * Components are pure data containers with no behavior - systems operate on them.
+===============================================================================
  */
 
 #pragma once

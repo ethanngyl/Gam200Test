@@ -1,11 +1,23 @@
 ﻿/**
- * @file MovementSystem.cpp
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Movement system implementation for entity motion control
- * @date 2025-09-30
- *
- * Implements WASD keyboard-based movement for entities with Transform and Movement components.
- * Handles input processing, direction normalization, and boundary clamping to keep entities on screen.
+===============================================================================
+ File:           MovementSystem.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-24
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the MovementSystem class.
+
+  Design notes:
+  This file implements the entity movement logic. In its Update() loop, the
+  system gets all relevant entities from the EntityManager. For each one, it
+  reads WASD input from the InputSystem to create a direction vector.
+
+  A key part of the implementation is normalizing the direction vector. This
+  prevents entities from moving faster on the diagonal than they do along
+  the cardinal axes. The final position is calculated using the entity's
+  speed and delta time, and then clamped to the screen boundaries.
+===============================================================================
  */
 #include "Precompiled.h"
 

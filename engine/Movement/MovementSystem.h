@@ -1,12 +1,24 @@
 ﻿/**
- * @file MovementSystem.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Movement system for keyboard-controlled entity motion
- * @date 2025-09-30
- *
- * Processes WASD input and updates Transform positions for entities
- * with Movement components. Provides frame-rate independent motion
- * using delta time.
+ ===============================================================================
+ File:           MovementSystem.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-24
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Header file for the MovementSystem class.
+ 
+  Design notes:
+  This file declares the MovementSystem, which follows an Entity-Component-System
+  (ECS) design. Its sole purpose is to move entities that have both a Transform
+  and a Movement component.
+ 
+  It depends on two other systems: the EntityManager (to get entity data) and
+  the InputSystem (to read keyboard input). These dependencies are provided
+  externally via setter methods to keep the system decoupled. The Update()
+  method takes a delta time (`dt`) parameter to ensure movement is smooth and
+  independent of the frame rate.
+===============================================================================
  */
 #pragma once
 #include "Interface.h"

@@ -1,14 +1,18 @@
 /**
- * @file ECSEntity.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Entity identifier and wrapper for ECS architecture
- * @date 2025-09-30
- *
- * @copyright Copyright (c) 2025
- *
- * Defines the Entity class which serves as a lightweight identifier
+===============================================================================
+ File:           ECSEntity.h
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ [A brief, one-sentence description of the file's primary purpose.]
+ 
+  Design notes:
+  Defines the Entity class which serves as a lightweight identifier
  * for game objects in the Entity Component System. Entities are just
  * IDs - the actual data lives in components.
+===============================================================================
  */
 
 #pragma once

@@ -1,14 +1,17 @@
 /**
- * @file EntityManager.cpp
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Core engine implementation providing game loop and system management
- * @date 2025-09-30
- *
- * @copyright Copyright (c) 2025
- *
- * Provides the EntityManager class which handles entity lifecycle,
+ ===============================================================================
+ File:           EntityManager.cpp
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ 
+  Design notes:
+  Provides the EntityManager class which handles entity lifecycle,
  * component attachment/detachment, and component storage/retrieval.
  * This is the central coordination point for the ECS system.
+===============================================================================
  */
 
 #include "ECSEntityManager.h"

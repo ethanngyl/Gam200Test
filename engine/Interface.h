@@ -1,12 +1,17 @@
 /**
- * @file Interface.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Abstract interface for all engine systems
- * @date 2025-09-30
- *
- * Defines the base interface that all engine systems must implement.
+ ===============================================================================
+ File:           Interface.h
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ 
+  Design notes:
+  Defines the base interface that all engine systems must implement.
  * Provides a uniform API for initialization, per-frame updates, and
  * inter-system messaging.
+===============================================================================
  */
 #pragma once
 

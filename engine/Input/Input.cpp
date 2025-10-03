@@ -1,12 +1,24 @@
 /**
- * @file Input.h
- * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
- * @brief Input system for keyboard and mouse handling
- * @date 2025-09-30
- *
- * Implements frame-accurate input detection using double-buffered state tracking.
- * Polls keyboard and mouse states each frame and provides query methods for
- * continuous (IsKeyDown), pressed (IsKeyPressed), and released (IsKeyReleased) events.
+===============================================================================
+ File:           Input.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the InputSystem class.
+
+  Design notes:
+  This file implements the core logic for input handling. The Update() method
+  is called once per frame. It first copies the current key states into the
+  previous key state buffer, then polls the operating system for the live
+  state of all relevant keys, updating the current state buffer.
+
+  The IsKeyPressed() and IsKeyReleased() functions work by comparing the
+  current and previous state buffers to detect transitions. Platform-specific
+  code, like the Windows GetAsyncKeyState() API call, is wrapped in a helper
+  function to make the system easier to port.
+===============================================================================
  */
 
 #include "Precompiled.h"
