@@ -87,8 +87,8 @@ namespace Framework
                 }
 
                 //// Optional: Keep on screen
-                if (transform.position.x > 1.0f) transform.position.x = 1.0f;
-                if (transform.position.x < -1.0f) transform.position.x = -1.0f;
+                if (transform.position.x > 2.0f) transform.position.x = 2.0f;
+                if (transform.position.x < -2.0f) transform.position.x = -2.0f;
                 if (transform.position.y > 1.0f) transform.position.y = 1.0f;
                 if (transform.position.y < -1.0f) transform.position.y = -1.0f;
             }
