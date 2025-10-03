@@ -1,53 +1,36 @@
 ﻿/*
 ===============================================================================
  File:          GraphicsSystem.cpp
- Author:        TAN WEI LEONG
- Email:         weileong.tan@digipen.edu
+ Author:        Sim Kah Yan, TAN WEI LEONG
+ Email:         kahyan.sim@digipen.edu, weileong.tan@digipen.edu
  Date:          2025-10-02
- Contribution:  100%
+ Contribution:  80%(Kah Yan), 20%(TAN WEI LEONG)
  ------------------------------------------------------------------------------
  Implementation of the GraphicsSystem class.
 
- Description:
- -------------
- This file implements the `GraphicsSystem` class, responsible for handling the 
- initialization, rendering, and input processing for graphical elements in the 
- system. It interacts with OpenGL to render various mesh types (triangle, quad, 
- line, and circle) and manages their colors, either as static or animated 
- (rainbow effect). The system also supports entity rendering based on an 
- entity-manager framework.
+ Brief:
+ Implementation of the GraphicsSystem class, which handles rendering,
+ OpenGL context setup, shader loading, mesh creation, background rendering,
+ and per-frame drawing of entities within the engine framework.
 
- Responsibilities:
- -----------------
- - `Initialize()`: Initializes OpenGL, loads shaders, and sets up meshes and 
-   colors.
- - `Update()`: Updates the graphics each frame, processes input, and renders 
-   entities.
- - `RenderEntities()`: Renders entities by retrieving their transform and 
-   sprite components.
- - `SendEngineMessage()`: Handles system messages (such as quit) from the engine.
- - `ProcessInput()`: Handles keyboard input, allowing mesh cycling and color 
-   mode toggling.
- - `SetCurrentMeshColor()`: Determines the color for the current mesh based on 
-   the color mode.
+ Details:
+ - Initializes the OpenGL rendering context and prints GPU information.
+ - Loads and compiles GLSL shaders.
+ - Creates basic meshes (triangle, quad, line, circle).
+ - Handles drawing a background textured quad.
+ - Renders entities based on their Transform and Sprite components.
+ - Supports mesh switching and rainbow/static color modes via keyboard input.
+ - Uses an orthographic projection for 2D rendering.
 
- Platform-specific Notes:
- -------------------------
- - On Windows, the system uses OpenGL with the GLEW library for extensions and 
-   provides basic OpenGL debugging. 
- - Shader paths are hardcoded to `"shaders/basic.vert"` and `"shaders/basic.frag"`. 
-   Ensure that these shader files are present.
- - Color interpolation can be toggled using the spacebar, cycling between static 
-   colors and a dynamic rainbow effect.
+ Notes:
+ - Uses a fixed viewport of 1600x800 and y-up coordinate system.
+ - Requires GLFW, GLEW, GLM, and custom Shader/Texture classes.
+ - No dynamic allocations during rendering except for initialization time.
 
  Safety:
- --------
- - All functions are `noexcept` where practical, ensuring the system attempts to 
-   produce a crash report even during a crash or exception.
- - The system makes best-effort attempts to log crashes to a timestamped file in 
-   the executable's directory.
- - The `force_crash_for_test()` function can deliberately trigger a crash for 
-   testing the crash logging behavior.
+ - All pointers checked before use.
+ - Proper cleanup in destructor to avoid memory leaks.
+ - Graceful fallback for missing shaders, textures, or meshes.
 ===============================================================================
 */
 
@@ -55,15 +38,11 @@
 
 namespace Framework {
 
-    /**
-     * @brief Constructs a `GraphicsSystem` object and initializes its member variables.
-     *
-     * The constructor sets up the initial values for various member variables,
-     * such as setting the window and shader pointers to `nullptr`, initializing
-     * the `currentMeshIndex` to 0, enabling color interpolation (for the rainbow
-     * effect), setting the initial color lerp time to 0.0f, and setting the
-     * `entityManager` to `nullptr`.
-     */
+    /*
+    -------------------------------------------------------------------------------
+    Constructor: Initializes member variables to default values.
+    -------------------------------------------------------------------------------
+    */
     GraphicsSystem::GraphicsSystem()
         : window(nullptr),                // Pointer to the GLFW window, initialized to nullptr.
         shader(nullptr),                  // Pointer to the shader program, initialized to nullptr.
@@ -77,14 +56,11 @@ namespace Framework {
         // Constructor: Initialize member variables and set defaults.
     }
 
-    /**
-     * @brief Destructor for the `GraphicsSystem` class.
-     *
-     * The destructor handles cleanup when the `GraphicsSystem` object is destroyed.
-     * It deallocates memory used by meshes in the `meshes` vector and deletes the
-     * shader object. This ensures that there are no memory leaks when the system is
-     * destroyed.
-     */
+    /*
+    -------------------------------------------------------------------------------
+    Destructor: Cleans up dynamically allocated shader, meshes, and textures.
+    -------------------------------------------------------------------------------
+    */
     GraphicsSystem::~GraphicsSystem() {
         std::cout << "GraphicsSystem: Cleaning up...\n";
 
@@ -98,13 +74,13 @@ namespace Framework {
         delete shader;
     }
 
-    /**
-     * @brief Initializes the graphics system, including OpenGL context, shaders, and meshes.
-     *
-     * This method ensures that OpenGL is properly initialized, shaders are loaded from
-     * the filesystem, and basic meshes are created (triangle, quad, line, circle).
-     * It also sets the default color mode (rainbow interpolation enabled).
-     */
+    /*
+    -------------------------------------------------------------------------------
+    Initialize:
+    Sets up OpenGL context, loads shaders, creates meshes, and loads the
+    background texture. Must be called after setting the GLFW window.
+    -------------------------------------------------------------------------------
+    */
     void GraphicsSystem::Initialize() {
         std::cout << "GraphicsSystem: Initializing...\n";
 
@@ -162,15 +138,12 @@ namespace Framework {
         std::cout << "Meshes and colors initialized successfully\n";
     }
 
-    /**
-     * @brief Updates the graphics system for each frame.
-     *
-     * This method clears the screen, handles input, renders all entities, and sets
-     * the appropriate mesh color based on the current interpolation setting. It also
-     * handles OpenGL error checking and frame swapping.
-     *
-     * @param dt Delta time, representing the time passed since the last update (used for animation or time-based changes).
-     */
+    /*
+    ------------------------------------------------------------------------------
+    Update: Called once per frame. Clears buffers, sets up projection,
+            draws background, renders entities, and processes input.
+    ------------------------------------------------------------------------------
+    */
     void GraphicsSystem::Update(float dt) {
         (void)dt;
         if (!window) return;  // Ensure window exists
@@ -214,13 +187,12 @@ namespace Framework {
         ProcessInput();  // Handle input events
     }
 
-    /**
-     * @brief Renders all entities that have both Transform and Sprite components.
-     *
-     * This method iterates through all entities in the `EntityManager`, checking if they
-     * have both Transform and Sprite components. It then applies the entity's transform
-     * (position, rotation, scale) and renders the associated mesh using the shader.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    RenderEntities: Renders all entities that have both Transform and Sprite
+                    components. Calculates transform and draws the corresponding mesh.
+    ------------------------------------------------------------------------------
+    */
     void GraphicsSystem::RenderEntities() {
         if (!entityManager) return;
 
@@ -250,14 +222,11 @@ namespace Framework {
         }
     }
 
-    /**
-    * @brief Retrieves the appropriate mesh for a given sprite.
-    *
-    * This method maps a sprite name (e.g., "triangle", "quad", "line", "circle") to
-    * the corresponding mesh in the `meshes` list.
-    *
-    * @param spriteName The name of the sprite (e.g., "triangle").
-    * @return A pointer to the mesh corresponding to the sprite, or the default mesh if not found.
+    /*
+    ------------------------------------------------------------------------------
+    GetMeshForSprite: Maps sprite names to preloaded meshes and returns the
+                      appropriate mesh pointer.
+    ------------------------------------------------------------------------------
     */
     Mesh* GraphicsSystem::GetMeshForSprite(const std::string& spriteName) {
         // Map sprite names to your existing mesh indices
@@ -274,15 +243,11 @@ namespace Framework {
         return meshes.empty() ? nullptr : meshes[0];
     }
 
-    /**
-     * @brief Handles system messages, such as quitting the application.
-     *
-     * This method listens for messages from the engine and processes them accordingly.
-     * For example, if a "quit" message is received, it triggers appropriate shutdown
-     * behavior for the graphics system.
-     *
-     * @param message The message being sent to the system (could be of type Status::Quit).
-     */
+    /*
+    ------------------------------------------------------------------------------
+    SendEngineMessage: Handles engine-wide messages such as Quit.
+    ------------------------------------------------------------------------------
+    */
     void GraphicsSystem::SendEngineMessage(Message* message) {
         if (message->MessageId == Status::Quit) {
             std::cout << "GraphicsSystem: Received quit message\n";
@@ -290,34 +255,28 @@ namespace Framework {
     }
 
 
-    /**
-     * @brief Begins the rendering of a new frame by clearing the screen.
-     *
-     * This method clears the color and depth buffers, effectively preparing the
-     * OpenGL context for the next frame.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    BeginFrame / EndFrame: Handles clearing and buffer swapping each frame.
+    ------------------------------------------------------------------------------
+    */
     void GraphicsSystem::BeginFrame() {
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    /**
-     * @brief Ends the current frame by swapping buffers and polling events.
-     *
-     * This method swaps the current buffer with the next one (displaying the frame)
-     * and processes any window or input events that have occurred during the frame.
-     */
+    
     void GraphicsSystem::EndFrame() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    /**
-     * @brief Processes keyboard input, allowing actions such as mesh cycling and color mode toggling.
-     *
-     * This method checks for key presses and handles specific actions, such as switching
-     * to the next mesh or toggling between static and dynamic (rainbow) color modes.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    ProcessInput: Handles keyboard input for mesh switching (ENTER) and toggling
+                  rainbow/static color mode (SPACE).
+    ------------------------------------------------------------------------------
+    */
     void GraphicsSystem::ProcessInput() {
         static bool enterPressedLast = false;
         static bool spacePressedLast = false;
@@ -343,13 +302,12 @@ namespace Framework {
         spacePressedLast = spaceNow;
     }
 
-    /**
-     * @brief Sets the current color for the selected mesh based on the interpolation setting.
-     *
-     * If color interpolation is enabled, this method sets a dynamic, rainbow-colored
-     * mesh. If interpolation is disabled, it applies a static color from the `meshColors`
-     * list, corresponding to the selected mesh.
-     */
+    /*
+    ------------------------------------------------------------------------------
+    SetCurrentMeshColor: Updates shader uniform uColor to use either rainbow
+                         animated color or static mesh color.
+    ------------------------------------------------------------------------------
+    */
     void GraphicsSystem::SetCurrentMeshColor() {
         if (!shader || currentMeshIndex < 0 || currentMeshIndex >= (int)meshColors.size())
             return;
