@@ -41,6 +41,15 @@
 
 //Components
 
+//New Graphics 
+#include "ResourceHandle.h"
+#include "Material.h"
+#include "ResourceManager.h"
+#include "Camera.h"
+#include "RenderCommand.h"
+#include "RenderComponents.h"
+#include "GraphicsSystemV2.h"
+
 //Core
 #include "Core.h"
 

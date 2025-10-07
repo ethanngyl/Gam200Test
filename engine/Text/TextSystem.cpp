@@ -221,6 +221,7 @@ namespace Framework {
     /************************************************************************/
     void TextSystem::Update(float /*dt*/) {
 #ifdef _WIN32
+
         if (_kbhit()) {
             int ch = _getch();
             if (ch == 'N' || ch == 'n') {

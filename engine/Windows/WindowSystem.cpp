@@ -73,7 +73,9 @@ namespace Framework
     void WindowSystem::Initialize()
     {
         std::cout << "WindowSystem: Initializing...\n";
-
+        static bool alreadyInitialized = false;
+        if (alreadyInitialized) return;
+        alreadyInitialized = true;
         // Initialize the GLFW library
         if (!glfwInit()) {
             std::cerr << "GLFW init failed\n";  // If GLFW initialization fails, print error message
