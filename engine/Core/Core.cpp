@@ -84,14 +84,6 @@ namespace Framework
             }
         }
 
-        for (auto system : Systems)
-        {
-            if (auto graphicsSystem = dynamic_cast<GraphicsSystem*>(system))
-            {
-                graphicsSystem->SetWindow(glfwWin);
-            }
-        }
-
         // 3. Initialize all systems (skip WindowSystem if already initialized)
         for (auto system : Systems)
         {

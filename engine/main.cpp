@@ -25,7 +25,7 @@
 #include <crtdbg.h>
 #endif
 #include "Precompiled.h"
-
+#include "GraphicsSystemV2.h"
  /**
   * @brief Windows application entry point
   * @param hInstance Handle to current application instance
@@ -172,8 +172,8 @@ int WINAPI WinMain(_In_ HINSTANCE /*hInstance*/,
     auto& transform1 = entityManager.GetComponent<Framework::Transform>(quadEntity);
     entityManager.AddComponent<Framework::BoxCollider>(quadEntity);
     auto& box = entityManager.GetComponent<Framework::BoxCollider>(quadEntity);
-    box.size = Framework::Vector2D(0.1f, 0.1f);
-    transform1.scale = Framework::Vector2D(0.1f, 0.1f); // Match visual size to collider
+    box.size = Framework::Vector2D(0.5f, 0.5f);
+    transform1.scale = Framework::Vector2D(0.5f, 0.5f); // Match visual size to collider
 
     entityManager.AddComponent<Framework::Sprite>(quadEntity);
     entityManager.GetComponent<Framework::Sprite>(quadEntity).texturePath = "quad";
@@ -219,8 +219,8 @@ int WINAPI WinMain(_In_ HINSTANCE /*hInstance*/,
     // ========================================================================
     
     // Control the camera
-    graphicsSys->SetCameraZoom(1.5f);  // Zoom in
-    graphicsSys->SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));  // Center camera
+    //graphicsSys->SetCameraZoom(1.5f);  // Zoom in
+    //graphicsSys->SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));  // Center camera
     
 
     // ========================================================================
