@@ -243,7 +243,8 @@ int WINAPI WinMain(_In_ HINSTANCE /*hInstance*/,
     LOG_INFO("CORE", "Game loop ended. Cleaning up...");
 
     // Cleanup systems
-    engine.DestroySystems();sa
+    engine.DestroySystems();
+
 
     LOG_INFO("CORE", "Engine shutdown complete.");
 
