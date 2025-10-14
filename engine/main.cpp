@@ -155,7 +155,7 @@ int WINAPI WinMain(_In_ HINSTANCE /*hInstance*/,
     auto& transform = entityManager.GetComponent<Framework::Transform>(triangleEntity);
     transform.scale = Framework::Vector2D(0.5f, 0.5f);
     entityManager.AddComponent<Framework::Sprite>(triangleEntity);
-    entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
+    //entityManager.GetComponent<Framework::Sprite>(triangleEntity).texturePath = "triangle";
     entityManager.AddComponent<Framework::TriangleCollider>(triangleEntity);
 
     auto& triCol = entityManager.GetComponent<Framework::TriangleCollider>(triangleEntity);
@@ -243,7 +243,7 @@ int WINAPI WinMain(_In_ HINSTANCE /*hInstance*/,
     LOG_INFO("CORE", "Game loop ended. Cleaning up...");
 
     // Cleanup systems
-    engine.DestroySystems();
+    engine.DestroySystems();sa
 
     LOG_INFO("CORE", "Engine shutdown complete.");
 
