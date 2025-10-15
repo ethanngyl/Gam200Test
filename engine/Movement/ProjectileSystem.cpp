@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -21,6 +21,7 @@
  */
 #include "Precompiled.h"
 #include "PlayerManager.h"
+#include "ProjectileSystem.h"
 namespace Framework
 {
     /**
@@ -29,14 +30,14 @@ namespace Framework
      * Initializes entity manager and input system pointers to nullptr.
      * These must be set via SetEntityManager() and SetInputSystem() before use.
      */
-    MovementSystem::MovementSystem() : entityManager(nullptr), inputSystem(nullptr)
+    ProjectileMovementSystem::ProjectileMovementSystem() : entityManager(nullptr)
     {
     }
 
     /**
      * @brief Destructor for MovementSystem
      */
-    MovementSystem::~MovementSystem()
+    ProjectileMovementSystem::~ProjectileMovementSystem()
     {
     }
 
@@ -45,9 +46,9 @@ namespace Framework
      *
      * Prints initialization confirmation to console.
      */
-    void MovementSystem::Initialize()
+    void ProjectileMovementSystem::Initialize()
     {
-        std::cout << "MovementSystem: Initialized\n";
+        std::cout << "Enemy Movement System: Initialized\n";
     }
 
     /**
@@ -62,47 +63,37 @@ namespace Framework
      *
      * @note Does nothing if entityManager or inputSystem are not set
      */
-    void MovementSystem::Update(float dt)
+    void ProjectileMovementSystem::Update(float dt)
     {
-        if (!entityManager || !inputSystem) return;
+        if (!entityManager) return;
 
         for (Entity entity : entityManager->GetAllEntities())
         {
             if (entityManager->HasComponent<Transform>(entity) &&
-                entityManager->HasComponent<Movement>(entity))
+                entityManager->HasComponent<ProjectileMovement>(entity))
             {
                 auto& transform = entityManager->GetComponent<Transform>(entity);
-                auto& movement = entityManager->GetComponent<Movement>(entity);
+                auto& movement = entityManager->GetComponent<ProjectileMovement>(entity);
 
-                // Get input direction from WASD
-                Vector2D inputDir(0, 0);
-
-                if (inputSystem->IsKeyDown(KEY_W)) inputDir.y += 1.0f;
-                if (inputSystem->IsKeyDown(KEY_S)) inputDir.y -= 1.0f;
-                if (inputSystem->IsKeyDown(KEY_A)) inputDir.x -= 1.0f;
-                if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += 1.0f;
-
-                // Normalize diagonal movement
-                if (inputDir.length() > 0.0f) {
-                    inputDir.normalize();
-                }
-
-                // Update movement direction
-                movement.direction = inputDir;
+                transform.position.x += movement.direction.x * movement.moveSpeed * dt;
+                transform.position.y += movement.direction.y * movement.moveSpeed * dt;
 
                 // Apply movement
                 if (!movement.blocked) {
                     transform.position += movement.direction * movement.moveSpeed * dt;
                 }
                 else {
-                    transform.position -= movement.direction * movement.moveSpeed * dt*10;
+                    transform.position -= movement.direction * movement.moveSpeed * dt * 10;
                 }
 
-                //// Optional: Keep on screen
-                if (transform.position.x > 2.0f) transform.position.x = 2.0f;
-                if (transform.position.x < -2.0f) transform.position.x = -2.0f;
-                if (transform.position.y > 1.0f) transform.position.y = 1.0f;
-                if (transform.position.y < -1.0f) transform.position.y = -1.0f;
+                // Optional: Destroy projectiles that go off-screen
+                // This prevents memory leaks from projectiles flying forever
+                if (transform.position.x > 3.0f || transform.position.x < -3.0f ||
+                    transform.position.y > 2.0f || transform.position.y < -2.0f)
+                {
+                    // Projectile is off-screen, destroy it
+                    entityManager->DestroyEntity(entity);
+                }
             }
         }
     }
@@ -113,7 +104,7 @@ namespace Framework
      *
      * Currently does not process any messages.
      */
-    void MovementSystem::SendEngineMessage(Message* message)
+    void ProjectileMovementSystem::SendEngineMessage(Message* message)
     {
         (void)message;
     }
