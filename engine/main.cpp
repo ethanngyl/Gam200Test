@@ -29,6 +29,7 @@
 #include "EntitySpawner.h"
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
+#include "ImguiSystem.h"
  /**
   * @brief Windows application entry point
   * @param hInstance Handle to current application instance
@@ -111,6 +112,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     Framework::EntityManager entityManager;
 
     // Create systems
+
     auto* windowSys = new Framework::WindowSystem();
     auto* graphicsSys = new Framework::GraphicsSystemV2();
     auto* inputSys = new Framework::InputSystem();
@@ -120,6 +122,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* projectileMovement = new Framework::ProjectileMovementSystem();
     auto* spawner = new Framework::EntitySpawner();
     auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
+    auto* imguiSys = new Framework::ImGuiSystem();
+
 
     // Configure systems
     movementSys->SetEntityManager(&entityManager);
@@ -137,6 +141,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     collisionSys->SetInput(inputSys);
 
     // Add systems to engine
+    
     engine.AddSystem(windowSys);
     engine.AddSystem(spawner);
     engine.AddSystem(playerController);  // NEW! Add before movement
@@ -152,7 +157,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // Initialize
     windowSys->Initialize();
     graphicsSys->SetWindow(windowSys->GetWindow());
-
+    imguiSys->SetWindow(windowSys->GetWindow());
+    imguiSys->SetEntityManager(&entityManager);
+    imguiSys->SetEntitySpawner(spawner);
+    engine.AddSystem(imguiSys);
     // NEW: Give player controller access to window
     playerController->SetWindow(windowSys->GetWindow());
 
@@ -186,6 +194,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     // Cleanup
     engine.DestroySystems();
+    glfwTerminate();
     LOG_INFO("CORE", "Engine shutdown complete.");
     eng::debug::Log::shutdown();
 

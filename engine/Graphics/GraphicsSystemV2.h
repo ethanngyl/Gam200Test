@@ -128,6 +128,8 @@ namespace Framework {
          */
         void CreateLegacyMaterials();
 
+        void RenderImGui();
+
         /**
          * @brief Get mesh for legacy sprite name
          */
