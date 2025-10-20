@@ -1,22 +1,89 @@
+/**
+ * @file 
+ recompiled.h
+ * @author ETHAN NG YONG LE (n.ethanyongle@digipen.edu)
+ * @brief Precompiled header for the StructSquad game engine
+ * @date 2025-09-30
+ *
+ * Central include file that precompiles commonly-used headers to improve
+ * compilation times. All .cpp files in the project should include this
+ * as their first include.
+ *
+ */
 #pragma once
-
 // Standard C++ libraries
-#include <vector>
-#include <string>
-#include <iostream>
-#include <memory>
-#include <cassert>
-#include <cmath>
-#include <fstream>
-#include <sstream>
+#include <vector> //Dynamic Array
+#include <string> //String Handling
+#include <iostream> //Console I/O
+#include <memory> //Smart pointer
+#include <cassert> //Assertions
+#include <cmath> //Math functions
+#include <fstream> //File I/O
+#include <sstream> //String streams
+#include <cstdio> //C-style I/O
+#include <exception> //Exception handling
+#include <iomanip> //I/O formatting
+#include <chrono> //Timing utilities 
+#include <algorithm> //STL Algorithms
+#include <array> //Fixed-size array
+#include <cstddef> //Standard definitions
+#include <map> //Sorted associative containers
+#include <cstdint> //Fixed-width integer types
+#include <unordered_map> //Hash maps
+#include <typeindex> //Type identification
+#include <cstdarg> //Variable Arguements
+#include <mutex> //Thread synchronization
+#include <string_view> //Non-owning string references
+#include <functional> //Function objects
 
 //Components
+
+//Core
+#include "Core.h"
+
+//Window
 #include "WindowSystem.h"
+#include "Windows.h"
+
+//Input
 #include "Input.h"
+
+//Interface
+#include "Interface.h" // The base class for all your engine systems
+
+//Graphics
 #include "GraphicsSystem.h"
+#include "Mesh.h"
+#include "MeshFactory.h"
+#include "Shader.h"
+
+//Collision
 #include "CollisionSystem.h"
+
+//Math
 #include "MathTestSystem.h"
 #include "Vector2D.h"
+#include "Matrix3x3.h"
+
+//Movement
+#include "MovementSystem.h"
+
+//Debugger
+#include "CrashLogger.h"
+#include "Log.h"
+#include "Perf.h"
+#include "PerfViewer.h"
+#include "Sinks.h"
+#include "Trace.h"
+
+//ECS
+#include "ECSComponent.h"
+#include "ECSEntity.h"
+#include "ECSEntityManager.h"
+#include "Component.h"
+
+//Message
+#include "Message.h"
 
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32
@@ -27,16 +94,20 @@
 #pragma comment(lib, "winmm.lib")  // Link timing library
 #endif
 
-// OpenGL headers (since you have GLRenderer)
-//#ifdef USE_OPENGL
-//#include <GL/gl.h>
-//#include <GL/glu.h>
-//#include <glad/glad.h>
-//#endif
-
+//GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/trigonometric.hpp>
+
+//GLEW
+#include <GL/glew.h>
+#include "GL/gl.h"
+
+//GLFW
+#include <GLFW/glfw3.h>
+#include <stb_image.h>
 
 // Useful debug macros
 #ifdef _DEBUG
@@ -44,6 +115,8 @@
 #else
 #define ASSERT(condition) ((void)0)
 #endif
+
+#include <Text/TextSystem.h>
 
 // Safe deletion macros
 #define SAFE_DELETE(p) { if(p) { delete (p); (p) = nullptr; } }

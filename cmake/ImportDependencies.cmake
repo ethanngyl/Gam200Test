@@ -31,9 +31,11 @@ macro(import_glm)
         FetchContent_Declare(
             glm
             GIT_REPOSITORY https://github.com/g-truc/glm.git
-            GIT_TAG 0.9.9.8
+            GIT_TAG master
         )
         FetchContent_MakeAvailable(glm)
+        target_include_directories(glm SYSTEM INTERFACE 
+            ${glm_SOURCE_DIR})
         message(STATUS "GLM imported successfully")
     endif()
 endmacro()
@@ -114,6 +116,24 @@ macro(import_imgui)
     endif()
 endmacro()
 
+macro(import_stb)
+    if(NOT TARGET stb)
+        message(STATUS "Importing stb_image...")
+        FetchContent_Declare(
+            stb
+            GIT_REPOSITORY https://github.com/nothings/stb.git
+            GIT_TAG master
+        )
+        FetchContent_Populate(stb)
+        
+        # stb is header-only, just create an interface library
+        add_library(stb INTERFACE)
+        target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
+        
+        message(STATUS "stb_image imported successfully")
+    endif()
+endmacro()
+
 # Main function to import all dependencies
 function(importDependencies)
     message(STATUS "=== Importing Dependencies ===")
@@ -123,6 +143,6 @@ function(importDependencies)
     import_glm() 
     import_glew()
     import_imgui()
-    
+    import_stb()
     message(STATUS "=== All Dependencies Imported ===")
 endfunction()

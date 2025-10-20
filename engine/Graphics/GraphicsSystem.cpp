@@ -1,47 +1,96 @@
-﻿#include "Precompiled.h"
-#include "GraphicsSystem.h"
-#include "Message.h"
-#include "GL/glew.h"
-#include "GL/gl.h"
-#include <GLFW/glfw3.h>
-#include "ECSComponent.h"
-#include "ECSEntity.h"
-#include "ECSEntityManager.h"
-#include "Component.h"
-#include "Shader.h"
-#include "Mesh.h"
-#include "MeshFactory.h"
+﻿/*
+===============================================================================
+ File:          GraphicsSystem.cpp
+ Author:        Sim Kah Yan, TAN WEI LEONG
+ Email:         kahyan.sim@digipen.edu, weileong.tan@digipen.edu
+ Date:          2025-10-02
+ Contribution:  80%(Kah Yan), 20%(TAN WEI LEONG)
+ ------------------------------------------------------------------------------
+ Implementation of the GraphicsSystem class.
 
-namespace Framework
-{
+ Brief:
+ Implementation of the GraphicsSystem class, which handles rendering,
+ OpenGL context setup, shader loading, mesh creation, background rendering,
+ and per-frame drawing of entities within the engine framework.
+
+ Details:
+ - Initializes the OpenGL rendering context and prints GPU information.
+ - Loads and compiles GLSL shaders.
+ - Creates basic meshes (triangle, quad, line, circle).
+ - Handles drawing a background textured quad.
+ - Renders entities based on their Transform and Sprite components.
+ - Supports mesh switching and rainbow/static color modes via keyboard input.
+ - Uses an orthographic projection for 2D rendering.
+
+ Notes:
+ - Uses a fixed viewport of 1600x800 and y-up coordinate system.
+ - Requires GLFW, GLEW, GLM, and custom Shader/Texture classes.
+ - No dynamic allocations during rendering except for initialization time.
+
+ Safety:
+ - All pointers checked before use.
+ - Proper cleanup in destructor to avoid memory leaks.
+ - Graceful fallback for missing shaders, textures, or meshes.
+===============================================================================
+*/
+
+#include "Precompiled.h"  // Includes essential precompiled headers for the graphics system.
+
+namespace Framework {
+
+    /*
+    -------------------------------------------------------------------------------
+    Constructor: Initializes member variables to default values.
+    -------------------------------------------------------------------------------
+    */
     GraphicsSystem::GraphicsSystem()
-        : window(nullptr), shader(nullptr), triangleMesh(nullptr),
-        currentMeshIndex(0),
-        interpolateColor(true),    // 🔹 enable color animation by default
-        colorLerpTime(0.0f),
-        colorLerpSpeed(1.0f),
-        entityManager(nullptr)
+        : window(nullptr),                // Pointer to the GLFW window, initialized to nullptr.
+        shader(nullptr),                  // Pointer to the shader program, initialized to nullptr.
+        triangleMesh(nullptr),            // Pointer to the triangle mesh, initialized to nullptr.
+        currentMeshIndex(0),              // Index of the currently selected mesh, starting from 0.
+        interpolateColor(true),           // Flag to toggle between static and dynamic (rainbow) colors, enabled by default.
+        colorLerpTime(0.0f),              // Time used for color interpolation, initialized to 0.0f.
+        colorLerpSpeed(1.0f),             // Speed of color interpolation, set to 1.0f.
+        entityManager(nullptr)            // Pointer to the EntityManager, initialized to nullptr.
     {
+        // Constructor: Initialize member variables and set defaults.
     }
 
-    GraphicsSystem::~GraphicsSystem()
-    {
+    /*
+    -------------------------------------------------------------------------------
+    Destructor: Cleans up dynamically allocated shader, meshes, and textures.
+    -------------------------------------------------------------------------------
+    */
+    GraphicsSystem::~GraphicsSystem() {
         std::cout << "GraphicsSystem: Cleaning up...\n";
+
+        // Deallocate memory for each mesh in the `meshes` vector.
+        // If any mesh pointer is valid (not nullptr), delete it to free memory.
         for (auto mesh : meshes) {
             if (mesh) delete mesh;
         }
+
+        // Delete the shader object to free its memory.
         delete shader;
     }
 
-    void GraphicsSystem::Initialize()
-    {
+    /*
+    -------------------------------------------------------------------------------
+    Initialize:
+    Sets up OpenGL context, loads shaders, creates meshes, and loads the
+    background texture. Must be called after setting the GLFW window.
+    -------------------------------------------------------------------------------
+    */
+    void GraphicsSystem::Initialize() {
         std::cout << "GraphicsSystem: Initializing...\n";
 
+        // Ensure that a window is set
         if (!window) {
             std::cerr << "GraphicsSystem: No window set!\n";
             return;
         }
 
+        // Set OpenGL context to the current window
         glfwMakeContextCurrent(window);
 
         // Query framebuffer size from the window
@@ -56,10 +105,13 @@ namespace Framework
 
         // After OpenGL context creation
         glewExperimental = GL_TRUE; // Ensures access to modern features
+        // Initialize GLEW for extension handling
+        glewExperimental = GL_TRUE;
         if (glewInit() != GLEW_OK) {
             std::cerr << "GLEW Initialization failed!" << std::endl;
         }
 
+        // Output OpenGL info (useful for debugging and version checking)
         std::cout << "\n\n==============================================\n";
         std::cout << "        PRINTING OPENGL INFORMATION\n";
         std::cout << "==============================================\n\n";
@@ -68,11 +120,11 @@ namespace Framework
         std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
         std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
 
-        // Viewport
+        // Set the viewport to match the window dimensions
         glViewport(0, 0, 1600, 800);
 
-        // Load shaders with better error handling
         try {
+            // Attempt to load shaders from file paths
             shader = new Shader("shaders/basic.vert", "shaders/basic.frag");
             std::cout << "Shaders loaded successfully\n";
         }
@@ -81,13 +133,13 @@ namespace Framework
             return;
         }
 
-        // Create meshes
+        // Create and initialize meshes (triangle, quad, line, circle)
         meshes.push_back(CreateTriangle());
         meshes.push_back(CreateQuad());
         meshes.push_back(CreateLine());
         meshes.push_back(CreateCircle(40, 0.5f));
 
-        // Initial static colors (used if interpolateColor = false)
+        // Static colors for meshes (used if interpolateColor is false)
         meshColors.push_back(glm::vec3(1.0f, 0.0f, 0.0f)); // Red
         meshColors.push_back(glm::vec3(0.0f, 1.0f, 0.0f)); // Green
         meshColors.push_back(glm::vec3(0.0f, 0.0f, 1.0f)); // Blue
@@ -98,60 +150,68 @@ namespace Framework
         std::cout << "Meshes and colors initialized successfully\n";
     }
 
-    void GraphicsSystem::Update(float dt)
-    {
-        if (!window) return;
-        if (glfwWindowShouldClose(window)) return;
+    /*
+    ------------------------------------------------------------------------------
+    Update: Called once per frame. Clears buffers, sets up projection,
+            draws background, renders entities, and processes input.
+    ------------------------------------------------------------------------------
+    */
+    void GraphicsSystem::Update(float dt) {
+        (void)dt;
+        if (!window) return;  // Ensure window exists
 
+        if (glfwWindowShouldClose(window)) return;  // Check if the window should close
 
-        // Rendering
-        BeginFrame();
+        BeginFrame();  // Prepare for new frame by clearing the screen
 
         if (!shader) {
             std::cerr << "GraphicsSystem: No shader!\n";
             return;
         }
 
-        shader->Bind();
+        // Calculate aspect ratio and create orthographic projection matrix
+        float aspectRatio = 1600.0f / 800.0f;  // 2.0
+        glm::mat4 projection = glm::ortho(-aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
 
-        // Loop over viewports
-        for (const auto& vp : viewports) {
-            glViewport(vp.x, vp.y, vp.width, vp.height);
+        shader->Bind();  // Bind the shader before rendering
 
-            // Optional: Clear only this viewport (good for debugging)
-            glEnable(GL_SCISSOR_TEST);
-            glScissor(vp.x, vp.y, vp.width, vp.height);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glDisable(GL_SCISSOR_TEST);
-
-            RenderEntities();
-            SetCurrentMeshColor();
-
-            //if (currentMeshIndex >= 0 && currentMeshIndex < (int)meshes.size()) {
-            //    if (meshes[currentMeshIndex])
-            //        meshes[currentMeshIndex]->Draw();
-            //}
-
-            GLenum error = glGetError();
-            if (error != GL_NO_ERROR) {
-                std::cerr << "OpenGL error in Update: " << error << "\n";
-            }
-
-            EndFrame();
-            ProcessInput();
+        // Set the projection matrix to the shader
+        GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
+        //std::cout << "Projection uniform location: " << projLoc << "\n";
+        if (projLoc == -1) {
+            std::cerr << "WARNING: uProjection uniform not found in shader!\n";
         }
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+        // Render all entities
+        RenderEntities();
+
+        // Set the current mesh color based on interpolation setting
+        SetCurrentMeshColor();
+
+        // Check for OpenGL errors
+        GLenum error = glGetError();
+        if (error != GL_NO_ERROR) {
+            std::cerr << "OpenGL error in Update: " << error << "\n";
+        }
+
+        EndFrame();      // Swap buffers and poll events
+        ProcessInput();  // Handle input events
     }
 
-    void GraphicsSystem::RenderEntities()
-    {
+    /*
+    ------------------------------------------------------------------------------
+    RenderEntities: Renders all entities that have both Transform and Sprite
+                    components. Calculates transform and draws the corresponding mesh.
+    ------------------------------------------------------------------------------
+    */
+    void GraphicsSystem::RenderEntities() {
         if (!entityManager) return;
 
-        for (Entity entity : entityManager->GetAllEntities())
-        {
+        for (Entity entity : entityManager->GetAllEntities()) {
             // Only render entities with both Transform and Sprite
             if (entityManager->HasComponent<Transform>(entity) &&
-                entityManager->HasComponent<Sprite>(entity))
-            {
+                entityManager->HasComponent<Sprite>(entity)) {
                  
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 //std::cout << "Drawing at: " << transform.position.x << ", " << transform.position.y << "\n";
@@ -174,8 +234,13 @@ namespace Framework
         }
     }
 
-    Mesh* GraphicsSystem::GetMeshForSprite(const std::string& spriteName)
-    {
+    /*
+    ------------------------------------------------------------------------------
+    GetMeshForSprite: Maps sprite names to preloaded meshes and returns the
+                      appropriate mesh pointer.
+    ------------------------------------------------------------------------------
+    */
+    Mesh* GraphicsSystem::GetMeshForSprite(const std::string& spriteName) {
         // Map sprite names to your existing mesh indices
         if (spriteName == "triangle" && meshes.size() > 0)
             return meshes[0];
@@ -190,84 +255,93 @@ namespace Framework
         return meshes.empty() ? nullptr : meshes[0];
     }
 
-    void GraphicsSystem::SendEngineMessage(Message* message)
-    {
+    /*
+    ------------------------------------------------------------------------------
+    SendEngineMessage: Handles engine-wide messages such as Quit.
+    ------------------------------------------------------------------------------
+    */
+    void GraphicsSystem::SendEngineMessage(Message* message) {
         if (message->MessageId == Status::Quit) {
             std::cout << "GraphicsSystem: Received quit message\n";
         }
     }
 
-    void GraphicsSystem::BeginFrame()
-    {
+
+    /*
+    ------------------------------------------------------------------------------
+    BeginFrame / EndFrame: Handles clearing and buffer swapping each frame.
+    ------------------------------------------------------------------------------
+    */
+    void GraphicsSystem::BeginFrame() {
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    void GraphicsSystem::EndFrame()
-    {
+    
+    void GraphicsSystem::EndFrame() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    void GraphicsSystem::ProcessInput()
-    {
+    /*
+    ------------------------------------------------------------------------------
+    ProcessInput: Handles keyboard input for mesh switching (ENTER) and toggling
+                  rainbow/static color mode (SPACE).
+    ------------------------------------------------------------------------------
+    */
+    void GraphicsSystem::ProcessInput() {
         static bool enterPressedLast = false;
         static bool spacePressedLast = false;
 
-        // --- handle ENTER: cycle through meshes ---
+        // --- Handle ENTER: Cycle through meshes ---
         bool enterNow = glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS;
         if (enterNow && !enterPressedLast) {
             if (!meshes.empty()) {
+                // Switch to the next mesh in the list
                 currentMeshIndex = (currentMeshIndex + 1) % (int)meshes.size();
                 std::cout << "Switched to mesh index: " << currentMeshIndex << "\n";
             }
         }
         enterPressedLast = enterNow;
 
-        // --- handle SPACE: toggle rainbow/static color ---
+        // --- Handle SPACE: Toggle rainbow/static color mode ---
         bool spaceNow = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
         if (spaceNow && !spacePressedLast) {
+            // Toggle color interpolation mode
             interpolateColor = !interpolateColor;
-            std::cout << "Space pressed → interpolateColor = " << interpolateColor << "\n";
+            std::cout << "Space pressed -> interpolateColor = " << interpolateColor << "\n";
         }
         spacePressedLast = spaceNow;
     }
 
-    void GraphicsSystem::SetCurrentMeshColor()
-    {
+    /*
+    ------------------------------------------------------------------------------
+    SetCurrentMeshColor: Updates shader uniform uColor to use either rainbow
+                         animated color or static mesh color.
+    ------------------------------------------------------------------------------
+    */
+    void GraphicsSystem::SetCurrentMeshColor() {
         if (!shader || currentMeshIndex < 0 || currentMeshIndex >= (int)meshColors.size())
             return;
 
-        unsigned int shaderID = shader->GetID();
-        int colorLoc = glGetUniformLocation(shaderID, "uColor");
+        GLuint shaderID = shader->GetID();
+        GLint colorLoc = glGetUniformLocation(shaderID, "uColor");
 
-        glm::vec3 baseColor = meshColors[currentMeshIndex];
-
+        // If interpolation is enabled, use a dynamic rainbow color
         if (interpolateColor) {
-            glm::vec3 targetColor = glm::vec3(1.0f) - baseColor;
-            colorLerpTime += colorLerpSpeed * 0.016f;
-            if (colorLerpTime > 1.0f) colorLerpTime = 0.0f;
-
-            // 🔹 rainbow animation
-            float t = glfwGetTime();
+            float t = static_cast<float>(glfwGetTime());
             glm::vec3 rainbow = glm::vec3(
-                (sin(t * 1.0f) * 0.5f) + 0.5f,
-                (sin(t * 1.3f) * 0.5f) + 0.5f,
-                (sin(t * 1.7f) * 0.5f) + 0.5f
+                (sin(t * 1.0f) * 0.5f) + 0.5f,  // Red component
+                (sin(t * 1.3f) * 0.5f) + 0.5f,  // Green component
+                (sin(t * 1.7f) * 0.5f) + 0.5f   // Blue component
             );
             glUniform3f(colorLoc, rainbow.r, rainbow.g, rainbow.b);
-            glm::vec3 result = glm::mix(baseColor, targetColor, colorLerpTime);
-            glUniform3f(colorLoc, result.r, result.g, result.b);
         }
-
         else {
-            // 🔹 fallback: use the base mesh color
+            // Otherwise, use the static color for the current mesh
             glm::vec3 baseColor = meshColors[currentMeshIndex];
             glUniform3f(colorLoc, baseColor.r, baseColor.g, baseColor.b);
         }
     }
 
-    void GraphicsSystem::AddViewport(int x, int y, int width, int height) {
-        viewports.emplace_back(x, y, width, height);
-    }
-}
+} // namespace Framework

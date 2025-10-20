@@ -1,7 +1,29 @@
-#include "Matrix3x3.h"
+/*
+===============================================================================
+ File:           Matrix3x3.cpp
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Implementation of the Matrix3x3 class.
+
+  Design notes:
+  This file implements the matrix operations declared in Matrix3x3.h.
+
+  -   Matrix multiplication is implemented with standard nested loops.
+  -   The `invert()` method calculates the inverse using the adjugate matrix
+      method. It checks if the determinant is close to zero to avoid numerical
+      instability and returns false for singular matrices.
+  -   The matrix-vector multiplication operator correctly applies the affine
+      transformation by assuming a homogeneous coordinate `w=1` for the input
+      2D vector. It also performs the perspective divide by the resulting `w`
+      component to handle potential non-affine transformations.
+  -   Rotation functions handle both radians and degrees, with the degree
+      version simply converting to radians before computation.
+===============================================================================
+*/
 #include "Precompiled.h"
-#include <algorithm>
-#include <cmath>
 
 namespace Framework {
 
@@ -123,7 +145,7 @@ namespace Framework {
     Matrix3x3 Matrix3x3::RotRad(float radians) { Matrix3x3 M; return M.setRotRad(radians); }
     Matrix3x3 Matrix3x3::RotDeg(float degrees) { Matrix3x3 M; return M.setRotDeg(degrees); }
 
-    // ----- free operators -----
+    // ----- non-member operators -----
     Matrix3x3 operator*(Matrix3x3 const& a, Matrix3x3 const& b) {
         Matrix3x3 out;
         for (int r = 0; r < 3; ++r) {
@@ -145,7 +167,6 @@ namespace Framework {
         return Vector2D{ x, y };
     }
 
-    // ----- legacy-style wrappers -----
     void Mtx33Identity(Matrix3x3& out) { out.setIdentity(); }
     void Mtx33Translate(Matrix3x3& out, float x, float y) { out.setTranslate(x, y); }
     void Mtx33Scale(Matrix3x3& out, float sx, float sy) { out.setScale(sx, sy); }

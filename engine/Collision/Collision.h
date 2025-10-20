@@ -1,27 +1,30 @@
-#pragma once
-#include "Math/Vector2D.h"
-
-/*
+ï»¿/*
 ===============================================================================
- Collision.h
-------------------------------------------------------------------------------
- Collider shapes and test helpers for collision system.
+File:        Collision.h
+Author:      Jiahao Zhou
+Email:       jiahao.zhou@digipen.edu
+Date:        2025-09-30
+Contribution: 100%
+-------------------------------------------------------------------------------
+Collider shapes and primitive tests (headers only).
 
- What¡¯s here
-   - Data: ShapeType, Circle, Rect, Collider (centered AABB for rect)
-   - Tests: circle_to_circle, rect_to_rect, circle_to_rect
-            point_in_circle, point_in_rect, point_in_collider, check_collision
-   - Bounds checks: circle_out_of_bounds, rect_out_of_bounds, point_out_of_bounds
-   - Triangle support: point_in_triangle, circle_to_triangle, rect_to_triangle
+Responsibilities:
+- Data: ShapeType, Circle, Rect, Triangle, Bounds, Collider factory helpers.
+- Tests: circle_to_circle, rect_to_rect, circle_to_rect,
+         point_in_circle/rect/collider, check_collision.
+- Bounds: circle_out_of_bounds, rect_out_of_bounds, point_out_of_bounds.
+- Triangle: point_in_triangle, circle_to_triangle, rect_to_triangle.
 
- Notes
-   - Coordinate system: y-up (top = y + h/2, bottom = y - h/2)
-   - Rects are centered at position with width/height
-   - Designed for use with CollisionSystem test harness
- Author: jiahao.zhou@digipen.edu
- Date:   2025-09-30
+Notes:
+- y-up coordinates; rects are centered at position with width/height.
+- Touching edges count as collision.
+
+Safety:
+- Pure functions; no ownership or allocations.
 ===============================================================================
 */
+#pragma once
+#include "Math/Vector2D.h"
 
 enum class ShapeType { Circle, Rect, Triangle };
 
@@ -41,7 +44,7 @@ struct Bounds {
     float top{ 240.0f };
 };
 
-
+// ---- Collider wrapper------------------------------------
 struct Collider {
     ShapeType shapeType{ShapeType::Circle};
     Framework::Vector2D position{};
@@ -49,7 +52,7 @@ struct Collider {
     Circle circle{};
     Rect rect{};
     Triangle triangle{};
-
+	// create a circle collider, radius, position(center)
     static Collider create_circle (float radius, Framework::Vector2D position){
         Collider c;
         c.shapeType = ShapeType::Circle;
@@ -57,6 +60,7 @@ struct Collider {
         c.position = position;
         return c;
     }
+	// create a rectangle collider, width, height, position(center)
     static Collider create_rect (float width, float height, Framework::Vector2D position){
         Collider c;
         c.shapeType = ShapeType::Rect;
@@ -65,6 +69,7 @@ struct Collider {
         c.position = position;
         return c;
     }
+	// create a triangle collider, three vertex
     static Collider create_triangle(Framework::Vector2D v0,
         Framework::Vector2D v1,
         Framework::Vector2D v2) {
@@ -81,6 +86,7 @@ struct Collider {
 
 };
 
+// ---- Collision Test Functions --------------------------
 bool circle_to_circle (const Collider& a, const Collider& b);
 bool rect_to_rect     (const Collider& a, const Collider& b);
 bool circle_to_rect   (const Collider& circle, const Collider& rect);
@@ -98,5 +104,5 @@ bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b);
 
 // Triangle collision function, not implement yet
 bool point_in_triangle(Framework::Vector2D const& p, Triangle const& tri);
-bool circle_to_triangle(const Collider& circle, Triangle const& tri);
-bool rect_to_triangle(const Collider& rectAABB, Triangle const& tri);
+bool circle_to_triangle(const Collider& circle, const Collider& triCol);
+bool rect_to_triangle(const Collider& rectAABB, const Collider& triCol);

@@ -1,0 +1,19 @@
+Project Set Up Guide:
+
+Recommended Platform: Visual Studio 2022
+- Download: https://visualstudio.microsoft.com/downloads
+- Download the community version of visual studio
+- During the installation process, tick "Deskstop Development with C++" under workloads, and under Individual Components, tick "C++ CMake tools for windows"
+- This will allow for C++ capabilities and standard libraries along with CMake utilities
+
+Set Up:
+- Once the relevant tools are installed
+- Open the folder with Visual Studio
+- CMake should run automatically and a .exe will be created
+- To create the build folder, open CMD in the current folder path where run.bat/clean.bat is located
+- Here are the list of commands
+- run.bat will create the build in debug mode
+- run.bat release will create the build in release mode
+- run.bat clean will delete the build folder
+- run.bat will delete and then create the build
+- clean.bat will perform a deep clean, removing .vs, build, out and the bin folder

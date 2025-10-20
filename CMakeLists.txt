@@ -13,6 +13,12 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(ImportDependencies)
 importDependencies()
 
+# Suppress warning level overrides from dependencies
+if(MSVC)
+    string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    string(REGEX REPLACE "/W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+endif()
+
 # Global compile flags and macros
 add_definitions(-DGLEW_STATIC)
 add_definitions(-DUSE_CSD3151_AUTOMATION=0) # Used for instructor's automation
@@ -30,16 +36,7 @@ file(GLOB_RECURSE APP_SRC
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
-"engine/Core.cpp"
-"engine/main.cpp"
-"engine/Windows/WindowSystem.cpp"
-"engine/Graphics/GraphicsSystem.cpp"
-"engine/Graphics/Shader.cpp"
-"engine/Graphics/Mesh.cpp"
-"engine/Graphics/MeshFactory.cpp"
-"engine/Input/Input.cpp" 
-"engine/Math/Matrix3x3.cpp"
-"engine/Math/Vector2D.cpp")
+"engine/main.cpp")
 
 # ======================= Linking =========================
 
@@ -49,15 +46,30 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     glm
     libglew_static
     imgui
+    stb
 )
 
+# Mark shaders as non-compiled
+set_source_files_properties(
+    "shaders/basic.vert"
+    "shaders/basic.frag"
+    PROPERTIES HEADER_FILE_ONLY TRUE
+)
+
+# Copy shaders to build directory
+file(COPY ${CMAKE_SOURCE_DIR}/engine/shaders
+     DESTINATION ${CMAKE_BINARY_DIR})
 # ======================= Include Directories =========================
 
 # Include directories for the project (fixed to use directory, not files)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
     ${CMAKE_SOURCE_DIR}/engine
+    ${CMAKE_SOURCE_DIR}/engine/Core
+    ${CMAKE_SOURCE_DIR}/engine/ECS
     ${CMAKE_SOURCE_DIR}/engine/Collision
+    ${CMAKE_SOURCE_DIR}/engine/Movement
+    ${CMAKE_SOURCE_DIR}/engine/Debugger
     ${CMAKE_SOURCE_DIR}/engine/Graphics  
     ${CMAKE_SOURCE_DIR}/engine/Input
     ${CMAKE_SOURCE_DIR}/engine/Math
@@ -73,8 +85,11 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE -Wall -Wextra)
 elseif (MSVC)
+    #Warning level 4
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /W4)
 endif()
+
+
 
 # ======================= Platform-Specific Linking =========================
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
@@ -94,7 +109,7 @@ endif()
 # Copy shaders folder
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
-          "${CMAKE_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/shaders")
+          "${CMAKE_SOURCE_DIR}/engine/shaders" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/shaders")
 
 # Copy assets folder
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
