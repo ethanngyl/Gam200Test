@@ -19,7 +19,7 @@
 class Message;
 
 /**
- * @class InterfaceSystem
+ * @class EngineSystem
  * @brief Abstract base class for all engine systems
  *
  * All systems in the engine (Graphics, Input, Movement, Collision, etc.)

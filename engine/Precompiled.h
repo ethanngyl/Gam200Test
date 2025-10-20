@@ -64,9 +64,7 @@
 #include "Interface.h" // The base class for all your engine systems
 
 //Graphics
-#include "GraphicsSystem.h"
 #include "Mesh.h"
-#include "MeshFactory.h"
 #include "Shader.h"
 
 //Collision

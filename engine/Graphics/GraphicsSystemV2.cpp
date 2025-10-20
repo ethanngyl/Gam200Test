@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           GraphicsSystemV2.cpp
  Author:         Graphics System Overhaul
@@ -72,6 +72,8 @@ namespace Framework {
         // 7. Setup initial render state
         SetupRenderState();
 
+        glfwSwapInterval(1);  // ✅ ADD THIS - Enables VSync
+
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
@@ -91,12 +93,14 @@ namespace Framework {
         if (!window || glfwWindowShouldClose(window)) {
             return;
         }
-
+        // Clear ONCE at the start
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
         // Reset statistics
         stats = RenderStats();
 
         // Clear frame
-        BeginFrame();
+        //BeginFrame();
 
         // Gather render commands from ECS
         GatherRenderCommands();
@@ -113,7 +117,7 @@ namespace Framework {
         }
 
         // Swap buffers
-        EndFrame();
+        //EndFrame();
 
         // Clear queues for next frame
         renderQueue.Clear();
@@ -766,4 +770,11 @@ namespace Framework {
         glfwPollEvents();
     }
 
+    void GraphicsSystemV2::RenderImGui() {
+        if (!window) return;
+
+        // Just swap - DON'T clear!
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 } // namespace Framework

@@ -59,7 +59,10 @@ namespace Framework
 
         // Mouse Buttons
         MOUSE_LEFT = VK_LBUTTON,
-        MOUSE_RIGHT = VK_RBUTTON
+        MOUSE_RIGHT = VK_RBUTTON,
+
+        //Shift Key
+        KEY_SHIFT = VK_SHIFT
     };
 
     /**

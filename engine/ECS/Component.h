@@ -49,6 +49,12 @@ namespace Framework
         bool blocked = false;
     };
 
+    struct ProjectileMovement : public Component<Movement>
+    {
+        float moveSpeed = 100.0f;
+        Vector2D direction;
+        bool blocked = false;
+    };
     /**
      * @struct Sprite
      * @brief Visual rendering component

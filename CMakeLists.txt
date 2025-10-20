@@ -80,6 +80,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/engine/Systems
     ${CMAKE_SOURCE_DIR}/engine/Windows
     ${CMAKE_SOURCE_DIR}/engine/Components
+    ${CMAKE_SOURCE_DIR}/engine/Player
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

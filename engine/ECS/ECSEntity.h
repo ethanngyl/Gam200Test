@@ -43,6 +43,7 @@ namespace Framework
     class Entity
     {
     public:
+        EntityID id; //Unique identifier for the entity, make private later
         /**
          * @brief Default constructor creates an invalid entity
          */
@@ -79,6 +80,6 @@ namespace Framework
         bool operator!=(const Entity& other) const { return id != other.id; }
 
     private:
-        EntityID id; //Unique identifier for the entity
+        
     };
 }
