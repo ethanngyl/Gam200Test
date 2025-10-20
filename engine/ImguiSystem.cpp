@@ -98,7 +98,7 @@ namespace Framework {
     {
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    }and
+    }
 
     void ImGuiSystem::SendEngineMessage(Message* msg)
     {
