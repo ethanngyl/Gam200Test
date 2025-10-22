@@ -64,6 +64,115 @@ namespace Framework {
         std::cout << "[ImGui] Initialized successfully\n";
     }
 
+	// jiahao
+    bool ImGuiSystem::OpenLevelFromTxt(const std::string& file, bool clearAll) {
+
+		std::ifstream readFile(file);
+        if (clearAll) {
+            entityManager->ClearAllEntities();
+        }
+        std::string line;
+        auto lineNumber = 0;
+        while (std::getline(readFile, line)) {
+
+			++lineNumber;
+
+            if (line.empty() || line[0] == '#') {
+                continue;
+            }
+			std::istringstream iss(line);
+            std::string type;
+
+            if (!(iss >> type)) {
+                std::cerr << "[ImGuiError] missing type at line " << lineNumber << "\n";
+                continue;
+            }
+
+            if (type == "player") {
+                float x = 0.0f, y = 0.0f;
+                if (iss >> x >> y) {
+					entitySpawner->SpawnPlayer(Vector2D(x, y));
+                }
+                else {
+					std::cerr << "[ImGuiError] parsing player at line " << lineNumber << "\n";
+                }
+            }
+            else if (type == "enemy") {
+                float x = 0.0f, y = 0.0f, spd = 0.05f;
+                if (iss >> x >> y ) {
+                    if (iss) iss >> spd;
+					entitySpawner->SpawnEnemy(Vector2D(x, y), spd);
+                }
+                else {
+					std::cerr << "[ImGuiError] parsing enemy at line " << lineNumber << "\n";
+                }
+            }
+            else if (type == "obstacle") {
+                float x = 0.0f, y = 0.0f, sx = 0.5f, sy = 0.5f;
+
+                if (iss >> x >> y >> sx >> sy){
+                    entitySpawner->SpawnObstacle(Vector2D(x, y), Vector2D(sx, sy));
+                }
+
+                else {
+					std::cerr << "[ImGuiError] parsing obstacle at line " << lineNumber << "\n";
+                  
+                }
+            }
+            else if (type == "sprite") {
+                std::string spriteName;
+                float x = 0.0f, y = 0.0f, sx = 1.0f, sy = 1.0f;
+                if (iss >> spriteName >> x >> y >> sx >> sy) {
+                    entitySpawner->SpawnSprite(spriteName, Vector2D(x, y), Vector2D(sx, sy));
+                }
+                else {
+                    std::cerr << "[ImGuiError] parsing sprite at line " << lineNumber << "\n";
+                }
+            }
+            else {
+				std::cerr << "[ImGuiError] Unknown entity type '" << type << "' at line " << lineNumber << "\n";
+            }
+        }
+        return true;
+    }
+
+    // jiahao
+    bool ImGuiSystem::SaveLevelToTxt(const std::string& file) {
+
+        std::ofstream writeFile(file);
+        if (!writeFile.is_open()) {
+            std::cerr << "[ImGuiError] Could not open file for writing: " << file << "\n";
+            return false;
+        }
+
+        writeFile << "# Saved from ImGui system\n";
+
+        auto entities = entityManager->GetAllEntities();
+        for (const auto& entity : entities) {
+            if (entityManager->HasComponent<Transform>(entity)) {
+                auto& transform = entityManager->GetComponent<Transform>(entity);
+                if (entityManager->HasComponent<CircleCollider>(entity)) {
+                    writeFile << "player " << transform.position.x << " " << transform.position.y << "\n";
+                }
+                else if (entityManager->HasComponent<TriangleCollider>(entity)) {
+                    writeFile << "enemy " << transform.position.x << " " << transform.position.y << "\n";
+                }
+                else if (entityManager->HasComponent<BoxCollider>(entity)) {
+                    writeFile << "obstacle " << transform.position.x << " " << transform.position.y << " "
+                              << transform.scale.x << " " << transform.scale.y << "\n";
+                }
+                else if (entityManager->HasComponent<Sprite>(entity)) {
+                    auto& sprite = entityManager->GetComponent<Sprite>(entity);
+                    writeFile << "sprite " << sprite.texturePath << " "
+                              << transform.position.x << " " << transform.position.y << " "
+                              << transform.scale.x << " " << transform.scale.y << "\n";
+                }
+            }
+        }
+        writeFile.close();
+        return true;
+	}
+
     void ImGuiSystem::Update(float dt)
     {
         frameTime = dt;
@@ -77,6 +186,31 @@ namespace Framework {
 
         // Menu bar
         if (ImGui::BeginMainMenuBar()) {
+            //File bar - jiahao
+            if (ImGui::BeginMenu("File")) {
+                if (ImGui::MenuItem("Open Level...")) {
+                    bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
+                    if (!isOpen) {
+                        std::cerr << "[ImGuiError] Failed to open level.txt\n";
+					}
+                    
+                }
+                if (ImGui::MenuItem("Save Level...")) {
+                    bool isSave = SaveLevelToTxt("assets/level1.txt");
+                    if (!isSave) {
+                        std::cerr << "[ImGuiError] Failed to save level.txt\n";
+                    }
+                }
+                if (ImGui::MenuItem("Exit")) {
+                    Message quitMsg(Status::Quit);
+                    CORE->BroadcastMessage(&quitMsg);
+                }
+
+				
+                ImGui::EndMenu();
+            }
+
+            //windows bar
             if (ImGui::BeginMenu("Windows")) {
                 ImGui::MenuItem("Entity Inspector", nullptr, &showEntityInspector);
                 ImGui::MenuItem("Spawner", nullptr, &showSpawner);

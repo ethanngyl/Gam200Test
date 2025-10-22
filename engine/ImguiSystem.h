@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           ImGuiSystem.h
  Description:    ImGui integration for visual debugging and entity inspection
@@ -29,8 +29,14 @@ namespace Framework {
         void SendEngineMessage(Message* msg) override;
         // Setup methods
         void SetWindow(GLFWwindow* win);
+        
         void SetEntityManager(EntityManager* em);
         void SetEntitySpawner(EntitySpawner* spawner);
+
+		// Load/Save level from text file
+        // jiahao
+        bool OpenLevelFromTxt(const std::string& file, bool clearAll);
+		bool SaveLevelToTxt(const std::string& file);
 
         // Render ImGui (call after game rendering, before swap buffers)
         void Render();

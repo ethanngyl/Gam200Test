@@ -1,0 +1,5 @@
+# comments start with #
+player 0.0 -0.5
+enemy -0.8 0.8
+obstacle -1.8 0.0 0.1 2.0
+sprite circle 0.0 0.0 0.3 0.3
