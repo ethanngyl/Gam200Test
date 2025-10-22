@@ -30,6 +30,8 @@
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
 #include "ImguiSystem.h"
+#include "MainMenuSystem.h"
+
  /**
   * @brief Windows application entry point
   * @param hInstance Handle to current application instance
@@ -123,16 +125,17 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* spawner = new Framework::EntitySpawner();
     auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
     auto* imguiSys = new Framework::ImGuiSystem();
+    auto* mainMenu = new Framework::MainMenuSystem();
 
 
-    // Configure systems
+
+    // --- Wire dependencies
     movementSys->SetEntityManager(&entityManager);
     projectileMovement->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
     collisionSys->SetEntityManager(&entityManager);
     spawner->SetEntityManager(&entityManager);
 
-    // NEW: Configure player controller
     playerController->SetEntitySpawner(spawner);
     playerController->SetEntityManager(&entityManager);
     playerController->SetInputSystem(inputSys);
@@ -140,31 +143,47 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     movementSys->SetInputSystem(inputSys);
     collisionSys->SetInput(inputSys);
 
-    // Add systems to engine
-    
+    windowSys->Initialize();
+    graphicsSys->SetWindow(windowSys->GetWindow());
+    graphicsSys->Initialize();
+    imguiSys->SetWindow(windowSys->GetWindow());
+    imguiSys->SetEntityManager(&entityManager);  
+    imguiSys->SetEntitySpawner(spawner);
+    mainMenu->Initialize();
+
+
+    // MainMenu 
+    mainMenu->SetEntityManager(&entityManager);
+    mainMenu->SetGraphics(graphicsSys);
+    mainMenu->SetWindow(windowSys->GetWindow());
+
+    // --- Add systems 
     engine.AddSystem(windowSys);
     engine.AddSystem(spawner);
-    engine.AddSystem(playerController);  // NEW! Add before movement
+    engine.AddSystem(inputSys);          
+    engine.AddSystem(playerController);
     engine.AddSystem(movementSys);
-    engine.AddSystem(graphicsSys);
-    engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
     engine.AddSystem(projectileMovement);
+    engine.AddSystem(mainMenu);           
+    engine.AddSystem(graphicsSys);
+    engine.AddSystem(imguiSys);
+
+    // --- Initialize all
+    engine.Initialize();
+
+    playerController->SetWindow(windowSys->GetWindow());
+
+
+
+
+
 
     LOG_INFO("CORE", "Systems added. Initializing engine...");
 
-    // Initialize
-    windowSys->Initialize();
-    graphicsSys->SetWindow(windowSys->GetWindow());
-    imguiSys->SetWindow(windowSys->GetWindow());
-    imguiSys->SetEntityManager(&entityManager);
-    imguiSys->SetEntitySpawner(spawner);
-    engine.AddSystem(imguiSys);
-    // NEW: Give player controller access to window
-    playerController->SetWindow(windowSys->GetWindow());
+  
 
-    engine.Initialize();
 
     LOG_INFO("CORE", "Engine initialized. Setting up game...");
 
