@@ -1,6 +1,6 @@
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // MainMenuSystem.cpp
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 #include "Precompiled.h"
 #include "MainMenuSystem.h"
@@ -8,14 +8,13 @@
 #include "RenderComponents.h"    // Renderable
 #include "Message.h"
 #include "Core.h"
+
 #include <GLFW/glfw3.h>
 #include <iostream>
 
 namespace Framework {
 
-    // ----------------------------------------------------------------------------
-    // Utility functions
-    // ----------------------------------------------------------------------------
+    // ---------- helpers ----------
     bool MainMenuSystem::PointInRect(float px, float py, float cx, float cy, float w, float h)
     {
         const float hw = 0.5f * w;
@@ -29,7 +28,7 @@ namespace Framework {
         if (!window) return;
 
         int w = 1, h = 1;
-        glfwGetWindowSize(window, &w, &h);
+        glfwGetFramebufferSize(window, &w, &h);
         if (w <= 0 || h <= 0) return;
 
         double mx, my;
@@ -43,60 +42,68 @@ namespace Framework {
         outY = yNdc;
     }
 
-    // ----------------------------------------------------------------------------
-    // MainMenuSystem methods
-    // ----------------------------------------------------------------------------
+    // ---------- wiring ----------
     MainMenuSystem::MainMenuSystem() = default;
 
     void MainMenuSystem::SetEntityManager(EntityManager* em) { m_em = em; }
     void MainMenuSystem::SetGraphics(GraphicsSystemV2* gfx) { m_gfx = gfx; }
     void MainMenuSystem::SetWindow(GLFWwindow* win) { m_window = win; }
 
+    // ---------- lifecycle ----------
     void MainMenuSystem::Initialize()
     {
-
         if (!m_em || !m_gfx) {
             std::cerr << "[MainMenu] ERROR: missing EntityManager or GraphicsSystemV2\n";
             return;
         }
 
         auto& rm = m_gfx->GetResourceManager();
+
         ShaderHandle shader = rm.LoadShader("shaders/basic.vert", "shaders/basic.frag", "default");
         if (!shader.IsValid()) {
-            std::cerr << "[MainMenu] ERROR: failed to load shader.\n";
+            std::cerr << "[MainMenu] ERROR: failed to load default shader\n";
         }
 
-        // Create two materials (opaque, no depth)
-        m_matButton = rm.CreateMaterial("ui_button_opaque", shader);
-        if (auto* m = rm.GetMaterial(m_matButton)) {
+        m_texPlay = rm.LoadTexture("assets/ui_play.png");
+        m_texExit = rm.LoadTexture("assets/ui_exit.png");
+
+        m_matTitle = rm.CreateMaterial("ui_title_mat", shader);
+        if (auto* m = rm.GetMaterial(m_matTitle)) {
             m->blendMode = BlendMode::Opaque;
             m->depthTest = false;
             m->depthWrite = false;
             m->cullBackFace = false;
+            m->tint = glm::vec4(1.0f);
         }
 
-        m_matHighlight = rm.CreateMaterial("ui_highlight_opaque", shader);
-        if (auto* m = rm.GetMaterial(m_matHighlight)) {
-            m->blendMode = BlendMode::Opaque;
+        m_matPlay = rm.CreateMaterial("ui_play_mat", shader);
+        if (auto* m = rm.GetMaterial(m_matPlay)) {
+            m->blendMode = BlendMode::AlphaBlend;
             m->depthTest = false;
             m->depthWrite = false;
             m->cullBackFace = false;
+            m->albedoTexture = m_texPlay;
+            m->tint = glm::vec4(1.0f);
+        }
+
+        m_matExit = rm.CreateMaterial("ui_exit_mat", shader);
+        if (auto* m = rm.GetMaterial(m_matExit)) {
+            m->blendMode = BlendMode::AlphaBlend;
+            m->depthTest = false;
+            m->depthWrite = false;
+            m->cullBackFace = false;
+            m->albedoTexture = m_texExit;
+            m->tint = glm::vec4(1.0f);
         }
 
         m_meshQuad = FindOrCreateQuad(rm);
-        CreateMenuEntities();
-        std::cout << "[MainMenu] Initialized.\n";
-        std::cout << "[MainMenu] Initialize OK (visible=" << std::boolalpha << m_visible << ")\n";
 
+        CreateMenuEntities();
+        std::cout << "[MainMenu] Initialized (images attached)\n";
     }
 
     void MainMenuSystem::Update(float /*dt*/)
     {
-        static int frames = 0;
-        if (++frames % 120 == 0) {
-            std::cout << "[MainMenu] Update... visible=" << m_visible << "\n";
-        }
-
         if (!m_visible || !m_em || !m_window)
             return;
 
@@ -107,26 +114,30 @@ namespace Framework {
         const bool clicked = (mouseDown && !m_lastMouseDown);
         m_lastMouseDown = mouseDown;
 
-        // Play button
+        // --- PLAY ---
         if (m_em->HasComponent<Transform>(m_btnPlay) && m_em->HasComponent<Renderable>(m_btnPlay)) {
             auto& tr = m_em->GetComponent<Transform>(m_btnPlay);
             auto& r = m_em->GetComponent<Renderable>(m_btnPlay);
-            const bool hov = PointInRect(mx, my, tr.position.x, tr.position.y, m_btnSize.x, m_btnSize.y);
-            r.tint = hov ? glm::vec4(0.3f, 0.85f, 1.0f, 1.0f)
-                : glm::vec4(0.2f, 0.75f, 0.9f, 1.0f);
+            const bool hov = PointInRect(mx, my, tr.position.x, tr.position.y, tr.scale.x, tr.scale.y);
+
+            r.tint = hov ? glm::vec4(1.10f, 1.10f, 1.10f, 1.0f)
+                : glm::vec4(1.00f, 1.00f, 1.00f, 1.0f);
+
             if (hov && clicked) {
                 SetVisible(false);
                 std::cout << "[MainMenu] Play clicked -> hide menu\n";
             }
         }
 
-        // Exit button
+        // --- EXIT ---
         if (m_em->HasComponent<Transform>(m_btnExit) && m_em->HasComponent<Renderable>(m_btnExit)) {
             auto& tr = m_em->GetComponent<Transform>(m_btnExit);
             auto& r = m_em->GetComponent<Renderable>(m_btnExit);
-            const bool hov = PointInRect(mx, my, tr.position.x, tr.position.y, m_btnSize.x, m_btnSize.y);
-            r.tint = hov ? glm::vec4(0.3f, 1.0f, 0.5f, 1.0f)
-                : glm::vec4(0.2f, 0.9f, 0.4f, 1.0f);
+            const bool hov = PointInRect(mx, my, tr.position.x, tr.position.y, tr.scale.x, tr.scale.y);
+
+            r.tint = hov ? glm::vec4(1.10f, 1.10f, 1.10f, 1.0f)
+                : glm::vec4(1.00f, 1.00f, 1.00f, 1.0f);
+
             if (hov && clicked) {
                 std::cout << "[MainMenu] Exit clicked -> quit\n";
                 Message q(Status::Quit);
@@ -148,16 +159,30 @@ namespace Framework {
             }
             };
 
+        setVis(m_titleBar, v);
         setVis(m_btnPlay, v);
         setVis(m_btnExit, v);
-        setVis(m_titleBar, v);
     }
 
+    // ---------- entities ----------
     void MainMenuSystem::CreateMenuEntities()
     {
-       
+        // Title bar 
+        {
+            m_titleBar = m_em->CreateEntity();
+            auto& tr = m_em->AddComponent<Transform>(m_titleBar, Vector2D(0.0f, 0.62f));
+            tr.scale = Vector2D(1.4f, 0.2f);
 
-        // Play
+            auto& r = m_em->AddComponent<Renderable>(m_titleBar);
+            r.mesh = m_meshQuad;
+            r.material = m_matTitle;
+            r.layer = 0;
+            r.orderInLayer = 0;
+            r.visible = true;
+            r.tint = glm::vec4(0.12f, 0.14f, 0.20f, 1.0f);
+        }
+
+        // Play 
         {
             m_btnPlay = m_em->CreateEntity();
             auto& tr = m_em->AddComponent<Transform>(m_btnPlay, Vector2D(0.0f, 0.20f));
@@ -165,14 +190,14 @@ namespace Framework {
 
             auto& r = m_em->AddComponent<Renderable>(m_btnPlay);
             r.mesh = m_meshQuad;
-            r.material = m_matButton;
+            r.material = m_matPlay;
             r.layer = 0;
             r.orderInLayer = 1;
             r.visible = true;
-            r.tint = glm::vec4(0.20f, 0.75f, 0.90f, 1.0f);
+            r.tint = glm::vec4(1.0f); 
         }
 
-        // Exit
+        // Exit 
         {
             m_btnExit = m_em->CreateEntity();
             auto& tr = m_em->AddComponent<Transform>(m_btnExit, Vector2D(0.0f, -0.15f));
@@ -180,11 +205,11 @@ namespace Framework {
 
             auto& r = m_em->AddComponent<Renderable>(m_btnExit);
             r.mesh = m_meshQuad;
-            r.material = m_matButton;
+            r.material = m_matExit;
             r.layer = 0;
             r.orderInLayer = 2;
             r.visible = true;
-            r.tint = glm::vec4(0.20f, 0.90f, 0.40f, 1.0f);
+            r.tint = glm::vec4(1.0f);
         }
 
         m_visible = true;
