@@ -87,12 +87,38 @@ namespace Framework {
         std::cout << "  Materials: " << resourceStats.materialCount << "\n\n";
     }
 
+    void GraphicsSystemV2::FollowPlayer(EntityManager* em, Entity player)
+    {
+        if (!em || !em->HasComponent<Transform>(player))
+            return;
+
+        auto& playerTransform = em->GetComponent<Transform>(player);
+
+        // Keep camera centered on player (XY plane)
+        glm::vec3 targetPos(playerTransform.position.x, playerTransform.position.y, 0.0f);
+
+        // Optional: smooth movement (camera lag)
+        glm::vec3 currentPos = mainCamera.GetPosition();
+        float smoothSpeed = 5.0f;  // adjust if needed
+        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * 0.016f);
+
+        mainCamera.SetPosition(newPos);
+    }
+
+
     void GraphicsSystemV2::Update(float dt) {
         (void)dt;
 
         if (!window || glfwWindowShouldClose(window)) {
             return;
         }
+
+        // === CAMERA FOLLOW LOGIC ===
+        if (followEnabled && entityManager && followTarget.IsValid()) {
+            FollowPlayer(entityManager, followTarget);
+        }
+        // ============================================
+
         // Clear ONCE at the start
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
@@ -333,7 +359,7 @@ namespace Framework {
         std::cout << "GraphicsSystemV2: Setting up background...\n";
 
         // Load background texture
-        backgroundTexture = resourceManager.LoadTexture("./assets/background.jpg");
+        backgroundTexture = resourceManager.LoadTexture("./assets/background.png");
 
         if (!backgroundTexture.IsValid()) {
             std::cerr << "WARNING: Failed to load background texture\n";
@@ -550,12 +576,16 @@ namespace Framework {
                 // Set transformation matrices
                 GLint modelLoc = glGetUniformLocation(shader->GetID(), "uModel");
                 GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
+                GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
 
                 if (modelLoc != -1) {
                     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(command.modelMatrix));
                 }
                 if (projLoc != -1) {
                     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+                }
+                if (viewLoc != -1) {
+                    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
                 }
             }
 
