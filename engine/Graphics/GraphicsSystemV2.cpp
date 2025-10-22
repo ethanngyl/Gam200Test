@@ -462,7 +462,7 @@ namespace Framework {
             bgCommand.layer = -1000;  // Render behind everything
 
             // Fullscreen quad
-            bgCommand.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 1.0f));
+            bgCommand.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f, 4.0f, 1.0f));
             bgCommand.tint = glm::vec4(1.0f);
 
             renderQueue.Submit(bgCommand);
