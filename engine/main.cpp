@@ -193,6 +193,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // Spawn player and give controller access to it
     Framework::Entity player = spawner->SpawnPlayer(Framework::Vector2D(0.0f, -0.5f));
     playerController->SetPlayerEntity(player);  // NEW!
+    graphicsSys->SetFollowTarget(player);
 
     std::cout << "\n=== CONTROLS ===\n";
     std::cout << "WASD/Arrows: Move player\n";
