@@ -2,29 +2,29 @@
 
 namespace Framework {
 	
-	AnimationsSystem::AnimationsSystem()
+	AnimationSystem::AnimationSystem()
 		: currentFrame(0)
 		, frameTimer(0.0f)
 		, isPlaying(false)
 		, demoInitialized(false)
 	{}
 
-	AnimationsSystem::~AnimationsSystem() {}
+	AnimationSystem::~AnimationSystem() {}
 
 	// === CORE LIFECYCLE ===
 
-	void AnimationsSystem::Initialize() {
+	void AnimationSystem::Initialize() {
 		std::cout << "\n========================================\n";
 		std::cout << "  AnimationSystem: Initializing\n";
 		std::cout << "  >> Ready to create animations\n";
 		std::cout << "========================================\n\n";
 	}
 
-	void AnimationsSystem::Update(float dt) {
+	void AnimationSystem::Update(float dt) {
 
 	}
 
-	void AnimationsSystem::SendEngineMessage(Message* message) {
+	void AnimationSystem::SendEngineMessage(Message* message) {
 
 	}
 

@@ -122,7 +122,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* spawner = new Framework::EntitySpawner();
     auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
     auto* imguiSys = new Framework::ImGuiSystem();
-    auto* animationSys = new Framework::AnimationsSystem();
+    auto* animationSys = new Framework::AnimationSystem();
 
     // Configure systems
     movementSys->SetEntityManager(&entityManager);

@@ -51,7 +51,7 @@
 #include "GraphicsSystemV2.h"
 
 //Animations
-#include "AnimationsSystem.h"
+#include "AnimationSystem.h"
 
 //Core
 #include "Core.h"

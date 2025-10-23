@@ -3,10 +3,10 @@
 
 namespace Framework {
 
-	class AnimationsSystem : public EngineSystem {
+	class AnimationSystem : public EngineSystem {
 	public:
-		AnimationsSystem();
-		virtual ~AnimationsSystem();
+		AnimationSystem();
+		virtual ~AnimationSystem();
 
 		// === CORE LIFECYCLE ===
 
