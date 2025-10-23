@@ -112,7 +112,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     Framework::EntityManager entityManager;
 
     // Create systems
-
     auto* windowSys = new Framework::WindowSystem();
     auto* graphicsSys = new Framework::GraphicsSystemV2();
     auto* inputSys = new Framework::InputSystem();
@@ -123,7 +122,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* spawner = new Framework::EntitySpawner();
     auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
     auto* imguiSys = new Framework::ImGuiSystem();
-
+    auto* animationSys = new Framework::AnimationsSystem();
 
     // Configure systems
     movementSys->SetEntityManager(&entityManager);
@@ -141,7 +140,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     collisionSys->SetInput(inputSys);
 
     // Add systems to engine
-    
     engine.AddSystem(windowSys);
     engine.AddSystem(spawner);
     engine.AddSystem(playerController);  // NEW! Add before movement
@@ -151,6 +149,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
     engine.AddSystem(projectileMovement);
+    engine.AddSystem(animationSys);
 
     LOG_INFO("CORE", "Systems added. Initializing engine...");
 

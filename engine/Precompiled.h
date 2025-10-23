@@ -50,6 +50,9 @@
 #include "RenderComponents.h"
 #include "GraphicsSystemV2.h"
 
+//Animations
+#include "AnimationsSystem.h"
+
 //Core
 #include "Core.h"
 
