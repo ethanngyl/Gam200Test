@@ -53,7 +53,7 @@ namespace Framework {
     void MainMenuSystem::Initialize()
     {
         if (!m_em || !m_gfx) {
-            std::cerr << "[MainMenu] ERROR: missing EntityManager or GraphicsSystemV2\n";
+            LOG_ERROR("ERROR", "[MainMenu] ERROR: missing EntityManager or GraphicsSystemV2");
             return;
         }
 
@@ -61,20 +61,11 @@ namespace Framework {
 
         ShaderHandle shader = rm.LoadShader("shaders/basic.vert", "shaders/basic.frag", "default");
         if (!shader.IsValid()) {
-            std::cerr << "[MainMenu] ERROR: failed to load default shader\n";
+            LOG_ERROR("ERROR", "[MainMenu] ERROR: failed to load default shader");
         }
 
         m_texPlay = rm.LoadTexture("assets/ui_play.png");
         m_texExit = rm.LoadTexture("assets/ui_exit.png");
-
-        m_matTitle = rm.CreateMaterial("ui_title_mat", shader);
-        if (auto* m = rm.GetMaterial(m_matTitle)) {
-            m->blendMode = BlendMode::Opaque;
-            m->depthTest = false;
-            m->depthWrite = false;
-            m->cullBackFace = false;
-            m->tint = glm::vec4(1.0f);
-        }
 
         m_matPlay = rm.CreateMaterial("ui_play_mat", shader);
         if (auto* m = rm.GetMaterial(m_matPlay)) {
@@ -99,7 +90,7 @@ namespace Framework {
         m_meshQuad = FindOrCreateQuad(rm);
 
         CreateMenuEntities();
-        std::cout << "[MainMenu] Initialized (images attached)\n";
+        LOG_INFO("InFo", "[MainMenu] Initialized (images attached)");
     }
 
     void MainMenuSystem::Update(float /*dt*/)
@@ -125,7 +116,7 @@ namespace Framework {
 
             if (hov && clicked) {
                 SetVisible(false);
-                std::cout << "[MainMenu] Play clicked -> hide menu\n";
+                LOG_INFO("InFo", "[MainMenu] Play clicked -> hide menu");
             }
         }
 
@@ -139,7 +130,7 @@ namespace Framework {
                 : glm::vec4(1.00f, 1.00f, 1.00f, 1.0f);
 
             if (hov && clicked) {
-                std::cout << "[MainMenu] Exit clicked -> quit\n";
+                LOG_INFO("InFo", "[MainMenu] Exit clicked -> quit");
                 Message q(Status::Quit);
                 CORE->BroadcastMessage(&q);
             }
@@ -167,22 +158,8 @@ namespace Framework {
     // ---------- entities ----------
     void MainMenuSystem::CreateMenuEntities()
     {
-        // Title bar 
-        {
-            m_titleBar = m_em->CreateEntity();
-            auto& tr = m_em->AddComponent<Transform>(m_titleBar, Vector2D(0.0f, 0.62f));
-            tr.scale = Vector2D(1.4f, 0.2f);
-
-            auto& r = m_em->AddComponent<Renderable>(m_titleBar);
-            r.mesh = m_meshQuad;
-            r.material = m_matTitle;
-            r.layer = 0;
-            r.orderInLayer = 0;
-            r.visible = true;
-            r.tint = glm::vec4(0.12f, 0.14f, 0.20f, 1.0f);
-        }
-
-        // Play 
+        
+        // Play Button 
         {
             m_btnPlay = m_em->CreateEntity();
             auto& tr = m_em->AddComponent<Transform>(m_btnPlay, Vector2D(0.0f, 0.20f));
@@ -197,7 +174,7 @@ namespace Framework {
             r.tint = glm::vec4(1.0f); 
         }
 
-        // Exit 
+        // Exit Button
         {
             m_btnExit = m_em->CreateEntity();
             auto& tr = m_em->AddComponent<Transform>(m_btnExit, Vector2D(0.0f, -0.15f));
