@@ -122,7 +122,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* mathSys = new Framework::MathTestSystem();
     auto* movementSys = new Framework::MovementSystem();
     auto* projectileMovement = new Framework::ProjectileMovementSystem();
-    auto* spawner = new Framework::EntitySpawner();
+ //   auto* spawner = new Framework::EntitySpawner();
     auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
     auto* imguiSys = new Framework::ImGuiSystem();
     auto* mainMenu = new Framework::MainMenuSystem();
@@ -134,9 +134,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     projectileMovement->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
     collisionSys->SetEntityManager(&entityManager);
-    spawner->SetEntityManager(&entityManager);
+ //  spawner->SetEntityManager(&entityManager);
 
-    playerController->SetEntitySpawner(spawner);
+ //   playerController->SetEntitySpawner(spawner);
     playerController->SetEntityManager(&entityManager);
     playerController->SetInputSystem(inputSys);
 
@@ -148,7 +148,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     graphicsSys->Initialize();
     imguiSys->SetWindow(windowSys->GetWindow());
     imguiSys->SetEntityManager(&entityManager);  
-    imguiSys->SetEntitySpawner(spawner);
+ //   imguiSys->SetEntitySpawner(spawner);
     mainMenu->Initialize();
 
 
@@ -159,7 +159,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     // --- Add systems 
     engine.AddSystem(windowSys);
-    engine.AddSystem(spawner);
+  //  engine.AddSystem(spawner);
     engine.AddSystem(inputSys);          
     engine.AddSystem(playerController);
     engine.AddSystem(movementSys);
@@ -188,11 +188,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     LOG_INFO("CORE", "Engine initialized. Setting up game...");
 
     // Setup game
-    SetupGame(spawner);
+  //  SetupGame(spawner);
 
     // Spawn player and give controller access to it
-    Framework::Entity player = spawner->SpawnPlayer(Framework::Vector2D(0.0f, -0.5f));
-    playerController->SetPlayerEntity(player);  // NEW!
+  //  Framework::Entity player = spawner->SpawnPlayer(Framework::Vector2D(0.0f, -0.5f));
+  //  playerController->SetPlayerEntity(player);  // NEW!
 
     std::cout << "\n=== CONTROLS ===\n";
     std::cout << "WASD/Arrows: Move player\n";
