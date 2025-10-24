@@ -40,7 +40,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // Initialize debug tools
     eng::debug::LogConfig logCfg;
     logCfg.level = eng::debug::LogLevel::Info;
-    logCfg.filePath = "engine.log";
+    logCfg.filePath = "asserts/engine.log";
     logCfg.useConsole = true;
     logCfg.useFile = true;
     logCfg.usePlatformOutput = true;
@@ -130,16 +130,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     playerController->SetWindow(windowSys->GetWindow());
 
     LOG_INFO("CORE", "Engine initialized. Starting game loop...");
-
-    std::cout << "\n=== CONTROLS ===\n";
-    std::cout << "WASD/Arrows: Move player\n";
-    std::cout << "SPACE: Shoot up\n";
-    std::cout << "LEFT SHIFT: Shoot down\n";
-    std::cout << "LEFT MOUSE: Shoot toward mouse\n";
-    std::cout << "E: Spawn enemy (debug)\n";
-    std::cout << "Q: Spawn obstacle (debug)\n";
-    std::cout << "R: Spawn pickup (debug)\n";
-    std::cout << "================\n\n";
 
     // Run game
     engine.GameLoop();
