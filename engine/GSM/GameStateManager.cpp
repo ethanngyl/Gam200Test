@@ -23,6 +23,21 @@ namespace Framework {
     {
     }
 
+    void SetupGame(Framework::EntitySpawner* spawner)
+    {
+        LOG_INFO("CORE", "=== Setting up game ===");
+
+        // Note: Player is spawned separately so we can get its Entity ID
+
+        // Spawn some initial enemies
+        spawner->SpawnEnemyWave(5, 0.6f);
+
+        // Spawn walls
+        spawner->SpawnObstacle(Framework::Vector2D(-1.8f, 0.0f), Framework::Vector2D(0.1f, 2.0f));
+        spawner->SpawnObstacle(Framework::Vector2D(1.8f, 0.0f), Framework::Vector2D(0.1f, 2.0f));
+
+        LOG_INFO("CORE", "Game setup complete!");
+    }
     void GameStateManager::Initialize()
     {
         LOG_INFO("CORE", "[GSM] Initializing Game State Manager...");
@@ -153,31 +168,12 @@ namespace Framework {
 
             case GameState::Level1:
                 LOG_INFO("CORE", "[GSM] Entering Level1");
-                
+
                 if (!m_entitySpawner || !m_entityManager) {
                     LOG_ERROR("ERROR", "[GSM] EntitySpawner or EntityManager not set!");
                     break;
                 }
 
-                
-
-                // Spawn initial enemies
-                m_entitySpawner->SpawnEnemyWave(5, 0.6f);
-                
-                // Spawn walls
-                Entity wall1 = m_entitySpawner->SpawnObstacle(
-                    Vector2D(-1.8f, 0.0f), 
-                    Vector2D(0.1f, 2.0f)
-                );
-                Entity wall2 = m_entitySpawner->SpawnObstacle(
-                    Vector2D(1.8f, 0.0f), 
-                    Vector2D(0.1f, 2.0f)
-                );
-                
-                m_stateEntities.push_back(wall1);
-                m_stateEntities.push_back(wall2);
-
-                LOG_INFO("CORE", "[GSM] Level1 setup complete");
                 break;
         }
     }
