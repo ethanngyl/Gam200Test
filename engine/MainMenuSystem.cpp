@@ -1,11 +1,11 @@
 // -----------------------------------------------------------------------------
-// MainMenuSystem.cpp
+// MainMenuSystem.cpp (Updated for GSM Integration)
 // -----------------------------------------------------------------------------
 
 #include "Precompiled.h"
 #include "MainMenuSystem.h"
-#include "Component.h"           // Transform
-#include "RenderComponents.h"    // Renderable
+#include "Component.h"
+#include "RenderComponents.h"
 #include "Message.h"
 #include "Core.h"
 
@@ -105,7 +105,7 @@ namespace Framework {
         const bool clicked = (mouseDown && !m_lastMouseDown);
         m_lastMouseDown = mouseDown;
 
-        // --- PLAY ---
+        // --- PLAY BUTTON ---
         if (m_em->HasComponent<Transform>(m_btnPlay) && m_em->HasComponent<Renderable>(m_btnPlay)) {
             auto& tr = m_em->GetComponent<Transform>(m_btnPlay);
             auto& r = m_em->GetComponent<Renderable>(m_btnPlay);
@@ -115,12 +115,22 @@ namespace Framework {
                 : glm::vec4(1.00f, 1.00f, 1.00f, 1.0f);
 
             if (hov && clicked) {
-                SetVisible(false);
-                LOG_INFO("InFo", "[MainMenu] Play clicked -> hide menu");
+                LOG_INFO("InFo", "[MainMenu] Play clicked!");
+
+
+                // NEW: Trigger callback to GSM
+                if (m_onPlayClicked) {
+                    m_onPlayClicked();
+
+                }
+                else {
+                    // Fallback: just hide menu (old behavior)
+                    SetVisible(false);
+                }
             }
         }
 
-        // --- EXIT ---
+        // --- EXIT BUTTON ---
         if (m_em->HasComponent<Transform>(m_btnExit) && m_em->HasComponent<Renderable>(m_btnExit)) {
             auto& tr = m_em->GetComponent<Transform>(m_btnExit);
             auto& r = m_em->GetComponent<Renderable>(m_btnExit);
@@ -155,10 +165,11 @@ namespace Framework {
         setVis(m_btnExit, v);
     }
 
+
+
     // ---------- entities ----------
     void MainMenuSystem::CreateMenuEntities()
     {
-        
         // Play Button 
         {
             m_btnPlay = m_em->CreateEntity();
@@ -171,7 +182,7 @@ namespace Framework {
             r.layer = 0;
             r.orderInLayer = 1;
             r.visible = true;
-            r.tint = glm::vec4(1.0f); 
+            r.tint = glm::vec4(1.0f);
         }
 
         // Exit Button

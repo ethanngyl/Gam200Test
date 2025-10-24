@@ -1,22 +1,7 @@
 ﻿/**
 ===============================================================================
- File:           main.cpp (Updated for GraphicsSystemV2)
- Author:         ETHAN NG YONG LE
- Email:          n.ethanyongle@digipen.edu
- Date:           2025-09-30
- Modified:       2025-10-07 (Graphics System V2 Integration)
- ------------------------------------------------------------------------------
-
-  Design notes:
-  Sets up the game engine, creates systems and entities, runs the main loop,
- * and handles cleanup. Includes debug features like memory leak detection
- * and crash logging in debug builds.
-
-  CHANGES FOR GRAPHICS SYSTEM V2:
-  - Replaced GraphicsSystem with GraphicsSystemV2
-  - Added window pointer passing to graphics system
-  - Kept backward compatibility with Sprite components
-  - Added example of using new Renderable component (commented out)
+ File:           main.cpp (Updated with GameStateManager)
+ Description:    Main entry point with GSM integration
 ===============================================================================
  */
 
@@ -31,50 +16,7 @@
 #include "ProjectileSystem.h"
 #include "ImguiSystem.h"
 #include "MainMenuSystem.h"
-
- /**
-  * @brief Windows application entry point
-  * @param hInstance Handle to current application instance
-  * @param hPrevInstance Always NULL in modern Windows
-  * @param lpCmdLine Command line arguments
-  * @param nShowCmd Window display mode
-  * @return Exit code (0 for success)
-  *
-  * Initializes:
-  * - Debug console and memory leak detection (debug builds only)
-  * - Logging and crash reporting systems
-  * - Core engine and all subsystems
-  * - ECS entities for demonstration
-  *
-  * Execution flow:
-  * 1. Debug setup (console, heap tracking)
-  * 2. Initialize logging and crash handlers
-  * 3. Create and wire up engine systems
-  * 4. Initialize all systems
-  * 5. Create test entities (triangle, quad)
-  * 6. Run game loop until quit
-  * 7. Cleanup and shutdown
-  */
-
-void SetupGame(Framework::EntitySpawner* spawner)
-{
-    LOG_INFO("CORE", "=== Setting up game ===");
-
-    // Note: Player is spawned separately so we can get its Entity ID
-
-    // Spawn some initial enemies
-    spawner->SpawnEnemyWave(5, 0.6f);
-
-    // Spawn walls
-    spawner->SpawnObstacle(Framework::Vector2D(-1.8f, 0.0f), Framework::Vector2D(0.1f, 2.0f));
-    spawner->SpawnObstacle(Framework::Vector2D(1.8f, 0.0f), Framework::Vector2D(0.1f, 2.0f));
-
-    LOG_INFO("CORE", "Game setup complete!");
-}
-
-// ============================================================================
-// MAIN ENTRY POINT
-// ============================================================================
+#include "GSM/GameStateManager.h"  
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
@@ -114,7 +56,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     Framework::EntityManager entityManager;
 
     // Create systems
-
     auto* windowSys = new Framework::WindowSystem();
     auto* graphicsSys = new Framework::GraphicsSystemV2();
     auto* inputSys = new Framework::InputSystem();
@@ -122,77 +63,72 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* mathSys = new Framework::MathTestSystem();
     auto* movementSys = new Framework::MovementSystem();
     auto* projectileMovement = new Framework::ProjectileMovementSystem();
- //   auto* spawner = new Framework::EntitySpawner();
-    auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
+    auto* spawner = new Framework::EntitySpawner();  
+    auto* playerController = new Framework::PlayerControllerSystem();
     auto* imguiSys = new Framework::ImGuiSystem();
     auto* mainMenu = new Framework::MainMenuSystem();
+    auto* gsm = new Framework::GameStateManager();  
 
-
-
-    // --- Wire dependencies
+    // --- Wire dependencies ---
     movementSys->SetEntityManager(&entityManager);
     projectileMovement->SetEntityManager(&entityManager);
     graphicsSys->SetEntityManager(&entityManager);
     collisionSys->SetEntityManager(&entityManager);
- //  spawner->SetEntityManager(&entityManager);
+    spawner->SetEntityManager(&entityManager); 
 
- //   playerController->SetEntitySpawner(spawner);
     playerController->SetEntityManager(&entityManager);
     playerController->SetInputSystem(inputSys);
 
     movementSys->SetInputSystem(inputSys);
     collisionSys->SetInput(inputSys);
 
+    // Window & Graphics
     windowSys->Initialize();
     graphicsSys->SetWindow(windowSys->GetWindow());
     graphicsSys->Initialize();
+
+    // ImGui
     imguiSys->SetWindow(windowSys->GetWindow());
-    imguiSys->SetEntityManager(&entityManager);  
- //   imguiSys->SetEntitySpawner(spawner);
-    mainMenu->Initialize();
+    imguiSys->SetEntityManager(&entityManager);
+    imguiSys->SetEntitySpawner(spawner); 
 
-
-    // MainMenu 
+    // MainMenu
     mainMenu->SetEntityManager(&entityManager);
     mainMenu->SetGraphics(graphicsSys);
     mainMenu->SetWindow(windowSys->GetWindow());
+    mainMenu->Initialize();
 
-    // --- Add systems 
+    // NEW: GameStateManager setup
+    gsm->SetEntityManager(&entityManager);
+    gsm->SetMainMenuSystem(mainMenu);
+    gsm->SetEntitySpawner(spawner);
+    gsm->SetConfigPath("assets/game_config.txt");  
+
+    // NEW: Connect MainMenu Play button to GSM
+    mainMenu->SetOnPlayCallback([gsm]() {
+        gsm->ChangeState(Framework::GameState::Level1);
+        });
+
+    // --- Add systems to engine ---
     engine.AddSystem(windowSys);
-  //  engine.AddSystem(spawner);
-    engine.AddSystem(inputSys);          
+    engine.AddSystem(gsm);                
+    engine.AddSystem(inputSys);
+    engine.AddSystem(spawner);        
     engine.AddSystem(playerController);
     engine.AddSystem(movementSys);
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
     engine.AddSystem(projectileMovement);
-    engine.AddSystem(mainMenu);           
+    engine.AddSystem(mainMenu);
     engine.AddSystem(graphicsSys);
     engine.AddSystem(imguiSys);
 
-    // --- Initialize all
+    // --- Initialize all systems ---
     engine.Initialize();
 
     playerController->SetWindow(windowSys->GetWindow());
 
-
-
-
-
-
-    LOG_INFO("CORE", "Systems added. Initializing engine...");
-
-  
-
-
-    LOG_INFO("CORE", "Engine initialized. Setting up game...");
-
-    // Setup game
-  //  SetupGame(spawner);
-
-    // Spawn player and give controller access to it
-  //  Framework::Entity player = spawner->SpawnPlayer(Framework::Vector2D(0.0f, -0.5f));
-  //  playerController->SetPlayerEntity(player);  // NEW!
+    LOG_INFO("CORE", "Engine initialized. Starting game loop...");
 
     std::cout << "\n=== CONTROLS ===\n";
     std::cout << "WASD/Arrows: Move player\n";
@@ -203,8 +139,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     std::cout << "Q: Spawn obstacle (debug)\n";
     std::cout << "R: Spawn pickup (debug)\n";
     std::cout << "================\n\n";
-
-    std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
 
     // Run game
     engine.GameLoop();
@@ -225,5 +159,3 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     return 0;
 }
-
-

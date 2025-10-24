@@ -1,15 +1,16 @@
 #pragma once
 // -----------------------------------------------------------------------------
-// MainMenuSystem.h
+// MainMenuSystem.h (Updated for GSM Integration)
 // Simple main menu (Play / Exit) using existing engine systems only.
-// Adds images to buttons via Material->albedoTexture, no engine changes.
+// Now supports GameStateManager callbacks for state transitions.
 // -----------------------------------------------------------------------------
 
 #include "Interface.h"
 #include "GraphicsSystemV2.h"
 #include "ECSEntityManager.h"
 #include "Vector2D.h"
-#include "ResourceManager.h"   // for handles & loading
+#include "ResourceManager.h"
+#include <functional>
 
 struct GLFWwindow;
 
@@ -35,6 +36,11 @@ namespace Framework {
 
         // Optional: enable/disable click actions (kept off by default)
         void SetInteractive(bool on) { m_interactive = on; }
+
+        // NEW: Set callback for when Play button is clicked
+        void SetOnPlayCallback(std::function<void()> callback) { m_onPlayClicked = callback; }
+
+
 
     private:
         void CreateMenuEntities();
@@ -66,10 +72,13 @@ namespace Framework {
         // State
         bool  m_visible = false;
         bool  m_lastMouseDown = false;
-        bool  m_interactive = false;   // keep buttons non-functional by default
+        bool  m_interactive = false;
 
         // Layout
         Vector2D m_btnSize = Vector2D(0.9f, 0.28f);
+
+        // NEW: Callback for state transitions
+        std::function<void()> m_onPlayClicked;
     };
 
 } // namespace Framework
