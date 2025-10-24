@@ -1,7 +1,16 @@
 ﻿/**
 ===============================================================================
- File:           main.cpp (Updated with GameStateManager)
- Description:    Main entry point with GSM integration
+ File:           main.cpp (Clean Version with EngineBootstrapper)
+ Author:         ETHAN NG YONG LE
+ Email:          n.ethanyongle@digipen.edu
+ Date:           2025-09-30
+ Modified:       2025-10-24 (Refactored with EngineBootstrapper)
+ ------------------------------------------------------------------------------
+
+  Design notes:
+  Ultra-clean entry point. All system initialization is delegated to
+  EngineBootstrapper, keeping main.cpp focused on high-level flow.
+
 ===============================================================================
  */
 
@@ -9,23 +18,23 @@
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #endif
-#include "Precompiled.h"
-#include "GraphicsSystemV2.h"
-#include "EntitySpawner.h"
-#include "PlayerManager.h"
-#include "ProjectileSystem.h"
-#include "ImguiSystem.h"
-#include "MainMenuSystem.h"
-#include "GSM/GameStateManager.h"  
 
+#include "Precompiled.h"
+#include "EngineBootstrapper/EngineBootstrapper.h"
+
+ /**
+  * @brief Windows application entry point
+  */
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
 #ifdef _DEBUG
+    // Setup debug console
     AllocConsole();
     freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
     freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
     freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
 
+    // Enable memory leak detection
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
     _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
@@ -37,7 +46,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     _CrtSetDbgFlag(flags);
 #endif
 
-    // Initialize debug tools
+    // ========================================================================
+    // INITIALIZE DEBUG TOOLS
+    // ========================================================================
     eng::debug::LogConfig logCfg;
     logCfg.level = eng::debug::LogLevel::Info;
     logCfg.filePath = "engine.log";
@@ -49,101 +60,81 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     eng::debug::PerfViewer::set_print_interval(1.0);
     eng::debug::CrashLogger::install_handlers();
 
-    LOG_INFO("CORE", "Starting Game Engine...");
+    LOG_INFO("CORE", "=================================================");
+    LOG_INFO("CORE", "     Starting StructSquad Game Engine");
+    LOG_INFO("CORE", "=================================================");
 
-    // Create core
+    // ========================================================================
+    // CREATE AND INITIALIZE ENGINE
+    // ========================================================================
     Framework::CoreEngine engine;
-    Framework::EntityManager entityManager;
 
-    // Create systems
-    auto* windowSys = new Framework::WindowSystem();
-    auto* graphicsSys = new Framework::GraphicsSystemV2();
-    auto* inputSys = new Framework::InputSystem();
-    auto* collisionSys = new Framework::CollisionSystem();
-    auto* mathSys = new Framework::MathTestSystem();
-    auto* movementSys = new Framework::MovementSystem();
-    auto* projectileMovement = new Framework::ProjectileMovementSystem();
-    auto* spawner = new Framework::EntitySpawner();  
-    auto* playerController = new Framework::PlayerControllerSystem();
-    auto* imguiSys = new Framework::ImGuiSystem();
-    auto* mainMenu = new Framework::MainMenuSystem();
-    auto* gsm = new Framework::GameStateManager();  
+    // Configure engine
+    Framework::EngineConfig config;
+    config.windowWidth = 1280;
+    config.windowHeight = 720;
+    config.windowTitle = "StructSquad";
+    config.gameConfigPath = "game_config.txt";
+    config.enableImGui = true;
+    config.enableDebugConsole = true;
 
-    // --- Wire dependencies ---
-    movementSys->SetEntityManager(&entityManager);
-    projectileMovement->SetEntityManager(&entityManager);
-    graphicsSys->SetEntityManager(&entityManager);
-    collisionSys->SetEntityManager(&entityManager);
-    spawner->SetEntityManager(&entityManager); 
+    // Initialize all systems via bootstrapper
+    if (!Framework::EngineBootstrapper::Initialize(engine, config)) {
+        LOG_ERROR("ERROR", "Failed to initialize engine!");
+        return -1;
+    }
 
-    playerController->SetEntityManager(&entityManager);
-    playerController->SetInputSystem(inputSys);
-
-    movementSys->SetInputSystem(inputSys);
-    collisionSys->SetInput(inputSys);
-
-    // Window & Graphics
-    windowSys->Initialize();
-    graphicsSys->SetWindow(windowSys->GetWindow());
-    graphicsSys->Initialize();
-
-    // ImGui
-    imguiSys->SetWindow(windowSys->GetWindow());
-    imguiSys->SetEntityManager(&entityManager);
-    imguiSys->SetEntitySpawner(spawner); 
-
-    // MainMenu
-    mainMenu->SetEntityManager(&entityManager);
-    mainMenu->SetGraphics(graphicsSys);
-    mainMenu->SetWindow(windowSys->GetWindow());
-
-    // NEW: GameStateManager setup
-    gsm->SetEntityManager(&entityManager);
-    gsm->SetMainMenuSystem(mainMenu);
-    gsm->SetEntitySpawner(spawner);
-    gsm->SetConfigPath("assets/game_config.txt");  
-
- 
-
-    // --- Add systems to engine ---
-    engine.AddSystem(windowSys);
-    engine.AddSystem(gsm);                
-    engine.AddSystem(inputSys);
-    engine.AddSystem(spawner);        
-    engine.AddSystem(playerController);
-    engine.AddSystem(movementSys);
-    engine.AddSystem(collisionSys);
-    engine.AddSystem(mathSys);
-    engine.AddSystem(projectileMovement);
-    engine.AddSystem(mainMenu);
-    engine.AddSystem(graphicsSys);
-    engine.AddSystem(imguiSys);
-
-    // NEW: Connect MainMenu Play button to GSM
-    mainMenu->SetOnPlayCallback([gsm]() {
-        gsm->ChangeState(Framework::GameState::Level1);
-        });
-
-    // --- Initialize all systems ---
+    // Initialize engine (calls Initialize() on all registered systems)
     engine.Initialize();
 
-    playerController->SetWindow(windowSys->GetWindow());
+    // ========================================================================
+    // DISPLAY CONTROLS
+    // ========================================================================
+    std::cout << "\n";
+    std::cout << "╔════════════════════════════════════════════════╗\n";
+    std::cout << "║              GAME CONTROLS                     ║\n";
+    std::cout << "╠════════════════════════════════════════════════╣\n";
+    std::cout << "║  WASD/Arrows  : Move player                    ║\n";
+    std::cout << "║  SPACE        : Shoot up                       ║\n";
+    std::cout << "║  LEFT SHIFT   : Shoot down                     ║\n";
+    std::cout << "║  LEFT MOUSE   : Shoot toward mouse             ║\n";
+    std::cout << "║                                                ║\n";
+    std::cout << "║  [DEBUG CONTROLS]                              ║\n";
+    std::cout << "║  E            : Spawn enemy                    ║\n";
+    std::cout << "║  Q            : Spawn obstacle                 ║\n";
+    std::cout << "║  R            : Spawn pickup                   ║\n";
+    std::cout << "║  F2           : Export performance CSV         ║\n";
+    std::cout << "║  ESC          : Quit                           ║\n";
+    std::cout << "╚════════════════════════════════════════════════╝\n";
+    std::cout << "\n";
 
-    LOG_INFO("CORE", "Engine initialized. Starting game loop...");
+    LOG_INFO("CORE", "Entering game loop...");
 
-    // Run game
+    // ========================================================================
+    // GAME LOOP
+    // ========================================================================
     engine.GameLoop();
 
+    // ========================================================================
+    // CLEANUP
+    // ========================================================================
     LOG_INFO("CORE", "Game loop ended. Cleaning up...");
 
-    // Cleanup
     engine.DestroySystems();
+
+    // Cleanup entity manager
+    delete Framework::EngineBootstrapper::GetEntityManager();
+
     glfwTerminate();
-    LOG_INFO("CORE", "Engine shutdown complete.");
+
+    LOG_INFO("CORE", "=================================================");
+    LOG_INFO("CORE", "     Engine shutdown complete");
+    LOG_INFO("CORE", "=================================================");
+
     eng::debug::Log::shutdown();
 
 #ifdef _DEBUG
-    std::cout << "Press Enter to close console...\n";
+    std::cout << "\nPress Enter to close console...\n";
     std::cin.get();
     FreeConsole();
 #endif
