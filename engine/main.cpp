@@ -123,6 +123,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* spawner = new Framework::EntitySpawner();
     auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
     auto* imguiSys = new Framework::ImGuiSystem();
+    auto* gridSys = new Framework::GridSystem();
 
 
     // Configure systems
@@ -151,6 +152,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
     engine.AddSystem(projectileMovement);
+    engine.AddSystem(gridSys);
 
     LOG_INFO("CORE", "Systems added. Initializing engine...");
 
@@ -186,6 +188,22 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     std::cout << "================\n\n";
 
     std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
+
+    Framework::GridConfig cfg;
+    cfg.cols = 32;
+    cfg.rows = 18;
+
+    // Option A: fit to screen
+    cfg.tileW = 4.0f / cfg.cols;       // 4 units wide (-2..2)
+    cfg.tileH = 2.0f / cfg.rows;       // 2 units high (-1..1)
+
+    // Center the grid so full board is visible
+    cfg.originWorld = { -((cfg.cols - 1) * cfg.tileW) * 0.5f,
+                        -((cfg.rows - 1) * cfg.tileH) * 0.5f };
+
+    cfg.diag = Framework::DiagonalRule::NoCutCorners;
+    Framework::GridAPI::Initialize(cfg);
+    Framework::BuildGridTiles(&entityManager);
 
     // Run game
     engine.GameLoop();
