@@ -40,7 +40,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // Initialize debug tools
     eng::debug::LogConfig logCfg;
     logCfg.level = eng::debug::LogLevel::Info;
-    logCfg.filePath = "asserts/engine.log";
+    logCfg.filePath = "engine.log";
     logCfg.useConsole = true;
     logCfg.useFile = true;
     logCfg.usePlatformOutput = true;
