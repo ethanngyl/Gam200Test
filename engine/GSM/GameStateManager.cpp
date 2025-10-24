@@ -8,6 +8,7 @@
 #include "Precompiled.h"
 #include "GameStateManager.h"
 #include "MainMenu.h"
+#include"level1.h"
 
  // ============================================================================
  // GLOBAL VARIABLE DEFINITIONS
@@ -51,13 +52,12 @@ void GSM_Update()
 
     case LEVEL_1:
         LOG_INFO("GSM", "  -> Level 1 state (NOT IMPLEMENTED)");
-        fpInitialize = []() { LOG_INFO("LEVEL2", "Initialize - TODO"); };
-        fpUpdate = []() {
-            next = mainMenu;
-            };
-        fpDraw = []() {};
-        fpFree = []() {};
-        fpUnload = []() {};
+        fpLoad = level1_Load;
+        fpInitialize = level1_Initialize;
+        fpUpdate = level1_Update;
+        fpDraw = level1_Draw;
+        fpFree = level1_Free;
+        fpUnload = level1_Unload;
         break;
 
     case LEVEL_2:
