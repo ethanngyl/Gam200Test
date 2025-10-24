@@ -150,4 +150,29 @@ namespace Framework {
         return new Mesh(vertices, GL_TRIANGLE_FAN, true);
     }
 
+    Mesh* CreateWireframeQuad() {
+        std::vector<float> vertices = {
+            // pos             // color           // texcoord
+            -0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // bottom left
+             0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,   1.0f, 0.0f, // bottom right
+             0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 1.0f,   1.0f, 1.0f, // top right
+            -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 1.0f,   0.0f, 1.0f  // top left
+        };
+
+        // Only the 4 edges - no diagonals!
+        std::vector<unsigned int> indices = {
+            0, 1,  // bottom edge
+            1, 2,  // right edge
+            2, 3,  // top edge
+            3, 0   // left edge
+        };
+
+        std::vector<int> attribSizes = { 3, 3, 2 };
+
+        Mesh* wireframe = new Mesh();
+        wireframe->Initialize(vertices, indices, attribSizes);
+        // Make sure this draws as GL_LINES, not GL_TRIANGLES
+        return wireframe;
+    }
+
 }  // namespace Framework

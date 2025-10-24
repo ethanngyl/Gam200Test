@@ -257,12 +257,14 @@ namespace Framework {
         MeshHandle quadMesh;
         MeshHandle lineMesh;
         MeshHandle circleMesh;
+        MeshHandle wireframeQMesh;
 
         // Default materials for primitives
         MaterialHandle triangleMaterial;
         MaterialHandle quadMaterial;
         MaterialHandle lineMaterial;
         MaterialHandle circleMaterial;
+        MaterialHandle wireframeQMaterial;
 
         // Debug rendering
         bool debugRenderingEnabled;

@@ -246,6 +246,7 @@ namespace Framework {
         Mesh* quad = CreateQuad();
         Mesh* line = CreateLine();
         Mesh* circle = CreateCircle(40, 0.5f);
+        Mesh* wireframeQ = CreateWireframeQuad();
 
         // Register meshes with resource manager
         triangleMesh = resourceManager.CreateMesh("triangle",
@@ -307,12 +308,33 @@ namespace Framework {
 
         circleMesh = resourceManager.CreateMesh("circle", circleVerts, {}, GL_TRIANGLE_FAN, true);
 
+        std::vector<float> wireframeQuadVerts = {
+            // Bottom left
+            -0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f,
+            // Bottom right
+             0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  1.0f, 0.0f,
+             // Top right
+              0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  1.0f, 1.0f,
+              // Top left
+              -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 1.0f,
+              // Close the loop
+              -0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f
+        };
+
+        wireframeQMesh = resourceManager.CreateMesh(
+            "wireframequad",
+            wireframeQuadVerts,
+            {},
+            GL_LINE_STRIP,  // ✅ LINE_STRIP = connected lines
+            true
+        );
+
         // Clean up temporary meshes
         delete triangle;
         delete quad;
         delete line;
         delete circle;
-
+        delete wireframeQ;
         std::cout << "Created " << 4 << " default meshes\n";
     }
 
@@ -350,6 +372,12 @@ namespace Framework {
         auto* circleMat = resourceManager.GetMaterial(circleMaterial);
         if (circleMat) {
             circleMat->tint = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+        }
+
+        wireframeQMaterial = resourceManager.CreateMaterial("wireframeq_mat", defaultShader);
+        auto* wireframeQMat = resourceManager.GetMaterial(wireframeQMaterial);
+        if (wireframeQMat) {
+            wireframeQMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
         }
 
         std::cout << "Created " << 5 << " default materials\n";
@@ -421,12 +449,14 @@ namespace Framework {
         legacyMeshMap["quad"] = quadMesh;
         legacyMeshMap["line"] = lineMesh;
         legacyMeshMap["circle"] = circleMesh;
+        legacyMeshMap["wireframequad"] = wireframeQMesh;
 
         // Map sprite names to materials
         legacyMaterialMap["triangle"] = triangleMaterial;
         legacyMaterialMap["quad"] = quadMaterial;
         legacyMaterialMap["line"] = lineMaterial;
         legacyMaterialMap["circle"] = circleMaterial;
+        legacyMaterialMap["wireframequad"] = wireframeQMaterial;
 
         std::cout << "Legacy material mappings created\n";
     }

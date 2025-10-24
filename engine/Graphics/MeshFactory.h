@@ -82,4 +82,6 @@ namespace Framework {
      */
     Mesh* CreateCircle(int segments, float radius);
 
+    Mesh* CreateWireframeQuad();
+
 } // namespace Framework
