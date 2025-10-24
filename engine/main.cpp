@@ -96,7 +96,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     mainMenu->SetEntityManager(&entityManager);
     mainMenu->SetGraphics(graphicsSys);
     mainMenu->SetWindow(windowSys->GetWindow());
-    mainMenu->Initialize();
 
     // NEW: GameStateManager setup
     gsm->SetEntityManager(&entityManager);
@@ -104,10 +103,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     gsm->SetEntitySpawner(spawner);
     gsm->SetConfigPath("assets/game_config.txt");  
 
-    // NEW: Connect MainMenu Play button to GSM
-    mainMenu->SetOnPlayCallback([gsm]() {
-        gsm->ChangeState(Framework::GameState::Level1);
-        });
+ 
 
     // --- Add systems to engine ---
     engine.AddSystem(windowSys);
@@ -122,6 +118,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     engine.AddSystem(mainMenu);
     engine.AddSystem(graphicsSys);
     engine.AddSystem(imguiSys);
+
+    // NEW: Connect MainMenu Play button to GSM
+    mainMenu->SetOnPlayCallback([gsm]() {
+        gsm->ChangeState(Framework::GameState::Level1);
+        });
 
     // --- Initialize all systems ---
     engine.Initialize();

@@ -163,6 +163,7 @@ namespace Framework {
                 LOG_INFO("CORE", "[GSM] Entering MainMenu");
                 if (m_mainMenuSystem) {
                     m_mainMenuSystem->SetVisible(true);
+
                 }
                 break;
 
@@ -174,6 +175,23 @@ namespace Framework {
                     break;
                 }
 
+                // Spawn initial enemies
+                m_entitySpawner->SpawnEnemyWave(5, 0.6f);
+
+                // Spawn walls
+                Entity wall1 = m_entitySpawner->SpawnObstacle(
+                    Vector2D(-1.8f, 0.0f),
+                    Vector2D(0.1f, 2.0f)
+                );
+                Entity wall2 = m_entitySpawner->SpawnObstacle(
+                    Vector2D(1.8f, 0.0f),
+                    Vector2D(0.1f, 2.0f)
+                );
+
+                m_stateEntities.push_back(wall1);
+                m_stateEntities.push_back(wall2);
+
+                LOG_INFO("CORE", "[GSM] Level1 setup complete");
                 break;
         }
     }
