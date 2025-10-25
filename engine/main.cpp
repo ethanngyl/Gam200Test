@@ -25,20 +25,21 @@ extern int current, previous, next;
 extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 
 // ============================================================================
-// ENGINE SYSTEMS (Global for easy access in state functions)
+// ENGINE SYSTEMS (Global pointers - initialized in InitializeEngineSystems)
 // ============================================================================
 namespace Global {
-    auto* entityManager = new Framework::EntityManager();
-    auto * windowSystem = new Framework::WindowSystem();
-    auto * graphicsSystem = new Framework::GraphicsSystemV2();
-    auto * inputSystem = new Framework::InputSystem();
-    auto * collisionSystem = new Framework::CollisionSystem();
-    auto * movementSystem = new Framework::MovementSystem();
-    auto * projectileSystem = new Framework::ProjectileMovementSystem();
-    auto * spawner = new Framework::EntitySpawner();
-    auto * playerController = new Framework::PlayerControllerSystem();
-    auto * imguiSystem = new Framework::ImGuiSystem();
-    auto * engine = new Framework::CoreEngine();
+    // Only declare pointers, do not allocate here
+    Framework::EntityManager* entityManager = nullptr;
+    Framework::WindowSystem* windowSystem = nullptr;
+    Framework::GraphicsSystemV2* graphicsSystem = nullptr;
+    Framework::InputSystem* inputSystem = nullptr;
+    Framework::CollisionSystem* collisionSystem = nullptr;
+    Framework::MovementSystem* movementSystem = nullptr;
+    Framework::ProjectileMovementSystem* projectileSystem = nullptr;
+    Framework::EntitySpawner* spawner = nullptr;
+    Framework::PlayerControllerSystem* playerController = nullptr;
+    Framework::ImGuiSystem* imguiSystem = nullptr;
+    Framework::CoreEngine* engine = nullptr;
 }
 
 // ============================================================================
@@ -58,7 +59,11 @@ void InitializeEngineSystems()
     Global::inputSystem = new Framework::InputSystem();
     Global::collisionSystem = new Framework::CollisionSystem();
     Global::movementSystem = new Framework::MovementSystem();
-
+    Global::projectileSystem = new Framework::ProjectileMovementSystem();
+    Global::spawner = new Framework::EntitySpawner();
+    Global::playerController = new Framework::PlayerControllerSystem();
+    Global::imguiSystem = new Framework::ImGuiSystem();
+    Global::engine = new Framework::CoreEngine();
 
     LOG_INFO("CORE", "[Init] Wiring system dependencies...");
 
@@ -95,6 +100,7 @@ void InitializeEngineSystems()
     LOG_INFO("CORE", "[Init] Adding systems to engine...");
 
     // Add systems to engine (order matters!)
+    // IMPORTANT: These systems will be deleted by engine->DestroySystems()
     Global::engine->AddSystem(Global::windowSystem);
     Global::engine->AddSystem(Global::inputSystem);
     Global::engine->AddSystem(Global::spawner);
@@ -115,13 +121,49 @@ void CleanupEngineSystems()
 {
     LOG_INFO("CORE", "[Cleanup] Destroying engine systems...");
 
+    // ========================================================================
+    // IMPORTANT: CoreEngine::DestroySystems() deletes all systems that were
+    // added via AddSystem(). We must NOT delete them again!
+    // 
+    // From Core.cpp line 189-196:
+    //   void CoreEngine::DestroySystems() {
+    //       for (unsigned i = 0; i < Systems.size(); ++i) {
+    //           delete Systems[Systems.size() - i - 1];  // Deletes here!
+    //       }
+    //       Systems.clear();
+    //   }
+    // ========================================================================
+
     if (Global::engine) {
+        // This will delete all systems added via AddSystem():
+        // - windowSystem, inputSystem, spawner, playerController,
+        // - movementSystem, collisionSystem, projectileSystem,
+        // - graphicsSystem, imguiSystem
         Global::engine->DestroySystems();
+
+        // Delete engine itself
+        delete Global::engine;
+        Global::engine = nullptr;
     }
 
-    delete Global::entityManager;
-    Global::entityManager = nullptr;
+    // Set all system pointers to nullptr (they're already deleted by engine)
+    Global::windowSystem = nullptr;
+    Global::inputSystem = nullptr;
+    Global::spawner = nullptr;
+    Global::playerController = nullptr;
+    Global::movementSystem = nullptr;
+    Global::collisionSystem = nullptr;
+    Global::projectileSystem = nullptr;
+    Global::graphicsSystem = nullptr;
+    Global::imguiSystem = nullptr;
 
+    // Only delete EntityManager (it was NOT added to engine)
+    if (Global::entityManager) {
+        delete Global::entityManager;
+        Global::entityManager = nullptr;
+    }
+
+    // Terminate GLFW
     glfwTerminate();
 
     LOG_INFO("CORE", "[Cleanup] Engine systems destroyed");
@@ -136,7 +178,9 @@ void UpdateEngineSystems()
 {
     // Engine systems are updated through the state's fpUpdate
     // But we need to handle input first
-    Global::inputSystem->Update(0.0f);
+    if (Global::inputSystem) {
+        Global::inputSystem->Update(0.0f);
+    }
 }
 
 // ============================================================================
@@ -183,7 +227,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // ========================================================================
     // INITIALIZE ENGINE
     // ========================================================================
-    Global::engine = new Framework::CoreEngine();
     InitializeEngineSystems();
 
     // ========================================================================
@@ -266,7 +309,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             }
 
             // Update core engine systems (movement, collision, etc.)
-            Global::engine->GameLoop();
+            if (Global::engine) {
+                Global::engine->GameLoop();
+            }
 
             // DRAW: State-specific rendering
             if (fpDraw) {
@@ -274,10 +319,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             }
 
             // Swap buffers and present
-            if (Global::windowSystem) {
-                Global::windowSystem->GetWindow();
+            if (Global::windowSystem && Global::windowSystem->GetWindow()) {
+                glfwSwapBuffers(Global::windowSystem->GetWindow());
             }
-
         }
 
         LOG_INFO("CORE", "[GSM] Exiting state loop");
@@ -313,7 +357,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     LOG_INFO("CORE", "GSM loop ended. Cleaning up...");
 
     CleanupEngineSystems();
-    delete Global::engine;
 
     LOG_INFO("CORE", "=================================================");
     LOG_INFO("CORE", "     Engine shutdown complete");
