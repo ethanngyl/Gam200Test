@@ -309,9 +309,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             }
 
             // Update core engine systems (movement, collision, etc.)
-            if (Global::engine) {
-                Global::engine->GameLoop();
-            }
+            //if (Global::engine) {
+            //    Global::engine->GameLoop();
+            //}
 
             // DRAW: State-specific rendering
             if (fpDraw) {

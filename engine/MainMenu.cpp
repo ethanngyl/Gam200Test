@@ -7,11 +7,16 @@
 
 #include "Precompiled.h"
 #include "MainMenu.h"
+#include "Input/Input.h"
+#include "GSM/GameStateList.h"
+#include "GSM/GameStateManager.h"
 
 // ============================================================================
 // MAIN MENU LIFECYCLE FUNCTIONS
 // ============================================================================
-
+namespace Global {
+    extern Framework::InputSystem* inputSystem;
+}
 void mainMenu_Load()
 {
     LOG_INFO("MENU", "=== Main Menu Load ===");
@@ -25,6 +30,12 @@ void mainMenu_Initialize()
 void mainMenu_Update()
 {
     LOG_INFO("MENU", "=== Main Menu Update ===");
+    if (Global::inputSystem && Global::inputSystem->IsKeyPressed(Framework::KEY_SPACE))
+    {
+        LOG_INFO("TEST", "Space pressed!");
+        next = LEVEL_1;
+
+    }
 }
 
 void mainMenu_Draw()
