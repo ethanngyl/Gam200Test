@@ -1,38 +1,56 @@
-/**
-
+﻿/**
 ===============================================================================
- File:           Core.cpp
- Author:         ETHAN NG YONG LE
- Email:          n.ethanyongle@digipen.edu
- Date:           2025-09-30
- Contribution:   100%
- ------------------------------------------------------------------------------
- 
-  Design notes:
-  This file implements the CoreEngine class which serves as the central
- * orchestrator for the game engine. It manages the main game loop, system
- * initialization and updates, message broadcasting, and frame timing.
+File: Core.cpp (Enhanced - Integration Version)
+Author: GE YONGQI
+-------------------------------------------------------------------------
+
+Improvements:
+- Integrate InitializeEngineSystems() into InitializeAllSystems()
+- Integrate CleanupEngineSystems() into Cleanup()
+- Implement ShouldWindowClose()
+- Implement UpdateSingleFrame()
 ===============================================================================
  */
- 
+
 #include "Precompiled.h"
 #include "Core.h"
 #include "MovementSystem.h"
+#include "CollisionSystem.h"
+#include "ProjectileSystem.h"        
+#include "ECSEntityManager.h"
+#include "EntitySpawner.h"
+#include "PlayerManager.h"           
+#include "ImguiSystem.h"            
+#include "WindowSystem.h"
+#include "GraphicsSystemV2.h"
+#include "Input.h"
+
+/*
 #include "PerfViewer.h"
 #include "Trace.h"
 #include "Perf.h"
 #include "Log.h"
 #include "CrashLogger.h"
-#include "ImguiSystem.h"
+*/
 
 namespace Framework
 {
     CoreEngine* CORE = nullptr;
 
     CoreEngine::CoreEngine()
+        : entityManager(nullptr)
+        , windowSystem(nullptr)
+        , graphicsSystem(nullptr)
+        , inputSystem(nullptr)
+        , collisionSystem(nullptr)
+        , movementSystem(nullptr)
+        , projectileSystem(nullptr)
+        , spawner(nullptr)
+        , playerController(nullptr)
+        , imguiSystem(nullptr)
+        , LastTime(0)
+        , GameActive(true)
     {
-        LastTime = 0;
-        GameActive = true;
         CORE = this;
     }
 
@@ -40,38 +58,218 @@ namespace Framework
     {
     }
 
-    void CoreEngine::Initialize()
+    // ========================================================================
+    // Initialize all systems with one click
+    // ========================================================================
+
+    bool CoreEngine::InitializeAllSystems()
     {
-        // 1. First initialize WindowSystem
-        for (auto system : Systems)
-        {
-            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
-            {
-                windowSystem->Initialize();
-            }
-        }
+        LOG_INFO("CORE", "================================================");
+        LOG_INFO("CORE", " CoreEngine: Initializing All Systems");
+        LOG_INFO("CORE", "================================================");
 
-        // 2. Get window handle
-        GLFWwindow* glfwWin = nullptr;
-        for (auto system : Systems)
-        {
-            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
-            {
-                glfwWin = windowSystem->GetWindow();
-                break;
-            }
-        }
+        try {
+            // Step 1: Create all systems
+            CreateAllSystems();
 
-        // 3. Initialize all other systems
-        for (auto system : Systems)
-        {
-            if (dynamic_cast<WindowSystem*>(system) == nullptr)
-            {
-                system->Initialize();
-            }
+            // Step 2: Connect system dependencies
+            WireSystemDependencies();
+
+            // Step 3: Initialize key systems
+            InitializeCriticalSystems();
+
+            // Step 4: Add the system to the engine
+            AddSystemsToEngine();
+
+            // Step 5: Initialize the remaining systems
+            Initialize();
+
+            LOG_INFO("CORE", "================================================");
+            LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
+            LOG_INFO("CORE", "================================================");
+
+            return true;
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR("CORE", "Failed to initialize systems: %s", e.what());
+            return false;
         }
     }
 
+    void CoreEngine::CreateAllSystems()
+    {
+        LOG_INFO("CORE", "[1/5] Creating engine systems...");
+
+        entityManager = new EntityManager();
+        windowSystem = new WindowSystem();
+        graphicsSystem = new GraphicsSystemV2();
+        inputSystem = new InputSystem();
+        collisionSystem = new CollisionSystem();
+        movementSystem = new MovementSystem();
+        projectileSystem = new ProjectileMovementSystem();
+        spawner = new EntitySpawner();
+        playerController = new PlayerControllerSystem();
+        imguiSystem = new ImGuiSystem();
+
+        LOG_INFO("CORE", "  ✓ All systems created");
+    }
+
+    void CoreEngine::WireSystemDependencies()
+    {
+        LOG_INFO("CORE", "[2/5] Wiring system dependencies...");
+
+        // Wire EntityManager
+        movementSystem->SetEntityManager(entityManager);
+        projectileSystem->SetEntityManager(entityManager);
+        graphicsSystem->SetEntityManager(entityManager);
+        collisionSystem->SetEntityManager(entityManager);
+        spawner->SetEntityManager(entityManager);
+        playerController->SetEntityManager(entityManager);
+        imguiSystem->SetEntityManager(entityManager);
+
+        // Wire InputSystem
+        playerController->SetInputSystem(inputSystem);
+        movementSystem->SetInputSystem(inputSystem);
+        collisionSystem->SetInput(inputSystem);
+
+        LOG_INFO("CORE", "Dependencies wired");
+    }
+
+    void CoreEngine::InitializeCriticalSystems()
+    {
+        LOG_INFO("CORE", "[3/5] Initializing critical systems...");
+
+        // Initialize WindowSystem first
+        windowSystem->Initialize();
+        LOG_INFO("CORE", "WindowSystem initialized");
+
+        // Set window dependencies
+        graphicsSystem->SetWindow(windowSystem->GetWindow());
+        imguiSystem->SetWindow(windowSystem->GetWindow());
+        imguiSystem->SetEntitySpawner(spawner);
+        playerController->SetWindow(windowSystem->GetWindow());
+        LOG_INFO("CORE", "Window dependencies set");
+
+        // Initialize GraphicsSystem
+        graphicsSystem->Initialize();
+        LOG_INFO("CORE", "GraphicsSystem initialized");
+    }
+
+    void CoreEngine::AddSystemsToEngine()
+    {
+        LOG_INFO("CORE", "[4/5] Adding systems to engine...");
+
+        // Add in specific order
+        AddSystem(windowSystem);
+        AddSystem(inputSystem);
+        AddSystem(spawner);
+        AddSystem(playerController);
+        AddSystem(movementSystem);
+        AddSystem(collisionSystem);
+        AddSystem(projectileSystem);
+        AddSystem(graphicsSystem);
+        AddSystem(imguiSystem);
+
+        LOG_INFO("CORE", "%zu systems added", Systems.size());
+    }
+
+    // ========================================================================
+    // Original Initialize (initialize the remaining systems)
+    // ========================================================================
+
+    void CoreEngine::Initialize()
+    {
+        LOG_INFO("CORE", "[5/5] Initializing remaining systems...");
+
+        // WindowSystem and GraphicsSystem already initialized
+        // Just initialize the others
+        for (auto system : Systems)
+        {
+            // Skip already initialized systems
+            if (dynamic_cast<WindowSystem*>(system) != nullptr ||
+                dynamic_cast<GraphicsSystemV2*>(system) != nullptr)
+            {
+                continue;
+            }
+
+            system->Initialize();
+        }
+
+        LOG_INFO("CORE", "All systems initialized");
+    }
+
+    // ========================================================================
+    // Clean all systems
+   // ========================================================================
+
+    void CoreEngine::Cleanup()
+    {
+        LOG_INFO("CORE", "================================================");
+        LOG_INFO("CORE", " CoreEngine: Cleaning Up");
+        LOG_INFO("CORE", "================================================");
+
+        // Destroy all systems added to engine
+        DestroySystems();
+
+        // Clear system pointers
+        windowSystem = nullptr;
+        inputSystem = nullptr;
+        spawner = nullptr;
+        playerController = nullptr;
+        movementSystem = nullptr;
+        collisionSystem = nullptr;
+        projectileSystem = nullptr;
+        graphicsSystem = nullptr;
+        imguiSystem = nullptr;
+
+        // Delete EntityManager (not added to engine)
+        if (entityManager) {
+            delete entityManager;
+            entityManager = nullptr;
+        }
+
+        // Terminate GLFW
+        glfwTerminate();
+
+        LOG_INFO("CORE", "Cleanup complete");
+    }
+
+    // ========================================================================
+    // Check if the window is closed
+    // ========================================================================
+
+    bool CoreEngine::ShouldWindowClose() const
+    {
+        if (!windowSystem) return false;
+        return windowSystem->ShouldClose();
+    }
+
+    // ========================================================================
+    // Single frame update (GSM friendly)
+    // ========================================================================
+
+    void CoreEngine::UpdateSingleFrame(float dt)
+    {
+        // Check if window should close
+        if (ShouldWindowClose()) {
+            GameActive = false;
+            Message quitMsg(Status::Quit);
+            BroadcastMessage(&quitMsg);
+            return;
+        }
+
+        // Update all systems
+        for (unsigned i = 0; i < Systems.size(); ++i)
+        {
+            Systems[i]->Update(dt);
+        }
+    }
+
+    // ========================================================================
+    // Original functionality (retained)
+    // ========================================================================
+
+    /*
     void CoreEngine::GameLoop()
     {
         LastTime = timeGetTime();
@@ -80,41 +278,28 @@ namespace Framework
         fps.set_enable_logging(true);
 
         // Attach window title updater
-        for (auto system : Systems)
-        {
-            if (auto windowSystem = dynamic_cast<WindowSystem*>(system))
-            {
-                GLFWwindow* win = windowSystem->GetWindow();
-                fps.set_title_updater([win](const char* title) {
-                    glfwSetWindowTitle(win, title);
-                    });
-            }
+        if (windowSystem && windowSystem->GetWindow()) {
+            GLFWwindow* win = windowSystem->GetWindow();
+            fps.set_title_updater([win](const char* title) {
+                glfwSetWindowTitle(win, title);
+                });
         }
 
-        // Find ImGui and Graphics systems
+        // Find ImGui system
         ImGuiSystem* imguiSys = nullptr;
-        GraphicsSystemV2* graphicsSys = nullptr;
-
-        for (auto system : Systems)
-        {
+        for (auto system : Systems) {
             if (auto imgui = dynamic_cast<ImGuiSystem*>(system)) {
                 imguiSys = imgui;
-            }
-            if (auto graphics = dynamic_cast<GraphicsSystemV2*>(system)) {
-                graphicsSys = graphics;
+                break;
             }
         }
 
         while (GameActive)
         {
-            // Check if window should close
-            for (auto system : Systems) {
-                if (auto windowSystem = dynamic_cast<WindowSystem*>(system)) {
-                    if (windowSystem->ShouldClose()) {
-                        Message quitMsg(Status::Quit);
-                        BroadcastMessage(&quitMsg);
-                    }
-                }
+            // Check window close
+            if (ShouldWindowClose()) {
+                Message quitMsg(Status::Quit);
+                BroadcastMessage(&quitMsg);
             }
 
             // Calculate delta time
@@ -126,30 +311,20 @@ namespace Framework
             // Begin perf frame
             eng::debug::PerfViewer::begin_frame();
 
-            // ========================================================
             // Update all systems
-            // ========================================================
             for (unsigned i = 0; i < Systems.size(); ++i)
             {
-                eng::debug::Subsystem tag =
-                    (i == 0) ? eng::debug::Subsystem::Graphics :
-                    (i == 1) ? eng::debug::Subsystem::Gameplay :
-                    eng::debug::Subsystem::Other;
-
                 Systems[i]->Update(dt);
-                (void)tag;
             }
 
-            // ========================================================
-            // FIXED: Render ImGui AFTER all systems (OUTSIDE loop)
-            // ========================================================
+            // Render ImGui
             if (imguiSys) {
                 imguiSys->Render();
             }
 
-            // Swap buffers AFTER ImGui
-            if (graphicsSys) {
-                graphicsSys->RenderImGui();
+            // Swap buffers
+            if (graphicsSystem) {
+                graphicsSystem->RenderImGui();
             }
 
             // End perf frame
@@ -158,18 +333,16 @@ namespace Framework
             // FPS counter
             fps.tick_with_dt(static_cast<double>(dt));
 
-            // CSV export (F2)
-            if (GetAsyncKeyState(VK_F2) & 0x0001)
-            {
+            // Debug keys
+            if (GetAsyncKeyState(VK_F2) & 0x0001) {
                 eng::debug::PerfViewer::export_csv("perf_recent.csv");
             }
-
-            // Crash test (F3)
             if (GetAsyncKeyState(VK_F3) & 0x0001) {
                 eng::debug::CrashLogger::force_crash_for_test();
             }
         }
     }
+    */
 
     void CoreEngine::BroadcastMessage(Message* message)
     {
@@ -191,9 +364,6 @@ namespace Framework
         {
             delete Systems[Systems.size() - i - 1];
         }
-
-
-
         Systems.clear();
     }
 }

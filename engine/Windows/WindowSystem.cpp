@@ -21,7 +21,7 @@ Details:
 - Checks for window close events and polls system events.
 
 Notes:
-- Default window size: 1600×800.
+- Default window size: 1600?00.
 - Default title: "Struct Squad Game Engine".
 - GLFW must be initialized successfully before creating a window.
 
