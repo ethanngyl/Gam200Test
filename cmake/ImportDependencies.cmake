@@ -134,6 +134,128 @@ macro(import_stb)
     endif()
 endmacro()
 
+# Macro to import FMOD (Windows only)
+macro(import_fmod)
+    if(NOT TARGET fmod)
+        message(STATUS "=== Importing FMOD ===")
+        
+        # Search for FMOD in library folder
+        set(FMOD_SEARCH_PATHS
+            "${CMAKE_SOURCE_DIR}/library/FMOD Studio API Windows"
+            "${CMAKE_SOURCE_DIR}/library/fmodstudioapi20309windows"
+        )
+        
+        # Allow user override
+        set(FMOD_ROOT "" CACHE PATH "Path to FMOD installation directory")
+        
+        # If user didn't specify, search for it
+        if(NOT FMOD_ROOT OR NOT EXISTS "${FMOD_ROOT}")
+            message(STATUS "FMOD_ROOT not set, searching in library folder...")
+            foreach(SEARCH_PATH ${FMOD_SEARCH_PATHS})
+                if(EXISTS "${SEARCH_PATH}")
+                    set(FMOD_ROOT "${SEARCH_PATH}")
+                    message(STATUS "Found FMOD at: ${FMOD_ROOT}")
+                    break()
+                endif()
+            endforeach()
+        endif()
+        
+        if(NOT FMOD_ROOT OR NOT EXISTS "${FMOD_ROOT}")
+            message(WARNING "FMOD not found. Searched in: ${CMAKE_SOURCE_DIR}/library/")
+            add_library(fmod INTERFACE)
+            set(FMOD_FOUND FALSE CACHE BOOL "FMOD library found" FORCE)
+            return()
+        endif()
+        
+        # Windows paths
+        set(FMOD_CORE_LIB_DIR "${FMOD_ROOT}/api/core/lib/x64")
+        set(FMOD_STUDIO_LIB_DIR "${FMOD_ROOT}/api/studio/lib/x64")
+        set(FMOD_CORE_INCLUDE_DIR "${FMOD_ROOT}/api/core/inc")
+        set(FMOD_STUDIO_INCLUDE_DIR "${FMOD_ROOT}/api/studio/inc")
+        
+        message(STATUS "Library directory: ${FMOD_CORE_LIB_DIR}")
+        message(STATUS "Include directory: ${FMOD_CORE_INCLUDE_DIR}")
+        
+        # Check directories exist
+        if(NOT EXISTS "${FMOD_CORE_LIB_DIR}")
+            message(FATAL_ERROR "FMOD library directory not found: ${FMOD_CORE_LIB_DIR}")
+        endif()
+        
+        if(NOT EXISTS "${FMOD_CORE_INCLUDE_DIR}")
+            message(FATAL_ERROR "FMOD include directory not found: ${FMOD_CORE_INCLUDE_DIR}")
+        endif()
+        
+        # Find FMOD Core libraries
+        find_library(FMOD_LIBRARY
+            NAMES fmod_vc fmod
+            PATHS ${FMOD_CORE_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        find_library(FMODL_LIBRARY
+            NAMES fmodL_vc fmodL
+            PATHS ${FMOD_CORE_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        if(NOT FMOD_LIBRARY)
+            message(FATAL_ERROR "FMOD library not found in: ${FMOD_CORE_LIB_DIR}")
+        endif()
+        
+        # Create FMOD Core library
+        add_library(fmod INTERFACE)
+        target_include_directories(fmod INTERFACE "${FMOD_CORE_INCLUDE_DIR}")
+        
+        if(FMODL_LIBRARY)
+            target_link_libraries(fmod INTERFACE 
+                $<$<CONFIG:Debug>:${FMODL_LIBRARY}>
+                $<$<NOT:$<CONFIG:Debug>>:${FMOD_LIBRARY}>
+            )
+        else()
+            target_link_libraries(fmod INTERFACE ${FMOD_LIBRARY})
+        endif()
+        
+        set(FMOD_FOUND TRUE CACHE BOOL "FMOD library found" FORCE)
+        message(STATUS " FMOD Core imported successfully!")
+        message(STATUS "  Release: ${FMOD_LIBRARY}")
+        if(FMODL_LIBRARY)
+            message(STATUS "  Debug: ${FMODL_LIBRARY}")
+        endif()
+        
+        # Find FMOD Studio libraries
+        find_library(FMOD_STUDIO_LIBRARY
+            NAMES fmodstudio_vc fmodstudio
+            PATHS ${FMOD_STUDIO_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        find_library(FMOD_STUDIOL_LIBRARY
+            NAMES fmodstudioL_vc fmodstudioL
+            PATHS ${FMOD_STUDIO_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        if(FMOD_STUDIO_LIBRARY)
+            add_library(fmod_studio INTERFACE)
+            target_include_directories(fmod_studio INTERFACE "${FMOD_STUDIO_INCLUDE_DIR}")
+            
+            if(FMOD_STUDIOL_LIBRARY)
+                target_link_libraries(fmod_studio INTERFACE 
+                    $<$<CONFIG:Debug>:${FMOD_STUDIOL_LIBRARY}>
+                    $<$<NOT:$<CONFIG:Debug>>:${FMOD_STUDIO_LIBRARY}>
+                    fmod
+                )
+            else()
+                target_link_libraries(fmod_studio INTERFACE ${FMOD_STUDIO_LIBRARY} fmod)
+            endif()
+            
+            message(STATUS "FMOD Studio imported successfully!")
+        endif()
+        
+        message(STATUS "=== FMOD Import Complete ===")
+    endif()
+endmacro()
+
 # Main function to import all dependencies
 function(importDependencies)
     message(STATUS "=== Importing Dependencies ===")
@@ -144,5 +266,6 @@ function(importDependencies)
     import_glew()
     import_imgui()
     import_stb()
+    import_fmod()
     message(STATUS "=== All Dependencies Imported ===")
 endfunction()
