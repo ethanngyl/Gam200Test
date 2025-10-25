@@ -51,6 +51,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     libglew_static
     imgui
     stb
+    fmod
 )
 
 # Mark shaders as non-compiled
