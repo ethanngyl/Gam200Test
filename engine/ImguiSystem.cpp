@@ -9,10 +9,7 @@
 #include "Precompiled.h"
 #include "ImGuiSystem.h"
 #include "EntitySpawner.h"
- //jiahao
- //Since ImGui::InputText takes char[], code will be messy if we use that directly
- //In order to use ImGui::InputText with std::string, the below library is required
-#include <misc/cpp/imgui_stdlib.h>
+
 
 
 namespace Framework {
@@ -59,6 +56,7 @@ namespace Framework {
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Enable Docking
         io.IniFilename = nullptr;  // Disable settings file
 
         ImGui::StyleColorsDark();
@@ -353,6 +351,8 @@ namespace Framework {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
 
         // Menu bar
         if (ImGui::BeginMainMenuBar()) {
