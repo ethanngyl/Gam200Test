@@ -21,13 +21,11 @@ Makefile
 *.sln.docstates
 Debug/
 Release/
-x64/
 x86/
 
 # Executables and libraries
 *.exe
 *.dll
-*.lib
 *.a
 *.so
 *.obj
