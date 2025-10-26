@@ -72,6 +72,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     LOG_INFO("CORE", "     Starting Game (Clean GSM Template)");
     LOG_INFO("CORE", "=================================================");
 
+
     // ========================================================================
     // INITIALIZE ENGINE
     // ========================================================================

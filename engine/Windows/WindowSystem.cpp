@@ -1,34 +1,37 @@
 #include "Precompiled.h"
+#include "ConfigReader/ConfigReader.h"  // ÃÌº”≈‰÷√∂¡»°∆˜
 
 /*
 ===============================================================================
-File:        WindowSystem.cpp
+File:        WindowSystem.cpp (With Config Support)
 co-Author:   Sim Kah Yan
 co-Author:   TAN WEI LEONG
+Modified by: GE YONGQI (Added config file support)
 Email:       kahyan.sim@digipen.edu
 Date:        2025-10-02
 Contribution: 10%(Kah Yan), 10% (TAN WEI LEONG)
 -------------------------------------------------------------------------------
 Brief:
 Implementation of the WindowSystem class. Handles the creation and management
-of the main application window using GLFW. Provides initialization, cleanup,
-and basic engine message handling to support quitting.
+of the main application window using GLFW. Now supports reading window
+configuration from game_config.txt.
 
 Details:
 - Initializes GLFW and creates a window with configurable width, height, and title.
+- Reads window settings from config file if available.
 - Destroys the window and terminates GLFW on shutdown.
 - Responds to engine messages such as Quit.
 - Checks for window close events and polls system events.
 
-Notes:
-- Default window size: 1600?00.
-- Default title: "Struct Squad Game Engine".
-- GLFW must be initialized successfully before creating a window.
+Config File Support:
+- window_width: Window width in pixels (default: 1600)
+- window_height: Window height in pixels (default: 800)
+- window_title: Window title string (default: "Struct Squad Game Engine")
+- fullscreen: Enable fullscreen mode (default: false)
 
-Safety:
-- All GLFW calls are wrapped with null checks.
-- Properly destroys window and terminates GLFW to avoid resource leaks.
-- Graceful fallback if initialization fails.
+Notes:
+- Config file is optional. If not found, uses default values.
+- GLFW must be initialized successfully before creating a window.
 
 ===============================================================================
 */
@@ -39,6 +42,7 @@ namespace Framework
     /*
     ------------------------------------------------------------------------------
     Constructor: Sets default window configuration and initializes member variables.
+                 Now loads configuration from game_config.txt if available.
     ------------------------------------------------------------------------------
     */
     WindowSystem::WindowSystem() : window(nullptr),
@@ -47,6 +51,8 @@ namespace Framework
         windowHeight(800),         // default height
         windowTitle("Struct Squad Game Engine") // default title
     {
+        // Load window configuration from config file
+        LoadWindowConfig();
     }
 
     /*
@@ -66,6 +72,30 @@ namespace Framework
 
     /*
     ------------------------------------------------------------------------------
+    LoadWindowConfig: Loads window configuration from game_config.txt
+    ------------------------------------------------------------------------------
+    */
+    void WindowSystem::LoadWindowConfig()
+    {
+        // Try to load config file
+        ConfigReader::LoadConfig("assets/game_config.txt");
+        // ConfigReader will handle file not found gracefully
+
+        // Read window dimensions
+        windowWidth = ConfigReader::GetInt("window_width", 1600);
+        windowHeight = ConfigReader::GetInt("window_height", 800);
+
+        // Read window title
+        windowTitle = ConfigReader::GetString("window_title", "Struct Squad Game Engine");
+
+        // Log the configuration
+        LOG_INFO("WINDOW", "Window config loaded:");
+        LOG_INFO("WINDOW", "  Size: %dx%d", windowWidth, windowHeight);
+        LOG_INFO("WINDOW", "  Title: %s", windowTitle.c_str());
+    }
+
+    /*
+    ------------------------------------------------------------------------------
     Initialize: Initializes the GLFW library and creates the main application
                 window using the configured size and title.
     ------------------------------------------------------------------------------
@@ -76,18 +106,24 @@ namespace Framework
         static bool alreadyInitialized = false;
         if (alreadyInitialized) return;
         alreadyInitialized = true;
+
         // Initialize the GLFW library
         if (!glfwInit()) {
             std::cerr << "GLFW init failed\n";  // If GLFW initialization fails, print error message
             return;
         }
+
         // Specify desired OpenGL version (4.5 Core Profile)
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+        // Check if fullscreen is requested
+        bool fullscreen = ConfigReader::GetBool("fullscreen", false);
+        GLFWmonitor* monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
+
         // Create the GLFW window using the configured width, height, and title
-        window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), nullptr, nullptr);
+        window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), monitor, nullptr);
         if (!window) {
             std::cerr << "Window creation failed\n";  // If window creation fails, print error message
             glfwTerminate();  // Terminate GLFW
@@ -99,6 +135,11 @@ namespace Framework
 
         // Output message confirming window creation
         std::cout << "WindowSystem: Window created! Press 'q' + Enter to quit.\n";
+        std::cout << "WindowSystem: Size: " << windowWidth << "x" << windowHeight << "\n";
+        std::cout << "WindowSystem: Title: " << windowTitle << "\n";
+        if (fullscreen) {
+            std::cout << "WindowSystem: Fullscreen mode enabled\n";
+        }
     }
 
     /*

@@ -9,12 +9,12 @@
 # ============================================================================
 
 # Set the initial state when game starts
-initial_state = level1
+initial_state = mainmenu
 
 ============================================================================
 # WINDOW SETTINGS
 # ============================================================================
-window_width = 1900
+window_width = 1600
 window_height = 1000
-window_title = My Game
+window_title = Testing
 fullscreen = false
