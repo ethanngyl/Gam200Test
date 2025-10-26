@@ -15,6 +15,6 @@ initial_state = mainmenu
 # WINDOW SETTINGS
 # ============================================================================
 window_width = 1600
-window_height = 1000
+window_height = 800
 window_title = Testing
 fullscreen = false
