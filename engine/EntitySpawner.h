@@ -71,7 +71,7 @@ namespace Framework {
          * @brief Spawn a player entity
          */
         Entity SpawnPlayer(const Vector2D& position) {
-            Entity player = SpawnSprite("circle", position, Vector2D(0.3f, 0.3f));
+            Entity player = SpawnSprite("wireframequad", position, Vector2D(0.3f, 0.3f));
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);

@@ -34,6 +34,8 @@
 #include "RenderComponents.h"
 #include "Material.h"
 #include <memory>
+#include <unordered_map>   
+#include "ECSEntity.h" 
 
 // Forward declarations
 struct GLFWwindow;
@@ -106,6 +108,16 @@ namespace Framework {
          * @brief Set camera zoom
          */
         void SetCameraZoom(float zoom);
+
+        /**
+         * @brief Set which entity the camera should follow
+         */
+        void SetFollowTarget(Entity e) { followTarget = e; followEnabled = true; }
+
+        /**
+         * @brief Stop following any entity
+         */
+        void ClearFollowTarget() { followEnabled = false; }
 
         // === DEBUG RENDERING ===
         
@@ -245,12 +257,14 @@ namespace Framework {
         MeshHandle quadMesh;
         MeshHandle lineMesh;
         MeshHandle circleMesh;
+        MeshHandle wireframeQMesh;
 
         // Default materials for primitives
         MaterialHandle triangleMaterial;
         MaterialHandle quadMaterial;
         MaterialHandle lineMaterial;
         MaterialHandle circleMaterial;
+        MaterialHandle wireframeQMaterial;
 
         // Debug rendering
         bool debugRenderingEnabled;
@@ -264,6 +278,15 @@ namespace Framework {
         // State tracking
         MaterialHandle currentBoundMaterial;
         ShaderHandle currentBoundShader;
+
+        /**
+         * @brief Makes the camera follow a target player entity
+         */
+        void FollowPlayer(EntityManager* em, Entity player);
+
+        // Camera follow target (optional)
+        Entity followTarget{ 0 };
+        bool followEnabled{ false };
 
         // Statistics
         struct RenderStats {
