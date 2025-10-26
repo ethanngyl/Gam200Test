@@ -14,6 +14,8 @@ Description: Using the integrated CoreEngine, main.cpp becomes very simple.
 #include "Precompiled.h"
 #include "GSM/GameStateManager.h"
 #include "ImguiSystem.h"
+#include "ConfigReader/ConfigReader.h"
+
 
 
  // ============================================================================
@@ -33,6 +35,7 @@ Framework::CoreEngine* engine = nullptr;
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
+
 #ifdef _DEBUG
     // Debug console setup
     AllocConsole();
@@ -81,7 +84,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // ========================================================================
     // GAME STATE MANAGER
     // ========================================================================
-    GSM_Initialize(mainMenu);
+    int initialState = ConfigReader::GetInitialGameState(mainMenu);
+    GSM_Initialize(initialState);
 
     LOG_INFO("CORE", "Entering GSM main loop...");
 
