@@ -1,7 +1,8 @@
 /**
 ===============================================================================
- File:           ConfigReader.cpp
- Description:    Configuration file reader - Implementation
+ File:           ConfigReader.cpp (Optimized Version)
+ Description:    Configuration file reader - Implementation with duplicate
+                 loading prevention
 ===============================================================================
  */
 
@@ -12,8 +13,12 @@
 #include <sstream>
 #include <algorithm>
 
- // Static member definition
+ // ============================================================================
+ // STATIC MEMBER DEFINITIONS
+ // ============================================================================
 std::map<std::string, std::string> ConfigReader::configData;
+bool ConfigReader::configLoaded = false;
+std::string ConfigReader::loadedConfigPath = "";
 
 // ============================================================================
 // PUBLIC METHODS
@@ -21,65 +26,34 @@ std::map<std::string, std::string> ConfigReader::configData;
 
 bool ConfigReader::LoadConfig(const std::string& filename)
 {
-    configData.clear();
-
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        LOG_WARN("CONFIG", "Could not open config file: %s", filename.c_str());
-        return false;
+    // Check if this file is already loaded
+    if (configLoaded && loadedConfigPath == filename) {
+        LOG_INFO("CONFIG", "Configuration already loaded from: %s", filename.c_str());
+        return true;
     }
 
-    LOG_INFO("CONFIG", "Loading configuration from: %s", filename.c_str());
+    // Load the config file
+    return LoadConfigInternal(filename);
+}
 
-    std::string line;
-    int lineNumber = 0;
+bool ConfigReader::ReloadConfig(const std::string& filename)
+{
+    LOG_INFO("CONFIG", "Force reloading configuration...");
+    configLoaded = false;
+    loadedConfigPath = "";
+    return LoadConfigInternal(filename);
+}
 
-    while (std::getline(file, line)) {
-        lineNumber++;
-
-        // Skip empty lines and comments
-        if (line.empty() || line[0] == '#') {
-            continue;
-        }
-
-        // Find the '=' separator
-        size_t pos = line.find('=');
-        if (pos == std::string::npos) {
-            LOG_WARN("CONFIG", "Invalid config line %d: %s", lineNumber, line.c_str());
-            continue;
-        }
-
-        // Extract key and value
-        std::string key = line.substr(0, pos);
-        std::string value = line.substr(pos + 1);
-
-        // Trim whitespace
-        key = Trim(key);
-        value = Trim(value);
-
-        if (key.empty()) {
-            LOG_WARN("CONFIG", "Empty key on line %d", lineNumber);
-            continue;
-        }
-
-        // Store in map
-        configData[key] = value;
-        LOG_INFO("CONFIG", "  %s = %s", key.c_str(), value.c_str());
-    }
-
-    file.close();
-    LOG_INFO("CONFIG", "Configuration loaded successfully (%zu entries)", configData.size());
-    return true;
+bool ConfigReader::IsConfigLoaded()
+{
+    return configLoaded;
 }
 
 int ConfigReader::GetInitialGameState(int defaultState)
 {
-    // Try to load config file if not already loaded
-    if (configData.empty()) {
-        if (!LoadConfig("assets/game_config.txt")) {
-            LOG_WARN("CONFIG", "Using default initial state");
-            return defaultState;
-        }
+    // Ensure config is loaded
+    if (!configLoaded) {
+        LoadConfig(CONFIG_FILE_PATH);
     }
 
     // Get initial_state value
@@ -158,6 +132,64 @@ bool ConfigReader::HasKey(const std::string& key)
 // ============================================================================
 // PRIVATE HELPER METHODS
 // ============================================================================
+
+bool ConfigReader::LoadConfigInternal(const std::string& filename)
+{
+    configData.clear();
+
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        LOG_WARN("CONFIG", "Could not open config file: %s", filename.c_str());
+        return false;
+    }
+
+    LOG_INFO("CONFIG", "Loading configuration from: %s", filename.c_str());
+
+    std::string line;
+    int lineNumber = 0;
+
+    while (std::getline(file, line)) {
+        lineNumber++;
+
+        // Skip empty lines and comments
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+
+        // Find the '=' separator
+        size_t pos = line.find('=');
+        if (pos == std::string::npos) {
+            LOG_WARN("CONFIG", "Invalid config line %d: %s", lineNumber, line.c_str());
+            continue;
+        }
+
+        // Extract key and value
+        std::string key = line.substr(0, pos);
+        std::string value = line.substr(pos + 1);
+
+        // Trim whitespace
+        key = Trim(key);
+        value = Trim(value);
+
+        if (key.empty()) {
+            LOG_WARN("CONFIG", "Empty key on line %d", lineNumber);
+            continue;
+        }
+
+        // Store in map
+        configData[key] = value;
+        LOG_INFO("CONFIG", "  %s = %s", key.c_str(), value.c_str());
+    }
+
+    file.close();
+
+    // Mark as loaded
+    configLoaded = true;
+    loadedConfigPath = filename;
+
+    LOG_INFO("CONFIG", "Configuration loaded successfully (%zu entries)", configData.size());
+    return true;
+}
 
 std::string ConfigReader::Trim(const std::string& str)
 {

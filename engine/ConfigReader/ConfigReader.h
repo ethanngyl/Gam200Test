@@ -1,7 +1,7 @@
 /**
 ===============================================================================
- File:           ConfigReader.h
- Description:    Configuration file reader with game state support
+ File:           ConfigReader.h (Optimized Version)
+ Description:    Configuration file reader with duplicate loading prevention
 ===============================================================================
  */
 
@@ -13,6 +13,12 @@
   * @class ConfigReader
   * @brief Reads and parses configuration files for game settings
   *
+  * Features:
+  * - Prevents duplicate loading of config file
+  * - Unified config file path constant
+  * - Supports multiple data types (int, float, bool, string)
+  * - Automatic game state parsing
+  *
   * Format:
   * - Lines starting with # are comments
   * - key = value format
@@ -21,12 +27,30 @@
 class ConfigReader
 {
 public:
+    // ========================================================================
+    // CONFIGURATION PATH
+    // ========================================================================
+    // Unified config file path - change this to match your project structure
+    static constexpr const char* CONFIG_FILE_PATH = "assets/game_config.txt";
+
+    // ========================================================================
+    // PUBLIC INTERFACE
+    // ========================================================================
+
     /**
      * @brief Load and parse a configuration file
      * @param filename Path to the configuration file
      * @return true if file was successfully loaded
+     * @note Calling this multiple times with the same file is safe (won't reload)
      */
-    static bool LoadConfig(const std::string& filename);
+    static bool LoadConfig(const std::string& filename = CONFIG_FILE_PATH);
+
+    /**
+     * @brief Force reload the configuration file
+     * @param filename Path to the configuration file
+     * @return true if file was successfully loaded
+     */
+    static bool ReloadConfig(const std::string& filename = CONFIG_FILE_PATH);
 
     /**
      * @brief Get the initial game state from config
@@ -74,8 +98,19 @@ public:
      */
     static bool HasKey(const std::string& key);
 
+    /**
+     * @brief Check if configuration has been loaded
+     * @return true if config is loaded
+     */
+    static bool IsConfigLoaded();
+
 private:
+    // ========================================================================
+    // PRIVATE MEMBERS
+    // ========================================================================
     static std::map<std::string, std::string> configData;
+    static bool configLoaded;
+    static std::string loadedConfigPath;
 
     /**
      * @brief Trim whitespace from both ends of a string
@@ -86,4 +121,9 @@ private:
      * @brief Parse state name string to enum value
      */
     static int ParseStateName(const std::string& stateName, int defaultState);
+
+    /**
+     * @brief Internal load function (without duplicate check)
+     */
+    static bool LoadConfigInternal(const std::string& filename);
 };
