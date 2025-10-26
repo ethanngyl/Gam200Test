@@ -358,6 +358,9 @@ namespace Framework {
         if (ImGui::BeginMainMenuBar()) {
             //File bar - jiahao
             if (ImGui::BeginMenu("File")) {
+                if (CORE->IsPlaying()) {
+                    ImGui::BeginDisabled();
+                }
                 if (ImGui::MenuItem("Open")) {
                     bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
                     if (!isOpen) {
@@ -399,7 +402,9 @@ namespace Framework {
                     CORE->BroadcastMessage(&quitMsg);
                 }
 
-				
+                if (CORE->IsPlaying()) {
+                    ImGui::EndDisabled();
+                }
                 ImGui::EndMenu();
             }
 
@@ -411,6 +416,33 @@ namespace Framework {
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
                 ImGui::EndMenu();
             }
+
+            //play/stop editor bar - jiahao
+            if (ImGui::BeginMenu("Editor")) {
+
+                if (!CORE->IsPlaying()) {
+                    if (ImGui::MenuItem("Play")) {
+                        if (!SaveLevelToTxt(defaultLevelPath)) {
+							std::cerr << "[ImGuiError] Could not create default setting"
+                                      <<defaultLevelPath << "\n";
+                        }
+                        else {
+							CORE->SetPlaying(true);
+                        }
+                    }
+                }
+
+                else {
+                    if (ImGui::MenuItem("Stop")) {
+						CORE->SetPlaying(false);
+						entityManager->ClearAllEntities();
+                        OpenLevelFromTxt(defaultLevelPath, true);
+                    }
+                }
+ 
+                ImGui::EndMenu();
+			}
+
             ImGui::EndMainMenuBar();
 
         

@@ -55,6 +55,7 @@ namespace Framework {
 		//in order to save and load level files
         std::string currentLevelPath;
         std::string openPath;
+		std::string defaultLevelPath = "assets/defaultLevel.txt";
 
         // UI Windows
         void ShowEntityInspector();
