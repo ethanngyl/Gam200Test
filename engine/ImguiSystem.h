@@ -11,6 +11,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+
 namespace Framework {
 
     class EntitySpawner;
@@ -48,6 +49,12 @@ namespace Framework {
         GLFWwindow* window;
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
+
+        //jiahao
+        //the below 2 std::string are used to record the file path
+		//in order to save and load level files
+        std::string currentLevelPath;
+        std::string openPath;
 
         // UI Windows
         void ShowEntityInspector();

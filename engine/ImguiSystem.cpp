@@ -347,6 +347,9 @@ namespace Framework {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
         }
 
+        static bool wantOpenModal = false;
+        static bool wantSaveAsModal = false;
+
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -360,25 +363,35 @@ namespace Framework {
                     if (!isOpen) {
                         std::cerr << "[ImGuiError] Failed to open level.txt\n";
 					}
-                    
+                    else {
+						currentLevelPath = "assets/level1.txt";
+                    }
                 }
 
                 if (ImGui::MenuItem("Open...")) {
                     if (currentLevelPath.empty()) {
 						currentLevelPath = "assets/level1.txt";
                     }
-                    ImGui::OpenPopup("Open Level...");
+					openPath = currentLevelPath;
+                    //ImGui::OpenPopup("Open Level...");
+                    wantOpenModal = true;
                 }
 
                 if (ImGui::MenuItem("Save")) {
-                    bool isSave = SaveLevelToTxt("assets/level1.txt");
+					const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
+                    bool isSave = SaveLevelToTxt(path);
                     if (!isSave) {
                         std::cerr << "[ImGuiError] Failed to save level.txt\n";
                     }
                 }
 
                 if (ImGui::MenuItem("Save as ...")) {
-
+                    if (currentLevelPath.empty()) {
+						currentLevelPath = "assets/level1.txt";
+                    }
+					openPath = currentLevelPath;
+                    //ImGui::OpenPopup("Save Level As...");
+					wantSaveAsModal = true;
                 }
 
                 if (ImGui::MenuItem("Exit")) {
@@ -400,23 +413,105 @@ namespace Framework {
             }
             ImGui::EndMainMenuBar();
 
-            /*if (ImGui::BeginPopupModal("Open Level...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        
+        }
 
-                //
-                //ImGui::InputText("Path", &openPath);
+        if (wantOpenModal) {
+            ImGui::OpenPopup("Open Level...");
+            wantOpenModal = false;
+		}
 
-                if (ImGui::Button("Open")) {
+        if (wantSaveAsModal) {
+            ImGui::OpenPopup("Save Level As...");
+            wantSaveAsModal = false;
+		}
+
+
+        if (ImGui::BeginPopupModal("Open Level...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            static char openBuffer[256] = "";
+            static bool openError = false;
+			static std::string openErrorMsg = "";
+
+            if (ImGui::IsWindowAppearing()) {
+                std::snprintf(openBuffer, sizeof(openBuffer), "%s", openPath.c_str());
+                openError = false;
+                openErrorMsg.clear();
+            }
+            ImGui::InputText("Path", openBuffer, sizeof(openBuffer));
+
+            if (openError) { 
+                ImGui::Spacing();
+				ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", openErrorMsg.c_str());
+                
+            }
+
+            if (ImGui::Button("Open")) {
+                openPath = openBuffer;
+                bool isOpen = OpenLevelFromTxt(openPath, true);
+                if (isOpen) {
+                    currentLevelPath = openPath;
                     ImGui::CloseCurrentPopup();
                 }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button("Cancel")) {
-                    ImGui::CloseCurrentPopup();
+                else {
+					openError = true;
+                    openErrorMsg = "Invalid path or file format: " + std::string(openBuffer);
                 }
+                
+            }
 
-                ImGui::EndPopup();
-            }*/
+            ImGui::SameLine();
+
+            if (ImGui::Button("Cancel")) {
+
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
+
+        if (ImGui::BeginPopupModal("Save Level As...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            
+            static char saveBuffer[256] = "";
+			static bool saveError = false;  
+			static std::string saveErrorMsg = "";
+
+            if (ImGui::IsWindowAppearing())
+            {
+                std::snprintf(saveBuffer, sizeof(saveBuffer), "%s", openPath.c_str());
+				saveError = false;
+                saveErrorMsg.clear();
+            }
+
+            ImGui::InputText("Path", saveBuffer, sizeof(saveBuffer) );
+
+            if (saveError) {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", saveErrorMsg.c_str());
+            }
+
+            if (ImGui::Button("Save")) {
+
+                openPath = saveBuffer;
+
+                bool isSave = SaveLevelToTxt(openPath);
+                if (isSave) {
+                    currentLevelPath = openPath;
+					ImGui::CloseCurrentPopup();
+                }
+                else {
+					saveError = true;
+					saveErrorMsg = "Could not save to path: " + std::string(saveBuffer);
+                }
+                
+            }
+
+			ImGui::SameLine();
+
+            if (ImGui::Button("Cancel")) {
+                ImGui::CloseCurrentPopup();
+            }
+			ImGui::EndPopup();
         }
 
         // Show windows
