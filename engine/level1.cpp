@@ -1,14 +1,15 @@
-// Level1.cpp
-#include "Precompiled.h"        
+﻿#include "Precompiled.h"        
 #include "Core.h"               
 #include "EntitySpawner.h"      
 #include "Vector2D.h"    
 #include "GSM/GameStateList.h"
 #include "GSM/GameStateManager.h"
+#include "PlayerManager.h"
 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::EntitySpawner;
+using Framework::PlayerControllerSystem;
 
 void level1_Load()
 {
@@ -30,8 +31,27 @@ void level1_Initialize()
         return;
     }
 
-    // Generate players
-    spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+    PlayerControllerSystem* playerControll = engine->GetPlayerController();
+    if (!playerControll) {
+        LOG_ERROR("LEVEL1", "playerControll is null!");
+        return;
+    }
+
+    // ========================================================================
+    // Spawn Player - Save the returned entity ID
+    // ========================================================================
+    Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+
+    // ========================================================================
+    // Tell the PlayerController who the player entity is
+    // ========================================================================
+    playerControll->SetPlayerEntity(playerEntity);
+
+    // Optional: Configure shooting parameters
+    playerControll->SetShootCooldown(0.2f);     
+    playerControll->SetProjectileSpeed(0.5f);
+
+    LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
 
     // Generate enemy waves
     spawner->SpawnEnemyWave(5, 0.8f);
@@ -49,12 +69,11 @@ void level1_Initialize()
 void level1_Update()
 {
     if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_SPACE))
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_2))
     {
-        LOG_INFO("TEST", "Space pressed!");
+        LOG_INFO("LEVEL1", "ESC pressed - returning to menu");
         next = mainMenu;
     }
-    
 }
 
 void level1_Draw()

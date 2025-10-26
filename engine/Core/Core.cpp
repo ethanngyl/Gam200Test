@@ -131,6 +131,8 @@ namespace Framework
         playerController->SetInputSystem(inputSystem);
         movementSystem->SetInputSystem(inputSystem);
         collisionSystem->SetInput(inputSystem);
+        playerController->SetEntitySpawner(spawner);
+
 
         LOG_INFO("CORE", "Dependencies wired");
     }
