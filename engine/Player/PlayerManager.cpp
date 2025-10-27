@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           PlayerControllerSystem.cpp
  Description:    Player input controller - Implementation
@@ -8,6 +8,8 @@
 #include "Precompiled.h"
 #include "PlayerManager.h"
 #include "EntitySpawner.h"
+
+#include "RenderComponents.h"
 
 namespace Framework {
 
@@ -56,6 +58,17 @@ namespace Framework {
         auto& playerTransform = entityManager->GetComponent<Transform>(playerEntity);
         Vector2D playerPos = playerTransform.position;
 
+        // One-time tint so the player stands out from the grid
+        if (entityManager->HasComponent<Renderable>(playerEntity)) {
+            static bool tinted = false;
+            if (!tinted) {
+                auto& rend = entityManager->GetComponent<Renderable>(playerEntity); 
+                rend.tint = glm::vec4(1.0f, 0.85f, 0.2f, 1.0f);    // yellow/gold
+
+                tinted = true; // don’t set it every frame
+            }
+        }
+
         // Update shooting cooldown
         if (shootCooldown > 0.0f) {
             shootCooldown -= dt;
@@ -68,6 +81,8 @@ namespace Framework {
         HandleShootUp(playerPos);
         HandleShootDown(playerPos);
         HandleShootAtMouse(playerPos);
+
+        HandleClickToMove();
 
         // ====================================================================
         // SPAWNING INPUT (Debug/Testing) - Use InputSystem
@@ -185,6 +200,56 @@ namespace Framework {
                 std::cout << "[PlayerController] Shoot at mouse!\n";
             }
         }
+    }
+
+    void PlayerControllerSystem::HandleClickToMove() {
+        if (!entityManager || !inputSystem) return;
+
+        // Only on the press frame
+        if (!inputSystem->IsKeyPressed(MOUSE_LEFT)) return;
+
+        // Prefer window-relative cursor → consistent with your system (you store GLFWwindow* already)
+        if (!window) return;
+        double cx = 0.0, cy = 0.0;
+        glfwGetCursorPos(window, &cx, &cy);
+
+        int winW = 0, winH = 0;
+        glfwGetWindowSize(window, &winW, &winH);
+        if (winW <= 0 || winH <= 0) return;
+
+        // Map to your existing world range (matches your mouse-shoot code)
+        float worldX = static_cast<float>((cx / double(winW)) * 4.0 - 2.0);
+        float worldY = static_cast<float>(-((cy / double(winH)) * 2.0 - 1.0)); // flip Y
+
+        // World -> Tile
+        auto maybeTile = GridAPI::WorldToTile(Vector2D{ worldX, worldY });
+        if (!maybeTile.has_value()) {
+            std::cout << "[ClickMove] outside grid\n";
+            return;
+        }
+        GridCoord target = *maybeTile;
+
+        // Only move to walkable tiles
+        if (!GridAPI::IsWalkable(target)) {
+            std::cout << "[ClickMove] blocked (" << target.x << "," << target.y << ")\n";
+            return;
+        }
+
+        // Ensure player entity & transform exist
+        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
+        auto& xform = entityManager->GetComponent<Transform>(playerEntity);
+
+        // Clear previous occupant (if any)
+        if (auto prev = GridAPI::WorldToTile(xform.position); prev.has_value()) {
+            GridAPI::SetOccupant(*prev, Entity{ INVALID_ENTITY });
+        }
+
+        // Snap to tile center + set occupancy
+        Vector2D snapped = GridAPI::TileToWorld(target);
+        xform.position = snapped;
+        GridAPI::SetOccupant(target, playerEntity);
+
+        std::cout << "[ClickMove] moved to (" << target.x << "," << target.y << ")\n";
     }
 
     // ============================================================================
