@@ -63,7 +63,6 @@ namespace Framework
     void WindowSystem::LoadWindowConfig()
     {
         // Load config file using unified path
-        // This is safe to call multiple times - won't reload if already loaded
         ConfigReader::LoadConfig(ConfigReader::CONFIG_FILE_PATH);
 
         // Read window configuration
