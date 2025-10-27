@@ -9,6 +9,7 @@
 
 #pragma once
 #include "Precompiled.h"
+#include "Grid\GridTile.h"
 
 namespace Framework {
 
@@ -163,18 +164,73 @@ namespace Framework {
             const std::string& spriteName,
             int rows, int cols,
             const Vector2D& startPos,
-            const Vector2D& spacing)
+            const Vector2D& spacing = Vector2D{ 1.0f, 1.0f })
         {
+            int nextId = 0;
+
             for (int row = 0; row < rows; ++row) {
                 for (int col = 0; col < cols; ++col) {
                     Vector2D pos(
                         startPos.x + col * spacing.x,
                         startPos.y + row * spacing.y
                     );
-                    SpawnSprite(spriteName, pos, Vector2D(0.1f, 0.1f));
+                    const Vector2D tileSize{ 0.1f, 0.1f };
+                    Entity e = SpawnSprite(spriteName, pos, tileSize);
+
+                    entityManager->AddComponent<GridTiles>(e);
+                    auto& gridTile = entityManager->GetComponent<GridTiles>(e);
+                    gridTile.tileId = nextId++;
+                    gridTile.x = col;
+                    gridTile.y = row;
+                    gridTile.entity = e;
+                    gridTile.centerWorld = pos;
+                    gridTile.tileW = tileSize.x;   // canonical cell size
+                    gridTile.tileH = tileSize.y;
+                    gridTile.blocked = false;
+                    gridTile.occupant = INVALID_ENTITY;
                 }
             }
             std::cout << "[EntitySpawner] Spawned grid: " << (rows * cols) << " entities\n";
+
+
+            // --- Debug summary (verify ids are sequential and unique) ---
+            const int total = rows * cols;
+            std::vector<bool> seen(static_cast<size_t>(total), false);
+            int minId = INT_MAX, maxId = INT_MIN, dupCount = 0, oobCount = 0;
+
+            for (auto e : entityManager->GetAllEntities()) {
+                if (!entityManager->HasComponent<GridTiles>(e)) continue;
+                const auto& gt = entityManager->GetComponent<GridTiles>(e);
+                minId = min(minId, gt.tileId);
+                maxId = max(maxId, gt.tileId);
+                if (gt.tileId < 0 || gt.tileId >= total) { ++oobCount; continue; }
+                if (seen[static_cast<size_t>(gt.tileId)]) ++dupCount;
+                else seen[static_cast<size_t>(gt.tileId)] = true;
+            }
+
+            std::cout << "[GridDebug] tiles=" << total
+                << " id-range=[" << minId << "," << maxId << "]"
+                << " dup=" << dupCount
+                << " oob=" << oobCount << "\n";
+
+            // Also print corner samples to eyeball mapping:
+            auto printTile = [&](int cx, int cy) {
+                for (auto e : entityManager->GetAllEntities()) {
+                    if (!entityManager->HasComponent<GridTiles>(e)) continue;
+                    const auto& gt = entityManager->GetComponent<GridTiles>(e);
+                    if (gt.x == cx && gt.y == cy) {
+                        std::cout << "  (" << cx << "," << cy << ") -> entity " << e.GetID()
+                            << " id=" << gt.tileId << " center=("
+                            << gt.centerWorld.x << "," << gt.centerWorld.y << ")\n";
+                        return;
+                    }
+                }
+                };
+
+            printTile(0, 0);
+            printTile(cols - 1, 0);
+            printTile(0, rows - 1);
+            printTile(cols - 1, rows - 1);
         }
 
         /**

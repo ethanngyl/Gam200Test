@@ -137,7 +137,7 @@ namespace Framework {
         // Execute render commands
         ExecuteRenderQueue();
 
-        RenderGridOverlay(); // NEW: queue grid primitives
+       // RenderGridOverlay(); // NEW: queue grid primitives
 
         // Render debug visualizations if enabled
         if (debugRenderingEnabled) {
@@ -730,58 +730,58 @@ namespace Framework {
         shader->Unbind();
     }
 
-    void GraphicsSystemV2::RenderGridOverlay() {
-        using namespace Framework;
+    //void GraphicsSystemV2::RenderGridOverlay() {
+    //    using namespace Framework;
 
-        const auto b = GridAPI::Bounds();
-        if (b.cols <= 0 || b.rows <= 0) return;
+    //    const auto b = GridAPI::Bounds();
+    //    if (b.cols <= 0 || b.rows <= 0) return;
 
-        const auto& rt = GridSystem::Runtime();
-        const float hw = rt.tileW * 0.5f;
-        const float hh = rt.tileH * 0.5f;
+    //    const auto& rt = GridSystem::Runtime();
+    //    const float hw = rt.tileW * 0.5f;
+    //    const float hh = rt.tileH * 0.5f;
 
-        const glm::vec4 lineCol = { 0.85f, 0.85f, 0.85f, 1.0f };
-        const glm::vec4 blockedCol = { 1.00f, 0.30f, 0.30f, 1.0f };
+    //    const glm::vec4 lineCol = { 0.85f, 0.85f, 0.85f, 1.0f };
+    //    const glm::vec4 blockedCol = { 1.00f, 0.30f, 0.30f, 1.0f };
 
-        // --- helpers BEFORE the per-cell loop ---
-    // axes
-        debugQueue.AddLine({ -2.0f, 0.0f, 0.0f }, { +2.0f, 0.0f, 0.0f }, { 1,1,0,1 });
-        debugQueue.AddLine({ 0.0f,-1.0f, 0.0f }, { 0.0f,+1.0f, 0.0f }, { 0,1,1,1 });
+    //    // --- helpers BEFORE the per-cell loop ---
+    //// axes
+    //    debugQueue.AddLine({ -2.0f, 0.0f, 0.0f }, { +2.0f, 0.0f, 0.0f }, { 1,1,0,1 });
+    //    debugQueue.AddLine({ 0.0f,-1.0f, 0.0f }, { 0.0f,+1.0f, 0.0f }, { 0,1,1,1 });
 
-        // grid AABB border
-        const float left = rt.originWorld.x - rt.tileW * 0.5f;
-        const float bottom = rt.originWorld.y - rt.tileH * 0.5f;
-        const float right = left + rt.tileW * b.cols;
-        const float top = bottom + rt.tileH * b.rows;
-        const glm::vec4 cyan = { 0,1,1,1 };
-        debugQueue.AddLine({ left,  bottom, 0 }, { right, bottom, 0 }, cyan);
-        debugQueue.AddLine({ right, bottom, 0 }, { right,    top, 0 }, cyan);
-        debugQueue.AddLine({ right,    top, 0 }, { left,     top, 0 }, cyan);
-        debugQueue.AddLine({ left,     top, 0 }, { left,  bottom, 0 }, cyan);
+    //    // grid AABB border
+    //    const float left = rt.originWorld.x - rt.tileW * 0.5f;
+    //    const float bottom = rt.originWorld.y - rt.tileH * 0.5f;
+    //    const float right = left + rt.tileW * b.cols;
+    //    const float top = bottom + rt.tileH * b.rows;
+    //    const glm::vec4 cyan = { 0,1,1,1 };
+    //    debugQueue.AddLine({ left,  bottom, 0 }, { right, bottom, 0 }, cyan);
+    //    debugQueue.AddLine({ right, bottom, 0 }, { right,    top, 0 }, cyan);
+    //    debugQueue.AddLine({ right,    top, 0 }, { left,     top, 0 }, cyan);
+    //    debugQueue.AddLine({ left,     top, 0 }, { left,  bottom, 0 }, cyan);
 
-        for (int y = 0; y < b.rows; ++y) {
-            for (int x = 0; x < b.cols; ++x) {
-                GridCoord c{ x, y };
-                const Vector2D center = GridAPI::TileToWorld(c);
+    //    for (int y = 0; y < b.rows; ++y) {
+    //        for (int x = 0; x < b.cols; ++x) {
+    //            GridCoord c{ x, y };
+    //            const Vector2D center = GridAPI::TileToWorld(c);
 
-                // outline (four thin lines)
-                debugQueue.AddLine({ center.x - hw, center.y - hh, 0.0f },
-                    { center.x + hw, center.y - hh, 0.0f }, lineCol);
-                debugQueue.AddLine({ center.x + hw, center.y - hh, 0.0f },
-                    { center.x + hw, center.y + hh, 0.0f }, lineCol);
-                debugQueue.AddLine({ center.x + hw, center.y + hh, 0.0f },
-                    { center.x - hw, center.y + hh, 0.0f }, lineCol);
-                debugQueue.AddLine({ center.x - hw, center.y + hh, 0.0f },
-                    { center.x - hw, center.y - hh, 0.0f }, lineCol);
+    //            // outline (four thin lines)
+    //            debugQueue.AddLine({ center.x - hw, center.y - hh, 0.0f },
+    //                { center.x + hw, center.y - hh, 0.0f }, lineCol);
+    //            debugQueue.AddLine({ center.x + hw, center.y - hh, 0.0f },
+    //                { center.x + hw, center.y + hh, 0.0f }, lineCol);
+    //            debugQueue.AddLine({ center.x + hw, center.y + hh, 0.0f },
+    //                { center.x - hw, center.y + hh, 0.0f }, lineCol);
+    //            debugQueue.AddLine({ center.x - hw, center.y + hh, 0.0f },
+    //                { center.x - hw, center.y - hh, 0.0f }, lineCol);
 
-                // optional fill for blocked cells
-                if (showGridBlocked && !GridAPI::IsWalkable(c)) {
-                    debugQueue.AddBox({ center.x, center.y, 0.0f },
-                        { rt.tileW, rt.tileH, 1.0f }, blockedCol);
-                }
-            }
-        }
-    }
+    //            // optional fill for blocked cells
+    //            if (showGridBlocked && !GridAPI::IsWalkable(c)) {
+    //                debugQueue.AddBox({ center.x, center.y, 0.0f },
+    //                    { rt.tileW, rt.tileH, 1.0f }, blockedCol);
+    //            }
+    //        }
+    //    }
+    //}
 
     // === RENDERING HELPERS ===
 

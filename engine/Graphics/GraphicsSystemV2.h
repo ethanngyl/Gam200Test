@@ -230,7 +230,7 @@ namespace Framework {
         void SetupBackground();
 
         // Draw grid to the debug queue (implemented in .cpp)
-        void RenderGridOverlay();  // NEW
+       // void RenderGridOverlay();  // NEW
 
         // === MEMBER VARIABLES ===
         
