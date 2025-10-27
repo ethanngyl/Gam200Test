@@ -14,9 +14,16 @@
 #include "Component.h"
 #include "MeshFactory.h"
 #include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace Framework {
 
+    static bool LooksLikeFilePath(const std::string& s) {
+        const auto slash = s.find_last_of("/\\");
+        const auto dot = s.find_last_of('.');
+        return dot != std::string::npos && (slash == std::string::npos || dot > slash);
+    }
     // === CONSTRUCTOR / DESTRUCTOR ===
 
     GraphicsSystemV2::GraphicsSystemV2()
@@ -67,10 +74,12 @@ namespace Framework {
         SetupBackground();
 
         // 6. Create legacy material support
-        CreateLegacyMaterials();
+        //CreateLegacyMaterials();
 
         // 7. Setup initial render state
         SetupRenderState();
+
+        resourceManager.LoadFiles();// new
 
         glfwSwapInterval(1);  // ✅ ADD THIS - Enables VSync
 
@@ -346,6 +355,30 @@ namespace Framework {
             return;
         }
 
+        // One Shot eveything method
+        /* ALL MATERIALS.txt
+        Default: defaultShader
+        triangle_mat: shader2, triangleMaterial
+        */
+
+        // Only load when you need it method
+        /* DefaultMaterial.txt
+         param1
+         param2
+        */
+        /* triangleMat.txt
+         param1
+         param2
+        */
+
+        /* DefaultScene
+            Background Obj -> uses BackgrounMat, this position, has render component
+            Obj1 -> uses Mat1, this position, has render component
+            Obj2 -> ...
+        */
+        // Then WHen I See I need Mat1, I search if I loaded Mat1 already, if not, loads mat1 file
+
+
         // Create default material
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
 
@@ -387,7 +420,7 @@ namespace Framework {
         std::cout << "GraphicsSystemV2: Setting up background...\n";
 
         // Load background texture
-        backgroundTexture = resourceManager.LoadTexture("./assets/background.png");
+        backgroundTexture = resourceManager.LoadTexture("assets/background.png");
 
         if (!backgroundTexture.IsValid()) {
             std::cerr << "WARNING: Failed to load background texture\n";
@@ -439,134 +472,170 @@ namespace Framework {
 
 namespace Framework {
 
-    // === LEGACY SUPPORT ===
+    //// === LEGACY SUPPORT ===
 
-    void GraphicsSystemV2::CreateLegacyMaterials() {
-        std::cout << "GraphicsSystemV2: Creating legacy material mappings...\n";
+    //void GraphicsSystemV2::CreateLegacyMaterials() {
+    //    std::cout << "GraphicsSystemV2: Creating legacy material mappings...\n";
 
         // Map sprite names to meshes
-        legacyMeshMap["triangle"] = triangleMesh;
-        legacyMeshMap["quad"] = quadMesh;
-        legacyMeshMap["line"] = lineMesh;
-        legacyMeshMap["circle"] = circleMesh;
-        legacyMeshMap["wireframequad"] = wireframeQMesh;
+        //legacyMeshMap["triangle"] = triangleMesh;
+        //legacyMeshMap["quad"] = quadMesh;
+        //legacyMeshMap["line"] = lineMesh;
+        //legacyMeshMap["circle"] = circleMesh;
+        //legacyMeshMap["wireframequad"] = wireframeQMesh;
 
-        // Map sprite names to materials
-        legacyMaterialMap["triangle"] = triangleMaterial;
-        legacyMaterialMap["quad"] = quadMaterial;
-        legacyMaterialMap["line"] = lineMaterial;
-        legacyMaterialMap["circle"] = circleMaterial;
-        legacyMaterialMap["wireframequad"] = wireframeQMaterial;
+        //// Map sprite names to materials
+        //legacyMaterialMap["triangle"] = triangleMaterial;
+        //legacyMaterialMap["quad"] = quadMaterial;
+        //legacyMaterialMap["line"] = lineMaterial;
+        //legacyMaterialMap["circle"] = circleMaterial;
+        //legacyMaterialMap["wireframequad"] = wireframeQMaterial;
 
-        std::cout << "Legacy material mappings created\n";
-    }
+    //    std::cout << "Legacy material mappings created\n";
+    //}
 
-    MeshHandle GraphicsSystemV2::GetMeshForSpriteName(const std::string& spriteName) {
-        auto it = legacyMeshMap.find(spriteName);
-        if (it != legacyMeshMap.end()) {
-            return it->second;
+    //MeshHandle GraphicsSystemV2::GetMeshForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyMeshMap.find(spriteName);
+    //    if (it != legacyMeshMap.end()) {
+    //        return it->second;
+    //    }
+    //    return triangleMesh;  // Fallback
+    //}
+
+    //MaterialHandle GraphicsSystemV2::GetMaterialForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyMaterialMap.find(spriteName);
+    //    if (it != legacyMaterialMap.end()) {
+    //        return it->second;
+    //    }
+    //    return defaultMaterial;  // Fallback
+    //}
+
+    //TextureHandle GraphicsSystemV2::GetTextureForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyTextureMap.find(spriteName);
+    //    if (it != legacyTextureMap.end())
+    //        return it->second;
+
+    //    // Try to load from file path (ResourceManager caches internally)
+    //    TextureHandle th = resourceManager.LoadTexture(spriteName);
+    //    if (th.IsValid()) {
+    //        legacyTextureMap[spriteName] = th;
+    //        return th;
+    //    }
+
+    //    return INVALID_TEXTURE_HANDLE;
+    //}
+
+    //MaterialHandle GraphicsSystemV2::GetMaterialForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyMaterialMap.find(spriteName);
+    //    if (it != legacyMaterialMap.end()) {
+    //        return it->second;
+    //    }
+    //    return defaultMaterial;  // Fallback
+    //}
+
+    TextureHandle GraphicsSystemV2::GetTextureForSpriteName(const std::string& name) {
+        // Only try to load when it looks like a file path (e.g., "assets/x.png")
+        if (LooksLikeFilePath(name)) {
+            return resourceManager.EnsureTexture(name); // cache-aware; creates handle if missing
         }
-        return triangleMesh;  // Fallback
-    }
-
-    MaterialHandle GraphicsSystemV2::GetMaterialForSpriteName(const std::string& spriteName) {
-        auto it = legacyMaterialMap.find(spriteName);
-        if (it != legacyMaterialMap.end()) {
-            return it->second;
-        }
-        return defaultMaterial;  // Fallback
+        return INVALID_TEXTURE_HANDLE; // logical names like "quad" shouldn't bind a texture
     }
 
     // === RENDERING PHASES ===
 
     void GraphicsSystemV2::GatherRenderCommands() {
-        if (!entityManager) {
-            return;
-        }
+        if (!entityManager) return;
 
-        // Render background first (if available)
+        // Idealy this should also be an enetity, and loaded from a file
+        // --- Background pass ---
         if (backgroundMaterial.IsValid() && backgroundMesh.IsValid()) {
-            RenderCommand bgCommand;
-            bgCommand.mesh = backgroundMesh;
-            bgCommand.material = backgroundMaterial;
-            bgCommand.layer = -1000;  // Render behind everything
-
-            // Fullscreen quad
-            bgCommand.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f, 4.0f, 1.0f));
-            bgCommand.tint = glm::vec4(1.0f);
-
-            renderQueue.Submit(bgCommand);
+            RenderCommand bg;
+            bg.mesh = backgroundMesh;
+            bg.material = backgroundMaterial;
+            bg.texture = backgroundTexture;
+            bg.layer = -1000;
+            bg.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f));
+            bg.tint = glm::vec4(1.0f);
+            renderQueue.Submit(bg);
         }
 
-        // Gather commands from entities
-        for (Entity entity : entityManager->GetAllEntities()) {
-            // Check if entity has required components
-            if (!entityManager->HasComponent<Transform>(entity)) {
+        // --- Entity passes ---
+        for (Entity e : entityManager->GetAllEntities()) {
+            if (!entityManager->HasComponent<Transform>(e))
                 continue;
-            }
 
-            // Support both new Renderable and old Sprite components
-            bool hasRenderable = entityManager->HasComponent<Renderable>(entity);
-            bool hasSprite = entityManager->HasComponent<Sprite>(entity);
+            auto& transform = entityManager->GetComponent<Transform>(e);
 
-            if (!hasRenderable && !hasSprite) {
-                continue;
-            }
+            // prefer MeshRenderer over Sprite
+            const bool hasRenderer = entityManager->HasComponent<MeshRenderer>(e);
+            const bool hasSprite = entityManager->HasComponent<Sprite>(e);
+            if (!hasRenderer && !hasSprite) continue;
 
-            RenderCommand command;
-            auto& transform = entityManager->GetComponent<Transform>(entity);
+            RenderCommand cmd;
+            // Loads ONLY Renderer OR Sprite Data into draw Command
+            // From Observstion, there are no Sprite Component using this currently
+            if (hasRenderer) {
+                auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+                if (!mr.visible) continue;
 
-            if (hasRenderable) {
-                // New system - use Renderable component
-                auto& renderable = entityManager->GetComponent<Renderable>(entity);
-
-                if (!renderable.visible) {
-                    continue;
+                // 4 Important Graphics Handles (Shader, Material, Mesh, Texture) [Shader is in Material]
+                cmd.mesh = mr.mesh.IsValid() ? mr.mesh : quadMesh;
+                cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
+                // ASC Note: I dun think you should be reading the sprite name here and then storing the tex id
+                // Like, storing the mr.texture should be done way before or something
+                // Okay maybe ask DX, becuase this might be the hot-loading part
+                // But if it is hot-loading, then need check if spriteName name change
+                if (mr.texture.IsValid()) {
+                    cmd.texture = mr.texture;
                 }
+                else if (!mr.spriteName.empty()) {
+                    TextureHandle tex = resourceManager.LoadTexture(mr.spriteName);
+                    if (tex.IsValid()) {
+                        cmd.texture = tex;
+                        mr.texture = tex; // persist handle ✅
+                    }
+                }
+                // To change Texture
+                // mr.texture = resourceManager.LoadTexture("assets/name.png"); // Idealy, name.png is gotten from IMGUI
 
-                // Check if using legacy sprite name or handles
-                if (!renderable.mesh.IsValid() && !renderable.spriteName.empty()) {
-                    // Legacy mode - map sprite name to resources
-                    command.mesh = GetMeshForSpriteName(renderable.spriteName);
-                    command.material = GetMaterialForSpriteName(renderable.spriteName);
+
+                // Other cmd command stuff
+                cmd.tint = mr.tint;
+                cmd.layer = mr.layer;
+                cmd.orderInLayer = mr.orderInLayer;
+
+            }
+            else if (hasSprite) {
+                auto& sp = entityManager->GetComponent<Sprite>(e);
+                // 4 Important Graphics Handles (Shader, Material, Mesh, Texture) [Shader is in Material]
+                cmd.mesh = quadMesh;
+                cmd.material = defaultMaterial;
+                if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
+                    TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
+                    cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
                 }
                 else {
-                    // Modern mode - use handles directly
-                    command.mesh = renderable.mesh;
-                    command.material = renderable.material.IsValid() ?
-                        renderable.material : defaultMaterial;
+                    cmd.texture = INVALID_TEXTURE_HANDLE;
                 }
-
-                command.layer = renderable.layer;
-                command.orderInLayer = renderable.orderInLayer;
-                command.tint = renderable.tint;
+                // Other cmd command stuff
+                cmd.tint = glm::vec4(1.0f);
+                cmd.layer = sp.layer;
 
             }
-            else {
-                // Legacy system - use old Sprite component
-                auto& sprite = entityManager->GetComponent<Sprite>(entity);
 
-                command.mesh = GetMeshForSpriteName(sprite.texturePath);
-                command.material = GetMaterialForSpriteName(sprite.texturePath);
-                command.layer = sprite.layer;
-                command.orderInLayer = 0;
-                command.tint = glm::vec4(1.0f);
-            }
+            // === Transform to model matrix ===
+            glm::mat4 model(1.0f);
+            model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
+            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
+            model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
+            cmd.modelMatrix = model;
 
-            // Build model matrix from transform
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(transform.position.x, transform.position.y, 0.0f));
-            model = glm::rotate(model, glm::radians(transform.rotation), glm::vec3(0, 0, 1));
-            model = glm::scale(model, glm::vec3(transform.scale.x, transform.scale.y, 1.0f));
+            cmd.depth = glm::distance(
+                glm::vec3(transform.position.x, transform.position.y, 0.0f),
+                mainCamera.GetPosition()
+            );
 
-            command.modelMatrix = model;
-
-            // Calculate depth for sorting (distance from camera)
-            glm::vec3 entityPos = glm::vec3(transform.position.x, transform.position.y, 0.0f);
-            glm::vec3 cameraPos = mainCamera.GetPosition();
-            command.depth = glm::distance(entityPos, cameraPos);
-
-            renderQueue.Submit(command);
+            renderQueue.Submit(cmd);
         }
     }
 
@@ -586,30 +655,32 @@ namespace Framework {
         currentBoundShader = INVALID_SHADER_HANDLE;
 
         // Execute each command
-        for (const auto& command : commands) {
-            if (!command.visible) {
+        for (const auto& cmd : commands) {
+            if (!cmd.visible) {
                 continue;
             }
 
             // Bind material if changed
-            if (command.material != currentBoundMaterial) {
-                BindMaterial(command.material, command.tint);
-                currentBoundMaterial = command.material;
-                stats.materialSwitches++;
+            if (cmd.material != currentBoundMaterial) {
+                // If Succeed, Bound new Material, Bound new Shader, Bound new Texture
+                // ASC TA: For now, Remove the binding of material texture, and use binding of cmd.texture instead
+                if (BindMaterial(cmd.material, cmd.tint))
+                {
+                    currentBoundMaterial = cmd.material;
+                    stats.materialSwitches++;
+                }
             }
 
             // Update shader uniforms
             Shader* shader = resourceManager.GetShader(currentBoundShader);
             if (shader) {
-                shader->Bind();
-
                 // Set transformation matrices
                 GLint modelLoc = glGetUniformLocation(shader->GetID(), "uModel");
                 GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
                 GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
 
                 if (modelLoc != -1) {
-                    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(command.modelMatrix));
+                    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cmd.modelMatrix));
                 }
                 if (projLoc != -1) {
                     glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -617,11 +688,28 @@ namespace Framework {
                 if (viewLoc != -1) {
                     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
                 }
-            }
 
-            // Draw mesh
-            DrawMesh(command.mesh);
-            stats.drawCalls++;
+                //Texture* t;
+                //if (cmd.texture.IsValid() && (t = resourceManager.GetTexture(cmd.texture))) {
+                if (cmd.texture.IsValid()) {
+                    // Either Use t->Bind(num), OR use glUniform1i method
+                    //t->Bind(0);
+                    GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
+                    if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
+                    //GLint texLoc = glGetUniformLocation(shader->GetID(), "uTexture");
+                    //if (texLoc != -1) glUniform1i(texLoc, 0);
+                    glBindTextureUnit(0, cmd.texture.GetID());
+
+                }
+                else {
+                    GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
+                    if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+                }
+                
+                // Draw mesh
+                DrawMesh(cmd.mesh);
+                stats.drawCalls++;
+            }
         }
 
         // Unbind everything
@@ -729,16 +817,16 @@ namespace Framework {
 
     // === RENDERING HELPERS ===
 
-    void GraphicsSystemV2::BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint) {
+    bool GraphicsSystemV2::BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint) {
         Material* material = resourceManager.GetMaterial(materialHandle);
         if (!material) {
-            return;
+            return false;
         }
 
         // Bind shader
         Shader* shader = resourceManager.GetShader(material->shader);
         if (!shader) {
-            return;
+            return false;
         }
 
         shader->Bind();
@@ -793,17 +881,17 @@ namespace Framework {
         }
 
         // Set shader uniforms
-        GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
-        if (useTexLoc != -1) {
-            glUniform1i(useTexLoc, hasTexture ? 1 : 0);
-        }
-
-        if (hasTexture) {
-            GLint texLoc = glGetUniformLocation(shader->GetID(), "uTexture");
-            if (texLoc != -1) {
-                glUniform1i(texLoc, 0);
-            }
-        }
+        //GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
+        //if (useTexLoc != -1) {
+        //    glUniform1i(useTexLoc, hasTexture ? 1 : 0);
+        //}
+        //
+        //if (hasTexture) {
+        //    GLint texLoc = glGetUniformLocation(shader->GetID(), "uTexture");
+        //    if (texLoc != -1) {
+        //        glUniform1i(texLoc, 0);
+        //    }
+        //}
 
         // Set color tint (combine material tint with instance tint)
         glm::vec3 finalTint = glm::vec3(material->tint * tint);
@@ -811,6 +899,7 @@ namespace Framework {
         if (colorLoc != -1) {
             glUniform3f(colorLoc, finalTint.r, finalTint.g, finalTint.b);
         }
+        return true;
     }
 
     void GraphicsSystemV2::DrawMesh(MeshHandle meshHandle) {

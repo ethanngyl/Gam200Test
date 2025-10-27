@@ -138,19 +138,22 @@ namespace Framework {
          * @brief Create default materials for legacy sprite names
          * Maintains backwards compatibility with old Sprite component
          */
-        void CreateLegacyMaterials();
+        //void CreateLegacyMaterials();
 
         void RenderImGui();
 
-        /**
-         * @brief Get mesh for legacy sprite name
-         */
-        MeshHandle GetMeshForSpriteName(const std::string& spriteName);
+        ///**
+        // * @brief Get mesh for legacy sprite name
+        // */
+        //MeshHandle GetMeshForSpriteName(const std::string& spriteName);
 
-        /**
-         * @brief Get material for legacy sprite name
-         */
-        MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
+        ///**
+        // * @brief Get material for legacy sprite name
+        // */
+        //MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
+
+        TextureHandle  GetTextureForSpriteName(const std::string& spriteName);
+
 
     private:
         // === RENDERING PHASES ===
@@ -185,7 +188,7 @@ namespace Framework {
         /**
          * @brief Bind material and set uniforms
          */
-        void BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint);
+        bool BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint);
 
         /**
          * @brief Draw a mesh
@@ -271,9 +274,11 @@ namespace Framework {
         MeshHandle debugLineMesh;
         MeshHandle debugCircleMesh;
 
-        // Legacy support (for backwards compatibility)
-        std::unordered_map<std::string, MeshHandle> legacyMeshMap;
-        std::unordered_map<std::string, MaterialHandle> legacyMaterialMap;
+        //// Legacy support (for backwards compatibility)
+        //std::unordered_map<std::string, MeshHandle> legacyMeshMap;
+        //std::unordered_map<std::string, MaterialHandle> legacyMaterialMap;
+        //std::unordered_map<std::string, TextureHandle>  
+        // ;
 
         // State tracking
         MaterialHandle currentBoundMaterial;
