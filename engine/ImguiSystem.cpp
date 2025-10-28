@@ -9,13 +9,14 @@
 #include "Precompiled.h"
 #include "ImGuiSystem.h"
 #include "EntitySpawner.h"
-
+#include "AudioSystem.h"
 namespace Framework {
 
     ImGuiSystem::ImGuiSystem()
         : window(nullptr)
         , entityManager(nullptr)
         , entitySpawner(nullptr)
+        , audioSystem(nullptr)
         , showDemo(false)
         , showEntityInspector(true)
         , showSpawner(true)
@@ -120,6 +121,12 @@ namespace Framework {
         entitySpawner = spawner;
     }
 
+
+    void ImGuiSystem::SetAudioSystem(AudioSystem* audio)
+    {
+        audioSystem = audio;
+    }
+
     // ============================================================================
     // UI WINDOWS - WITH ## UNIQUE IDS
     // ============================================================================
@@ -208,7 +215,7 @@ namespace Framework {
         ImGui::SetNextWindowSize(ImVec2(250, 450), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(370, 30), ImGuiCond_FirstUseEver);
 
-        // ✅ FIX: Add ##UniqueID
+        // FIX: Add ##UniqueID
         if (!ImGui::Begin("Entity Spawner##Spawner1", &showSpawner)) {
             ImGui::End();
             return;
@@ -263,7 +270,18 @@ namespace Framework {
         }
 
         if (ImGui::Button("Spawn Grid Pattern##Btn7", ImVec2(-1, 0))) {
-            entitySpawner->SpawnGrid("quad", 4, 4, Vector2D(-0.6f, -0.4f), Vector2D(0.3f, 0.3f));
+            entitySpawner->SpawnGrid("wireframequad", 4, 4, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
+        }
+
+        if (ImGui::Button("Trigger Audio##Btn8", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("leaves", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
         }
 
         ImGui::End();
@@ -274,7 +292,7 @@ namespace Framework {
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(630, 30), ImGuiCond_FirstUseEver);
 
-        // ✅ FIX: Add ##UniqueID
+        //Add unique id
         if (!ImGui::Begin("Debug Info##Debug1", &showDebug)) {
             ImGui::End();
             return;
