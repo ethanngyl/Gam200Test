@@ -6,7 +6,7 @@ namespace Framework {
 		: currentFrame(0)
 		, frameTimer(0.0f)
 		, isPlaying(false)
-		, demoInitialized(false)
+		, entityManager(nullptr)
 	{}
 
 	AnimationSystem::~AnimationSystem() {}
@@ -37,6 +37,8 @@ namespace Framework {
 				if (anim.currentFrame >= anim.frameCount) {
 					anim.currentFrame = anim.loop ? 0 : anim.frameCount - 1;
 				}
+
+				std::cout << "Frame: " << anim.currentFrame << "\n";
 			}
 		}
 	}

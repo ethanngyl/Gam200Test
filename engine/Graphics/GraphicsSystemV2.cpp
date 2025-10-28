@@ -563,7 +563,7 @@ namespace Framework {
                 const int y = frame / cols;
 
                 float u0 = (x * anim.frameWidth) / float(texW);
-                float u1 = ((x + 1) * anim.frameWidth) / float(texW);
+                float u1 = ((x + anim.uvShrinkPx)) * anim.frameWidth / float(texW);
 
                 float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
                 float v0 = 1.0f - ((y + 1) * anim.frameHeight) / float(texH);

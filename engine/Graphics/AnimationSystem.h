@@ -20,8 +20,7 @@ namespace Framework {
 	private:
         // === SIMPLE ANIMATION DATA ===
 
-		// Animation frames: each number is a "color code"
-		// 0 = Red, 1 = Green, 2 = Blue, etc.
+		// Animation frames
         std::vector<int> animationFrames;
 
         // How long to show each frame (in seconds)
@@ -31,9 +30,6 @@ namespace Framework {
         int currentFrame;
         float frameTimer;
         bool isPlaying;
-
-        // Demo variables
-        bool demoInitialized;
 
 		Framework::EntityManager* entityManager; // ADD THIS
 	};

@@ -179,7 +179,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     // === Give player sprite animation ===
     auto& anim = entityManager.AddComponent<Framework::SpriteAnimation>(player);
-    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Doraemon.png");
+    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Doraemon.png"); // assets/Charmander.png (another spritesheet)
     Framework::Texture* tex = graphicsSys->GetResourceManager().GetTexture(anim.spriteSheet);
 
     anim.frameCount = 6;
@@ -187,6 +187,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     anim.frameHeight = tex->GetHeight() / 2;
     anim.loop = true;
     anim.frameTime = 0.5f;
+    anim.uvShrinkPx = 0.9f;
     anim.currentFrame = 0;
 
     // === Renderable setup ===
