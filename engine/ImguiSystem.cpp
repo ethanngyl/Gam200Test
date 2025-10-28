@@ -263,7 +263,7 @@ namespace Framework {
         }
 
         if (ImGui::Button("Spawn Grid Pattern##Btn7", ImVec2(-1, 0))) {
-            entitySpawner->SpawnGrid("wireframequad", 4, 4, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
+            entitySpawner->SpawnGrid("wireframequad", 16, 20, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
         }
 
         ImGui::End();

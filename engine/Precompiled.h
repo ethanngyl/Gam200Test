@@ -97,7 +97,8 @@
 
 //Grid
 #include "Grid/Grid.h"
-#include "Grid/BuildGridTiles.h"
+#include "Grid/GridTile.h"
+//#include "Grid/GridECS.h"
 
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32

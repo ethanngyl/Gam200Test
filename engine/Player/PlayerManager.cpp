@@ -5,11 +5,15 @@
 ===============================================================================
  */
 
+
 #include "Precompiled.h"
 #include "PlayerManager.h"
 #include "EntitySpawner.h"
 
+
 #include "RenderComponents.h"
+#include "Grid\GridECS.h"
+
 
 namespace Framework {
 
@@ -222,7 +226,7 @@ namespace Framework {
         float worldY = static_cast<float>(-((cy / double(winH)) * 2.0 - 1.0)); // flip Y
 
         // World -> Tile
-        auto maybeTile = GridAPI::WorldToTile(Vector2D{ worldX, worldY });
+        auto maybeTile = WorldToTile(Vector2D{ worldX, worldY });
         if (!maybeTile.has_value()) {
             std::cout << "[ClickMove] outside grid\n";
             return;
@@ -230,7 +234,7 @@ namespace Framework {
         GridCoord target = *maybeTile;
 
         // Only move to walkable tiles
-        if (!GridAPI::IsWalkable(target)) {
+        if (!IsWalkable(target)) {
             std::cout << "[ClickMove] blocked (" << target.x << "," << target.y << ")\n";
             return;
         }
@@ -240,14 +244,14 @@ namespace Framework {
         auto& xform = entityManager->GetComponent<Transform>(playerEntity);
 
         // Clear previous occupant (if any)
-        if (auto prev = GridAPI::WorldToTile(xform.position); prev.has_value()) {
-            GridAPI::SetOccupant(*prev, Entity{ INVALID_ENTITY });
+        if (auto prev = WorldToTile(xform.position); prev.has_value()) {
+            SetOccupant(*prev, Entity{ INVALID_ENTITY });
         }
 
         // Snap to tile center + set occupancy
-        Vector2D snapped = GridAPI::TileToWorld(target);
+        Vector2D snapped = TileToWorld(target);
         xform.position = snapped;
-        GridAPI::SetOccupant(target, playerEntity);
+        SetOccupant(target, playerEntity);
 
         std::cout << "[ClickMove] moved to (" << target.x << "," << target.y << ")\n";
     }

@@ -72,7 +72,7 @@ namespace Framework {
          * @brief Spawn a player entity
          */
         Entity SpawnPlayer(const Vector2D& position) {
-            Entity player = SpawnSprite("wireframequad", position, Vector2D(0.3f, 0.3f));
+            Entity player = SpawnSprite("quad", position, Vector2D(0.1f, 0.1f));
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -166,6 +166,15 @@ namespace Framework {
             const Vector2D& startPos,
             const Vector2D& spacing = Vector2D{ 1.0f, 1.0f })
         {
+
+            auto& record = GetGrid();
+            record.rows = rows;
+            record.cols = cols;
+            record.startPos = startPos;
+            record.spacing = spacing;
+            record.em = entityManager;
+            record.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
+
             int nextId = 0;
 
             for (int row = 0; row < rows; ++row) {
