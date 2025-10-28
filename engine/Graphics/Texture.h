@@ -71,6 +71,10 @@ namespace Framework {
         // GetID: Returns the OpenGL texture object ID.
         unsigned GetID() const { return id; }
 
+        // <-- ADD THESE TWO LINES
+        int GetWidth()  const { return width; }
+        int GetHeight() const { return height; }
+
     private:
         unsigned int id;// OpenGL texture object handle
         int width, height, nrChannels;// Width and Height of the loaded texture in pixels, and Number of color channels (e.g. 3 = RGB, 4 = RGBA)

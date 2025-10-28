@@ -119,6 +119,8 @@ namespace Framework {
          */
         void ClearFollowTarget() { followEnabled = false; }
 
+        MeshHandle GetQuadMesh() const { return quadMesh; }
+
         // === DEBUG RENDERING ===
         
         /**

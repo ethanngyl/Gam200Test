@@ -30,6 +30,7 @@
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
 #include "ImguiSystem.h"
+
  /**
   * @brief Windows application entry point
   * @param hInstance Handle to current application instance
@@ -130,6 +131,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     graphicsSys->SetEntityManager(&entityManager);
     collisionSys->SetEntityManager(&entityManager);
     spawner->SetEntityManager(&entityManager);
+    animationSys->SetEntityManager(&entityManager);
 
     // NEW: Configure player controller
     playerController->SetEntitySpawner(spawner);
@@ -144,12 +146,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     engine.AddSystem(spawner);
     engine.AddSystem(playerController);  // NEW! Add before movement
     engine.AddSystem(movementSys);
+    engine.AddSystem(animationSys);
     engine.AddSystem(graphicsSys);
     engine.AddSystem(inputSys);
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
     engine.AddSystem(projectileMovement);
-    engine.AddSystem(animationSys);
 
     LOG_INFO("CORE", "Systems added. Initializing engine...");
 
@@ -174,6 +176,27 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     Framework::Entity player = spawner->SpawnPlayer(Framework::Vector2D(0.0f, -0.5f));
     playerController->SetPlayerEntity(player);  // NEW!
     graphicsSys->SetFollowTarget(player);
+
+    // === Give player sprite animation ===
+    auto& anim = entityManager.AddComponent<Framework::SpriteAnimation>(player);
+    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Doraemon.png");
+    Framework::Texture* tex = graphicsSys->GetResourceManager().GetTexture(anim.spriteSheet);
+
+    anim.frameCount = 6;
+    anim.frameWidth = tex->GetWidth() / 4;
+    anim.frameHeight = tex->GetHeight() / 2;
+    anim.loop = true;
+    anim.frameTime = 0.5f;
+    anim.currentFrame = 0;
+
+    // === Renderable setup ===
+    // Player MUST have a Renderable
+    entityManager.AddComponent<Framework::Renderable>(player);
+    auto& rend = entityManager.GetComponent<Framework::Renderable>(player);
+    rend.visible = true;
+    rend.layer = 10;
+    rend.mesh = graphicsSys->GetQuadMesh();
+    rend.tint = glm::vec4(1, 1, 1, 1);
 
     std::cout << "\n=== CONTROLS ===\n";
     std::cout << "WASD/Arrows: Move player\n";

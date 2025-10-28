@@ -1,4 +1,4 @@
-/**
+ /**
 ===============================================================================
  File:           RenderComponents.h
  Author:         Graphics System Overhaul
@@ -46,7 +46,7 @@ namespace Framework {
         glm::vec4 tint = glm::vec4(1.0f);  // Color tint multiplier
         
         // Legacy sprite name support (for backwards compatibility)
-        std::string spriteName;
+        std::string spriteName = "";
 
         Renderable() = default;
         

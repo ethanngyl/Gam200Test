@@ -1,5 +1,6 @@
 #pragma
 #include "Precompiled.h"
+#include "ECSEntityManager.h"     // ADD THIS
 
 namespace Framework {
 
@@ -13,6 +14,8 @@ namespace Framework {
 		virtual void Initialize() override;
 		virtual void Update(float dt) override;
 		virtual void SendEngineMessage(Message* message) override;
+
+		void SetEntityManager(Framework::EntityManager* em) { entityManager = em; }
 
 	private:
         // === SIMPLE ANIMATION DATA ===
@@ -31,6 +34,8 @@ namespace Framework {
 
         // Demo variables
         bool demoInitialized;
+
+		Framework::EntityManager* entityManager; // ADD THIS
 	};
 
 }

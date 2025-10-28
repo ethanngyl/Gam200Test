@@ -486,36 +486,42 @@ namespace Framework {
             RenderCommand command;
             auto& transform = entityManager->GetComponent<Transform>(entity);
 
+            // --- Build command from components ---
             if (hasRenderable) {
-                // New system - use Renderable component
                 auto& renderable = entityManager->GetComponent<Renderable>(entity);
+                if (!renderable.visible) continue;
 
-                if (!renderable.visible) {
-                    continue;
+                // 1) NEVER depend on spriteName anymore (remove the legacy check)
+                //    If the renderable has no material yet, instantiate one from defaultMaterial.
+                // === Ensure this entity has its own cloned Material ===
+                if (!renderable.material.IsValid())
+                {
+                    Material* base = resourceManager.GetMaterial(defaultMaterial);
+                    if (!base) continue;
+
+                    MaterialHandle inst = resourceManager.CreateMaterial(
+                        "entity_mat_" + std::to_string(entity.GetID()),
+                        base->shader // <- second parameter required by YOUR engine
+                    );
+
+                    Material* pm = resourceManager.GetMaterial(inst);
+                    if (!pm) continue;
+
+                    *pm = *base; // shallow copy (safe in this engine)
+                    renderable.material = inst;
                 }
 
-                // Check if using legacy sprite name or handles
-                if (!renderable.mesh.IsValid() && !renderable.spriteName.empty()) {
-                    // Legacy mode - map sprite name to resources
-                    command.mesh = GetMeshForSpriteName(renderable.spriteName);
-                    command.material = GetMaterialForSpriteName(renderable.spriteName);
-                }
-                else {
-                    // Modern mode - use handles directly
-                    command.mesh = renderable.mesh;
-                    command.material = renderable.material.IsValid() ?
-                        renderable.material : defaultMaterial;
-                }
-
+                // 2) Choose mesh/material to draw
+                command.mesh = renderable.mesh;              // must be valid quad in your pipeline
+                command.material = renderable.material.IsValid() ? renderable.material : defaultMaterial;
                 command.layer = renderable.layer;
                 command.orderInLayer = renderable.orderInLayer;
                 command.tint = renderable.tint;
-
             }
             else {
-                // Legacy system - use old Sprite component
+                // Legacy Sprite component path (keep if you still support it),
+                // but DO NOT use spriteName strings to decide; resolve once during spawn if needed.
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
-
                 command.mesh = GetMeshForSpriteName(sprite.texturePath);
                 command.material = GetMaterialForSpriteName(sprite.texturePath);
                 command.layer = sprite.layer;
@@ -535,6 +541,40 @@ namespace Framework {
             glm::vec3 entityPos = glm::vec3(transform.position.x, transform.position.y, 0.0f);
             glm::vec3 cameraPos = mainCamera.GetPosition();
             command.depth = glm::distance(entityPos, cameraPos);
+
+            // === SPRITE SHEET UV SLICING ===
+            if (entityManager->HasComponent<SpriteAnimation>(entity)) {
+                auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
+
+                Material* mat = GetResourceManager().GetMaterial(command.material);
+                if (!mat) continue;
+
+                // Get texture from the animation's spriteSheet handle
+                Texture* tex = GetResourceManager().GetTexture(anim.spriteSheet);
+                if (!tex) continue;
+
+                const int texW = tex->GetWidth();
+                const int texH = tex->GetHeight();
+                if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0) continue;
+
+                const int cols = texW / anim.frameWidth;
+                const int frame = anim.currentFrame % max(1, anim.frameCount);
+                const int x = frame % cols;
+                const int y = frame / cols;
+
+                float u0 = (x * anim.frameWidth) / float(texW);
+                float v0 = (y * anim.frameHeight) / float(texH);
+                float u1 = ((x + 1) * anim.frameWidth) / float(texW);
+                float v1 = ((y + 1) * anim.frameHeight) / float(texH);
+
+                mat->u0 = u0;  mat->v0 = v0;
+                mat->u1 = u1;  mat->v1 = v1;
+
+                // Make sure the same texture is used by the material that we are slicing
+                if (!mat->albedoTexture.IsValid()) {
+                    mat->albedoTexture = anim.spriteSheet;
+                }
+            }
 
             renderQueue.Submit(command);
         }
@@ -713,6 +753,11 @@ namespace Framework {
 
         shader->Bind();
         currentBoundShader = material->shader;
+
+        glUniform1f(glGetUniformLocation(shader->GetID(), "u0"), material->u0);
+        glUniform1f(glGetUniformLocation(shader->GetID(), "v0"), material->v0);
+        glUniform1f(glGetUniformLocation(shader->GetID(), "u1"), material->u1);
+        glUniform1f(glGetUniformLocation(shader->GetID(), "v1"), material->v1);
 
         // Set blend mode
         switch (material->blendMode) {
