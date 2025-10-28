@@ -3,6 +3,7 @@
 #include "ECSEntity.h"
 #include "ECSComponent.h"
 #include "Component.h"
+#include "Vector2D.h"
 
 namespace Framework {
 

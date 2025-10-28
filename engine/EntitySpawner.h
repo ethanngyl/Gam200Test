@@ -186,6 +186,8 @@ namespace Framework {
                     const Vector2D tileSize{ 0.1f, 0.1f };
                     Entity e = SpawnSprite(spriteName, pos, tileSize);
 
+                    record.tiles[record.Index(col, row)] = e;
+
                     entityManager->AddComponent<GridTiles>(e);
                     auto& gridTile = entityManager->GetComponent<GridTiles>(e);
                     gridTile.tileId = nextId++;
