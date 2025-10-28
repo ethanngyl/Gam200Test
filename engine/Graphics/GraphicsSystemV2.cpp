@@ -563,9 +563,10 @@ namespace Framework {
                 const int y = frame / cols;
 
                 float u0 = (x * anim.frameWidth) / float(texW);
-                float v0 = (y * anim.frameHeight) / float(texH);
                 float u1 = ((x + 1) * anim.frameWidth) / float(texW);
-                float v1 = ((y + 1) * anim.frameHeight) / float(texH);
+
+                float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
+                float v0 = 1.0f - ((y + 1) * anim.frameHeight) / float(texH);
 
                 mat->u0 = u0;  mat->v0 = v0;
                 mat->u1 = u1;  mat->v1 = v1;
@@ -754,10 +755,8 @@ namespace Framework {
         shader->Bind();
         currentBoundShader = material->shader;
 
-        glUniform1f(glGetUniformLocation(shader->GetID(), "u0"), material->u0);
-        glUniform1f(glGetUniformLocation(shader->GetID(), "v0"), material->v0);
-        glUniform1f(glGetUniformLocation(shader->GetID(), "u1"), material->u1);
-        glUniform1f(glGetUniformLocation(shader->GetID(), "v1"), material->v1);
+        glUniform4f(glGetUniformLocation(shader->GetID(), "uUVRect"),
+            material->u0, material->v0, material->u1, material->v1);
 
         // Set blend mode
         switch (material->blendMode) {
