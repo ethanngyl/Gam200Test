@@ -63,7 +63,7 @@ void level1_Initialize()
 
     if (graphicsSystem) {
         graphicsSystem->SetFollowTarget(playerEntity);
-        graphicsSystem->SetCameraZoom(3.2f);
+        graphicsSystem->SetCameraZoom(1.2f);
     }
 
 
