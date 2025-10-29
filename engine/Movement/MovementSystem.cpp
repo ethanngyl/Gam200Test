@@ -84,12 +84,12 @@ namespace Framework
                 if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += 1.0f;
 
                 // === SCALING ===
-                if (inputSystem->IsKeyDown(KEY_1)) {
+                if (inputSystem->IsKeyDown(KEY_5)) {
                     transform.scale.x += 1.0f * dt;
                     transform.scale.y += 1.0f * dt;
                 }
 
-                if (inputSystem->IsKeyDown(KEY_2)) {
+                if (inputSystem->IsKeyDown(KEY_6)) {
                     transform.scale.x -= 1.0f * dt;
                     transform.scale.y -= 1.0f * dt;
                 }

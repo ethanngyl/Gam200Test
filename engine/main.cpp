@@ -196,7 +196,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     Framework::Texture* tex = graphicsSys->GetResourceManager().GetTexture(anim.spriteSheet);
 
     anim.frameCount  = 9;     // How many frames? (in the spritesheet)
-    anim.frameTime   = 0.5f;  // speed of sprite movement (animation)
+    anim.frameTime   = 0.15f;  // speed of sprite movement (animation)
     anim.rows        = 3;     // based on spritesheet (ROW-MAJOR) | First frame: top left
     anim.columns     = 3;     // based on spritesheet
     anim.uvShrinkPx  = 0.9f;  // size of sprite
