@@ -46,8 +46,8 @@ macro(import_glew)
         message(STATUS "Importing GLEW...")
         FetchContent_Declare(
             glew
-            URL https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.zip
-            URL_HASH SHA256=a9046a913774395a095edcc0b0ac2d81c3aacca61787b39839b941e9be14e0d4
+            GIT_REPOSITORY https://github.com/Perlmint/glew-cmake.git
+            GIT_TAG d06782b910213d675925e6e51a69ad0fd1fe1f23
         )
         FetchContent_Populate(glew)
         

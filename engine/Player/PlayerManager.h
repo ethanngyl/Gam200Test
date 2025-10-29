@@ -52,6 +52,8 @@ namespace Framework {
         void HandleShootDown(const Vector2D& playerPos);
         void HandleShootAtMouse(const Vector2D& playerPos);
 
+        void HandleClickToMove();
+
         // ========================================================================
         // ENTITY SPAWNING HANDLERS (Debug/Testing)
         // ========================================================================

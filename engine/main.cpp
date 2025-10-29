@@ -30,6 +30,7 @@
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
 #include "ImguiSystem.h"
+#include "AudioSystem.h"
  /**
   * @brief Windows application entry point
   * @param hInstance Handle to current application instance
@@ -121,6 +122,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     auto* movementSys = new Framework::MovementSystem();
     auto* projectileMovement = new Framework::ProjectileMovementSystem();
     auto* spawner = new Framework::EntitySpawner();
+    auto* audioSys = new Framework::AudioSystem();
     auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
     auto* imguiSys = new Framework::ImGuiSystem();
 
@@ -131,6 +133,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     graphicsSys->SetEntityManager(&entityManager);
     collisionSys->SetEntityManager(&entityManager);
     spawner->SetEntityManager(&entityManager);
+    audioSys->SetEntityManager(&entityManager);
 
     // NEW: Configure player controller
     playerController->SetEntitySpawner(spawner);
@@ -151,6 +154,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     engine.AddSystem(collisionSys);
     engine.AddSystem(mathSys);
     engine.AddSystem(projectileMovement);
+    engine.AddSystem(audioSys);
 
     LOG_INFO("CORE", "Systems added. Initializing engine...");
 
@@ -160,11 +164,19 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     imguiSys->SetWindow(windowSys->GetWindow());
     imguiSys->SetEntityManager(&entityManager);
     imguiSys->SetEntitySpawner(spawner);
+    
     engine.AddSystem(imguiSys);
     // NEW: Give player controller access to window
     playerController->SetWindow(windowSys->GetWindow());
-
+    
     engine.Initialize();
+
+    bool loaded = audioSys->LoadSound("assets/leaves.wav", "leaves");
+    if (!loaded) {
+        std::cout << "[ERROR] Failed to load leaves.wav!\n";
+        std::cout << "[INFO] Make sure file exists at: assets/leaves.wav\n";
+    }
+    imguiSys->SetAudioSystem(audioSys);
 
     LOG_INFO("CORE", "Engine initialized. Setting up game...");
 
@@ -187,6 +199,22 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     std::cout << "================\n\n";
 
     std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
+
+    //Framework::GridConfig cfg;
+    //cfg.cols = 32;
+    //cfg.rows = 18;
+
+    //// Option A: fit to screen
+    //cfg.tileW = 4.0f / cfg.cols;       // 4 units wide (-2..2)
+    //cfg.tileH = 2.0f / cfg.rows;       // 2 units high (-1..1)
+
+    //// Center the grid so full board is visible
+    //cfg.originWorld = { -((cfg.cols - 1) * cfg.tileW) * 0.5f,
+    //                    -((cfg.rows - 1) * cfg.tileH) * 0.5f };
+
+    //cfg.diag = Framework::DiagonalRule::NoCutCorners;
+    //Framework::GridAPI::Initialize(cfg);
+    //Framework::BuildGridTiles(&entityManager);
 
     // Run game
     engine.GameLoop();

@@ -10,8 +10,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-
-
+#include "AudioSystem.h"
 namespace Framework {
 
     class EntitySpawner;
@@ -39,6 +38,7 @@ namespace Framework {
         bool OpenLevelFromTxt(const std::string& file, bool clearAll);
 		bool SaveLevelToTxt(const std::string& file);
 
+        void SetAudioSystem(AudioSystem* audio);
         // Render ImGui (call after game rendering, before swap buffers)
         void Render();
 
@@ -57,6 +57,7 @@ namespace Framework {
         std::string openPath;
 		std::string defaultLevelPath = "assets/defaultLevel.txt";
 
+        AudioSystem* audioSystem;
         // UI Windows
         void ShowEntityInspector();
         void ShowSpawnerWindow();

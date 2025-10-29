@@ -33,9 +33,11 @@
 #include "RenderCommand.h"
 #include "RenderComponents.h"
 #include "Material.h"
+#include "Precompiled.h"
 #include <memory>
 #include <unordered_map>   
 #include "ECSEntity.h" 
+
 
 // Forward declarations
 struct GLFWwindow;
@@ -152,6 +154,9 @@ namespace Framework {
          */
         MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
 
+        void SetShowGrid(bool e) { showGrid = e; }
+        void SetShowGridBlocked(bool e) { showGridBlocked = e; }
+
     private:
         // === RENDERING PHASES ===
         
@@ -223,6 +228,9 @@ namespace Framework {
          * @brief Create background rendering resources
          */
         void SetupBackground();
+
+        // Draw grid to the debug queue (implemented in .cpp)
+       // void RenderGridOverlay();  // NEW
 
         // === MEMBER VARIABLES ===
         
@@ -301,6 +309,10 @@ namespace Framework {
             size_t trianglesRendered = 0;
             size_t materialSwitches = 0;
         } stats;
+
+        // State: whether to show the grid overlay/fill
+        bool showGrid = true;         // NEW
+        bool showGridBlocked = true;  // NEW
     };
 
 } // namespace Framework
