@@ -748,6 +748,11 @@ namespace Framework {
 
         ImGui::Separator();
         ImGui::Text("Controls:");
+        ImGui::BulletText("up down left right: Move editor camera");
+        ImGui::BulletText("Key 1: Zoom in");
+        ImGui::BulletText("Key 2: Zoom out");
+        ImGui::BulletText("key 0: Reset Camera");
+        ImGui::BulletText("click above menu Editor->Play to activate play mode");
         ImGui::BulletText("WASD: Move");
         ImGui::BulletText("SPACE: Shoot Up");
         ImGui::BulletText("SHIFT: Shoot Down");
@@ -755,6 +760,8 @@ namespace Framework {
         ImGui::BulletText("O: Spawn Obstacle");
         ImGui::BulletText("R: Spawn Pickup");
         ImGui::BulletText("Q/ESC: Quit");
+
+        
 
         ImGui::End();
     }
