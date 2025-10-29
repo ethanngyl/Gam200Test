@@ -84,6 +84,11 @@ namespace Framework {
 
         glfwSwapInterval(1);  // ✅ ADD THIS - Enables VSync
 
+        text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
+
+        text_.loadFont("Sans48", "assets/fonts/Roboto-Regular.ttf", 48);
+        text_.loadFont("Serif32", "assets/fonts/NotoSerif-Bold.ttf", 32);
+
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
@@ -95,6 +100,7 @@ namespace Framework {
         std::cout << "  Textures: " << resourceStats.textureCount << "\n";
         std::cout << "  Meshes: " << resourceStats.meshCount << "\n";
         std::cout << "  Materials: " << resourceStats.materialCount << "\n\n";
+        std::cout << "TextRenderer initialized.\n";
     }
 
     void GraphicsSystemV2::FollowPlayer(EntityManager* em, Entity player)
@@ -147,16 +153,17 @@ namespace Framework {
         // Execute render commands
         ExecuteRenderQueue();
 
-       // RenderGridOverlay(); // NEW: queue grid primitives
-
         // Render debug visualizations if enabled
         if (debugRenderingEnabled) {
-            
             RenderDebugPrimitives();
         }
 
         // Swap buffers
         //EndFrame();
+        
+        // === Text Rendering Pass ===
+        text_.draw("Sans48", "Hello, StructSquad!", 30.f, viewportHeight - 60.f, 1.0f, { 1.0f, 1.0f, 1.0f });
+        text_.draw("Serif32", "Score: 12345", viewportWidth - 250.f, 40.f, 1.0f, { 0.2f, 0.9f, 0.3f });
 
         // Clear queues for next frame
         renderQueue.Clear();
@@ -194,6 +201,8 @@ namespace Framework {
         // Update camera aspect ratio
         float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
         mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+
+        text_.setScreenSize(width, height);
 
         std::cout << "GraphicsSystemV2: Viewport resized to " << width << "x" << height << "\n";
     }
@@ -818,59 +827,6 @@ namespace Framework {
 
         shader->Unbind();
     }
-
-    //void GraphicsSystemV2::RenderGridOverlay() {
-    //    using namespace Framework;
-
-    //    const auto b = GridAPI::Bounds();
-    //    if (b.cols <= 0 || b.rows <= 0) return;
-
-    //    const auto& rt = GridSystem::Runtime();
-    //    const float hw = rt.tileW * 0.5f;
-    //    const float hh = rt.tileH * 0.5f;
-
-    //    const glm::vec4 lineCol = { 0.85f, 0.85f, 0.85f, 1.0f };
-    //    const glm::vec4 blockedCol = { 1.00f, 0.30f, 0.30f, 1.0f };
-
-    //    // --- helpers BEFORE the per-cell loop ---
-    //// axes
-    //    debugQueue.AddLine({ -2.0f, 0.0f, 0.0f }, { +2.0f, 0.0f, 0.0f }, { 1,1,0,1 });
-    //    debugQueue.AddLine({ 0.0f,-1.0f, 0.0f }, { 0.0f,+1.0f, 0.0f }, { 0,1,1,1 });
-
-    //    // grid AABB border
-    //    const float left = rt.originWorld.x - rt.tileW * 0.5f;
-    //    const float bottom = rt.originWorld.y - rt.tileH * 0.5f;
-    //    const float right = left + rt.tileW * b.cols;
-    //    const float top = bottom + rt.tileH * b.rows;
-    //    const glm::vec4 cyan = { 0,1,1,1 };
-    //    debugQueue.AddLine({ left,  bottom, 0 }, { right, bottom, 0 }, cyan);
-    //    debugQueue.AddLine({ right, bottom, 0 }, { right,    top, 0 }, cyan);
-    //    debugQueue.AddLine({ right,    top, 0 }, { left,     top, 0 }, cyan);
-    //    debugQueue.AddLine({ left,     top, 0 }, { left,  bottom, 0 }, cyan);
-
-    //    for (int y = 0; y < b.rows; ++y) {
-    //        for (int x = 0; x < b.cols; ++x) {
-    //            GridCoord c{ x, y };
-    //            const Vector2D center = GridAPI::TileToWorld(c);
-
-    //            // outline (four thin lines)
-    //            debugQueue.AddLine({ center.x - hw, center.y - hh, 0.0f },
-    //                { center.x + hw, center.y - hh, 0.0f }, lineCol);
-    //            debugQueue.AddLine({ center.x + hw, center.y - hh, 0.0f },
-    //                { center.x + hw, center.y + hh, 0.0f }, lineCol);
-    //            debugQueue.AddLine({ center.x + hw, center.y + hh, 0.0f },
-    //                { center.x - hw, center.y + hh, 0.0f }, lineCol);
-    //            debugQueue.AddLine({ center.x - hw, center.y + hh, 0.0f },
-    //                { center.x - hw, center.y - hh, 0.0f }, lineCol);
-
-    //            // optional fill for blocked cells
-    //            if (showGridBlocked && !GridAPI::IsWalkable(c)) {
-    //                debugQueue.AddBox({ center.x, center.y, 0.0f },
-    //                    { rt.tileW, rt.tileH, 1.0f }, blockedCol);
-    //            }
-    //        }
-    //    }
-    //}
 
     // === RENDERING HELPERS ===
 
