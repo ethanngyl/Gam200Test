@@ -30,7 +30,8 @@
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
 #include "ImguiSystem.h"
-#include "AudioSystem.h"
+#include "AudioSystem.h" 
+
  /**
   * @brief Windows application entry point
   * @param hInstance Handle to current application instance
@@ -193,13 +194,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Doraemon.png"); // assets/Charmander.png (another spritesheet)
     Framework::Texture* tex = graphicsSys->GetResourceManager().GetTexture(anim.spriteSheet);
 
-    anim.frameCount = 6;
-    anim.frameWidth = tex->GetWidth() / 4;
-    anim.frameHeight = tex->GetHeight() / 2;
+    anim.frameCount = 6;     // How many frames? (in the spritesheet)
+    anim.frameTime = 0.5f;   // speed of sprite movement (animation)
+    anim.uvShrinkPx = 0.9f;  // size of sprite
+    anim.rows = 2;    // based on spritesheet (ROW-MAJOR) | First frame: top left
+    anim.columns = 4; // based on spritesheet
+    anim.frameWidth = tex->GetWidth() / anim.columns;
+    anim.frameHeight = tex->GetHeight() / anim.rows;
     anim.loop = true;
-    anim.frameTime = 0.5f;
-    anim.uvShrinkPx = 0.9f;
-    anim.currentFrame = 0;
 
     // === Renderable setup ===
     // Player MUST have a Renderable

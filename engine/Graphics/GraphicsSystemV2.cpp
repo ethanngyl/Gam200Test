@@ -596,7 +596,7 @@ namespace Framework {
                 float u1 = ((x + anim.uvShrinkPx)) * anim.frameWidth / float(texW);
 
                 float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
-                float v0 = 1.0f - ((y + 1) * anim.frameHeight) / float(texH);
+                float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
 
                 mat->u0 = u0;  mat->v0 = v0;
                 mat->u1 = u1;  mat->v1 = v1;
