@@ -229,6 +229,12 @@ namespace Framework
         LOG_INFO("CORE", " CoreEngine: Cleaning Up");
         LOG_INFO("CORE", "================================================");
 
+        // Stop all audio before destroying systems
+        if (audioSystem) {
+            LOG_INFO("CORE", "Stopping all audio...");
+            audioSystem->StopAllSounds();
+        }
+
         // Destroy all systems added to engine
         DestroySystems();
 
