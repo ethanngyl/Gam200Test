@@ -69,7 +69,7 @@ void level1_Initialize()
 void level1_Update()
 {
     if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_2))
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
         LOG_INFO("LEVEL1", "ESC pressed - returning to menu");
         next = mainMenu;
