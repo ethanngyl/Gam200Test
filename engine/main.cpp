@@ -191,23 +191,24 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     // === Give player sprite animation ===
     auto& anim = entityManager.AddComponent<Framework::SpriteAnimation>(player);
-    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Bird.png"); // Charmander.png, Doraemon.png, Bird.png (spritesheets)
+
+    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Bird.png"); // Doraemon.png, Bird.png (spritesheets)
     Framework::Texture* tex = graphicsSys->GetResourceManager().GetTexture(anim.spriteSheet);
-                                                                
-    anim.frameCount = 9;     // How many frames? (in the spritesheet)
-    anim.frameTime = 0.5f;   // speed of sprite movement (animation)
-    anim.uvShrinkPx = 0.9f;  // size of sprite
-    anim.rows = 3;    // based on spritesheet (ROW-MAJOR) | First frame: top left
-    anim.columns = 3; // based on spritesheet
-    anim.frameWidth = tex->GetWidth() / anim.columns;
+
+    anim.frameCount  = 9;     // How many frames? (in the spritesheet)
+    anim.frameTime   = 0.5f;  // speed of sprite movement (animation)
+    anim.rows        = 3;     // based on spritesheet (ROW-MAJOR) | First frame: top left
+    anim.columns     = 3;     // based on spritesheet
+    anim.uvShrinkPx  = 0.9f;  // size of sprite
+    anim.frameWidth  = tex->GetWidth() / anim.columns;
     anim.frameHeight = tex->GetHeight() / anim.rows;
-    anim.loop = true;
 
     // === Renderable setup ===
     // Player MUST have a Renderable
     entityManager.AddComponent<Framework::Renderable>(player);
     auto& rend = entityManager.GetComponent<Framework::Renderable>(player);
     rend.visible = true;
+
     rend.layer = 10;
     rend.mesh = graphicsSys->GetQuadMesh();
     rend.tint = glm::vec4(1, 1, 1, 1);

@@ -45,11 +45,10 @@ namespace Framework {
 
 	void AnimationSystem::SendEngineMessage(Message* message) {
 		// Restart animation when SPACE is pressed
-		if (message->MessageId == KEY_SPACE) {
+		if (message->MessageId == KEY_0) {
 			currentFrame = 0;
 			frameTimer = 0.0f;
-			std::cout << "Animation: RESTARTED by space key!" << std::endl;
+			std::cout << "Animation: RESTARTED by '0' key!" << std::endl;
 		}
 	}
-
 }
