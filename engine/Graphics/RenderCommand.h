@@ -30,7 +30,7 @@ namespace Framework {
         // What to draw
         MeshHandle mesh;
         MaterialHandle material;
-        
+        TextureHandle  texture;
         // Transform
         glm::mat4 modelMatrix;
         
