@@ -191,14 +191,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     // === Give player sprite animation ===
     auto& anim = entityManager.AddComponent<Framework::SpriteAnimation>(player);
-    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Doraemon.png"); // assets/Charmander.png (another spritesheet)
+    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Bird.png"); // Charmander.png, Doraemon.png, Bird.png (spritesheets)
     Framework::Texture* tex = graphicsSys->GetResourceManager().GetTexture(anim.spriteSheet);
-
-    anim.frameCount = 6;     // How many frames? (in the spritesheet)
+                                                                
+    anim.frameCount = 9;     // How many frames? (in the spritesheet)
     anim.frameTime = 0.5f;   // speed of sprite movement (animation)
     anim.uvShrinkPx = 0.9f;  // size of sprite
-    anim.rows = 2;    // based on spritesheet (ROW-MAJOR) | First frame: top left
-    anim.columns = 4; // based on spritesheet
+    anim.rows = 3;    // based on spritesheet (ROW-MAJOR) | First frame: top left
+    anim.columns = 3; // based on spritesheet
     anim.frameWidth = tex->GetWidth() / anim.columns;
     anim.frameHeight = tex->GetHeight() / anim.rows;
     anim.loop = true;
