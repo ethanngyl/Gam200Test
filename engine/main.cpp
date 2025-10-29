@@ -212,6 +212,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     rend.mesh = graphicsSys->GetQuadMesh();
     rend.tint = glm::vec4(1, 1, 1, 1);
 
+    // ======= Transformation setup =======
+    auto& xform = entityManager.AddComponent<Framework::Transform>(player);
+    xform.upperLimit = 3.0f;
+    xform.lowerLimit = 0.5f;
+
     std::cout << "\n=== CONTROLS ===\n";
     std::cout << "WASD/Arrows: Move player\n";
     std::cout << "SPACE: Shoot up\n";

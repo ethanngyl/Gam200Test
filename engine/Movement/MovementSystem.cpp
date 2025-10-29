@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -81,6 +81,31 @@ namespace Framework
                 if (inputSystem->IsKeyDown(KEY_S)) inputDir.y -= 1.0f;
                 if (inputSystem->IsKeyDown(KEY_A)) inputDir.x -= 1.0f;
                 if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += 1.0f;
+
+                // === SCALING ===
+                if (inputSystem->IsKeyDown(KEY_1)) {
+                    transform.scale.x += 1.0f * dt;
+                    transform.scale.y += 1.0f * dt;
+                }
+
+                if (inputSystem->IsKeyDown(KEY_2)) {
+                    transform.scale.x -= 1.0f * dt;
+                    transform.scale.y -= 1.0f * dt;
+                }
+
+                // === Scale Clamping ===
+                transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
+                transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
+
+                // === ROTATION ===
+                if (inputSystem->IsKeyDown(KEY_3)) {
+                    transform.rotation += 90.0f * dt;
+                }
+
+                if (inputSystem->IsKeyDown(KEY_4)) {
+                    transform.rotation -= 90.0f * dt;
+                }
+
 
                 // Normalize diagonal movement
                 if (inputDir.length() > 0.0f) {
