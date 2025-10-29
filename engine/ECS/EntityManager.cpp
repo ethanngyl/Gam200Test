@@ -1,4 +1,4 @@
-/**
+﻿/**
  ===============================================================================
  File:           EntityManager.cpp
  Author:         ETHAN NG YONG LE
@@ -82,4 +82,19 @@ namespace Framework
         // Recycle the ID
         freeEntityIDs.push_back(id);
     }
+
+
+    /**
+     * @brief Delete all entities and components
+     * @author jiahao.zhou@digipen.edu
+	 * add this function to clear all entities and components in the entity manager
+     * require this function for loading scenes in ImGui system
+     */
+    void EntityManager::ClearAllEntities()
+    {
+        components.clear();
+        allEntities.clear();
+        freeEntityIDs.clear();
+        nextEntityID = 1;
+	}
 }

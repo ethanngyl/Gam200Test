@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           Core.h
  Author:         ETHAN NG YONG LE
@@ -96,6 +96,9 @@ namespace Framework
          */
         void BroadcastMessage(Message* message);
 
+        bool IsPlaying() const { return isPlaying; }
+        void SetPlaying(bool value) { isPlaying = value; }
+
     private:
         // Systems collection
         std::vector<EngineSystem*> Systems;
@@ -105,6 +108,8 @@ namespace Framework
 
         // Game state
         bool GameActive;
+
+		bool isPlaying = false;
     };
 
     /**

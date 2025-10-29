@@ -88,6 +88,9 @@ namespace Framework {
 
         text_.loadFont("Sans48", "assets/fonts/Roboto-Regular.ttf", 48);
         text_.loadFont("Serif32", "assets/fonts/NotoSerif-Bold.ttf", 32);
+		//set the editor camera to default position - jiahao
+		editorCameraStartPos = mainCamera.GetPosition();
+		editorCameraZoom = mainCamera.GetZoom();
 
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
@@ -122,6 +125,50 @@ namespace Framework {
     }
 
 
+	//definition of ResetEditorCamera - Jiahao
+    void GraphicsSystemV2::ResetEditorCamera() {
+		mainCamera.SetPosition(editorCameraStartPos);
+		mainCamera.SetZoom(editorCameraZoom);
+    }
+
+	//definition of HandleEditorCamera - Jiahao
+    void GraphicsSystemV2::HandleEditorCamera(float dt) {
+        const float panSpeed = 2.0f * dt;
+		const float zoomSpeed = 1.5f * dt;
+
+		//Panning with arrow keys
+        if (GetAsyncKeyState(Framework::KEY_LEFT)) {
+            mainCamera.Translate({ -panSpeed, 0.0f, 0.0f });
+        }
+        if (GetAsyncKeyState(Framework::KEY_RIGHT)) {
+            mainCamera.Translate({ panSpeed, 0.0f, 0.0f });
+        }
+        if (GetAsyncKeyState(Framework::KEY_UP)) {
+            mainCamera.Translate({ 0.0f, panSpeed, 0.0f });
+        }
+        if (GetAsyncKeyState(Framework::KEY_DOWN)) {
+            mainCamera.Translate({ 0.0f, -panSpeed, 0.0f });
+        }
+
+		//Zooming 
+        if (GetAsyncKeyState(Framework::KEY_1)) {
+            float zoom = mainCamera.GetZoom();
+            mainCamera.SetZoom(zoom * (1.0f + zoomSpeed));
+        }
+
+        if (GetAsyncKeyState(Framework::KEY_2)) {
+            float zoom = mainCamera.GetZoom();
+            mainCamera.SetZoom(zoom * (1.0f - zoomSpeed));
+        }
+
+		//Reset camera position 
+
+        if (GetAsyncKeyState(Framework::KEY_0)) {
+            ResetEditorCamera();
+        }
+    }
+
+
     void GraphicsSystemV2::Update(float dt) {
         (void)dt;
 
@@ -129,10 +176,19 @@ namespace Framework {
             return;
         }
 
+
         // === CAMERA FOLLOW LOGIC ===
-        if (followEnabled && entityManager && followTarget.IsValid()) {
-            FollowPlayer(entityManager, followTarget);
+
+        if (!Framework::CORE->IsPlaying()) {
+			HandleEditorCamera(dt);
         }
+        else {
+            if (followEnabled && entityManager && followTarget.IsValid()) {
+                FollowPlayer(entityManager, followTarget);
+            }
+        }
+
+
         // ============================================
 
         // Clear ONCE at the start
