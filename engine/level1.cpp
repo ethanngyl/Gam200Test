@@ -5,11 +5,13 @@
 #include "GSM/GameStateList.h"
 #include "GSM/GameStateManager.h"
 #include "PlayerManager.h"
+#include "Graphics/GraphicsSystemV2.h"
 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::EntitySpawner;
 using Framework::PlayerControllerSystem;
+using Framework::GraphicsSystemV2;
 
 void level1_Load()
 {
@@ -31,9 +33,15 @@ void level1_Initialize()
         return;
     }
 
+
     PlayerControllerSystem* playerControll = engine->GetPlayerController();
     if (!playerControll) {
         LOG_ERROR("LEVEL1", "playerControll is null!");
+        return;
+    }
+    GraphicsSystemV2* graphicsSystem = engine->GetGraphicsSystem();
+    if (!graphicsSystem) {
+        LOG_ERROR("LEVEL1", "graphicsSystem is null!");
         return;
     }
 
@@ -47,11 +55,15 @@ void level1_Initialize()
     // ========================================================================
     playerControll->SetPlayerEntity(playerEntity);
 
-    // Optional: Configure shooting parameters
+    // Configure shooting parameters
     playerControll->SetShootCooldown(0.2f);     
     playerControll->SetProjectileSpeed(0.5f);
 
     LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
+
+    graphicsSystem->SetFollowTarget(playerEntity);
+    graphicsSystem->SetCameraZoom(1.2f);
+
 
     // Generate enemy waves
     spawner->SpawnEnemyWave(5, 0.8f);
@@ -69,7 +81,7 @@ void level1_Initialize()
 void level1_Update()
 {
     if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_2))
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
         LOG_INFO("LEVEL1", "ESC pressed - returning to menu");
         next = mainMenu;
