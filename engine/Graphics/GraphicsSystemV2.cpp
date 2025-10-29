@@ -633,6 +633,7 @@ namespace Framework {
             if (!entityManager->HasComponent<Transform>(e))
                 continue;
 
+            RenderCommand command;
             auto& transform = entityManager->GetComponent<Transform>(e);
 
             // prefer MeshRenderer over Sprite
@@ -641,8 +642,8 @@ namespace Framework {
             if (!hasRenderer && !hasSprite) continue;
 
             // --- Build command from components ---
-            if (hasRenderable) {
-                auto& renderable = entityManager->GetComponent<Renderable>(entity);
+            if (hasRenderer) {
+                auto& renderable = entityManager->GetComponent<Renderable>(e);
                 if (!renderable.visible) continue;
 
                 // 1) NEVER depend on spriteName anymore (remove the legacy check)
@@ -654,7 +655,7 @@ namespace Framework {
                     if (!base) continue;
 
                     MaterialHandle inst = resourceManager.CreateMaterial(
-                        "entity_mat_" + std::to_string(entity.GetID()),
+                        "entity_mat_" + std::to_string(e.GetID()),
                         base->shader // <- second parameter required by YOUR engine
                     );
 
@@ -672,32 +673,22 @@ namespace Framework {
                 command.orderInLayer = renderable.orderInLayer;
                 command.tint = renderable.tint;
             }
-            else {
-                // Legacy Sprite component path (keep if you still support it),
-                // but DO NOT use spriteName strings to decide; resolve once during spawn if needed.
-                auto& sprite = entityManager->GetComponent<Sprite>(entity);
-                command.mesh = GetMeshForSpriteName(sprite.texturePath);
-                command.material = GetMaterialForSpriteName(sprite.texturePath);
-                command.layer = sprite.layer;
-                command.orderInLayer = 0;
-                command.tint = glm::vec4(1.0f);
-            }
 
             // === Transform to model matrix ===
             glm::mat4 model(1.0f);
             model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
-            cmd.modelMatrix = model;
+            command.modelMatrix = model;
 
-            cmd.depth = glm::distance(
+            command.depth = glm::distance(
                 glm::vec3(transform.position.x, transform.position.y, 0.0f),
                 mainCamera.GetPosition()
             );
 
             // === SPRITE SHEET UV SLICING ===
-            if (entityManager->HasComponent<SpriteAnimation>(entity)) {
-                auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
+            if (entityManager->HasComponent<SpriteAnimation>(e)) {
+                auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
                 Material* mat = GetResourceManager().GetMaterial(command.material);
                 if (!mat) continue;
