@@ -86,16 +86,12 @@ namespace Framework {
 
         text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
 
-        <<<<<< < Updated upstream
-            text_.loadFont("Sans48", "assets/fonts/Roboto-Regular.ttf", 48);
-        text_.loadFont("Serif32", "assets/fonts/NotoSerif-Bold.ttf", 32);
         //set the editor camera to default position - jiahao
         editorCameraStartPos = mainCamera.GetPosition();
         editorCameraZoom = mainCamera.GetZoom();
-        ====== =
-            text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48); //ASC: here change the font type
+
+        text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48); //ASC: here change the font type
         text_.loadFont("Serif32", "assets/Roboto-VariableFont_wdth,wght.ttf", 32);
-        >>>>>> > Stashed changes
 
             std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
