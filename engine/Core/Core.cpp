@@ -24,14 +24,15 @@ Improvements:
 #include "WindowSystem.h"
 #include "GraphicsSystemV2.h"
 #include "Input.h"
+#include "AudioSystem.h"
 
-/*
-#include "PerfViewer.h"
-#include "Trace.h"
-#include "Perf.h"
-#include "Log.h"
-#include "CrashLogger.h"
-*/
+ /*
+ #include "PerfViewer.h"
+ #include "Trace.h"
+ #include "Perf.h"
+ #include "Log.h"
+ #include "CrashLogger.h"
+ */
 
 namespace Framework
 {
@@ -48,6 +49,7 @@ namespace Framework
         , spawner(nullptr)
         , playerController(nullptr)
         , imguiSystem(nullptr)
+        , audioSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
     {
@@ -84,6 +86,18 @@ namespace Framework
             // Step 5: Initialize the remaining systems
             Initialize();
 
+            if (audioSystem) {
+                LOG_INFO("CORE", "Loading test audio...");
+                bool loaded = audioSystem->LoadSound("assets/leaves.wav", "leaves");
+                if (loaded) {
+                    LOG_INFO("CORE", "✓ Test audio 'leaves' loaded successfully");
+                }
+                else {
+                    LOG_WARN("CORE", "✗ Failed to load test audio");
+                }
+            }
+
+
             LOG_INFO("CORE", "================================================");
             LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
             LOG_INFO("CORE", "================================================");
@@ -110,6 +124,7 @@ namespace Framework
         spawner = new EntitySpawner();
         playerController = new PlayerControllerSystem();
         imguiSystem = new ImGuiSystem();
+        audioSystem = new AudioSystem();
 
         LOG_INFO("CORE", "  ✓ All systems created");
     }
@@ -126,6 +141,7 @@ namespace Framework
         spawner->SetEntityManager(entityManager);
         playerController->SetEntityManager(entityManager);
         imguiSystem->SetEntityManager(entityManager);
+        audioSystem->SetEntityManager(entityManager);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -133,6 +149,8 @@ namespace Framework
         collisionSystem->SetInput(inputSystem);
         playerController->SetEntitySpawner(spawner);
 
+        // Wire AudioSystem to ImGuiSystem
+        imguiSystem->SetAudioSystem(audioSystem);
 
         LOG_INFO("CORE", "Dependencies wired");
     }
@@ -171,6 +189,7 @@ namespace Framework
         AddSystem(projectileSystem);
         AddSystem(graphicsSystem);
         AddSystem(imguiSystem);
+        AddSystem(audioSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -223,6 +242,7 @@ namespace Framework
         projectileSystem = nullptr;
         graphicsSystem = nullptr;
         imguiSystem = nullptr;
+        audioSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {

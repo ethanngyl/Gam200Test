@@ -32,6 +32,7 @@ namespace Framework
     class EntitySpawner;
     class PlayerControllerSystem;
     class ImGuiSystem;
+    class AudioSystem;
 
     /**
      * @class CoreEngine
@@ -85,7 +86,7 @@ namespace Framework
          *
          * @note This replaces ShouldWindowClose() in main.cpp
         */
-                bool ShouldWindowClose() const;
+        bool ShouldWindowClose() const;
 
         // ====================================================================
         // Single frame update (GSM friendly)
@@ -129,6 +130,7 @@ namespace Framework
         EntitySpawner* GetSpawner() const { return spawner; }
         PlayerControllerSystem* GetPlayerController() const { return playerController; }
         ImGuiSystem* GetImGuiSystem() const { return imguiSystem; }
+        AudioSystem* GetAudioSystem() const { return audioSystem; }
 
 
         /**
@@ -160,7 +162,10 @@ namespace Framework
          * @warning Contains an infinite loop that will block GSM
          */
 
-        //void GameLoop();
+        bool IsPlaying() const { return isPlaying; }
+        void SetPlaying(bool value) { isPlaying = value; }
+
+         //void GameLoop();
 
     private:
         // System Collection
@@ -177,10 +182,13 @@ namespace Framework
         EntitySpawner* spawner;
         PlayerControllerSystem* playerController;
         ImGuiSystem* imguiSystem;
+        AudioSystem* audioSystem;
 
         // state
         unsigned LastTime;
         bool GameActive;
+        bool isPlaying = false;
+
 
         // Private helper methods
         void CreateAllSystems();
