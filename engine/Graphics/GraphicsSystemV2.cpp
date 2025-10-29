@@ -70,7 +70,8 @@ namespace Framework {
         // 4. Create default materials
         CreateDefaultMaterials();
 
-        // 5. Setup background
+        // 5. Setup 
+
         SetupBackground();
 
         // 6. Create legacy material support

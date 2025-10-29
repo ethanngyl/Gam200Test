@@ -52,12 +52,15 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     imgui
     stb
     fmod
+    Freetype::Freetype
 )
 
 # Mark shaders as non-compiled
 set_source_files_properties(
     "shaders/basic.vert"
     "shaders/basic.frag"
+    "shaders/text.vert"
+    "shaders/text.frag"
     PROPERTIES HEADER_FILE_ONLY TRUE
 )
 

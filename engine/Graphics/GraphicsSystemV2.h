@@ -36,6 +36,7 @@
 #include <memory>
 #include <unordered_map>   
 #include "ECSEntity.h" 
+#include "TextRenderer.h"
 
 // Forward declarations
 struct GLFWwindow;
@@ -283,7 +284,7 @@ namespace Framework {
         // State tracking
         MaterialHandle currentBoundMaterial;
         ShaderHandle currentBoundShader;
-
+        TextRenderer text_;    // FreeType text renderer
         /**
          * @brief Makes the camera follow a target player entity
          */
