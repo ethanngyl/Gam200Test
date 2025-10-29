@@ -119,4 +119,16 @@ namespace Framework
             : radius(r), offset(off) {
         }
     };
+
+    struct AudioSource : public Component<AudioSource> {
+        std::string soundName;
+        bool isPlaying = false;
+        bool loop = false;
+        float volume = 1.0f;
+        float pitch = 1.0f;
+        bool playOnStart = false;
+
+        void* fmodChannel = nullptr;
+    };
+
 }

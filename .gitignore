@@ -25,7 +25,6 @@ x86/
 
 # Executables and libraries
 *.exe
-*.dll
 *.a
 *.so
 *.obj
