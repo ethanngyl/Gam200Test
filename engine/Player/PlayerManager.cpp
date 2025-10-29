@@ -12,7 +12,12 @@
 
 
 #include "RenderComponents.h"
+
 #include "Grid\GridECS.h"
+#include "Grid\Grid.h"
+#include <GLFW/glfw3.h>
+#include "Vector2D.h"
+#include <cmath>
 
 
 namespace Framework {
@@ -140,7 +145,6 @@ namespace Framework {
     {
         projectileSpeed = speed;
     }
-
     // ============================================================================
     // SHOOTING HANDLERS - Using InputSystem
     // ============================================================================
@@ -176,7 +180,7 @@ namespace Framework {
     void PlayerControllerSystem::HandleShootAtMouse(const Vector2D& playerPos)
     {
         // Using InputSystem for mouse input
-        if (inputSystem->IsKeyPressed(MOUSE_LEFT) && shootCooldown <= 0.0f) {
+        if (inputSystem->IsKeyPressed(MOUSE_RIGHT) && shootCooldown <= 0.0f) {
             // Get mouse position from InputSystem
             float mouseX, mouseY;
             inputSystem->GetMousePosition(mouseX, mouseY);
@@ -207,53 +211,105 @@ namespace Framework {
     }
 
     void PlayerControllerSystem::HandleClickToMove() {
-        if (!entityManager || !inputSystem) return;
+        // 1) Basic guards
+        if (!inputSystem || !window || !entityManager) return;
 
-        // Only on the press frame
-        if (!inputSystem->IsKeyPressed(MOUSE_LEFT)) return;
+        if (!inputSystem->IsKeyPressed(MOUSE_LEFT))   return;
 
-        // Prefer window-relative cursor → consistent with your system (you store GLFWwindow* already)
-        if (!window) return;
-        double cx = 0.0, cy = 0.0;
-        glfwGetCursorPos(window, &cx, &cy);
+        const Framework::Grid& g = Framework::GetGrid();
+        if (g.cols <= 0 || g.rows <= 0) return;
 
-        int winW = 0, winH = 0;
-        glfwGetWindowSize(window, &winW, &winH);
-        if (winW <= 0 || winH <= 0) return;
+        // 2) Read mouse and convert to world (same path you already used)
+        double cx = 0.0, cy = 0.0;            glfwGetCursorPos(window, &cx, &cy);
+        int fbW = 0, fbH = 0;                 glfwGetFramebufferSize(window, &fbW, &fbH);
+        if (fbW <= 0 || fbH <= 0) return;
 
-        // Map to your existing world range (matches your mouse-shoot code)
-        float worldX = static_cast<float>((cx / double(winW)) * 4.0 - 2.0);
-        float worldY = static_cast<float>(-((cy / double(winH)) * 2.0 - 1.0)); // flip Y
-
-        // World -> Tile
-        auto maybeTile = WorldToTile(Vector2D{ worldX, worldY });
-        if (!maybeTile.has_value()) {
-            std::cout << "[ClickMove] outside grid\n";
-            return;
-        }
-        GridCoord target = *maybeTile;
-
-        // Only move to walkable tiles
-        if (!IsWalkable(target)) {
-            std::cout << "[ClickMove] blocked (" << target.x << "," << target.y << ")\n";
-            return;
+        float sx = 1.0f, sy = 1.0f;           glfwGetWindowContentScale(window, &sx, &sy);
+        double fx = cx * sx, fy = cy * sy;
+        if (sx == 0.0f || sy == 0.0f) {
+            int winW = 0, winH = 0; glfwGetWindowSize(window, &winW, &winH);
+            if (winW > 0 && winH > 0) {
+                fx = cx * (double)fbW / (double)winW;
+                fy = cy * (double)fbH / (double)winH;
+            }
         }
 
-        // Ensure player entity & transform exist
+        const double ndcX = (fx / (double)fbW) * 2.0 - 1.0;
+        const double ndcY = 1.0 - (fy / (double)fbH) * 2.0;
+
+        // Use your same world extents
+        constexpr float WORLD_X_HALF = 2.0f;
+        constexpr float WORLD_Y_HALF = 1.0f;
+
+        const float worldX = (float)ndcX * WORLD_X_HALF;
+        const float worldY = (float)ndcY * WORLD_Y_HALF;
+        Framework::Vector2D clickWorld{ worldX, worldY };
+
+        // 3) Get player transform
         if (!entityManager->HasComponent<Transform>(playerEntity)) return;
         auto& xform = entityManager->GetComponent<Transform>(playerEntity);
 
-        // Clear previous occupant (if any)
-        if (auto prev = WorldToTile(xform.position); prev.has_value()) {
-            SetOccupant(*prev, Entity{ INVALID_ENTITY });
+        // 4) Current tile & its exact center
+        auto curTile = Framework::WorldToTile(xform.position);
+        if (!curTile) return;
+        Framework::Vector2D curCenter = Framework::TileToWorld({ curTile->x, curTile->y });
+
+        // 5) If we're not centered, snap once and quit (prevents “slanted” drift)
+        const float tolX = 0.25f * g.spacing.x;
+        const float tolY = 0.25f * g.spacing.y;
+        if (std::fabs(xform.position.x - curCenter.x) > tolX ||
+            std::fabs(xform.position.y - curCenter.y) > tolY) {
+            xform.position = curCenter;
+            return;
         }
 
-        // Snap to tile center + set occupancy
-        Vector2D snapped = TileToWorld(target);
-        xform.position = snapped;
-        SetOccupant(target, playerEntity);
+        // 6) Decide the step in SCREEN PIXELS (robust against camera/aspect)
+        int winW = 0, winH = 0;  glfwGetWindowSize(window, &winW, &winH);
+        if (winW <= 0 || winH <= 0) return;
 
-        std::cout << "[ClickMove] moved to (" << target.x << "," << target.y << ")\n";
+        auto worldToPixel = [&](const Framework::Vector2D& w) -> std::pair<float, float> {
+            // world -> NDC
+            float x = w.x / WORLD_X_HALF;
+            float y = w.y / WORLD_Y_HALF;
+            // NDC [-1,+1] -> [0,1]
+            float u = (x * 0.5f) + 0.5f;
+            float v = (y * 0.5f) + 0.5f;
+            // [0,1] -> pixels (v is bottom-up; convert to top-left origin)
+            return { u * winW, (1.0f - v) * winH };
+            };
+
+        auto [cxPix, cyPix] = worldToPixel(curCenter);
+        auto [mxPix, myPix] = worldToPixel(clickWorld);
+
+        float dxPix = mxPix - cxPix;
+        float dyPix = myPix - cyPix;
+
+        // deadzone in pixels to ignore tiny jiggle
+        constexpr float DEAD_PX = 2.0f;
+        if (std::fabs(dxPix) < DEAD_PX && std::fabs(dyPix) < DEAD_PX) return;
+
+        // 7) Dominant-axis step (4-way). Screen Y grows downward:
+        //    click above -> dyPix < 0. Flip the sign below if your world’s “up” is opposite.
+        int stepCol = 0, stepRow = 0;
+        if (std::fabs(dyPix) > std::fabs(dxPix)) {
+            stepRow = (dyPix < 0.f) ? 1 : -1;   // if up-is-negative in your world, use ? -1 : 1
+        }
+        else {
+            stepCol = (dxPix > 0.f) ? 1 : -1;
+        }
+
+        int nextCol = curTile->x + stepCol;
+        int nextRow = curTile->y + stepRow;
+
+        // 8) Bounds + walkable
+        if (!Framework::InBounds({ nextCol, nextRow })) return;
+        if (!Framework::IsWalkable({ nextCol, nextRow })) return;
+
+        // 9) Move exactly one tile; update occupancy in correct order
+        Framework::Vector2D nextCenter = Framework::TileToWorld({ nextCol, nextRow });
+        Framework::SetOccupant({ curTile->x, curTile->y }, Framework::Entity{ Framework::INVALID_ENTITY });
+        xform.position = nextCenter;
+        Framework::SetOccupant({ nextCol, nextRow }, playerEntity);
     }
 
     // ============================================================================
