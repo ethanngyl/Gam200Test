@@ -65,7 +65,7 @@ namespace Framework
     void MovementSystem::Update(float dt)
     {
         if (!entityManager || !inputSystem) return;
-        if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
+        //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
 
         for (Entity entity : entityManager->GetAllEntities())
         {
