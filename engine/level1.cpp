@@ -61,8 +61,10 @@ void level1_Initialize()
 
     LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
 
-    graphicsSystem->SetFollowTarget(playerEntity);
-    graphicsSystem->SetCameraZoom(1.2f);
+    if (graphicsSystem) {
+        graphicsSystem->SetFollowTarget(playerEntity);
+        graphicsSystem->SetCameraZoom(3.2f);
+    }
 
 
     // Generate enemy waves
