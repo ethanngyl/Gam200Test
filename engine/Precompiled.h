@@ -98,6 +98,11 @@
 //Message
 #include "Message.h"
 
+//Grid
+#include "Grid/Grid.h"
+#include "Grid/GridTile.h"
+//#include "Grid/GridECS.h"
+
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
