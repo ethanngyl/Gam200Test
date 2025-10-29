@@ -51,12 +51,16 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     libglew_static
     imgui
     stb
+    fmod
+    Freetype::Freetype
 )
 
 # Mark shaders as non-compiled
 set_source_files_properties(
     "shaders/basic.vert"
     "shaders/basic.frag"
+    "shaders/text.vert"
+    "shaders/text.frag"
     PROPERTIES HEADER_FILE_ONLY TRUE
 )
 
@@ -70,6 +74,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
     ${CMAKE_SOURCE_DIR}/engine
     ${CMAKE_SOURCE_DIR}/engine/Core
+    ${CMAKE_SOURCE_DIR}/engine/Audio
     ${CMAKE_SOURCE_DIR}/engine/ECS
     ${CMAKE_SOURCE_DIR}/engine/Collision
     ${CMAKE_SOURCE_DIR}/engine/Movement
@@ -119,3 +124,11 @@ add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/assets")
+
+
+add_custom_command(TARGET StructSquad POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/library/FMOD Studio API Windows/api/core/lib/x64/fmod.dll"
+        "${CMAKE_SOURCE_DIR}/library/FMOD Studio API Windows/api/core/lib/x64/fmodL.dll"
+        $<TARGET_FILE_DIR:StructSquad>
+)

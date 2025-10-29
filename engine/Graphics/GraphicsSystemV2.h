@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           GraphicsSystemV2.h
  Author:         Graphics System Overhaul
@@ -33,7 +33,12 @@
 #include "RenderCommand.h"
 #include "RenderComponents.h"
 #include "Material.h"
+#include "Precompiled.h"
 #include <memory>
+#include <unordered_map>   
+#include "ECSEntity.h" 
+#include "TextRenderer.h"
+
 
 // Forward declarations
 struct GLFWwindow;
@@ -107,6 +112,16 @@ namespace Framework {
          */
         void SetCameraZoom(float zoom);
 
+        /**
+         * @brief Set which entity the camera should follow
+         */
+        void SetFollowTarget(Entity e) { followTarget = e; followEnabled = true; }
+
+        /**
+         * @brief Stop following any entity
+         */
+        void ClearFollowTarget() { followEnabled = false; }
+
         // === DEBUG RENDERING ===
         
         /**
@@ -126,19 +141,25 @@ namespace Framework {
          * @brief Create default materials for legacy sprite names
          * Maintains backwards compatibility with old Sprite component
          */
-        void CreateLegacyMaterials();
+        //void CreateLegacyMaterials();
 
         void RenderImGui();
 
-        /**
-         * @brief Get mesh for legacy sprite name
-         */
-        MeshHandle GetMeshForSpriteName(const std::string& spriteName);
+        ///**
+        // * @brief Get mesh for legacy sprite name
+        // */
+        //MeshHandle GetMeshForSpriteName(const std::string& spriteName);
 
-        /**
-         * @brief Get material for legacy sprite name
-         */
-        MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
+        ///**
+        // * @brief Get material for legacy sprite name
+        // */
+        //MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
+
+        TextureHandle  GetTextureForSpriteName(const std::string& spriteName);
+
+
+        void SetShowGrid(bool e) { showGrid = e; }
+        void SetShowGridBlocked(bool e) { showGridBlocked = e; }
 
     private:
         // === RENDERING PHASES ===
@@ -173,7 +194,7 @@ namespace Framework {
         /**
          * @brief Bind material and set uniforms
          */
-        void BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint);
+        bool BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint);
 
         /**
          * @brief Draw a mesh
@@ -212,6 +233,9 @@ namespace Framework {
          */
         void SetupBackground();
 
+        // Draw grid to the debug queue (implemented in .cpp)
+       // void RenderGridOverlay();  // NEW
+
         // === MEMBER VARIABLES ===
         
         // Core systems
@@ -245,25 +269,45 @@ namespace Framework {
         MeshHandle quadMesh;
         MeshHandle lineMesh;
         MeshHandle circleMesh;
+        MeshHandle wireframeQMesh;
 
         // Default materials for primitives
         MaterialHandle triangleMaterial;
         MaterialHandle quadMaterial;
         MaterialHandle lineMaterial;
         MaterialHandle circleMaterial;
+        MaterialHandle wireframeQMaterial;
 
         // Debug rendering
         bool debugRenderingEnabled;
         MeshHandle debugLineMesh;
         MeshHandle debugCircleMesh;
 
-        // Legacy support (for backwards compatibility)
-        std::unordered_map<std::string, MeshHandle> legacyMeshMap;
-        std::unordered_map<std::string, MaterialHandle> legacyMaterialMap;
+        //// Legacy support (for backwards compatibility)
+        //std::unordered_map<std::string, MeshHandle> legacyMeshMap;
+        //std::unordered_map<std::string, MaterialHandle> legacyMaterialMap;
+        //std::unordered_map<std::string, TextureHandle>  
+        // ;
 
         // State tracking
         MaterialHandle currentBoundMaterial;
         ShaderHandle currentBoundShader;
+        TextRenderer text_;    // FreeType text renderer
+        /**
+         * @brief Makes the camera follow a target player entity
+         */
+        void FollowPlayer(EntityManager* em, Entity player);
+
+        //Editor Camera functions - Jiahao
+		void HandleEditorCamera(float dt);
+		void ResetEditorCamera();
+
+		glm::vec3 editorCameraStartPos{ 0.0f, 0.0f, 0.0f };
+		float editorCameraZoom{ 1.0f };
+
+        // Camera follow target (optional)
+        Entity followTarget{ 0 };
+        bool followEnabled{ false };
 
         // Statistics
         struct RenderStats {
@@ -271,6 +315,10 @@ namespace Framework {
             size_t trianglesRendered = 0;
             size_t materialSwitches = 0;
         } stats;
+
+        // State: whether to show the grid overlay/fill
+        bool showGrid = true;         // NEW
+        bool showGridBlocked = true;  // NEW
     };
 
 } // namespace Framework

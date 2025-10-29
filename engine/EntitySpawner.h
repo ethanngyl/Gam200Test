@@ -9,6 +9,9 @@
 
 #pragma once
 #include "Precompiled.h"
+#include "RenderComponents.h"   // for MeshRenderer
+#include "ECSEntityManager.h"   // if not already pulled in through Precompiled.h
+#include "Grid\GridTile.h"
 
 namespace Framework {
 
@@ -60,8 +63,10 @@ namespace Framework {
             auto& transform = entityManager->GetComponent<Transform>(entity);
             transform.scale = scale;
 
-            entityManager->AddComponent<Sprite>(entity);
-            entityManager->GetComponent<Sprite>(entity).texturePath = spriteName;
+            auto& mr = entityManager->AddComponent<MeshRenderer>(entity);
+            mr.spriteName = spriteName;  // may be "player.png" or "quad" etc.
+            mr.visible = true;
+            mr.tint = glm::vec4(1.0f);
 
             std::cout << "[EntitySpawner] Spawned sprite: " << spriteName << "\n";
             return entity;
@@ -71,7 +76,8 @@ namespace Framework {
          * @brief Spawn a player entity
          */
         Entity SpawnPlayer(const Vector2D& position) {
-            Entity player = SpawnSprite("circle", position, Vector2D(0.3f, 0.3f));
+            // Use the actual file path so the renderer will load a texture.
+            Entity player = SpawnSprite("assets/testing.jpg", position, Vector2D(0.3f, 0.3f));
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -81,7 +87,7 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-            std::cout << "[EntitySpawner] Spawned player\n";
+            std::cout << "[EntitySpawner] Spawned player (testing.jpg)\n";
             return player;
         }
 
@@ -89,7 +95,7 @@ namespace Framework {
          * @brief Spawn an enemy entity 
          */
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
-            Entity enemy = SpawnSprite("quad", position, Vector2D(0.4f, 0.4f));
+            Entity enemy = SpawnSprite("assets/testing.jpg", position, Vector2D(0.4f, 0.4f));
 
             //entityManager->AddComponent<Movement>(enemy);
             //auto& movement = entityManager->GetComponent<Movement>(enemy);
@@ -108,12 +114,13 @@ namespace Framework {
         /**
          * @brief Spawn a projectile/bullet
          */
+        //ASC: its technically of a script
         Entity SpawnProjectile(
             const Vector2D& position,
             const Vector2D& direction,
             float speed = 0.3f)
         {
-            Entity projectile = SpawnSprite("circle", position, Vector2D(0.1f, 0.1f));
+            Entity projectile = SpawnSprite("assets/background.jpg", position, Vector2D(0.1f, 0.1f));
 
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
@@ -135,7 +142,7 @@ namespace Framework {
             const Vector2D& position,
             const Vector2D& size = Vector2D(0.5f, 0.5f))
         {
-            Entity obstacle = SpawnSprite("quad", position, size);
+            Entity obstacle = SpawnSprite("assets/testing.jpg", position, size);
 
             entityManager->AddComponent<BoxCollider>(obstacle);
             auto& collider = entityManager->GetComponent<BoxCollider>(obstacle);
@@ -163,18 +170,84 @@ namespace Framework {
             const std::string& spriteName,
             int rows, int cols,
             const Vector2D& startPos,
-            const Vector2D& spacing)
+            const Vector2D& spacing = Vector2D{ 1.0f, 1.0f })
         {
+
+            auto& record = GetGrid();
+            record.rows = rows;
+            record.cols = cols;
+            record.startPos = startPos;
+            record.spacing = spacing;
+            record.em = entityManager;
+            record.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
+
+            int nextId = 0;
+
             for (int row = 0; row < rows; ++row) {
                 for (int col = 0; col < cols; ++col) {
                     Vector2D pos(
                         startPos.x + col * spacing.x,
                         startPos.y + row * spacing.y
                     );
-                    SpawnSprite(spriteName, pos, Vector2D(0.1f, 0.1f));
+                    const Vector2D tileSize{ 0.1f, 0.1f };
+                    Entity e = SpawnSprite(spriteName, pos, tileSize);
+
+                    record.tiles[record.Index(col, row)] = e;
+
+                    entityManager->AddComponent<GridTiles>(e);
+                    auto& gridTile = entityManager->GetComponent<GridTiles>(e);
+                    gridTile.tileId = nextId++;
+                    gridTile.x = col;
+                    gridTile.y = row;
+                    gridTile.entity = e;
+                    gridTile.centerWorld = pos;
+                    gridTile.tileW = tileSize.x;   // canonical cell size
+                    gridTile.tileH = tileSize.y;
+                    gridTile.blocked = false;
+                    gridTile.occupant = INVALID_ENTITY;
                 }
             }
             std::cout << "[EntitySpawner] Spawned grid: " << (rows * cols) << " entities\n";
+
+
+            // --- Debug summary (verify ids are sequential and unique) ---
+            const int total = rows * cols;
+            std::vector<bool> seen(static_cast<size_t>(total), false);
+            int minId = INT_MAX, maxId = INT_MIN, dupCount = 0, oobCount = 0;
+
+            for (auto e : entityManager->GetAllEntities()) {
+                if (!entityManager->HasComponent<GridTiles>(e)) continue;
+                const auto& gt = entityManager->GetComponent<GridTiles>(e);
+                minId = min(minId, gt.tileId);
+                maxId = max(maxId, gt.tileId);
+                if (gt.tileId < 0 || gt.tileId >= total) { ++oobCount; continue; }
+                if (seen[static_cast<size_t>(gt.tileId)]) ++dupCount;
+                else seen[static_cast<size_t>(gt.tileId)] = true;
+            }
+
+            std::cout << "[GridDebug] tiles=" << total
+                << " id-range=[" << minId << "," << maxId << "]"
+                << " dup=" << dupCount
+                << " oob=" << oobCount << "\n";
+
+            // Also print corner samples to eyeball mapping:
+            auto printTile = [&](int cx, int cy) {
+                for (auto e : entityManager->GetAllEntities()) {
+                    if (!entityManager->HasComponent<GridTiles>(e)) continue;
+                    const auto& gt = entityManager->GetComponent<GridTiles>(e);
+                    if (gt.x == cx && gt.y == cy) {
+                        std::cout << "  (" << cx << "," << cy << ") -> entity " << e.GetID()
+                            << " id=" << gt.tileId << " center=("
+                            << gt.centerWorld.x << "," << gt.centerWorld.y << ")\n";
+                        return;
+                    }
+                }
+                };
+
+            printTile(0, 0);
+            printTile(cols - 1, 0);
+            printTile(0, rows - 1);
+            printTile(cols - 1, rows - 1);
         }
 
         /**
