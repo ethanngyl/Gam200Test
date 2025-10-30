@@ -6,10 +6,12 @@
 #include "GSM/GameStateManager.h"
 #include "PlayerManager.h"
 
+
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::EntitySpawner;
 using Framework::PlayerControllerSystem;
+using Framework::GraphicsSystemV2;
 
 void level1_Load()
 {
@@ -20,10 +22,19 @@ void level1_Initialize()
 {
     LOG_INFO("LEVEL1", "=== Level1 Initialize ===");
 
+
     if (!engine) {
         LOG_ERROR("LEVEL1", "Engine is null!");
         return;
     }
+
+    engine->SetPlaying(true);
+
+	GraphicsSystemV2* graphics = engine->GetGraphicsSystem();
+    if (!graphics) {
+        LOG_ERROR("LEVEL1", "Graphics system is null!");
+        return;
+	}
 
     EntitySpawner* spawner = engine->GetSpawner();
     if (!spawner) {
@@ -41,7 +52,7 @@ void level1_Initialize()
     // Spawn Player - Save the returned entity ID
     // ========================================================================
     Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
-
+	graphics->SetFollowTarget(playerEntity);
     // ========================================================================
     // Tell the PlayerController who the player entity is
     // ========================================================================
