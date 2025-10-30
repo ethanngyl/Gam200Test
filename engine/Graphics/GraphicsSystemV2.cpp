@@ -178,6 +178,13 @@ namespace Framework {
         }
 
 
+        // ADD THIS: Check for window resize each frame
+        int fbWidth, fbHeight;
+        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+        if (fbWidth != viewportWidth || fbHeight != viewportHeight) {
+            SetViewportSize(fbWidth, fbHeight);
+        }
+
         // === CAMERA FOLLOW LOGIC ===
 
         if (!Framework::CORE->IsPlaying()) {
