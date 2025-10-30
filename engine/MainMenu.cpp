@@ -10,6 +10,8 @@
 #include "Input/Input.h"
 #include "GSM/GameStateList.h"
 #include "GSM/GameStateManager.h"
+#include "ImguiSystem.h"
+
 
 // ============================================================================
 // MAIN MENU LIFECYCLE FUNCTIONS
@@ -24,6 +26,15 @@ void mainMenu_Load()
 void mainMenu_Initialize()
 {
     LOG_INFO("MENU", "=== Main Menu Initialize ===");
+    if (engine && engine->GetImGuiSystem()) {
+        engine->GetImGuiSystem()->Disable();
+        LOG_INFO("MENU", "ImGui disabled in menu");
+    }
+
+    if (engine) {
+        engine->SetPlaying(false);
+        LOG_INFO("MENU", "Menu in EDITOR mode");
+    }
 }
 
 void mainMenu_Update()

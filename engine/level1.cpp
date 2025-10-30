@@ -5,6 +5,7 @@
 #include "GSM/GameStateList.h"
 #include "GSM/GameStateManager.h"
 #include "PlayerManager.h"
+#include "ImguiSystem.h"
 
 
 extern Framework::CoreEngine* engine;
@@ -12,6 +13,7 @@ using Framework::Vector2D;
 using Framework::EntitySpawner;
 using Framework::PlayerControllerSystem;
 using Framework::GraphicsSystemV2;
+//using Framework::ImGuiSystem;
 
 void level1_Load()
 {
@@ -27,7 +29,10 @@ void level1_Initialize()
         LOG_ERROR("LEVEL1", "Engine is null!");
         return;
     }
-
+    if (engine && engine->GetImGuiSystem()) {
+        engine->GetImGuiSystem()->Enable();
+        LOG_INFO("MENU", "ImGui disabled in menu");
+    }
     engine->SetPlaying(true);
 
 	GraphicsSystemV2* graphics = engine->GetGraphicsSystem();
@@ -97,6 +102,22 @@ void level1_Draw()
 void level1_Free()
 {
     LOG_INFO("LEVEL1", "=== Level1 Free ===");
+
+
+    if (engine && engine->GetImGuiSystem()) {
+        engine->GetImGuiSystem()->Disable();
+        LOG_INFO("MENU", "ImGui disabled in menu");
+    }
+
+    if (engine) {
+        engine->SetPlaying(false);
+
+        if (engine->GetGraphicsSystem()) {
+            engine->GetGraphicsSystem()->ClearFollowTarget();
+        }
+
+        LOG_INFO("LEVEL1", "Switched back to EDITOR mode");
+    }
 
     // Clean All Entities
     if (engine && engine->GetEntityManager()) {
