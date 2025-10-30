@@ -56,7 +56,7 @@ void level1_Initialize()
     // ========================================================================
     // Spawn Player - Save the returned entity ID
     // ========================================================================
-    Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+    Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
 	graphics->SetFollowTarget(playerEntity);
     // ========================================================================
     // Tell the PlayerController who the player entity is
@@ -73,11 +73,11 @@ void level1_Initialize()
     spawner->SpawnEnemyWave(5, 0.8f);
 
     // Generate some obstacles
-    spawner->SpawnObstacle(Vector2D(-0.5f, 0.0f), Vector2D(0.3f, 0.3f));
-    spawner->SpawnObstacle(Vector2D(0.5f, 0.0f), Vector2D(0.3f, 0.3f));
+    //spawner->SpawnObstacle(Vector2D(-0.5f, 0.0f), Vector2D(0.3f, 0.3f));
+    //spawner->SpawnObstacle(Vector2D(0.5f, 0.0f), Vector2D(0.3f, 0.3f));
 
     // Generate a circular pattern
-    spawner->SpawnCircle("circle", 8, Vector2D(0.0f, 0.0f), 0.6f);
+    //spawner->SpawnCircle("circle", 8, Vector2D(0.0f, 0.0f), 0.6f);
 
     LOG_INFO("LEVEL1", "All entities spawned successfully");
 }
