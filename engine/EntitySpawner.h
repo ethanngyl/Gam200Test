@@ -79,7 +79,7 @@ namespace Framework {
          */
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
-            Entity player = SpawnSprite("assets/testing.jpg", position, Vector2D(0.3f, 0.3f));
+            Entity player = SpawnSprite("assets/testing.png", position, Vector2D(0.3f, 0.3f));
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -89,7 +89,7 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-            std::cout << "[EntitySpawner] Spawned player (testing.jpg)\n";
+            std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
 
             //camera
             //FollowPlayer
@@ -104,7 +104,7 @@ namespace Framework {
 
         //TO MEET THE RUBRICS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!LOOK HERE LOOK HERE (MULTIPLE SHADER)
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
-            Entity enemy = SpawnSprite("assets/testing.jpg", position, Vector2D(0.4f, 0.4f));
+            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
             mr.material = GraphicsSystemV2::Material2;
@@ -153,7 +153,7 @@ namespace Framework {
             const Vector2D& position,
             const Vector2D& size = Vector2D(0.5f, 0.5f))
         {
-            Entity obstacle = SpawnSprite("assets/testing.jpg", position, size);
+            Entity obstacle = SpawnSprite("assets/testing.png", position, size);
 
             entityManager->AddComponent<BoxCollider>(obstacle);
             auto& collider = entityManager->GetComponent<BoxCollider>(obstacle);
