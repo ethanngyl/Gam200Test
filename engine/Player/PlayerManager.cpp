@@ -67,7 +67,7 @@ namespace Framework {
             static bool tinted = false;
             if (!tinted) {
                 auto& rend = entityManager->GetComponent<Renderable>(playerEntity); 
-                rend.tint = glm::vec4(1.0f, 0.85f, 0.2f, 1.0f);    // yellow/gold
+                //rend.tint = glm::vec4(1.0f, 0.85f, 0.2f, 1.0f);    // yellow/gold
 
                 tinted = true; // don’t set it every frame
             }
