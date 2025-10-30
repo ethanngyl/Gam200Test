@@ -64,7 +64,7 @@ namespace Framework {
             transform.scale = scale;
 
             auto& mr = entityManager->AddComponent<MeshRenderer>(entity);
-            mr.spriteName = spriteName;  // may be "player.png" or "quad" etc.
+            mr.spriteName = spriteName;  // may be "player.png" or "quad" etc. 
             mr.visible = true;
             mr.tint = glm::vec4(1.0f);
 

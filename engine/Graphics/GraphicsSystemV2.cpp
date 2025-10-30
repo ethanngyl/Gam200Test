@@ -632,73 +632,102 @@ namespace Framework {
             renderQueue.Submit(bg);
         }
 
-        // --- Entity passes ---
+        // Entity passes
         for (Entity e : entityManager->GetAllEntities()) {
+
             if (!entityManager->HasComponent<Transform>(e))
                 continue;
 
-            RenderCommand command;
             auto& transform = entityManager->GetComponent<Transform>(e);
 
-            // prefer MeshRenderer over Sprite
             const bool hasRenderer = entityManager->HasComponent<MeshRenderer>(e);
             const bool hasSprite = entityManager->HasComponent<Sprite>(e);
             if (!hasRenderer && !hasSprite) continue;
 
-            // --- Build command from components ---
-            if (hasRenderer) {
-                auto& renderable = entityManager->GetComponent<Renderable>(e);
-                if (!renderable.visible) continue;
+            RenderCommand cmd;
 
-                // 1) NEVER depend on spriteName anymore (remove the legacy check)
-                //    If the renderable has no material yet, instantiate one from defaultMaterial.
-                // === Ensure this entity has its own cloned Material ===
-                if (!renderable.material.IsValid())
-                {
+            // ---------- MeshRenderer ----------
+            if (hasRenderer) {
+                auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+                if (!mr.visible) continue;
+
+                cmd.mesh = mr.mesh.IsValid() ? mr.mesh : quadMesh;
+
+                // === IMPORTANT: CLONE material so UV animation doesn't affect all ===
+                if (!mr.material.IsValid()) {
                     Material* base = resourceManager.GetMaterial(defaultMaterial);
                     if (!base) continue;
 
                     MaterialHandle inst = resourceManager.CreateMaterial(
                         "entity_mat_" + std::to_string(e.GetID()),
-                        base->shader // <- second parameter required by YOUR engine
+                        base->shader
                     );
 
                     Material* pm = resourceManager.GetMaterial(inst);
                     if (!pm) continue;
 
-                    *pm = *base; // shallow copy (safe in this engine)
-                    renderable.material = inst;
+                    *pm = *base; // shallow copy (safe)
+                    mr.material = inst;
                 }
 
-                // 2) Choose mesh/material to draw
-                command.mesh = renderable.mesh;              // must be valid quad in your pipeline
-                command.material = renderable.material.IsValid() ? renderable.material : defaultMaterial;
-                command.layer = renderable.layer;
-                command.orderInLayer = renderable.orderInLayer;
-                command.tint = renderable.tint;
+                cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
+
+                // texture
+                if (mr.texture.IsValid()) {
+                    cmd.texture = mr.texture;
+                }
+                else if (!mr.spriteName.empty()) {
+                    TextureHandle tex = resourceManager.LoadTexture(mr.spriteName);
+                    if (tex.IsValid()) {
+                        cmd.texture = tex;
+                        mr.texture = tex;
+                    }
+                }
+
+                cmd.tint = mr.tint;
+                cmd.layer = mr.layer;
+                cmd.orderInLayer = mr.orderInLayer;
             }
 
-            // === Transform to model matrix ===
+            // ---------- SPRITE ----------
+            else if (hasSprite) {
+                auto& sp = entityManager->GetComponent<Sprite>(e);
+
+                cmd.mesh = quadMesh;
+                cmd.material = defaultMaterial;
+
+                if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
+                    TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
+                    cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
+                }
+                else {
+                    cmd.texture = INVALID_TEXTURE_HANDLE;
+                }
+
+                cmd.tint = glm::vec4(1.0f);
+                cmd.layer = sp.layer;
+            }
+
+            // ---------- Transform ----------
             glm::mat4 model(1.0f);
             model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
-            command.modelMatrix = model;
+            cmd.modelMatrix = model;
 
-            command.depth = glm::distance(
+            cmd.depth = glm::distance(
                 glm::vec3(transform.position.x, transform.position.y, 0.0f),
                 mainCamera.GetPosition()
             );
 
-            // === SPRITE SHEET UV SLICING ===
+            // ---------- SPRITE SHEET UV ANIMATION ----------
             if (entityManager->HasComponent<SpriteAnimation>(e)) {
                 auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
-                Material* mat = GetResourceManager().GetMaterial(command.material);
+                Material* mat = resourceManager.GetMaterial(cmd.material);
                 if (!mat) continue;
 
-                // Get texture from the animation's spriteSheet handle
-                Texture* tex = GetResourceManager().GetTexture(anim.spriteSheet);
+                Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
                 if (!tex) continue;
 
                 const int texW = tex->GetWidth();
@@ -711,21 +740,19 @@ namespace Framework {
                 const int y = frame / cols;
 
                 float u0 = (x * anim.frameWidth) / float(texW);
-                float u1 = ((x + anim.uvShrinkPx)) * anim.frameWidth / float(texW);
+                float u1 = ((x + 1) * anim.frameWidth) / float(texW);
 
                 float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
-                float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
+                float v0 = 1.0f - ((y + 1) * anim.frameHeight) / float(texH);
 
-                mat->u0 = u0;  mat->v0 = v0;
-                mat->u1 = u1;  mat->v1 = v1;
+                mat->u0 = u0; mat->v0 = v0;
+                mat->u1 = u1; mat->v1 = v1;
 
-                // Make sure the same texture is used by the material that we are slicing
-                if (!mat->albedoTexture.IsValid()) {
+                if (!mat->albedoTexture.IsValid())
                     mat->albedoTexture = anim.spriteSheet;
-                }
             }
 
-            renderQueue.Submit(command);
+            renderQueue.Submit(cmd);
         }
     }
 
