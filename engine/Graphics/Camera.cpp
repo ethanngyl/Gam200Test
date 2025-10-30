@@ -101,9 +101,9 @@ namespace Framework {
     // === PRIVATE METHODS ===
 
     void Camera::UpdateViewMatrix() {
-        
         // Create view matrix from position and rotation
         viewMatrix = glm::mat4(1.0f);
+
         // Apply rotation (in reverse order: Z, Y, X)
         viewMatrix = glm::rotate(viewMatrix, glm::radians(rotation.z), glm::vec3(0, 0, 1));
         viewMatrix = glm::rotate(viewMatrix, glm::radians(rotation.y), glm::vec3(0, 1, 0));

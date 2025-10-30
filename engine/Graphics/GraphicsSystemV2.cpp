@@ -86,13 +86,14 @@ namespace Framework {
 
         text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
 
-        text_.loadFont("Sans48", "assets/fonts/Roboto-Regular.ttf", 48);
-        text_.loadFont("Serif32", "assets/fonts/NotoSerif-Bold.ttf", 32);
-		//set the editor camera to default position - jiahao
-		editorCameraStartPos = mainCamera.GetPosition();
-		editorCameraZoom = mainCamera.GetZoom();
+        //set the editor camera to default position - jiahao
+        editorCameraStartPos = mainCamera.GetPosition();
+        editorCameraZoom = mainCamera.GetZoom();
 
-        std::cout << "\n========================================\n";
+        text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48); //ASC: here change the font type
+        text_.loadFont("Serif32", "assets/Roboto-VariableFont_wdth,wght.ttf", 32);
+
+            std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
 
@@ -125,18 +126,18 @@ namespace Framework {
     }
 
 
-	//definition of ResetEditorCamera - Jiahao
+    //definition of ResetEditorCamera - Jiahao
     void GraphicsSystemV2::ResetEditorCamera() {
-		mainCamera.SetPosition(editorCameraStartPos);
-		mainCamera.SetZoom(editorCameraZoom);
+        mainCamera.SetPosition(editorCameraStartPos);
+        mainCamera.SetZoom(editorCameraZoom);
     }
 
-	//definition of HandleEditorCamera - Jiahao
+    //definition of HandleEditorCamera - Jiahao
     void GraphicsSystemV2::HandleEditorCamera(float dt) {
         const float panSpeed = 2.0f * dt;
-		const float zoomSpeed = 1.5f * dt;
+        const float zoomSpeed = 1.5f * dt;
 
-		//Panning with arrow keys
+        //Panning with arrow keys
         if (GetAsyncKeyState(Framework::KEY_LEFT)) {
             mainCamera.Translate({ -panSpeed, 0.0f, 0.0f });
         }
@@ -150,7 +151,7 @@ namespace Framework {
             mainCamera.Translate({ 0.0f, -panSpeed, 0.0f });
         }
 
-		//Zooming 
+        //Zooming 
         if (GetAsyncKeyState(Framework::KEY_1)) {
             float zoom = mainCamera.GetZoom();
             mainCamera.SetZoom(zoom * (1.0f + zoomSpeed));
@@ -161,7 +162,7 @@ namespace Framework {
             mainCamera.SetZoom(zoom * (1.0f - zoomSpeed));
         }
 
-		//Reset camera position 
+        //Reset camera position 
 
         if (GetAsyncKeyState(Framework::KEY_0)) {
             ResetEditorCamera();
@@ -180,7 +181,7 @@ namespace Framework {
         // === CAMERA FOLLOW LOGIC ===
 
         if (!Framework::CORE->IsPlaying()) {
-			HandleEditorCamera(dt);
+            HandleEditorCamera(dt);
         }
         else {
             if (followEnabled && entityManager && followTarget.IsValid()) {
@@ -216,11 +217,14 @@ namespace Framework {
 
         // Swap buffers
         //EndFrame();
-        
-        // === Text Rendering Pass ===
-        text_.draw("Sans48", "Hello, StructSquad!", 30.f, viewportHeight - 60.f, 1.0f, { 1.0f, 1.0f, 1.0f });
-        text_.draw("Serif32", "Score: 12345", viewportWidth - 250.f, 40.f, 1.0f, { 0.2f, 0.9f, 0.3f });
 
+        // === Text Rendering Pass ===
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        text_.draw("Sans48", "Hello, StructSquad!", 30.f, viewportHeight - 60.f, 1.0f, { 1.0f, 1.0f, 1.0f }); //what the text will display
+        text_.draw("Serif32", "Score: 12345", viewportWidth - 250.f, 40.f, 1.0f, { 1.0f, 0.3f, 0.3f });
+        glEnable(GL_DEPTH_TEST);
         // Clear queues for next frame
         renderQueue.Clear();
         debugQueue.Clear();
@@ -791,7 +795,7 @@ namespace Framework {
                     GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
                     if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
                 }
-                
+
                 // Draw mesh
                 DrawMesh(cmd.mesh);
                 stats.drawCalls++;

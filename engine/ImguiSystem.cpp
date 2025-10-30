@@ -30,6 +30,12 @@ namespace Framework {
     {
         std::cout << "[ImGui] Shutting down...\n";
 
+        // Stop all audio if audio system exists
+        if (audioSystem) {
+            std::cout << "[ImGui] Stopping all audio...\n";
+            audioSystem->StopAllSounds();
+        }
+
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
@@ -55,7 +61,7 @@ namespace Framework {
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Enable Docking
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Enable Docking
         io.IniFilename = nullptr;  // Disable settings file
 
         ImGui::StyleColorsDark();
@@ -66,14 +72,14 @@ namespace Framework {
         std::cout << "[ImGui] Initialized successfully\n";
     }
 
-	// jiahao
+    // jiahao
     bool ImGuiSystem::OpenLevelFromTxt(const std::string& file, bool clearAll) {
 
-		std::ifstream readFile(file);
+        std::ifstream readFile(file);
 
         if (!readFile.is_open()) {
             std::cerr << "[ImGuiError] Could not open file for reading: " << file << "\n";
-			return false;
+            return false;
         }
 
         if (!entityManager) {
@@ -92,12 +98,12 @@ namespace Framework {
         auto lineNumber = 0;
         while (std::getline(readFile, line)) {
 
-			++lineNumber;
+            ++lineNumber;
 
             if (line.empty() || line[0] == '#') {
                 continue;
             }
-			std::istringstream iss(line);
+            std::istringstream iss(line);
             std::string word;
 
             if (!(iss >> word)) {
@@ -119,7 +125,7 @@ namespace Framework {
                 float px, py, sx, sy;
                 if (iss >> px >> py >> sx >> sy) {
                     entityManager->AddComponent<Framework::Transform>(Entity);
-					auto& transform = entityManager->GetComponent<Framework::Transform>(Entity);
+                    auto& transform = entityManager->GetComponent<Framework::Transform>(Entity);
                     transform.position = Vector2D(px, py);
                     transform.scale = Vector2D(sx, sy);
                 }
@@ -132,9 +138,9 @@ namespace Framework {
             if (word == "Sprite") {
                 std::string name;
                 if (iss >> name) {
-					entityManager->AddComponent<Framework::Sprite>(Entity);
-					auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
-					sprite.texturePath = name;
+                    entityManager->AddComponent<Framework::Sprite>(Entity);
+                    auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
+                    sprite.texturePath = name;
                 }
                 continue;
             }
@@ -143,7 +149,7 @@ namespace Framework {
                 float speed, dx, dy;
                 if (iss >> speed >> dx >> dy)
                 {
-					entityManager->AddComponent<Framework::Movement>(Entity);
+                    entityManager->AddComponent<Framework::Movement>(Entity);
                     auto& movement = entityManager->GetComponent<Framework::Movement>(Entity);
                     movement.moveSpeed = speed;
                     movement.direction = Vector2D(dx, dy);
@@ -167,26 +173,26 @@ namespace Framework {
                 }
                 else {
                     std::cerr << "[ImGuiError] parsing BoxCollider at line " << lineNumber << "\n";
-					continue;
+                    continue;
                 }
             }
 
             if (word == "CircleCollider") {
                 float radius, ox, oy;
                 if (iss >> radius >> ox >> oy) {
-					entityManager->AddComponent<Framework::CircleCollider>(Entity);
+                    entityManager->AddComponent<Framework::CircleCollider>(Entity);
                     auto& circleCollider = entityManager->GetComponent<Framework::CircleCollider>(Entity);
                     circleCollider.radius = radius;
                     circleCollider.offset = Vector2D(ox, oy);
                 }
                 else {
                     std::cerr << "[ImGuiError] parsing CircleCollider at line " << lineNumber << "\n";
-					continue;
+                    continue;
                 }
             }
 
             if (word == "TriangleCollider") {
-				float v0x, v0y, v1x, v1y, v2x, v2y;
+                float v0x, v0y, v1x, v1y, v2x, v2y;
                 if (iss >> v0x >> v0y >> v1x >> v1y >> v2x >> v2y)
                 {
                     entityManager->AddComponent<Framework::TriangleCollider>(Entity);
@@ -204,20 +210,20 @@ namespace Framework {
             /*if (type == "player") {
                 float x = 0.0f, y = 0.0f;
                 if (iss >> x >> y) {
-					entitySpawner->SpawnPlayer(Vector2D(x, y));
+                    entitySpawner->SpawnPlayer(Vector2D(x, y));
                 }
                 else {
-					std::cerr << "[ImGuiError] parsing player at line " << lineNumber << "\n";
+                    std::cerr << "[ImGuiError] parsing player at line " << lineNumber << "\n";
                 }
             }
             else if (type == "enemy") {
                 float x = 0.0f, y = 0.0f, spd = 0.05f;
                 if (iss >> x >> y ) {
                     if (iss) iss >> spd;
-					entitySpawner->SpawnEnemy(Vector2D(x, y), spd);
+                    entitySpawner->SpawnEnemy(Vector2D(x, y), spd);
                 }
                 else {
-					std::cerr << "[ImGuiError] parsing enemy at line " << lineNumber << "\n";
+                    std::cerr << "[ImGuiError] parsing enemy at line " << lineNumber << "\n";
                 }
             }
             else if (type == "obstacle") {
@@ -228,8 +234,8 @@ namespace Framework {
                 }
 
                 else {
-					std::cerr << "[ImGuiError] parsing obstacle at line " << lineNumber << "\n";
-                  
+                    std::cerr << "[ImGuiError] parsing obstacle at line " << lineNumber << "\n";
+
                 }
             }
             else if (type == "sprite") {
@@ -243,7 +249,7 @@ namespace Framework {
                 }
             }
             else {
-				std::cerr << "[ImGuiError] Unknown entity type '" << type << "' at line " << lineNumber << "\n";
+                std::cerr << "[ImGuiError] Unknown entity type '" << type << "' at line " << lineNumber << "\n";
             }*/
         }
         return true;
@@ -266,51 +272,51 @@ namespace Framework {
                 || entityManager->HasComponent<Sprite>(entity)
                 || entityManager->HasComponent<CircleCollider>(entity)
                 || entityManager->HasComponent<TriangleCollider>(entity)
-				|| entityManager->HasComponent<BoxCollider>(entity);
+                || entityManager->HasComponent<BoxCollider>(entity);
 
             if (!hasAny) {
                 continue;
-			}
+            }
 
             writeFile << "entity\n";
 
             if (entityManager->HasComponent<Transform>(entity)) {
-				auto& transform = entityManager->GetComponent<Transform>(entity);
+                auto& transform = entityManager->GetComponent<Transform>(entity);
                 writeFile << "Transform " << transform.position.x << " " << transform.position.y << " "
-					<< transform.scale.x << " " << transform.scale.y << "\n";
+                    << transform.scale.x << " " << transform.scale.y << "\n";
             }
 
             if (entityManager->HasComponent<Sprite>(entity)) {
-				auto& sprite = entityManager->GetComponent<Sprite>(entity);
+                auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
                     writeFile << "Sprite " << sprite.texturePath << "\n";
                 }
-				
+
             }
 
             if (entityManager->HasComponent<Movement>(entity)) {
-				auto& movement = entityManager->GetComponent<Movement>(entity);
-				writeFile << "Movement " << movement.moveSpeed << " " << movement.direction.x << " " << movement.direction.y << "\n";
+                auto& movement = entityManager->GetComponent<Movement>(entity);
+                writeFile << "Movement " << movement.moveSpeed << " " << movement.direction.x << " " << movement.direction.y << "\n";
 
             }
 
             if (entityManager->HasComponent<BoxCollider>(entity)) {
-				auto& boxCollider = entityManager->GetComponent<BoxCollider>(entity);
-				const int trigger = boxCollider.isTrigger ? 1 : 0;
-				writeFile << "BoxCollider " << boxCollider.size.x << " " << boxCollider.size.y << " " << boxCollider.offset.x << " " << boxCollider.offset.y << " " << trigger << "\n";
+                auto& boxCollider = entityManager->GetComponent<BoxCollider>(entity);
+                const int trigger = boxCollider.isTrigger ? 1 : 0;
+                writeFile << "BoxCollider " << boxCollider.size.x << " " << boxCollider.size.y << " " << boxCollider.offset.x << " " << boxCollider.offset.y << " " << trigger << "\n";
 
             }
 
             if (entityManager->HasComponent<CircleCollider>(entity)) {
-				auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
-				writeFile << "CircleCollider " << circleCollider.radius << " " << circleCollider.offset.x << " " << circleCollider.offset.y << "\n";
+                auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
+                writeFile << "CircleCollider " << circleCollider.radius << " " << circleCollider.offset.x << " " << circleCollider.offset.y << "\n";
             }
 
             if (entityManager->HasComponent<TriangleCollider>(entity)) {
-				auto& triangleCollider = entityManager->GetComponent<TriangleCollider>(entity);
-				writeFile << "TriangleCollider " << triangleCollider.v0.x << " " << triangleCollider.v0.y << " "
-					      << triangleCollider.v1.x << " " << triangleCollider.v1.y << " "
-					      << triangleCollider.v2.x << " " << triangleCollider.v2.y << "\n";
+                auto& triangleCollider = entityManager->GetComponent<TriangleCollider>(entity);
+                writeFile << "TriangleCollider " << triangleCollider.v0.x << " " << triangleCollider.v0.y << " "
+                    << triangleCollider.v1.x << " " << triangleCollider.v1.y << " "
+                    << triangleCollider.v2.x << " " << triangleCollider.v2.y << "\n";
             }
             /*if (entityManager->HasComponent<Transform>(entity)) {
                 auto& transform = entityManager->GetComponent<Transform>(entity);
@@ -331,11 +337,11 @@ namespace Framework {
                               << transform.scale.x << " " << transform.scale.y << "\n";
                 }
             }*/
-			writeFile << "\n";
+            writeFile << "\n";
         }
         writeFile.close();
         return true;
-	}
+    }
 
     void ImGuiSystem::Update(float dt)
     {
@@ -365,23 +371,23 @@ namespace Framework {
                     bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
                     if (!isOpen) {
                         std::cerr << "[ImGuiError] Failed to open level.txt\n";
-					}
+                    }
                     else {
-						currentLevelPath = "assets/level1.txt";
+                        currentLevelPath = "assets/level1.txt";
                     }
                 }
 
                 if (ImGui::MenuItem("Open...")) {
                     if (currentLevelPath.empty()) {
-						currentLevelPath = "assets/level1.txt";
+                        currentLevelPath = "assets/level1.txt";
                     }
-					openPath = currentLevelPath;
+                    openPath = currentLevelPath;
                     //ImGui::OpenPopup("Open Level...");
                     wantOpenModal = true;
                 }
 
                 if (ImGui::MenuItem("Save")) {
-					const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
+                    const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
                     bool isSave = SaveLevelToTxt(path);
                     if (!isSave) {
                         std::cerr << "[ImGuiError] Failed to save level.txt\n";
@@ -390,11 +396,11 @@ namespace Framework {
 
                 if (ImGui::MenuItem("Save as ...")) {
                     if (currentLevelPath.empty()) {
-						currentLevelPath = "assets/level1.txt";
+                        currentLevelPath = "assets/level1.txt";
                     }
-					openPath = currentLevelPath;
+                    openPath = currentLevelPath;
                     //ImGui::OpenPopup("Save Level As...");
-					wantSaveAsModal = true;
+                    wantSaveAsModal = true;
                 }
 
                 if (ImGui::MenuItem("Exit")) {
@@ -423,46 +429,46 @@ namespace Framework {
                 if (!CORE->IsPlaying()) {
                     if (ImGui::MenuItem("Play")) {
                         if (!SaveLevelToTxt(defaultLevelPath)) {
-							std::cerr << "[ImGuiError] Could not create default setting"
-                                      <<defaultLevelPath << "\n";
+                            std::cerr << "[ImGuiError] Could not create default setting"
+                                << defaultLevelPath << "\n";
                         }
                         else {
-							CORE->SetPlaying(true);
+                            CORE->SetPlaying(true);
                         }
                     }
                 }
 
                 else {
                     if (ImGui::MenuItem("Stop")) {
-						CORE->SetPlaying(false);
-						entityManager->ClearAllEntities();
+                        CORE->SetPlaying(false);
+                        entityManager->ClearAllEntities();
                         OpenLevelFromTxt(defaultLevelPath, true);
                     }
                 }
- 
+
                 ImGui::EndMenu();
-			}
+            }
 
             ImGui::EndMainMenuBar();
 
-        
+
         }
 
         if (wantOpenModal) {
             ImGui::OpenPopup("Open Level...");
             wantOpenModal = false;
-		}
+        }
 
         if (wantSaveAsModal) {
             ImGui::OpenPopup("Save Level As...");
             wantSaveAsModal = false;
-		}
+        }
 
 
         if (ImGui::BeginPopupModal("Open Level...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             static char openBuffer[256] = "";
             static bool openError = false;
-			static std::string openErrorMsg = "";
+            static std::string openErrorMsg = "";
 
             if (ImGui::IsWindowAppearing()) {
                 std::snprintf(openBuffer, sizeof(openBuffer), "%s", openPath.c_str());
@@ -471,10 +477,10 @@ namespace Framework {
             }
             ImGui::InputText("Path", openBuffer, sizeof(openBuffer));
 
-            if (openError) { 
+            if (openError) {
                 ImGui::Spacing();
-				ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", openErrorMsg.c_str());
-                
+                ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", openErrorMsg.c_str());
+
             }
 
             if (ImGui::Button("Open")) {
@@ -485,10 +491,10 @@ namespace Framework {
                     ImGui::CloseCurrentPopup();
                 }
                 else {
-					openError = true;
+                    openError = true;
                     openErrorMsg = "Invalid path or file format: " + std::string(openBuffer);
                 }
-                
+
             }
 
             ImGui::SameLine();
@@ -503,19 +509,19 @@ namespace Framework {
 
 
         if (ImGui::BeginPopupModal("Save Level As...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            
+
             static char saveBuffer[256] = "";
-			static bool saveError = false;  
-			static std::string saveErrorMsg = "";
+            static bool saveError = false;
+            static std::string saveErrorMsg = "";
 
             if (ImGui::IsWindowAppearing())
             {
                 std::snprintf(saveBuffer, sizeof(saveBuffer), "%s", openPath.c_str());
-				saveError = false;
+                saveError = false;
                 saveErrorMsg.clear();
             }
 
-            ImGui::InputText("Path", saveBuffer, sizeof(saveBuffer) );
+            ImGui::InputText("Path", saveBuffer, sizeof(saveBuffer));
 
             if (saveError) {
                 ImGui::Spacing();
@@ -529,21 +535,21 @@ namespace Framework {
                 bool isSave = SaveLevelToTxt(openPath);
                 if (isSave) {
                     currentLevelPath = openPath;
-					ImGui::CloseCurrentPopup();
+                    ImGui::CloseCurrentPopup();
                 }
                 else {
-					saveError = true;
-					saveErrorMsg = "Could not save to path: " + std::string(saveBuffer);
+                    saveError = true;
+                    saveErrorMsg = "Could not save to path: " + std::string(saveBuffer);
                 }
-                
+
             }
 
-			ImGui::SameLine();
+            ImGui::SameLine();
 
             if (ImGui::Button("Cancel")) {
                 ImGui::CloseCurrentPopup();
             }
-			ImGui::EndPopup();
+            ImGui::EndPopup();
         }
 
         // Show windows
@@ -742,6 +748,17 @@ namespace Framework {
             }
         }
 
+        if (ImGui::Button("Stop All Audio##Btn9", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] Stopping all audio\n";
+                audioSystem->StopAllSounds();
+                std::cout << "[DEBUG] All audio stopped\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
         ImGui::End();
     }
 
@@ -777,7 +794,7 @@ namespace Framework {
         ImGui::BulletText("R: Spawn Pickup");
         ImGui::BulletText("Q/ESC: Quit");
 
-        
+
 
         ImGui::End();
     }

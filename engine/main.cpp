@@ -1,22 +1,8 @@
 /**
 ===============================================================================
- File:           main.cpp (Updated for GraphicsSystemV2)
- Author:         ETHAN NG YONG LE
- Email:          n.ethanyongle@digipen.edu
- Date:           2025-09-30
- Modified:       2025-10-07 (Graphics System V2 Integration)
- ------------------------------------------------------------------------------
-
-  Design notes:
-  Sets up the game engine, creates systems and entities, runs the main loop,
- * and handles cleanup. Includes debug features like memory leak detection
- * and crash logging in debug builds.
-
-  CHANGES FOR GRAPHICS SYSTEM V2:
-  - Replaced GraphicsSystem with GraphicsSystemV2
-  - Added window pointer passing to graphics system
-  - Kept backward compatibility with Sprite components
-  - Added example of using new Renderable component (commented out)
+File: main.cpp (Super Simple Version)
+Author: GE YONGQI
+Description: Using the integrated CoreEngine, main.cpp becomes very simple.
 ===============================================================================
  */
 
@@ -24,53 +10,24 @@
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 #endif
+
 #include "Precompiled.h"
-#include "GraphicsSystemV2.h"
-#include "EntitySpawner.h"
-#include "PlayerManager.h"
-#include "ProjectileSystem.h"
+#include "GSM/GameStateManager.h"
 #include "ImguiSystem.h"
-#include "AudioSystem.h" 
+#include "ConfigReader/ConfigReader.h"
 
- /**
-  * @brief Windows application entry point
-  * @param hInstance Handle to current application instance
-  * @param hPrevInstance Always NULL in modern Windows
-  * @param lpCmdLine Command line arguments
-  * @param nShowCmd Window display mode
-  * @return Exit code (0 for success)
-  *
-  * Initializes:
-  * - Debug console and memory leak detection (debug builds only)
-  * - Logging and crash reporting systems
-  * - Core engine and all subsystems
-  * - ECS entities for demonstration
-  *
-  * Execution flow:
-  * 1. Debug setup (console, heap tracking)
-  * 2. Initialize logging and crash handlers
-  * 3. Create and wire up engine systems
-  * 4. Initialize all systems
-  * 5. Create test entities (triangle, quad)
-  * 6. Run game loop until quit
-  * 7. Cleanup and shutdown
-  */
 
-void SetupGame(Framework::EntitySpawner* spawner)
-{
-    LOG_INFO("CORE", "=== Setting up game ===");
 
-    // Note: Player is spawned separately so we can get its Entity ID
+ // ============================================================================
+ // GLOBAL VARIABLES (School Template Style)
+ // ============================================================================
+extern int current, previous, next;
+extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 
-    // Spawn some initial enemies
-    spawner->SpawnEnemyWave(5, 0.6f);
-
-    // Spawn walls
-    spawner->SpawnObstacle(Framework::Vector2D(-1.8f, 0.0f), Framework::Vector2D(0.1f, 2.0f));
-    spawner->SpawnObstacle(Framework::Vector2D(1.8f, 0.0f), Framework::Vector2D(0.1f, 2.0f));
-
-    LOG_INFO("CORE", "Game setup complete!");
-}
+// ============================================================================
+// GLOBAL ENGINE
+// ============================================================================
+Framework::CoreEngine* engine = nullptr;
 
 // ============================================================================
 // MAIN ENTRY POINT
@@ -78,7 +35,9 @@ void SetupGame(Framework::EntitySpawner* spawner)
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
+
 #ifdef _DEBUG
+    // Debug console setup
     AllocConsole();
     freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
     freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
@@ -95,7 +54,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     _CrtSetDbgFlag(flags);
 #endif
 
-    // Initialize debug tools
+    // ========================================================================
+    // INITIALIZE DEBUG TOOLS
+    // ========================================================================
     eng::debug::LogConfig logCfg;
     logCfg.level = eng::debug::LogLevel::Info;
     logCfg.filePath = "engine.log";
@@ -107,163 +68,152 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     eng::debug::PerfViewer::set_print_interval(1.0);
     eng::debug::CrashLogger::install_handlers();
 
-    LOG_INFO("CORE", "Starting Game Engine...");
+    LOG_INFO("CORE", "=================================================");
+    LOG_INFO("CORE", "     Starting Game (Clean GSM Template)");
+    LOG_INFO("CORE", "=================================================");
 
-    // Create core
-    Framework::CoreEngine engine;
-    Framework::EntityManager entityManager;
 
-    // Create systems
-    auto* windowSys = new Framework::WindowSystem();
-    auto* graphicsSys = new Framework::GraphicsSystemV2();
-    auto* inputSys = new Framework::InputSystem();
-    auto* collisionSys = new Framework::CollisionSystem();
-    auto* mathSys = new Framework::MathTestSystem();
-    auto* movementSys = new Framework::MovementSystem();
-    auto* projectileMovement = new Framework::ProjectileMovementSystem();
-    auto* spawner = new Framework::EntitySpawner();
-    auto* audioSys = new Framework::AudioSystem();
-    auto* playerController = new Framework::PlayerControllerSystem();  // NEW!
-    auto* imguiSys = new Framework::ImGuiSystem();
-    auto* animationSys = new Framework::AnimationSystem();
-
-    // Configure systems
-    movementSys->SetEntityManager(&entityManager);
-    projectileMovement->SetEntityManager(&entityManager);
-    graphicsSys->SetEntityManager(&entityManager);
-    collisionSys->SetEntityManager(&entityManager);
-    spawner->SetEntityManager(&entityManager);
-    audioSys->SetEntityManager(&entityManager);
-    animationSys->SetEntityManager(&entityManager);
-
-    // NEW: Configure player controller
-    playerController->SetEntitySpawner(spawner);
-    playerController->SetEntityManager(&entityManager);
-    playerController->SetInputSystem(inputSys);
-
-    movementSys->SetInputSystem(inputSys);
-    collisionSys->SetInput(inputSys);
-
-    // Add systems to engine
-    engine.AddSystem(windowSys);
-    engine.AddSystem(spawner);
-    engine.AddSystem(playerController);  // NEW! Add before movement
-    engine.AddSystem(movementSys);
-    engine.AddSystem(animationSys);
-    engine.AddSystem(graphicsSys);
-    engine.AddSystem(inputSys);
-    engine.AddSystem(collisionSys);
-    engine.AddSystem(mathSys);
-    engine.AddSystem(projectileMovement);
-    engine.AddSystem(audioSys);
-
-    LOG_INFO("CORE", "Systems added. Initializing engine...");
-
-    // Initialize
-    windowSys->Initialize();
-    graphicsSys->SetWindow(windowSys->GetWindow());
-    imguiSys->SetWindow(windowSys->GetWindow());
-    imguiSys->SetEntityManager(&entityManager);
-    imguiSys->SetEntitySpawner(spawner);
-    
-    engine.AddSystem(imguiSys);
-    // NEW: Give player controller access to window
-    playerController->SetWindow(windowSys->GetWindow());
-    
-    engine.Initialize();
-
-    bool loaded = audioSys->LoadSound("assets/leaves.wav", "leaves");
-    if (!loaded) {
-        std::cout << "[ERROR] Failed to load leaves.wav!\n";
-        std::cout << "[INFO] Make sure file exists at: assets/leaves.wav\n";
+    // ========================================================================
+    // INITIALIZE ENGINE
+    // ========================================================================
+    engine = new Framework::CoreEngine();
+    if (!engine->InitializeAllSystems()) {
+        LOG_ERROR("CORE", "Failed to initialize engine!");
+        return -1;
     }
-    imguiSys->SetAudioSystem(audioSys);
 
-    LOG_INFO("CORE", "Engine initialized. Setting up game...");
+    // ========================================================================
+    // GAME STATE MANAGER
+    // ========================================================================
+    int initialState = ConfigReader::GetInitialGameState(mainMenu);
+    GSM_Initialize(initialState);
 
-    // Setup game
-    SetupGame(spawner);
+    LOG_INFO("CORE", "Entering GSM main loop...");
 
-    // Spawn player and give controller access to it
-    Framework::Entity player = spawner->SpawnPlayer(Framework::Vector2D(0.0f, -0.5f));
-    playerController->SetPlayerEntity(player);  // NEW!
-    graphicsSys->SetFollowTarget(player);
+    unsigned lastTime = timeGetTime();
 
-    // === Give player sprite animation ===
-    auto& anim = entityManager.AddComponent<Framework::SpriteAnimation>(player);
+    // ========================================================================
+    // GAME STATE MANAGER LOOP
+    // ========================================================================
+    while (current != GS_QUIT)
+    {
+        // Check for window close
+        if (engine->ShouldWindowClose()) {
+            LOG_INFO("CORE", "Window close requested");
+            break;
+        }
 
-    anim.spriteSheet = graphicsSys->GetResourceManager().LoadTexture("assets/Bird.png"); // Doraemon.png, Bird.png (spritesheets)
-    Framework::Texture* tex = graphicsSys->GetResourceManager().GetTexture(anim.spriteSheet);
+        // --------------------------------------------------------------------
+        // STATE TRANSITION
+        // --------------------------------------------------------------------
+        if (current != GS_RESTART)
+        {
+            LOG_INFO("CORE", "[GSM] Transitioning to state: %d", current);
+            GSM_Update();
 
-    anim.frameCount  = 9;     // How many frames? (in the spritesheet)
-    anim.frameTime   = 0.15f;  // speed of sprite movement (animation)
-    anim.rows        = 3;     // based on spritesheet (ROW-MAJOR) | First frame: top left
-    anim.columns     = 3;     // based on spritesheet
-    anim.uvShrinkPx  = 0.9f;  // size of sprite
-    anim.frameWidth  = tex->GetWidth() / anim.columns;
-    anim.frameHeight = tex->GetHeight() / anim.rows;
+            if (fpLoad) {
+                LOG_INFO("CORE", "[GSM] Load phase...");
+                fpLoad();
+            }
+        }
+        else
+        {
+            LOG_INFO("CORE", "[GSM] Restarting state: %d", previous);
+            next = previous;
+            current = previous;
+        }
 
-    // === Renderable setup ===
-    // Player MUST have a Renderable
-    entityManager.AddComponent<Framework::Renderable>(player);
-    auto& rend = entityManager.GetComponent<Framework::Renderable>(player);
-    rend.visible = true;
+        if (fpInitialize) {
+            LOG_INFO("CORE", "[GSM] Initialize phase...");
+            fpInitialize();
+        }
 
-    rend.layer = 10;
-    rend.mesh = graphicsSys->GetQuadMesh();
-    rend.tint = glm::vec4(1, 1, 1, 1);
+        // --------------------------------------------------------------------
+        // STATE LOOP
+        // --------------------------------------------------------------------
+        LOG_INFO("CORE", "[GSM] Entering state loop...");
 
-    // ======= Transformation setup =======
-    auto& xform = entityManager.AddComponent<Framework::Transform>(player);
-    xform.upperLimit = 3.0f;
-    xform.lowerLimit = 0.5f;
+        while (next == current)
+        {
+            // Check engine and window
+            if (!engine->IsActive() || engine->ShouldWindowClose()) {
+                next = GS_QUIT;
+                break;
+            }
 
-    std::cout << "\n=== CONTROLS ===\n";
-    std::cout << "WASD/Arrows: Move player\n";
-    std::cout << "SPACE: Shoot up\n";
-    std::cout << "LEFT SHIFT: Shoot down\n";
-    std::cout << "LEFT MOUSE: Shoot toward mouse\n";
-    std::cout << "E: Spawn enemy (debug)\n";
-    std::cout << "Q: Spawn obstacle (debug)\n";
-    std::cout << "R: Spawn pickup (debug)\n";
-    std::cout << "================\n\n";
+            // Calculate delta time
+            unsigned currentTime = timeGetTime();
+            float dt = (currentTime - lastTime) / 1000.0f;
+            if (dt < 0.001f) dt = 0.016f;
+            lastTime = currentTime;
 
-    std::cout << "Total entities: " << entityManager.GetAllEntities().size() << "\n\n";
+            // Poll events
+            glfwPollEvents();
 
-    //Framework::GridConfig cfg;
-    //cfg.cols = 32;
-    //cfg.rows = 18;
+            // Update all systems
+            engine->UpdateSingleFrame(dt);
 
-    //// Option A: fit to screen
-    //cfg.tileW = 4.0f / cfg.cols;       // 4 units wide (-2..2)
-    //cfg.tileH = 2.0f / cfg.rows;       // 2 units high (-1..1)
+            // State update
+            if (fpUpdate) {
+                fpUpdate();
+            }
 
-    //// Center the grid so full board is visible
-    //cfg.originWorld = { -((cfg.cols - 1) * cfg.tileW) * 0.5f,
-    //                    -((cfg.rows - 1) * cfg.tileH) * 0.5f };
+            // State draw
+            if (fpDraw) {
+                fpDraw();
+            }
 
-    //cfg.diag = Framework::DiagonalRule::NoCutCorners;
-    //Framework::GridAPI::Initialize(cfg);
-    //Framework::BuildGridTiles(&entityManager);
+            if (engine->GetImGuiSystem() &&
+                engine->GetWindowSystem() &&
+                engine->GetWindowSystem()->GetWindow()) {
+                engine->GetImGuiSystem()->Render();
 
-    // Run game
-    engine.GameLoop();
+                if (engine->GetGraphicsSystem()) {
+                    engine->GetGraphicsSystem()->RenderImGui();
+                }
+            }
+        }
 
-    LOG_INFO("CORE", "Game loop ended. Cleaning up...");
+        LOG_INFO("CORE", "[GSM] Exiting state loop");
 
-    // Cleanup
-    engine.DestroySystems();
-    glfwTerminate();
-    LOG_INFO("CORE", "Engine shutdown complete.");
+        // --------------------------------------------------------------------
+        // STATE CLEANUP
+        // --------------------------------------------------------------------
+        if (fpFree) {
+            LOG_INFO("CORE", "[GSM] Free phase...");
+            fpFree();
+        }
+
+        if (next != GS_RESTART) {
+            if (fpUnload) {
+                LOG_INFO("CORE", "[GSM] Unload phase...");
+                fpUnload();
+            }
+        }
+
+        previous = current;
+        current = next;
+    }
+
+    // ========================================================================
+    // CLEANUP
+    // ========================================================================
+    LOG_INFO("CORE", "GSM loop ended. Cleaning up...");
+
+    engine->Cleanup();
+    delete engine;
+
+    LOG_INFO("CORE", "=================================================");
+    LOG_INFO("CORE", "     Engine shutdown complete");
+    LOG_INFO("CORE", "=================================================");
+
     eng::debug::Log::shutdown();
 
 #ifdef _DEBUG
-    std::cout << "Press Enter to close console...\n";
+    std::cout << "\nPress Enter to close console...\n";
     std::cin.get();
     FreeConsole();
 #endif
 
     return 0;
 }
-
-

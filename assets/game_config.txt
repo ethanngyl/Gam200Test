@@ -1,0 +1,20 @@
+# ============================================================================
+# Game Configuration File
+# ============================================================================
+# This file controls the initial game state
+#
+# Available states:
+#   - mainmenu  : Show main menu with Play/Exit buttons
+#   - level1    : Start directly in game level
+# ============================================================================
+
+# Set the initial state when game starts
+initial_state = mainmenu
+
+============================================================================
+# WINDOW SETTINGS
+# ============================================================================
+window_width = 1900
+window_height = 800
+window_title = Testing
+fullscreen = false

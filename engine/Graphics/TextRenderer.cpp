@@ -113,14 +113,15 @@ void TextRenderer::init(int screenWidth, int screenHeight,
 
     // Compile and link text shader
     program_ = linkProgramFromFiles(vertPath, fragPath);
-    uProjection_ = glGetUniformLocation(program_, "uProjection");
-    uTextColor_ = glGetUniformLocation(program_, "uTextColor");
-    uSampler_ = glGetUniformLocation(program_, "uText");
 
     // Set up orthographic projection
     projection_ = glm::ortho(0.0f, static_cast<float>(screenWidth),
         0.0f, static_cast<float>(screenHeight));
     glUseProgram(program_);
+    uProjection_ = glGetUniformLocation(program_, "uProjection");
+    uTextColor_ = glGetUniformLocation(program_, "uTextColor");
+    uSampler_ = glGetUniformLocation(program_, "uTexture");
+
     glUniformMatrix4fv(uProjection_, 1, GL_FALSE, glm::value_ptr(projection_));
 
     // Configure VAO/VBO for 6-vertex quads
@@ -207,10 +208,9 @@ void TextRenderer::draw(const std::string& fontKey,
     if (it == fonts_.end()) return;
 
     glUseProgram(program_);
-    glUniform3fv(uTextColor_, 1, glm::value_ptr(color));
-    glUniform1i(uSampler_, 0);
+    glUniform3f(uTextColor_, color.r, color.g, color.b);
+    //glUniform1i(uSampler_, 0);
 
-    glBindVertexArray(vao_);
 
     for (char c : text) {
         const auto& glyphMap = it->second;
@@ -233,7 +233,10 @@ void TextRenderer::draw(const std::string& fontKey,
         };
 
         glBindTextureUnit(0, ch.tex);
+        //glUniform1i(uSampler_, ch.tex);
         glNamedBufferSubData(vbo_, 0, sizeof(verts), verts);
+        glBindVertexArray(vao_);
+
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         x += (ch.advance >> 6) * scale;
