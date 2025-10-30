@@ -1,4 +1,4 @@
-﻿#include "Precompiled.h"        
+#include "Precompiled.h"        
 #include "Core.h"               
 #include "EntitySpawner.h"      
 #include "Vector2D.h"    
@@ -41,6 +41,43 @@ void level1_Initialize()
     // Spawn Player - Save the returned entity ID
     // ========================================================================
     Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+
+    //------------------------------------------------------------------
+    //  SPRITE ANIMATION SETUP FOR PLAYER
+    //------------------------------------------------------------------
+    auto* em = engine->GetEntityManager();
+    auto* gfx = engine->GetGraphicsSystem();
+
+    if (em && gfx) {
+        // Attach animation component
+        auto& anim = em->AddComponent<Framework::SpriteAnimation>(playerEntity);
+
+        anim.spriteSheet = gfx->GetResourceManager().LoadTexture("assets/Bird.png");
+        Framework::Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+
+        anim.rows = 3;
+        anim.columns = 3;
+        anim.frameCount = 9;
+        anim.frameTime = 0.15f;
+        anim.loop = true;
+        anim.playing = true;
+        anim.uvShrinkPx = 0.9f;
+
+        anim.frameWidth = tex->GetWidth() / anim.columns;
+        anim.frameHeight = tex->GetHeight() / anim.rows;
+
+        // Renderable
+        auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
+        rend.visible = true;
+        rend.layer = 10;
+        rend.mesh = gfx->GetQuadMesh();
+        rend.tint = glm::vec4(1, 1, 1, 1);
+
+        // Transform
+        auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
+        xform.upperLimit = 3.0f;
+        xform.lowerLimit = 0.5f;
+    }
 
     // ========================================================================
     // Tell the PlayerController who the player entity is

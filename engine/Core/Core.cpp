@@ -25,6 +25,7 @@ Improvements:
 #include "GraphicsSystemV2.h"
 #include "Input.h"
 #include "AudioSystem.h"
+#include "AnimationSystem.h"
 
  /*
  #include "PerfViewer.h"
@@ -50,6 +51,7 @@ namespace Framework
         , playerController(nullptr)
         , imguiSystem(nullptr)
         , audioSystem(nullptr)
+        , animationSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
     {
@@ -125,6 +127,7 @@ namespace Framework
         playerController = new PlayerControllerSystem();
         imguiSystem = new ImGuiSystem();
         audioSystem = new AudioSystem();
+        animationSystem = new AnimationSystem();
 
         LOG_INFO("CORE", "  ✓ All systems created");
     }
@@ -142,6 +145,7 @@ namespace Framework
         playerController->SetEntityManager(entityManager);
         imguiSystem->SetEntityManager(entityManager);
         audioSystem->SetEntityManager(entityManager);
+        animationSystem->SetEntityManager(entityManager);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -190,6 +194,7 @@ namespace Framework
         AddSystem(graphicsSystem);
         AddSystem(imguiSystem);
         AddSystem(audioSystem);
+        AddSystem(animationSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -249,6 +254,7 @@ namespace Framework
         graphicsSystem = nullptr;
         imguiSystem = nullptr;
         audioSystem = nullptr;
+        animationSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {

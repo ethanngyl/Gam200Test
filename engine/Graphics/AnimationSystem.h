@@ -35,7 +35,7 @@ Example:
 ===============================================================================
  */
 
-#pragma
+#pragma once
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
 
