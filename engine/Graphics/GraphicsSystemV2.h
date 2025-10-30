@@ -258,11 +258,15 @@ namespace Framework {
         ShaderHandle defaultShader;
         ShaderHandle debugShader;
         MaterialHandle defaultMaterial;
+        ShaderHandle Shader2;
         
         // Background rendering
         TextureHandle backgroundTexture;
         MeshHandle backgroundMesh;
         MaterialHandle backgroundMaterial;
+        public:
+        inline static MaterialHandle Material2;
+        private:
 
         // Default primitive meshes
         MeshHandle triangleMesh;

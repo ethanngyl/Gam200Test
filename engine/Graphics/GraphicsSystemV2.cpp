@@ -93,7 +93,7 @@ namespace Framework {
         text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48); //ASC: here change the font type
         text_.loadFont("Serif32", "assets/Roboto-VariableFont_wdth,wght.ttf", 32);
 
-        std::cout << "\n========================================\n";
+            std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
 
@@ -312,6 +312,12 @@ namespace Framework {
             "default"
         );
 
+        Shader2 = resourceManager.LoadShader(
+            "shaders/basic.vert",
+            "shaders/basic2.frag",
+            "color"
+        );
+
         if (!defaultShader.IsValid()) {
             std::cerr << "ERROR: Failed to load default shader!\n";
         }
@@ -454,7 +460,7 @@ namespace Framework {
 
         // Create default material
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
-
+        Material2 = resourceManager.CreateMaterial("color", Shader2);//                                   new
         // Create materials for each primitive
         triangleMaterial = resourceManager.CreateMaterial("triangle_mat", defaultShader);
         auto* triMat = resourceManager.GetMaterial(triangleMaterial);

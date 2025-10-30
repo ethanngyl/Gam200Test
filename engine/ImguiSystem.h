@@ -39,6 +39,7 @@ namespace Framework {
 		bool SaveLevelToTxt(const std::string& file);
 
         void SetAudioSystem(AudioSystem* audio);
+        void SetGraphicsSystem(GraphicsSystemV2* graphics);
         // Render ImGui (call after game rendering, before swap buffers)
         void Render();
 
@@ -58,6 +59,7 @@ namespace Framework {
 		std::string defaultLevelPath = "assets/defaultLevel.txt";
 
         AudioSystem* audioSystem;
+        GraphicsSystemV2* graphicsSystem;
         // UI Windows
         void ShowEntityInspector();
         void ShowSpawnerWindow();
