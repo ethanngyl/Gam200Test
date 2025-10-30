@@ -42,6 +42,29 @@ void level1_Initialize()
     // ========================================================================
     Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
 
+    // ========================================================================
+    // Tell the PlayerController who the player entity is
+    // ========================================================================
+    playerControll->SetPlayerEntity(playerEntity);
+
+    // Optional: Configure shooting parameters
+    playerControll->SetShootCooldown(0.2f);     
+    playerControll->SetProjectileSpeed(0.5f);
+
+    LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
+
+    // Generate enemy waves
+    spawner->SpawnEnemyWave(5, 0.8f);
+
+    // Generate some obstacles
+    spawner->SpawnObstacle(Vector2D(-0.5f, 0.0f), Vector2D(0.3f, 0.3f));
+    spawner->SpawnObstacle(Vector2D(0.5f, 0.0f), Vector2D(0.3f, 0.3f));
+
+    // Generate a circular pattern
+    spawner->SpawnCircle("circle", 8, Vector2D(0.0f, 0.0f), 0.6f);
+
+    LOG_INFO("LEVEL1", "All entities spawned successfully");
+
     //------------------------------------------------------------------
     //  SPRITE ANIMATION SETUP FOR PLAYER
     //------------------------------------------------------------------
@@ -78,29 +101,6 @@ void level1_Initialize()
         xform.upperLimit = 3.0f;
         xform.lowerLimit = 0.5f;
     }
-
-    // ========================================================================
-    // Tell the PlayerController who the player entity is
-    // ========================================================================
-    playerControll->SetPlayerEntity(playerEntity);
-
-    // Optional: Configure shooting parameters
-    playerControll->SetShootCooldown(0.2f);     
-    playerControll->SetProjectileSpeed(0.5f);
-
-    LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
-
-    // Generate enemy waves
-    spawner->SpawnEnemyWave(5, 0.8f);
-
-    // Generate some obstacles
-    spawner->SpawnObstacle(Vector2D(-0.5f, 0.0f), Vector2D(0.3f, 0.3f));
-    spawner->SpawnObstacle(Vector2D(0.5f, 0.0f), Vector2D(0.3f, 0.3f));
-
-    // Generate a circular pattern
-    spawner->SpawnCircle("circle", 8, Vector2D(0.0f, 0.0f), 0.6f);
-
-    LOG_INFO("LEVEL1", "All entities spawned successfully");
 }
 
 void level1_Update()
@@ -108,7 +108,7 @@ void level1_Update()
     if (engine && engine->GetInputSystem() &&
         engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
-        LOG_INFO("LEVEL1", "ESC pressed - returning to menu");
+         LOG_INFO("LEVEL1", "ESC pressed - returning to menu");
         next = mainMenu;
     }
 }
