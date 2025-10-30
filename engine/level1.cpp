@@ -44,6 +44,7 @@ void level1_Initialize()
         LOG_ERROR("LEVEL1", "graphicsSystem is null!");
         return;
     }
+    engine->SetPlaying(true);
 
     // ========================================================================
     // Spawn Player - Save the returned entity ID

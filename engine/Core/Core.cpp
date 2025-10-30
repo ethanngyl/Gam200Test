@@ -206,13 +206,6 @@ namespace Framework
         // Just initialize the others
         for (auto system : Systems)
         {
-            // Skip already initialized systems
-            if (dynamic_cast<WindowSystem*>(system) != nullptr ||
-                dynamic_cast<GraphicsSystemV2*>(system) != nullptr)
-            {
-                continue;
-            }
-
             system->Initialize();
         }
 
@@ -292,85 +285,6 @@ namespace Framework
             Systems[i]->Update(dt);
         }
     }
-
-    // ========================================================================
-    // Original functionality (retained)
-    // ========================================================================
-
-    /*
-    void CoreEngine::GameLoop()
-    {
-        LastTime = timeGetTime();
-
-        eng::debug::FpsCounter fps;
-        fps.set_enable_logging(true);
-
-        // Attach window title updater
-        if (windowSystem && windowSystem->GetWindow()) {
-            GLFWwindow* win = windowSystem->GetWindow();
-            fps.set_title_updater([win](const char* title) {
-                glfwSetWindowTitle(win, title);
-                });
-        }
-
-        // Find ImGui system
-        ImGuiSystem* imguiSys = nullptr;
-        for (auto system : Systems) {
-            if (auto imgui = dynamic_cast<ImGuiSystem*>(system)) {
-                imguiSys = imgui;
-                break;
-            }
-        }
-
-        while (GameActive)
-        {
-            // Check window close
-            if (ShouldWindowClose()) {
-                Message quitMsg(Status::Quit);
-                BroadcastMessage(&quitMsg);
-            }
-
-            // Calculate delta time
-            unsigned currenttime = timeGetTime();
-            float dt = (currenttime - LastTime) / 1000.0f;
-            if (dt < 0.001f) dt = 0.016f;
-            LastTime = currenttime;
-
-            // Begin perf frame
-            eng::debug::PerfViewer::begin_frame();
-
-            // Update all systems
-            for (unsigned i = 0; i < Systems.size(); ++i)
-            {
-                Systems[i]->Update(dt);
-            }
-
-            // Render ImGui
-            if (imguiSys) {
-                imguiSys->Render();
-            }
-
-            // Swap buffers
-            if (graphicsSystem) {
-                graphicsSystem->RenderImGui();
-            }
-
-            // End perf frame
-            eng::debug::PerfViewer::end_frame();
-
-            // FPS counter
-            fps.tick_with_dt(static_cast<double>(dt));
-
-            // Debug keys
-            if (GetAsyncKeyState(VK_F2) & 0x0001) {
-                eng::debug::PerfViewer::export_csv("perf_recent.csv");
-            }
-            if (GetAsyncKeyState(VK_F3) & 0x0001) {
-                eng::debug::CrashLogger::force_crash_for_test();
-            }
-        }
-    }
-    */
 
     void CoreEngine::BroadcastMessage(Message* message)
     {
