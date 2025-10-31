@@ -1,16 +1,17 @@
 /**
 ===============================================================================
  File:           MainMenu.h
- Description:    Main menu state functions 
+ Description:    Main menu state with UI buttons
 ===============================================================================
  */
 
 #pragma once
 #include "Precompiled.h"
 
- // ============================================================================
- // MAIN MENU STATE FUNCTIONS (6 lifecycle functions)
- // ============================================================================
+
+// ============================================================================
+// MAIN MENU STATE FUNCTIONS (6 lifecycle functions)
+// ============================================================================
 
 void mainMenu_Load();
 void mainMenu_Initialize();

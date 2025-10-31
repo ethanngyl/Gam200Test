@@ -1,0 +1,180 @@
+/**
+===============================================================================
+ File:           UISystem.h
+ Description:    Universal UI system for buttons and other UI elements
+ Author:         Your Team + Claude
+ Date:           2025-01-01
+===============================================================================
+ */
+
+#pragma once
+#include "Precompiled.h"
+#include <functional>
+#include <vector>
+#include <memory>
+
+namespace Framework {
+
+    // Forward declarations
+    class CoreEngine;
+    class Camera;
+
+    /**
+     * @brief Callback function type for button clicks
+     * Usage: void OnPlayClicked() { ... }
+     */
+    using ButtonCallback = std::function<void()>;
+
+    /**
+     * @brief UI Button structure
+     * Represents a clickable button in world space
+     */
+    struct UIButton {
+        Entity entity;              // Button entity
+        Vector2D position;          // Center position in world space
+        Vector2D size;              // Button size (width, height)
+        std::string texturePath;    // Button texture path
+        ButtonCallback onClick;     // Callback when clicked
+
+        // States
+        bool isHovered;             // Mouse is over button
+        bool isPressed;             // Button is being pressed
+        bool isEnabled;             // Button can be interacted with
+        int layer;                  // Rendering layer (default: 10)
+
+        // Visual properties
+        glm::vec4 normalTint;       // Normal state color
+        glm::vec4 hoverTint;        // Hover state color
+        glm::vec4 pressedTint;      // Pressed state color
+        glm::vec4 disabledTint;     // Disabled state color
+
+        UIButton()
+            : entity(0)
+            , isHovered(false)
+            , isPressed(false)
+            , isEnabled(true)
+            , layer(10)
+            , normalTint(1.0f, 1.0f, 1.0f, 1.0f)
+            , hoverTint(1.2f, 1.2f, 1.2f, 1.0f)
+            , pressedTint(0.9f, 0.9f, 0.9f, 1.0f)
+            , disabledTint(0.5f, 0.5f, 0.5f, 0.5f)
+        {
+        }
+
+        /**
+         * @brief Check if point is inside button (in world space)
+         */
+        bool Contains(const Vector2D& point) const {
+            float halfW = size.x * 0.5f;
+            float halfH = size.y * 0.5f;
+            return (point.x >= position.x - halfW &&
+                point.x <= position.x + halfW &&
+                point.y >= position.y - halfH &&
+                point.y <= position.y + halfH);
+        }
+    };
+
+    /**
+     * @brief Universal UI System
+     * Manages all UI elements including buttons, labels, etc.
+     * Handles input, rendering, and lifecycle of UI components
+     */
+    class UISystem : public EngineSystem {
+    public:
+        UISystem(CoreEngine* engine);
+        virtual ~UISystem();
+
+        // ====================================================================
+        // SYSTEM LIFECYCLE
+        // ====================================================================
+        virtual void Initialize() override;
+        virtual void Update(float dt) override;
+        virtual void SendEngineMessage(Message* message) override;
+
+        // ====================================================================
+        // BUTTON CREATION API
+        // ====================================================================
+
+        /**
+         * @brief Create a new button
+         * @param texturePath Path to button texture
+         * @param position Button center position in world space
+         * @param size Button size (width, height)
+         * @param onClick Callback function when clicked
+         * @return Pointer to created button (managed by UISystem)
+         */
+        UIButton* CreateButton(
+            const std::string& texturePath,
+            const Vector2D& position,
+            const Vector2D& size,
+            ButtonCallback onClick
+        );
+
+        /**
+         * @brief Create a button with custom colors
+         */
+        UIButton* CreateButton(
+            const std::string& texturePath,
+            const Vector2D& position,
+            const Vector2D& size,
+            ButtonCallback onClick,
+            const glm::vec4& normalTint,
+            const glm::vec4& hoverTint
+        );
+
+        // ====================================================================
+        // BUTTON MANAGEMENT
+        // ====================================================================
+
+        /**
+         * @brief Remove a button from the system
+         */
+        void RemoveButton(UIButton* button);
+
+        /**
+         * @brief Clear all buttons
+         */
+        void ClearAllButtons();
+
+        /**
+         * @brief Enable/disable a button
+         */
+        void SetButtonEnabled(UIButton* button, bool enabled);
+
+        /**
+         * @brief Get number of buttons
+         */
+        size_t GetButtonCount() const { return buttons.size(); }
+
+        // ====================================================================
+        // COORDINATE CONVERSION
+        // ====================================================================
+
+        /**
+         * @brief Convert screen coordinates to world coordinates
+         * Handles window resizing and high-DPI displays
+         */
+        Vector2D ScreenToWorld(float screenX, float screenY);
+
+        // ====================================================================
+        // UTILITY
+        // ====================================================================
+
+        /**
+         * @brief Enable/disable the entire UI system
+         */
+        void SetEnabled(bool enabled) { isEnabled = enabled; }
+        bool IsEnabled() const { return isEnabled; }
+
+    private:
+        CoreEngine* engine;
+        std::vector<std::unique_ptr<UIButton>> buttons;
+        bool isEnabled;
+
+        // Helper functions
+        void UpdateButton(UIButton* button, const Vector2D& mouseWorld);
+        void UpdateButtonVisuals(UIButton* button);
+        void SpawnButtonEntity(UIButton* button);
+    };
+
+} // namespace Framework

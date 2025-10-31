@@ -33,6 +33,7 @@ namespace Framework
     class PlayerControllerSystem;
     class ImGuiSystem;
     class AudioSystem;
+    class UISystem;
 
     /**
      * @class CoreEngine
@@ -131,6 +132,7 @@ namespace Framework
         PlayerControllerSystem* GetPlayerController() const { return playerController; }
         ImGuiSystem* GetImGuiSystem() const { return imguiSystem; }
         AudioSystem* GetAudioSystem() const { return audioSystem; }
+        UISystem* GetUISystem() const { return uiSystem; }
 
 
         /**
@@ -183,6 +185,7 @@ namespace Framework
         PlayerControllerSystem* playerController;
         ImGuiSystem* imguiSystem;
         AudioSystem* audioSystem;
+        UISystem* uiSystem;
 
         // state
         unsigned LastTime;
