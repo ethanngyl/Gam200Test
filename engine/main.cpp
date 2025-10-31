@@ -1,8 +1,8 @@
 ﻿/**
 ===============================================================================
-File: main.cpp (Super Simple Version)
+File: main.cpp (Super Clean Version)
 Author: GE YONGQI
-Description: Using the integrated CoreEngine, main.cpp becomes very simple.
+Description: Ultra-simple main using DebugConfig for all debug initialization
 ===============================================================================
  */
 
@@ -12,21 +12,14 @@ Description: Using the integrated CoreEngine, main.cpp becomes very simple.
 #endif
 
 #include "Precompiled.h"
-#include "GSM/GameStateManager.h"
 #include "ImguiSystem.h"
-#include "ConfigReader/ConfigReader.h"
-
-
 
  // ============================================================================
- // GLOBAL VARIABLES (School Template Style)
+ // GLOBAL VARIABLES
  // ============================================================================
 extern int current, previous, next;
 extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 
-// ============================================================================
-// GLOBAL ENGINE
-// ============================================================================
 Framework::CoreEngine* engine = nullptr;
 
 // ============================================================================
@@ -55,23 +48,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 #endif
 
     // ========================================================================
-    // INITIALIZE DEBUG TOOLS
+    // INITIALIZE DEBUG SYSTEMS
     // ========================================================================
-    eng::debug::LogConfig logCfg;
-    logCfg.level = eng::debug::LogLevel::Info;
-    logCfg.filePath = "engine.log";
-    logCfg.useConsole = true;
-    logCfg.useFile = true;
-    logCfg.usePlatformOutput = true;
-    logCfg.showSourceInfo = false;
-    eng::debug::Log::init(logCfg);
-    eng::debug::PerfViewer::set_print_interval(1.0);
-    eng::debug::CrashLogger::install_handlers();
+    Framework::DebugConfig::Initialize();
 
     LOG_INFO("CORE", "=================================================");
-    LOG_INFO("CORE", "     Starting Game (Clean GSM Template)");
+    LOG_INFO("CORE", "     StructSquad Engine Starting");
     LOG_INFO("CORE", "=================================================");
-
 
     // ========================================================================
     // INITIALIZE ENGINE
@@ -79,7 +62,17 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     engine = new Framework::CoreEngine();
     if (!engine->InitializeAllSystems()) {
         LOG_ERROR("CORE", "Failed to initialize engine!");
+        Framework::DebugConfig::Shutdown();
         return -1;
+    }
+
+    // ========================================================================
+    // ⭐ SETUP FPS COUNTER WITH WINDOW ⭐
+    // ========================================================================
+    if (engine->GetWindowSystem() && engine->GetWindowSystem()->GetWindow()) {
+        auto window = engine->GetWindowSystem()->GetWindow();
+        // Reinitialize FPS counter with window (for title updates)
+        Framework::DebugConfig::Initialize(window);
     }
 
     // ========================================================================
@@ -89,6 +82,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     GSM_Initialize(initialState);
 
     LOG_INFO("CORE", "Entering GSM main loop...");
+    LOG_INFO("CORE", "Debug Controls: F2 = Export Performance CSV");
 
     unsigned lastTime = timeGetTime();
 
@@ -147,6 +141,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             if (dt < 0.001f) dt = 0.016f;
             lastTime = currentTime;
 
+            // Begin performance frame
+            eng::debug::PerfViewer::begin_frame();
+
             // Poll events
             glfwPollEvents();
 
@@ -163,6 +160,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
                 fpDraw();
             }
 
+            // ImGui rendering
             if (engine->GetImGuiSystem() &&
                 engine->GetWindowSystem() &&
                 engine->GetWindowSystem()->GetWindow()) {
@@ -170,6 +168,21 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
                 if (engine->GetGraphicsSystem()) {
                     engine->GetGraphicsSystem()->RenderImGui();
+                }
+            }
+
+            // End performance frame
+            eng::debug::PerfViewer::end_frame();
+
+            // Update FPS counter
+            Framework::DebugConfig::GetFpsCounter().tick_with_dt(
+                static_cast<double>(dt)
+            );
+
+            // ⭐ Debug hotkey: F2 to export performance data
+            if (GetAsyncKeyState(VK_F2) & 0x0001) {
+                if (eng::debug::PerfViewer::export_csv("performance.csv")) {
+                    LOG_INFO("DEBUG", "Performance data exported");
                 }
             }
         }
@@ -202,12 +215,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     engine->Cleanup();
     delete engine;
+    engine = nullptr;
 
     LOG_INFO("CORE", "=================================================");
     LOG_INFO("CORE", "     Engine shutdown complete");
     LOG_INFO("CORE", "=================================================");
 
-    eng::debug::Log::shutdown();
+    // SHUTDOWN DEBUG SYSTEMS
+    Framework::DebugConfig::Shutdown();
 
 #ifdef _DEBUG
     std::cout << "\nPress Enter to close console...\n";

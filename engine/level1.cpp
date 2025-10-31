@@ -1,9 +1,6 @@
-﻿#include "Precompiled.h"        
-#include "Core.h"               
+﻿#include "Precompiled.h"   
+
 #include "EntitySpawner.h"      
-#include "Vector2D.h"    
-#include "GSM/GameStateList.h"
-#include "GSM/GameStateManager.h"
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
 

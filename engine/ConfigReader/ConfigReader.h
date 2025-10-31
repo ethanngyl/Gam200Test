@@ -1,9 +1,29 @@
-/**
+/*
 ===============================================================================
- File:           ConfigReader.h (Optimized Version)
- Description:    Configuration file reader with duplicate loading prevention
+ File:          ConfigReader.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Configuration file reader for game settings (header)
+
+  Features:
+     - Prevents duplicate loading of configuration file
+     - Unified config file path constant
+     - Supports multiple data types (int, float, bool, string)
+     - Automatic game state parsing
+
+  Format:
+     - Lines starting with '#' are comments
+     - key = value format
+     - Whitespace is trimmed
+
+  Example:
+     fullscreen = true
+     initial_state = Level1
 ===============================================================================
- */
+*/
 
 #pragma once
 #include <string>

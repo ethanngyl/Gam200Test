@@ -129,6 +129,8 @@ namespace Framework
     */
     void WindowSystem::Update(float dt)
     {
+        DBG_SCOPE_SYS("Window System", eng::debug::Subsystem::Graphics);
+
         (void)dt;
         glfwPollEvents();
     }

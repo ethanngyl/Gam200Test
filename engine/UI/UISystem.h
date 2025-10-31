@@ -8,9 +8,7 @@
 
 #pragma once
 #include "Precompiled.h"
-#include <functional>
-#include <vector>
-#include <memory>
+
 
 namespace Framework {
 

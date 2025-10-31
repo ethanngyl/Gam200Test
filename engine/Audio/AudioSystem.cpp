@@ -57,6 +57,8 @@ namespace Framework {
     }
 
     void AudioSystem::Update(float dt) {
+        DBG_SCOPE_SYS("Audio System", eng::debug::Subsystem::Audio);
+
         if (!fmodSystem) return;
 
         // Update FMOD

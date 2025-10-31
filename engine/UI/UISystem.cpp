@@ -7,10 +7,9 @@
  */
 
 #include "Precompiled.h"
-#include "UISystem.h"
-#include "Core.h"
-#include "Input/Input.h"
+
 #include "EntitySpawner.h"
+
 
 namespace Framework {
 
@@ -42,6 +41,8 @@ namespace Framework {
 
     void UISystem::Update(float dt)
     {
+        DBG_SCOPE_SYS("UI System", eng::debug::Subsystem::Gameplay);
+
         (void)dt;
 
         if (!isEnabled || !engine) return;
@@ -53,6 +54,28 @@ namespace Framework {
 
         GLFWwindow* window = windowSystem->GetWindow();
         if (!window) return;
+
+        static int lastWidth = 0, lastHeight = 0;
+        int currentWidth = windowSystem->GetWidth();
+        int currentHeight = windowSystem->GetHeight();
+
+        if (currentWidth != lastWidth || currentHeight != lastHeight) {
+            LOG_INFO("UI", "Window resized: %dx%d -> %dx%d",
+                lastWidth, lastHeight, currentWidth, currentHeight);
+
+            // 打印按钮信息
+            for (size_t i = 0; i < buttons.size(); ++i) {
+                if (buttons[i]) {
+                    LOG_DEBUG("UI", "  Button[%zu] world pos: (%.2f, %.2f) size: (%.2f, %.2f)",
+                        i,
+                        buttons[i]->position.x, buttons[i]->position.y,
+                        buttons[i]->size.x, buttons[i]->size.y);
+                }
+            }
+
+            lastWidth = currentWidth;
+            lastHeight = currentHeight;
+        }
 
         // Get mouse position in screen space
         float mouseScreenX, mouseScreenY;

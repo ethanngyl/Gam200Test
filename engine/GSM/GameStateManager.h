@@ -7,7 +7,6 @@
 
 #pragma once
 #include "Precompiled.h"
-#include "GameStateList.h"
 
  // ============================================================================
  // FUNCTION POINTER TYPE

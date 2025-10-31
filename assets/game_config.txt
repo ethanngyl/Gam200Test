@@ -1,20 +1,80 @@
 # ============================================================================
 # Game Configuration File
 # ============================================================================
-# This file controls the initial game state
-#
+# This file controls all game settings including window, debug, and initial state
+# ============================================================================
+
+# ============================================================================
+# INITIAL GAME STATE
+# ============================================================================
 # Available states:
 #   - mainmenu  : Show main menu with Play/Exit buttons
 #   - level1    : Start directly in game level
+#   - level2    : Level 2
+#   - quit      : Exit immediately (for testing)
 # ============================================================================
-
-# Set the initial state when game starts
 initial_state = mainmenu
 
-============================================================================
+# ============================================================================
 # WINDOW SETTINGS
 # ============================================================================
 window_width = 1920
 window_height = 1080
-window_title = Testing
+window_title = StructSquad Game Engine
 fullscreen = false
+
+# ============================================================================
+# DEBUG SYSTEM SETTINGS
+# ============================================================================
+
+# --- Logging Configuration ---
+# Log level: Debug, Info, Warn, Error
+# Debug = Show everything (verbose)
+# Info  = Normal operation messages
+# Warn  = Warnings only
+# Error = Errors only
+debug_log_level = Info
+
+# Log file path
+debug_log_file = StructSquad.log
+
+# Enable console output (true/false)
+debug_use_console = true
+
+# Enable file output (true/false)
+debug_use_file = true
+
+# Enable Visual Studio Output window (Windows only)
+debug_use_platform_output = true
+
+# Show source file and line number in logs (true/false)
+debug_show_source_info = false
+
+# --- Performance Monitoring ---
+# Enable FPS counter in window title (true/false)
+debug_fps_enabled = true
+
+# Enable FPS logging to console (true/false)
+debug_fps_logging = true
+
+# FPS smoothing factor (0.0 - 1.0)
+# Lower = smoother, Higher = more responsive
+debug_fps_smoothing = 0.2
+
+# Performance viewer print interval (seconds)
+debug_perf_print_interval = 1.0
+
+# --- Crash Logger ---
+# Enable automatic crash reporting (true/false)
+debug_crash_logger_enabled = true
+
+# ============================================================================
+# CAMERA SETTINGS (for UI coordinate conversion)
+# ============================================================================
+# Viewport height in world units (affects UI scaling)
+# Common values: 5.0, 10.0, 20.0
+camera_viewport_height = 10.0
+
+# ============================================================================
+# END OF CONFIGURATION
+# ============================================================================
