@@ -752,11 +752,15 @@ namespace Framework {
                 float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
                 float v0 = 1.0f - ((y + 1) * anim.frameHeight) / float(texH);
 
-                mat->u0 = u0; mat->v0 = v0;
-                mat->u1 = u1; mat->v1 = v1;
+                // Horizontal flip
+                if (anim.flipX) std::swap(u0, u1);
 
-                if (!mat->albedoTexture.IsValid())
-                    mat->albedoTexture = anim.spriteSheet;
+                mat->u0 = u0;
+                mat->u1 = u1;
+                mat->v0 = v0;
+                mat->v1 = v1;
+
+                if (!mat->albedoTexture.IsValid()) mat->albedoTexture = anim.spriteSheet;
             }
 
             renderQueue.Submit(cmd);

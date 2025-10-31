@@ -58,10 +58,10 @@ void level1_Initialize()
         anim.rows = 3;
         anim.columns = 3;
         anim.frameCount = 9;
-        anim.frameTime = 0.15f;
+        anim.frameTime = 0.10f;
         anim.loop = true;
         anim.playing = true;
-        anim.uvShrinkPx = 0.9f;
+        anim.uvShrinkPx = 0.8f;
 
         anim.frameWidth = tex->GetWidth() / anim.columns;
         anim.frameHeight = tex->GetHeight() / anim.rows;
@@ -71,7 +71,7 @@ void level1_Initialize()
 
         // Transform
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
-        xform.upperLimit = 3.0f;
+        xform.upperLimit = 2.5f;
         xform.lowerLimit = 0.5f;
     }
 

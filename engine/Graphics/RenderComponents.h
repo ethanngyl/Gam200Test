@@ -80,7 +80,8 @@ namespace Framework {
         float uvShrinkPx = 1.0f;
         bool loop = true;
         bool playing = true;
-
+        bool flipX = false;
+        
         // Frame dimensions in texture
         int frameWidth = 0;
         int frameHeight = 0;

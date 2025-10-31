@@ -83,6 +83,18 @@ namespace Framework
                 if (inputSystem->IsKeyDown(KEY_A)) inputDir.x -= 1.0f;
                 if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += 1.0f;
 
+                // Face right when pressing D
+                if (inputDir.x > 0.0f) {
+                    if (entityManager->HasComponent<SpriteAnimation>(entity))
+                        entityManager->GetComponent<SpriteAnimation>(entity).flipX = false;
+                }
+
+                // Face left when pressing A
+                if (inputDir.x < 0.0f) {
+                    if (entityManager->HasComponent<SpriteAnimation>(entity))
+                        entityManager->GetComponent<SpriteAnimation>(entity).flipX = true;
+                }
+
                 // === SCALING ===
                 if (inputSystem->IsKeyDown(KEY_6)) {
                     transform.scale.x += 1.0f * dt;

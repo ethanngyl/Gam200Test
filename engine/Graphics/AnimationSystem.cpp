@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           AnimationSystem.cpp
  Author:         TAN WEI LEONG
@@ -112,6 +112,16 @@ namespace Framework {
 
 			if (!anim.playing) continue;
 
+			// Movement check
+			if (entityManager->HasComponent<Movement>(e)) {
+				auto& move = entityManager->GetComponent<Movement>(e);
+
+				// If NOT moving → idle still frame
+				if (fabs(move.direction.x) < 0.001f && fabs(move.direction.y) < 0.001f) {
+					continue;               // do NOT animate
+				}
+			}
+
 			anim.elapsedTime += dt;
 
 			if (anim.elapsedTime >= anim.frameTime) {
@@ -121,7 +131,8 @@ namespace Framework {
 				if (anim.currentFrame >= anim.frameCount) {
 					anim.currentFrame = anim.loop ? 0 : anim.frameCount - 1;
 				}
-
+				
+				// For Debug
 				std::cout << "Frame: " << anim.currentFrame << "\n";
 			}
 		}
@@ -145,7 +156,7 @@ namespace Framework {
 	===============================================================================
 	 */
 	void AnimationSystem::SendEngineMessage(Message* message) {
-		// Restart animation when SPACE is pressed
+		// Restart animation when 0 is pressed
 		if (message->MessageId == KEY_0) {
 			currentFrame = 0;
 			frameTimer = 0.0f;
