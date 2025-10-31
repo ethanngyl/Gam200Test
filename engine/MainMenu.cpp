@@ -2,7 +2,6 @@
 ===============================================================================
  File:           MainMenu_GlobalUI.cpp
  Description:    MainMenu using global UISystem from CoreEngine
- Author:         Your Team + Claude
  Date:           2025-01-01
 ===============================================================================
  */

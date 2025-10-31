@@ -2,7 +2,6 @@
 ===============================================================================
  File:           UISystem.h
  Description:    Universal UI system for buttons and other UI elements
- Author:         Your Team + Claude
  Date:           2025-01-01
 ===============================================================================
  */
