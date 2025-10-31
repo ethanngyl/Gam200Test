@@ -98,7 +98,6 @@ void level1_Update()
     if (engine && engine->GetInputSystem() &&
         engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
-        LOG_INFO("LEVEL1", "ESC pressed - returning to menu");
         next = mainMenu;
     }
 }
@@ -107,7 +106,7 @@ void level1_Draw()
 {
     // Only responsible for rendering related matters
     // Do not create entities here
-    LOG_INFO("MENU", "=== level1 Draw ===");
+    //LOG_INFO("MENU", "=== level1 Draw ===");
 }
 
 void level1_Free()
