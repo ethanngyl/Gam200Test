@@ -1,9 +1,25 @@
-/**
+/*
 ===============================================================================
- File:           GameStateManager.cpp
- Description:    Game state manager implementation
+ File:          GameStateManager.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Game State Manager (implementation)
+
+  Responsibilities:
+     - Maintains current, previous, and next game states
+     - Maps each state to its respective function pointer set
+     - Handles GSM_Initialize() and GSM_Update() logic
+
+  Design notes:
+     - Supports modular state transitions (main menu, levels, quit, etc.)
+     - Logs all transitions for debugging via Log system
+     - Function pointers are reset on invalid or undefined states
 ===============================================================================
- */
+*/
+
 
 #include "Precompiled.h"
 #include "MainMenu.h"

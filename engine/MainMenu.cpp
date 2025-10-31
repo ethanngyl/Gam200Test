@@ -1,10 +1,24 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           MainMenu_GlobalUI.cpp
- Description:    MainMenu using global UISystem from CoreEngine
- Date:           2025-01-01
+ File:          MainMenu.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Main menu state (implementation)
+
+  Design notes:
+     - Uses global UISystem to create Play and Exit buttons
+     - Disables ImGui overlay to preserve clean UI visuals
+     - Transitions to Level 1 or exits the game via button callbacks
+
+  Highlights:
+     - Integrates seamlessly with CoreEngine’s UISystem and GraphicsSystem
+     - Automatically clears previous UI state during transitions
 ===============================================================================
- */
+*/
+
 
 #include "Precompiled.h"
 

@@ -1,4 +1,26 @@
-﻿#include "Precompiled.h"   
+﻿/*
+===============================================================================
+ File:          level1.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Level 1 gameplay state (implementation)
+
+  Design notes:
+     - Spawns the player, enemies, and sets up gameplay entities
+     - Links the PlayerControllerSystem to the spawned player entity
+     - Uses the CoreEngine’s GraphicsSystemV2 for camera tracking
+
+  Highlights:
+     - Integrates with UISystem and ImGuiSystem for in-game control
+     - Cleans up all entities on state exit
+     - Fully logged for debugging and system verification
+===============================================================================
+*/
+
+#include "Precompiled.h"   
 
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
@@ -10,7 +32,6 @@ using Framework::Vector2D;
 using Framework::EntitySpawner;
 using Framework::PlayerControllerSystem;
 using Framework::GraphicsSystemV2;
-//using Framework::ImGuiSystem;
 
 void level1_Load()
 {
@@ -68,13 +89,6 @@ void level1_Initialize()
 
     // Generate enemy waves
     spawner->SpawnEnemyWave(5, 0.8f);
-
-    // Generate some obstacles
-    //spawner->SpawnObstacle(Vector2D(-0.5f, 0.0f), Vector2D(0.3f, 0.3f));
-    //spawner->SpawnObstacle(Vector2D(0.5f, 0.0f), Vector2D(0.3f, 0.3f));
-
-    // Generate a circular pattern
-    //spawner->SpawnCircle("circle", 8, Vector2D(0.0f, 0.0f), 0.6f);
 
     LOG_INFO("LEVEL1", "All entities spawned successfully");
 }

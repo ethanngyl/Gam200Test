@@ -1,10 +1,28 @@
-/**
+/*
 ===============================================================================
- File:           UISystem.cpp
- Description:    Universal UI system implementation
- Date:           2025-01-01
+ File:          UISystem.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Universal UI System (implementation)
+
+  Design notes:
+     - Provides a centralized UI management layer integrated with the engine
+     - Maintains button lifecycle (create, update, remove, clear)
+     - Uses world-space positions for flexible layout in gameplay scenes
+
+  Technical details:
+     - Converts mouse coordinates from screen to world space with DPI correction
+     - Updates button visual states based on hover, press, or disable state
+     - Logs all major UI interactions via the Log system
+
+  Thread-safety:
+     - Operates on the main thread only; no synchronization required
 ===============================================================================
- */
+*/
+
 
 #include "Precompiled.h"
 

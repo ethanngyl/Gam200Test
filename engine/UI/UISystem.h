@@ -1,10 +1,25 @@
-/**
+/*
 ===============================================================================
- File:           UISystem.h
- Description:    Universal UI system for buttons and other UI elements
- Date:           2025-01-01
+ File:          UISystem.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Universal UI System (header)
+
+  Responsibilities:
+     - Manages all in-game UI elements such as buttons and overlays
+     - Handles creation, input detection, and rendering updates for UI objects
+     - Provides screen-to-world coordinate conversion and visual feedback
+
+  Highlights:
+     - Button creation API supporting callbacks and custom tint states
+     - DPI-aware coordinate transformation for consistent input detection
+     - Integrated with engine systems (InputSystem, GraphicsSystem, EntityManager)
 ===============================================================================
- */
+*/
+
 
 #pragma once
 #include "Precompiled.h"

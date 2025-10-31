@@ -1,10 +1,26 @@
-﻿/**
+﻿/*
 ===============================================================================
-File: main.cpp (Super Clean Version)
-Author: GE YONGQI
-Description: Ultra-simple main using DebugConfig for all debug initialization
+ File:          main.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Main entry point of the StructSquad Engine
+
+  Responsibilities:
+     - Initializes debug console, logging, and memory leak detection
+     - Sets up the CoreEngine and initializes all subsystems
+     - Manages the Game State Manager (GSM) lifecycle
+     - Runs the main game loop until the quit condition is met
+
+  Highlights:
+     - Uses ConfigReader to determine the initial game state
+     - Integrates DebugConfig for performance profiling and FPS tracking
+     - Supports hotkey-based debug features (e.g., F2 exports performance data)
 ===============================================================================
- */
+*/
+
 
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
