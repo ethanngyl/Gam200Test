@@ -21,8 +21,14 @@ Thread-safety:
 ===============================================================================
 */
 
-#include "Precompiled.h"
+#include "Log.h"
+#include "Sinks.h"
 
+#include <chrono>
+#include <cstdarg>
+#include <mutex>
+#include <sstream>
+#include <iomanip>
 
 namespace eng::debug {
 

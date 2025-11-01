@@ -37,8 +37,6 @@
 #include <algorithm>
 #include <sstream>
 #include <cctype>
-#include "Debugger/Trace.h"
-
 
 namespace Framework {
 
@@ -223,7 +221,6 @@ namespace Framework {
     /************************************************************************/
     void TextSystem::Update(float /*dt*/) {
 #ifdef _WIN32
-        DBG_SCOPE_SYS("Text System", eng::debug::Subsystem::Gameplay);
 
         if (_kbhit()) {
             int ch = _getch();

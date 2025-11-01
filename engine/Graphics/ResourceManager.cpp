@@ -12,97 +12,10 @@
 #include "Precompiled.h"
 #include "ResourceManager.h"
 #include <iostream>
-#include <filesystem>
 
 namespace Framework {
 
     // === SHADER MANAGEMENT ===
-
-    void ResourceManager::LoadFiles()
-    {
-        namespace fs = std::filesystem;
-
-        const fs::path root = "./assets";
-        if (!fs::exists(root)) {
-            std::cerr << "ResourceManager::LoadFiles: assets folder not found: " << root << "\n";
-            return;
-        }
-
-        // 1) Collect files by extension
-        std::unordered_set<std::string> textureExts = { ".png", ".jpg", ".jpeg", ".bmp", ".tga" };
-        // If you also use .ktx/.dds, add them here
-
-        // For shader pairing by stem (e.g., foo.vert + foo.frag)
-        std::unordered_map<std::string, fs::path> vertByStem;
-        std::unordered_map<std::string, fs::path> fragByStem;
-
-        // Normalize helper: return a portable relative string key for caches & logs
-        auto normalize = [](fs::path p) -> std::string {
-            p = fs::weakly_canonical(p);
-            // make it relative to the working dir if possible
-            std::error_code ec;
-            fs::path rel = fs::relative(p, fs::current_path(), ec);
-            return (ec ? p : rel).generic_string(); // forward slashes
-            };
-
-        // 2) First pass: index files
-        for (const auto& entry : fs::recursive_directory_iterator(root)) {
-            if (!entry.is_regular_file()) continue;
-
-            const fs::path path = entry.path();
-            const std::string ext = path.extension().string();
-            const std::string stem = path.stem().string();
-
-            // Collect shaders for pairing
-            if (ext == ".vert" || ext == ".vs" || ext == ".vsh" || ext == ".glslv") {
-                vertByStem[stem] = path;
-                continue;
-            }
-            if (ext == ".frag" || ext == ".fs" || ext == ".fsh" || ext == ".glslf") {
-                fragByStem[stem] = path;
-                continue;
-            }
-
-            // Queue textures by extension
-            if (textureExts.count(ext)) {
-                const std::string key = normalize(path);
-                // 3) Load textures immediately (cache will dedupe)
-                TextureHandle th = LoadTexture(key);
-                if (!th.IsValid()) {
-                    std::cerr << "ResourceManager::LoadFiles: failed to load texture: " << key << "\n";
-                }
-                continue;
-            }
-
-            // (Optional) If you have other types later (audio, fonts), detect here
-            // e.g. .wav/.mp3 -> LoadAudio(...), .ttf -> LoadFont(...), etc.
-        }
-
-        // 4) Pair & load shaders by stem (only load pairs that exist)
-        for (const auto& [stem, vpath] : vertByStem) {
-            auto fit = fragByStem.find(stem);
-            if (fit == fragByStem.end()) continue; // no matching fragment shader; skip
-
-            const std::string vkey = normalize(vpath);
-            const std::string fkey = normalize(fit->second);
-
-            // Use the stem as a friendly shader "name" in logs/caches
-            ShaderHandle sh = LoadShader(vkey, fkey, stem);
-            if (!sh.IsValid()) {
-                std::cerr << "ResourceManager::LoadFiles: failed to load shader pair: "
-                    << vkey << " + " << fkey << " (name=" << stem << ")\n";
-            }
-        }
-
-        // 5) Summary
-        auto stats = GetStats();
-        std::cout << "ResourceManager::LoadFiles: scanned '" << root.generic_string() << "'\n"
-            << "  Shaders:  " << stats.shaderCount << "\n"
-            << "  Textures: " << stats.textureCount << "\n"
-            << "  Meshes:   " << stats.meshCount << "\n"
-            << "  Materials:" << stats.materialCount << "\n";
-    }
-
 
     ShaderHandle ResourceManager::LoadShader(const std::string& vertPath,
                                              const std::string& fragPath,
@@ -335,21 +248,6 @@ namespace Framework {
         stats.meshCount = meshes.size();
         stats.materialCount = materials.size();
         return stats;
-    }
-
-    bool ResourceManager::HasTexture(TextureHandle h) const {
-        std::lock_guard<std::mutex> lock(resourceMutex);
-        return textures.find(h) != textures.end() && textures.at(h).resource != nullptr;
-    }
-
-    TextureHandle ResourceManager::EnsureTexture(const std::string& path) {
-        // LoadTexture already dedupes via cache; this just makes intent obvious.
-        return LoadTexture(path);
-    }
-
-    bool ResourceManager::PathKnownAsTexture(const std::string& path) const {
-        std::lock_guard<std::mutex> lock(resourceMutex);
-        return textureCache.find(path) != textureCache.end();
     }
 
 } // namespace Framework

@@ -1,12 +1,18 @@
-#include "Precompiled.h"
+#include "CrashLogger.h"
+#include "Log.h"
 
-
+#include <cstdio>
+#include <exception>
+#include <sstream>
+#include <iomanip>
+#include <chrono>
+#include <string>
 
 #if defined(_WIN32)
 #define NOMINMAX
 #include <windows.h>
 #include <dbghelp.h>
-#pragma comment(lib, "dbghelp.lib")
+#pragma comment(lib, "dbghelp.lib") // link dbghelp automatically
 #endif
 /*
 ===============================================================================

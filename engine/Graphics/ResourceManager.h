@@ -23,7 +23,6 @@
 #include "Texture.h"
 #include "Mesh.h"
 #include <unordered_map>
-#include <unordered_set>
 #include <memory>
 #include <string>
 #include <mutex>
@@ -57,10 +56,6 @@ namespace Framework {
         // Prevent copying
         ResourceManager(const ResourceManager&) = delete;
         ResourceManager& operator=(const ResourceManager&) = delete;
-
-        // --------------
-        void LoadFiles();
-        // --------------`
 
         // === SHADER MANAGEMENT ===
         
@@ -167,10 +162,6 @@ namespace Framework {
             size_t materialCount = 0;
         };
         Stats GetStats() const;
-
-        bool HasTexture(TextureHandle h) const;
-        TextureHandle EnsureTexture(const std::string& path);   // Load if missing, return handle
-        bool          PathKnownAsTexture(const std::string& path) const;
 
     private:
         // Resource storage

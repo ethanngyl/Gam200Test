@@ -82,21 +82,9 @@
 #include "CrashLogger.h"
 #include "Log.h"
 #include "Perf.h"
-#include "Trace.h"
 #include "PerfViewer.h"
 #include "Sinks.h"
-#include "DebugConfig.h"
-
-
-//GSM
-#include "GameStateList.h"
-#include "GameStateManager.h"
-
-//UI
-#include "UISystem.h"
-
-//ConfigReader
-#include "ConfigReader.h"
+#include "Trace.h"
 
 //ECS
 #include "ECSComponent.h"

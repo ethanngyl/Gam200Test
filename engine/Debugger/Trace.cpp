@@ -26,8 +26,8 @@
 ===============================================================================
 */
 
-#include "Precompiled.h"
-
+#include "Trace.h"
+#include "PerfViewer.h"
 
 namespace eng::debug {
 

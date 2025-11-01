@@ -32,7 +32,7 @@
 */
 
 #pragma once
-#include "Precompiled.h"
+#include <string>
 
 namespace eng::debug {
 	class CrashLogger {

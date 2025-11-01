@@ -34,7 +34,6 @@ Safety:
 #include <cmath>
 #include <iostream>
 
-
 /// Returns true if two circles intersect or touch.
 /// Touching edges count as collision.
 bool circle_to_circle(const Collider& a, const Collider& b) {

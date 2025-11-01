@@ -5,7 +5,7 @@ in vec2 TexCoord;
 
 out vec4 FragColor;
 
-layout (binding=0) uniform sampler2D uTexture;
+uniform sampler2D uTexture;
 uniform vec3 uColor;
 
 void main() {

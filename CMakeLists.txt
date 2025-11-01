@@ -52,15 +52,12 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     imgui
     stb
     fmod
-    Freetype::Freetype
 )
 
 # Mark shaders as non-compiled
 set_source_files_properties(
     "shaders/basic.vert"
     "shaders/basic.frag"
-    "shaders/text.vert"
-    "shaders/text.frag"
     PROPERTIES HEADER_FILE_ONLY TRUE
 )
 
@@ -76,12 +73,9 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/engine/Core
     ${CMAKE_SOURCE_DIR}/engine/Audio
     ${CMAKE_SOURCE_DIR}/engine/ECS
-    ${CMAKE_SOURCE_DIR}/engine/GSM
-    ${CMAKE_SOURCE_DIR}/engine/UI
     ${CMAKE_SOURCE_DIR}/engine/Collision
     ${CMAKE_SOURCE_DIR}/engine/Movement
     ${CMAKE_SOURCE_DIR}/engine/Debugger
-    ${CMAKE_SOURCE_DIR}/engine/ConfigReader
     ${CMAKE_SOURCE_DIR}/engine/Graphics  
     ${CMAKE_SOURCE_DIR}/engine/Input
     ${CMAKE_SOURCE_DIR}/engine/Math

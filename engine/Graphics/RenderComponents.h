@@ -32,12 +32,9 @@ namespace Framework {
      */
     struct Renderable : public Component<Renderable> {
         // Resource references
-        MeshHandle mesh;
-        MaterialHandle material;
-        TextureHandle  texture;
-
-        std::string    spriteName;// consider renaming to `texturePath` later
-
+        MeshHandle mesh = INVALID_MESH_HANDLE;
+        MaterialHandle material = INVALID_MATERIAL_HANDLE;
+        
         // Rendering properties
         int layer = 0;            // Sorting layer (lower = drawn first)
         int orderInLayer = 0;     // Order within layer
@@ -47,6 +44,9 @@ namespace Framework {
         
         // Per-instance overrides
         glm::vec4 tint = glm::vec4(1.0f);  // Color tint multiplier
+        
+        // Legacy sprite name support (for backwards compatibility)
+        std::string spriteName;
 
         Renderable() = default;
         
@@ -58,9 +58,6 @@ namespace Framework {
         explicit Renderable(const std::string& name)
             : spriteName(name) {}
     };
-
-    // New name, same type. Can attach/get MeshRenderer in ECS code
-    using MeshRenderer = Renderable;
 
     /**
      * @struct SpriteAnimation

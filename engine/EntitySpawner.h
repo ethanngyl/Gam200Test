@@ -9,8 +9,6 @@
 
 #pragma once
 #include "Precompiled.h"
-#include "RenderComponents.h"   // for MeshRenderer
-#include "ECSEntityManager.h"   // if not already pulled in through Precompiled.h
 #include "Grid\GridTile.h"
 
 namespace Framework {
@@ -63,10 +61,8 @@ namespace Framework {
             auto& transform = entityManager->GetComponent<Transform>(entity);
             transform.scale = scale;
 
-            auto& mr = entityManager->AddComponent<MeshRenderer>(entity);
-            mr.spriteName = spriteName;  // may be "player.png" or "quad" etc.
-            mr.visible = true;
-            mr.tint = glm::vec4(1.0f);
+            entityManager->AddComponent<Sprite>(entity);
+            entityManager->GetComponent<Sprite>(entity).texturePath = spriteName;
 
             std::cout << "[EntitySpawner] Spawned sprite: " << spriteName << "\n";
             return entity;
@@ -76,8 +72,7 @@ namespace Framework {
          * @brief Spawn a player entity
          */
         Entity SpawnPlayer(const Vector2D& position) {
-            // Use the actual file path so the renderer will load a texture.
-            Entity player = SpawnSprite("assets/testing.png", position, Vector2D(0.3f, 0.3f));
+            Entity player = SpawnSprite("quad", position, Vector2D(0.1f, 0.1f));
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -87,7 +82,7 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-            std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
+            std::cout << "[EntitySpawner] Spawned player\n";
             return player;
         }
 
@@ -95,7 +90,7 @@ namespace Framework {
          * @brief Spawn an enemy entity 
          */
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
-            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
+            Entity enemy = SpawnSprite("quad", position, Vector2D(0.1f, 0.1f));
 
             //entityManager->AddComponent<Movement>(enemy);
             //auto& movement = entityManager->GetComponent<Movement>(enemy);
@@ -114,13 +109,12 @@ namespace Framework {
         /**
          * @brief Spawn a projectile/bullet
          */
-        //ASC: its technically of a script
         Entity SpawnProjectile(
             const Vector2D& position,
             const Vector2D& direction,
             float speed = 0.3f)
         {
-            Entity projectile = SpawnSprite("assets/background.jpg", position, Vector2D(0.1f, 0.1f));
+            Entity projectile = SpawnSprite("circle", position, Vector2D(0.1f, 0.1f));
 
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
@@ -142,7 +136,7 @@ namespace Framework {
             const Vector2D& position,
             const Vector2D& size = Vector2D(0.5f, 0.5f))
         {
-            Entity obstacle = SpawnSprite("assets/testing.png", position, size);
+            Entity obstacle = SpawnSprite("quad", position, size);
 
             entityManager->AddComponent<BoxCollider>(obstacle);
             auto& collider = entityManager->GetComponent<BoxCollider>(obstacle);

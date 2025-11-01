@@ -35,8 +35,10 @@
 */
 
 #pragma once
-#include "Precompiled.h"
-
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace eng::debug {
 

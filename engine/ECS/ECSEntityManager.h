@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           ECSEntityManager.h
  Author:         ETHAN NG YONG LE
@@ -117,15 +117,6 @@ namespace Framework
          * Used by systems to iterate over entities for processing.
          */
         std::vector<Entity> GetAllEntities() const { return allEntities; }
-
-        /**
-		 * @brief Delete all entities and components
-         * @author jiahao.zhou@digipen.edu
-         * add this function to clear all entities and components in the entity manager
-         * require this function for loading scenes in ImGui system
-         */
-        void ClearAllEntities();
-
 
     private:
         EntityID nextEntityID; //Next entitiy id to assign

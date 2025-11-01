@@ -4,8 +4,8 @@ layout(location=1) in vec3 aColor;
 layout(location=2) in vec2 aTexCoord;
 
 uniform mat4 uModel;
-uniform mat4 uProjection;
 uniform mat4 uView;
+uniform mat4 uProjection;
 
 out vec3 vertexColor;
 out vec2 TexCoord;

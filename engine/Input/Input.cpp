@@ -42,8 +42,6 @@ namespace Framework
 
     void InputSystem::Update(float dt)
     {
-        DBG_SCOPE_SYS("IO System", eng::debug::Subsystem::IO);
-
         (void)dt;
         // Store previous frame's key states
         PreviousKeys = CurrentKeys;

@@ -40,7 +40,8 @@
 */
 
 #pragma once
-#include "Precompiled.h"
+#include <chrono>
+#include <string_view>
 
 namespace eng::debug {
 
@@ -56,8 +57,6 @@ namespace eng::debug {
 		Audio,
 		Gameplay,
 		IO,
-		Engine,
-		Math,
 		Other,
 		COUNT
 	};
