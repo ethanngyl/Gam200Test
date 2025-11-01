@@ -22,13 +22,7 @@
    - FileSink uses std::ofstream opened in append mode and flushes per write.
 ===============================================================================
 */
-
-#include "Sinks.h"
-#include <cstdio>
-
-#if defined(_WIN32)
-#include <windows.h>
-#endif
+#include "Precompiled.h"
 
 namespace eng::debug {  
 

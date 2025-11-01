@@ -111,6 +111,8 @@ namespace eng::debug {
         case Subsystem::Audio:    return "Audio";
         case Subsystem::Gameplay: return "Gameplay";
         case Subsystem::IO:       return "IO";
+        case Subsystem::Engine:   return "Engine";
+        case Subsystem::Math:     return "Math";
         default:                  return "Other";
         }
     }

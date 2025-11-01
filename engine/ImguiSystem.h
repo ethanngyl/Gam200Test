@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           ImGuiSystem.h
  Description:    ImGui integration for visual debugging and entity inspection
@@ -29,8 +29,15 @@ namespace Framework {
         void SendEngineMessage(Message* msg) override;
         // Setup methods
         void SetWindow(GLFWwindow* win);
+        
         void SetEntityManager(EntityManager* em);
         void SetEntitySpawner(EntitySpawner* spawner);
+
+		// Load/Save level from text file
+        // jiahao
+        bool OpenLevelFromTxt(const std::string& file, bool clearAll);
+		bool SaveLevelToTxt(const std::string& file);
+
         void SetAudioSystem(AudioSystem* audio);
         // Render ImGui (call after game rendering, before swap buffers)
         void Render();
@@ -38,10 +45,22 @@ namespace Framework {
         // Shutdown ImGui
         void Shutdown();
 
+        void Enable() { enabled = true; }
+        void Disable() { enabled = false; }
+        bool IsEnabled() const { return enabled; }
+
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
+
+        //jiahao
+        //the below 2 std::string are used to record the file path
+		//in order to save and load level files
+        std::string currentLevelPath;
+        std::string openPath;
+		std::string defaultLevelPath = "assets/defaultLevel.txt";
+
         AudioSystem* audioSystem;
         // UI Windows
         void ShowEntityInspector();
@@ -54,6 +73,8 @@ namespace Framework {
         bool showEntityInspector;
         bool showSpawner;
         bool showDebug;
+
+        bool enabled;
 
         float frameTime;
         int entityCount;

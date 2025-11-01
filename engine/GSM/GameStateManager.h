@@ -1,0 +1,46 @@
+/*
+===============================================================================
+ File:          GameStateManager.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Game State Manager (header)
+
+  Purpose:
+     Declares the GSM interface and function pointer structure used
+     to control transitions between game states.
+
+  Design notes:
+     - Each state defines its own set of load, initialize, update, draw,
+       free, and unload functions.
+     - The GSM swaps these function pointers dynamically as the game changes state.
+
+  Usage:
+     1) Call GSM_Initialize(startState) once at startup.
+     2) Call GSM_Update() each frame to refresh function pointers
+        according to the current active state.
+===============================================================================
+*/
+
+
+#pragma once
+#include "Precompiled.h"
+
+ // ============================================================================
+ // FUNCTION POINTER TYPE
+ // ============================================================================
+typedef void(*FP)(void);
+
+// ============================================================================
+// GLOBAL VARIABLES (Declared here, defined in .cpp)
+// ============================================================================
+extern int current, previous, next;
+extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
+
+// ============================================================================
+// GSM FUNCTIONS
+// ============================================================================
+void GSM_Initialize(int startingState);
+void GSM_Update();

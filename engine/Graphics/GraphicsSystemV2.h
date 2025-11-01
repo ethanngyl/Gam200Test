@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           GraphicsSystemV2.h
  Author:         Graphics System Overhaul
@@ -37,6 +37,7 @@
 #include <memory>
 #include <unordered_map>   
 #include "ECSEntity.h" 
+#include "TextRenderer.h"
 
 
 // Forward declarations
@@ -140,19 +141,22 @@ namespace Framework {
          * @brief Create default materials for legacy sprite names
          * Maintains backwards compatibility with old Sprite component
          */
-        void CreateLegacyMaterials();
+        //void CreateLegacyMaterials();
 
         void RenderImGui();
 
-        /**
-         * @brief Get mesh for legacy sprite name
-         */
-        MeshHandle GetMeshForSpriteName(const std::string& spriteName);
+        ///**
+        // * @brief Get mesh for legacy sprite name
+        // */
+        //MeshHandle GetMeshForSpriteName(const std::string& spriteName);
 
-        /**
-         * @brief Get material for legacy sprite name
-         */
-        MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
+        ///**
+        // * @brief Get material for legacy sprite name
+        // */
+        //MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
+
+        TextureHandle  GetTextureForSpriteName(const std::string& spriteName);
+
 
         void SetShowGrid(bool e) { showGrid = e; }
         void SetShowGridBlocked(bool e) { showGridBlocked = e; }
@@ -190,7 +194,7 @@ namespace Framework {
         /**
          * @brief Bind material and set uniforms
          */
-        void BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint);
+        bool BindMaterial(MaterialHandle materialHandle, const glm::vec4& tint);
 
         /**
          * @brief Draw a mesh
@@ -279,18 +283,27 @@ namespace Framework {
         MeshHandle debugLineMesh;
         MeshHandle debugCircleMesh;
 
-        // Legacy support (for backwards compatibility)
-        std::unordered_map<std::string, MeshHandle> legacyMeshMap;
-        std::unordered_map<std::string, MaterialHandle> legacyMaterialMap;
+        //// Legacy support (for backwards compatibility)
+        //std::unordered_map<std::string, MeshHandle> legacyMeshMap;
+        //std::unordered_map<std::string, MaterialHandle> legacyMaterialMap;
+        //std::unordered_map<std::string, TextureHandle>  
+        // ;
 
         // State tracking
         MaterialHandle currentBoundMaterial;
         ShaderHandle currentBoundShader;
-
+        TextRenderer text_;    // FreeType text renderer
         /**
          * @brief Makes the camera follow a target player entity
          */
         void FollowPlayer(EntityManager* em, Entity player);
+
+        //Editor Camera functions - Jiahao
+		void HandleEditorCamera(float dt);
+		void ResetEditorCamera();
+
+		glm::vec3 editorCameraStartPos{ 0.0f, 0.0f, 0.0f };
+		float editorCameraZoom{ 1.0f };
 
         // Camera follow target (optional)
         Entity followTarget{ 0 };

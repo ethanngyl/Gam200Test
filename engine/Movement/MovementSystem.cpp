@@ -64,7 +64,10 @@ namespace Framework
      */
     void MovementSystem::Update(float dt)
     {
+        DBG_SCOPE_SYS("Movement System", eng::debug::Subsystem::Gameplay);
+
         if (!entityManager || !inputSystem) return;
+        //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
 
         for (Entity entity : entityManager->GetAllEntities())
         {

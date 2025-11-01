@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -66,7 +66,7 @@ namespace Framework
     void ProjectileMovementSystem::Update(float dt)
     {
         if (!entityManager) return;
-
+        //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
         for (Entity entity : entityManager->GetAllEntities())
         {
             if (entityManager->HasComponent<Transform>(entity) &&
