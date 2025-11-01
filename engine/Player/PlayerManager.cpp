@@ -48,6 +48,8 @@ namespace Framework {
 
     void PlayerControllerSystem::Update(float dt)
     {
+        DBG_SCOPE_SYS("Player Controller System", eng::debug::Subsystem::Gameplay);
+
         // Check if we have all required systems
         if (!spawner || !entityManager || !inputSystem) {
             return;

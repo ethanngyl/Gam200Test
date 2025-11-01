@@ -44,11 +44,9 @@
 */
 
 #pragma once
-#include <array>
-#include <chrono>
-#include <cstdint>
-#include <string>
-#include "Trace.h" 
+#include "Precompiled.h"
+
+
 
 namespace eng::debug {
 

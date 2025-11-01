@@ -36,8 +36,12 @@ namespace Framework {
             return;
         }
 
-        // Initialize FMOD (2D only, no 3D)
+        // Initialize FMOD (2D)
+        //Max channels is the maximum number of different sounds/audio that can be playing simultaneously
+        //FMOD_INIT_NORMAL tells fmod to use the default/standard settings
         result = fmodSystem->init(maxChannels, FMOD_INIT_NORMAL, nullptr);
+
+        //Checks for any errors with fmod after initializing
         CheckFMODError(result, "init");
 
         if (result != FMOD_OK) {
@@ -53,6 +57,8 @@ namespace Framework {
     }
 
     void AudioSystem::Update(float dt) {
+        DBG_SCOPE_SYS("Audio System", eng::debug::Subsystem::Audio);
+
         if (!fmodSystem) return;
 
         // Update FMOD

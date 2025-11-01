@@ -16,6 +16,7 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Debugger/Trace.h"
 
 namespace Framework {
 
@@ -172,12 +173,22 @@ namespace Framework {
 
 
     void GraphicsSystemV2::Update(float dt) {
+
+        DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics); 
+
         (void)dt;
 
         if (!window || glfwWindowShouldClose(window)) {
             return;
         }
 
+
+        // ADD THIS: Check for window resize each frame
+        int fbWidth, fbHeight;
+        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+        if (fbWidth != viewportWidth || fbHeight != viewportHeight) {
+            SetViewportSize(fbWidth, fbHeight);
+        }
 
         // === CAMERA FOLLOW LOGIC ===
 
