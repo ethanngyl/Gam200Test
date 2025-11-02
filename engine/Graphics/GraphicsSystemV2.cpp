@@ -58,7 +58,9 @@ namespace Framework {
             std::cerr << "ERROR: No window set! Call SetWindow() before Initialize()\n";
             return;
         }
+        //0. Load Meshfactory Values
 
+        meshFactory.MeshValueInitialize();
         // 1. Initialize OpenGL context
         InitializeOpenGL();
 
@@ -333,13 +335,12 @@ namespace Framework {
 
     void GraphicsSystemV2::CreateDefaultMeshes() {
         std::cout << "GraphicsSystemV2: Creating default meshes...\n";
-
         // Create primitive meshes using the factory functions
-        Mesh* triangle = CreateTriangle();
-        Mesh* quad = CreateQuad();
-        Mesh* line = CreateLine();
-        Mesh* circle = CreateCircle(40, 0.5f);
-        Mesh* wireframeQ = CreateWireframeQuad();
+        Mesh* triangle = meshFactory.CreateTriangle();
+        Mesh* quad = meshFactory.CreateQuad();
+        Mesh* line = meshFactory.CreateLine();
+        Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
+        Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
 
         // Register meshes with resource manager
         triangleMesh = resourceManager.CreateMesh("triangle",
