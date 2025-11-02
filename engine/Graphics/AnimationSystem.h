@@ -227,6 +227,10 @@ namespace Framework {
         ===============================================================================
          */
 		Framework::EntityManager* entityManager;
+        float max_static_threshold;
+        float default_zero;
+        float anim_current_frame;
+        float anim_frame_mod;
 	};
 
 } // namespace Framework

@@ -35,7 +35,7 @@ Usage:
  */
 
 #include "Precompiled.h"
-
+#include "ConfigReader.h"
 namespace Framework {
 	
 	/**
@@ -81,6 +81,11 @@ namespace Framework {
 	===============================================================================
 	 */
 	void AnimationSystem::Initialize() {
+		ConfigReader::LoadConfig("valueloader.txt");
+		max_static_threshold = ConfigReader::GetFloat("max_static_threshold", 0.0);
+		default_zero = ConfigReader::GetFloat("default_zero", 0.0);
+		anim_current_frame = ConfigReader::GetFloat("anim_current_frame", 0.0);
+		anim_frame_mod = ConfigReader::GetFloat("anim_frame_mod", 1.0);
 		std::cout << "AnimationSystem: Initialized!" << std::endl;
 	}
 
@@ -117,7 +122,8 @@ namespace Framework {
 				auto& move = entityManager->GetComponent<Movement>(e);
 
 				// If NOT moving → idle still frame
-				if (fabs(move.direction.x) < 0.001f && fabs(move.direction.y) < 0.001f) {
+				//Critical Bug** max_static_threshold not being set to 0.001 
+				if (fabs(move.direction.x) < max_static_threshold && fabs(move.direction.y) < max_static_threshold) {
 					continue;               // do NOT animate
 				}
 			}
@@ -129,7 +135,7 @@ namespace Framework {
 				anim.currentFrame++;
 
 				if (anim.currentFrame >= anim.frameCount) {
-					anim.currentFrame = anim.loop ? 0 : anim.frameCount - 1;
+					anim.currentFrame = anim.loop ? anim_current_frame : anim.frameCount - anim_frame_mod;
 				}
 				
 				// For Debug
