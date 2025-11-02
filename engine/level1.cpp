@@ -120,7 +120,6 @@ void level1_Initialize()
         xform.lowerLimit = 0.5f;
     }
 
-    Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
 	graphics->SetFollowTarget(playerEntity);
     // ========================================================================
     // Tell the PlayerController who the player entity is
