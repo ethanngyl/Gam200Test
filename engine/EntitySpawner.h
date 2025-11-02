@@ -95,6 +95,8 @@ namespace Framework {
          * @brief Spawn an enemy entity 
          */
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
+            (void)moveSpeed; // silence unused variable warning
+
             Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
 
             //entityManager->AddComponent<Movement>(enemy);

@@ -15,5 +15,5 @@ y_bound = 1.0
 # Animation Values
 # ============================================================================
 max_static_threshold = 0.001
-anim_current_frame = 0.0
-anim_frame_mod = 1.0
+anim_current_frame = 0
+anim_frame_mod = 1

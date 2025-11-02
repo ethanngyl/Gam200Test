@@ -36,6 +36,7 @@ Usage:
 
 #include "Precompiled.h"
 #include "ConfigReader.h"
+
 namespace Framework {
 	
 	/**
@@ -82,10 +83,10 @@ namespace Framework {
 	 */
 	void AnimationSystem::Initialize() {
 		ConfigReader::LoadConfig("valueloader.txt");
-		max_static_threshold = ConfigReader::GetFloat("max_static_threshold", 0.0);
+		max_static_threshold = ConfigReader::GetFloat("max_static_threshold", 0.001f);
 		default_zero = ConfigReader::GetFloat("default_zero", 0.0);
-		anim_current_frame = ConfigReader::GetFloat("anim_current_frame", 0.0);
-		anim_frame_mod = ConfigReader::GetFloat("anim_frame_mod", 1.0);
+		anim_current_frame = ConfigReader::GetInt("anim_current_frame", 0);
+		anim_frame_mod = ConfigReader::GetInt("anim_frame_mod", 1);
 		std::cout << "AnimationSystem: Initialized!" << std::endl;
 	}
 
@@ -122,7 +123,7 @@ namespace Framework {
 				auto& move = entityManager->GetComponent<Movement>(e);
 
 				// If NOT moving → idle still frame
-				//Critical Bug** max_static_threshold not being set to 0.001 
+				//Critical Bug** max_static_threshold not being set to 0.001 -> FIXED by Wei Liang
 				if (fabs(move.direction.x) < max_static_threshold && fabs(move.direction.y) < max_static_threshold) {
 					continue;               // do NOT animate
 				}
@@ -148,25 +149,16 @@ namespace Framework {
 	===============================================================================
 	 * @brief Handles engine messages for animation control
 	 *
-	 * Processes incoming messages to control animation behavior:
-	 * - Restart animations
-	 * - Play/pause toggles
-	 * - Frame skipping
-	 * - Animation speed changes
-	 *
 	 * @param message Pointer to the incoming message object
 	 *        Contains message ID and optional data payload
 	 *
-	 * Currently Supported Messages:
-	 * - KEY_0: Resets all animations to first frame
+	 * Currently unused.
+	 * Animation events are handled via config + Update() movement checks.
+     * Message-based animation control can be added in future iterations.
 	===============================================================================
 	 */
 	void AnimationSystem::SendEngineMessage(Message* message) {
-		// Restart animation when 0 is pressed
-		if (message->MessageId == KEY_0) {
-			currentFrame = 0;
-			frameTimer = 0.0f;
-			std::cout << "Animation: RESTARTED by '0' key!" << std::endl;
-		}
+		// Animation system currently does not react to messages.
+		(void)message; // silence unused variable warning
 	}
 }

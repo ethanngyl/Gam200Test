@@ -113,6 +113,8 @@ void level1_Initialize()
 
         // Renderable
         auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
+        rend.visible = true;
+        rend.layer = 1;
 
         // Transform
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
