@@ -5,6 +5,7 @@
 #include "GSM/GameStateList.h"
 #include "GSM/GameStateManager.h"
 #include "PlayerManager.h"
+#include "ConfigReader/ConfigReader.h"
 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
@@ -43,35 +44,45 @@ void level1_Initialize()
     Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
 
     //------------------------------------------------------------------
-    //  SPRITE ANIMATION SETUP FOR PLAYER
+    //  SPRITE ANIMATION SETUP FOR PLAYER (config-driven)
     //------------------------------------------------------------------
     auto* em = engine->GetEntityManager();
     auto* gfx = engine->GetGraphicsSystem();
 
     if (em && gfx) {
-        // Attach animation component
+        // ============================================================================
+        // Load animation setting
+        // ============================================================================
+        ConfigReader::LoadConfig("assets/anim_Bird.txt");
+
+        // === Give player sprite animation ===
         auto& anim = em->AddComponent<Framework::SpriteAnimation>(playerEntity);
 
-        anim.spriteSheet = gfx->GetResourceManager().LoadTexture("assets/Bird.png");
+        // Sprite path
+        std::string spritePath = ConfigReader::GetString("sprite", "");
+        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(spritePath);
         Framework::Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
 
-        anim.rows = 3;
-        anim.columns = 3;
-        anim.frameCount = 9;
-        anim.frameTime = 0.10f;
-        anim.loop = true;
-        anim.playing = true;
-        anim.uvShrinkPx = 0.8f;
+        // Sheet layout
+        anim.rows = ConfigReader::GetInt("rows", 1);
+        anim.columns = ConfigReader::GetInt("columns", 1);
+        anim.frameCount = ConfigReader::GetInt("frameCount", 1);
+        anim.frameTime = ConfigReader::GetFloat("frameTime", 0.0f);
+        anim.loop = ConfigReader::GetBool("loop", true);
+        anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
 
+        // Derived frame size
         anim.frameWidth = tex->GetWidth() / anim.columns;
         anim.frameHeight = tex->GetHeight() / anim.rows;
+        anim.playing = true;
+        anim.currentFrame = 0;
 
         // Renderable
         auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
 
         // Transform
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
-        xform.upperLimit = 2.5f;
+        xform.upperLimit = 2.0f;
         xform.lowerLimit = 0.5f;
     }
 
