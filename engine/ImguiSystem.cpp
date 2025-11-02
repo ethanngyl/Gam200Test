@@ -70,6 +70,7 @@ namespace Framework {
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 330");
 
+        EnableFileDragAndDrop();
         std::cout << "[ImGui] Initialized successfully\n";
     }
 
@@ -287,6 +288,13 @@ namespace Framework {
                     << transform.scale.x << " " << transform.scale.y << "\n";
             }
 
+            if (entityManager->HasComponent<MeshRenderer>(entity)) {
+				auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
+                if (!meshRenderer.spriteName.empty()) {
+					writeFile << "Sprite " << meshRenderer.spriteName << "\n";
+                }
+            }
+
             if (entityManager->HasComponent<Sprite>(entity)) {
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
@@ -343,6 +351,68 @@ namespace Framework {
         writeFile.close();
         return true;
     }
+
+    void ImGuiSystem::EnableFileDragAndDrop() {
+        //
+		glfwSetWindowUserPointer(window, this);
+        //
+		glfwSetDropCallback(window, FileDropCallBack);
+    }
+
+    void ImGuiSystem::FileDropCallBack(GLFWwindow* window, int count, const char** paths) {
+        Framework::ImGuiSystem* self = static_cast<Framework::ImGuiSystem*>(glfwGetWindowUserPointer(window));
+        if (self) {
+            self->OnFileDrop(count, paths);
+        }
+}
+
+    void ImGuiSystem::OnFileDrop(int count, const char** paths) {
+        for (int i = 0; i < count; ++i) {
+			std::filesystem::path path(paths[i]);
+
+            if (IsLevelFile(path)) {
+                bool isOpen = OpenLevelFromTxt(path.string(), true);
+                if (isOpen) {
+                    currentLevelPath = path.string();
+                    std::cout << "[Drop] Opened level file: " << currentLevelPath << "\n";
+                }
+                else {
+                    std::cerr << "[DropError] Unsupported file type: " << path << "\n";
+                }
+                continue;
+            }
+
+            if (IsTextureFile(path)) {
+                if (!entitySpawner) {
+					std::cerr << "[DropError] Missing EntitySpawner, cannot spawn sprite" << "\n";
+                    continue;
+                }
+
+                Framework::Entity entity = entitySpawner->SpawnSprite(
+                    path.string(),
+                    Vector2D(0.0f, 0.0f),
+                    Vector2D(1.0f, 1.0f)
+				);
+                std::cout << "[Drop] Spawned sprite from: " << path << " as entity" << entity.id << "\n";
+				continue;
+            }
+
+			std::cerr << "[DropError] Unsupported file type: " << path << "\n";
+        }
+
+    }
+    bool ImGuiSystem::IsLevelFile(const std::filesystem::path& path) const {
+		return path.has_extension() && path.extension() == ".txt";
+    }
+    bool ImGuiSystem::IsTextureFile(const std::filesystem::path& path) const {
+        if (!path.has_extension()) {
+            return false;
+        }
+		auto ext = path.extension().string();
+		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+		return ext == ".png" || ext == ".jpg" || ext == ".jpeg";
+    }
+
 
     void ImGuiSystem::Update(float dt)
     {
@@ -439,13 +509,56 @@ namespace Framework {
                         }
                         else {
                             CORE->SetPlaying(true);
+                            if (auto* gfx = CORE->GetGraphicsSystem())
+                            {
+                                if (entityManager)
+                                {
+                                    Framework::Entity player{};
+                                    for (auto e : entityManager->GetAllEntities())
+                                    {
+                                        if (entityManager->HasComponent<Framework::CircleCollider>(e))
+                                        {
+                                            auto& c = entityManager->GetComponent<Framework::CircleCollider>(e);
+                                            if (c.radius > 0.12f && c.radius < 0.18f)
+                                            {
+                                                player = e;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if (player.IsValid())
+                                    {
+                                        gfx->SetFollowTarget(player);
+                                    }
+                                }
+                            }
                         }
+
                     }
                 }
 
                 else {
                     if (ImGui::MenuItem("Stop")) {
                         CORE->SetPlaying(false);
+
+                        //Reset Camera
+                        if (auto gfx = CORE->GetGraphicsSystem()) {
+                            gfx->ClearFollowTarget();
+                            gfx->ResetEditorCamera();
+                        }
+
+						//Reload default level
+                        if (!OpenLevelFromTxt(defaultLevelPath, true)) {
+                            if (!currentLevelPath.empty()) {
+								OpenLevelFromTxt(currentLevelPath, true);
+                            }
+                            else {
+                                std::cerr << "[ImGuiError] Could not create default setting " << defaultLevelPath << "\n";
+                                OpenLevelFromTxt("assets/level1.txt", true);
+                            }
+                        }
+
                         entityManager->ClearAllEntities();
                         OpenLevelFromTxt(defaultLevelPath, true);
                     }

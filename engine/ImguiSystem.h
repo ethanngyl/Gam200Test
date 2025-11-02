@@ -49,6 +49,9 @@ namespace Framework {
         void Disable() { enabled = false; }
         bool IsEnabled() const { return enabled; }
 
+		//File drag and drop support - jiahao
+        void EnableFileDragAndDrop();
+
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
@@ -67,6 +70,13 @@ namespace Framework {
         void ShowSpawnerWindow();
         void ShowDebugWindow();
         void ShowDemoWindow();
+
+        //file drop - jiahao
+		static void FileDropCallBack(GLFWwindow* window, int count, const char** paths);
+		void OnFileDrop(int count, const char** paths);
+        bool IsLevelFile(const std::filesystem::path& path) const;
+		bool IsTextureFile(const std::filesystem::path& path) const;
+
 
         // State
         bool showDemo;
