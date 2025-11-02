@@ -141,13 +141,13 @@ namespace Framework
                 // Update movement direction
                 movement.direction = inputDir;
 
-                // Apply movement
-                //if (!movement.blocked) {
-                //    transform.position += movement.direction * movement.moveSpeed * dt;
-                //}
-                //else {
-                //    transform.position -= movement.direction * movement.moveSpeed * dt*10;
-                //}
+                //Apply movement
+                if (!movement.blocked) {
+                    transform.position += movement.direction * movement.moveSpeed * dt;
+                }
+                else {
+                    transform.position -= movement.direction * movement.moveSpeed * dt;
+                }
 
                 //// Optional: Keep on screen
                 if (transform.position.x > x_bound) transform.position.x = x_bound;
