@@ -125,7 +125,7 @@ namespace Framework {
 			anim.elapsedTime += dt;
 
 			if (anim.elapsedTime >= anim.frameTime) {
-				anim.elapsedTime = 0.0f;
+				anim.elapsedTime = default_zero;
 				anim.currentFrame++;
 
 				if (anim.currentFrame >= anim.frameCount) {
