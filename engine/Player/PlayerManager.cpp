@@ -221,6 +221,9 @@ namespace Framework {
         UpdateTilePulseAnimation();
         UpdateBorderOutlineAnimation();
 
+		//Added grid movement with arrow keys
+        HandleArrowKeyMovement();
+
         // ====================================================================
         // SPAWNING INPUT (Debug/Testing) - Use InputSystem
         // ====================================================================
@@ -338,6 +341,7 @@ namespace Framework {
         }
     }
 
+
     void PlayerControllerSystem::HandleClickToMove() {
 
         // Guards - early exit if conditions aren't met
@@ -348,8 +352,10 @@ namespace Framework {
         const Framework::Grid& g = Framework::GetGrid();
         if (g.cols <= 0 || g.rows <= 0) return;
 
-        // 1) Get mouse position and convert to normalized coordinates
-        double u = 0.0, v = 0.0;
+        // === SIMPLE APPROACH: Map screen directly to grid ===
+        // Since your grid appears to fill most of the screen visually,
+        // let's just map screen coordinates proportionally to grid tiles
+
 #ifdef _WIN32
         float mx = 0.f, my = 0.f;
         inputSystem->GetMousePosition(mx, my);
@@ -364,49 +370,71 @@ namespace Framework {
         ScreenToClient(hwndTop, &cliPt);
 
         RECT rc{}; GetClientRect(hwndTop, &rc);
-        const int fbW = rc.right - rc.left;
-        const int fbH = rc.bottom - rc.top;
-        if (fbW <= 0 || fbH <= 0) return;
+        const int screenW = rc.right - rc.left;
+        const int screenH = rc.bottom - rc.top;
+        if (screenW <= 0 || screenH <= 0) return;
 
-        // Clamp to [0, fbW/fbH]
-        if (cliPt.x < 0) cliPt.x = 0; else if (cliPt.x > fbW) cliPt.x = fbW;
-        if (cliPt.y < 0) cliPt.y = 0; else if (cliPt.y > fbH) cliPt.y = fbH;
+        // Clamp click to screen bounds
+        if (cliPt.x < 0) cliPt.x = 0; else if (cliPt.x > screenW) cliPt.x = screenW;
+        if (cliPt.y < 0) cliPt.y = 0; else if (cliPt.y > screenH) cliPt.y = screenH;
 
-        u = static_cast<double>(cliPt.x) / static_cast<double>(fbW);
-        v = static_cast<double>(cliPt.y) / static_cast<double>(fbH);
-#endif
+        // === METHOD 1: Direct screen-to-grid mapping ===
+        // Assume the grid fills a specific portion of the screen
+        // You'll need to adjust these margins based on where your grid actually appears
 
-        // 2) Build grid bounding box in world space
-        const float worldMinX = g.startPos.x;
-        const float worldMinY = g.startPos.y;
-        const float worldMaxX = g.startPos.x + (g.cols - 1) * g.spacing.x;
-        const float worldMaxY = g.startPos.y + (g.rows - 1) * g.spacing.y;
+        // From your screenshot, the grid appears to fill most of the screen
+        // Let's assume it has some margins
+        const float marginLeft = 0.05f;   // 5% margin on left
+        const float marginRight = 0.05f;  // 5% margin on right
+        const float marginTop = 0.05f;    // 5% margin on top
+        const float marginBottom = 0.15f; // 15% margin on bottom (larger for UI)
 
-        Framework::Vector2D gridCenter{
-            (worldMinX + worldMaxX) * 0.5f,
-            (worldMinY + worldMaxY) * 0.5f
-        };
-        Framework::Vector2D gridSize{
-            (worldMaxX - worldMinX),
-            (worldMaxY - worldMinY)
-        };
-        Collider gridBox = Collider::create_rect(gridSize.x, gridSize.y, gridCenter);
+        const float gridScreenLeft = screenW * marginLeft;
+        const float gridScreenRight = screenW * (1.0f - marginRight);
+        const float gridScreenTop = screenH * marginTop;
+        const float gridScreenBottom = screenH * (1.0f - marginBottom);
 
-        // 3) Convert normalized coordinates to world position
-        Framework::Vector2D clickWorld{
-            worldMinX + (float)u * (worldMaxX - worldMinX),
-            worldMaxY - (float)v * (worldMaxY - worldMinY)
-        };
+        const float gridScreenWidth = gridScreenRight - gridScreenLeft;
+        const float gridScreenHeight = gridScreenBottom - gridScreenTop;
 
-        if (!point_in_rect(clickWorld, gridBox)) return;
+        // Check if click is within the grid area on screen
+        if (cliPt.x < gridScreenLeft || cliPt.x > gridScreenRight ||
+            cliPt.y < gridScreenTop || cliPt.y > gridScreenBottom) {
+            std::cout << "[Click] Outside grid screen area\n";
+            return;
+        }
 
-        // 4) Get current player tile and recentre if needed
+        // Map to grid coordinates
+        float gridU = (cliPt.x - gridScreenLeft) / gridScreenWidth;
+        float gridV = (cliPt.y - gridScreenTop) / gridScreenHeight;
+
+        int col = static_cast<int>(gridU * g.cols);
+        // FIX: Flip Y-axis - screen Y increases downward, but grid row 0 is at bottom
+        int row = static_cast<int>((1.0f - gridV) * g.rows);
+
+        // Clamp to grid bounds
+        if (col < 0) col = 0;
+        if (col >= g.cols) col = g.cols - 1;
+        if (row < 0) row = 0;
+        if (row >= g.rows) row = g.rows - 1;
+
+        Framework::GridCoord tgt{ col, row };
+
+        std::cout << "[Click] Screen(" << cliPt.x << "," << cliPt.y << ")"
+            << " ScreenGrid(" << gridU << "," << gridV << ")"
+            << " -> Tile(" << col << "," << row << ")\n";
+
+        // Get tile center in world coordinates
+        Framework::Vector2D tileCenter = Framework::TileToWorld(tgt);
+
+        // Get current player tile
         auto& xform = entityManager->GetComponent<Transform>(playerEntity);
         auto curTileOpt = Framework::WorldToTile(xform.position);
         if (!curTileOpt) return;
         Framework::GridCoord cur = *curTileOpt;
-        const Framework::Vector2D curCenter = Framework::TileToWorld(cur);
 
+        // Recentre player on current tile if drifted
+        const Framework::Vector2D curCenter = Framework::TileToWorld(cur);
         const float tolX = 0.25f * g.spacing.x;
         const float tolY = 0.25f * g.spacing.y;
         if (std::fabs(xform.position.x - curCenter.x) > tolX ||
@@ -414,26 +442,14 @@ namespace Framework {
             xform.position = curCenter;
         }
 
-        // 5) Get clicked tile
-        auto tgtTileOpt = Framework::WorldToTile(clickWorld);
-        if (!tgtTileOpt) return;
-        Framework::GridCoord tgt = *tgtTileOpt;
-
-        {
-            Framework::Vector2D center = Framework::TileToWorld(tgt);
-            std::cout << "[ClickMove] tile=(" << tgt.x << "," << tgt.y
-                << ") center=(" << center.x << "," << center.y << ")\n";
-        }
-
-        // 6) *** SHOW VISUAL FEEDBACK - ADJUST PARAMETERS HERE! ***
-        // ==========================================================
+        // Show visual feedback
         ShowBorderOutline(tgt, 0.22f, 500);
 
         const auto& gridRef = Framework::GetGrid();
         Framework::Entity clickedEnt = gridRef.TileAt(tgt.x, tgt.y);
         StartTilePulse(clickedEnt, 1.25f, 250);
 
-        // 7) Calculate movement direction (one step at a time)
+        // Calculate movement direction (one step at a time)
         const int dx = tgt.x - cur.x;
         const int dy = tgt.y - cur.y;
 
@@ -453,10 +469,90 @@ namespace Framework {
         if (!Framework::InBounds(next)) return;
         if (!Framework::IsWalkable(next)) return;
 
-        // 8) Update occupancy and move player
+        // Update occupancy and move player
         Framework::SetOccupant(cur, Framework::Entity{ Framework::INVALID_ENTITY });
         xform.position = Framework::TileToWorld(next);
         Framework::SetOccupant(next, playerEntity);
+#endif
+    }
+
+    void PlayerControllerSystem::HandleArrowKeyMovement() {
+        // Guards
+        if (!inputSystem || !entityManager) return;
+        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
+
+        const Framework::Grid& g = Framework::GetGrid();
+        if (g.cols <= 0 || g.rows <= 0) return;
+
+        // Get current player position
+        auto& xform = entityManager->GetComponent<Transform>(playerEntity);
+        auto curTileOpt = Framework::WorldToTile(xform.position);
+        if (!curTileOpt) return;
+
+        Framework::GridCoord cur = *curTileOpt;
+
+        // Recentre player on current tile if drifted
+        const Framework::Vector2D curCenter = Framework::TileToWorld(cur);
+        const float tolX = 0.25f * g.spacing.x;
+        const float tolY = 0.25f * g.spacing.y;
+        if (std::fabs(xform.position.x - curCenter.x) > tolX ||
+            std::fabs(xform.position.y - curCenter.y) > tolY) {
+            xform.position = curCenter;
+        }
+
+        // Check for Arrow Key input (use IsKeyPressed for one-time press detection)
+        int stepX = 0, stepY = 0;
+
+        if (inputSystem->IsKeyPressed(KEY_UP)) {
+            stepY = 1;  // Move up (increase Y)
+            std::cout << "[Arrow] Moving UP\n";
+        }
+        else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
+            stepY = -1; // Move down (decrease Y)
+            std::cout << "[Arrow] Moving DOWN\n";
+        }
+        else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
+            stepX = -1; // Move left (decrease X)
+            std::cout << "[Arrow] Moving LEFT\n";
+        }
+        else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
+            stepX = 1;  // Move right (increase X)
+            std::cout << "[Arrow] Moving RIGHT\n";
+        }
+        else {
+            return; // No movement input
+        }
+
+        // Calculate next tile
+        Framework::GridCoord next{ cur.x + stepX, cur.y + stepY };
+
+        // Check if next tile is valid and walkable
+        if (!Framework::InBounds(next)) {
+            std::cout << "[WASD] Out of bounds! Current(" << cur.x << "," << cur.y
+                << ") -> Next(" << next.x << "," << next.y << ")\n";
+            return;
+        }
+
+        if (!Framework::IsWalkable(next)) {
+            std::cout << "[WASD] Tile blocked! (" << next.x << "," << next.y << ")\n";
+            return;
+        }
+
+        // Visual feedback for target tile
+        ShowBorderOutline(next, 0.22f, 200);
+        const auto& gridRef = Framework::GetGrid();
+        Framework::Entity targetEnt = gridRef.TileAt(next.x, next.y);
+        StartTilePulse(targetEnt, 1.15f, 150);
+
+        // Update occupancy
+        Framework::SetOccupant(cur, Framework::Entity{ Framework::INVALID_ENTITY });
+
+        // Move player
+        xform.position = Framework::TileToWorld(next);
+        Framework::SetOccupant(next, playerEntity);
+
+        std::cout << "[WASD] Moved from (" << cur.x << "," << cur.y
+            << ") to (" << next.x << "," << next.y << ")\n";
     }
 
     // ============================================================================

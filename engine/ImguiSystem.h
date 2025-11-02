@@ -38,11 +38,16 @@ namespace Framework {
         // Shutdown ImGui
         void Shutdown();
 
+        void SetPlayerEntity(Entity player) { playerEntity = player; }
+
+
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
         AudioSystem* audioSystem;
+        Entity playerEntity;
+
         // UI Windows
         void ShowEntityInspector();
         void ShowSpawnerWindow();

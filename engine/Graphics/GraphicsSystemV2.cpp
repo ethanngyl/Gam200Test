@@ -487,19 +487,19 @@ namespace Framework {
             return;
         }
 
-        // Render background first (if available)
-        if (backgroundMaterial.IsValid() && backgroundMesh.IsValid()) {
-            RenderCommand bgCommand;
-            bgCommand.mesh = backgroundMesh;
-            bgCommand.material = backgroundMaterial;
-            bgCommand.layer = -1000;  // Render behind everything
+        //// Render background first (if available)
+        //if (backgroundMaterial.IsValid() && backgroundMesh.IsValid()) {
+        //    RenderCommand bgCommand;
+        //    bgCommand.mesh = backgroundMesh;
+        //    bgCommand.material = backgroundMaterial;
+        //    bgCommand.layer = -1000;  // Render behind everything
 
-            // Fullscreen quad
-            bgCommand.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f, 4.0f, 1.0f));
-            bgCommand.tint = glm::vec4(1.0f);
+        //    // Fullscreen quad
+        //    bgCommand.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f, 4.0f, 1.0f));
+        //    bgCommand.tint = glm::vec4(1.0f);
 
-            renderQueue.Submit(bgCommand);
-        }
+        //    renderQueue.Submit(bgCommand);
+        //}
 
         // Gather commands from entities
         for (Entity entity : entityManager->GetAllEntities()) {

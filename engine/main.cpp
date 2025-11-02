@@ -62,7 +62,7 @@ void SetupGame(Framework::EntitySpawner* spawner)
     // Note: Player is spawned separately so we can get its Entity ID
 
     // Spawn some initial enemies
-    spawner->SpawnEnemyWave(5, 0.6f);
+    //spawner->SpawnEnemyWave(5, 0.6f);
 
     // Spawn walls
     spawner->SpawnObstacle(Framework::Vector2D(-1.8f, 0.0f), Framework::Vector2D(0.1f, 2.0f));
@@ -185,8 +185,13 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
     // Spawn player and give controller access to it
     Framework::Entity player = spawner->SpawnPlayer(Framework::Vector2D(0.0f, -0.5f));
-    playerController->SetPlayerEntity(player);  // NEW!
+    playerController->SetPlayerEntity(player);  
     graphicsSys->SetFollowTarget(player);
+    imguiSys->SetPlayerEntity(player);  
+
+    auto* pathfindingSys = new Framework::PathfindingSystem();
+    pathfindingSys->SetEntityManager(&entityManager);
+    engine.AddSystem(pathfindingSys);
 
     std::cout << "\n=== CONTROLS ===\n";
     std::cout << "WASD/Arrows: Move player\n";
