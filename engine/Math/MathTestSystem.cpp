@@ -106,6 +106,8 @@ namespace Framework {
     void MathTestSystem::Update(float dt)
     {
     //    // This system does not need per-frame updates.
+        DBG_SCOPE_SYS("Math System", eng::debug::Subsystem::Math);
+
         (void)dt;
     }
 

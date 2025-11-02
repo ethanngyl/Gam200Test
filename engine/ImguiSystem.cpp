@@ -21,6 +21,7 @@ namespace Framework {
         , showEntityInspector(true)
         , showSpawner(true)
         , showDebug(true)
+        ,enabled(false)
         , frameTime(0.0f)
         , entityCount(0)
     {
@@ -345,6 +346,10 @@ namespace Framework {
 
     void ImGuiSystem::Update(float dt)
     {
+        if (!enabled) {
+            return;
+        }
+
         frameTime = dt;
         if (entityManager) {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
@@ -561,6 +566,12 @@ namespace Framework {
 
     void ImGuiSystem::Render()
     {
+        if (!enabled) {
+            return;
+        }
+
+        if (!window) return;
+
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }

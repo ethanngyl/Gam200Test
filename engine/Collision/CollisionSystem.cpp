@@ -66,6 +66,8 @@ void CollisionSystem::Initialize()
 
 void CollisionSystem::Update(float dt)
 {
+    DBG_SCOPE_SYS("CollisionSystem System", eng::debug::Subsystem::Physics);
+
     CheckECSCollisions();
     // If input system is not wired, do nothing
     if (!m_input) return;

@@ -1,39 +1,33 @@
-﻿/**
+/*
 ===============================================================================
-File: Core.cpp (Enhanced - Integration Version)
-Author: GE YONGQI
--------------------------------------------------------------------------
+ File:          Core.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Core engine manager (implementation)
 
-Improvements:
-- Integrate InitializeEngineSystems() into InitializeAllSystems()
-- Integrate CleanupEngineSystems() into Cleanup()
-- Implement ShouldWindowClose()
-- Implement UpdateSingleFrame()
+  Design notes:
+     - Integrates initialization, update, and cleanup of all subsystems
+     - Provides a one-click startup routine via InitializeAllSystems()
+     - Uses dependency wiring to ensure correct order and relationships
+     - Automatically logs progress and errors through the Log system
+
+  Thread-safety:
+     - Not thread-safe (single-threaded engine model)
+     - All systems created and destroyed on the same thread
 ===============================================================================
- */
+*/
+
 
 #include "Precompiled.h"
-#include "Core.h"
-#include "MovementSystem.h"
-#include "CollisionSystem.h"
+
 #include "ProjectileSystem.h"        
-#include "ECSEntityManager.h"
 #include "EntitySpawner.h"
 #include "PlayerManager.h"           
 #include "ImguiSystem.h"            
-#include "WindowSystem.h"
-#include "GraphicsSystemV2.h"
-#include "Input.h"
-#include "AudioSystem.h"
-#include "AnimationSystem.h"
 
- /*
- #include "PerfViewer.h"
- #include "Trace.h"
- #include "Perf.h"
- #include "Log.h"
- #include "CrashLogger.h"
- */
 
 namespace Framework
 {
@@ -52,6 +46,7 @@ namespace Framework
         , imguiSystem(nullptr)
         , audioSystem(nullptr)
         , animationSystem(nullptr)
+        , uiSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
     {
@@ -73,29 +68,29 @@ namespace Framework
         LOG_INFO("CORE", "================================================");
 
         try {
-            // Step 1: Create all systems
+            // Create all systems
             CreateAllSystems();
 
-            // Step 2: Connect system dependencies
+            // Connect system dependencies
             WireSystemDependencies();
 
-            // Step 3: Initialize key systems
+            // Initialize key systems
             InitializeCriticalSystems();
 
-            // Step 4: Add the system to the engine
+            // Add the system to the engine
             AddSystemsToEngine();
 
-            // Step 5: Initialize the remaining systems
+            // Initialize the remaining systems
             Initialize();
 
             if (audioSystem) {
                 LOG_INFO("CORE", "Loading test audio...");
                 bool loaded = audioSystem->LoadSound("assets/leaves.wav", "leaves");
                 if (loaded) {
-                    LOG_INFO("CORE", "✓ Test audio 'leaves' loaded successfully");
+                    LOG_INFO("CORE", "Test audio 'leaves' loaded successfully");
                 }
                 else {
-                    LOG_WARN("CORE", "✗ Failed to load test audio");
+                    LOG_WARN("CORE", "Failed to load test audio");
                 }
             }
 
@@ -128,8 +123,9 @@ namespace Framework
         imguiSystem = new ImGuiSystem();
         audioSystem = new AudioSystem();
         animationSystem = new AnimationSystem();
+        uiSystem = new UISystem(this);
 
-        LOG_INFO("CORE", "  ✓ All systems created");
+        LOG_INFO("CORE", " All systems created");
     }
 
     void CoreEngine::WireSystemDependencies()
@@ -195,6 +191,7 @@ namespace Framework
         AddSystem(imguiSystem);
         AddSystem(audioSystem);
         AddSystem(animationSystem);
+        AddSystem(uiSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -255,6 +252,7 @@ namespace Framework
         imguiSystem = nullptr;
         audioSystem = nullptr;
         animationSystem = nullptr;
+        uiSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {
@@ -284,6 +282,8 @@ namespace Framework
 
     void CoreEngine::UpdateSingleFrame(float dt)
     {
+        DBG_SCOPE_SYS("CoreEngine Frame", eng::debug::Subsystem::Engine);
+
         // Check if window should close
         if (ShouldWindowClose()) {
             GameActive = false;
@@ -298,85 +298,6 @@ namespace Framework
             Systems[i]->Update(dt);
         }
     }
-
-    // ========================================================================
-    // Original functionality (retained)
-    // ========================================================================
-
-    /*
-    void CoreEngine::GameLoop()
-    {
-        LastTime = timeGetTime();
-
-        eng::debug::FpsCounter fps;
-        fps.set_enable_logging(true);
-
-        // Attach window title updater
-        if (windowSystem && windowSystem->GetWindow()) {
-            GLFWwindow* win = windowSystem->GetWindow();
-            fps.set_title_updater([win](const char* title) {
-                glfwSetWindowTitle(win, title);
-                });
-        }
-
-        // Find ImGui system
-        ImGuiSystem* imguiSys = nullptr;
-        for (auto system : Systems) {
-            if (auto imgui = dynamic_cast<ImGuiSystem*>(system)) {
-                imguiSys = imgui;
-                break;
-            }
-        }
-
-        while (GameActive)
-        {
-            // Check window close
-            if (ShouldWindowClose()) {
-                Message quitMsg(Status::Quit);
-                BroadcastMessage(&quitMsg);
-            }
-
-            // Calculate delta time
-            unsigned currenttime = timeGetTime();
-            float dt = (currenttime - LastTime) / 1000.0f;
-            if (dt < 0.001f) dt = 0.016f;
-            LastTime = currenttime;
-
-            // Begin perf frame
-            eng::debug::PerfViewer::begin_frame();
-
-            // Update all systems
-            for (unsigned i = 0; i < Systems.size(); ++i)
-            {
-                Systems[i]->Update(dt);
-            }
-
-            // Render ImGui
-            if (imguiSys) {
-                imguiSys->Render();
-            }
-
-            // Swap buffers
-            if (graphicsSystem) {
-                graphicsSystem->RenderImGui();
-            }
-
-            // End perf frame
-            eng::debug::PerfViewer::end_frame();
-
-            // FPS counter
-            fps.tick_with_dt(static_cast<double>(dt));
-
-            // Debug keys
-            if (GetAsyncKeyState(VK_F2) & 0x0001) {
-                eng::debug::PerfViewer::export_csv("perf_recent.csv");
-            }
-            if (GetAsyncKeyState(VK_F3) & 0x0001) {
-                eng::debug::CrashLogger::force_crash_for_test();
-            }
-        }
-    }
-    */
 
     void CoreEngine::BroadcastMessage(Message* message)
     {

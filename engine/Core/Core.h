@@ -1,23 +1,29 @@
-/**
+/*
 ===============================================================================
-File: Core.h (Enhanced - Integration Version)
-Author: GE YONGQI / Enhanced by integration
--------------------------------------------------------------------------
+ File:          Core.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Core engine manager (header)
 
-Design Improvements:
-- Integrate InitializeEngineSystems() from main.cpp into Core
-- Integrate CleanupEngineSystems() into Core
-- Add the ShouldWindowClose() method
-- Add the UpdateSingleFrame() method
+  Responsibilities:
+     - Centralizes creation, initialization, and cleanup of all engine systems
+     - Provides unified access to subsystems (graphics, input, audio, etc.)
+     - Offers single-frame update support for GSM integration
+     - Manages engine state and system lifecycle
 
-Goal: Make main.cpp more concise, requiring only calls to Core methods
+  Highlights:
+     - Replaces scattered initialization in main.cpp with CoreEngine::InitializeAllSystems()
+     - Handles cleanup and resource release via CoreEngine::Cleanup()
+     - Supports both standalone and GSM-driven game loops
 ===============================================================================
- */
+*/
+
 
 #pragma once
 #include "Precompiled.h"
-#include "Interface.h"
-#include "Message.h"
 
 namespace Framework
 {
@@ -34,6 +40,7 @@ namespace Framework
     class ImGuiSystem;
     class AudioSystem;
     class AnimationSystem;
+    class UISystem;
 
     /**
      * @class CoreEngine
@@ -133,6 +140,7 @@ namespace Framework
         ImGuiSystem* GetImGuiSystem() const { return imguiSystem; }
         AudioSystem* GetAudioSystem() const { return audioSystem; }
         AnimationSystem* GetAnimationSystem() const { return animationSystem; }
+        UISystem* GetUISystem() const { return uiSystem; }
 
 
         /**
@@ -186,6 +194,7 @@ namespace Framework
         ImGuiSystem* imguiSystem;
         AudioSystem* audioSystem;
         AnimationSystem* animationSystem;
+        UISystem* uiSystem;
 
         // state
         unsigned LastTime;
