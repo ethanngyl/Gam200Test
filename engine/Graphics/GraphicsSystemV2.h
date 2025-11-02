@@ -38,7 +38,7 @@
 #include <unordered_map>   
 #include "ECSEntity.h" 
 #include "TextRenderer.h"
-
+#include "MeshFactory.h"
 
 // Forward declarations
 struct GLFWwindow;
@@ -165,7 +165,7 @@ namespace Framework {
 
     private:
         // === RENDERING PHASES ===
-        
+        MeshFactory meshFactory;
         /**
          * @brief Gather all renderables and populate render queue
          */
