@@ -1,0 +1,12 @@
+# ============================================================================
+# MOVEMENT VALUES
+# ============================================================================
+y_mov_displacement = 1.0
+x_mov_displacement = 1.0
+input_dir_x = 0.0
+input_dir_y = 0.0
+scale_multiplier = 1.0
+rotation_angle = 90.0
+default_zero = 0.0
+x_bound = 2.0
+y_bound = 1.0

@@ -23,6 +23,7 @@
 
 #include "Precompiled.h"
 #include "EntitySpawner.h"
+#include "ConfigReader.h"
 namespace Framework
 {
     InputSystem::InputSystem()
@@ -63,7 +64,7 @@ namespace Framework
         // Shooting/spawning keys (for PlayerController)
         UpdateKeyState(KEY_SHIFT, GetAsyncKeyState(KEY_SHIFT));
         UpdateKeyState(KEY_E, GetAsyncKeyState(KEY_E));
-        UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));  // Changed from Q
+        UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));  
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
 
