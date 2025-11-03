@@ -70,6 +70,11 @@ namespace Framework {
         void ShowSpawnerWindow();
         void ShowDebugWindow();
         void ShowDemoWindow();
+        //Asset windows - jiahao
+        bool showAssets = false;
+		std::string selectedAssetPath = "";
+        Framework::Entity selectedEntity{};
+		void ShowAssetsWindow();
 
         //file drop - jiahao
 		static void FileDropCallBack(GLFWwindow* window, int count, const char** paths);

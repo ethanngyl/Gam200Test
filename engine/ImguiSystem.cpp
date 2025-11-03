@@ -21,9 +21,10 @@ namespace Framework {
         , showEntityInspector(true)
         , showSpawner(true)
         , showDebug(true)
-        ,enabled(false)
+        , enabled(false)
         , frameTime(0.0f)
         , entityCount(0)
+        , showAssets(true)
     {
     }
 
@@ -413,6 +414,36 @@ namespace Framework {
 		return ext == ".png" || ext == ".jpg" || ext == ".jpeg";
     }
 
+    void ImGuiSystem::ShowAssetsWindow() {
+        ImGui::SetNextWindowSize(ImVec2(320.0f, 420.0f), ImGuiCond_FirstUseEver);
+        if (!ImGui::Begin("Assets##Assets", &showAssets))
+        {
+            ImGui::End();
+            return;
+        }
+
+        for (auto const& e : std::filesystem::recursive_directory_iterator("assets")) {
+            if (!e.is_regular_file()) {
+                continue;
+            }
+
+            auto const path = e.path();
+			std::string const label = path.filename().string();
+			std::string const fullPath = path.string();
+
+            if (ImGui::Selectable(label.c_str())) {
+                if (IsTextureFile(path) && entitySpawner) {
+                    entitySpawner->SpawnSprite(fullPath, Vector2D(0.0f, 0.0f));
+
+                }
+                else if (IsLevelFile(path)) {
+					OpenLevelFromTxt(fullPath, true);
+                }
+            }
+        }
+		ImGui::End();
+    }
+
 
     void ImGuiSystem::Update(float dt)
     {
@@ -495,12 +526,15 @@ namespace Framework {
                 ImGui::MenuItem("Spawner", nullptr, &showSpawner);
                 ImGui::MenuItem("Debug Info", nullptr, &showDebug);
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
+				//Asset window - jiahao
+				ImGui::MenuItem("Assets", nullptr, &showAssets);
                 ImGui::EndMenu();
             }
 
             //play/stop editor bar - jiahao
             if (ImGui::BeginMenu("Editor")) {
 
+                //fix camera problem
                 if (!CORE->IsPlaying()) {
                     if (ImGui::MenuItem("Play")) {
                         if (!SaveLevelToTxt(defaultLevelPath)) {
@@ -675,6 +709,8 @@ namespace Framework {
         if (showSpawner) ShowSpawnerWindow();
         if (showDebug) ShowDebugWindow();
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
+		// show asset window - jiahao
+		if (showAssets) ShowAssetsWindow();
     }
 
     void ImGuiSystem::Render()
