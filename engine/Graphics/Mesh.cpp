@@ -80,6 +80,7 @@ namespace Framework {
             glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride * sizeof(float), (void*)(6 * sizeof(float)));
             glEnableVertexAttribArray(2);
         }
+        SetInstanceData();
         // Unbind to avoid accidental modifications
         Unbind();
     }
@@ -96,6 +97,7 @@ namespace Framework {
         if (VAO) glDeleteVertexArrays(1, &VAO);
         if (VBO) glDeleteBuffers(1, &VBO);
         if (EBO) glDeleteBuffers(1, &EBO);
+        if (instanceVBO) glDeleteBuffers(1, &instanceVBO);
     }
 
     // ---------------- Initialize with indices ----------------
@@ -133,7 +135,7 @@ namespace Framework {
             glEnableVertexAttribArray(i);
             offset += attribSizes[i] * sizeof(float);
         }
-
+        SetInstanceData();
         glBindVertexArray(0);
     }
 
@@ -186,8 +188,8 @@ namespace Framework {
      */
     void Mesh::Bind() const {
         glBindVertexArray(VAO);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        //glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        //if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     }
 
 
@@ -199,8 +201,38 @@ namespace Framework {
      */
     void Mesh::Unbind() const {
         glBindVertexArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        //glBindBuffer(GL_ARRAY_BUFFER, 0);
+        //if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    }
+
+    void Mesh::SetInstanceData()
+    {
+        if (instanceVBO == 0)
+            glCreateBuffers(1, &instanceVBO);
+        glNamedBufferStorage(instanceVBO, num_of_mesh * sizeof(glm::mat4),
+            nullptr, GL_DYNAMIC_STORAGE_BIT);// mat4 instanceVBO[1];
+        glBindVertexArray(VAO);
+        // mat4 = 4 vec4 attributes
+        for (GLuint i = 0; i < 4; i++) {
+            glEnableVertexArrayAttrib(VAO, 3 + i);
+            glVertexArrayVertexBuffer(VAO, 3 + i, instanceVBO, sizeof(glm::vec4) * i, sizeof(glm::mat4));
+            glVertexArrayAttribIFormat(VAO, 3 + i, 4, GL_FLOAT, 0);
+            glVertexArrayAttribBinding(VAO, 3 + i, 3 + i);
+
+            glVertexAttribDivisor(3 + i, 1);  // <== important
+        }
+
+        glBindVertexArray(0);
+    }
+
+    void Mesh::DrawInstanced(const std::vector<glm::mat4>& instanceMatrices, GLsizei instanceCount) const
+    {
+        Bind();
+        if (useIndices)
+            glDrawElementsInstanced(drawMode, indexCount, GL_UNSIGNED_INT, 0, instanceCount);
+        else
+            glDrawArraysInstanced(drawMode, 0, vertexCount, instanceCount);
+        Unbind();
     }
 
 }
