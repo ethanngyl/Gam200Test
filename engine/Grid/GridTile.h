@@ -19,9 +19,6 @@ namespace Framework {
 		Vector2D centerWorld{ 0.f, 0.f };
 		float    tileW = 1.f;
 		float    tileH = 1.f;
-
-		float neighborLenX() const { return tileW; }
-		float neighborLenY() const { return tileH; }
 	};
 
 }

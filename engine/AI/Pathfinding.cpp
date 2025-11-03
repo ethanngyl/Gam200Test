@@ -30,6 +30,8 @@
 #include "Pathfinding.h"
 #include "EntitySpawner.h"
 #include "ECSEntityManager.h"
+#include "MathABS.h"
+#include "Turn.h"
 #include <queue>
 #include <algorithm>
 
@@ -61,9 +63,12 @@ namespace Framework {
      */
     void PathfindingSystem::Update(float dt) {
         if (!entityManager) return;
+        if (!IsEnemyTurn()) return;  
 
         const Grid& grid = GetGrid();
         if (grid.cols <= 0 || grid.rows <= 0 || !grid.em) return;
+
+        bool enemyMoved = false;
 
         // Update all enemies with AI component
         for (Entity entity : entityManager->GetAllEntities()) {
@@ -98,15 +103,37 @@ namespace Framework {
             }
             ai.hasReachedTarget = false;
 
-            // Recalculate path if empty or reached end
-            if (ai.currentPath.empty() || ai.pathIndex >= ai.currentPath.size()) {
-                ai.currentPath = FindPath(enemyTile, targetTile, grid);
-                ai.pathIndex = 0;
+            // *** ALWAYS recalculate path every turn ***
+        // This ensures the enemy tracks the player's CURRENT position
+            std::cout << "[EnemyAI] Recalculating path from (" << enemyTile.x << "," << enemyTile.y
+                << ") to player at (" << targetTile.x << "," << targetTile.y << ")\n";
 
-                if (ai.currentPath.empty()) continue;
+            ai.currentPath = FindPath(enemyTile, targetTile, grid);
+        //    ai.pathIndex = 0;
+
+            if (ai.currentPath.empty()) {
+                std::cout << "[EnemyAI] No path found for Enemy " << entity.GetID() << "\n";
+                EndEnemyTurn();
+                return;
             }
 
-            // Update movement timer
+            // >>> FIX 1: skip start if present
+            if (ai.currentPath[0].x == enemyTile.x && ai.currentPath[0].y == enemyTile.y) {
+                ai.pathIndex = 1;
+            }
+            else {
+                ai.pathIndex = 0;
+            }
+
+            std::cout << "[EnemyAI] New path has " << ai.currentPath.size() << " tiles\n";
+
+            //*** this follows the original set path first, reaches the end goal then recalculates when path runs out ***
+           /* if (ai.currentPath.empty() || ai.pathIndex >= ai.currentPath.size()) {
+                ai.currentPath = FindPath(enemyTile, targetTile, grid);
+                ai.pathIndex = 0;
+            }*/
+
+            //// Update movement timer
             ai.moveTimer -= dt;
             if (ai.moveTimer > 0.0f) continue;
 
@@ -114,7 +141,10 @@ namespace Framework {
             if (ai.pathIndex < ai.currentPath.size()) {
                 GridCoord nextTile = ai.currentPath[ai.pathIndex];
 
-                if (!IsWalkable(nextTile)) {
+                // >>> allow stepping onto the goal tile
+                const bool passable =
+                    (nextTile.x == targetTile.x && nextTile.y == targetTile.y) || IsWalkable(nextTile);
+                if (!passable) {
                     ai.currentPath.clear();
                     continue;
                 }
@@ -125,6 +155,9 @@ namespace Framework {
 
                 ai.moveTimer = ai.moveDelay;
                 ai.pathIndex++;
+                enemyMoved = true;
+                EndEnemyTurn();
+                return;
             }
         }
     }
@@ -153,7 +186,7 @@ namespace Framework {
      * Used as the heuristic for A* pathfinding on a 4-directional grid.
      */
     int PathfindingSystem::Heuristic(const GridCoord& a, const GridCoord& b) {
-        return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+        return Abs(a.x - b.x) + Abs(a.y - b.y);
     }
 
 
@@ -176,7 +209,29 @@ namespace Framework {
         for (int i = 0; i < 4; ++i) {
             GridCoord neighbor{ coord.x + dx[i], coord.y + dy[i] };
 
-            if (grid.InBounds(neighbor.x, neighbor.y) && IsWalkable(neighbor)) {
+            /*if (grid.InBounds(neighbor.x, neighbor.y) && IsWalkable(neighbor)) {
+                neighbors.push_back(neighbor);
+            }*/
+
+            if (!grid.InBounds(neighbor.x, neighbor.y)) {
+                continue;
+            }
+
+            // *** KEY FIX: Just check if tile is blocked, ignore occupancy ***
+            // We need to allow pathing to occupied tiles (like the player's position)
+            Entity tileEntity = grid.TileAt(neighbor.x, neighbor.y);
+            if (tileEntity.GetID() == INVALID_ENTITY) {
+                continue;
+            }
+
+            if (!grid.em->HasComponent<GridTiles>(tileEntity)) {
+                continue;
+            }
+
+            const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
+
+            // Only check if physically blocked, NOT if occupied
+            if (!gridTile.blocked) {
                 neighbors.push_back(neighbor);
             }
         }

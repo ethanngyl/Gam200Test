@@ -15,6 +15,8 @@
 #include "Grid\GridECS.h"
 #include "Grid\Grid.h"
 #include "Vector2D.h"
+#include "AI\Pathfinding.h"
+#include "AI\Turn.h"
 #include <Windows.h>
 
 namespace Framework {
@@ -184,6 +186,7 @@ namespace Framework {
             return;
         }
 
+
         // Get player position
         auto& playerTransform = entityManager->GetComponent<Transform>(playerEntity);
         Vector2D playerPos = playerTransform.position;
@@ -222,8 +225,8 @@ namespace Framework {
         UpdateBorderOutlineAnimation();
 
 		//Added grid movement with arrow keys
-        HandleArrowKeyMovement();
-
+            HandleArrowKeyMovement();
+        
         // ====================================================================
         // SPAWNING INPUT (Debug/Testing) - Use InputSystem
         // ====================================================================
@@ -480,6 +483,7 @@ namespace Framework {
         // Guards
         if (!inputSystem || !entityManager) return;
         if (!entityManager->HasComponent<Transform>(playerEntity)) return;
+        if (!IsPlayerTurn()) return;
 
         const Framework::Grid& g = Framework::GetGrid();
         if (g.cols <= 0 || g.rows <= 0) return;
@@ -553,6 +557,8 @@ namespace Framework {
 
         std::cout << "[WASD] Moved from (" << cur.x << "," << cur.y
             << ") to (" << next.x << "," << next.y << ")\n";
+
+        EndPlayerTurn();
     }
 
     // ============================================================================
