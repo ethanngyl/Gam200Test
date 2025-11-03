@@ -23,6 +23,7 @@
 
 #include "Precompiled.h"
 #include "EntitySpawner.h"
+#include "ConfigReader.h"
 namespace Framework
 {
     InputSystem::InputSystem()
@@ -42,6 +43,8 @@ namespace Framework
 
     void InputSystem::Update(float dt)
     {
+        DBG_SCOPE_SYS("IO System", eng::debug::Subsystem::IO);
+
         (void)dt;
         // Store previous frame's key states
         PreviousKeys = CurrentKeys;
@@ -61,7 +64,7 @@ namespace Framework
         // Shooting/spawning keys (for PlayerController)
         UpdateKeyState(KEY_SHIFT, GetAsyncKeyState(KEY_SHIFT));
         UpdateKeyState(KEY_E, GetAsyncKeyState(KEY_E));
-        UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));  // Changed from Q
+        UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));  
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
 

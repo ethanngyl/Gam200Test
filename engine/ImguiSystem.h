@@ -11,6 +11,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "AudioSystem.h"
+
 namespace Framework {
 
     class EntitySpawner;
@@ -46,6 +47,10 @@ namespace Framework {
         // Shutdown ImGui
         void Shutdown();
 
+        void Enable() { enabled = true; }
+        void Disable() { enabled = false; }
+        bool IsEnabled() const { return enabled; }
+
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
@@ -71,6 +76,8 @@ namespace Framework {
         bool showEntityInspector;
         bool showSpawner;
         bool showDebug;
+
+        bool enabled;
 
         float frameTime;
         int entityCount;

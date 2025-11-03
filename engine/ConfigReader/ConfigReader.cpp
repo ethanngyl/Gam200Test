@@ -1,17 +1,28 @@
-/**
+/*
 ===============================================================================
- File:           ConfigReader.cpp (Optimized Version)
- Description:    Configuration file reader - Implementation with duplicate
-                 loading prevention
+ File:          ConfigReader.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Configuration file reader for the engine (implementation)
+
+  Design notes:
+     - Prevents duplicate loading using a cached config path
+     - Supports parsing of int, float, bool, and string values
+     - Automatically loads the default config if not yet loaded
+     - Uses logging macros for diagnostics and error reporting
+
+  Thread-safety:
+     - All methods are static and rely on internal global state
+     - Not thread-safe by design (single-threaded initialization expected)
 ===============================================================================
- */
+*/
+
 
 #include "Precompiled.h"
-#include "ConfigReader.h"
-#include "GSM/GameStateList.h"
-#include <fstream>
-#include <sstream>
-#include <algorithm>
+
 
  // ============================================================================
  // STATIC MEMBER DEFINITIONS

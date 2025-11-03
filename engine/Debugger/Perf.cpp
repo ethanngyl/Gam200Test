@@ -18,11 +18,8 @@
      FPS (1 / dt). This makes the displayed number less jumpy.
 ===============================================================================
 */
+#include "Precompiled.h"
 
-#include "Perf.h"
-#include "Log.h"
-#include <chrono>
-#include <cstdio>
 
 namespace eng::debug {
 

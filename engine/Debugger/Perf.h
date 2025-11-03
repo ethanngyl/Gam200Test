@@ -34,8 +34,8 @@
 */
 
 #pragma once
-#include <chrono>
-#include <functional>
+#include "Precompiled.h"
+
 
 namespace eng::debug {
 

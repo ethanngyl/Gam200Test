@@ -1,0 +1,7 @@
+sprite = assets/Doraemon.png
+rows = 2
+columns = 4
+frameCount = 6
+frameTime = 0.15
+loop = true
+uvShrinkPx = 0.9
