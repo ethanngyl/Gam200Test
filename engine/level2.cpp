@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          level2.cpp
  Author:        GE YONGQI
@@ -43,7 +43,7 @@ void level2_Initialize()
         engine->GetImGuiSystem()->Enable();
         LOG_INFO("MENU", "ImGui disabled in menu");
     }
-    engine->SetPlaying(true);
+    engine->SetPlaying(false);
 
     LOG_INFO("MENU", "Menu in EDITOR mode");
 
