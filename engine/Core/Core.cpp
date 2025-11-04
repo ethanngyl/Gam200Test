@@ -151,6 +151,7 @@ namespace Framework
 
         // Wire AudioSystem to ImGuiSystem
         imguiSystem->SetAudioSystem(audioSystem);
+        imguiSystem->SetGraphicsSystem(graphicsSystem);
 
         LOG_INFO("CORE", "Dependencies wired");
     }

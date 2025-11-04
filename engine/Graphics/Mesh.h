@@ -53,6 +53,7 @@ namespace Framework {
     */
     class Mesh {
     public:
+        const int num_of_mesh = 100;
         /*
         ------------------------------------------------------------------------------
         Constructor: Quick constructor for non-indexed meshes.
@@ -122,6 +123,11 @@ namespace Framework {
         */
         unsigned int GetVertexCount() const { return vertexCount; }
 
+        void SetInstanceData();
+        void DrawInstanced(const std::vector<glm::mat4>& instanceMatrices, GLsizei instanceCount) const;
+        GLuint GetInstanceVBO() const { return instanceVBO; }
+        friend class GraphicsSystemV2;
+        
     private:
         // Helper functions to bind/unbind VAO during drawing
         void Bind() const;
@@ -136,7 +142,7 @@ namespace Framework {
 
         // OpenGL buffer handles
         GLuint VAO = 0, VBO = 0, EBO = 0;// Vertex Array Object, Buffer Object, and Element Buffer Object (optional)
-        
+        GLuint instanceVBO = 0;
         // Mesh data
         std::vector<float> vertice;
         unsigned int vertexCount = 0;

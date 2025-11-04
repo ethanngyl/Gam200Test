@@ -136,7 +136,7 @@ void level1_Initialize()
 void level1_Update()
 {
     if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_2))
     {
         next = mainMenu;
     }else if (engine && engine->GetInputSystem() &&

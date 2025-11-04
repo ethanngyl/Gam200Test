@@ -66,6 +66,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
 set_source_files_properties(
     "shaders/basic.vert"
     "shaders/basic.frag"
+    "shaders/basic2.frag"
     "shaders/text.vert"
     "shaders/text.frag"
     PROPERTIES HEADER_FILE_ONLY TRUE

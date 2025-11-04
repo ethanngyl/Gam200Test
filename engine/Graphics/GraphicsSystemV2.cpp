@@ -36,6 +36,7 @@ namespace Framework {
         , debugRenderingEnabled(false)
         , currentBoundMaterial(INVALID_MATERIAL_HANDLE)
         , currentBoundShader(INVALID_SHADER_HANDLE)
+        , meshFactory()
     {
         std::cout << "GraphicsSystemV2: Constructor\n";
     }
@@ -326,6 +327,12 @@ namespace Framework {
             "default"
         );
 
+        Shader2 = resourceManager.LoadShader(
+            "shaders/basic.vert",
+            "shaders/basic2.frag",
+            "color"
+        );
+
         if (!defaultShader.IsValid()) {
             std::cerr << "ERROR: Failed to load default shader!\n";
         }
@@ -467,7 +474,7 @@ namespace Framework {
 
         // Create default material
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
-
+        Material2 = resourceManager.CreateMaterial("color", Shader2);//                                   new
         // Create materials for each primitive
         triangleMaterial = resourceManager.CreateMaterial("triangle_mat", defaultShader);
         auto* triMat = resourceManager.GetMaterial(triangleMaterial);
@@ -775,82 +782,92 @@ namespace Framework {
 
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
+        if (commands.empty()) return;
+        //glEnable(GL_BLEND);
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        if (commands.empty()) {
-            return;
-        }
-
-        // Get camera matrices
+        // Camera matrices
         glm::mat4 projection = mainCamera.GetProjectionMatrix();
         glm::mat4 view = mainCamera.GetViewMatrix();
 
-        // Reset state tracking
         currentBoundMaterial = INVALID_MATERIAL_HANDLE;
         currentBoundShader = INVALID_SHADER_HANDLE;
 
-        // Execute each command
-        for (const auto& cmd : commands) {
-            if (!cmd.visible) {
-                continue;
+        // ---- STEP 1: Group by (mesh + material + texture) ----
+        struct Key {
+            MeshHandle mesh;
+            MaterialHandle mat;
+            TextureHandle tex;
+        };
+        struct KeyHash {
+            size_t operator()(const Key& k) const noexcept {
+                return ((size_t)k.mesh.GetID() << 32) ^ (size_t)k.mat.GetID() ^ (size_t)k.tex.GetID();
             }
+        };
+        struct KeyEq {
+            bool operator()(const Key& a, const Key& b) const noexcept {
+                return a.mesh == b.mesh && a.mat == b.mat && a.tex == b.tex;
+            }
+        };
 
-            // Bind material if changed
-            if (cmd.material != currentBoundMaterial) {
-                // If Succeed, Bound new Material, Bound new Shader, Bound new Texture
-                // ASC TA: For now, Remove the binding of material texture, and use binding of cmd.texture instead
-                if (BindMaterial(cmd.material, cmd.tint)) {
-                    currentBoundMaterial = cmd.material;
+        std::unordered_map<Key, std::vector<glm::mat4>, KeyHash, KeyEq> batches;
+
+        for (const auto& cmd : commands) {
+            if (!cmd.visible) continue;
+            batches[{cmd.mesh, cmd.material, cmd.texture}].push_back(cmd.modelMatrix);
+        }
+
+        // ---- STEP 2: Render each batch once ----
+        for (auto& [key, matrices] : batches) {
+            if (matrices.empty()) continue;
+
+            // Bind material and shader once
+            if (key.mat != currentBoundMaterial) {
+                if (BindMaterial(key.mat, glm::vec4(1.0f))) { // tint uniform already handled
+                    currentBoundMaterial = key.mat;
                     stats.materialSwitches++;
                 }
             }
 
-            // Update shader uniforms
             Shader* shader = resourceManager.GetShader(currentBoundShader);
-            if (shader) {
-                // Set transformation matrices
-                GLint modelLoc = glGetUniformLocation(shader->GetID(), "uModel");
-                GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
-                GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
+            if (!shader) continue;
 
-                if (modelLoc != -1) {
-                    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(cmd.modelMatrix));
-                }
-                if (projLoc != -1) {
-                    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-                }
-                if (viewLoc != -1) {
-                    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-                }
+            GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
+            GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
+            if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+            if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-                //Texture* t;
-                //if (cmd.texture.IsValid() && (t = resourceManager.GetTexture(cmd.texture))) {
-                if (cmd.texture.IsValid()) {
-                    // Either Use t->Bind(num), OR use glUniform1i method
-                    //t->Bind(0);
-                    GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
-                    if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
-                    //GLint texLoc = glGetUniformLocation(shader->GetID(), "uTexture");
-                    //if (texLoc != -1) glUniform1i(texLoc, 0);
-                    glBindTextureUnit(0, cmd.texture.GetID());
-
-                }
-                else {
-                    GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
-                    if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
-                }
-
-                // Draw mesh
-                DrawMesh(cmd.mesh);
-                stats.drawCalls++;
+            // Texture binding
+            if (key.tex.IsValid()) {
+                glBindTextureUnit(0, key.tex.GetID());
+                GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
+                if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
             }
+            else {
+                GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
+                if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+            }
+
+            // Get mesh
+            Mesh* mesh = resourceManager.GetMesh(key.mesh);
+            if (!mesh) continue;
+
+            // ---- STEP 3: Upload instance data and draw ----
+            mesh->SetInstanceData(); // sets up the VAO attributes
+            // Upload matrices to GPU buffer (modern DSA version)
+            glNamedBufferSubData(mesh->instanceVBO, 0,
+                matrices.size() * sizeof(glm::mat4),
+                matrices.data());
+
+            // Draw once for all instances
+            mesh->DrawInstanced(matrices, static_cast<GLsizei>(matrices.size()));
+
+            stats.drawCalls++;
         }
 
-        // Unbind everything
+        // Cleanup
         if (currentBoundShader.IsValid()) {
-            Shader* shader = resourceManager.GetShader(currentBoundShader);
-            if (shader) {
-                shader->Unbind();
-            }
+            if (auto* sh = resourceManager.GetShader(currentBoundShader)) sh->Unbind();
         }
     }
 
