@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          Core.h
  Author:        GE YONGQI
@@ -39,11 +39,12 @@ namespace Framework
     class PlayerControllerSystem;
     class ImGuiSystem;
     class AudioSystem;
+    class AnimationSystem;
     class UISystem;
 
     /**
      * @class CoreEngine
-     * ​​@brief Enhanced Core Engine - Integrates initialization, update, and cleanup functions
+     * @brief Enhanced Core Engine - Integrates initialization, update, and cleanup functions
      *
      * New functions:
      * - InitializeAllSystems(): Creates and initializes all systems
@@ -138,6 +139,7 @@ namespace Framework
         PlayerControllerSystem* GetPlayerController() const { return playerController; }
         ImGuiSystem* GetImGuiSystem() const { return imguiSystem; }
         AudioSystem* GetAudioSystem() const { return audioSystem; }
+        AnimationSystem* GetAnimationSystem() const { return animationSystem; }
         UISystem* GetUISystem() const { return uiSystem; }
 
 
@@ -149,7 +151,7 @@ namespace Framework
 
         /**
          * @brief Add a system to the engine
-         * ​​@param system System pointer
+         * @param system System pointer
          */
         void AddSystem(EngineSystem* system);
 
@@ -191,6 +193,7 @@ namespace Framework
         PlayerControllerSystem* playerController;
         ImGuiSystem* imguiSystem;
         AudioSystem* audioSystem;
+        AnimationSystem* animationSystem;
         UISystem* uiSystem;
 
         // state

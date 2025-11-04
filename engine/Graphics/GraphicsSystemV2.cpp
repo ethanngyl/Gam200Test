@@ -58,7 +58,9 @@ namespace Framework {
             std::cerr << "ERROR: No window set! Call SetWindow() before Initialize()\n";
             return;
         }
+        //0. Load Meshfactory Values
 
+        meshFactory.MeshValueInitialize();
         // 1. Initialize OpenGL context
         InitializeOpenGL();
 
@@ -334,13 +336,12 @@ namespace Framework {
 
     void GraphicsSystemV2::CreateDefaultMeshes() {
         std::cout << "GraphicsSystemV2: Creating default meshes...\n";
-
         // Create primitive meshes using the factory functions
-        Mesh* triangle = CreateTriangle();
-        Mesh* quad = CreateQuad();
-        Mesh* line = CreateLine();
-        Mesh* circle = CreateCircle(40, 0.5f);
-        Mesh* wireframeQ = CreateWireframeQuad();
+        Mesh* triangle = meshFactory.CreateTriangle();
+        Mesh* quad = meshFactory.CreateQuad();
+        Mesh* line = meshFactory.CreateLine();
+        Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
+        Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
 
         // Register meshes with resource manager
         triangleMesh = resourceManager.CreateMesh("triangle",
@@ -644,32 +645,47 @@ namespace Framework {
             renderQueue.Submit(bg);
         }
 
-        // --- Entity passes ---
+        // Entity passes
         for (Entity e : entityManager->GetAllEntities()) {
+
             if (!entityManager->HasComponent<Transform>(e))
                 continue;
 
             auto& transform = entityManager->GetComponent<Transform>(e);
 
-            // prefer MeshRenderer over Sprite
             const bool hasRenderer = entityManager->HasComponent<MeshRenderer>(e);
             const bool hasSprite = entityManager->HasComponent<Sprite>(e);
             if (!hasRenderer && !hasSprite) continue;
 
             RenderCommand cmd;
-            // Loads ONLY Renderer OR Sprite Data into draw Command
-            // From Observstion, there are no Sprite Component using this currently
+
+            // ---------- MeshRenderer ----------
             if (hasRenderer) {
                 auto& mr = entityManager->GetComponent<MeshRenderer>(e);
                 if (!mr.visible) continue;
 
-                // 4 Important Graphics Handles (Shader, Material, Mesh, Texture) [Shader is in Material]
                 cmd.mesh = mr.mesh.IsValid() ? mr.mesh : quadMesh;
+
+                // === IMPORTANT: CLONE material so UV animation doesn't affect all ===
+                if (!mr.material.IsValid()) {
+                    Material* base = resourceManager.GetMaterial(defaultMaterial);
+                    if (!base) continue;
+
+                    MaterialHandle inst = resourceManager.CreateMaterial(
+                        "entity_mat_" + std::to_string(e.GetID()),
+                        base->shader
+                    );
+
+                    Material* pm = resourceManager.GetMaterial(inst);
+                    if (!pm) continue;
+
+                    *pm = *base; // shallow copy (safe)
+                    mr.material = inst;
+                }
+
                 cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
-                // ASC Note: I dun think you should be reading the sprite name here and then storing the tex id
-                // Like, storing the mr.texture should be done way before or something
-                // Okay maybe ask DX, becuase this might be the hot-loading part
-                // But if it is hot-loading, then need check if spriteName name change
+
+                // texture
                 if (mr.texture.IsValid()) {
                     cmd.texture = mr.texture;
                 }
@@ -677,24 +693,22 @@ namespace Framework {
                     TextureHandle tex = resourceManager.LoadTexture(mr.spriteName);
                     if (tex.IsValid()) {
                         cmd.texture = tex;
-                        mr.texture = tex; // persist handle ✅
+                        mr.texture = tex;
                     }
                 }
-                // To change Texture
-                // mr.texture = resourceManager.LoadTexture("assets/name.png"); // Idealy, name.png is gotten from IMGUI
 
-
-                // Other cmd command stuff
                 cmd.tint = mr.tint;
                 cmd.layer = mr.layer;
                 cmd.orderInLayer = mr.orderInLayer;
-
             }
+
+            // ---------- SPRITE ----------
             else if (hasSprite) {
                 auto& sp = entityManager->GetComponent<Sprite>(e);
-                // 4 Important Graphics Handles (Shader, Material, Mesh, Texture) [Shader is in Material]
+
                 cmd.mesh = quadMesh;
                 cmd.material = defaultMaterial;
+
                 if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
                     TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
                     cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
@@ -702,16 +716,15 @@ namespace Framework {
                 else {
                     cmd.texture = INVALID_TEXTURE_HANDLE;
                 }
-                // Other cmd command stuff
+
                 cmd.tint = glm::vec4(1.0f);
                 cmd.layer = sp.layer;
-
             }
 
-            // === Transform to model matrix ===
+            // ---------- Transform ----------
             glm::mat4 model(1.0f);
             model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
-            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
+            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1});
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
             cmd.modelMatrix = model;
 
@@ -719,6 +732,42 @@ namespace Framework {
                 glm::vec3(transform.position.x, transform.position.y, 0.0f),
                 mainCamera.GetPosition()
             );
+
+            // ---------- SPRITE SHEET UV ANIMATION ----------
+            if (entityManager->HasComponent<SpriteAnimation>(e)) {
+                auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
+
+                Material* mat = resourceManager.GetMaterial(cmd.material);
+                if (!mat) continue;
+
+                Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
+                if (!tex) continue;
+
+                const int texW = tex->GetWidth();
+                const int texH = tex->GetHeight();
+                if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0) continue;
+
+                const int cols = texW / anim.frameWidth;
+                const int frame = anim.currentFrame % max(1, anim.frameCount);
+                const int x = frame % cols;
+                const int y = frame / cols;
+
+                float u0 = (x * anim.frameWidth) / float(texW);
+                float u1 = ((x + anim.uvShrinkPx) * anim.frameWidth) / float(texW);
+
+                float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
+                float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
+
+                // Horizontal flip
+                if (anim.flipX) std::swap(u0, u1);
+
+                mat->u0 = u0;
+                mat->u1 = u1;
+                mat->v0 = v0;
+                mat->v1 = v1;
+
+                if (!mat->albedoTexture.IsValid()) mat->albedoTexture = anim.spriteSheet;
+            }
 
             renderQueue.Submit(cmd);
         }
@@ -749,8 +798,7 @@ namespace Framework {
             if (cmd.material != currentBoundMaterial) {
                 // If Succeed, Bound new Material, Bound new Shader, Bound new Texture
                 // ASC TA: For now, Remove the binding of material texture, and use binding of cmd.texture instead
-                if (BindMaterial(cmd.material, cmd.tint))
-                {
+                if (BindMaterial(cmd.material, cmd.tint)) {
                     currentBoundMaterial = cmd.material;
                     stats.materialSwitches++;
                 }
@@ -916,6 +964,9 @@ namespace Framework {
 
         shader->Bind();
         currentBoundShader = material->shader;
+
+        glUniform4f(glGetUniformLocation(shader->GetID(), "uUVRect"),
+            material->u0, material->v0, material->u1, material->v1);
 
         // Set blend mode
         switch (material->blendMode) {

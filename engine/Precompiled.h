@@ -50,6 +50,9 @@
 #include "RenderComponents.h"
 #include "GraphicsSystemV2.h"
 
+//Animations
+#include "AnimationSystem.h"
+
 //Core
 #include "Core.h"
 
@@ -86,7 +89,6 @@
 #include "PerfViewer.h"
 #include "Sinks.h"
 #include "DebugConfig.h"
-
 
 //GSM
 #include "GameStateList.h"

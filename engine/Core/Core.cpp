@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          Core.cpp
  Author:        GE YONGQI
@@ -45,6 +45,7 @@ namespace Framework
         , playerController(nullptr)
         , imguiSystem(nullptr)
         , audioSystem(nullptr)
+        , animationSystem(nullptr)
         , uiSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
@@ -121,6 +122,7 @@ namespace Framework
         playerController = new PlayerControllerSystem();
         imguiSystem = new ImGuiSystem();
         audioSystem = new AudioSystem();
+        animationSystem = new AnimationSystem();
         uiSystem = new UISystem(this);
 
         LOG_INFO("CORE", " All systems created");
@@ -139,6 +141,7 @@ namespace Framework
         playerController->SetEntityManager(entityManager);
         imguiSystem->SetEntityManager(entityManager);
         audioSystem->SetEntityManager(entityManager);
+        animationSystem->SetEntityManager(entityManager);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -187,6 +190,7 @@ namespace Framework
         AddSystem(graphicsSystem);
         AddSystem(imguiSystem);
         AddSystem(audioSystem);
+        AddSystem(animationSystem);
         AddSystem(uiSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
@@ -247,6 +251,7 @@ namespace Framework
         graphicsSystem = nullptr;
         imguiSystem = nullptr;
         audioSystem = nullptr;
+        animationSystem = nullptr;
         uiSystem = nullptr;
 
         // Delete EntityManager (not added to engine)

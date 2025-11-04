@@ -38,7 +38,7 @@
 #include <unordered_map>   
 #include "ECSEntity.h" 
 #include "TextRenderer.h"
-
+#include "MeshFactory.h"
 
 // Forward declarations
 struct GLFWwindow;
@@ -126,6 +126,7 @@ namespace Framework {
         //Editor Camera functions - Jiahao
         void HandleEditorCamera(float dt);
         void ResetEditorCamera();
+        MeshHandle GetQuadMesh() const { return quadMesh; }
 
         // === DEBUG RENDERING ===
         
@@ -168,7 +169,7 @@ namespace Framework {
 
     private:
         // === RENDERING PHASES ===
-        
+        MeshFactory meshFactory;
         /**
          * @brief Gather all renderables and populate render queue
          */

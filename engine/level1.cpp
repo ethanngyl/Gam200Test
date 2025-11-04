@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          level1.cpp
  Author:        GE YONGQI
@@ -11,7 +11,7 @@
   Design notes:
      - Spawns the player, enemies, and sets up gameplay entities
      - Links the PlayerControllerSystem to the spawned player entity
-     - Uses the CoreEngine’s GraphicsSystemV2 for camera tracking
+     - Uses the CoreEngine�s GraphicsSystemV2 for camera tracking
 
   Highlights:
      - Integrates with UISystem and ImGuiSystem for in-game control
@@ -24,6 +24,7 @@
 
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
+#include "ConfigReader/ConfigReader.h"
 #include "ImguiSystem.h"
 
 
@@ -74,7 +75,53 @@ void level1_Initialize()
     // ========================================================================
     // Spawn Player - Save the returned entity ID
     // ========================================================================
-    Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
+    Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+
+    //------------------------------------------------------------------
+    //  SPRITE ANIMATION SETUP FOR PLAYER (config-driven)
+    //------------------------------------------------------------------
+    auto* em = engine->GetEntityManager();
+    auto* gfx = engine->GetGraphicsSystem();
+
+    if (em && gfx) {
+        // ============================================================================
+        // Load animation setting
+        // ============================================================================
+        ConfigReader::LoadConfig("assets/anim_Bird.txt");
+
+        // === Give player sprite animation ===
+        auto& anim = em->AddComponent<Framework::SpriteAnimation>(playerEntity);
+
+        // Sprite path
+        std::string spritePath = ConfigReader::GetString("sprite", "");
+        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(spritePath);
+        Framework::Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+
+        // Sheet layout
+        anim.rows = ConfigReader::GetInt("rows", 1);
+        anim.columns = ConfigReader::GetInt("columns", 1);
+        anim.frameCount = ConfigReader::GetInt("frameCount", 1);
+        anim.frameTime = ConfigReader::GetFloat("frameTime", 0.0f);
+        anim.loop = ConfigReader::GetBool("loop", true);
+        anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
+
+        // Derived frame size
+        anim.frameWidth = tex->GetWidth() / anim.columns;
+        anim.frameHeight = tex->GetHeight() / anim.rows;
+        anim.playing = true;
+        anim.currentFrame = 0;
+
+        // Renderable
+        auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
+        rend.visible = true;
+        rend.layer = 1;
+
+        // Transform
+        auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
+        xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
+        xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
+    }
+
 	graphics->SetFollowTarget(playerEntity);
     // ========================================================================
     // Tell the PlayerController who the player entity is
