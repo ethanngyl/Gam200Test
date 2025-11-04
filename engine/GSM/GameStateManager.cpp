@@ -23,8 +23,8 @@
 
 #include "Precompiled.h"
 #include "MainMenu.h"
-#include"level1.h"
-
+#include "level1.h"
+#include "level2.h"
  // ============================================================================
  // GLOBAL VARIABLE DEFINITIONS
  // ============================================================================
@@ -77,14 +77,12 @@ void GSM_Update()
 
     case LEVEL_2:
         LOG_INFO("GSM", "  -> Level 2 state (NOT IMPLEMENTED)");
-        fpLoad = []() { LOG_INFO("LEVEL2", "Load - TODO"); };
-        fpInitialize = []() { LOG_INFO("LEVEL2", "Initialize - TODO"); };
-        fpUpdate = []() {
-            next = mainMenu;
-            };
-        fpDraw = []() {};
-        fpFree = []() {};
-        fpUnload = []() {};
+        fpLoad = level2_Load;
+        fpInitialize = level2_Initialize;
+        fpUpdate = level2_Update;
+        fpDraw = level2_Draw;
+        fpFree = level2_Free;
+        fpUnload = level2_Unload;
         break;
 
     case LEVEL_3:

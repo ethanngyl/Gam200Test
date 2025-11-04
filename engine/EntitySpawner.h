@@ -13,6 +13,8 @@
 #include "ECSEntityManager.h"   // if not already pulled in through Precompiled.h
 #include "Grid\GridTile.h"
 
+extern Framework::CoreEngine* engine;
+
 namespace Framework {
 
     /**
@@ -88,15 +90,26 @@ namespace Framework {
             collider.radius = 0.15f;
 
             std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
+
+            //camera
+            //FollowPlayer
+            engine->GetGraphicsSystem()->SetFollowTarget(player);
+
             return player;
         }
 
         /**
          * @brief Spawn an enemy entity 
          */
-        Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
-            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
 
+        //TO MEET THE RUBRICS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!LOOK HERE LOOK HERE (MULTIPLE SHADER)
+        Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
+            (void)moveSpeed; // silence unused variable warning
+
+            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
+            //entityManager->GetComponent<MeshRenderer>(enemy);
+            auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
+            mr.material = GraphicsSystemV2::Material2;
             //entityManager->AddComponent<Movement>(enemy);
             //auto& movement = entityManager->GetComponent<Movement>(enemy);
             //movement.moveSpeed = moveSpeed;

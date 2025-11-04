@@ -81,7 +81,6 @@ namespace Framework {
             LOG_INFO("UI", "Window resized: %dx%d -> %dx%d",
                 lastWidth, lastHeight, currentWidth, currentHeight);
 
-            // 打印按钮信息
             for (size_t i = 0; i < buttons.size(); ++i) {
                 if (buttons[i]) {
                     LOG_DEBUG("UI", "  Button[%zu] world pos: (%.2f, %.2f) size: (%.2f, %.2f)",

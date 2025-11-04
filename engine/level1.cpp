@@ -12,11 +12,6 @@
      - Spawns the player, enemies, and sets up gameplay entities
      - Links the PlayerControllerSystem to the spawned player entity
      - Uses the CoreEngine’s GraphicsSystemV2 for camera tracking
-
-  Highlights:
-     - Integrates with UISystem and ImGuiSystem for in-game control
-     - Cleans up all entities on state exit
-     - Fully logged for debugging and system verification
 ===============================================================================
 */
 
@@ -30,9 +25,7 @@
 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
-using Framework::EntitySpawner;
-using Framework::PlayerControllerSystem;
-using Framework::GraphicsSystemV2;
+
 
 void level1_Load()
 {
@@ -49,24 +42,24 @@ void level1_Initialize()
         return;
     }
     if (engine && engine->GetImGuiSystem()) {
-        engine->GetImGuiSystem()->Enable();
+        engine->GetImGuiSystem()->Disable();
         LOG_INFO("MENU", "ImGui disabled in menu");
     }
     engine->SetPlaying(true);
 
-	GraphicsSystemV2* graphics = engine->GetGraphicsSystem();
+    auto graphics = engine->GetGraphicsSystem();
     if (!graphics) {
         LOG_ERROR("LEVEL1", "Graphics system is null!");
         return;
 	}
 
-    EntitySpawner* spawner = engine->GetSpawner();
+    auto spawner = engine->GetSpawner();
     if (!spawner) {
         LOG_ERROR("LEVEL1", "Spawner is null!");
         return;
     }
 
-    PlayerControllerSystem* playerControll = engine->GetPlayerController();
+    auto playerControll = engine->GetPlayerController();
     if (!playerControll) {
         LOG_ERROR("LEVEL1", "playerControll is null!");
         return;
@@ -75,7 +68,7 @@ void level1_Initialize()
     // ========================================================================
     // Spawn Player - Save the returned entity ID
     // ========================================================================
-    Framework::Entity playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+    auto playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
 
     //------------------------------------------------------------------
     //  SPRITE ANIMATION SETUP FOR PLAYER (config-driven)
@@ -113,11 +106,13 @@ void level1_Initialize()
 
         // Renderable
         auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
+        rend.visible = true;
+        rend.layer = 1;
 
         // Transform
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
-        xform.upperLimit = 2.0f;
-        xform.lowerLimit = 0.5f;
+        xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
+        xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
     }
 
 	graphics->SetFollowTarget(playerEntity);
@@ -141,9 +136,13 @@ void level1_Initialize()
 void level1_Update()
 {
     if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_2))
     {
         next = mainMenu;
+    }else if (engine && engine->GetInputSystem() &&
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_6))
+    {
+        next = LEVEL_2;
     }
 }
 

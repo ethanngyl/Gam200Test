@@ -602,6 +602,11 @@ namespace Framework {
         audioSystem = audio;
     }
 
+    void ImGuiSystem::SetGraphicsSystem(GraphicsSystemV2* graphics)
+    {
+        graphicsSystem = graphics;
+    }
+
     // ============================================================================
     // UI WINDOWS - WITH ## UNIQUE IDS
     // ============================================================================
@@ -769,6 +774,13 @@ namespace Framework {
                 std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
         }
+
+        ImGui::BeginDisabled();
+        {
+            auto p = graphicsSystem->GetCamera().GetPosition();
+            ImGui::DragFloat2("Cam Pos", glm::value_ptr(p));
+        }
+        ImGui::EndDisabled();
 
         ImGui::End();
     }
