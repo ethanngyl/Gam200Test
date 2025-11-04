@@ -47,6 +47,7 @@ namespace Framework
         , audioSystem(nullptr)
         , animationSystem(nullptr)
         , uiSystem(nullptr)
+		, pathfindingSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
     {
@@ -124,6 +125,7 @@ namespace Framework
         audioSystem = new AudioSystem();
         animationSystem = new AnimationSystem();
         uiSystem = new UISystem(this);
+		pathfindingSystem = new PathfindingSystem();
 
         LOG_INFO("CORE", " All systems created");
     }
@@ -142,6 +144,8 @@ namespace Framework
         imguiSystem->SetEntityManager(entityManager);
         audioSystem->SetEntityManager(entityManager);
         animationSystem->SetEntityManager(entityManager);
+        pathfindingSystem->SetEntityManager(entityManager);
+
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -192,6 +196,7 @@ namespace Framework
         AddSystem(audioSystem);
         AddSystem(animationSystem);
         AddSystem(uiSystem);
+		AddSystem(pathfindingSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -253,6 +258,7 @@ namespace Framework
         audioSystem = nullptr;
         animationSystem = nullptr;
         uiSystem = nullptr;
+		pathfindingSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {

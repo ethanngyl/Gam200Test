@@ -54,6 +54,9 @@ namespace Framework {
         GLFWwindow* window;
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
+        Entity playerEntity;
+        AudioSystem* audioSystem;
+
 
         //jiahao
         //the below 2 std::string are used to record the file path
@@ -62,7 +65,6 @@ namespace Framework {
         std::string openPath;
 		std::string defaultLevelPath = "assets/defaultLevel.txt";
 
-        AudioSystem* audioSystem;
         // UI Windows
         void ShowEntityInspector();
         void ShowSpawnerWindow();

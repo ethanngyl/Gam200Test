@@ -24,6 +24,8 @@
 
 #pragma once
 #include "Precompiled.h"
+#include "AI/Pathfinding.h"
+#include "AI/Turn.h"
 
 namespace Framework
 {
@@ -41,6 +43,7 @@ namespace Framework
     class AudioSystem;
     class AnimationSystem;
     class UISystem;
+    class PathfindingSystem;
 
     /**
      * @class CoreEngine
@@ -141,6 +144,7 @@ namespace Framework
         AudioSystem* GetAudioSystem() const { return audioSystem; }
         AnimationSystem* GetAnimationSystem() const { return animationSystem; }
         UISystem* GetUISystem() const { return uiSystem; }
+		PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
 
 
         /**
@@ -195,6 +199,7 @@ namespace Framework
         AudioSystem* audioSystem;
         AnimationSystem* animationSystem;
         UISystem* uiSystem;
+		PathfindingSystem* pathfindingSystem;
 
         // state
         unsigned LastTime;

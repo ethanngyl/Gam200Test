@@ -53,6 +53,14 @@ namespace Framework {
         void HandleShootAtMouse(const Vector2D& playerPos);
 
         void HandleClickToMove();
+        void UpdateTilePulseAnimation();
+        void UpdateBorderOutlineAnimation();
+
+        void HandleArrowKeyMovement();
+
+        void StartTilePulse(Framework::Entity tileEntity, float pulseScale, DWORD pulseDurationMs);
+        void ShowBorderOutline(const GridCoord& tile, float thicknessFraction, DWORD durationMs);
+
 
         // ========================================================================
         // ENTITY SPAWNING HANDLERS (Debug/Testing)
