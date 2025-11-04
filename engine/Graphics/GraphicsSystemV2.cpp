@@ -36,6 +36,7 @@ namespace Framework {
         , debugRenderingEnabled(false)
         , currentBoundMaterial(INVALID_MATERIAL_HANDLE)
         , currentBoundShader(INVALID_SHADER_HANDLE)
+        , meshFactory()
     {
         std::cout << "GraphicsSystemV2: Constructor\n";
     }
@@ -781,6 +782,8 @@ namespace Framework {
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
         if (commands.empty()) return;
+        //glEnable(GL_BLEND);
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         // Camera matrices
         glm::mat4 projection = mainCamera.GetProjectionMatrix();

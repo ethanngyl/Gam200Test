@@ -227,6 +227,7 @@ namespace Framework {
 
     void Mesh::DrawInstanced(const std::vector<glm::mat4>& instanceMatrices, GLsizei instanceCount) const
     {
+        UNREFERENCED_PARAMETER(instanceMatrices);
         Bind();
         if (useIndices)
             glDrawElementsInstanced(drawMode, indexCount, GL_UNSIGNED_INT, 0, instanceCount);
