@@ -3,7 +3,7 @@
  File:           AnimationSystem.h
  Author:         TAN WEI LEONG
  Email:          weileong.tan@digipen.edu
- Date:           2025-10-29
+ Date:           2025-11-04
  ------------------------------------------------------------------------------
 ANIMATION SYSTEM HEADER
 

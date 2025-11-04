@@ -118,8 +118,8 @@ void level1_Initialize()
 
         // Transform
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
-        xform.upperLimit = 2.0f;
-        xform.lowerLimit = 0.5f;
+        xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
+        xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
     }
 
 	graphics->SetFollowTarget(playerEntity);

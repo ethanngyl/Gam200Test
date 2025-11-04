@@ -723,7 +723,7 @@ namespace Framework {
             // ---------- Transform ----------
             glm::mat4 model(1.0f);
             model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
-            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
+            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1});
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
             cmd.modelMatrix = model;
 
@@ -797,8 +797,7 @@ namespace Framework {
             if (cmd.material != currentBoundMaterial) {
                 // If Succeed, Bound new Material, Bound new Shader, Bound new Texture
                 // ASC TA: For now, Remove the binding of material texture, and use binding of cmd.texture instead
-                if (BindMaterial(cmd.material, cmd.tint))
-                {
+                if (BindMaterial(cmd.material, cmd.tint)) {
                     currentBoundMaterial = cmd.material;
                     stats.materialSwitches++;
                 }
