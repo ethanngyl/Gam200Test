@@ -26,7 +26,7 @@ Usage:
     1. Create AnimationSystem instance
     2. Set EntityManager using SetEntityManager()
     3. System automatically processes entities with SpriteAnimation component
-    4. Send messages for external control (e.g., KEY_0 to restart)
+    4. Send messages for external control (Not in use)
 
 Example:
     AnimationSystem* animSystem = new AnimationSystem();
@@ -134,9 +134,6 @@ namespace Framework {
          *
          * @param message Pointer to the incoming message object
          *        Contains message ID and optional data payload
-         *
-         * Currently Supported Messages:
-         * - KEY_0: Resets all animations to first frame
         ===============================================================================
          */
 		virtual void SendEngineMessage(Message* message) override;
