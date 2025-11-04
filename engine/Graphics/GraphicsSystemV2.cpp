@@ -730,7 +730,7 @@ namespace Framework {
             // ---------- Transform ----------
             glm::mat4 model(1.0f);
             model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
-            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
+            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1});
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
             cmd.modelMatrix = model;
 

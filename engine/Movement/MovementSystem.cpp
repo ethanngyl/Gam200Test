@@ -109,12 +109,12 @@ namespace Framework
                 }
 
                 // === SCALING ===
-                if (inputSystem->IsKeyDown(KEY_6)) {
+                if (inputSystem->IsKeyDown(KEY_3)) {
                     transform.scale.x += scale_multiplier * dt;
                     transform.scale.y += scale_multiplier * dt;
                 }
 
-                if (inputSystem->IsKeyDown(KEY_7)) {
+                if (inputSystem->IsKeyDown(KEY_4)) {
                     transform.scale.x -= scale_multiplier * dt;
                     transform.scale.y -= scale_multiplier * dt;
                 }
@@ -124,11 +124,11 @@ namespace Framework
                 transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
 
                 // === ROTATION ===
-                if (inputSystem->IsKeyDown(KEY_3)) {
+                if (inputSystem->IsKeyDown(KEY_7)) {
                     transform.rotation += rotation_angle * dt;
                 }
 
-                if (inputSystem->IsKeyDown(KEY_4)) {
+                if (inputSystem->IsKeyDown(KEY_8)) {
                     transform.rotation -= rotation_angle * dt;
                 }
 

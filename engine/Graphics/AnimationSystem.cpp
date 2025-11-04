@@ -3,7 +3,7 @@
  File:           AnimationSystem.cpp
  Author:         TAN WEI LEONG
  Email:          weileong.tan@digipen.edu
- Date:           2025-10-29
+ Date:           2025-11-04
  ------------------------------------------------------------------------------
 ANIMATION SYSTEM IMPLEMENTATION
 
@@ -122,10 +122,9 @@ namespace Framework {
 			if (entityManager->HasComponent<Movement>(e)) {
 				auto& move = entityManager->GetComponent<Movement>(e);
 
-				// If NOT moving → idle still frame
-				//Critical Bug** max_static_threshold not being set to 0.001 -> FIXED by Wei Liang
+				// If not moving → idle still frame
 				if (fabs(move.direction.x) < max_static_threshold && fabs(move.direction.y) < max_static_threshold) {
-					continue;               // do NOT animate
+					continue;               // do not animate
 				}
 			}
 

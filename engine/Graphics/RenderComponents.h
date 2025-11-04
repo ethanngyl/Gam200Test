@@ -77,7 +77,7 @@ namespace Framework {
         int rows = 0;
         float frameTime = 0.0f;    // Time per frame
         float elapsedTime = 0.0f;
-        float uvShrinkPx = 1.0f;
+        float uvShrinkPx = 0.0f;
         bool loop = true;
         bool playing = true;
         bool flipX = false;
