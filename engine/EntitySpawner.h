@@ -63,6 +63,10 @@ namespace Framework {
 
             entityManager->AddComponent<Sprite>(entity);
             entityManager->GetComponent<Sprite>(entity).texturePath = spriteName;
+            auto& mr = entityManager->AddComponent<MeshRenderer>(entity);
+            mr.spriteName = spriteName;  // may be "player.png" or "quad" etc. 
+            mr.visible = true;
+            mr.tint = glm::vec4(1.0f);
 
             std::cout << "[EntitySpawner] Spawned sprite: " << spriteName << "\n";
             return entity;
@@ -90,7 +94,9 @@ namespace Framework {
          * @brief Spawn an enemy entity 
          */
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
-            Entity enemy = SpawnSprite("quad", position, Vector2D(0.1f, 0.1f));
+            (void)moveSpeed; // silence unused variable warning
+
+            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
 
             //entityManager->AddComponent<Movement>(enemy);
             //auto& movement = entityManager->GetComponent<Movement>(enemy);

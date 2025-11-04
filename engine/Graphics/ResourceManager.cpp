@@ -101,6 +101,8 @@ namespace Framework {
                                                  int width, int height,
                                                  int channels,
                                                  const unsigned char* data) {
+        (void)data, channels, height, width; // silence unused variable warning
+
         std::lock_guard<std::mutex> lock(resourceMutex);
 
         // Create texture (implementation would need to be added to Texture class)

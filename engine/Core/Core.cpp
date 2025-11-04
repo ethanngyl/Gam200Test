@@ -1,5 +1,4 @@
-/**
-
+/*
 ===============================================================================
  File:           Core.cpp
  Author:         ETHAN NG YONG LE
@@ -30,6 +29,21 @@ namespace Framework
     CoreEngine* CORE = nullptr;
 
     CoreEngine::CoreEngine()
+        : entityManager(nullptr)
+        , windowSystem(nullptr)
+        , graphicsSystem(nullptr)
+        , inputSystem(nullptr)
+        , collisionSystem(nullptr)
+        , movementSystem(nullptr)
+        , projectileSystem(nullptr)
+        , spawner(nullptr)
+        , playerController(nullptr)
+        , imguiSystem(nullptr)
+        , audioSystem(nullptr)
+        , animationSystem(nullptr)
+        , uiSystem(nullptr)
+        , LastTime(0)
+        , GameActive(true)
     {
         LastTime = 0;
         GameActive = true;
@@ -39,6 +53,149 @@ namespace Framework
     CoreEngine::~CoreEngine()
     {
     }
+
+    // ========================================================================
+    // Initialize all systems with one click
+    // ========================================================================
+
+    bool CoreEngine::InitializeAllSystems()
+    {
+        LOG_INFO("CORE", "================================================");
+        LOG_INFO("CORE", " CoreEngine: Initializing All Systems");
+        LOG_INFO("CORE", "================================================");
+
+        try {
+            // Create all systems
+            CreateAllSystems();
+
+            // Connect system dependencies
+            WireSystemDependencies();
+
+            // Initialize key systems
+            InitializeCriticalSystems();
+
+            // Add the system to the engine
+            AddSystemsToEngine();
+
+            // Initialize the remaining systems
+            Initialize();
+
+            if (audioSystem) {
+                LOG_INFO("CORE", "Loading test audio...");
+                bool loaded = audioSystem->LoadSound("assets/leaves.wav", "leaves");
+                if (loaded) {
+                    LOG_INFO("CORE", "Test audio 'leaves' loaded successfully");
+                }
+                else {
+                    LOG_WARN("CORE", "Failed to load test audio");
+                }
+            }
+
+
+            LOG_INFO("CORE", "================================================");
+            LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
+            LOG_INFO("CORE", "================================================");
+
+            return true;
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR("CORE", "Failed to initialize systems: %s", e.what());
+            return false;
+        }
+    }
+
+    void CoreEngine::CreateAllSystems()
+    {
+        LOG_INFO("CORE", "[1/5] Creating engine systems...");
+
+        entityManager = new EntityManager();
+        windowSystem = new WindowSystem();
+        graphicsSystem = new GraphicsSystemV2();
+        inputSystem = new InputSystem();
+        collisionSystem = new CollisionSystem();
+        movementSystem = new MovementSystem();
+        projectileSystem = new ProjectileMovementSystem();
+        spawner = new EntitySpawner();
+        playerController = new PlayerControllerSystem();
+        imguiSystem = new ImGuiSystem();
+        audioSystem = new AudioSystem();
+        animationSystem = new AnimationSystem();
+        uiSystem = new UISystem(this);
+
+        LOG_INFO("CORE", " All systems created");
+    }
+
+    void CoreEngine::WireSystemDependencies()
+    {
+        LOG_INFO("CORE", "[2/5] Wiring system dependencies...");
+
+        // Wire EntityManager
+        movementSystem->SetEntityManager(entityManager);
+        projectileSystem->SetEntityManager(entityManager);
+        graphicsSystem->SetEntityManager(entityManager);
+        collisionSystem->SetEntityManager(entityManager);
+        spawner->SetEntityManager(entityManager);
+        playerController->SetEntityManager(entityManager);
+        imguiSystem->SetEntityManager(entityManager);
+        audioSystem->SetEntityManager(entityManager);
+        animationSystem->SetEntityManager(entityManager);
+
+        // Wire InputSystem
+        playerController->SetInputSystem(inputSystem);
+        movementSystem->SetInputSystem(inputSystem);
+        collisionSystem->SetInput(inputSystem);
+        playerController->SetEntitySpawner(spawner);
+
+        // Wire AudioSystem to ImGuiSystem
+        imguiSystem->SetAudioSystem(audioSystem);
+
+        LOG_INFO("CORE", "Dependencies wired");
+    }
+
+    void CoreEngine::InitializeCriticalSystems()
+    {
+        LOG_INFO("CORE", "[3/5] Initializing critical systems...");
+
+        // Initialize WindowSystem first
+        windowSystem->Initialize();
+        LOG_INFO("CORE", "WindowSystem initialized");
+
+        // Set window dependencies
+        graphicsSystem->SetWindow(windowSystem->GetWindow());
+        imguiSystem->SetWindow(windowSystem->GetWindow());
+        imguiSystem->SetEntitySpawner(spawner);
+        playerController->SetWindow(windowSystem->GetWindow());
+        LOG_INFO("CORE", "Window dependencies set");
+
+        // Initialize GraphicsSystem
+        graphicsSystem->Initialize();
+        LOG_INFO("CORE", "GraphicsSystem initialized");
+    }
+
+    void CoreEngine::AddSystemsToEngine()
+    {
+        LOG_INFO("CORE", "[4/5] Adding systems to engine...");
+
+        // Add in specific order
+        AddSystem(windowSystem);
+        AddSystem(inputSystem);
+        AddSystem(spawner);
+        AddSystem(playerController);
+        AddSystem(movementSystem);
+        AddSystem(collisionSystem);
+        AddSystem(projectileSystem);
+        AddSystem(graphicsSystem);
+        AddSystem(imguiSystem);
+        AddSystem(audioSystem);
+        AddSystem(animationSystem);
+        AddSystem(uiSystem);
+
+        LOG_INFO("CORE", "%zu systems added", Systems.size());
+    }
+
+    // ========================================================================
+    // Original Initialize (initialize the remaining systems)
+    // ========================================================================
 
     void CoreEngine::Initialize()
     {
@@ -154,6 +311,19 @@ namespace Framework
 
             // End perf frame
             eng::debug::PerfViewer::end_frame();
+        // Clear system pointers
+        windowSystem = nullptr;
+        inputSystem = nullptr;
+        spawner = nullptr;
+        playerController = nullptr;
+        movementSystem = nullptr;
+        collisionSystem = nullptr;
+        projectileSystem = nullptr;
+        graphicsSystem = nullptr;
+        imguiSystem = nullptr;
+        audioSystem = nullptr;
+        animationSystem = nullptr;
+        uiSystem = nullptr;
 
             // FPS counter
             fps.tick_with_dt(static_cast<double>(dt));

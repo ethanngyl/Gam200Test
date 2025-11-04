@@ -1,4 +1,4 @@
-/**
+/*
 ===============================================================================
  File:           Core.h
  Author:         ETHAN NG YONG LE
@@ -21,9 +21,24 @@
 
 namespace Framework
 {
+    // Forward declaration
+    class EntityManager;
+    class WindowSystem;
+    class GraphicsSystemV2;
+    class InputSystem;
+    class CollisionSystem;
+    class MovementSystem;
+    class ProjectileMovementSystem;
+    class EntitySpawner;
+    class PlayerControllerSystem;
+    class ImGuiSystem;
+    class AudioSystem;
+    class AnimationSystem;
+    class UISystem;
+
     /**
      * @class CoreEngine
-     * @brief Central orchestrator for the game engine
+     * @brief Enhanced Core Engine - Integrates initialization, update, and cleanup functions
      *
      * The CoreEngine manages:
      * - Main game loop execution and frame timing
@@ -57,17 +72,66 @@ namespace Framework
          * 1. WindowSystem initialization
          * 2. GraphicsSystem window assignment
          * 3. Remaining systems initialization
+         * @note This replaces ShouldWindowClose() in main.cpp
+        */
+        bool ShouldWindowClose() const;
+
+        // ====================================================================
+        // Single frame update (GSM friendly)
+        // ====================================================================
+
+        /**
+         * @brief Update all systems for one frame
+         * @param dt Delta time in seconds
+         *
+         * @note This is for the GSM loop and does not include its own infinite loop.
+        */
+        void UpdateSingleFrame(float dt);
+
+        // ====================================================================
+        // State Access
+        // ====================================================================
+
+        /**
+         * @brief Check if the engine is active
+         * @return true if the engine should continue running
+        */
+        bool IsActive() const { return GameActive; }
+
+        /**
+         * @brief Set the engine active state
+         * @param active The new active state
+         */
+        void SetActive(bool active) { GameActive = active; }
+
+        // ====================================================================
+        // System accessor (for external access)
+        // ====================================================================
+
+        EntityManager* GetEntityManager() const { return entityManager; }
+        WindowSystem* GetWindowSystem() const { return windowSystem; }
+        GraphicsSystemV2* GetGraphicsSystem() const { return graphicsSystem; }
+        InputSystem* GetInputSystem() const { return inputSystem; }
+        CollisionSystem* GetCollisionSystem() const { return collisionSystem; }
+        MovementSystem* GetMovementSystem() const { return movementSystem; }
+        ProjectileMovementSystem* GetProjectileSystem() const { return projectileSystem; }
+        EntitySpawner* GetSpawner() const { return spawner; }
+        PlayerControllerSystem* GetPlayerController() const { return playerController; }
+        ImGuiSystem* GetImGuiSystem() const { return imguiSystem; }
+        AudioSystem* GetAudioSystem() const { return audioSystem; }
+        AnimationSystem* GetAnimationSystem() const { return animationSystem; }
+        UISystem* GetUISystem() const { return uiSystem; }
+
+
+        /**
+         * @brief Initializes the added system
+         * @note Usually does not need to be called manually, InitializeAllSystems() will call it
          */
         void Initialize();
 
         /**
-         * @brief Main game loop that runs until termination
-         *
-         * Executes each frame:
-         * - Calculates delta time
-         * - Checks for window close
-         * - Updates all systems
-         * - Monitors performance metrics
+         * @brief Add a system to the engine
+         * @param system System pointer
          */
         void GameLoop();
 
@@ -101,6 +165,22 @@ namespace Framework
         std::vector<EngineSystem*> Systems;
 
         // Timing
+        // Pointers to various systems (for easy management)
+        EntityManager* entityManager;
+        WindowSystem* windowSystem;
+        GraphicsSystemV2* graphicsSystem;
+        InputSystem* inputSystem;
+        CollisionSystem* collisionSystem;
+        MovementSystem* movementSystem;
+        ProjectileMovementSystem* projectileSystem;
+        EntitySpawner* spawner;
+        PlayerControllerSystem* playerController;
+        ImGuiSystem* imguiSystem;
+        AudioSystem* audioSystem;
+        AnimationSystem* animationSystem;
+        UISystem* uiSystem;
+
+        // state
         unsigned LastTime;
 
         // Game state

@@ -42,6 +42,13 @@ file(COPY "${CMAKE_SOURCE_DIR}/assets"
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
 "engine/main.cpp")
 
+# MSVC-only: disable noisy integer conversion warnings
+#  - C4244: converting larger numeric types to smaller ones (possible loss of data)
+#  - C4267: converting size_t (64-bit) to smaller integer types
+if (MSVC)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /wd4244 /wd4267)
+endif()
+
 # ======================= Linking =========================
 
 # Link libraries (fixed syntax)
