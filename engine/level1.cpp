@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          level1.cpp
  Author:        GE YONGQI
@@ -11,7 +11,7 @@
   Design notes:
      - Spawns the player, enemies, and sets up gameplay entities
      - Links the PlayerControllerSystem to the spawned player entity
-     - Uses the CoreEngine�s GraphicsSystemV2 for camera tracking
+     - Uses the CoreEngine GraphicsSystemV2 for camera tracking
 ===============================================================================
 */
 
@@ -19,7 +19,6 @@
 
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
-#include "ConfigReader/ConfigReader.h"
 #include "ImguiSystem.h"
 
 
@@ -136,7 +135,7 @@ void level1_Initialize()
 void level1_Update()
 {
     if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_2))
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
         next = mainMenu;
     }else if (engine && engine->GetInputSystem() &&
@@ -148,9 +147,60 @@ void level1_Update()
 
 void level1_Draw()
 {
-    // Only responsible for rendering related matters
-    // Do not create entities here
-    //LOG_INFO("MENU", "=== level1 Draw ===");
+    if (!engine) return;
+
+    auto graphics = engine->GetGraphicsSystem();
+    if (!graphics) return;
+
+    // ========================================================================
+    // Read UI text settings from configuration file
+    // ========================================================================
+
+    // Font
+    std::string fontLarge = ConfigReader::GetString("lv1_ui_font_large", "Sans48");
+
+    // Text content
+    std::string textScaling = ConfigReader::GetString("lv1_text_scaling", "Scaling Button: 3 & 4");
+    std::string textRotation = ConfigReader::GetString("lv1_text_rotation", "Rotation Button: 7 & 8");
+    std::string textMovement = ConfigReader::GetString("lv1_text_movement", "Character Movement: W A S D");
+    std::string textMenu = ConfigReader::GetString("lv1_text_menu", "Back to Menu: 5");
+    std::string textNextLevel = ConfigReader::GetString("lv1_text_next_level", "Next Level: 6");
+
+    // Location
+    float textX = ConfigReader::GetFloat("lv1_ui_text_x", 50.0f);
+    float textScalingY = ConfigReader::GetFloat("lv1_ui_text_scaling_y", 650.0f);
+    float textRotationY = ConfigReader::GetFloat("lv1_ui_text_rotation_y", 550.0f);
+    float textMovementY = ConfigReader::GetFloat("lv1_ui_text_movement_y", 450.0f);
+    float textMenuY = ConfigReader::GetFloat("lv1_ui_text_menu_y", 350.0f);
+    float textNextLevelY = ConfigReader::GetFloat("lv1_ui_text_next_level_y", 250.0f);
+
+    // Scaling and color
+    float textScale = ConfigReader::GetFloat("lv1_ui_text_scale", 1.0f);
+    float colorR = ConfigReader::GetFloat("lv1_ui_text_color_r", 1.0f);
+    float colorG = ConfigReader::GetFloat("lv1_ui_text_color_g", 1.0f);
+    float colorB = ConfigReader::GetFloat("lv1_ui_text_color_b", 1.0f);
+    glm::vec3 textColor(colorR, colorG, colorB);
+
+    // ========================================================================
+    // Render UI text (using values ​​from the configuration file)
+    // ========================================================================
+
+    graphics->DrawText4(fontLarge, textScaling,
+        textX, textScalingY, textScale, textColor);
+
+    graphics->DrawText4(fontLarge, textRotation,
+        textX, textRotationY, textScale, textColor);
+
+    graphics->DrawText4(fontLarge, textMovement,
+        textX, textMovementY, textScale, textColor);
+
+    graphics->DrawText4(fontLarge, textMenu,
+        textX, textMenuY, textScale, textColor);
+
+    graphics->DrawText4(fontLarge, textNextLevel,
+        textX, textNextLevelY, textScale, textColor);
+
+    
 }
 
 void level1_Free()
