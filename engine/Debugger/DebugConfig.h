@@ -1,10 +1,14 @@
 /**
 ===============================================================================
- File:           DebugConfig.h
+ File:          DebugConfig.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
  Description:    Debug system configuration manager
                  Reads debug settings from game_config.txt and initializes
                  all debug systems in one call
- Date:           2025-01-01
 ===============================================================================
  */
 

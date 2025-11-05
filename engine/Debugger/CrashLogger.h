@@ -28,6 +28,7 @@
    - Reports crash reason and code (if SEH).
    - Captures a call stack (with file:line info if PDB symbols are available).
    - Guarantees a file is written before process termination.
+   - Configurable through game_config.txt using ConfigReader.
 ===============================================================================
 */
 
@@ -37,12 +38,36 @@
 namespace eng::debug {
 	class CrashLogger {
 	public:
+		// Configuration structure for crash logger (For Defensive Programming)
+		struct Config {
+			bool enabled = true;
+			std::string reportPrefix = "crash_";
+			std::string reportExtension = ".txt";
+			std::string reportDirectory = ".";
+			int maxStackFrames = 64;
+			int skipFrames = 0;
+			int symbolBufferSize = 256;
+			int maxSymbolNameLength = 255;
+			std::string separatorLine = "--------------------------------------------------";
+		};
+
 		// Install the terminate handler and SEH filter (Windows only).
+		// Automatically loads configuration from ConfigReader if available.
 		static void install_handlers();
+
+		// Load configuration from ConfigReader
+		// Call this before install_handlers() to customize settings
+		static void load_config();
+
+		// Get current configuration
+		static const Config& get_config() { return config_; }
 
 		// Force a crash for testing (currently writes through a null pointer).
 		static void force_crash_for_test();
 	private:
+		// Configuration instance
+		static Config config_;
+
 		// Internal helper: write a crash report file and mirror a log line.
 		static void write_report_(const char* title, const char* detail);
 
