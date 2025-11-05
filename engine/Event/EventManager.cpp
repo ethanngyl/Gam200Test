@@ -20,6 +20,7 @@ namespace framework {
     }
 
     void EventSystem::Update(float dt) {
+        UNREFERENCED_PARAMETER(dt);
         // Process all queued events this frame
         ProcessEvents();
     }
@@ -39,6 +40,8 @@ namespace framework {
     }
 
     void EventSystem::Unsubscribe(const std::string& eventType, EventCallback callback) {
+        UNREFERENCED_PARAMETER(callback);
+
         // Find the event type
         auto it = m_subscribers.find(eventType);
         if (it != m_subscribers.end()) {

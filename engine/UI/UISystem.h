@@ -17,13 +17,12 @@
      - Button creation API supporting callbacks and custom tint states
      - DPI-aware coordinate transformation for consistent input detection
      - Integrated with engine systems (InputSystem, GraphicsSystem, EntityManager)
+     - Configurable default visual properties via game_config.txt
 ===============================================================================
 */
 
-
 #pragma once
 #include "Precompiled.h"
-
 
 namespace Framework {
 
@@ -52,7 +51,7 @@ namespace Framework {
         bool isHovered;             // Mouse is over button
         bool isPressed;             // Button is being pressed
         bool isEnabled;             // Button can be interacted with
-        int layer;                  // Rendering layer (default: 10)
+        int layer;                  // Rendering layer
 
         // Visual properties
         glm::vec4 normalTint;       // Normal state color
@@ -93,6 +92,17 @@ namespace Framework {
      */
     class UISystem : public EngineSystem {
     public:
+        /**
+         * @brief Configuration structure for UI system defaults
+         */
+        struct Config {
+            int defaultLayer = 10;
+            glm::vec4 defaultNormalTint = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+            glm::vec4 defaultHoverTint = glm::vec4(1.2f, 1.2f, 1.2f, 1.0f);
+            glm::vec4 defaultPressedTint = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
+            glm::vec4 defaultDisabledTint = glm::vec4(0.5f, 0.5f, 0.5f, 0.5f);
+        };
+
         UISystem(CoreEngine* engine);
         virtual ~UISystem();
 
@@ -104,11 +114,25 @@ namespace Framework {
         virtual void SendEngineMessage(Message* message) override;
 
         // ====================================================================
+        // CONFIGURATION
+        // ====================================================================
+
+        /**
+         * @brief Load configuration from ConfigReader
+         */
+        void LoadConfig();
+
+        /**
+         * @brief Get current configuration
+         */
+        const Config& GetConfig() const { return config_; }
+
+        // ====================================================================
         // BUTTON CREATION API
         // ====================================================================
 
         /**
-         * @brief Create a new button
+         * @brief Create a new button with default visual settings
          * @param texturePath Path to button texture
          * @param position Button center position in world space
          * @param size Button size (width, height)
@@ -182,11 +206,15 @@ namespace Framework {
         CoreEngine* engine;
         std::vector<std::unique_ptr<UIButton>> buttons;
         bool isEnabled;
+        Config config_;
 
         // Helper functions
         void UpdateButton(UIButton* button, const Vector2D& mouseWorld);
         void UpdateButtonVisuals(UIButton* button);
         void SpawnButtonEntity(UIButton* button);
+
+        // Apply default configuration to a button
+        void ApplyDefaultConfig(UIButton* button);
     };
 
 } // namespace Framework

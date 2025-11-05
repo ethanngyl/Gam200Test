@@ -6,28 +6,28 @@
  Date:          2025-10-31
  Contribution:  100%
  ------------------------------------------------------------------------------
-  Universal UI System (implementation)
+  Universal UI System
 
   Design notes:
      - Provides a centralized UI management layer integrated with the engine
      - Maintains button lifecycle (create, update, remove, clear)
      - Uses world-space positions for flexible layout in gameplay scenes
+     - Loads default visual properties from game_config.txt
 
   Technical details:
      - Converts mouse coordinates from screen to world space with DPI correction
      - Updates button visual states based on hover, press, or disable state
      - Logs all major UI interactions via the Log system
+     - Applies configurable default tints to newly created buttons
 
   Thread-safety:
      - Operates on the main thread only; no synchronization required
 ===============================================================================
 */
 
-
 #include "Precompiled.h"
-
+#include "ConfigReader.h"
 #include "EntitySpawner.h"
-
 
 namespace Framework {
 
@@ -54,7 +54,17 @@ namespace Framework {
 
     void UISystem::Initialize()
     {
+        // Load configuration
+        LoadConfig();
+
         LOG_INFO("UI", "UISystem initialized");
+        LOG_INFO("UI", "  Default layer: %d", config_.defaultLayer);
+        LOG_INFO("UI", "  Default normal tint: (%.2f, %.2f, %.2f, %.2f)",
+            config_.defaultNormalTint.r, config_.defaultNormalTint.g,
+            config_.defaultNormalTint.b, config_.defaultNormalTint.a);
+        LOG_INFO("UI", "  Default hover tint: (%.2f, %.2f, %.2f, %.2f)",
+            config_.defaultHoverTint.r, config_.defaultHoverTint.g,
+            config_.defaultHoverTint.b, config_.defaultHoverTint.a);
     }
 
     void UISystem::Update(float dt)
@@ -115,6 +125,81 @@ namespace Framework {
     }
 
     // ========================================================================
+    // CONFIGURATION
+    // ========================================================================
+
+    void UISystem::LoadConfig()
+    {
+        // Ensure ConfigReader is loaded
+        if (!ConfigReader::IsConfigLoaded()) {
+            ConfigReader::LoadConfig();
+        }
+
+        // Load default layer
+        config_.defaultLayer = ConfigReader::GetInt("ui_button_default_layer", 10);
+
+        // Load normal tint
+        config_.defaultNormalTint = glm::vec4(
+            ConfigReader::GetFloat("ui_button_normal_tint_r", 1.0f),
+            ConfigReader::GetFloat("ui_button_normal_tint_g", 1.0f),
+            ConfigReader::GetFloat("ui_button_normal_tint_b", 1.0f),
+            ConfigReader::GetFloat("ui_button_normal_tint_a", 1.0f)
+        );
+
+        // Load hover tint
+        config_.defaultHoverTint = glm::vec4(
+            ConfigReader::GetFloat("ui_button_hover_tint_r", 1.2f),
+            ConfigReader::GetFloat("ui_button_hover_tint_g", 1.2f),
+            ConfigReader::GetFloat("ui_button_hover_tint_b", 1.2f),
+            ConfigReader::GetFloat("ui_button_hover_tint_a", 1.0f)
+        );
+
+        // Load pressed tint
+        config_.defaultPressedTint = glm::vec4(
+            ConfigReader::GetFloat("ui_button_pressed_tint_r", 0.9f),
+            ConfigReader::GetFloat("ui_button_pressed_tint_g", 0.9f),
+            ConfigReader::GetFloat("ui_button_pressed_tint_b", 0.9f),
+            ConfigReader::GetFloat("ui_button_pressed_tint_a", 1.0f)
+        );
+
+        // Load disabled tint
+        config_.defaultDisabledTint = glm::vec4(
+            ConfigReader::GetFloat("ui_button_disabled_tint_r", 0.5f),
+            ConfigReader::GetFloat("ui_button_disabled_tint_g", 0.5f),
+            ConfigReader::GetFloat("ui_button_disabled_tint_b", 0.5f),
+            ConfigReader::GetFloat("ui_button_disabled_tint_a", 0.5f)
+        );
+
+        // Clamp all tint values to reasonable range [0.0, 2.0]
+        auto clampVec4 = [](glm::vec4& v) {
+            v.r = std::clamp(v.r, 0.0f, 2.0f);
+            v.g = std::clamp(v.g, 0.0f, 2.0f);
+            v.b = std::clamp(v.b, 0.0f, 2.0f);
+            v.a = std::clamp(v.a, 0.0f, 2.0f);
+            };
+
+        clampVec4(config_.defaultNormalTint);
+        clampVec4(config_.defaultHoverTint);
+        clampVec4(config_.defaultPressedTint);
+        clampVec4(config_.defaultDisabledTint);
+
+        // Clamp layer to reasonable range
+        if (config_.defaultLayer < 0) config_.defaultLayer = 0;
+        if (config_.defaultLayer > 100) config_.defaultLayer = 100;
+    }
+
+    void UISystem::ApplyDefaultConfig(UIButton* button)
+    {
+        if (!button) return;
+
+        button->layer = config_.defaultLayer;
+        button->normalTint = config_.defaultNormalTint;
+        button->hoverTint = config_.defaultHoverTint;
+        button->pressedTint = config_.defaultPressedTint;
+        button->disabledTint = config_.defaultDisabledTint;
+    }
+
+    // ========================================================================
     // BUTTON CREATION
     // ========================================================================
 
@@ -124,11 +209,32 @@ namespace Framework {
         const Vector2D& size,
         ButtonCallback onClick)
     {
-        return CreateButton(
-            texturePath, position, size, onClick,
-            glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),  // Normal
-            glm::vec4(1.2f, 1.2f, 1.2f, 1.0f)   // Hover
-        );
+        if (!engine) {
+            LOG_ERROR("UI", "Engine is null, cannot create button");
+            return nullptr;
+        }
+
+        // Create button object
+        auto button = std::make_unique<UIButton>();
+        button->texturePath = texturePath;
+        button->position = position;
+        button->size = size;
+        button->onClick = onClick;
+
+        // Apply default configuration
+        ApplyDefaultConfig(button.get());
+
+        // Spawn entity
+        SpawnButtonEntity(button.get());
+
+        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f)",
+            position.x, position.y, size.x, size.y);
+
+        // Store button and return raw pointer
+        UIButton* rawPtr = button.get();
+        buttons.push_back(std::move(button));
+
+        return rawPtr;
     }
 
     UIButton* UISystem::CreateButton(
@@ -150,13 +256,18 @@ namespace Framework {
         button->position = position;
         button->size = size;
         button->onClick = onClick;
+
+        // Apply default configuration first
+        ApplyDefaultConfig(button.get());
+
+        // Then override with custom tints
         button->normalTint = normalTint;
         button->hoverTint = hoverTint;
 
         // Spawn entity
         SpawnButtonEntity(button.get());
 
-        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f)",
+        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f) with custom tints",
             position.x, position.y, size.x, size.y);
 
         // Store button and return raw pointer
@@ -376,7 +487,6 @@ namespace Framework {
             renderable.layer = button->layer;
             renderable.tint = button->normalTint;
         }
-
     }
 
 } // namespace Framework

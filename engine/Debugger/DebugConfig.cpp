@@ -1,6 +1,11 @@
 /**
 ===============================================================================
- File:           DebugConfig.cpp
+ File:          DebugConfig.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
  Description:    Debug system configuration manager implementation
 ===============================================================================
  */
@@ -166,8 +171,17 @@ namespace Framework {
         );
 
         if (enabled) {
+            // Install crash handlers (will automatically load configuration)
             eng::debug::CrashLogger::install_handlers();
+
+            // Get and display configuration
+            const auto& config = eng::debug::CrashLogger::get_config();
+
             LOG_INFO("DEBUG", "Crash logger installed");
+            LOG_INFO("DEBUG", "  Report prefix: %s", config.reportPrefix.c_str());
+            LOG_INFO("DEBUG", "  Report extension: %s", config.reportExtension.c_str());
+            LOG_INFO("DEBUG", "  Output directory: %s", config.reportDirectory.c_str());
+            LOG_INFO("DEBUG", "  Max stack frames: %d", config.maxStackFrames);
         }
         else {
             LOG_INFO("DEBUG", "Crash logger disabled");
