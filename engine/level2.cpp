@@ -27,13 +27,11 @@ extern Framework::CoreEngine* engine;
 
 void level2_Load()
 {
-    LOG_INFO("LEVEL2", "=== Level2 Load ===");
+    ConfigReader::LoadConfig("assets/valueloader.txt");
 }
 
 void level2_Initialize()
 {
-    LOG_INFO("LEVEL2", "=== Level2 Initialize ===");
-
 
     if (!engine) {
         LOG_ERROR("LEVEL2", "Engine is null!");
