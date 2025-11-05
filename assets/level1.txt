@@ -2,7 +2,7 @@
 
 entity
 Transform 0.0 -0.5  0.3 0.3
-Sprite circle
+Sprite Bird.png
 Movement 0.20  0.0 0.0
 CircleCollider 0.15  0.0 0.0
 

@@ -1,6 +1,5 @@
 #include "Precompiled.h"
-
-
+#include "ConfigReader.h"
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -16,14 +15,15 @@
  Date:          2025-09-30
  Contribution:  100%
  ------------------------------------------------------------------------------
- Implementation of CrashLogger.
+ Implementation of CrashLogger with ConfigReader integration.
 
  Responsibilities:
    - On install_handlers():
+       * Load configuration from game_config.txt via ConfigReader
        * Register a terminate handler for C++ exceptions.
        * On Windows, also register an SEH filter for hardware faults.
    - When a crash occurs:
-       * Build a filename crash_YYYYMMDD_HHMMSS.txt in exe directory.
+       * Build a filename using configured prefix/extension
        * Write details (title, reason, optional stack trace).
        * Mirror one concise log line ("Crash report written: <path>").
    - force_crash_for_test() deliberately crashes so developers can test the
@@ -34,6 +34,11 @@
      to resolve addresses to function names and file:line if symbols are loaded.
    - On other platforms only very basic info is available.
 
+ Configuration:
+   - All hardcoded values can now be configured via game_config.txt
+   - Uses ConfigReader to load settings at initialization
+   - Falls back to default values if config keys are missing
+
  Safety:
    - Functions are noexcept where practical to ensure that even during a crash,
      we make a best effort to produce a file.
@@ -42,17 +47,29 @@
 
 namespace eng::debug {
 
-    // Helper: return directory of the running executable.
-    static std::string exe_dir_() {
-    #if defined(_WIN32)
+    // ========================================================================
+    // STATIC MEMBER INITIALIZATION
+    // ========================================================================
+    CrashLogger::Config CrashLogger::config_;
+
+    // ========================================================================
+    // HELPER FUNCTIONS
+    // ========================================================================
+
+    // Helper: return directory of the running executable or configured directory.
+    static std::string get_crash_dir_(const std::string& configuredDir) {
+        if (configuredDir != ".") {
+            return configuredDir;
+        }
+#if defined(_WIN32)
         char path[MAX_PATH]{};
         GetModuleFileNameA(nullptr, path, MAX_PATH);
         std::string s(path);
         const size_t pos = s.find_last_of("\\/");
         return (pos == std::string::npos) ? std::string(".") : s.substr(0, pos);
-    #else
+#else
         return ".";
-    #endif
+#endif
     }
 
     // Timestamp helper for filename.
@@ -61,11 +78,11 @@ namespace eng::debug {
         const auto now = system_clock::now();
         const auto t = system_clock::to_time_t(now);
         std::tm tm{};
-    #if defined(_WIN32)
+#if defined(_WIN32)
         localtime_s(&tm, &t);
-    #else
+#else
         localtime_r(&t, &tm);
-    #endif
+#endif
         std::ostringstream oss;
         oss << std::setfill('0')
             << std::setw(4) << (tm.tm_year + 1900)
@@ -77,7 +94,7 @@ namespace eng::debug {
         return oss.str();
     }
 
-    #if defined(_WIN32)
+#if defined(_WIN32)
     // -------------------------------------------------------------------------
     // DbgHelp helpers: initialize symbols and resolve addresses to text.
     // -------------------------------------------------------------------------
@@ -89,14 +106,15 @@ namespace eng::debug {
         inited = true;
     }
 
-    static std::string addr_to_string_(DWORD64 addr) {
+    static std::string addr_to_string_(DWORD64 addr, int symbolBufferSize, int maxSymbolNameLen) {
         init_symbols_();
         HANDLE proc = GetCurrentProcess();
 
-        char buffer[sizeof(SYMBOL_INFO) + 256];
-        PSYMBOL_INFO sym = reinterpret_cast<PSYMBOL_INFO>(buffer);
+        // Use configured buffer size
+        std::vector<char> buffer(sizeof(SYMBOL_INFO) + symbolBufferSize);
+        PSYMBOL_INFO sym = reinterpret_cast<PSYMBOL_INFO>(buffer.data());
         sym->SizeOfStruct = sizeof(SYMBOL_INFO);
-        sym->MaxNameLen = 255;
+        sym->MaxNameLen = maxSymbolNameLen;
 
         std::ostringstream oss;
         DWORD64 disp64 = 0;
@@ -118,59 +136,98 @@ namespace eng::debug {
         return oss.str();
     }
 
-    static std::string capture_stack_(unsigned skipFrames = 0) {
+    static std::string capture_stack_(unsigned skipFrames, int maxFrames, int symbolBufferSize, int maxSymbolNameLen) {
         init_symbols_();
-        void* frames[64];
-        USHORT n = CaptureStackBackTrace(skipFrames + 1, 64 - skipFrames, frames, nullptr);
+
+        // Use configured max frames
+        std::vector<void*> frames(maxFrames);
+        USHORT n = CaptureStackBackTrace(skipFrames + 1, maxFrames - skipFrames, frames.data(), nullptr);
+
         std::ostringstream oss;
         for (USHORT i = 0; i < n; ++i) {
             DWORD64 a = reinterpret_cast<DWORD64>(frames[i]);
-            oss << "  [" << i << "] " << addr_to_string_(a) << "\n";
+            oss << "  [" << i << "] " << addr_to_string_(a, symbolBufferSize, maxSymbolNameLen) << "\n";
         }
         return oss.str();
     }
-    #endif // _WIN32
+#endif // _WIN32
 
-    // -------------------------------------------------------------------------
-    // CrashLogger API
-    // -------------------------------------------------------------------------
+    // ========================================================================
+    // CONFIGURATION LOADING
+    // ========================================================================
+
+    void CrashLogger::load_config() {
+        // Ensure config file is loaded
+        ConfigReader::LoadConfig();
+
+        // Load all configuration values with defaults
+        config_.enabled = ConfigReader::GetBool("debug_crash_logger_enabled", true);
+        config_.reportPrefix = ConfigReader::GetString("crash_report_prefix", "crash_");
+        config_.reportExtension = ConfigReader::GetString("crash_report_extension", ".txt");
+        config_.reportDirectory = ConfigReader::GetString("crash_report_directory", ".");
+        config_.maxStackFrames = ConfigReader::GetInt("crash_max_stack_frames", 64);
+        config_.skipFrames = ConfigReader::GetInt("crash_skip_frames", 0);
+        config_.symbolBufferSize = ConfigReader::GetInt("crash_symbol_buffer_size", 256);
+        config_.maxSymbolNameLength = ConfigReader::GetInt("crash_max_symbol_name_length", 255);
+        config_.separatorLine = ConfigReader::GetString("crash_separator_line", "--------------------------------------------------");
+
+        Log::write(LogLevel::Info, "CRASH", "", 0, "CrashLogger configuration loaded.");
+    }
+
+    // ========================================================================
+    // PUBLIC API
+    // ========================================================================
 
     void CrashLogger::install_handlers() {
-    #if defined(_WIN32)
+        // Load configuration first
+        load_config();
 
+        // Check if crash logger is enabled
+        if (!config_.enabled) {
+            Log::write(LogLevel::Info, "CRASH", "", 0, "CrashLogger is disabled in configuration.");
+            return;
+        }
+
+#if defined(_WIN32)
         // Suppress Windows error dialog boxes to allow auto-logging.
         SetErrorMode(SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS);
 
         // Register our SEH filter.
         SetUnhandledExceptionFilter(reinterpret_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(seh_filter_));
-    #endif
+#endif
         // Register terminate handler for unhandled C++ exceptions.
         std::set_terminate(terminate_handler_);
-        Log::write(LogLevel::Info, "CRASH", "", 0, "CrashLogger installed.");
+        Log::write(LogLevel::Info, "CRASH", "", 0, "CrashLogger installed successfully.");
     }
 
     void CrashLogger::force_crash_for_test() {
         int* p = nullptr;
         *p = 42;
-
     }
 
-    // Deliberately write to a null pointer to trigger access violation.
+    // ========================================================================
+    // CRASH REPORT GENERATION
+    // ========================================================================
+
     void CrashLogger::write_report_(const char* title, const char* detail) {
-        const std::string filename = std::string("crash_") + timestamp_() + ".txt";
-        const std::string fullpath = exe_dir_() + "/" + filename;
+        // Build filename using configuration
+        const std::string filename = config_.reportPrefix + timestamp_() + config_.reportExtension;
+        const std::string fullpath = get_crash_dir_(config_.reportDirectory) + "/" + filename;
 
         if (std::FILE* fp = nullptr; fopen_s(&fp, fullpath.c_str(), "w") == 0 && fp) {
             std::fprintf(fp, "%s\n", title ? title : "Crash");
-            std::fprintf(fp, "--------------------------------------------------\n");
+            std::fprintf(fp, "%s\n", config_.separatorLine.c_str());
             std::fprintf(fp, "%s\n", detail ? detail : "(no details)");
             std::fclose(fp);
         }
 
-
         // Mirror one concise line into our logging system.
         Log::write(LogLevel::Error, "CRASH", "", 0, std::string("Crash report written: ") + fullpath);
     }
+
+    // ========================================================================
+    // EXCEPTION HANDLERS
+    // ========================================================================
 
     void CrashLogger::terminate_handler_() {
         // Called by std::terminate().
@@ -188,9 +245,14 @@ namespace eng::debug {
         d << "Unhandled C++ termination.\n"
             << "Reason: " << whatMsg << "\n";
 
-    #if defined(_WIN32)
-        d << "Stack:\n" << capture_stack_(0);
-    #endif
+#if defined(_WIN32)
+        d << "Stack:\n" << capture_stack_(
+            config_.skipFrames,
+            config_.maxStackFrames,
+            config_.symbolBufferSize,
+            config_.maxSymbolNameLength
+        );
+#endif
 
         write_report_("C++ terminate", d.str().c_str());
         std::abort();
@@ -207,30 +269,39 @@ namespace eng::debug {
             << " (" << seh_code_to_string_(code) << ")\n";
 
         if (faultAddr) {
-            d << "Fault address: " << addr_to_string_(reinterpret_cast<DWORD64>(faultAddr)) << "\n";
+            d << "Fault address: " << addr_to_string_(
+                reinterpret_cast<DWORD64>(faultAddr),
+                config_.symbolBufferSize,
+                config_.maxSymbolNameLength
+            ) << "\n";
         }
 
-        d << "Stack:\n" << capture_stack_(0);
+        d << "Stack:\n" << capture_stack_(
+            config_.skipFrames,
+            config_.maxStackFrames,
+            config_.symbolBufferSize,
+            config_.maxSymbolNameLength
+        );
 
         write_report_("SEH Exception", d.str().c_str());
         return EXCEPTION_EXECUTE_HANDLER;
-    #else
+#else
         write_report_("SEH Exception", "SEH not supported on this platform.");
         return 1;
-    #endif
+#endif
     }
 
     std::string CrashLogger::seh_code_to_string_(unsigned long code) {
-    #if defined(_WIN32)
+#if defined(_WIN32)
         switch (code) {
         case EXCEPTION_ACCESS_VIOLATION:         return "ACCESS_VIOLATION";
         case EXCEPTION_INT_DIVIDE_BY_ZERO:       return "INT_DIVIDE_BY_ZERO";
         case EXCEPTION_STACK_OVERFLOW:           return "STACK_OVERFLOW";
         default: return "UNKNOWN_EXCEPTION";
         }
-    #else
+#else
         return "UNKNOWN_EXCEPTION";
-    #endif
+#endif
     }
 
 } // namespace eng::debug

@@ -71,7 +71,7 @@ void CollisionSystem::Update(float dt)
     CheckECSCollisions();
     // If input system is not wired, do nothing
     if (!m_input) return;
-    if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
+    //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
     //check whether test mode is activated
     if (m_input->IsKeyPressed(KEY_T)) {
         testActive = !testActive;

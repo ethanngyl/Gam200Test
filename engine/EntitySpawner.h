@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           EntitySpawner.h (Fixed Logging Version)
  Description:    System for spawning entities dynamically during gameplay
@@ -66,6 +66,7 @@ namespace Framework {
             transform.scale = scale;
 
             auto& mr = entityManager->AddComponent<MeshRenderer>(entity);
+            mr.material = GraphicsSystemV2::Material2;
             mr.spriteName = spriteName;  // may be "player.png" or "quad" etc. 
             mr.visible = true;
             mr.tint = glm::vec4(1.0f);
@@ -79,7 +80,13 @@ namespace Framework {
          */
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
-            Entity player = SpawnSprite("quad", position, Vector2D(0.3f, 0.3f));
+			const std::string spritePath = "assets/Bird.png";
+            Entity player = SpawnSprite(spritePath, position, Vector2D(0.3f, 0.3f));
+
+            auto& mr = entityManager->GetComponent<MeshRenderer>(player);
+            mr.material = GraphicsSystemV2::Material2;
+
+
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -88,6 +95,8 @@ namespace Framework {
             entityManager->AddComponent<CircleCollider>(player);
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
+
+
 
             std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
 

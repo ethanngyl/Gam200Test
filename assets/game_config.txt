@@ -68,12 +68,80 @@ debug_perf_print_interval = 1.0
 # Enable automatic crash reporting (true/false)
 debug_crash_logger_enabled = true
 
+# Crash report file prefix (e.g., "crash_" results in crash_20251031_153045.txt)
+crash_report_prefix = crash_
+
+# Crash report file extension
+crash_report_extension = .txt
+
+# Crash report output directory (relative to exe, or use "." for exe directory)
+crash_report_directory = .
+
+# Stack trace settings
+crash_max_stack_frames = 64
+crash_skip_frames = 0
+
+# Symbol resolution settings (Windows only)
+crash_symbol_buffer_size = 256
+crash_max_symbol_name_length = 255
+
+# Report formatting
+crash_separator_line = --------------------------------------------------
+
+# --- Performance Viewer Configuration ---
+# Ring buffer size (number of frames to keep in history)
+# Larger values = more history data for CSV export
+# Typical: 300 frames (~5 seconds at 60 FPS)
+# Range: 60-3600 (1 second to 1 minute at 60 FPS)
+debug_perf_ring_buffer_size = 300
+
+# CSV export decimal precision for time values (milliseconds)
+debug_perf_csv_precision = 3
+
+# Percentage display decimal precision in logs
+debug_perf_percent_precision = 1
+
+
+
 # ============================================================================
 # CAMERA SETTINGS (for UI coordinate conversion)
 # ============================================================================
 # Viewport height in world units (affects UI scaling)
 # Common values: 5.0, 10.0, 20.0
 camera_viewport_height = 10.0
+
+# ============================================================================
+# UI SYSTEM SETTINGS
+# ============================================================================
+
+# --- Button Visual Settings ---
+# Default button rendering layer
+ui_button_default_layer = 10
+
+# Default button tint colors (RGBA, values 0.0-2.0)
+# Normal state
+ui_button_normal_tint_r = 1.0
+ui_button_normal_tint_g = 1.0
+ui_button_normal_tint_b = 1.0
+ui_button_normal_tint_a = 1.0
+
+# Hover state (when mouse is over button)
+ui_button_hover_tint_r = 1.2
+ui_button_hover_tint_g = 1.2
+ui_button_hover_tint_b = 1.2
+ui_button_hover_tint_a = 1.0
+
+# Pressed state (when button is being clicked)
+ui_button_pressed_tint_r = 0.9
+ui_button_pressed_tint_g = 0.9
+ui_button_pressed_tint_b = 0.9
+ui_button_pressed_tint_a = 1.0
+
+# Disabled state
+ui_button_disabled_tint_r = 0.5
+ui_button_disabled_tint_g = 0.5
+ui_button_disabled_tint_b = 0.5
+ui_button_disabled_tint_a = 0.5
 
 # ============================================================================
 # END OF CONFIGURATION
