@@ -53,7 +53,7 @@ namespace Framework {
     */
     class Mesh {
     public:
-        const int num_of_mesh = 100;
+        const int num_of_mesh = 4096;
         /*
         ------------------------------------------------------------------------------
         Constructor: Quick constructor for non-indexed meshes.
