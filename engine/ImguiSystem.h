@@ -85,6 +85,9 @@ namespace Framework {
         bool IsLevelFile(const std::filesystem::path& path) const;
 		bool IsTextureFile(const std::filesystem::path& path) const;
 
+        std::filesystem::path rootpath ="assets/";
+        std::filesystem::path currentpath = "assets/";
+        std::filesystem::path previouspath;
 
         // State
         bool showDemo;
