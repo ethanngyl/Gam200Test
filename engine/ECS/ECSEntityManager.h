@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <memory>
 #include <typeindex>
+#include <cassert>
+
 
 namespace Framework
 {
@@ -146,10 +148,13 @@ namespace Framework
             std::unordered_map<EntityID, std::unique_ptr<ComponentBase>>> components;
     };
 
+
     // Template implementations must be in header
     template<typename T, typename... Args>
     T& EntityManager::AddComponent(Entity entity, Args&&... args)
     {
+        //assert(!HasComponent<T>(entity));
+
         std::type_index typeIndex(typeid(T));
         auto component = std::make_unique<T>(std::forward<Args>(args)...);
         T* ptr = component.get();
@@ -160,6 +165,8 @@ namespace Framework
     template<typename T>
     T& EntityManager::GetComponent(Entity entity)
     {
+        //assert(HasComponent<T>(entity));
+
         std::type_index typeIndex(typeid(T));
         return *static_cast<T*>(components[typeIndex][entity.GetID()].get());
     }

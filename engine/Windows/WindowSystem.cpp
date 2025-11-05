@@ -101,6 +101,7 @@ namespace Framework
 
         // Check if fullscreen is requested
         bool fullscreen = ConfigReader::GetBool("fullscreen", false);
+        fullscreen = false;/////////////
         GLFWmonitor* monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
 
         // Create the window

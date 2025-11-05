@@ -279,15 +279,15 @@ namespace Framework {
         // Default resources
         ShaderHandle defaultShader;
         ShaderHandle debugShader;
-        MaterialHandle defaultMaterial;
-        ShaderHandle Shader2;
+        ShaderHandle gridShader;
         
         // Background rendering
         TextureHandle backgroundTexture;
         MeshHandle backgroundMesh;
         MaterialHandle backgroundMaterial;
         public:
-        inline static MaterialHandle Material2;
+        inline static MaterialHandle defaultMaterial;
+        inline static MaterialHandle birdMaterial;
         private:
 
         // Default primitive meshes
@@ -324,8 +324,7 @@ namespace Framework {
          */
         void FollowPlayer(EntityManager* em, Entity player);
 
-        
-
+        glm::vec2 ComputeCameraDims() const;
 		glm::vec3 editorCameraStartPos{ 0.0f, 0.0f, 0.0f };
 		float editorCameraZoom{ 1.0f };
 
