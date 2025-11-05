@@ -82,6 +82,7 @@ namespace Framework {
         //CreateLegacyMaterials();
 
         // 7. Setup initial render state
+
         SetupRenderState();
 
         resourceManager.LoadFiles();// new

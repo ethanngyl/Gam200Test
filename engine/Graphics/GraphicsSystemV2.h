@@ -138,6 +138,10 @@ namespace Framework {
          */
         void ClearFollowTarget() { followEnabled = false; }
 
+
+        //Editor Camera functions - Jiahao
+        void HandleEditorCamera(float dt);
+        void ResetEditorCamera();
         MeshHandle GetQuadMesh() const { return quadMesh; }
 
         // === DEBUG RENDERING ===
@@ -320,9 +324,7 @@ namespace Framework {
          */
         void FollowPlayer(EntityManager* em, Entity player);
 
-        //Editor Camera functions - Jiahao
-		void HandleEditorCamera(float dt);
-		void ResetEditorCamera();
+        
 
 		glm::vec3 editorCameraStartPos{ 0.0f, 0.0f, 0.0f };
 		float editorCameraZoom{ 1.0f };
