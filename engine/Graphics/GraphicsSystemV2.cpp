@@ -175,8 +175,6 @@ namespace Framework {
     }
 
 
-
-
     void GraphicsSystemV2::Update(float dt) {
 
         DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics); 
@@ -236,12 +234,12 @@ namespace Framework {
         //EndFrame();
 
         // === Text Rendering Pass ===
-//        glDisable(GL_DEPTH_TEST);
-//        glEnable(GL_BLEND);
-//        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//        text_.draw("Sans48", "Hello, StructSquad!", 30.f, viewportHeight - 60.f, 1.0f, { 1.0f, 1.0f, 1.0f }); //what the text will display
-//        text_.draw("Serif32", "Score: 12345", viewportWidth - 250.f, 40.f, 1.0f, { 1.0f, 0.3f, 0.3f });
-//        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        text_.draw("Sans48", "Hello, StructSquad!", 30.f, viewportHeight - 60.f, 1.0f, { 1.0f, 1.0f, 1.0f }); //what the text will display
+        text_.draw("Serif32", "Score: 12345", viewportWidth - 250.f, 40.f, 1.0f, { 1.0f, 0.3f, 0.3f });
+        glEnable(GL_DEPTH_TEST);
         // Clear queues for next frame
         renderQueue.Clear();
         debugQueue.Clear();
@@ -1072,21 +1070,6 @@ namespace Framework {
     void GraphicsSystemV2::EndFrame() {
         glfwSwapBuffers(window);
         glfwPollEvents();
-    }
-
-    void GraphicsSystemV2::DrawText4(const std::string& fontKey,
-        const std::string& text,
-        float x, float y,
-        float scale,
-        const glm::vec3& color)
-    {
-        glDisable(GL_DEPTH_TEST);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        text_.draw(fontKey, text, x, y, scale, color);
-
-        glEnable(GL_DEPTH_TEST);
     }
 
     void GraphicsSystemV2::RenderImGui() {

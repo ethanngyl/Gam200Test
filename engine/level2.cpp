@@ -27,11 +27,13 @@ extern Framework::CoreEngine* engine;
 
 void level2_Load()
 {
-    ConfigReader::LoadConfig("assets/valueloader.txt");
+    LOG_INFO("LEVEL2", "=== Level2 Load ===");
 }
 
 void level2_Initialize()
 {
+    LOG_INFO("LEVEL2", "=== Level2 Initialize ===");
+
 
     if (!engine) {
         LOG_ERROR("LEVEL2", "Engine is null!");
@@ -39,9 +41,11 @@ void level2_Initialize()
     }
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Enable();
+        LOG_INFO("MENU", "ImGui disabled in menu");
     }
     engine->SetPlaying(false);
 
+    LOG_INFO("MENU", "Menu in EDITOR mode");
 
     auto graphics = engine->GetGraphicsSystem();
     if (graphics) {
@@ -62,35 +66,9 @@ void level2_Update()
 
 void level2_Draw()
 {
-    if (!engine) return;
-
-    auto graphics = engine->GetGraphicsSystem();
-    if (!graphics) return;
-
-    // ========================================================================
-    // Read UI text settings from configuration file
-    // ========================================================================
-    
-    // Font
-    std::string fontLarge = ConfigReader::GetString("lv2_ui_font_large", "Sans48");
-
-    // Text content
-    std::string textScaling = ConfigReader::GetString("lv2_text_info", "This level is for Level editor testing");
-
-    // Location
-    float textX = ConfigReader::GetFloat("lv2_ui_text_info_x", 500.0f);
-    float texty = ConfigReader::GetFloat("lv2_ui_text_info_y", 350.0f);
-
-    // Scaling and color
-    float textScale = ConfigReader::GetFloat("lv2_ui_text_scale", 1.0f);
-    float colorR = ConfigReader::GetFloat("lv2_ui_text_color_r", 1.0f);
-    float colorG = ConfigReader::GetFloat("lv2_ui_text_color_g", 1.0f);
-    float colorB = ConfigReader::GetFloat("lv2_ui_text_color_b", 1.0f);
-
-    // ========================================================================
-    // Render UI text (using values ​​from the configuration file)
-    // ========================================================================
-    graphics->DrawText4(fontLarge, textScaling, textX, texty, textScale, glm::vec3(colorR, colorG, colorB));
+    // Only responsible for rendering related matters
+    // Do not create entities here
+    //LOG_INFO("MENU", "=== level2 Draw ===");
 }
 
 void level2_Free()
