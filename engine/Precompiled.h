@@ -38,6 +38,7 @@
 #include <mutex> //Thread synchronization
 #include <string_view> //Non-owning string references
 #include <functional> //Function objects
+#include <queue>
 
 //Components
 
@@ -108,6 +109,9 @@
 
 //Message
 #include "Message.h"
+
+//Event
+#include "Event.h"
 
 //Grid
 #include "Grid/Grid.h"
