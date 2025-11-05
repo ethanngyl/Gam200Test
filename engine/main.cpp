@@ -94,7 +94,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // ========================================================================
     // GAME STATE MANAGER
     // ========================================================================
-    int initialState = ConfigReader::GetInitialGameState(LEVEL_2);
+    int initialState = ConfigReader::GetInitialGameState(mainMenu);
     GSM_Initialize(initialState);
 
     LOG_INFO("CORE", "Entering GSM main loop...");
