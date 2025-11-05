@@ -21,9 +21,10 @@ namespace Framework {
         , showEntityInspector(true)
         , showSpawner(true)
         , showDebug(true)
-        ,enabled(false)
+        , enabled(false)
         , frameTime(0.0f)
         , entityCount(0)
+        , showAssets(true)
     {
     }
 
@@ -70,6 +71,7 @@ namespace Framework {
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 330");
 
+        EnableFileDragAndDrop();
         std::cout << "[ImGui] Initialized successfully\n";
     }
 
@@ -141,7 +143,9 @@ namespace Framework {
                 if (iss >> name) {
                     entityManager->AddComponent<Framework::Sprite>(Entity);
                     auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
-                    sprite.texturePath = name;
+                    //sprite.texturePath =  name;
+                    std::string label = std::filesystem::path(name).filename().string();
+                    sprite.texturePath = std::string("assets/") + label;
                 }
                 continue;
             }
@@ -287,6 +291,13 @@ namespace Framework {
                     << transform.scale.x << " " << transform.scale.y << "\n";
             }
 
+            if (entityManager->HasComponent<MeshRenderer>(entity)) {
+                auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
+                if (!meshRenderer.spriteName.empty()) {
+                    writeFile << "Sprite " << meshRenderer.spriteName << "\n";
+                }
+            }
+
             if (entityManager->HasComponent<Sprite>(entity)) {
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
@@ -344,6 +355,147 @@ namespace Framework {
         return true;
     }
 
+    void ImGuiSystem::EnableFileDragAndDrop() {
+        //
+        glfwSetWindowUserPointer(window, this);
+        //
+        glfwSetDropCallback(window, FileDropCallBack);
+    }
+
+    void ImGuiSystem::FileDropCallBack(GLFWwindow* window, int count, const char** paths) {
+        Framework::ImGuiSystem* self = static_cast<Framework::ImGuiSystem*>(glfwGetWindowUserPointer(window));
+        if (self) {
+            self->OnFileDrop(count, paths);
+        }
+    }
+
+    void ImGuiSystem::OnFileDrop(int count, const char** paths) {
+        for (int i = 0; i < count; ++i) {
+            std::filesystem::path path(paths[i]);
+
+            if (IsLevelFile(path)) {
+                bool isOpen = OpenLevelFromTxt(path.string(), true);
+                if (isOpen) {
+                    currentLevelPath = path.string();
+                    std::cout << "[Drop] Opened level file: " << currentLevelPath << "\n";
+                }
+                else {
+                    std::cerr << "[DropError] Unsupported file type: " << path << "\n";
+                }
+                continue;
+            }
+
+            if (IsTextureFile(path)) {
+                if (!entitySpawner) {
+                    std::cerr << "[DropError] Missing EntitySpawner, cannot spawn sprite" << "\n";
+                    continue;
+                }
+
+                std::string label = path.filename().string();
+                std::string filePath = std::string("assets/") + label;
+
+                Framework::Entity entity = entitySpawner->SpawnSprite(
+                    filePath,
+                    Vector2D(0.0f, 0.0f),
+                    Vector2D(1.0f, 1.0f)
+                );
+                std::cout << "[Drop] Spawned sprite from: " << path << " as entity" << entity.id << "\n";
+                continue;
+            }
+
+            std::cerr << "[DropError] Unsupported file type: " << path << "\n";
+        }
+
+    }
+    bool ImGuiSystem::IsLevelFile(const std::filesystem::path& path) const {
+        return path.has_extension() && path.extension() == ".txt";
+    }
+    bool ImGuiSystem::IsTextureFile(const std::filesystem::path& path) const {
+        if (!path.has_extension()) {
+            return false;
+        }
+        auto ext = path.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        return ext == ".png" || ext == ".jpg" || ext == ".jpeg";
+    }
+
+
+
+    void ImGuiSystem::ShowAssetsWindow() {
+        ImGui::SetNextWindowSize(ImVec2(320.0f, 420.0f), ImGuiCond_FirstUseEver);
+        if (!ImGui::Begin("Assets##Assets", &showAssets))
+        {
+            ImGui::End();
+            return;
+        }
+        //
+        ImGui::SeparatorText(currentpath.string().c_str());
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 10);
+
+        if (ImGui::Button("<##Back")) {
+            if (currentpath != rootpath) {
+                if (!previouspath.empty()) {
+                    currentpath = previouspath;
+                    previouspath = currentpath.parent_path();
+                }
+            }
+
+        }
+        for (auto const& e : std::filesystem::directory_iterator(currentpath)) {
+
+
+            auto const path = e.path();
+            std::string const label = path.filename().string();
+            std::string const ImGuilabel = e.is_directory() ? "->" + label : label;
+            //std::string const fullPath = path.string();
+            std::string filePath = "assets/" + label;
+            if (ImGui::Selectable(ImGuilabel.c_str())) {
+
+                if (e.is_directory()) {
+                    previouspath = currentpath;
+                    currentpath = e;
+                }
+                if (IsTextureFile(path) && entitySpawner) {
+                    std::string filePath = "assets/" + label;
+                    //entitySpawner->SpawnSprite(filePath, Vector2D(0.0f, 0.0f));
+
+                }
+                else if (IsLevelFile(path)) {
+                    OpenLevelFromTxt(filePath, true);
+                }
+            }
+
+            //drag and drop asset window
+            //
+            if (IsTextureFile(path))
+            {
+                //making it double click for now until we add drag and drop target
+                if (ImGui::IsItemHovered()) {
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        if (entitySpawner) {
+                            Framework::Entity entity = entitySpawner->SpawnSprite(
+                                filePath,
+                                Vector2D(0.0f, 0.0f),
+                                Vector2D(1.0f, 1.0f)
+                            );
+                            std::cout << "[Drop] Spawned sprite from: " << filePath << " as entity" << entity.id << "\n";
+                        }
+                    }
+
+                }
+
+                if (ImGui::BeginDragDropSource()) {
+                    ImGui::SetDragDropPayload("Sprite", &filePath, filePath.size());
+                    ImGui::Text(label.c_str());
+                    ImGui::EndDragDropSource();
+                }
+            }
+        }
+
+        ImGui::End();
+    }
+
+
     void ImGuiSystem::Update(float dt)
     {
         if (!enabled) {
@@ -362,10 +514,28 @@ namespace Framework {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+        //  if (ImGui::BeginDragDropTarget()) {
+        //      if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite")) {
+        //          if (payload->DataSize == sizeof(std::string)) {
+        //              std::string filePath = *(std::string*)payload->Data;
+        //              if (IsTextureFile(filePath)) {
+        //                  // Handle texture file drop
+        //                  if (entitySpawner) {
+        //                      Framework::Entity entity = entitySpawner->SpawnSprite(
+        //                          filePath,
+        //                          Vector2D(0.0f, 0.0f),
+        //                          Vector2D(1.0f, 1.0f)
+        //                      );
+        //                      std::cout << "[Drop] Spawned sprite from: " << filePath << " as entity" << entity.id << "\n";
+                          //}
+        //              }
+        //          }
+        //      }
+        //      ImGui::EndDragDropTarget();
+        //  }
 
 
-
-        // Menu bar
+          // Menu bar
         if (ImGui::BeginMainMenuBar()) {
             //File bar - jiahao
             if (ImGui::BeginMenu("File")) {
@@ -425,12 +595,15 @@ namespace Framework {
                 ImGui::MenuItem("Spawner", nullptr, &showSpawner);
                 ImGui::MenuItem("Debug Info", nullptr, &showDebug);
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
+                //Asset window - jiahao
+                ImGui::MenuItem("Assets", nullptr, &showAssets);
                 ImGui::EndMenu();
             }
 
             //play/stop editor bar - jiahao
             if (ImGui::BeginMenu("Editor")) {
 
+                //fix camera problem
                 if (!CORE->IsPlaying()) {
                     if (ImGui::MenuItem("Play")) {
                         if (!SaveLevelToTxt(defaultLevelPath)) {
@@ -439,13 +612,56 @@ namespace Framework {
                         }
                         else {
                             CORE->SetPlaying(true);
+                            if (auto* gfx = CORE->GetGraphicsSystem())
+                            {
+                                if (entityManager)
+                                {
+                                    Framework::Entity player{};
+                                    for (auto e : entityManager->GetAllEntities())
+                                    {
+                                        if (entityManager->HasComponent<Framework::CircleCollider>(e))
+                                        {
+                                            auto& c = entityManager->GetComponent<Framework::CircleCollider>(e);
+                                            if (c.radius > 0.12f && c.radius < 0.18f)
+                                            {
+                                                player = e;
+                                                break;
+                                            }
+                                        }
+                                    }
+
+                                    if (player.IsValid())
+                                    {
+                                        gfx->SetFollowTarget(player);
+                                    }
+                                }
+                            }
                         }
+
                     }
                 }
 
                 else {
                     if (ImGui::MenuItem("Stop")) {
                         CORE->SetPlaying(false);
+
+                        //Reset Camera
+                        if (auto gfx = CORE->GetGraphicsSystem()) {
+                            gfx->ClearFollowTarget();
+                            gfx->ResetEditorCamera();
+                        }
+
+                        //Reload default level
+                        if (!OpenLevelFromTxt(defaultLevelPath, true)) {
+                            if (!currentLevelPath.empty()) {
+                                OpenLevelFromTxt(currentLevelPath, true);
+                            }
+                            else {
+                                std::cerr << "[ImGuiError] Could not create default setting " << defaultLevelPath << "\n";
+                                OpenLevelFromTxt("assets/level1.txt", true);
+                            }
+                        }
+
                         entityManager->ClearAllEntities();
                         OpenLevelFromTxt(defaultLevelPath, true);
                     }
@@ -562,6 +778,8 @@ namespace Framework {
         if (showSpawner) ShowSpawnerWindow();
         if (showDebug) ShowDebugWindow();
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
+        // show asset window - jiahao
+        if (showAssets) ShowAssetsWindow();
     }
 
     void ImGuiSystem::Render()
