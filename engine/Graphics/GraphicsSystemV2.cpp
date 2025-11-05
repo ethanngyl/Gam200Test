@@ -196,14 +196,16 @@ namespace Framework {
         }
 
         // === CAMERA FOLLOW LOGIC ===
-
-        if (!Framework::CORE->IsPlaying()) {
-            HandleEditorCamera(dt);
-        }
-        else {
-            if (followEnabled && entityManager && followTarget.IsValid()) {
-                FollowPlayer(entityManager, followTarget);
+        //!Framework::CORE->IsPlaying()
+        if (current == LEVEL_2) {
+            if (!Framework::CORE->IsPlaying()) {
+                HandleEditorCamera(dt);
             }
+            
+        }
+        
+        if (followEnabled && entityManager && followTarget.IsValid() && Framework::CORE->IsPlaying()) {
+                FollowPlayer(entityManager, followTarget);
         }
 
 

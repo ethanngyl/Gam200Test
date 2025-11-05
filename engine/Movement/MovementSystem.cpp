@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -79,81 +79,83 @@ namespace Framework
 
         if (!entityManager || !inputSystem) return;
         //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
-
-        for (Entity entity : entityManager->GetAllEntities())
+        if(Framework::CORE->IsPlaying())
         {
-            if (entityManager->HasComponent<Transform>(entity) &&
-                entityManager->HasComponent<Movement>(entity))
+            for (Entity entity : entityManager->GetAllEntities())
             {
-                auto& transform = entityManager->GetComponent<Transform>(entity);
-                auto& movement = entityManager->GetComponent<Movement>(entity);
+                if (entityManager->HasComponent<Transform>(entity) &&
+                    entityManager->HasComponent<Movement>(entity))
+                {
+                    auto& transform = entityManager->GetComponent<Transform>(entity);
+                    auto& movement = entityManager->GetComponent<Movement>(entity);
 
-                // Get input direction from WASD
-                Vector2D inputDir(input_dir_x, input_dir_y);
+                    // Get input direction from WASD
+                    Vector2D inputDir(input_dir_x, input_dir_y);
 
-                if (inputSystem->IsKeyDown(KEY_W)) inputDir.y += y_mov_displacement;
-                if (inputSystem->IsKeyDown(KEY_S)) inputDir.y -= y_mov_displacement;
-                if (inputSystem->IsKeyDown(KEY_A)) inputDir.x -= x_mov_displacement;
-                if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += x_mov_displacement;
+                    if (inputSystem->IsKeyDown(KEY_W)) inputDir.y += y_mov_displacement;
+                    if (inputSystem->IsKeyDown(KEY_S)) inputDir.y -= y_mov_displacement;
+                    if (inputSystem->IsKeyDown(KEY_A)) inputDir.x -= x_mov_displacement;
+                    if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += x_mov_displacement;
 
-                // Face right when pressing D
-                if (inputDir.x > default_zero) {
-                    if (entityManager->HasComponent<SpriteAnimation>(entity))
-                        entityManager->GetComponent<SpriteAnimation>(entity).flipX = false;
+                    // Face right when pressing D
+                    if (inputDir.x > default_zero) {
+                        if (entityManager->HasComponent<SpriteAnimation>(entity))
+                            entityManager->GetComponent<SpriteAnimation>(entity).flipX = false;
+                    }
+
+                    // Face left when pressing A
+                    if (inputDir.x < default_zero) {
+                        if (entityManager->HasComponent<SpriteAnimation>(entity))
+                            entityManager->GetComponent<SpriteAnimation>(entity).flipX = true;
+                    }
+
+                    // === SCALING ===
+                    if (inputSystem->IsKeyDown(KEY_3)) {
+                        transform.scale.x += scale_multiplier * dt;
+                        transform.scale.y += scale_multiplier * dt;
+                    }
+
+                    if (inputSystem->IsKeyDown(KEY_4)) {
+                        transform.scale.x -= scale_multiplier * dt;
+                        transform.scale.y -= scale_multiplier * dt;
+                    }
+
+                    // === Scale Clamping ===
+                    /*transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
+                    transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);*/
+
+                    // === ROTATION ===
+                    if (inputSystem->IsKeyDown(KEY_7)) {
+                        transform.rotation += rotation_angle * dt;
+                    }
+
+                    if (inputSystem->IsKeyDown(KEY_8)) {
+                        transform.rotation -= rotation_angle * dt;
+                    }
+
+
+                    // Normalize diagonal movement
+                    if (inputDir.length() > default_zero) {
+                        inputDir.normalize();
+                    }
+
+                    // Update movement direction
+                    movement.direction = inputDir;
+
+                    //Apply movement
+                    if (!movement.blocked) {
+                        transform.position += movement.direction * movement.moveSpeed * dt;
+                    }
+                    else {
+                        transform.position -= movement.direction * movement.moveSpeed * dt;
+                    }
+
+                    //// Optional: Keep on screen
+                    if (transform.position.x > x_bound) transform.position.x = x_bound;
+                    if (transform.position.x < -x_bound) transform.position.x = -x_bound;
+                    if (transform.position.y > y_bound) transform.position.y = y_bound;
+                    if (transform.position.y < -y_bound) transform.position.y = -y_bound;
                 }
-
-                // Face left when pressing A
-                if (inputDir.x < default_zero) {
-                    if (entityManager->HasComponent<SpriteAnimation>(entity))
-                        entityManager->GetComponent<SpriteAnimation>(entity).flipX = true;
-                }
-
-                // === SCALING ===
-                if (inputSystem->IsKeyDown(KEY_3)) {
-                    transform.scale.x += scale_multiplier * dt;
-                    transform.scale.y += scale_multiplier * dt;
-                }
-
-                if (inputSystem->IsKeyDown(KEY_4)) {
-                    transform.scale.x -= scale_multiplier * dt;
-                    transform.scale.y -= scale_multiplier * dt;
-                }
-
-                // === Scale Clamping ===
-                transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
-                transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
-
-                // === ROTATION ===
-                if (inputSystem->IsKeyDown(KEY_7)) {
-                    transform.rotation += rotation_angle * dt;
-                }
-
-                if (inputSystem->IsKeyDown(KEY_8)) {
-                    transform.rotation -= rotation_angle * dt;
-                }
-
-
-                // Normalize diagonal movement
-                if (inputDir.length() > default_zero) {
-                    inputDir.normalize();
-                }
-
-                // Update movement direction
-                movement.direction = inputDir;
-
-                //Apply movement
-                if (!movement.blocked) {
-                    transform.position += movement.direction * movement.moveSpeed * dt;
-                }
-                else {
-                    transform.position -= movement.direction * movement.moveSpeed * dt;
-                }
-
-                //// Optional: Keep on screen
-                if (transform.position.x > x_bound) transform.position.x = x_bound;
-                if (transform.position.x < -x_bound) transform.position.x = -x_bound;
-                if (transform.position.y > y_bound) transform.position.y = y_bound;
-                if (transform.position.y < -y_bound) transform.position.y = -y_bound;
             }
         }
     }

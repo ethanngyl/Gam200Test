@@ -48,7 +48,7 @@ void level1_Initialize()
         engine->GetImGuiSystem()->Disable();
         LOG_INFO("MENU", "ImGui disabled in menu");
     }
-    engine->SetPlaying(false);
+    engine->SetPlaying(true);
 
     auto graphics = engine->GetGraphicsSystem();
     if (!graphics) {
