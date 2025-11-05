@@ -60,18 +60,21 @@ namespace Framework {
             }
 
             Entity entity = entityManager->CreateEntity();
-
             entityManager->AddComponent<Transform>(entity, position);
             auto& transform = entityManager->GetComponent<Transform>(entity);
             transform.scale = scale;
 
             auto& mr = entityManager->AddComponent<MeshRenderer>(entity);
-            mr.material = GraphicsSystemV2::Material2;
-            mr.spriteName = spriteName;  // may be "player.png" or "quad" etc. 
+            mr.spriteName = spriteName;
             mr.visible = true;
             mr.tint = glm::vec4(1.0f);
 
-            std::cout << "[EntitySpawner] Spawned sprite: " << spriteName << "\n";
+            // ✅ ONE LINE
+            if (CORE && CORE->GetGraphicsSystem()) {
+                auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
+                gs->AssignMeshAndMaterial(mr, spriteName);  // Let graphics system handle it
+            }
+
             return entity;
         }
 
@@ -80,13 +83,11 @@ namespace Framework {
          */
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
-			const std::string spritePath = "assets/Bird.png";
+			const std::string spritePath = "quad";
             Entity player = SpawnSprite(spritePath, position, Vector2D(0.3f, 0.3f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(player);
             mr.material = GraphicsSystemV2::Material2;
-
-
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -95,8 +96,6 @@ namespace Framework {
             entityManager->AddComponent<CircleCollider>(player);
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
-
-
 
             std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
 
@@ -142,7 +141,7 @@ namespace Framework {
             const Vector2D& direction,
             float speed = 0.3f)
         {
-            Entity projectile = SpawnSprite("assets/background.jpg", position, Vector2D(0.1f, 0.1f));
+            Entity projectile = SpawnSprite("circle", position, Vector2D(0.1f, 0.1f));
 
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);

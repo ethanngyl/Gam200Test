@@ -941,13 +941,13 @@ namespace Framework {
             entitySpawner->SpawnEnemy(Vector2D(spawnX, spawnY));
         }
 
-        if (ImGui::Button("Spawn Projectile##Btn3", ImVec2(-1, 0))) {
-            entitySpawner->SpawnProjectile(
-                Vector2D(spawnX, spawnY),
-                Vector2D(0.0f, 1.0f),
-                0.5f
-            );
-        }
+        //if (ImGui::Button("Spawn Projectile##Btn3", ImVec2(-1, 0))) {
+        //    entitySpawner->SpawnProjectile(
+        //        Vector2D(spawnX, spawnY),
+        //        Vector2D(0.0f, 1.0f),
+        //        0.5f
+        //    );
+        //}
 
         if (ImGui::Button("Spawn Obstacle##Btn4", ImVec2(-1, 0))) {
             entitySpawner->SpawnObstacle(

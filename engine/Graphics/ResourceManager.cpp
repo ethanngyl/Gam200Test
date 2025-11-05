@@ -353,5 +353,37 @@ namespace Framework {
         std::lock_guard<std::mutex> lock(resourceMutex);
         return textureCache.find(path) != textureCache.end();
     }
+    MeshHandle ResourceManager::GetMeshHandle(const std::string& name) {
+        std::lock_guard<std::mutex> lock(resourceMutex);
 
+        // Check cache first (fastest)
+        auto it = meshCache.find(name);
+        if (it != meshCache.end()) {
+            return it->second;
+        }
+
+        // If not in cache, search through all meshes by their stored path/name
+        for (const auto& [handle, entry] : meshes) {
+            if (entry.path == name) {
+                return handle;
+            }
+        }
+
+        std::cerr << "WARNING: Mesh '" << name << "' not found\n";
+        return INVALID_MESH_HANDLE;
+    }
+
+    MaterialHandle ResourceManager::GetMaterialHandle(const std::string& name) {
+        std::lock_guard<std::mutex> lock(resourceMutex);
+
+        // Search through all materials by their name field
+        for (const auto& [handle, entry] : materials) {
+            if (entry.resource && entry.resource->name == name) {
+                return handle;
+            }
+        }
+
+        std::cerr << "WARNING: Material '" << name << "' not found\n";
+        return INVALID_MATERIAL_HANDLE;
+    }
 } // namespace Framework

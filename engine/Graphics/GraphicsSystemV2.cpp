@@ -198,7 +198,7 @@ namespace Framework {
         // === CAMERA FOLLOW LOGIC ===
         //!Framework::CORE->IsPlaying()
         if (current == LEVEL_2) {
-            if (!Framework::CORE->IsPlaying()) {
+            if (Framework::CORE->IsPlaying()) {
                 HandleEditorCamera(dt);
             }
             
@@ -1097,5 +1097,25 @@ namespace Framework {
         // Just swap - DON'T clear!
         glfwSwapBuffers(window);
         glfwPollEvents();
+    }
+
+    void GraphicsSystemV2::AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName) {
+        static std::unordered_map<std::string, std::pair<std::string, std::string>> lookup = {
+            {"wireframequad", {"wireframequad", "wireframeq_mat"}},
+            {"circle", {"circle", "circle_mat"}},
+            {"quad", {"quad", "quad_mat"}},
+            {"triangle", {"triangle", "triangle_mat"}},
+            {"line", {"line", "line_mat"}}
+        };
+
+        auto it = lookup.find(spriteName);
+        if (it != lookup.end()) {
+            mr.mesh = resourceManager.GetMeshHandle(it->second.first);
+            mr.material = resourceManager.GetMaterialHandle(it->second.second);
+        }
+        else {
+            mr.mesh = resourceManager.GetMeshHandle("quad");
+            mr.material = Material2;
+        }
     }
 } // namespace Framework

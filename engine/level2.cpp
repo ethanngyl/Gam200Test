@@ -40,7 +40,7 @@ void level2_Initialize()
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Enable();
     }
-    engine->SetPlaying(false);
+    engine->SetPlaying(true);
 
 
     auto graphics = engine->GetGraphicsSystem();

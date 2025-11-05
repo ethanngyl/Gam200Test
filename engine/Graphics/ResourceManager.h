@@ -167,7 +167,8 @@ namespace Framework {
             size_t materialCount = 0;
         };
         Stats GetStats() const;
-
+        MeshHandle GetMeshHandle(const std::string& name);
+        MaterialHandle GetMaterialHandle(const std::string& name);
         bool HasTexture(TextureHandle h) const;
         TextureHandle EnsureTexture(const std::string& path);   // Load if missing, return handle
         bool          PathKnownAsTexture(const std::string& path) const;
