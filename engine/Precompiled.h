@@ -109,6 +109,9 @@
 //Message
 #include "Message.h"
 
+//Event
+#include "Event.h"
+
 //Grid
 #include "Grid/Grid.h"
 #include "Grid/GridTile.h"
