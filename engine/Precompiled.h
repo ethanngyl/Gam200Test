@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           Precompiled.h
  Author:         ETHAN NG YONG LE
@@ -38,7 +38,7 @@
 #include <mutex> //Thread synchronization
 #include <string_view> //Non-owning string references
 #include <functional> //Function objects
-
+#include <queue>
 //Components
 
 //New Graphics 
@@ -146,7 +146,7 @@
 #endif
 
 #include <Text/TextSystem.h>
-
+#include "Event.h"
 // Safe deletion macros
 #define SAFE_DELETE(p) { if(p) { delete (p); (p) = nullptr; } }
 #define SAFE_DELETE_ARRAY(p) { if(p) { delete[] (p); (p) = nullptr; } }

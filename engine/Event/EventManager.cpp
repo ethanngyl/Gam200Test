@@ -1,4 +1,4 @@
-#include "Precompiled.h"
+﻿#include "Precompiled.h"
 namespace framework {
 
     EventSystem::~EventSystem() {
@@ -26,7 +26,7 @@ namespace framework {
     void EventSystem::SendEngineMessage(Message* message) {
         // Print debug/logging information to console
         if (message) {
-            std::cout << "[EventSystem] " << message->GetText() << std::endl;
+            //std::cout << "[EventSystem] " << message->GetText() << std::endl;
         }
     }
 
