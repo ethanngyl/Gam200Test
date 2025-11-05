@@ -79,7 +79,7 @@ namespace Framework {
          */
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
-            Entity player = SpawnSprite("assets/testing.png", position, Vector2D(0.3f, 0.3f));
+            Entity player = SpawnSprite("quad", position, Vector2D(0.3f, 0.3f));
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);

@@ -127,8 +127,6 @@ void level1_Initialize()
 
     LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
 
-    // Generate enemy waves
-    spawner->SpawnEnemyWave(5, 0.8f);
 
     LOG_INFO("LEVEL1", "All entities spawned successfully");
 }
