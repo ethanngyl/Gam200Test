@@ -27,6 +27,9 @@
 #include "Event/Event.h"
 #include "Event/DamageIndicatorSystem.h"
 
+#include "Grid/Grid.h"
+#include "Grid/GridECS.h"
+#include "Grid/GridTile.h"
 namespace Framework
 {
     // Forward declaration
@@ -45,6 +48,7 @@ namespace Framework
     class UISystem;
     class EventSystem;
     class DamageIndicatorSystem;
+    class PathfindingSystem;
 
     /**
      * @class CoreEngine
@@ -146,7 +150,7 @@ namespace Framework
         AnimationSystem* GetAnimationSystem() const { return animationSystem; }
         UISystem* GetUISystem() const { return uiSystem; }
         EventSystem* GetEventSystem() const { return eventSystem; }
-        
+        PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
 
 
         /**
@@ -203,6 +207,8 @@ namespace Framework
         UISystem* uiSystem;
         EventSystem* eventSystem;
         DamageIndicatorSystem* damageIndicator;
+        PathfindingSystem* pathfindingSystem;
+
 
         // state
         unsigned LastTime;

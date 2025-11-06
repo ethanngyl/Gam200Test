@@ -161,6 +161,12 @@ namespace Framework {
     TextureHandle ResourceManager::LoadTexture(const std::string& path) {
         std::lock_guard<std::mutex> lock(resourceMutex);
 
+        // Skip logical names (non-file paths)
+        if (path.find('.') == std::string::npos) {
+            // e.g., "wireframequad", "circle", etc.
+            return INVALID_TEXTURE_HANDLE;
+        }
+
         // Check cache
         auto cacheIt = textureCache.find(path);
         if (cacheIt != textureCache.end()) {

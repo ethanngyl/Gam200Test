@@ -30,6 +30,10 @@
 #include "Event/Event.h"
 #include "Event/DamageIndicatorSystem.h"
 
+#include "Grid/Grid.h"
+#include "Grid/GridECS.h"
+#include "Grid/GridTile.h"
+#include "Pathfinding/Pathfinding.h"
 
 
 namespace Framework
@@ -54,6 +58,7 @@ namespace Framework
         , LastTime(0)
         , GameActive(true)
         , damageIndicator(nullptr)
+        , pathfindingSystem(nullptr)
     {
         CORE = this;
     }
@@ -134,6 +139,7 @@ namespace Framework
         uiSystem = new UISystem(this);
         eventSystem = new EventSystem();
         damageIndicator = new DamageIndicatorSystem();
+        pathfindingSystem = new PathfindingSystem();
 
         LOG_INFO("CORE", " All systems created");
     }
@@ -152,6 +158,9 @@ namespace Framework
         imguiSystem->SetEntityManager(entityManager);
         audioSystem->SetEntityManager(entityManager);
         animationSystem->SetEntityManager(entityManager);
+        pathfindingSystem->SetEntityManager(entityManager);
+
+       
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -179,6 +188,8 @@ namespace Framework
 
         // Set window dependencies
         graphicsSystem->SetWindow(windowSystem->GetWindow());
+        inputSystem->SetWindow(windowSystem->GetWindow());  
+
         imguiSystem->SetWindow(windowSystem->GetWindow());
         imguiSystem->SetEntitySpawner(spawner);
         playerController->SetWindow(windowSystem->GetWindow());
@@ -207,6 +218,8 @@ namespace Framework
         AddSystem(animationSystem);
         AddSystem(uiSystem);
         AddSystem(eventSystem);
+        AddSystem(pathfindingSystem);
+
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }

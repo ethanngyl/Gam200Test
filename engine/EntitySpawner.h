@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           EntitySpawner.h (Fixed Logging Version)
  Description:    System for spawning entities dynamically during gameplay
@@ -69,10 +69,19 @@ namespace Framework {
             mr.visible = true;
             mr.tint = glm::vec4(1.0f);
 
-            // ✅ ONE LINE
+            // ensure each entity has its own material instance
             if (CORE && CORE->GetGraphicsSystem()) {
                 auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
-                gs->AssignMeshAndMaterial(mr, spriteName);  // Let graphics system handle it
+                gs->AssignMeshAndMaterial(mr, spriteName);
+
+                // create a unique copy of the base material
+                if (mr.material.IsValid()) {
+                    auto* base = gs->GetResourceManager().GetMaterial(mr.material);
+                    MaterialHandle clone = gs->GetResourceManager().CreateMaterial(
+                        spriteName + "_inst_" + std::to_string(entity.GetID()), base->shader);
+                    *gs->GetResourceManager().GetMaterial(clone) = *base;  // shallow copy
+                    mr.material = clone;
+                }
             }
 
             return entity;
@@ -84,7 +93,7 @@ namespace Framework {
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
 			const std::string spritePath = "quad";
-            Entity player = SpawnSprite(spritePath, position, Vector2D(0.3f, 0.3f));
+            Entity player = SpawnSprite(spritePath, position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(player);
             mr.material = GraphicsSystemV2::Material2;
@@ -114,7 +123,7 @@ namespace Framework {
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
             (void)moveSpeed; // silence unused variable warning
 
-            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
+            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.1f, 0.1f));
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
             mr.material = GraphicsSystemV2::Material2;
@@ -220,6 +229,8 @@ namespace Framework {
 
                     entityManager->AddComponent<GridTiles>(e);
                     auto& gridTile = entityManager->GetComponent<GridTiles>(e);
+                    auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+                    mr.material = GraphicsSystemV2::Material2;
                     gridTile.tileId = nextId++;
                     gridTile.x = col;
                     gridTile.y = row;

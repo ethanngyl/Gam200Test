@@ -4,6 +4,7 @@
  Author:         TAN WEI LEONG
  Email:          weileong.tan@digipen.edu
  Date:           2025-11-04
+ Contribution:   100%
  ------------------------------------------------------------------------------
 ANIMATION SYSTEM IMPLEMENTATION
 

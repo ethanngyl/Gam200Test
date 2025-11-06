@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          UISystem.cpp
  Author:        GE YONGQI
@@ -349,29 +349,82 @@ namespace Framework {
         GLFWwindow* window = windowSystem->GetWindow();
         if (!window) return Vector2D(0, 0);
 
-        // Get actual window size
-        int actualWidth, actualHeight;
-        glfwGetWindowSize(window, &actualWidth, &actualHeight);
+        // ========================================================================
+        // STEP 1: Understand input coordinates
+        // ========================================================================
+        // glfwGetCursorPos() returns coordinates relative to the TOP-LEFT of window
+        // (0, 0) = top-left corner of the window
+        // (windowWidth, windowHeight) = bottom-right corner
+        //
+        // These are NOT screen coordinates (which would be global across all monitors)
 
-        // Get framebuffer size (for high-DPI displays)
+        // ========================================================================
+        // STEP 2: Get window and framebuffer sizes
+        // ========================================================================
+
+        // Framebuffer size = actual pixels OpenGL renders to
         int fbWidth, fbHeight;
         glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 
-        // Calculate DPI scale
-        float scaleX = (float)fbWidth / (float)actualWidth;
-        float scaleY = (float)fbHeight / (float)actualHeight;
+        // Window size = what GLFW reports for cursor/window dimensions
+        int windowWidth, windowHeight;
+        glfwGetWindowSize(window, &windowWidth, &windowHeight);
 
-        // Adjust mouse coordinates
-        float adjustedX = screenX * scaleX;
-        float adjustedY = screenY * scaleY;
+        // ⭐ Key insight: On high-DPI displays, framebuffer can be 2x window size
+        // Example (Retina display):
+        //   Window: 1600x800
+        //   Framebuffer: 3200x1600
+        //   Scale: 2.0x
 
-        // Convert to NDC (-1 to 1)
-        float ndcX = (2.0f * adjustedX) / fbWidth - 1.0f;
-        float ndcY = 1.0f - (2.0f * adjustedY) / fbHeight;
+        // ========================================================================
+        // STEP 3: Convert from window space to framebuffer space
+        // ========================================================================
 
-        // Convert to world space
+        float fbX = screenX * ((float)fbWidth / (float)windowWidth);
+        float fbY = screenY * ((float)fbHeight / (float)windowHeight);
+
+        // Example on 2x display:
+        // Mouse at window (100, 50)
+        // -> Framebuffer (200, 100)
+
+        // ========================================================================
+        // STEP 4: Convert framebuffer to NDC (Normalized Device Coordinates)
+        // ========================================================================
+
+        // Framebuffer: (0, 0) = top-left, (fbWidth, fbHeight) = bottom-right
+        // NDC: (-1, 1) = top-left, (1, -1) = bottom-right
+
+        float ndcX = (2.0f * fbX / (float)fbWidth) - 1.0f;
+        float ndcY = 1.0f - (2.0f * fbY / (float)fbHeight);
+
+        // Explanation:
+        // fbX = 0        -> ndcX = -1.0 (left edge)
+        // fbX = fbWidth  -> ndcX = +1.0 (right edge)
+        // fbY = 0        -> ndcY = +1.0 (top edge)
+        // fbY = fbHeight -> ndcY = -1.0 (bottom edge)
+
+        // ========================================================================
+        // STEP 5: Convert NDC to world space
+        // ========================================================================
+
         glm::mat4 invViewProj = glm::inverse(graphics->GetCamera().GetViewProjectionMatrix());
         glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
+
+        // The camera's view-projection matrix transforms world -> NDC
+        // The inverse transforms NDC -> world
+
+        // ========================================================================
+        // OPTIONAL: Debug logging
+        // ========================================================================
+
+        // Uncomment to see the transformation pipeline:
+        /*
+        LOG_DEBUG("UI", "Coordinate Transform:");
+        LOG_DEBUG("UI", "  Window:      (%.1f, %.1f)", screenX, screenY);
+        LOG_DEBUG("UI", "  Framebuffer: (%.1f, %.1f)", fbX, fbY);
+        LOG_DEBUG("UI", "  NDC:         (%.3f, %.3f)", ndcX, ndcY);
+        LOG_DEBUG("UI", "  World:       (%.3f, %.3f)", worldPos.x, worldPos.y);
+        */
 
         return Vector2D(worldPos.x, worldPos.y);
     }

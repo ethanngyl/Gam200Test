@@ -1,8 +1,8 @@
-﻿/*
+/*
 ===============================================================================
  File:          level1.cpp
- Author:        GE YONGQI
- Email:         yongqi.ge@digipen.edu
+ Author:        TAN WEI LEONG
+ Email:         weileong.tan@digipen.edu
  Date:          2025-10-31
  Contribution:  100%
  ------------------------------------------------------------------------------
@@ -62,11 +62,6 @@ void level1_Initialize()
         return;
     }
 
-    auto playerControll = engine->GetPlayerController();
-    if (!playerControll) {
-        LOG_ERROR("LEVEL1", "playerControll is null!");
-        return;
-    }
 
     // ========================================================================
     // Spawn Player - Save the returned entity ID
@@ -126,11 +121,6 @@ void level1_Initialize()
     // ========================================================================
     // Tell the PlayerController who the player entity is
     // ========================================================================
-    playerControll->SetPlayerEntity(playerEntity);
-
-    // Optional: Configure shooting parameters
-    playerControll->SetShootCooldown(0.2f);
-    playerControll->SetProjectileSpeed(0.5f);
 
     LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
 

@@ -4,7 +4,7 @@
  Author:         Josh Ong
  Email:          josh.o@digipen.edu
  Date:           2025-10-24
- Contribution:
+ Contribution: 	 90%
  ------------------------------------------------------------------------------
 
   Brief:
@@ -120,4 +120,21 @@ namespace Framework {
 			  grid.startPos.y + static_cast<float>(c.y) * grid.spacing.y
 			};
 		}
+		// ============================================================================
+		// Declaration of function: RebuildSpatialPartitioning
+		// author: jiahao.zhou@digipen
+		// ============================================================================
+		
+		void RebuildSpatialPartition();
+		// ============================================================================
+		// Declaration of function: SpatialPartitioningInsert
+		// author: jiahao.zhou@digipen
+		// ============================================================================
+		void SpatialPartitioningInsert(Framework::Entity entity);
+
+		// ============================================================================
+		// Declaration of function: SpatialPartitioningRemove
+		// author: jiahao.zhou@digipen
+		// ============================================================================
+		void SpatialPartitioningRemove(Framework::Entity entity);
 }

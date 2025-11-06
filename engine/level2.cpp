@@ -20,9 +20,11 @@
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
+#include "Pathfinding.h"
 
 
 extern Framework::CoreEngine* engine;
+using Framework::Vector2D;
 
 
 void level2_Load()
@@ -40,7 +42,7 @@ void level2_Initialize()
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Enable();
     }
-    engine->SetPlaying(true);
+    engine->SetPlaying(false);
 
 
     auto graphics = engine->GetGraphicsSystem();
@@ -48,6 +50,28 @@ void level2_Initialize()
         // Reset camera for menu
         graphics->SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));
         graphics->SetCameraZoom(1.0f);
+    }
+
+    auto spawner = engine->GetSpawner();
+
+    auto playerController = engine->GetPlayerController();
+    auto playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+
+    playerController->SetPlayerEntity(playerEntity);
+    playerController->SetEntitySpawner(spawner);
+
+    if (engine->GetImGuiSystem()) {
+        engine->GetImGuiSystem()->SetPlayerEntity(playerEntity);
+        LOG_INFO("LEVEL2", "Player entity set on ImGui system");
+    }
+
+    if (engine->GetEntityManager()) {
+        Framework::PathfindingSystem::SpawnEnemyFurthestFromPlayer(
+            playerEntity,
+            engine->GetEntityManager(),
+            spawner
+        );
+        LOG_INFO("LEVEL2", "Enemy spawned (will pathfind to player)");
     }
 }
 
