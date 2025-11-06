@@ -1151,9 +1151,9 @@ namespace Framework {
 
         ImGui::Separator();
 
-        if (ImGui::Button("Spawn Circle Pattern##Btn6", ImVec2(-1, 0))) {
-            entitySpawner->SpawnCircle("circle", 12, Vector2D(0, 0), 0.8f);
-        }
+        //if (ImGui::Button("Spawn Circle Pattern##Btn6", ImVec2(-1, 0))) {
+        //    entitySpawner->SpawnCircle("circle", 12, Vector2D(0, 0), 0.8f);
+        //}
 
         if (ImGui::Button("Spawn Grid Pattern##Btn7", ImVec2(-1, 0))) {
             entitySpawner->SpawnGrid("wireframequad",10, 10, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
