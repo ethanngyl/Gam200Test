@@ -62,11 +62,6 @@ void level1_Initialize()
         return;
     }
 
-    auto playerControll = engine->GetPlayerController();
-    if (!playerControll) {
-        LOG_ERROR("LEVEL1", "playerControll is null!");
-        return;
-    }
 
     // ========================================================================
     // Spawn Player - Save the returned entity ID
@@ -126,7 +121,6 @@ void level1_Initialize()
     // ========================================================================
     // Tell the PlayerController who the player entity is
     // ========================================================================
-    playerControll->SetPlayerEntity(playerEntity);
 
     LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
 
