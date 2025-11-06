@@ -1,3 +1,29 @@
+/**
+===============================================================================
+ File:           MathABS.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-10-27
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+  Brief:
+  - Provides fast, inline, and constexpr implementations for calculating the
+    absolute value (Abs) for various scalar types and a component-wise absolute
+    value for Vector2D.
+
+  Key features:
+  - **Scalar Abs**: Overloaded templates/functions for all standard signed and
+    unsigned integer types, as well as float, double, and long double.
+  - **Vector Abs**: Provides component-wise absolute value calculation for Vector2D.
+  - **Performance**: Use of 'inline constexpr' ensures these functions are typically
+    evaluated at compile time or inlined for maximum runtime efficiency, avoiding
+    potential overhead from <cmath> or <cstdlib> standard library calls.
+  - **Magnitude Helper**: Includes LengthSq for squared magnitude, a common
+    optimization technique that avoids a square root operation.
+===============================================================================
+ */
+
 #pragma once
 #include "Vector2D.h"
 

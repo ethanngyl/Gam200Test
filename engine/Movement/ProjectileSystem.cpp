@@ -30,7 +30,7 @@ namespace Framework
      * Initializes entity manager and input system pointers to nullptr.
      * These must be set via SetEntityManager() and SetInputSystem() before use.
      */
-    ProjectileMovementSystem::ProjectileMovementSystem() : entityManager(nullptr)
+    ProjectileMovementSystem::ProjectileMovementSystem() : entityManager(nullptr), eventSystem(nullptr)
     {
     }
 
@@ -85,6 +85,10 @@ namespace Framework
                 else {
                     transform.position -= movement.direction * movement.moveSpeed * dt;
                 }
+                //if statement to check if entity has enemy component, checks if projectile collides with enemy, sends a msg to enemy that its taking dmg
+                // once health gone, destroy enemy entity plus projectile
+               
+                CheckProjectileEnemyCollisions();
 
                 // Optional: Destroy projectiles that go off-screen
                 // This prevents memory leaks from projectiles flying forever
@@ -107,5 +111,123 @@ namespace Framework
     void ProjectileMovementSystem::SendEngineMessage(Message* message)
     {
         (void)message;
+    }
+
+    void ProjectileMovementSystem::CheckProjectileEnemyCollisions() {
+        if (!entityManager) return;
+
+        // Collect all projectiles
+        std::vector<Entity> projectiles;
+        for (Entity e : entityManager->GetAllEntities())
+        {
+            if (entityManager->HasComponent<ProjectileMovement>(e) &&
+                entityManager->HasComponent<Transform>(e) &&
+                entityManager->HasComponent<CircleCollider>(e))
+            {
+                projectiles.push_back(e);
+            }
+        }
+
+        // Collect all enemies
+        std::vector<Entity> enemies;
+        for (Entity e : entityManager->GetAllEntities())
+        {
+            // *** Check if entity is an enemy ***
+            if (entityManager->HasComponent<Transform>(e) &&
+                entityManager->HasComponent<BoxCollider>(e) &&
+                entityManager->HasComponent<Health>(e))  // Must have health!
+            {
+                enemies.push_back(e);
+            }
+        }
+
+        // Check each projectile against each enemy
+        for (Entity projectile : projectiles)
+        {
+            auto& projTransform = entityManager->GetComponent<Transform>(projectile);
+            auto& projCollider = entityManager->GetComponent<CircleCollider>(projectile);
+
+            // Create collision shape for projectile
+               Collider projShape = Collider::create_circle(
+                projCollider.radius,
+                projTransform.position
+            );
+
+            bool projectileHit = false;
+
+            for (Entity enemy : enemies)
+            {
+                auto& enemyTransform = entityManager->GetComponent<Transform>(enemy);
+                auto& enemyCollider = entityManager->GetComponent<BoxCollider>(enemy);
+                auto& enemyHealth = entityManager->GetComponent<Health>(enemy);
+
+                // Skip if enemy is already dead
+                if (enemyHealth.isDead) continue;
+
+                // Create collision shape for enemy
+                Collider enemyShape = Collider::create_rect(
+                    enemyCollider.size.x,
+                    enemyCollider.size.y,
+                    enemyTransform.position
+                );
+
+                // *** CHECK COLLISION ***
+                if (check_collision(projShape, enemyShape))
+                {
+                    std::cout << "[ProjectileSystem] Projectile " << projectile.GetID()
+                        << " hit Enemy " << enemy.GetID() << "!\n";
+
+                    // Deal damage to enemy
+                    const int PROJECTILE_DAMAGE = 10;
+                    enemyHealth.TakeDamage(PROJECTILE_DAMAGE);
+
+                    std::cout << "  Enemy health: " << enemyHealth.currentHealth
+                        << "/" << enemyHealth.maxHealth << "\n";
+
+                    // *** PUBLISH ENEMY_DAMAGED EVENT ***
+                    if (eventSystem) {
+                        eventSystem->QueueMessage(
+                            new EnemyDamagedMessage(
+                                enemy,
+                                projectile,
+                                PROJECTILE_DAMAGE,
+                                enemyHealth.currentHealth,
+                                enemyTransform.position
+                            )
+                        );
+                    }
+
+                    // Check if enemy died
+                    if (enemyHealth.isDead)
+                    {
+                        std::cout << "Enemy " << enemy.GetID() << " DESTROYED!\n";
+
+                        // *** PUBLISH ENEMY_DEATH EVENT ***
+                        if (eventSystem) {
+                            eventSystem->QueueMessage(
+                                new EnemyDeathMessage(
+                                    enemy,
+                                    projectile,
+                                    enemyTransform.position
+                                )
+                            );
+                        }
+
+                        // Destroy the enemy entity
+                        entityManager->DestroyEntity(enemy);
+                    }
+
+                    // Mark projectile for destruction
+                    projectileHit = true;
+                    break;  // One projectile can only hit one enemy
+                }
+            }
+
+            // Destroy projectile if it hit something
+            if (projectileHit)
+            {
+                entityManager->DestroyEntity(projectile);
+            }
+        }
     }
 }

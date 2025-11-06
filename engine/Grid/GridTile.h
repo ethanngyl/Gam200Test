@@ -1,3 +1,24 @@
+/**
+===============================================================================
+ File:           GridTile.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-10-24
+ Contribution:	 100%
+ ------------------------------------------------------------------------------
+
+  Brief:
+  - Defines the GridTiles component, which is attached to every tile entity
+	in the ECS to store tile-specific properties.
+
+  Key features:
+  - Inherits from Component, integrating seamlessly with the ECS.
+  - Stores grid coordinates (x, y) and tile identification (tileId, entity).
+  - Contains pathfinding data: 'blocked' status and the 'occupant' entity ID.
+  - Stores world-space geometry data (centerWorld, tileW, tileH).
+===============================================================================
+ */
+
 #pragma once
 
 #include "ECSEntity.h"

@@ -134,4 +134,35 @@ namespace Framework
         void* fmodChannel = nullptr;
     };
 
+    /**
+     * @brief Health component for entities that can take damage
+     */
+    struct Health : public Component<Health> {
+        int maxHealth = 50;
+        int currentHealth = 50;
+        bool isDead = false;
+
+        Health() = default;
+        Health(int max) : maxHealth(max), currentHealth(max) {}
+
+        void TakeDamage(int damage) {
+            currentHealth -= damage;
+            if (currentHealth <= 0) {
+                currentHealth = 0;
+                isDead = true;
+            }
+        }
+
+        void Heal(int amount) {
+            currentHealth += amount;
+            if (currentHealth > maxHealth) {
+                currentHealth = maxHealth;
+            }
+        }
+
+        float GetHealthPercent() const {
+            return static_cast<float>(currentHealth) / static_cast<float>(maxHealth);
+        }
+    };
+
 }

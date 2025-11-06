@@ -123,6 +123,9 @@ namespace Framework {
             //movement.moveSpeed = moveSpeed;
             //movement.direction = Vector2D(0.0f, -1.0f);
 
+            // *** NEW: Add Health component (50 HP by default) ***
+            entityManager->AddComponent<Health>(enemy, 50);
+            std::cout << "[EntitySpawner] Enemy spawned with 50 HP\n";
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);

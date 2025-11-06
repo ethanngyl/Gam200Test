@@ -24,6 +24,8 @@
 
 #pragma once
 #include "Precompiled.h"
+#include "Event/Event.h"
+#include "Event/DamageIndicatorSystem.h"
 
 namespace Framework
 {
@@ -41,6 +43,8 @@ namespace Framework
     class AudioSystem;
     class AnimationSystem;
     class UISystem;
+    class EventSystem;
+    class DamageIndicatorSystem;
 
     /**
      * @class CoreEngine
@@ -141,6 +145,8 @@ namespace Framework
         AudioSystem* GetAudioSystem() const { return audioSystem; }
         AnimationSystem* GetAnimationSystem() const { return animationSystem; }
         UISystem* GetUISystem() const { return uiSystem; }
+        EventSystem* GetEventSystem() const { return eventSystem; }
+        
 
 
         /**
@@ -195,6 +201,8 @@ namespace Framework
         AudioSystem* audioSystem;
         AnimationSystem* animationSystem;
         UISystem* uiSystem;
+        EventSystem* eventSystem;
+        DamageIndicatorSystem* damageIndicator;
 
         // state
         unsigned LastTime;
@@ -207,6 +215,8 @@ namespace Framework
         void WireSystemDependencies();
         void InitializeCriticalSystems();
         void AddSystemsToEngine();
+
+        void SetupEventListeners();
     };
 
     /**

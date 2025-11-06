@@ -1,3 +1,26 @@
+/**
+===============================================================================
+ File:           Grid.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu	
+ Date:           2025-10-22
+ Contribution:	 100%
+ ------------------------------------------------------------------------------
+
+  Brief:
+  - Defines the core data structure for the 2D tile grid. The Grid struct stores
+	the dimensions, world-space properties, and a list of entities representing
+	the individual tiles.
+
+  Key features:
+  - Stores grid dimensions (rows/cols) and physical properties (startPos, spacing).
+  - Holds a vector of Entity IDs for all tiles in row-major order.
+  - Provides utility methods for boundary checking (InBounds) and index calculation (Index).
+  - Offers a quick lookup method for a tile entity at a specific coordinate (TileAt).
+  - Provides a global access point (GetGrid) for the single Grid instance.
+===============================================================================
+ */
+
 #pragma once
 
 #include "ECSEntity.h"

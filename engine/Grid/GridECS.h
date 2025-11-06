@@ -1,3 +1,29 @@
+/**
+===============================================================================
+ File:           GridECS.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-10-24
+ Contribution:
+ ------------------------------------------------------------------------------
+
+  Brief:
+  - Provides the main API for interacting with the grid system using ECS components.
+	This includes boundary checks, walkability queries, state modification, and
+	coordinate conversions.
+
+  Key features:
+  - Defines GridCoord structure for simple integer tile coordinates.
+  - **Tile State API**: Includes IsWalkable, SetBlocked, and SetOccupant, which
+	abstract the process of accessing the GridTiles component via the EntityManager.
+  - **Coordinate Conversion**: Provides WorldToTile and TileToWorld functions
+	for converting between world-space Vector2D and grid-space GridCoord,
+	based on the center of the tile.
+  - All functions use the global GetGrid() accessor and rely on the EntityManager
+	and GridTiles component for their operations.
+===============================================================================
+ */
+
 #pragma once
 #include <cmath>
 #include <optional>

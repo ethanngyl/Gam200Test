@@ -26,7 +26,10 @@
 #include "ProjectileSystem.h"        
 #include "EntitySpawner.h"
 #include "PlayerManager.h"           
-#include "ImguiSystem.h"            
+#include "ImguiSystem.h"  
+#include "Event/Event.h"
+#include "Event/DamageIndicatorSystem.h"
+
 
 
 namespace Framework
@@ -47,8 +50,10 @@ namespace Framework
         , audioSystem(nullptr)
         , animationSystem(nullptr)
         , uiSystem(nullptr)
+        , eventSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
+        , damageIndicator(nullptr)
     {
         CORE = this;
     }
@@ -82,6 +87,9 @@ namespace Framework
 
             // Initialize the remaining systems
             Initialize();
+
+            //Initializes the subscribers to receive events
+            SetupEventListeners();
 
             if (audioSystem) {
                 LOG_INFO("CORE", "Loading test audio...");
@@ -124,6 +132,8 @@ namespace Framework
         audioSystem = new AudioSystem();
         animationSystem = new AnimationSystem();
         uiSystem = new UISystem(this);
+        eventSystem = new EventSystem();
+        damageIndicator = new DamageIndicatorSystem();
 
         LOG_INFO("CORE", " All systems created");
     }
@@ -152,6 +162,9 @@ namespace Framework
         // Wire AudioSystem to ImGuiSystem
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
+
+        // Wire Event System
+        projectileSystem->SetEventSystem(eventSystem);
 
         LOG_INFO("CORE", "Dependencies wired");
     }
@@ -193,6 +206,7 @@ namespace Framework
         AddSystem(audioSystem);
         AddSystem(animationSystem);
         AddSystem(uiSystem);
+        AddSystem(eventSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -221,6 +235,30 @@ namespace Framework
 
         LOG_INFO("CORE", "All systems initialized");
     }
+
+    // ========================================================================
+    // Event Subscribers
+   // ========================================================================
+
+    void CoreEngine::SetupEventListeners() {
+        LOG_INFO("CORE", "Setting up event listeners...");
+
+        if (!eventSystem || !damageIndicator) {
+            LOG_WARN("CORE", "EventSystem or DamageIndicator is null, skipping listener setup");
+            return;
+        }
+
+        // *** THIS IS THE CRITICAL SUBSCRIPTION STEP ***
+
+        // 1. Register for damage events (ENEMY_DAMAGED)
+        eventSystem->RegisterObserver(Framework::MessageIds::enemyDamaged, damageIndicator);
+        LOG_INFO("CORE", "Registered DamageIndicator for ENEMY_DAMAGED events");
+
+        // 2. Register for death events (ENEMY_DEATH)
+        eventSystem->RegisterObserver(Framework::MessageIds::enemyDeath, damageIndicator);
+        LOG_INFO("CORE", "Registered DamageIndicator for ENEMY_DEATH events");
+    }
+
 
     // ========================================================================
     // Clean all systems
@@ -254,11 +292,17 @@ namespace Framework
         audioSystem = nullptr;
         animationSystem = nullptr;
         uiSystem = nullptr;
+        eventSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {
             delete entityManager;
             entityManager = nullptr;
+        }
+
+        if (damageIndicator) {
+            delete damageIndicator;
+            damageIndicator = nullptr;
         }
 
         // Terminate GLFW
