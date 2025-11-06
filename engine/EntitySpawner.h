@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           EntitySpawner.h (Fixed Logging Version)
  Description:    System for spawning entities dynamically during gameplay
@@ -69,10 +69,19 @@ namespace Framework {
             mr.visible = true;
             mr.tint = glm::vec4(1.0f);
 
-            // ✅ ONE LINE
+            // ensure each entity has its own material instance
             if (CORE && CORE->GetGraphicsSystem()) {
                 auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
-                gs->AssignMeshAndMaterial(mr, spriteName);  // Let graphics system handle it
+                gs->AssignMeshAndMaterial(mr, spriteName);
+
+                // create a unique copy of the base material
+                if (mr.material.IsValid()) {
+                    auto* base = gs->GetResourceManager().GetMaterial(mr.material);
+                    MaterialHandle clone = gs->GetResourceManager().CreateMaterial(
+                        spriteName + "_inst_" + std::to_string(entity.GetID()), base->shader);
+                    *gs->GetResourceManager().GetMaterial(clone) = *base;  // shallow copy
+                    mr.material = clone;
+                }
             }
 
             return entity;
