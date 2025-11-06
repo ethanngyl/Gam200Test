@@ -32,6 +32,16 @@ file(GLOB_RECURSE APP_SRC
    "${SRC_DIR}/*.hpp"
 )
 
+# -------------------------------------------------------------------
+# IDE File Organization Configuration
+# -------------------------------------------------------------------
+# Organizes files in the IDE's project view based on their physical location.
+source_group(
+    TREE "${CMAKE_CURRENT_SOURCE_DIR}/engine" # Tells CMake to attempt to replicate the directory structure found under 'engine'.
+    PREFIX "engine"  # Sets the top-level virtual folder name in the IDE to 'engine'.
+    FILES ${APP_SRC} # Applies this grouping structure to all files collected in the ${APP_SRC} variable.
+)
+
 # Copy assets at configure time (happens when CMake runs)
 file(COPY "${CMAKE_SOURCE_DIR}/assets" 
      DESTINATION "${CMAKE_BINARY_DIR}")
@@ -75,6 +85,7 @@ set_source_files_properties(
 # Copy shaders to build directory
 file(COPY ${CMAKE_SOURCE_DIR}/engine/shaders
      DESTINATION ${CMAKE_BINARY_DIR})
+
 # ======================= Include Directories =========================
 
 # Include directories for the project (fixed to use directory, not files)
