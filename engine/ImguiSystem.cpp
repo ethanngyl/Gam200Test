@@ -990,7 +990,7 @@ namespace Framework {
         ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
 
-        // ✅ FIX: Add ##UniqueID to make this window unique
+        //  FIX: Add ##UniqueID to make this window unique
         if (!ImGui::Begin("Entity Inspector##Inspector1", &showEntityInspector)) {
             ImGui::End();
             return;
