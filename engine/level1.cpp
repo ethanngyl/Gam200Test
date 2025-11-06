@@ -21,7 +21,6 @@
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
-#include "../Graphics/GraphicsSystemV2.h"
 
 
 extern Framework::CoreEngine* engine;
@@ -110,13 +109,12 @@ void level1_Initialize()
         anim.currentFrame = 0;
 
         // Renderable
-        auto& rend = em->GetComponent<Framework::Renderable>(playerEntity);
+        auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
         rend.visible = true;
         rend.layer = 1;
 
-
         // Transform
-        auto& xform = em->GetComponent<Framework::Transform>(playerEntity);
+        auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
         xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
         xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
 

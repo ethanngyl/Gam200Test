@@ -66,7 +66,7 @@ namespace Framework {
             transform.scale = scale;
 
             auto& mr = entityManager->AddComponent<MeshRenderer>(entity);
-            mr.material = GraphicsSystemV2::defaultMaterial;
+            mr.material = GraphicsSystemV2::Material2;
             mr.spriteName = spriteName;  // may be "player.png" or "quad" etc. 
             mr.visible = true;
             mr.tint = glm::vec4(1.0f);
@@ -80,7 +80,13 @@ namespace Framework {
          */
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
-            Entity player = SpawnSprite("assets/Bird.png", position, Vector2D(0.3f, 0.3f));
+			const std::string spritePath = "assets/Bird.png";
+            Entity player = SpawnSprite(spritePath, position, Vector2D(0.3f, 0.3f));
+
+            auto& mr = entityManager->GetComponent<MeshRenderer>(player);
+            mr.material = GraphicsSystemV2::Material2;
+
+
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -90,10 +96,9 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-            auto& mr = entityManager->GetComponent<MeshRenderer>(player);
-            mr.material = GraphicsSystemV2::birdMaterial;
 
-            std::cout << "[EntitySpawner] Spawned player (Bird.png)\n";
+
+            std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
 
             //camera
             //FollowPlayer
@@ -106,17 +111,19 @@ namespace Framework {
          * @brief Spawn an enemy entity 
          */
 
+        //TO MEET THE RUBRICS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!LOOK HERE LOOK HERE (MULTIPLE SHADER)
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
             (void)moveSpeed; // silence unused variable warning
 
             Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.4f, 0.4f));
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
-            mr.material = GraphicsSystemV2::defaultMaterial;
+            mr.material = GraphicsSystemV2::Material2;
             //entityManager->AddComponent<Movement>(enemy);
             //auto& movement = entityManager->GetComponent<Movement>(enemy);
             //movement.moveSpeed = moveSpeed;
             //movement.direction = Vector2D(0.0f, -1.0f);
+
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);

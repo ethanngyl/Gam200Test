@@ -130,13 +130,6 @@ namespace Framework {
         mainCamera.SetPosition(newPos);
     }
 
-    glm::vec2 GraphicsSystemV2::ComputeCameraDims() const {
-        float aspect = static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight);
-        float z = mainCamera.GetZoom();   // your ortho was set to [-aspect..aspect] × [-1..1] then scaled by zoom
-        float halfH = 1.0f * z;
-        float halfW = aspect * z;
-        return { 2.0f * halfW, 2.0f * halfH }; // full visible width/height in world units
-    }
 
     //definition of ResetEditorCamera - Jiahao
     void GraphicsSystemV2::ResetEditorCamera() {
@@ -338,10 +331,10 @@ namespace Framework {
             "default"
         );
 
-        gridShader = resourceManager.LoadShader(
-            "shaders/grid.vert",
-            "shaders/grid.frag",
-            "grid"
+        Shader2 = resourceManager.LoadShader(
+            "shaders/basic.vert",
+            "shaders/basic2.frag",
+            "color"
         );
 
         if (!defaultShader.IsValid()) {
@@ -485,7 +478,7 @@ namespace Framework {
 
         // Create default material
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
-        birdMaterial = resourceManager.CreateMaterial("bird", defaultShader);
+        Material2 = resourceManager.CreateMaterial("color", Shader2);//                                   new
         // Create materials for each primitive
         triangleMaterial = resourceManager.CreateMaterial("triangle_mat", defaultShader);
         auto* triMat = resourceManager.GetMaterial(triangleMaterial);
@@ -534,40 +527,12 @@ namespace Framework {
         // Use the quad mesh for background
         backgroundMesh = quadMesh;
 
-        // Prefer the grid shader/material for the background
-        //(gridShader/gridMaterial must be created in LoadDefaultResources/CreateDefaultMaterials)
-        ShaderHandle shaderForBG = gridShader.IsValid() ? gridShader : defaultShader;
-
-        // create the background material using the chosen shader
-        backgroundMaterial = resourceManager.CreateMaterial("background", shaderForBG);
-
-        // Configure the material (bind the image)
-        if (Material* bgMat = resourceManager.GetMaterial(backgroundMaterial)) {
-            bgMat->albedoTexture = backgroundTexture;   // the image
-            bgMat->tint = glm::vec4(1.0f);     // no tint
-        }
-
-        // Set default grid uniforms once on the shader program (safe no-ops if using defaultShader)
-        if (shaderForBG.IsValid()) {
-            if (Shader* sh = resourceManager.GetShader(shaderForBG)) {
-                sh->Bind();
-                // image tint (keep white)
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uColor"); loc != -1)
-                    glUniform3f(loc, 1.0f, 1.0f, 1.0f);
-
-                // grid controls (only used by basic2_grid.frag)
-                //if (auto loc = glGetUniformLocation(sh->GetID(), "uCamDim");   loc != -1) glUniform2f(loc, 4.0f, 2.0f);
-                //if (auto loc = glGetUniformLocation(sh->GetID(), "uCamPos");   loc != -1) glUniform2f(loc, 0.0f, 0.0f);
-
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uShowGrid");   loc != -1) glUniform1i(loc, 1);
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uCellSize");   loc != -1) glUniform2f(loc, 1.0f, 1.0f);
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uLineWidth");  loc != -1) glUniform1f(loc, 0.02f);
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uGridColor");  loc != -1) glUniform4f(loc, 0.0f, 0.0f, 0.0f, 0.85f);
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uMajorEvery"); loc != -1) glUniform1i(loc, 5);
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uMajorWidth"); loc != -1) glUniform1f(loc, 0.04f);
-                if (auto loc = glGetUniformLocation(sh->GetID(), "uMajorColor"); loc != -1) glUniform4f(loc, 0.0f, 0.0f, 0.0f, 1.0f);
-                sh->Unbind();
-            }
+        // Create background material
+        backgroundMaterial = resourceManager.CreateMaterial("background", defaultShader);
+        auto* bgMat = resourceManager.GetMaterial(backgroundMaterial);
+        if (bgMat) {
+            bgMat->albedoTexture = backgroundTexture;
+            bgMat->tint = glm::vec4(1.0f);  // No tinting
         }
 
         std::cout << "Background setup complete\n";
@@ -604,6 +569,67 @@ namespace Framework {
 
 namespace Framework {
 
+    //// === LEGACY SUPPORT ===
+
+    //void GraphicsSystemV2::CreateLegacyMaterials() {
+    //    std::cout << "GraphicsSystemV2: Creating legacy material mappings...\n";
+
+        // Map sprite names to meshes
+        //legacyMeshMap["triangle"] = triangleMesh;
+        //legacyMeshMap["quad"] = quadMesh;
+        //legacyMeshMap["line"] = lineMesh;
+        //legacyMeshMap["circle"] = circleMesh;
+        //legacyMeshMap["wireframequad"] = wireframeQMesh;
+
+        //// Map sprite names to materials
+        //legacyMaterialMap["triangle"] = triangleMaterial;
+        //legacyMaterialMap["quad"] = quadMaterial;
+        //legacyMaterialMap["line"] = lineMaterial;
+        //legacyMaterialMap["circle"] = circleMaterial;
+        //legacyMaterialMap["wireframequad"] = wireframeQMaterial;
+
+    //    std::cout << "Legacy material mappings created\n";
+    //}
+
+    //MeshHandle GraphicsSystemV2::GetMeshForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyMeshMap.find(spriteName);
+    //    if (it != legacyMeshMap.end()) {
+    //        return it->second;
+    //    }
+    //    return triangleMesh;  // Fallback
+    //}
+
+    //MaterialHandle GraphicsSystemV2::GetMaterialForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyMaterialMap.find(spriteName);
+    //    if (it != legacyMaterialMap.end()) {
+    //        return it->second;
+    //    }
+    //    return defaultMaterial;  // Fallback
+    //}
+
+    //TextureHandle GraphicsSystemV2::GetTextureForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyTextureMap.find(spriteName);
+    //    if (it != legacyTextureMap.end())
+    //        return it->second;
+
+    //    // Try to load from file path (ResourceManager caches internally)
+    //    TextureHandle th = resourceManager.LoadTexture(spriteName);
+    //    if (th.IsValid()) {
+    //        legacyTextureMap[spriteName] = th;
+    //        return th;
+    //    }
+
+    //    return INVALID_TEXTURE_HANDLE;
+    //}
+
+    //MaterialHandle GraphicsSystemV2::GetMaterialForSpriteName(const std::string& spriteName) {
+    //    auto it = legacyMaterialMap.find(spriteName);
+    //    if (it != legacyMaterialMap.end()) {
+    //        return it->second;
+    //    }
+    //    return defaultMaterial;  // Fallback
+    //}
+
     TextureHandle GraphicsSystemV2::GetTextureForSpriteName(const std::string& name) {
         // Only try to load when it looks like a file path (e.g., "assets/x.png")
         if (LooksLikeFilePath(name)) {
@@ -624,17 +650,9 @@ namespace Framework {
             bg.mesh = backgroundMesh;
             bg.material = backgroundMaterial;
             bg.texture = backgroundTexture;
-            bg.layer = 64;
-            //bg.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f));
+            bg.layer = -1000;
+            bg.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f));
             bg.tint = glm::vec4(1.0f);
-            const glm::vec3 camPos = mainCamera.GetPosition();
-            const glm::vec2 camDim = ComputeCameraDims();
-
-            glm::mat4 M(1.0f);
-            M = glm::translate(M, glm::vec3(camPos.x, camPos.y, 0.0f));
-            M = glm::scale(M, glm::vec3(camDim.x, camDim.y, 1.0f));
-            bg.modelMatrix = M;
-
             renderQueue.Submit(bg);
         }
 
@@ -659,12 +677,21 @@ namespace Framework {
 
                 cmd.mesh = mr.mesh.IsValid() ? mr.mesh : quadMesh;
 
-                // === By right, this should NEVER Trigger ===
+                // === IMPORTANT: CLONE material so UV animation doesn't affect all ===
                 if (!mr.material.IsValid()) {
                     Material* base = resourceManager.GetMaterial(defaultMaterial);
                     if (!base) continue;
 
-                    mr.material = defaultMaterial;
+                    MaterialHandle inst = resourceManager.CreateMaterial(
+                        "entity_mat_" + std::to_string(e.GetID()),
+                        base->shader
+                    );
+
+                    Material* pm = resourceManager.GetMaterial(inst);
+                    if (!pm) continue;
+
+                    *pm = *base; // shallow copy (safe)
+                    mr.material = inst;
                 }
 
                 cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
@@ -813,15 +840,6 @@ namespace Framework {
             GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
             if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
             if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-            
-            const glm::vec2 camDim = ComputeCameraDims();
-            const glm::vec3 camPos = mainCamera.GetPosition();
-
-            if (GLint loc = glGetUniformLocation(shader->GetID(), "uCamDim"); loc != -1)
-                glUniform2f(loc, camDim.x, camDim.y);
-
-            if (GLint loc = glGetUniformLocation(shader->GetID(), "uCamPos"); loc != -1)
-                glUniform2f(loc, camPos.x, camPos.y);
 
             // Texture binding
             if (key.tex.IsValid()) {
@@ -839,6 +857,7 @@ namespace Framework {
             if (!mesh) continue;
 
             // ---- STEP 3: Upload instance data and draw ----
+            mesh->SetInstanceData(); // sets up the VAO attributes
             // Upload matrices to GPU buffer (modern DSA version)
             glNamedBufferSubData(mesh->instanceVBO, 0,
                 matrices.size() * sizeof(glm::mat4),
