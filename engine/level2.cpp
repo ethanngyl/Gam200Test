@@ -23,6 +23,7 @@
 
 
 extern Framework::CoreEngine* engine;
+using Framework::Vector2D;
 
 
 void level2_Load()
@@ -49,6 +50,13 @@ void level2_Initialize()
         graphics->SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));
         graphics->SetCameraZoom(1.0f);
     }
+    auto spawner = engine->GetSpawner();
+
+    auto playerController = engine->GetPlayerController();
+    auto playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+    playerController->SetPlayerEntity(playerEntity);
+    playerController->SetEntitySpawner(spawner);
+
 }
 
 void level2_Update()

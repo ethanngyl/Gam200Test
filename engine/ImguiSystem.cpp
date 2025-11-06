@@ -10,6 +10,7 @@
 #include "ImGuiSystem.h"
 #include "EntitySpawner.h"
 #include "AudioSystem.h"
+#include "Pathfinding.h"
 namespace Framework {
 
     ImGuiSystem::ImGuiSystem()
@@ -19,6 +20,7 @@ namespace Framework {
         , audioSystem(nullptr)
         , showDemo(false)
         , showEntityInspector(true)
+        , playerEntity(INVALID_ENTITY)
         , showSpawner(true)
         , showDebug(true)
         , enabled(false)
@@ -993,7 +995,14 @@ namespace Framework {
         }
 
         if (ImGui::Button("Spawn Grid Pattern##Btn7", ImVec2(-1, 0))) {
-            entitySpawner->SpawnGrid("wireframequad", 5, 5, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
+            entitySpawner->SpawnGrid("wireframequad",10, 10, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
+
+            if (playerEntity.GetID() != INVALID_ENTITY) {
+                PathfindingSystem::SpawnEnemyFurthestFromPlayer(playerEntity, entityManager, entitySpawner);
+            }
+            else {
+                std::cout << "[ImGui] Can't spawn enemy - no player set!\n";
+            }
         }
 
         if (ImGui::Button("Trigger Audio##Btn8", ImVec2(-1, 0))) {
