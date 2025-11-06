@@ -1,3 +1,39 @@
+/**
+===============================================================================
+ File:           level3.cpp
+ Author:         PADILLA CARL JAMESON Z.
+ Email:          c.padilla@digipen.edu
+ Date:           2025/11/07
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+  Design notes:
+  Implements Level 3 setup, update loop, and teardown.
+
+  Initialization:
+  - Grabs core subsystems (Graphics, Spawner, PlayerController, EntityManager,
+    Pathfinding, Input), configures a tile grid (cols/rows, origin, spacing).
+  - Spawns player at grid center and enemy at a furthest walkable tile to chase
+    via A*; sets initial turn phase to Player.
+  - Sets baseline camera transform and enables follow target (player).
+
+  Per-frame Update:
+  - Delegates input & movement to PlayerControllerSystem (click/arrow step).
+  - Ticks PathfindingSystem for enemy pursuit along computed paths.
+  - Maintains camera follow while engine is playing.
+
+  Teardown:
+  - Clears camera follow, destroys all level entities, and resets cached entity
+    handles to invalid values to avoid dangling references.
+
+  Notes:
+  - Uses grid utilities to keep movement discrete and turn-based.
+  - Designed to be self-contained so other levels can reuse engine subsystems
+    with different configurations.
+===============================================================================
+ */
+
+
 #include "Precompiled.h"
 #include "level3.h"
 
@@ -13,11 +49,25 @@ namespace {
     Framework::Entity gEnemy{ Framework::INVALID_ENTITY };
 }
 
+/**
+ * @brief Loads Level 3 state
+ *
+ * Logs the load phase and prepares for initialization.
+ * No heavy setup or entity creation occurs here.
+ */
 void level3_Load()
 {
     LOG_INFO("LEVEL3", "Load");
 }
 
+/**
+ * @brief Initializes Level 3
+ *
+ * Sets up all main systems and objects:
+ * - Initializes grid layout and links it globally
+ * - Spawns player and enemy (A* pathfinding)
+ * - Sets camera position and turn phase
+ */
 void level3_Initialize()
 {
     using namespace Framework;
@@ -86,6 +136,14 @@ void level3_Initialize()
         grid.cols, grid.rows, gPlayer.GetID(), playerWorldPos.x, playerWorldPos.y, gEnemy.GetID());
 }
 
+/**
+ * @brief Updates Level 3 every frame
+ *
+ * Handles per-frame logic:
+ * - Processes player input and movement
+ * - Updates enemy pathfinding behavior
+ * - Keeps the camera centered on the player
+ */
 void level3_Update()
 {
     if (engine && engine->GetInputSystem() &&
@@ -114,9 +172,22 @@ void level3_Update()
         gfx->SetFollowTarget(gPlayer);
     }
 }
-
+/**
+ * @brief Draws Level 3
+ *
+ * Placeholder for custom render logic.
+ * Usually handled by the graphics system.
+ */
 void level3_Draw() {}
 
+/**
+ * @brief Frees all Level 3 data
+ *
+ * Cleans up entities and resets references:
+ * - Clears camera follow target
+ * - Destroys all level entities
+ * - Resets player and enemy IDs
+ */
 void level3_Free()
 {
     using namespace Framework;
@@ -131,6 +202,11 @@ void level3_Free()
     gEnemy = Entity{ INVALID_ENTITY };
 }
 
+/**
+ * @brief Unloads Level 3
+ *
+ * Logs the unload phase for debugging and profiling.
+ */
 void level3_Unload()
 {
     LOG_INFO("LEVEL3", "Unload");

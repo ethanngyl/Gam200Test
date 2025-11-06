@@ -40,8 +40,8 @@ namespace Framework {
     class EntitySpawner;
 
     /**
-     * @brief A* pathfinding node for grid-based pathfinding
-     */
+    * @brief A* pathfinding node for grid-based pathfinding
+    */
     struct PathNode {
         GridCoord coord;
         int gCost;  // Distance from start
@@ -55,8 +55,8 @@ namespace Framework {
     };
 
     /**
-     * @brief Enemy AI component - stores pathfinding state per enemy
-     */
+    * @brief Enemy AI component - stores pathfinding state per enemy
+    */
     struct EnemyAI : public Component<EnemyAI> {
         std::vector<GridCoord> currentPath;  // Path to follow
         size_t pathIndex;                     // Current position in path
@@ -76,8 +76,8 @@ namespace Framework {
     };
 
     /**
-     * @brief system that manages enemy AI pathfinding nav
-     */
+    * @brief system that manages enemy AI pathfinding nav
+    */
     class PathfindingSystem : public EngineSystem {
     public:
         PathfindingSystem() : entityManager(nullptr) {}
@@ -90,8 +90,8 @@ namespace Framework {
         void SetEntityManager(EntityManager* em) { entityManager = em; }
 
         /**
-         * @brief Spawn an enemy at the furthest walkable tile from player
-         */
+        * @brief Spawn an enemy at the furthest walkable tile from player
+        */
         static Entity SpawnEnemyFurthestFromPlayer(
             Entity playerEntity,
             EntityManager* entityManager,
@@ -101,26 +101,26 @@ namespace Framework {
         EntityManager* entityManager;
 
         /**
-         * @brief Calculate A* path from start to goal
-         */
+        * @brief Calculate A* path from start to goal
+        */
         static std::vector<GridCoord> FindPath(
             const GridCoord& start,
             const GridCoord& goal,
             const Grid& grid);
 
         /**
-         * @brief Calculate Manhattan distance heuristic
-         */
+        * @brief Calculate Manhattan distance heuristic
+        */
         static int Heuristic(const GridCoord& a, const GridCoord& b);
 
         /**
-         * @brief Get valid neighboring tiles (4-directional)
-         */
+        * @brief Get valid neighboring tiles (4-directional)
+        */
         static std::vector<GridCoord> GetNeighbors(const GridCoord& coord, const Grid& grid);
 
         /**
-         * @brief Reconstruct path from A* search
-         */
+        * @brief Reconstruct path from A* search
+        */
         static std::vector<GridCoord> ReconstructPath(
             const std::vector<std::vector<PathNode>>& nodes,
             const GridCoord& start,

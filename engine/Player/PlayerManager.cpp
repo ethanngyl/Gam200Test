@@ -1,10 +1,27 @@
-﻿/**
+﻿/******************************************************************************
 ===============================================================================
- File:           PlayerControllerSystem.cpp
- Description:    Player input controller - Implementation
-===============================================================================
- */
+ File:           PlayerManager.cpp
+ Author:         <MAIN AUTHOR NAME>
+ Co-authors:     PADILLA CARL JAMESON Z.
+ Email:          <main.author@digipen.edu>
+ Date:           2025/11/07
+ Contribution:   PADILLA CARL JAMESON Z.: 35%
+ ------------------------------------------------------------------------------
+  Description:
+  Implements player grid movement and on-tile feedback. Mouse clicks map to a
+  target tile for click-to-move; arrow keys step a single tile. Both paths run
+  validation (in-bounds, walkable, occupancy), update player/tile state, and
+  coordinate with the turn system. Visual confirmation uses two timed effects:
+  a one-shot tile pulse (scale up then restore) and a temporary border outline
+  (four strips) that auto-hides on timeout.
 
+  Design notes:
+  - Input → grid mapping → validated move → state/turn updates
+  - TilePulse: start/extend, tracked by a countdown; restores scale on expiry
+  - BorderOutline: show with configurable thickness; hides on timeout
+  - Frame-friendly: effects update via lightweight per-frame timers only
+===============================================================================
+******************************************************************************/
 
 #include "Precompiled.h"
 #include "PlayerManager.h"
@@ -20,6 +37,10 @@
 #include <Windows.h>
 
 namespace Framework {
+
+    /**
+    * @brief Ends an active tile pulse when its timer expires; restores original scale.
+    */
 
     static Framework::Entity s_pulseEnt;          // INVALID by default
     static float s_savedScaleX = 1.0f, s_savedScaleY = 1.0f;
@@ -39,6 +60,12 @@ namespace Framework {
         }
     }
 
+    /**
+    * @brief Starts/extends a tile pulse by scaling once and timing its restore.
+    * @param tileEntity     Tile entity to pulse
+    * @param pulseScale     One-shot scale multiplier
+    * @param pulseDurationMs Duration before restoring original scale
+    */
     void PlayerControllerSystem::StartTilePulse(Framework::Entity clickedEnt, float pulseScale, DWORD pulseDurationMs) {
         if (clickedEnt.GetID() == Framework::INVALID_ENTITY ||
             !entityManager->HasComponent<Transform>(clickedEnt)) {
@@ -78,6 +105,10 @@ namespace Framework {
     // BORDER OUTLINE ANIMATION - Shared static variables
     // ============================================================================
 
+    /**
+    * @brief Arrow-key single-step grid movement (validates bounds/walkability).
+    *        Shows feedback (border + pulse), updates occupancy, and ends player turn.
+    */
     // Static variables shared between border functions
     static Framework::Entity s_outlineTop, s_outlineBot, s_outlineLeft, s_outlineRight;
     static bool s_outlineInit = false;
@@ -104,6 +135,12 @@ namespace Framework {
         }
     }
 
+    /**
+    * @brief Shows a rectangular border around a target tile using four thin sprites.
+    * @param tile               Target grid coordinate
+    * @param thicknessFraction  Fraction of tile size to use for strip thickness
+    * @param durationMs         Duration before auto-hide
+    */
     void PlayerControllerSystem::ShowBorderOutline(const Framework::GridCoord& tgt, float thicknessFraction, DWORD durationMs) {
         const Framework::Grid& g = Framework::GetGrid();
         const float tileW = g.spacing.x;
@@ -347,49 +384,44 @@ namespace Framework {
         }
     }
 
-
+    /**
+    * @brief Click-to-move: maps mouse click to grid tile and moves 1 step toward it.
+    *        Shows feedback (border + pulse) and updates tile occupancy.
+    */
     void PlayerControllerSystem::HandleClickToMove() {
 
-        // Guards - early exit if conditions aren't met
+        // Basic guards: input/entity systems must exist, left mouse must be pressed,
+        // and the player must have a Transform to move.
         if (!inputSystem || !entityManager) return;
         if (!inputSystem->IsKeyPressed(MOUSE_LEFT)) return;
         if (!entityManager->HasComponent<Transform>(playerEntity)) return;
 
         const Framework::Grid& g = Framework::GetGrid();
-        if (g.cols <= 0 || g.rows <= 0) return;
-
-        // === SIMPLE APPROACH: Map screen directly to grid ===
-        // Since your grid appears to fill most of the screen visually,
-        // let's just map screen coordinates proportionally to grid tiles
+        if (g.cols <= 0 || g.rows <= 0) return; // grid must be initialized
 
 #ifdef _WIN32
         float mx = 0.f, my = 0.f;
-        inputSystem->GetMousePosition(mx, my);
+        inputSystem->GetMousePosition(mx, my); // screen-space mouse (pixels)
 
         POINT scrPt{ static_cast<LONG>(mx), static_cast<LONG>(my) };
-        HWND hwndUnder = WindowFromPoint(scrPt);
+        HWND hwndUnder = WindowFromPoint(scrPt); // window under cursor
         if (!hwndUnder) return;
-        HWND hwndTop = GetAncestor(hwndUnder, GA_ROOT);
+        HWND hwndTop = GetAncestor(hwndUnder, GA_ROOT); // top-level window
         if (!hwndTop) hwndTop = hwndUnder;
 
         POINT cliPt = scrPt;
-        ScreenToClient(hwndTop, &cliPt);
+        ScreenToClient(hwndTop, &cliPt); // convert to client-area coords
 
         RECT rc{}; GetClientRect(hwndTop, &rc);
         const int screenW = rc.right - rc.left;
         const int screenH = rc.bottom - rc.top;
         if (screenW <= 0 || screenH <= 0) return;
 
-        // Clamp click to screen bounds
+        // Clamp click to client bounds (defensive)
         if (cliPt.x < 0) cliPt.x = 0; else if (cliPt.x > screenW) cliPt.x = screenW;
         if (cliPt.y < 0) cliPt.y = 0; else if (cliPt.y > screenH) cliPt.y = screenH;
 
-        // === METHOD 1: Direct screen-to-grid mapping ===
-        // Assume the grid fills a specific portion of the screen
-        // You'll need to adjust these margins based on where your grid actually appears
-
-        // From your screenshot, the grid appears to fill most of the screen
-        // Let's assume it has some margins
+        // Reserve margins for UI; remaining area is considered the “grid view”
         const float marginLeft = 0.05f;   // 5% margin on left
         const float marginRight = 0.05f;  // 5% margin on right
         const float marginTop = 0.05f;    // 5% margin on top
@@ -430,7 +462,7 @@ namespace Framework {
             << " ScreenGrid(" << gridU << "," << gridV << ")"
             << " -> Tile(" << col << "," << row << ")\n";
 
-        // Get tile center in world coordinates
+        // World-space center of the clicked tile (useful for debug/FX)
         Framework::Vector2D tileCenter = Framework::TileToWorld(tgt);
 
         // Get current player tile
@@ -475,15 +507,19 @@ namespace Framework {
         if (!Framework::InBounds(next)) return;
         if (!Framework::IsWalkable(next)) return;
 
-        // Update occupancy and move player
+        // Update occupancy before/after moving (keeps grid state consistent)
         Framework::SetOccupant(cur, Framework::Entity{ Framework::INVALID_ENTITY });
         xform.position = Framework::TileToWorld(next);
         Framework::SetOccupant(next, playerEntity);
 #endif
     }
 
+    /**
+    * @brief Arrow-key single-step grid movement (validates bounds/walkability).
+    *        Shows feedback (border + pulse), updates occupancy, and ends player turn.
+    */
     void PlayerControllerSystem::HandleArrowKeyMovement() {
-        // Guards
+        // Guards: need input + entity systems, player Transform, and it must be player’s turn
         if (!inputSystem || !entityManager) return;
         if (!entityManager->HasComponent<Transform>(playerEntity)) return;
         if (!IsPlayerTurn()) return;
