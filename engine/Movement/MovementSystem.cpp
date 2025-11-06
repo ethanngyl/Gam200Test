@@ -120,9 +120,9 @@ namespace Framework
                         transform.scale.y -= scale_multiplier * dt;
                     }
 
-                    // === Scale Clamping ===
-                    transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
-                    transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
+                    //// === Scale Clamping ===
+                    //transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
+                    //transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
 
                     // === ROTATION ===
                     if (inputSystem->IsKeyDown(KEY_7)) {
