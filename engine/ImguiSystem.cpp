@@ -1166,7 +1166,7 @@ namespace Framework {
             }
         }
 
-        if (ImGui::Button("Trigger Audio##Btn8", ImVec2(-1, 0))) {
+        if (ImGui::Button("Trigger Leaves SFX##Btn8", ImVec2(-1, 0))) {
             if (audioSystem) {
                 std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("leaves", false);
@@ -1177,7 +1177,40 @@ namespace Framework {
             }
         }
 
-        if (ImGui::Button("Stop All Audio##Btn9", ImVec2(-1, 0))) {
+        if (ImGui::Button("Trigger Shooting SFX##Btn9", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("shooting", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Trigger Menu BGM##Btn9", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("mmbgm", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Trigger In-Game BGM##Btn10", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("bgm", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Stop All Audio##Btn11", ImVec2(-1, 0))) {
             if (audioSystem) {
                 std::cout << "[DEBUG] Stopping all audio\n";
                 audioSystem->StopAllSounds();

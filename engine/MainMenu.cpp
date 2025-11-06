@@ -172,8 +172,9 @@ void mainMenu_Free()
 void mainMenu_Unload()
 {
     LOG_INFO("MENU", "=== Main Menu Unload ===");
-    if (engine && engine->GetAudioSystem()) {
-        engine->GetAudioSystem()->UnloadSound("mmbgm");
-        LOG_INFO("MENU", "Unloaded menu audio assets");
-    }
+    //Do not use the code below, unloading will completely remove it from the fmod library
+    //if (engine && engine->GetAudioSystem()) {
+    //    engine->GetAudioSystem()->UnloadSound("mmbgm");
+    //    LOG_INFO("MENU", "Unloaded menu audio assets");
+    //}
 }
