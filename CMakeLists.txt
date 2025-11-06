@@ -55,8 +55,13 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 # MSVC-only: disable noisy integer conversion warnings
 #  - C4244: converting larger numeric types to smaller ones (possible loss of data)
 #  - C4267: converting size_t (64-bit) to smaller integer types
+#  - C4305: generic truncation/conversion of a constant (often seen in library headers)
 if (MSVC)
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /wd4244 /wd4267)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE 
+        /wd4244 
+        /wd4267
+        /wd4305
+    )
 endif()
 
 # ======================= Linking =========================
