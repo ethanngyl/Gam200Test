@@ -64,7 +64,7 @@ namespace Framework {
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Enable Docking
-        io.IniFilename = nullptr;  // Disable settings file
+        //io.IniFilename = nullptr;  // Disable settings file
 
         ImGui::StyleColorsDark();
 
@@ -222,46 +222,68 @@ namespace Framework {
 
     // ============================================================================
     // This is the function that able to save level from a txt file
-    // author: jiahao.zhou@digipen
+    // author: jiahao zhou 
     // ============================================================================
     bool ImGuiSystem::SaveLevelToTxt(const std::string& file) {
 
+		//this is to declare a output file stream called writeFile and open the file
         std::ofstream writeFile(file);
+
+		//check if the file is open, display error message if not
         if (!writeFile.is_open()) {
             std::cerr << "[ImGuiError] Could not open file for writing: " << file << "\n";
             return false;
         }
 
+		//write title line
         writeFile << "# Saved from ImGui system\n";
 
+        //get all entities from ECS manager
         auto entities = entityManager->GetAllEntities();
+
+		//Create a loop to go through all entities
         for (const auto& entity : entities) {
+			//check if the entity has any of the components we need to write in the file
             const bool hasAny = entityManager->HasComponent<Transform>(entity)
                 || entityManager->HasComponent<Sprite>(entity)
                 || entityManager->HasComponent<CircleCollider>(entity)
                 || entityManager->HasComponent<TriangleCollider>(entity)
                 || entityManager->HasComponent<BoxCollider>(entity);
 
+            //if the component doesnt have any entity, skip this entity
             if (!hasAny) {
                 continue;
             }
 
+            //write entity whenever there is a new entity
             writeFile << "entity\n";
 
+			//if else condition to check which component the entity has and write the corresponding data to the file
+
+			//this if else condition is to check if entity has transform component
             if (entityManager->HasComponent<Transform>(entity)) {
+				//get reference to the transform component
                 auto& transform = entityManager->GetComponent<Transform>(entity);
+                //write position (x,y) and the scale(x,y)
                 writeFile << "Transform " << transform.position.x << " " << transform.position.y << " "
                     << transform.scale.x << " " << transform.scale.y << "\n";
             }
 
+			//this if else condition is to check if entity has sprite component
             if (entityManager->HasComponent<MeshRenderer>(entity)) {
+				// get reference to the meshRenderer component
+                // in renderring system, there is also meshrenderer component to generate image
+                // some entity may not have 
 				auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
+				//write the sprite name
                 if (!meshRenderer.spriteName.empty()) {
 					writeFile << "Sprite " << meshRenderer.spriteName << "\n";
                 }
             }
 
+			// this if else condition is to check if entity has sprite component
             if (entityManager->HasComponent<Sprite>(entity)) {
+				// get reference to the sprite component
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
                     writeFile << "Sprite " << sprite.texturePath << "\n";
