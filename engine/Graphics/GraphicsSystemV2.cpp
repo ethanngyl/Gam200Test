@@ -198,7 +198,7 @@ namespace Framework {
         // === CAMERA FOLLOW LOGIC ===
         //!Framework::CORE->IsPlaying()
         if (current == LEVEL_2) {
-            if (Framework::CORE->IsPlaying()) {
+            if (!Framework::CORE->IsPlaying()) {
                 HandleEditorCamera(dt);
             }
             
