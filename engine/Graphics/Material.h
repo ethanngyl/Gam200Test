@@ -68,12 +68,6 @@ namespace Framework {
         
         // Color tint
         glm::vec4 tint = glm::vec4(1.0f);
-
-        // Sprite sheet UV bounds
-        float u0 = 0.0f;
-        float v0 = 0.0f;
-        float u1 = 1.0f;
-        float v1 = 1.0f;
         
         // Custom parameters
         std::unordered_map<std::string, MaterialParameter> parameters;

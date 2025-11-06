@@ -83,7 +83,7 @@ namespace Framework
                     transform.position += movement.direction * movement.moveSpeed * dt;
                 }
                 else {
-                    transform.position -= movement.direction * movement.moveSpeed * dt;
+                    transform.position -= movement.direction * movement.moveSpeed * dt * 10;
                 }
 
                 // Optional: Destroy projectiles that go off-screen

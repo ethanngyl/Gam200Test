@@ -50,9 +50,7 @@ namespace Framework {
             std::cerr << "ERROR: No window set! Call SetWindow() before Initialize()\n";
             return;
         }
-        //0. Load Meshfactory Values
 
-        meshFactory.MeshValueInitialize();
         // 1. Initialize OpenGL context
         InitializeOpenGL();
 
@@ -245,12 +243,13 @@ namespace Framework {
 
     void GraphicsSystemV2::CreateDefaultMeshes() {
         std::cout << "GraphicsSystemV2: Creating default meshes...\n";
+
         // Create primitive meshes using the factory functions
-        Mesh* triangle = meshFactory.CreateTriangle();
-        Mesh* quad = meshFactory.CreateQuad();
-        Mesh* line = meshFactory.CreateLine();
-        Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
-        Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
+        Mesh* triangle = CreateTriangle();
+        Mesh* quad = CreateQuad();
+        Mesh* line = CreateLine();
+        Mesh* circle = CreateCircle(40, 0.5f);
+        Mesh* wireframeQ = CreateWireframeQuad();
 
         // Register meshes with resource manager
         triangleMesh = resourceManager.CreateMesh("triangle",
@@ -533,73 +532,6 @@ namespace Framework {
                     // Legacy mode - map sprite name to resources
                     command.mesh = GetMeshForSpriteName(renderable.spriteName);
                     command.material = GetMaterialForSpriteName(renderable.spriteName);
-        // Entity passes
-        for (Entity e : entityManager->GetAllEntities()) {
-
-            if (!entityManager->HasComponent<Transform>(e))
-                continue;
-
-            auto& transform = entityManager->GetComponent<Transform>(e);
-
-            const bool hasRenderer = entityManager->HasComponent<MeshRenderer>(e);
-            const bool hasSprite = entityManager->HasComponent<Sprite>(e);
-            if (!hasRenderer && !hasSprite) continue;
-
-            RenderCommand cmd;
-
-            // ---------- MeshRenderer ----------
-            if (hasRenderer) {
-                auto& mr = entityManager->GetComponent<MeshRenderer>(e);
-                if (!mr.visible) continue;
-
-                cmd.mesh = mr.mesh.IsValid() ? mr.mesh : quadMesh;
-
-                // === IMPORTANT: CLONE material so UV animation doesn't affect all ===
-                if (!mr.material.IsValid()) {
-                    Material* base = resourceManager.GetMaterial(defaultMaterial);
-                    if (!base) continue;
-
-                    MaterialHandle inst = resourceManager.CreateMaterial(
-                        "entity_mat_" + std::to_string(e.GetID()),
-                        base->shader
-                    );
-
-                    Material* pm = resourceManager.GetMaterial(inst);
-                    if (!pm) continue;
-
-                    *pm = *base; // shallow copy (safe)
-                    mr.material = inst;
-                }
-
-                cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
-
-                // texture
-                if (mr.texture.IsValid()) {
-                    cmd.texture = mr.texture;
-                }
-                else if (!mr.spriteName.empty()) {
-                    TextureHandle tex = resourceManager.LoadTexture(mr.spriteName);
-                    if (tex.IsValid()) {
-                        cmd.texture = tex;
-                        mr.texture = tex;
-                    }
-                }
-
-                cmd.tint = mr.tint;
-                cmd.layer = mr.layer;
-                cmd.orderInLayer = mr.orderInLayer;
-            }
-
-            // ---------- SPRITE ----------
-            else if (hasSprite) {
-                auto& sp = entityManager->GetComponent<Sprite>(e);
-
-                cmd.mesh = quadMesh;
-                cmd.material = defaultMaterial;
-
-                if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
-                    TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
-                    cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
                 }
                 else {
                     // Modern mode - use handles directly
@@ -612,8 +544,6 @@ namespace Framework {
                 command.orderInLayer = renderable.orderInLayer;
                 command.tint = renderable.tint;
 
-                cmd.tint = glm::vec4(1.0f);
-                cmd.layer = sp.layer;
             }
             else {
                 // Legacy system - use old Sprite component
@@ -625,12 +555,6 @@ namespace Framework {
                 command.orderInLayer = 0;
                 command.tint = glm::vec4(1.0f);
             }
-            // ---------- Transform ----------
-            glm::mat4 model(1.0f);
-            model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
-            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1});
-            model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
-            cmd.modelMatrix = model;
 
             // Build model matrix from transform
             glm::mat4 model = glm::mat4(1.0f);
@@ -646,43 +570,6 @@ namespace Framework {
             command.depth = glm::distance(entityPos, cameraPos);
 
             renderQueue.Submit(command);
-            // ---------- SPRITE SHEET UV ANIMATION ----------
-            if (entityManager->HasComponent<SpriteAnimation>(e)) {
-                auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
-
-                Material* mat = resourceManager.GetMaterial(cmd.material);
-                if (!mat) continue;
-
-                Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
-                if (!tex) continue;
-
-                const int texW = tex->GetWidth();
-                const int texH = tex->GetHeight();
-                if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0) continue;
-
-                const int cols = texW / anim.frameWidth;
-                const int frame = anim.currentFrame % max(1, anim.frameCount);
-                const int x = frame % cols;
-                const int y = frame / cols;
-
-                float u0 = (x * anim.frameWidth) / float(texW);
-                float u1 = ((x + anim.uvShrinkPx) * anim.frameWidth) / float(texW);
-
-                float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
-                float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
-
-                // Horizontal flip
-                if (anim.flipX) std::swap(u0, u1);
-
-                mat->u0 = u0;
-                mat->u1 = u1;
-                mat->v0 = v0;
-                mat->v1 = v1;
-
-                if (!mat->albedoTexture.IsValid()) mat->albedoTexture = anim.spriteSheet;
-            }
-
-            renderQueue.Submit(cmd);
         }
     }
 
@@ -708,13 +595,10 @@ namespace Framework {
             }
 
             // Bind material if changed
-            if (cmd.material != currentBoundMaterial) {
-                // If Succeed, Bound new Material, Bound new Shader, Bound new Texture
-                // ASC TA: For now, Remove the binding of material texture, and use binding of cmd.texture instead
-                if (BindMaterial(cmd.material, cmd.tint)) {
-                    currentBoundMaterial = cmd.material;
-                    stats.materialSwitches++;
-                }
+            if (command.material != currentBoundMaterial) {
+                BindMaterial(command.material, command.tint);
+                currentBoundMaterial = command.material;
+                stats.materialSwitches++;
             }
 
             // Update shader uniforms
@@ -915,9 +799,6 @@ namespace Framework {
 
         shader->Bind();
         currentBoundShader = material->shader;
-
-        glUniform4f(glGetUniformLocation(shader->GetID(), "uUVRect"),
-            material->u0, material->v0, material->u1, material->v1);
 
         // Set blend mode
         switch (material->blendMode) {

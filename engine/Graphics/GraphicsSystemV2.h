@@ -37,8 +37,7 @@
 #include <memory>
 #include <unordered_map>   
 #include "ECSEntity.h" 
-#include "TextRenderer.h"
-#include "MeshFactory.h"
+
 
 // Forward declarations
 struct GLFWwindow;
@@ -122,8 +121,6 @@ namespace Framework {
          */
         void ClearFollowTarget() { followEnabled = false; }
 
-        MeshHandle GetQuadMesh() const { return quadMesh; }
-
         // === DEBUG RENDERING ===
         
         /**
@@ -162,7 +159,7 @@ namespace Framework {
 
     private:
         // === RENDERING PHASES ===
-        MeshFactory meshFactory;
+        
         /**
          * @brief Gather all renderables and populate render queue
          */

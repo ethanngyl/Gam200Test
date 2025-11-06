@@ -1,6 +1,5 @@
 #include "Precompiled.h"
-#include "ConfigReader.h"
-#include "MeshFactory.h"
+
 /*
 ===============================================================================
 File:        MeshFactory.cpp
@@ -45,59 +44,7 @@ namespace Framework {
     *
     * @return A pointer to the created `Mesh` object representing a triangle.
     */
-    void MeshFactory::MeshValueInitialize() {
-        ConfigReader::LoadConfig("valueloader.txt");
-        blv_x = ConfigReader::GetFloat("blv_x", 0);
-        blv_y = ConfigReader::GetFloat("blv_y", 0);
-        blv_z = ConfigReader::GetFloat("blv_z", 0);
-        blv_r = ConfigReader::GetFloat("blv_r", 0);
-        blv_g = ConfigReader::GetFloat("blv_g", 0);
-        blv_b = ConfigReader::GetFloat("blv_b", 0);
-        blv_u = ConfigReader::GetFloat("blv_u", 0);
-        blv_v = ConfigReader::GetFloat("blv_v", 0);
-        blr_x = ConfigReader::GetFloat("blr_x", 0);
-        blr_y = ConfigReader::GetFloat("blr_y", 0);
-        blr_z = ConfigReader::GetFloat("blr_z", 0);
-        blr_r = ConfigReader::GetFloat("blr_r", 0);
-        blr_g = ConfigReader::GetFloat("blr_g", 0);
-        blr_b = ConfigReader::GetFloat("blr_b", 0);
-        blr_u = ConfigReader::GetFloat("blr_u", 0);
-        blr_v = ConfigReader::GetFloat("blr_v", 0);
-        trv_x = ConfigReader::GetFloat("trv_x", 0);
-        trv_y = ConfigReader::GetFloat("trv_y", 0);
-        trv_z = ConfigReader::GetFloat("trv_z", 0);
-        trv_r = ConfigReader::GetFloat("trv_r", 0);
-        trv_g = ConfigReader::GetFloat("trv_g", 0);
-        trv_b = ConfigReader::GetFloat("trv_b", 0);
-        trv_u = ConfigReader::GetFloat("trv_u", 0);
-        trv_v = ConfigReader::GetFloat("trv_v", 0);
-        tlv_x = ConfigReader::GetFloat("tlv_x", 0);
-        tlv_y = ConfigReader::GetFloat("tlv_y", 0);
-        tlv_z = ConfigReader::GetFloat("tlv_z", 0);
-        tlv_r = ConfigReader::GetFloat("tlv_r", 0);
-        tlv_g = ConfigReader::GetFloat("tlv_g", 0);
-        tlv_b = ConfigReader::GetFloat("tlv_b", 0);
-        tlv_u = ConfigReader::GetFloat("tlv_u", 0);
-        tlv_v = ConfigReader::GetFloat("tlv_v", 0);
-        sp_x = ConfigReader::GetFloat("sp_x", 0);
-        sp_y = ConfigReader::GetFloat("sp_y", 0);
-        sp_z = ConfigReader::GetFloat("sp_z", 0);
-        sp_r = ConfigReader::GetFloat("sp_r", 0);
-        sp_g = ConfigReader::GetFloat("sp_g", 0);
-        sp_b = ConfigReader::GetFloat("sp_b", 0);
-        sp_u = ConfigReader::GetFloat("sp_u", 0);
-        sp_v = ConfigReader::GetFloat("sp_v", 0);
-        ep_x = ConfigReader::GetFloat("ep_x", 0);
-        ep_y = ConfigReader::GetFloat("ep_y", 0);
-        ep_z = ConfigReader::GetFloat("ep_z", 0);
-        ep_r = ConfigReader::GetFloat("ep_r", 0);
-        ep_g = ConfigReader::GetFloat("ep_g", 0);
-        ep_b = ConfigReader::GetFloat("ep_b", 0);
-        ep_u = ConfigReader::GetFloat("ep_u", 0);
-        ep_v = ConfigReader::GetFloat("ep_v", 0);
-    }
-    //To remove**
-    Mesh* MeshFactory::CreateTriangle() {
+    Mesh* CreateTriangle() {
         // Define vertices for a triangle with positions and colors
         std::vector<float> vertices = {
             // pos         // color        // texcoord
@@ -118,14 +65,14 @@ namespace Framework {
      *
      * @return A pointer to the created `Mesh` object representing a quad.
      */
-    Mesh* MeshFactory::CreateQuad() {
+    Mesh* CreateQuad() {
         // Interleaved vertex data: pos, color, texcoord
         std::vector<float> vertices = {
             // pos             // color           // texcoord
-            blv_x, blv_y, blv_z,  blv_r, blv_g, blv_b,   blv_u, blv_v, // bottom left
-             blr_x, blr_y, blr_z,  blr_r, blr_g, blr_b,   blr_u, blr_v, // bottom right
-             trv_x,  trv_y, trv_z,  trv_r, trv_g, trv_b,   trv_u, trv_v, // top right
-             tlv_x,  tlv_y, tlv_z,  tlv_r, tlv_g, tlv_b,   tlv_u, tlv_v  // top left
+            -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   0.0f, 0.0f, // bottom left
+             0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+             0.5f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,   1.0f, 1.0f, // top right
+            -0.5f,  0.5f, 0.0f,  1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
         };
 
         // Two triangles forming a quad
@@ -151,7 +98,7 @@ namespace Framework {
      *
      * @return A pointer to the created `Mesh` object representing a line.
      */
-    Mesh* MeshFactory::CreateLine() {
+    Mesh* CreateLine() {
         // Define vertices for a line with positions and colors
         std::vector<float> vertices = {
             // pos          // color        // texcoord
@@ -175,7 +122,7 @@ namespace Framework {
      *
      * @return A pointer to the created `Mesh` object representing a circle.
      */
-    Mesh* MeshFactory::CreateCircle(int segments, float radius) {
+    Mesh* CreateCircle(int segments, float radius) {
         std::vector<float> vertices;
 
         // center point
@@ -203,7 +150,7 @@ namespace Framework {
         return new Mesh(vertices, GL_TRIANGLE_FAN, true);
     }
 
-    Mesh* MeshFactory::CreateWireframeQuad() {
+    Mesh* CreateWireframeQuad() {
         std::vector<float> vertices = {
             // pos             // color           // texcoord
             -0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,   0.0f, 0.0f, // bottom left

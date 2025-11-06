@@ -1,15 +1,19 @@
 /**
 ===============================================================================
- File:           EntitySpawner.h (Fixed Logging Version)
+ File:           EntitySpawner.h
  Description:    System for spawning entities dynamically during gameplay
 
- This version uses simpler logging to avoid const char* conversion issues.
+ Purpose:
+ Instead of hardcoding entities in main.cpp, this system allows you to:
+ - Spawn entities from anywhere in your code
+ - Create enemies, projectiles, pickups at runtime
+ - Respond to game events (player input, collisions, timers)
+ - No ImGui needed, no hardcoded main.cpp
 ===============================================================================
  */
 
 #pragma once
 #include "Precompiled.h"
-#include "Grid\GridTile.h"
 
 namespace Framework {
 
@@ -29,6 +33,8 @@ namespace Framework {
         }
 
         void Update(float dt) override {
+            // Could spawn entities based on timers, waves, etc.
+            // For now, this is just a utility system
             (void)dt;
         }
 
@@ -36,10 +42,11 @@ namespace Framework {
             (void)msg;
         }
 
+        // Set entity manager
         void SetEntityManager(EntityManager* em) { entityManager = em; }
 
         // ========================================================================
-        // SPAWNING METHODS
+        // SPAWNING METHODS - Call these from anywhere!
         // ========================================================================
 
         /**
@@ -57,14 +64,16 @@ namespace Framework {
 
             Entity entity = entityManager->CreateEntity();
 
+            // Add transform
             entityManager->AddComponent<Transform>(entity, position);
             auto& transform = entityManager->GetComponent<Transform>(entity);
             transform.scale = scale;
 
+            // Add sprite
             entityManager->AddComponent<Sprite>(entity);
             entityManager->GetComponent<Sprite>(entity).texturePath = spriteName;
 
-            std::cout << "[EntitySpawner] Spawned sprite: " << spriteName << "\n";
+            LOG_INFO("CORE", "Spawned sprite: " + spriteName);
             return entity;
         }
 
@@ -72,37 +81,44 @@ namespace Framework {
          * @brief Spawn a player entity
          */
         Entity SpawnPlayer(const Vector2D& position) {
-            Entity player = SpawnSprite("quad", position, Vector2D(0.1f, 0.1f));
+            Entity player = SpawnSprite("circle", position, Vector2D(0.3f, 0.3f));
 
+            // Add movement
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
             movement.moveSpeed = 0.2f;
 
+            // Add collider
             entityManager->AddComponent<CircleCollider>(player);
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-            std::cout << "[EntitySpawner] Spawned player\n";
+            LOG_INFO("CORE", "Spawned player");
             return player;
         }
 
         /**
-         * @brief Spawn an enemy entity 
+         * @brief Spawn an enemy entity
          */
-        Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.5f, 0.5f)) {
-            Entity enemy = SpawnSprite("quad", position, Vector2D(0.1f, 0.1f));
+        Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f) {
+            Entity enemy = SpawnSprite("triangle", position, Vector2D(0.4f, 0.4f));
 
-            //entityManager->AddComponent<Movement>(enemy);
-            //auto& movement = entityManager->GetComponent<Movement>(enemy);
-            //movement.moveSpeed = moveSpeed;
-            //movement.direction = Vector2D(0.0f, -1.0f);
+            // Add movement
+            entityManager->AddComponent<Movement>(enemy);
+            auto& movement = entityManager->GetComponent<Movement>(enemy);
+            movement.moveSpeed = moveSpeed;
+            movement.direction = Vector2D(0.0f, -1.0f); // Move down
 
+            // Add collider
+            entityManager->AddComponent<TriangleCollider>(enemy);
+            auto& triCol = entityManager->GetComponent<TriangleCollider>(enemy);
+            float halfW = 0.04f;
+            float halfH = 0.04f;
+            triCol.v0 = Vector2D(0.0f, halfH);
+            triCol.v1 = Vector2D(-halfW, -halfH);
+            triCol.v2 = Vector2D(halfW, -halfH);
 
-            entityManager->AddComponent<BoxCollider>(enemy);
-            auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
-            collider.size = size;
-
-            std::cout << "[EntitySpawner] Spawned enemy\n";
+            LOG_INFO("CORE", "Spawned enemy");
             return enemy;
         }
 
@@ -116,16 +132,18 @@ namespace Framework {
         {
             Entity projectile = SpawnSprite("circle", position, Vector2D(0.1f, 0.1f));
 
-            entityManager->AddComponent<ProjectileMovement>(projectile);
-            auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
+            // Add movement
+            entityManager->AddComponent<Movement>(projectile);
+            auto& movement = entityManager->GetComponent<Movement>(projectile);
             movement.moveSpeed = speed;
             movement.direction = direction;
 
+            // Add small collider
             entityManager->AddComponent<CircleCollider>(projectile);
             auto& collider = entityManager->GetComponent<CircleCollider>(projectile);
             collider.radius = 0.05f;
 
-            std::cout << "[EntitySpawner] Spawned projectile\n";
+            LOG_INFO("CORE", "Spawned projectile");
             return projectile;
         }
 
@@ -138,11 +156,12 @@ namespace Framework {
         {
             Entity obstacle = SpawnSprite("quad", position, size);
 
+            // Add collider
             entityManager->AddComponent<BoxCollider>(obstacle);
             auto& collider = entityManager->GetComponent<BoxCollider>(obstacle);
             collider.size = size;
 
-            std::cout << "[EntitySpawner] Spawned obstacle\n";
+            LOG_INFO("CORE", "Spawned obstacle");
             return obstacle;
         }
 
@@ -154,7 +173,7 @@ namespace Framework {
                 float x = -1.0f + (2.0f / (count - 1)) * i;
                 SpawnEnemy(Vector2D(x, yPosition));
             }
-            std::cout << "[EntitySpawner] Spawned enemy wave: " << count << " enemies\n";
+            LOG_INFO("CORE", "Spawned enemy wave: " + std::to_string(count));
         }
 
         /**
@@ -164,84 +183,18 @@ namespace Framework {
             const std::string& spriteName,
             int rows, int cols,
             const Vector2D& startPos,
-            const Vector2D& spacing = Vector2D{ 1.0f, 1.0f })
+            const Vector2D& spacing)
         {
-
-            auto& record = GetGrid();
-            record.rows = rows;
-            record.cols = cols;
-            record.startPos = startPos;
-            record.spacing = spacing;
-            record.em = entityManager;
-            record.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
-
-            int nextId = 0;
-
             for (int row = 0; row < rows; ++row) {
                 for (int col = 0; col < cols; ++col) {
                     Vector2D pos(
                         startPos.x + col * spacing.x,
                         startPos.y + row * spacing.y
                     );
-                    const Vector2D tileSize{ 0.1f, 0.1f };
-                    Entity e = SpawnSprite(spriteName, pos, tileSize);
-
-                    record.tiles[record.Index(col, row)] = e;
-
-                    entityManager->AddComponent<GridTiles>(e);
-                    auto& gridTile = entityManager->GetComponent<GridTiles>(e);
-                    gridTile.tileId = nextId++;
-                    gridTile.x = col;
-                    gridTile.y = row;
-                    gridTile.entity = e;
-                    gridTile.centerWorld = pos;
-                    gridTile.tileW = tileSize.x;   // canonical cell size
-                    gridTile.tileH = tileSize.y;
-                    gridTile.blocked = false;
-                    gridTile.occupant = INVALID_ENTITY;
+                    SpawnSprite(spriteName, pos, Vector2D(0.1f, 0.1f));
                 }
             }
-            std::cout << "[EntitySpawner] Spawned grid: " << (rows * cols) << " entities\n";
-
-
-            // --- Debug summary (verify ids are sequential and unique) ---
-            const int total = rows * cols;
-            std::vector<bool> seen(static_cast<size_t>(total), false);
-            int minId = INT_MAX, maxId = INT_MIN, dupCount = 0, oobCount = 0;
-
-            for (auto e : entityManager->GetAllEntities()) {
-                if (!entityManager->HasComponent<GridTiles>(e)) continue;
-                const auto& gt = entityManager->GetComponent<GridTiles>(e);
-                minId = min(minId, gt.tileId);
-                maxId = max(maxId, gt.tileId);
-                if (gt.tileId < 0 || gt.tileId >= total) { ++oobCount; continue; }
-                if (seen[static_cast<size_t>(gt.tileId)]) ++dupCount;
-                else seen[static_cast<size_t>(gt.tileId)] = true;
-            }
-
-            std::cout << "[GridDebug] tiles=" << total
-                << " id-range=[" << minId << "," << maxId << "]"
-                << " dup=" << dupCount
-                << " oob=" << oobCount << "\n";
-
-            // Also print corner samples to eyeball mapping:
-            auto printTile = [&](int cx, int cy) {
-                for (auto e : entityManager->GetAllEntities()) {
-                    if (!entityManager->HasComponent<GridTiles>(e)) continue;
-                    const auto& gt = entityManager->GetComponent<GridTiles>(e);
-                    if (gt.x == cx && gt.y == cy) {
-                        std::cout << "  (" << cx << "," << cy << ") -> entity " << e.GetID()
-                            << " id=" << gt.tileId << " center=("
-                            << gt.centerWorld.x << "," << gt.centerWorld.y << ")\n";
-                        return;
-                    }
-                }
-                };
-
-            printTile(0, 0);
-            printTile(cols - 1, 0);
-            printTile(0, rows - 1);
-            printTile(cols - 1, rows - 1);
+            LOG_INFO("CORE", "Spawned grid: " + std::to_string(rows * cols) + " entities");
         }
 
         /**
@@ -261,8 +214,12 @@ namespace Framework {
                 );
                 SpawnSprite(spriteName, pos, Vector2D(0.1f, 0.1f));
             }
-            std::cout << "[EntitySpawner] Spawned circle: " << count << " entities\n";
+            LOG_INFO("CORE", "Spawned circle: " + std::to_string(count) + " entities");
         }
+
+        // ========================================================================
+        // UTILITY METHODS
+        // ========================================================================
 
         /**
          * @brief Destroy an entity

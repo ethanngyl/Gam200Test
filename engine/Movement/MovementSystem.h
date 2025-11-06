@@ -92,14 +92,5 @@ namespace Framework
     private:
         EntityManager* entityManager; //Entity component database
         InputSystem* inputSystem; // Keyboard input provider
-        float y_mov_displacement;
-        float x_mov_displacement;
-        float default_zero;
-        float input_dir_x;
-        float input_dir_y;
-        float scale_multiplier;
-        float rotation_angle;
-        float x_bound;
-        float y_bound;
     };
 }

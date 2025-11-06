@@ -1,4 +1,4 @@
- /**
+/**
 ===============================================================================
  File:           RenderComponents.h
  Author:         Graphics System Overhaul
@@ -69,16 +69,11 @@ namespace Framework {
         TextureHandle spriteSheet;
         int currentFrame = 0;
         int frameCount = 1;
-        int totalFrames = 0;
-        int columns = 0;
-        int rows = 0;
-        float frameTime = 0.0f;    // Time per frame
+        float frameTime = 0.1f;    // Time per frame
         float elapsedTime = 0.0f;
-        float uvShrinkPx = 0.0f;
         bool loop = true;
         bool playing = true;
-        bool flipX = false;
-        
+
         // Frame dimensions in texture
         int frameWidth = 0;
         int frameHeight = 0;
