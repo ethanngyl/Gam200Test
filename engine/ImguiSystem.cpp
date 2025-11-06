@@ -1,10 +1,43 @@
-﻿/**
+﻿/*
 ===============================================================================
- SIMPLE FIX: Just Add ## to Window Names
+File:        ImGuiSystem.cpp
+Author:      Ethan Ng, Jiahao Zhou
+Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu,
+Date:        2025-11-07
+Contribution: 45%(Ethan), 55%(Jiahao)
+-------------------------------------------------------------------------------
+ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
+OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
+drag–drop, asset browser) to ECS and subsystems.
 
- No docking features needed - just unique IDs to prevent tab drag issues
-===============================================================================
- */
+Responsibilities:
+- Initialize/Shutdown ImGui (context, backends) and per-frame begin/end.
+- Render main menu bar (File/Windows/Editor) and windows:
+  • Entity Inspector, Spawner ,Debug Info ,ImGui Demo ,Assets Browser.
+- Level I/O: Open/Save/Save-As of simple TXT format (Transform/Sprite/Colliders).
+- File Drag-and-Drop: load txt file as level, spawn sprites for image files
+- Editor controls: Play/Stop toggle, default level caching & reload.
+- Editor Camera and camera flow: on Play set follow-target to player; on Stop clear follow & reset
+  editor camera via GraphicsSystemV2.
+- Subsystem hookups: EntityManager, EntitySpawner, AudioSystem (stop all on quit),
+  GraphicsSystemV2 (ImGui render + camera helpers).
+
+Controls for:
+- Menu → File: Open / Open… / Save / Save As… / Exit
+- Menu → Windows: toggle editor panels
+- Menu → Editor: Play (when stopped) / Stop (when playing)
+- Assets Browser: double-click texture to spawn at origin; drag filename to future
+  drop targets; click “<” to go up one folder
+- OS Drag-&-Drop onto window:
+  • .txt → load level (clears scene if requested
+  • .png, .jpg, .jpeg → spawn sprite 
+
+Notes:
+
+
+Safety:
+
+*/
 
 #include "Precompiled.h"
 #include "ImGuiSystem.h"
