@@ -57,6 +57,13 @@ namespace Framework
         UpdateKeyState(KEY_S, GetAsyncKeyState(KEY_S));
         UpdateKeyState(KEY_D, GetAsyncKeyState(KEY_D));
 
+        //Arrow Keys: For player
+        UpdateKeyState(KEY_UP, GetAsyncKeyState(KEY_UP));
+        UpdateKeyState(KEY_DOWN, GetAsyncKeyState(KEY_DOWN));
+        UpdateKeyState(KEY_LEFT, GetAsyncKeyState(KEY_LEFT));
+        UpdateKeyState(KEY_RIGHT, GetAsyncKeyState(KEY_RIGHT));
+
+
         // System keys
         UpdateKeyState(KEY_Q, GetAsyncKeyState(KEY_Q));
         UpdateKeyState(KEY_ESCAPE, GetAsyncKeyState(KEY_ESCAPE));

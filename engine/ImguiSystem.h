@@ -53,12 +53,13 @@ namespace Framework {
 
 		//File drag and drop support - jiahao
         void EnableFileDragAndDrop();
+        void SetPlayerEntity(Entity player) { playerEntity = player; }
 
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
-
+        Entity playerEntity;
         //jiahao
         //the below 2 std::string are used to record the file path
 		//in order to save and load level files

@@ -26,7 +26,11 @@
 #include "ProjectileSystem.h"        
 #include "EntitySpawner.h"
 #include "PlayerManager.h"           
-#include "ImguiSystem.h"            
+#include "ImguiSystem.h"  
+#include "Grid/Grid.h"
+#include "Grid/GridECS.h"
+#include "Grid/GridTile.h"
+#include "Pathfinding/Pathfinding.h"
 
 
 namespace Framework
@@ -49,6 +53,7 @@ namespace Framework
         , uiSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
+        , pathfindingSystem(nullptr)
     {
         CORE = this;
     }
@@ -124,6 +129,7 @@ namespace Framework
         audioSystem = new AudioSystem();
         animationSystem = new AnimationSystem();
         uiSystem = new UISystem(this);
+        pathfindingSystem = new PathfindingSystem();
 
         LOG_INFO("CORE", " All systems created");
     }
@@ -142,6 +148,9 @@ namespace Framework
         imguiSystem->SetEntityManager(entityManager);
         audioSystem->SetEntityManager(entityManager);
         animationSystem->SetEntityManager(entityManager);
+        pathfindingSystem->SetEntityManager(entityManager);
+
+       
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -196,6 +205,8 @@ namespace Framework
         AddSystem(audioSystem);
         AddSystem(animationSystem);
         AddSystem(uiSystem);
+        AddSystem(pathfindingSystem);
+
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }

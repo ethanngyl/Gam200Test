@@ -84,7 +84,7 @@ namespace Framework {
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
 			const std::string spritePath = "quad";
-            Entity player = SpawnSprite(spritePath, position, Vector2D(0.3f, 0.3f));
+            Entity player = SpawnSprite(spritePath, position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(player);
             mr.material = GraphicsSystemV2::Material2;
@@ -217,6 +217,8 @@ namespace Framework {
 
                     entityManager->AddComponent<GridTiles>(e);
                     auto& gridTile = entityManager->GetComponent<GridTiles>(e);
+                    auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+                    mr.material = GraphicsSystemV2::Material2;
                     gridTile.tileId = nextId++;
                     gridTile.x = col;
                     gridTile.y = row;
