@@ -37,6 +37,7 @@ extern int current, previous, next;
 extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 
 Framework::CoreEngine* engine = nullptr;
+const float FIXED_DT = 1.0f / 60.0f;        // 60 FPS = 16.67ms per step
 
 // ============================================================================
 // MAIN ENTRY POINT
@@ -192,7 +193,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
             // Update FPS counter
             Framework::DebugConfig::GetFpsCounter().tick_with_dt(
-                static_cast<double>(dt)
+                static_cast<double>(FIXED_DT)
             );
 
             // ⭐ Debug hotkey: F2 to export performance data
