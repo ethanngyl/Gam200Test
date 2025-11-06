@@ -1,27 +1,24 @@
-/**
+﻿/**
  ===============================================================================
- File:           Input.h
- Author:         Josh Ong
+ File:           Input.h (FIXED VERSION)
+ Author:         Josh Ong (Modified by GE YONGQI)
  Email:          josh.o@digipen.edu
  Date:           2025-09-22
- Contribution:   100%
+ Modification:   2025-11-06
  ------------------------------------------------------------------------------
- Header file for the InputSystem class.
- 
-  Design notes:
-  This file declares the InputSystem, which handles real-time keyboard and
-  mouse input. It uses a KeyCode enum to provide a unified interface for all
-  supported keys and buttons.
- 
-  The system is designed to provide frame-accurate input events. It does this
-  by maintaining the input state for both the current and previous frames.
-  This "double-buffering" allows it to distinguish between a key being held
-  down (IsKeyDown), a key being pressed for the first time (IsKeyPressed),
-  and a key being released (IsKeyReleased).
+  FIXED: Added window pointer and SetWindow() method
+
+ Changes:
+ - Added GLFWwindow* member variable
+ - Added SetWindow() method
+ - GetMousePosition() now returns window-relative coordinates
 ===============================================================================
  */
 #pragma once
 #include "Precompiled.h"
+
+ // Forward declare GLFWwindow
+struct GLFWwindow;
 
 namespace Framework
 {
@@ -44,7 +41,7 @@ namespace Framework
         KEY_Q = 'Q', KEY_R = 'R', KEY_S = 'S', KEY_T = 'T',
         KEY_U = 'U', KEY_V = 'V', KEY_W = 'W', KEY_X = 'X',
         KEY_Y = 'Y', KEY_Z = 'Z', KEY_1 = '1', KEY_2 = '2',
-        KEY_3 = '3', KEY_4 = '4', KEY_5 = '5', KEY_6 = '6', 
+        KEY_3 = '3', KEY_4 = '4', KEY_5 = '5', KEY_6 = '6',
         KEY_7 = '7', KEY_8 = '8', KEY_9 = '9', KEY_0 = '0',
 
         KEY_SPACE = ' ',
@@ -138,20 +135,33 @@ namespace Framework
          * @param key Key to check
          * @return True only on the frame the key transitioned from down to up
          */
-        bool IsKeyReleased(KeyCode key); // True only on the frame key was released
+        bool IsKeyReleased(KeyCode key);
 
         /**
          * @brief Gets the current mouse cursor position
-         * @param[out] x Mouse X coordinate in screen space
-         * @param[out] y Mouse Y coordinate in screen space
+         * @param[out] x Mouse X coordinate in WINDOW space (0 = left edge)
+         * @param[out] y Mouse Y coordinate in WINDOW space (0 = top edge)
          *
-         * @note Coordinates are in screen space, not game world space.
-         *       Conversion to world space requires viewport transforms.
+         * IMPORTANT: Returns window-relative coordinates, not screen coordinates
+         * - (0, 0) = top-left corner of the window
+         * - (windowWidth, windowHeight) = bottom-right corner
+         * - Independent of window position on screen
          */
         void GetMousePosition(float& x, float& y);
+
+        /**
+         * @brief Sets the GLFW window for mouse position queries
+         * @param win GLFW window pointer
+         *
+         * MUST be called before GetMousePosition() will work correctly
+         */
+        void SetWindow(GLFWwindow* win);
+
     private:
         std::map<KeyCode, bool> CurrentKeys;     // Keys down this frame
         std::map<KeyCode, bool> PreviousKeys;    // Keys down last frame
+        GLFWwindow* window;                      // NEW: Window pointer for mouse queries
+
         /**
          * @brief Updates the state of a specific key
          * @param key Key to update
@@ -167,6 +177,6 @@ namespace Framework
          * Uses GetAsyncKeyState on Windows. Would need platform-specific
          * implementations for other operating systems.
          */
-        bool GetAsyncKeyState(KeyCode key);      // Platform-specific key checking
+        bool GetAsyncKeyState(KeyCode key);
     };
 }

@@ -165,7 +165,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             glfwPollEvents();
 
             // Update all systems
-            engine->UpdateSingleFrame(dt);
+            engine->UpdateSingleFrame(FIXED_DT);
 
             // State update
             if (fpUpdate) {
@@ -193,7 +193,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
             // Update FPS counter
             Framework::DebugConfig::GetFpsCounter().tick_with_dt(
-                static_cast<double>(FIXED_DT)
+                static_cast<double>(dt)
             );
 
             // ⭐ Debug hotkey: F2 to export performance data

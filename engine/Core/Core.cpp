@@ -153,6 +153,7 @@ namespace Framework
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
+
         LOG_INFO("CORE", "Dependencies wired");
     }
 
@@ -166,6 +167,8 @@ namespace Framework
 
         // Set window dependencies
         graphicsSystem->SetWindow(windowSystem->GetWindow());
+        inputSystem->SetWindow(windowSystem->GetWindow());  
+
         imguiSystem->SetWindow(windowSystem->GetWindow());
         imguiSystem->SetEntitySpawner(spawner);
         playerController->SetWindow(windowSystem->GetWindow());
