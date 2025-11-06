@@ -48,7 +48,7 @@ namespace Framework {
     }
     /**
      * @brief Default constructor for AudioSystem
-     * - Prints a message to the console after being called
+     * - Creates the AudioSystem instance and logs creation message
      */
     AudioSystem::AudioSystem() {
         std::cout << "[Audio] AudioSystem created\n";
@@ -56,7 +56,7 @@ namespace Framework {
     
     /**
      * @brief Default destructor for AudioSystem
-     * - Prints a message to the console after being called
+     * -  Logs destruction message. Does not clean up FMOD resources automatically.
      */
     AudioSystem::~AudioSystem() {
         std::cout << "[Audio] AudioSystem destroyed\n";
@@ -242,7 +242,8 @@ namespace Framework {
 
     /**
      * @brief The function below loads our sound
-     * @params filepath, Takes in the filepath of the audio
+     * @param filepath - Path to the audio file (e.g., "assets/sounds/jump.wav")
+     * @param name - Unique identifier for accessing this sound later
      * @return True if the createSound has successfully loaded, false if not
      * 
      * Implementation details:
@@ -291,7 +292,7 @@ namespace Framework {
 
     /**
      * @brief The function below unloads our sound
-     * @params name, Takes in the name/key of the audio we intend to unload
+     * @param name - Unique identifier of the sound to unload
      *
      * Implementation details:
      * - Searches the map for the name/key specified with find()
@@ -313,8 +314,8 @@ namespace Framework {
 
     /**
      * @brief The function below plays our sound
-     * @params name, Takes in the name/key of the audio we intend to play
-     * @params loop, Whether or not we want to loop the audio
+     * @param soundName - Name of the sound to play (must be loaded first)
+     * @param loop - If true, sound loops indefinitely; if false, plays once
      *
      * Implementation details:
      * - Verifies fmodsystem is intialized
