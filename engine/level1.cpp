@@ -128,10 +128,6 @@ void level1_Initialize()
     // ========================================================================
     playerControll->SetPlayerEntity(playerEntity);
 
-    // Optional: Configure shooting parameters
-    playerControll->SetShootCooldown(0.2f);
-    playerControll->SetProjectileSpeed(0.5f);
-
     LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
 
 
