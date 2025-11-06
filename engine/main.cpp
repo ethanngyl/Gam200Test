@@ -37,6 +37,7 @@ extern int current, previous, next;
 extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 
 Framework::CoreEngine* engine = nullptr;
+const float FIXED_DT = 1.0f / 60.0f;        // 60 FPS = 16.67ms per step
 
 // ============================================================================
 // MAIN ENTRY POINT
@@ -164,7 +165,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             glfwPollEvents();
 
             // Update all systems
-            engine->UpdateSingleFrame(dt);
+            engine->UpdateSingleFrame(FIXED_DT);
 
             // State update
             if (fpUpdate) {

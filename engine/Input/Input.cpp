@@ -1,23 +1,17 @@
-/**
+﻿/**
 ===============================================================================
- File:           Input.cpp
- Author:         Josh Ong
+ File:           Input.cpp (FIXED VERSION)
+ Author:         Josh Ong (Modified by GE YONGQI)
  Email:          josh.o@digipen.edu
  Date:           2025-09-22
- Contribution:   100%
+ Modification:   2025-11-06
  ------------------------------------------------------------------------------
- Implementation of the InputSystem class.
+  FIXED: GetMousePosition() now returns window-relative coordinates
 
-  Design notes:
-  This file implements the core logic for input handling. The Update() method
-  is called once per frame. It first copies the current key states into the
-  previous key state buffer, then polls the operating system for the live
-  state of all relevant keys, updating the current state buffer.
-
-  The IsKeyPressed() and IsKeyReleased() functions work by comparing the
-  current and previous state buffers to detect transitions. Platform-specific
-  code, like the Windows GetAsyncKeyState() API call, is wrapped in a helper
-  function to make the system easier to port.
+ Changes:
+ - Added window pointer to InputSystem
+ - Changed GetCursorPos() to glfwGetCursorPos()
+ - Now returns coordinates relative to window, not screen
 ===============================================================================
  */
 
@@ -27,6 +21,7 @@
 namespace Framework
 {
     InputSystem::InputSystem()
+        : window(nullptr)  //  Initialize window pointer
     {
     }
 
@@ -39,6 +34,13 @@ namespace Framework
         std::cout << "InputSystem: Initializing...\n";
         std::cout << "InputSystem: Use WASD to move, ESC to quit\n";
         std::cout << "InputSystem: SPACE to shoot, E to spawn enemy, O to spawn obstacle\n";
+    }
+
+    //  NEW: Set window pointer
+    void InputSystem::SetWindow(GLFWwindow* win)
+    {
+        window = win;
+        std::cout << "InputSystem: Window set\n";
     }
 
     void InputSystem::Update(float dt)
@@ -64,7 +66,7 @@ namespace Framework
         // Shooting/spawning keys (for PlayerController)
         UpdateKeyState(KEY_SHIFT, GetAsyncKeyState(KEY_SHIFT));
         UpdateKeyState(KEY_E, GetAsyncKeyState(KEY_E));
-        UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));  
+        UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
 
@@ -109,14 +111,28 @@ namespace Framework
         }
     }
 
+    //  FIXED: Now returns window-relative coordinates
     void InputSystem::GetMousePosition(float& x, float& y)
     {
-#ifdef _WIN32
-        POINT point;
-        GetCursorPos(&point);
-        x = static_cast<float>(point.x);
-        y = static_cast<float>(point.y);
-#endif
+        // Default values if window is not available
+        x = 0.0f;
+        y = 0.0f;
+
+        if (!window) {
+            return;
+        }
+
+        //  Use GLFW to get window-relative coordinates
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+
+        x = static_cast<float>(xpos);
+        y = static_cast<float>(ypos);
+
+        // These coordinates are now:
+        // - (0, 0) = top-left of window
+        // - (windowWidth, windowHeight) = bottom-right of window
+        // - Independent of window position on screen
     }
 
     void InputSystem::SendEngineMessage(Message* message)

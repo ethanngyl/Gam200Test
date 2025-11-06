@@ -207,19 +207,27 @@ namespace Framework {
 
     void Mesh::SetInstanceData()
     {
-        if (instanceVBO == 0)
+        if (instanceVBO == 0) {
             glCreateBuffers(1, &instanceVBO);
-        glNamedBufferStorage(instanceVBO, num_of_mesh * sizeof(glm::mat4),
-            nullptr, GL_DYNAMIC_STORAGE_BIT);// mat4 instanceVBO[1];
+            glNamedBufferStorage(instanceVBO, num_of_mesh * sizeof(glm::mat4),
+                nullptr, GL_DYNAMIC_STORAGE_BIT);// mat4 instanceVBO[1];
+        }
+
         glBindVertexArray(VAO);
+
         // mat4 = 4 vec4 attributes
         for (GLuint i = 0; i < 4; i++) {
             glEnableVertexArrayAttrib(VAO, 3 + i);
+
+            // offset advances by a vec4 each column of the mat4
             glVertexArrayVertexBuffer(VAO, 3 + i, instanceVBO, sizeof(glm::vec4) * i, sizeof(glm::mat4));
-            glVertexArrayAttribIFormat(VAO, 3 + i, 4, GL_FLOAT, 0);
+            
+            // use FLOAT format (no “I”)
+            glVertexArrayAttribFormat(VAO, 3 + i, 4, GL_FLOAT, GL_FALSE, 0);
             glVertexArrayAttribBinding(VAO, 3 + i, 3 + i);
 
-            glVertexAttribDivisor(3 + i, 1);  // <== important
+            // per-instance step
+            glVertexAttribDivisor(3 + i, 1);
         }
 
         glBindVertexArray(0);

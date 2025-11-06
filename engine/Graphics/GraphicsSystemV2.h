@@ -93,7 +93,7 @@ namespace Framework {
          * Must be called before Initialize()
          */
         void SetWindow(GLFWwindow* win);
-
+        void AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName);
         /**
          * @brief Set the entity manager for ECS integration
          */

@@ -130,19 +130,34 @@ namespace Framework {
         mainCamera.SetPosition(newPos);
     }
 
-
-    //definition of ResetEditorCamera - Jiahao
+    // ============================================================================
+    // /definition of ResetEditorCamera - Jiahao
+    // // author: jiahao Zhou
+    // Currently the editor camera share same class as main camera which is "Camera"
+	// It is just in editor mode, the camera has different control method
+	// so it still using mainCamera variable to represent editor camera
+    // ============================================================================
+    
     void GraphicsSystemV2::ResetEditorCamera() {
         mainCamera.SetPosition(editorCameraStartPos);
         mainCamera.SetZoom(editorCameraZoom);
     }
 
-    //definition of HandleEditorCamera - Jiahao
+    // ============================================================================
+    // /definition of HandleEditorCamera- Jiahao
+    // author: jiahao Zhou
+    // Currently the editor camera share same class as main camera which is "Camera"
+    // It is just in editor mode, the camera has different control method
+    // so it still using mainCamera variable to represent editor camera
+    // ============================================================================
+    
     void GraphicsSystemV2::HandleEditorCamera(float dt) {
+		// Define pan and zoom speeds
         const float panSpeed = 2.0f * dt;
         const float zoomSpeed = 1.5f * dt;
 
         //Panning with arrow keys
+		//Basically move the camera position based on arrow key input
         if (GetAsyncKeyState(Framework::KEY_LEFT)) {
             mainCamera.Translate({ -panSpeed, 0.0f, 0.0f });
         }
@@ -157,6 +172,7 @@ namespace Framework {
         }
 
         //Zooming 
+		// key 1 to zoom in, key 2 to zoom out
         if (GetAsyncKeyState(Framework::KEY_1)) {
             float zoom = mainCamera.GetZoom();
             mainCamera.SetZoom(zoom * (1.0f + zoomSpeed));
@@ -168,7 +184,7 @@ namespace Framework {
         }
 
         //Reset camera position 
-
+		// key 0 to reset camera, and call function ResetEditorCamera
         if (GetAsyncKeyState(Framework::KEY_0)) {
             ResetEditorCamera();
         }
@@ -195,7 +211,15 @@ namespace Framework {
             SetViewportSize(fbWidth, fbHeight);
         }
 
-        // === CAMERA FOLLOW LOGIC ===
+        // === CAMERA LOGIC ===
+        // 
+        // === EDITOR CAMERA LOGIC - jiahao
+        // this if else condition is to check when to use editor camera or make camera follow player
+        // LEVEL_2 is editor mode, if the game state current is in editor mode, proceed to the next check
+        // check if current imgui system is in play mode or not
+        // if yes, activate handleEditorCamera function, which the camera not following the player,  
+        // and able to move by arrow key(up down, left, right), key 1 to zoom in, key 2 to zoom out
+        // and key 0  to reset camera
         //!Framework::CORE->IsPlaying()
         if (current == LEVEL_2) {
             if (!Framework::CORE->IsPlaying()) {
@@ -203,7 +227,7 @@ namespace Framework {
             }
             
         }
-        
+        // === CAMERA FOLLOW LOGIC ===
         if (followEnabled && entityManager && followTarget.IsValid() && Framework::CORE->IsPlaying()) {
                 FollowPlayer(entityManager, followTarget);
         }
@@ -1097,5 +1121,25 @@ namespace Framework {
         // Just swap - DON'T clear!
         glfwSwapBuffers(window);
         glfwPollEvents();
+    }
+
+    void GraphicsSystemV2::AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName) {
+        static std::unordered_map<std::string, std::pair<std::string, std::string>> lookup = {
+            {"wireframequad", {"wireframequad", "wireframeq_mat"}},
+            {"circle", {"circle", "circle_mat"}},
+            {"quad", {"quad", "quad_mat"}},
+            {"triangle", {"triangle", "triangle_mat"}},
+            {"line", {"line", "line_mat"}}
+        };
+
+        auto it = lookup.find(spriteName);
+        if (it != lookup.end()) {
+            mr.mesh = resourceManager.GetMeshHandle(it->second.first);
+            mr.material = resourceManager.GetMaterialHandle(it->second.second);
+        }
+        else {
+            mr.mesh = resourceManager.GetMeshHandle("quad");
+            mr.material = Material2;
+        }
     }
 } // namespace Framework
