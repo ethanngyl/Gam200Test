@@ -1108,13 +1108,6 @@ namespace Framework {
         //    );
         //}
 
-        //if (ImGui::Button("Spawn Obstacle##Btn4", ImVec2(-1, 0))) {
-        //    entitySpawner->SpawnObstacle(
-        //        Vector2D(spawnX, spawnY),
-        //        Vector2D(0.3f, 0.3f)
-        //    );
-        //}
-
         ImGui::Separator();
 
         static int waveCount = 5;
