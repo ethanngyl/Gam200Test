@@ -32,6 +32,16 @@ file(GLOB_RECURSE APP_SRC
    "${SRC_DIR}/*.hpp"
 )
 
+# -------------------------------------------------------------------
+# IDE File Organization Configuration
+# -------------------------------------------------------------------
+# Organizes files in the IDE's project view based on their physical location.
+source_group(
+    TREE "${CMAKE_CURRENT_SOURCE_DIR}/engine" # Tells CMake to attempt to replicate the directory structure found under 'engine'.
+    PREFIX "engine"  # Sets the top-level virtual folder name in the IDE to 'engine'.
+    FILES ${APP_SRC} # Applies this grouping structure to all files collected in the ${APP_SRC} variable.
+)
+
 # Copy assets at configure time (happens when CMake runs)
 file(COPY "${CMAKE_SOURCE_DIR}/assets" 
      DESTINATION "${CMAKE_BINARY_DIR}")
@@ -45,8 +55,15 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 # MSVC-only: disable noisy integer conversion warnings
 #  - C4244: converting larger numeric types to smaller ones (possible loss of data)
 #  - C4267: converting size_t (64-bit) to smaller integer types
+#  - C4305: generic truncation/conversion of a constant (often seen in library headers)
 if (MSVC)
-    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE /wd4244 /wd4267)
+    target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE 
+        /wd4244 # 'conversion from larger to smaller'
+        /wd4267 # 'conversion from size_t'
+        /wd4305 # 'truncation from type1 to type2' (for constants/initializers)
+        /wd4456 # Suppress 'hides previous local'
+        /wd4459 # Suppress 'hides global'
+    )
 endif()
 
 # ======================= Linking =========================
@@ -75,6 +92,7 @@ set_source_files_properties(
 # Copy shaders to build directory
 file(COPY ${CMAKE_SOURCE_DIR}/engine/shaders
      DESTINATION ${CMAKE_BINARY_DIR})
+
 # ======================= Include Directories =========================
 
 # Include directories for the project (fixed to use directory, not files)

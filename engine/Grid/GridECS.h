@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <cmath>
 #include <optional>
 #include "Vector2D.h"
@@ -94,4 +94,21 @@ namespace Framework {
 			  grid.startPos.y + static_cast<float>(c.y) * grid.spacing.y
 			};
 		}
+		// ============================================================================
+		// Declaration of function: RebuildSpatialPartitioning
+		// author: jiahao.zhou@digipen
+		// ============================================================================
+		
+		void RebuildSpatialPartition();
+		// ============================================================================
+		// Declaration of function: SpatialPartitioningInsert
+		// author: jiahao.zhou@digipen
+		// ============================================================================
+		void SpatialPartitioningInsert(Framework::Entity entity);
+
+		// ============================================================================
+		// Declaration of function: SpatialPartitioningRemove
+		// author: jiahao.zhou@digipen
+		// ============================================================================
+		void SpatialPartitioningRemove(Framework::Entity entity);
 }

@@ -272,7 +272,6 @@ namespace Framework {
         // ====================================================================
 
         HandleSpawnEnemy();
-        HandleSpawnObstacle();
         HandleSpawnPickup();
     }
 
@@ -611,21 +610,6 @@ namespace Framework {
             float randomX = -1.5f + (rand() / (float)RAND_MAX) * 3.0f;
             spawner->SpawnEnemy(Vector2D(randomX, 0.8f), 0.1f);
             std::cout << "[PlayerController] Spawned enemy\n";
-        }
-    }
-
-    void PlayerControllerSystem::HandleSpawnObstacle()
-    {
-        // Note: KEY_Q triggers quit in Input.cpp, so using KEY_O instead
-        if (inputSystem->IsKeyPressed(KEY_O)) {
-            // Spawn obstacle at random position
-            float randomX = -1.5f + (rand() / (float)RAND_MAX) * 3.0f;
-            float randomY = -0.5f + (rand() / (float)RAND_MAX) * 1.0f;
-            spawner->SpawnObstacle(
-                Vector2D(randomX, randomY),
-                Vector2D(0.3f, 0.3f)
-            );
-            std::cout << "[PlayerController] Spawned obstacle\n";
         }
     }
 

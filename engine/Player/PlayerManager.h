@@ -82,7 +82,6 @@ namespace Framework {
         // ========================================================================
 
         void HandleSpawnEnemy();
-        void HandleSpawnObstacle();
         void HandleSpawnPickup();
 
         // ========================================================================
