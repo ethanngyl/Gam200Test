@@ -58,9 +58,11 @@ add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC}
 #  - C4305: generic truncation/conversion of a constant (often seen in library headers)
 if (MSVC)
     target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE 
-        /wd4244 
-        /wd4267
-        /wd4305
+        /wd4244 # 'conversion from larger to smaller'
+        /wd4267 # 'conversion from size_t'
+        /wd4305 # 'truncation from type1 to type2' (for constants/initializers)
+        /wd4456 # Suppress 'hides previous local'
+        /wd4459 # Suppress 'hides global'
     )
 endif()
 
