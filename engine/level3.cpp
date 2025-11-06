@@ -88,6 +88,12 @@ void level3_Initialize()
 
 void level3_Update()
 {
+    if (engine && engine->GetInputSystem() &&
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
+    {
+        next = mainMenu;
+    }
+
     using namespace Framework;
     CoreEngine* engine = CORE;
     if (!engine) return;
