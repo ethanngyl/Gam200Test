@@ -1059,6 +1059,9 @@ namespace Framework {
 
         if (shouldDelete && entityToDelete.id != 0) {
             entityManager->DestroyEntity(entityToDelete);
+			//temporary put spatialPartitioningRemove function here
+			//just to show how the spatial partitioning works with entity deletion
+			Framework::SpatialPartitioningRemove(entityToDelete);
         }
     }
 
@@ -1091,7 +1094,10 @@ namespace Framework {
         }
 
         if (ImGui::Button("Spawn Enemy##Btn2", ImVec2(-1, 0))) {
-            entitySpawner->SpawnEnemy(Vector2D(spawnX, spawnY));
+            Framework::Entity enemy = entitySpawner->SpawnEnemy(Vector2D(spawnX, spawnY));
+            //temporary put spatialPartitioningInsert function here 
+			//to show that how does the spatial partitioning works with entity spawner
+            Framework::SpatialPartitioningInsert(enemy);
         }
 
         //if (ImGui::Button("Spawn Projectile##Btn3", ImVec2(-1, 0))) {
