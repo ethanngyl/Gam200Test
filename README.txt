@@ -31,6 +31,7 @@ enemy will move towards it accordingly. The shortest path is always recalculated
 Current Levels:
 The game loads first into the main menu, with a play and exit button. 
 Main Menu: Clicking on play will load up level one, clicking exit will close the application
+Level Selector: Buttons Levels 1 - 3 will be displayed, clicking on them will bring the player to that respective level. A back button will also be displayed to bring them back to the main menu
 Level 1: Currently contains an entity with an animated bird sprite rendered. The entity's animation is only active while 
 the player is moving via the WASD keys. The player can hit space bar to fire a projectile upwards. There is an enemy
 on that level to allow testing for the current subscriber listener system which enables the enemy to take damage upon
@@ -40,4 +41,6 @@ back to the main menu and Key 6 loads up level 2.
 Level 2: Level 2 is a sandbox/level editor level. Functionalities of the ImGui can be tested here. More information on the level
 editor can be found in the LevelEditor document. Key 3 on this level will bring the player to level 3. Level 3 can only be accessed
 via hitting key 3 in level 2.
-Level 3: Level 3 is a demonstration of the current grid and pathfinding system that will form the foundation of the game. 
+Level 3: Level 3 demonstrates the core grid, occupancy, and pathfinding loop that the rest of the game will build on. It validates tile creation, world to tile conversion, entity occupancy, arrow key movement, and enemy pursuit using A*—all within a turn/queue framework. 
+The grid snaps the player to a box and is not allowed to move out of it until it's the players' turn. This level showcases the turn based system that is implemented, one turn and one tile movement per phase. 
+The pathfinding from the enemy is recalculated at every turn, enabling a smarter AI to find its way to the player.

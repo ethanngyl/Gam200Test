@@ -146,8 +146,8 @@ namespace Framework
                     }
 
                     // Clamp the scale to prevent excessive shrinking or stretching
-                    transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
-                    transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
+                    //transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
+                    //transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
 
                     // ---------------------- Rotation controls (KEY 7 / 8) ----------------------
                     if (inputSystem->IsKeyDown(KEY_7))
