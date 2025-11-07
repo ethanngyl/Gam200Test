@@ -1,18 +1,22 @@
-/**
+/*
 ===============================================================================
- File:           RenderCommand.h
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Render command system for organizing and sorting draw calls.
- Enables efficient batching and state management.
+File:        RenderCommand.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100%
+-------------------------------------------------------------------------------
+Brief:
+Lightweight render command types and queues used by GraphicsSystemV2.
 
- Design notes:
- - Commands are generated during render pass
- - Sorted by layer, material, and depth
- - Enables efficient state change minimization
- - Supports instanced rendering (future)
+- RenderCommand: one logical draw call (mesh + material + texture + xform)
+- RenderQueue:   gathers/Sorts/clears commands each frame (front-to-back)
+- DebugRenderQueue: lines/circles/boxes for on-screen debug overlays
+
+Notes:
+- Sorting packs (layer, material, orderInLayer, depth) into a 64-bit key.
+- Depth is quantized to 16 bits assuming a normalized range (0..100 units)
+  to keep the key compact and branch-free during sort.
 ===============================================================================
 */
 #pragma once
@@ -117,27 +121,30 @@ namespace Framework {
     class DebugRenderQueue {
     public:
         struct DebugLine {
-            glm::vec3 start;
-            glm::vec3 end;
-            glm::vec4 color;
+            glm::vec3 start;            // World-space start
+            glm::vec3 end;              // World-space end
+            glm::vec4 color;            // RGBA (no texture)
         };
 
         struct DebugCircle {
-            glm::vec3 center;
-            float radius;
-            glm::vec4 color;
-            int segments = 32;
+            glm::vec3 center;           // World-space center (XY plane assumed)
+            float radius;               // Circle radius in world units
+            glm::vec4 color;            // RGBA
+            int segments = 32;          // Tessellation for approximated circle
         };
 
         struct DebugBox {
-            glm::vec3 center;
-            glm::vec3 size;
-            glm::vec4 color;
+            glm::vec3 center;           // World-space center
+            glm::vec3 size;             // World-space extents (width, height, depth)
+            glm::vec4 color;            // RGBA
         };
 
         /**
          * @brief Add debug line
          */
+         // Add a line primitive
+         // Example: // Draw a cyan normal from P to P+N
+         // AddLine(P, P + N, {0,1,1,1});
         void AddLine(const glm::vec3& start, const glm::vec3& end, 
                      const glm::vec4& color = glm::vec4(1.0f)) {
             lines.push_back({start, end, color});
@@ -146,6 +153,8 @@ namespace Framework {
         /**
          * @brief Add debug circle
          */
+         // Add a circle primitive (useful for collision radii / vision cones)
+         // Note: segments controls smoothness vs cost.
         void AddCircle(const glm::vec3& center, float radius,
                       const glm::vec4& color = glm::vec4(1.0f), int segments = 32) {
             circles.push_back({center, radius, color, segments});
@@ -154,6 +163,7 @@ namespace Framework {
         /**
          * @brief Add debug box
          */
+        // Add an axis-aligned box (use size={w,h,1} for 2D quads)
         void AddBox(const glm::vec3& center, const glm::vec3& size,
                    const glm::vec4& color = glm::vec4(1.0f)) {
             boxes.push_back({center, size, color});
@@ -162,6 +172,7 @@ namespace Framework {
         /**
          * @brief Get all debug primitives
          */
+         // Fast const accessors used by the debug pass
         const std::vector<DebugLine>& GetLines() const { return lines; }
         const std::vector<DebugCircle>& GetCircles() const { return circles; }
         const std::vector<DebugBox>& GetBoxes() const { return boxes; }
@@ -169,6 +180,7 @@ namespace Framework {
         /**
          * @brief Clear all debug primitives
          */
+         // Clear all primitives at end-of-frame
         void Clear() {
             lines.clear();
             circles.clear();

@@ -4,11 +4,10 @@
 /*
 ===============================================================================
 File:        Mesh.cpp
-Author:      TAN WEI LEONG
-co-Author:   Sim Kah Yan
-Email:       weileong.tan@digipen.edu, kahyan.sim@digipen.edu
-Date:        2025-10-02
-Contribution: 70%(TAN WEI LEONG), 30%(Sim Kah Yan)
+Author:      Sim Kah yan, TAN WEI LEONG
+Email:       kahyan.sim@digipen.edu, weileong.tan@digipen.edu
+Date:        2025-11-06
+Contribution: 70%(Sim Kah Yan), 30%(TAN WEI LEONG)
 -------------------------------------------------------------------------------
 Brief:
 Implementation of the Mesh class, which encapsulates OpenGL buffer objects and
@@ -205,45 +204,8 @@ namespace Framework {
         //if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
-    // ============================================================================
-    // Author:        Tan Wei Leong
-    // Email:         weileong.tan@digipen.edu
-    // Date:          2025-11-06
-    // Contribution:  100% (Mesh Instancing System)
-    // -----------------------------------------------------------------------------
-    // Function: Mesh::SetInstanceData
-    // Description:
-    //   Initializes GPU buffers and vertex attribute configurations for
-    //   per-instance transformation rendering. This enables each instance
-    //   of the same mesh to have its own transformation matrix (position,
-    //   rotation, and scale), allowing the GPU to efficiently render many
-    //   identical meshes with unique transforms using instanced drawing.
-    //
-    //   Implementation Details:
-    //     • Creates an instance VBO (instanceVBO) if it does not already exist.
-    //     • Allocates dynamic storage sized to hold one mat4 per instance.
-    //     • Configures the vertex array object (VAO) to treat each mat4 as
-    //       four consecutive vec4 attributes (locations 3–6).
-    //     • Uses glVertexAttribDivisor() to ensure each instance uses a
-    //       unique transform per draw call.
-    //
-    //   Key Features:
-    //     - Enables GPU instancing (reduces draw calls drastically)
-    //     - Uses modern Direct State Access (DSA) functions for cleaner setup
-    //     - Works with Mesh::DrawInstanced() and GraphicsSystemV2 batching
-    //     - Efficiently supports large numbers of entities sharing one mesh
-    //
-    //   Example Usage:
-    //     mesh->SetInstanceData();
-    //     mesh->DrawInstanced(modelMatrices, instanceCount);
-    //
-    //   Dependencies:
-    //     - OpenGL 4.5+ (DSA required)
-    //     - glm::mat4 for transformation matrices
-    // ============================================================================
     void Mesh::SetInstanceData()
     {
-        // Mesh Instancing (Transformation per Instance) By: Wei Leong
         if (instanceVBO == 0)
         {
             glCreateBuffers(1, &instanceVBO);

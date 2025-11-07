@@ -1,11 +1,37 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           GraphicsSystemV2.cpp
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Implementation of the overhauled graphics system.
+File:        GraphicsSystemV2.cpp
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100% (remaining of the code)
+-------------------------------------------------------------------------------
+Brief:
+Implementation of GraphicsSystemV2, the modern rendering system that manages
+resource loading, camera control (including editor utilities and follow target),
+render queue gathering/sorting, batched and instancing draw execution, debug primitives, and
+text rendering.
+
+Details:
+- Initializes OpenGL, loads default shaders/materials/meshes, and sets baseline
+  render state (blend/cull/depth).
+- Every frame: updates viewport/resolution, manages camera, gathers renderables
+  from ECS (MeshRenderer/Sprite/SpriteAnimation), sorts/batches, binds material
+  once per batch, and draws meshes efficiently.
+- Provides debug overlay drawing (lines/circles/boxes) and simple background pass.
+- Integrates a FreeType-based TextRenderer for HUD/UI text.
+
+Notes:
+- Expects SetWindow(...) to be called before Initialize().
+- EntityManager is injected; this system does not own or create ECS data.
+- Uses y-up, orthographic camera by default; view/projection are kept in sync
+  with viewport size via SetViewportSize().
+
+Safety:
+- All external pointers are checked before use.
+- ResourceManager handles lifetime for GPU resources via handles.
+- Minimal per-frame allocations; debug rendering uses temporary meshes only
+  for clarity (can be batched later for performance).
 ===============================================================================
 */
 #include "Precompiled.h"
@@ -20,6 +46,7 @@
 
 namespace Framework {
 
+    // Check if a string looks like a file path (used to decide whether to load texture by name)
     static bool LooksLikeFilePath(const std::string& s) {
         const auto slash = s.find_last_of("/\\");
         const auto dot = s.find_last_of('.');
@@ -27,6 +54,7 @@ namespace Framework {
     }
     // === CONSTRUCTOR / DESTRUCTOR ===
 
+     // Constructor: Set sane defaults and record initial state.
     GraphicsSystemV2::GraphicsSystemV2()
         : window(nullptr)
         , entityManager(nullptr)
@@ -40,7 +68,7 @@ namespace Framework {
     {
         std::cout << "GraphicsSystemV2: Constructor\n";
     }
-
+    // Destructor: Release cached resources via ResourceManager and log teardown.
     GraphicsSystemV2::~GraphicsSystemV2() {
         std::cout << "GraphicsSystemV2: Destructor - Cleaning up...\n";
 
@@ -49,7 +77,9 @@ namespace Framework {
     }
 
     // === CORE LIFECYCLE ===
-
+    // 
+    // Initialize: Create GL context state, load resources, create meshes/materials,
+    // set render state, initialize text system, and print resource stats.
     void GraphicsSystemV2::Initialize() {
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initializing\n";
@@ -85,9 +115,10 @@ namespace Framework {
 
         SetupRenderState();
 
-        resourceManager.LoadFiles();// new
+        // 8. Allow ResourceManager to load any queued files (if using manifests)
+        resourceManager.LoadFiles();
 
-        glfwSwapInterval(1);  //ADD THIS - Enables VSync
+        glfwSwapInterval(1);  //Enables VSync
 
         text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
 
@@ -95,10 +126,11 @@ namespace Framework {
         editorCameraStartPos = mainCamera.GetPosition();
         editorCameraZoom = mainCamera.GetZoom();
 
-        text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48); //ASC: here change the font type
+        // Load fonts (keys must match what DrawText uses)
+        text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48);
         text_.loadFont("Serif32", "assets/Roboto-VariableFont_wdth,wght.ttf", 32);
 
-            std::cout << "\n========================================\n";
+        std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
 
@@ -112,6 +144,7 @@ namespace Framework {
         std::cout << "TextRenderer initialized.\n";
     }
 
+    // FollowPlayer: Smoothly move camera toward player's Transform (XY plane).
     void GraphicsSystemV2::FollowPlayer(EntityManager* em, Entity player)
     {
         if (!em || !em->HasComponent<Transform>(player))
@@ -119,12 +152,12 @@ namespace Framework {
 
         auto& playerTransform = em->GetComponent<Transform>(player);
 
-        // Keep camera centered on player (XY plane)
+        // Target camera position = player position (z fixed at 0)
         glm::vec3 targetPos(playerTransform.position.x, playerTransform.position.y, 0.0f);
 
-        // Optional: smooth movement (camera lag)
+        // Smoothly interpolate camera position toward target (simple exponential smoothing)
         glm::vec3 currentPos = mainCamera.GetPosition();
-        float smoothSpeed = 5.0f;  // adjust if needed
+        float smoothSpeed = 5.0f;  // Tune responsiveness
         glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * 0.016f);
 
         mainCamera.SetPosition(newPos);
@@ -190,9 +223,7 @@ namespace Framework {
         }
     }
 
-
-
-
+    // Update: Per-frame entry point. Handles viewport changes, camera logic, render queue gather/sort/execute, optional debug pass, and error checks.(continuation from kah yan)
     void GraphicsSystemV2::Update(float dt) {
 
         DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics); 
@@ -204,14 +235,14 @@ namespace Framework {
         }
 
 
-        // ADD THIS: Check for window resize each frame
+        // Detect window resize each frame and update camera/viewport
         int fbWidth, fbHeight;
         glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
         if (fbWidth != viewportWidth || fbHeight != viewportHeight) {
             SetViewportSize(fbWidth, fbHeight);
         }
 
-        // === CAMERA LOGIC ===
+        // ============== CAMERA LOGIC ==============
         // 
         // === EDITOR CAMERA LOGIC - jiahao
         // this if else condition is to check when to use editor camera or make camera follow player
@@ -231,8 +262,6 @@ namespace Framework {
         if (followEnabled && entityManager && followTarget.IsValid() && Framework::CORE->IsPlaying()) {
                 FollowPlayer(entityManager, followTarget);
         }
-
-
         // ============================================
 
         // Clear ONCE at the start
@@ -240,9 +269,6 @@ namespace Framework {
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
         // Reset statistics
         stats = RenderStats();
-
-        // Clear frame
-        //BeginFrame();
 
         // Gather render commands from ECS
         GatherRenderCommands();
@@ -258,16 +284,6 @@ namespace Framework {
             RenderDebugPrimitives();
         }
 
-        // Swap buffers
-        //EndFrame();
-
-        // === Text Rendering Pass ===
-//        glDisable(GL_DEPTH_TEST);
-//        glEnable(GL_BLEND);
-//        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//        text_.draw("Sans48", "Hello, StructSquad!", 30.f, viewportHeight - 60.f, 1.0f, { 1.0f, 1.0f, 1.0f }); //what the text will display
-//        text_.draw("Serif32", "Score: 12345", viewportWidth - 250.f, 40.f, 1.0f, { 1.0f, 0.3f, 0.3f });
-//        glEnable(GL_DEPTH_TEST);
         // Clear queues for next frame
         renderQueue.Clear();
         debugQueue.Clear();
@@ -279,6 +295,7 @@ namespace Framework {
         }
     }
 
+    // SendEngineMessage: React to engine-wide messages (e.g., Quit).
     void GraphicsSystemV2::SendEngineMessage(Message* message) {
         if (message->MessageId == Status::Quit) {
             std::cout << "GraphicsSystemV2: Received quit message\n";
@@ -286,46 +303,46 @@ namespace Framework {
     }
 
     // === SETUP ===
-
+    // Provide GLFW window (must be set before Initialize()).
     void GraphicsSystemV2::SetWindow(GLFWwindow* win) {
         window = win;
     }
-
+    // Connect ECS EntityManager for renderable collection and follow logic.
     void GraphicsSystemV2::SetEntityManager(EntityManager* em) {
         entityManager = em;
     }
-
+    // SetViewportSize: Update GL viewport, camera projection, and text renderer.
     void GraphicsSystemV2::SetViewportSize(int width, int height) {
         viewportWidth = width;
         viewportHeight = height;
 
         glViewport(0, 0, width, height);
 
-        // Update camera aspect ratio
+        // Maintain orthographic projection with aspect-preserving extents
         float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
         mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
-
+        // Keep text renderer aligned to screen size
         text_.setScreenSize(width, height);
 
         std::cout << "GraphicsSystemV2: Viewport resized to " << width << "x" << height << "\n";
     }
-
+    // Set camera position explicitly (editor or scripted motion).
     void GraphicsSystemV2::SetCameraPosition(const glm::vec3& position) {
         mainCamera.SetPosition(position);
     }
-
+    // Set camera zoom explicitly (orthographic scale).
     void GraphicsSystemV2::SetCameraZoom(float zoom) {
         mainCamera.SetZoom(zoom);
     }
 
     // === INITIALIZATION HELPERS ===
-
+    // InitializeOpenGL: Make context current, initialize GLEW, and log device info.
     void GraphicsSystemV2::InitializeOpenGL() {
         std::cout << "GraphicsSystemV2: Initializing OpenGL...\n";
 
         glfwMakeContextCurrent(window);
 
-        // Initialize GLEW
+        // Initialize GLEW for function loading
         glewExperimental = GL_TRUE;
         GLenum glewError = glewInit();
         if (glewError != GLEW_OK) {
@@ -345,16 +362,17 @@ namespace Framework {
         glViewport(0, 0, viewportWidth, viewportHeight);
     }
 
+    // LoadDefaultResources: Compile/link default shaders and assign debug shader.
     void GraphicsSystemV2::LoadDefaultResources() {
         std::cout << "GraphicsSystemV2: Loading default resources...\n";
 
-        // Load default shader
+        // Default shader (basic textured/colored)
         defaultShader = resourceManager.LoadShader(
             "shaders/basic.vert",
             "shaders/basic.frag",
             "default"
         );
-
+        // Alternate fragment shader
         Shader2 = resourceManager.LoadShader(
             "shaders/basic.vert",
             "shaders/basic2.frag",
@@ -365,10 +383,11 @@ namespace Framework {
             std::cerr << "ERROR: Failed to load default shader!\n";
         }
 
-        // Load debug shader (could be the same as default for now)
+        // Load debug shader
         debugShader = defaultShader;
     }
 
+    // CreateDefaultMeshes: Build/Load basic shapes and register with ResourceManager.
     void GraphicsSystemV2::CreateDefaultMeshes() {
         std::cout << "GraphicsSystemV2: Creating default meshes...\n";
         // Create primitive meshes using the factory functions
@@ -383,13 +402,6 @@ namespace Framework {
             triangle->GetVertexCount() > 0 ? std::vector<float>() : std::vector<float>(),
             {}, GL_TRIANGLES, true);
 
-        // Note: The current ResourceManager::CreateMesh needs the actual vertex data
-        // For now, we'll create them directly. This should be refactored to accept Mesh*
-
-        // Temporary workaround - store the created meshes
-        // In a production system, you'd refactor CreateMesh to accept Mesh* or the factory would use ResourceManager
-
-        // For now, just recreate them through the resource manager
         // Triangle vertices
         std::vector<float> triVerts = {
             0.0f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.5f, 1.0f,
@@ -437,7 +449,8 @@ namespace Framework {
         }
 
         circleMesh = resourceManager.CreateMesh("circle", circleVerts, {}, GL_TRIANGLE_FAN, true);
-
+        
+        // Register wireframe quad
         std::vector<float> wireframeQuadVerts = {
             // Bottom left
             -0.5f, -0.5f, 0.0f,  1.0f, 1.0f, 1.0f,  0.0f, 0.0f,
@@ -455,7 +468,7 @@ namespace Framework {
             "wireframequad",
             wireframeQuadVerts,
             {},
-            GL_LINE_STRIP,  // ✅ LINE_STRIP = connected lines
+            GL_LINE_STRIP, 
             true
         );
 
@@ -468,6 +481,7 @@ namespace Framework {
         std::cout << "Created " << 4 << " default meshes\n";
     }
 
+    // CreateDefaultMaterials: Instantiate per-primitive materials with base tints.
     void GraphicsSystemV2::CreateDefaultMaterials() {
         std::cout << "GraphicsSystemV2: Creating default materials...\n";
 
@@ -476,58 +490,34 @@ namespace Framework {
             return;
         }
 
-        // One Shot eveything method
-        /* ALL MATERIALS.txt
-        Default: defaultShader
-        triangle_mat: shader2, triangleMaterial
-        */
-
-        // Only load when you need it method
-        /* DefaultMaterial.txt
-         param1
-         param2
-        */
-        /* triangleMat.txt
-         param1
-         param2
-        */
-
-        /* DefaultScene
-            Background Obj -> uses BackgrounMat, this position, has render component
-            Obj1 -> uses Mat1, this position, has render component
-            Obj2 -> ...
-        */
-        // Then WHen I See I need Mat1, I search if I loaded Mat1 already, if not, loads mat1 file
-
-
         // Create default material
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
-        Material2 = resourceManager.CreateMaterial("color", Shader2);//                                   new
+        Material2 = resourceManager.CreateMaterial("color", Shader2);
         // Create materials for each primitive
         triangleMaterial = resourceManager.CreateMaterial("triangle_mat", defaultShader);
         auto* triMat = resourceManager.GetMaterial(triangleMaterial);
         if (triMat) {
             triMat->tint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
         }
-
+        // Quad material
         quadMaterial = resourceManager.CreateMaterial("quad_mat", defaultShader);
         auto* quadMat = resourceManager.GetMaterial(quadMaterial);
         if (quadMat) {
             quadMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
         }
-
+        // Line material
         lineMaterial = resourceManager.CreateMaterial("line_mat", defaultShader);
         auto* lineMat = resourceManager.GetMaterial(lineMaterial);
         if (lineMat) {
             lineMat->tint = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
         }
-
+        // Circle material
         circleMaterial = resourceManager.CreateMaterial("circle_mat", defaultShader);
         auto* circleMat = resourceManager.GetMaterial(circleMaterial);
         if (circleMat) {
             circleMat->tint = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
         }
-
+        // Wireframe quad material
         wireframeQMaterial = resourceManager.CreateMaterial("wireframeq_mat", defaultShader);
         auto* wireframeQMat = resourceManager.GetMaterial(wireframeQMaterial);
         if (wireframeQMat) {
@@ -537,6 +527,7 @@ namespace Framework {
         std::cout << "Created " << 5 << " default materials\n";
     }
 
+    // SetupBackground: Load texture, assign quad mesh, and create a background material.
     void GraphicsSystemV2::SetupBackground() {
         std::cout << "GraphicsSystemV2: Setting up background...\n";
 
@@ -562,6 +553,7 @@ namespace Framework {
         std::cout << "Background setup complete\n";
     }
 
+    // SetupRenderState: Global GL state for this renderer.
     void GraphicsSystemV2::SetupRenderState() {
         // Enable alpha blending
         glEnable(GL_BLEND);
@@ -575,85 +567,7 @@ namespace Framework {
         glCullFace(GL_BACK);
     }
 
-    // Continued in next part...
-
-} // namespace Framework
-/**
-===============================================================================
- File:           GraphicsSystemV2_Part2.cpp
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Second part of GraphicsSystemV2 implementation - rendering logic.
-
- NOTE: In production, merge Part1 and Part2 into single GraphicsSystemV2.cpp
-===============================================================================
-*/
-
-namespace Framework {
-
-    //// === LEGACY SUPPORT ===
-
-    //void GraphicsSystemV2::CreateLegacyMaterials() {
-    //    std::cout << "GraphicsSystemV2: Creating legacy material mappings...\n";
-
-        // Map sprite names to meshes
-        //legacyMeshMap["triangle"] = triangleMesh;
-        //legacyMeshMap["quad"] = quadMesh;
-        //legacyMeshMap["line"] = lineMesh;
-        //legacyMeshMap["circle"] = circleMesh;
-        //legacyMeshMap["wireframequad"] = wireframeQMesh;
-
-        //// Map sprite names to materials
-        //legacyMaterialMap["triangle"] = triangleMaterial;
-        //legacyMaterialMap["quad"] = quadMaterial;
-        //legacyMaterialMap["line"] = lineMaterial;
-        //legacyMaterialMap["circle"] = circleMaterial;
-        //legacyMaterialMap["wireframequad"] = wireframeQMaterial;
-
-    //    std::cout << "Legacy material mappings created\n";
-    //}
-
-    //MeshHandle GraphicsSystemV2::GetMeshForSpriteName(const std::string& spriteName) {
-    //    auto it = legacyMeshMap.find(spriteName);
-    //    if (it != legacyMeshMap.end()) {
-    //        return it->second;
-    //    }
-    //    return triangleMesh;  // Fallback
-    //}
-
-    //MaterialHandle GraphicsSystemV2::GetMaterialForSpriteName(const std::string& spriteName) {
-    //    auto it = legacyMaterialMap.find(spriteName);
-    //    if (it != legacyMaterialMap.end()) {
-    //        return it->second;
-    //    }
-    //    return defaultMaterial;  // Fallback
-    //}
-
-    //TextureHandle GraphicsSystemV2::GetTextureForSpriteName(const std::string& spriteName) {
-    //    auto it = legacyTextureMap.find(spriteName);
-    //    if (it != legacyTextureMap.end())
-    //        return it->second;
-
-    //    // Try to load from file path (ResourceManager caches internally)
-    //    TextureHandle th = resourceManager.LoadTexture(spriteName);
-    //    if (th.IsValid()) {
-    //        legacyTextureMap[spriteName] = th;
-    //        return th;
-    //    }
-
-    //    return INVALID_TEXTURE_HANDLE;
-    //}
-
-    //MaterialHandle GraphicsSystemV2::GetMaterialForSpriteName(const std::string& spriteName) {
-    //    auto it = legacyMaterialMap.find(spriteName);
-    //    if (it != legacyMaterialMap.end()) {
-    //        return it->second;
-    //    }
-    //    return defaultMaterial;  // Fallback
-    //}
-
+    // Resolve sprite name to a texture if the string looks like a file path.
     TextureHandle GraphicsSystemV2::GetTextureForSpriteName(const std::string& name) {
         // Only try to load when it looks like a file path (e.g., "assets/x.png")
         if (LooksLikeFilePath(name)) {
@@ -663,7 +577,8 @@ namespace Framework {
     }
 
     // === RENDERING PHASES ===
-
+    
+    // GatherRenderCommands: Build RenderQueue from ECS (background + entities).
     void GraphicsSystemV2::GatherRenderCommands() {
         if (!entityManager) return;
 
@@ -699,9 +614,10 @@ namespace Framework {
                 auto& mr = entityManager->GetComponent<MeshRenderer>(e);
                 if (!mr.visible) continue;
 
+                // Use provided mesh or default to quad
                 cmd.mesh = mr.mesh.IsValid() ? mr.mesh : quadMesh;
 
-                // === IMPORTANT: CLONE material so UV animation doesn't affect all ===
+                // Ensure each renderer gets an instanced material (so UV edits don't leak)
                 if (!mr.material.IsValid()) {
                     Material* base = resourceManager.GetMaterial(defaultMaterial);
                     if (!base) continue;
@@ -714,13 +630,13 @@ namespace Framework {
                     Material* pm = resourceManager.GetMaterial(inst);
                     if (!pm) continue;
 
-                    *pm = *base; // shallow copy (safe)
+                    *pm = *base; // shallow copy of defaults
                     mr.material = inst;
                 }
 
                 cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
 
-                // texture
+                // Choose texture: explicit handle first, else attempt load by sprite name
                 if (mr.texture.IsValid()) {
                     cmd.texture = mr.texture;
                 }
@@ -743,7 +659,7 @@ namespace Framework {
 
                 cmd.mesh = quadMesh;
                 cmd.material = defaultMaterial;
-
+                // Load texture only if spritePath looks like a real file
                 if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
                     TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
                     cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
@@ -1099,19 +1015,6 @@ namespace Framework {
                 hasTexture = true;
             }
         }
-
-        // Set shader uniforms
-        //GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
-        //if (useTexLoc != -1) {
-        //    glUniform1i(useTexLoc, hasTexture ? 1 : 0);
-        //}
-        //
-        //if (hasTexture) {
-        //    GLint texLoc = glGetUniformLocation(shader->GetID(), "uTexture");
-        //    if (texLoc != -1) {
-        //        glUniform1i(texLoc, 0);
-        //    }
-        //}
 
         // Set color tint (combine material tint with instance tint)
         glm::vec3 finalTint = glm::vec3(material->tint * tint);

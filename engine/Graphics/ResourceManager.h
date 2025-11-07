@@ -1,21 +1,24 @@
-/**
+/*
 ===============================================================================
- File:           ResourceManager.h
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Centralized resource management system for all graphics resources.
- Handles loading, caching, and lifetime management of shaders, textures,
- meshes, and materials.
+File:        ResourceManager.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100%
+-------------------------------------------------------------------------------
+Brief:
+Central hub for graphics resources (Shaders, Textures, Meshes, Materials).
+Owns all lifetimes, dedupes loads via caches, and tracks references so
+resources are released when no longer used.
 
- Design notes:
- - Automatic resource caching (no duplicate loads)
- - Reference counting for automatic cleanup
- - Thread-safe resource access
- - Supports hot-reloading (future extension)
+Notes:
+- Thread-safe: a single mutex guards all maps/caches.
+- Shader cache key: "<vertPath>|<fragPath>" (stable across calls).
+- Texture cache key: normalized path string.
+- Mesh cache key: logical name (e.g., "quad").
 ===============================================================================
 */
+
 #pragma once
 #include "ResourceHandle.h"
 #include "Material.h"
@@ -167,10 +170,14 @@ namespace Framework {
             size_t materialCount = 0;
         };
         Stats GetStats() const;
-        MeshHandle GetMeshHandle(const std::string& name);
+
+        // Lookups by friendly name/path (returns INVALID_*_HANDLE if not found)
+        MeshHandle     GetMeshHandle(const std::string& name);
         MaterialHandle GetMaterialHandle(const std::string& name);
-        bool HasTexture(TextureHandle h) const;
-        TextureHandle EnsureTexture(const std::string& path);   // Load if missing, return handle
+
+        // Quick validity checks and convenience loaders
+        bool          HasTexture(TextureHandle h) const;
+        TextureHandle EnsureTexture(const std::string& path);     // Load if missing
         bool          PathKnownAsTexture(const std::string& path) const;
 
     private:
@@ -194,7 +201,7 @@ namespace Framework {
         // Thread safety
         mutable std::mutex resourceMutex;
 
-        // Helper to generate cache key for shader
+        // Build a stable shader cache key from vertex/fragment file paths
         std::string MakeShaderKey(const std::string& vertPath, const std::string& fragPath) const {
             return vertPath + "|" + fragPath;
         }

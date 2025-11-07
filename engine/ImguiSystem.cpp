@@ -1,10 +1,10 @@
 ﻿/*
 ===============================================================================
 File:        ImGuiSystem.cpp
-Author:      Ethan Ng, Jiahao Zhou
-Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu,
+Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
+Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-11-07
-Contribution: 45%(Ethan), 55%(Jiahao)
+Contribution: 42%(Ethan), 53%(Jiahao), 5%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,

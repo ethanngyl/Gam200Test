@@ -4,12 +4,11 @@
 #include "GL/gl.h"
 /*
 ===============================================================================
-File:        Mesh.h
-Author:      TAN WEI LEONG
-co-Author:   Sim Kah Yan
-Email:       weileong.tan@digipen.edu, kahyan.sim@digipen.edu
-Date:        2025-10-02
-Contribution: 70%(TAN WEI LEONG), 30%(Sim Kah Yan)
+File:        Mesh.cpp
+Author:      Sim Kah yan, TAN WEI LEONG
+Email:       kahyan.sim@digipen.edu, weileong.tan@digipen.edu
+Date:        2025-11-06
+Contribution: 50%(Sim Kah Yan), 50%(TAN WEI LEONG)
 -------------------------------------------------------------------------------
 Brief:
 Declaration of the Mesh class, which encapsulates OpenGL Vertex Array Objects
@@ -123,24 +122,6 @@ namespace Framework {
         */
         unsigned int GetVertexCount() const { return vertexCount; }
 
-        /**
-         * @brief Initializes per-instance transformation data for instanced rendering.
-         *
-         * Sets up GPU buffer attributes that allow each instance of a mesh to have
-         * its own unique transformation matrix (model matrix). This enables
-         * efficient batch rendering of multiple entities that share the same mesh
-         * but differ in position, rotation, or scale.
-         *
-         * Implementation Details:
-         * - Creates and binds a vertex buffer object (VBO) for instance matrices.
-         * - Configures vertex attribute divisors so each instance uses its own
-         *   transformation data.
-         * - Works in conjunction with Mesh::DrawInstanced() for batched rendering.
-         *
-         * @note Must be called before DrawInstanced() to initialize per-instance data.
-         * @see Mesh::DrawInstanced
-         * @see GraphicsSystemV2::ExecuteRenderQueue
-         */
         void SetInstanceData();
 
         void DrawInstanced(const std::vector<glm::mat4>& instanceMatrices, GLsizei instanceCount) const;
