@@ -205,28 +205,66 @@ namespace Framework {
         //if (useIndices) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
+    // ============================================================================
+    // Author:        Tan Wei Leong
+    // Email:         weileong.tan@digipen.edu
+    // Date:          2025-11-06
+    // Contribution:  100% (Mesh Instancing System)
+    // -----------------------------------------------------------------------------
+    // Function: Mesh::SetInstanceData
+    // Description:
+    //   Initializes GPU buffers and vertex attribute configurations for
+    //   per-instance transformation rendering. This enables each instance
+    //   of the same mesh to have its own transformation matrix (position,
+    //   rotation, and scale), allowing the GPU to efficiently render many
+    //   identical meshes with unique transforms using instanced drawing.
+    //
+    //   Implementation Details:
+    //     • Creates an instance VBO (instanceVBO) if it does not already exist.
+    //     • Allocates dynamic storage sized to hold one mat4 per instance.
+    //     • Configures the vertex array object (VAO) to treat each mat4 as
+    //       four consecutive vec4 attributes (locations 3–6).
+    //     • Uses glVertexAttribDivisor() to ensure each instance uses a
+    //       unique transform per draw call.
+    //
+    //   Key Features:
+    //     - Enables GPU instancing (reduces draw calls drastically)
+    //     - Uses modern Direct State Access (DSA) functions for cleaner setup
+    //     - Works with Mesh::DrawInstanced() and GraphicsSystemV2 batching
+    //     - Efficiently supports large numbers of entities sharing one mesh
+    //
+    //   Example Usage:
+    //     mesh->SetInstanceData();
+    //     mesh->DrawInstanced(modelMatrices, instanceCount);
+    //
+    //   Dependencies:
+    //     - OpenGL 4.5+ (DSA required)
+    //     - glm::mat4 for transformation matrices
+    // ============================================================================
     void Mesh::SetInstanceData()
     {
-        if (instanceVBO == 0) {
+        // Mesh Instancing (Transformation per Instance) By: Wei Leong
+        if (instanceVBO == 0)
+        {
             glCreateBuffers(1, &instanceVBO);
-            glNamedBufferStorage(instanceVBO, num_of_mesh * sizeof(glm::mat4),
-                nullptr, GL_DYNAMIC_STORAGE_BIT);// mat4 instanceVBO[1];
+            glNamedBufferStorage(instanceVBO, num_of_mesh * sizeof(glm::mat4), nullptr, GL_DYNAMIC_STORAGE_BIT);
         }
 
         glBindVertexArray(VAO);
 
-        // mat4 = 4 vec4 attributes
-        for (GLuint i = 0; i < 4; i++) {
+        // A mat4 is represented as 4 consecutive vec4 attributes
+        for (GLuint i = 0; i < 4; i++)
+        {
             glEnableVertexArrayAttrib(VAO, 3 + i);
 
-            // offset advances by a vec4 each column of the mat4
+            // Offset advances by one vec4 per column of the mat4
             glVertexArrayVertexBuffer(VAO, 3 + i, instanceVBO, sizeof(glm::vec4) * i, sizeof(glm::mat4));
-            
-            // use FLOAT format (no “I”)
+
+            // Specify attribute format: 4 floats per vec4
             glVertexArrayAttribFormat(VAO, 3 + i, 4, GL_FLOAT, GL_FALSE, 0);
             glVertexArrayAttribBinding(VAO, 3 + i, 3 + i);
 
-            // per-instance step
+            // Each instance uses its own matrix (advance per instance)
             glVertexAttribDivisor(3 + i, 1);
         }
 

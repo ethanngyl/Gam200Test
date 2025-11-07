@@ -350,8 +350,34 @@ namespace Framework {
         return textures.find(h) != textures.end() && textures.at(h).resource != nullptr;
     }
 
-    TextureHandle ResourceManager::EnsureTexture(const std::string& path) {
-        // LoadTexture already dedupes via cache; this just makes intent obvious.
+    // ============================================================================
+    // Author:        Tan Wei Leong
+    // Email:         weileong.tan@digipen.edu
+    // Date:          2025-11-06
+    // Contribution:  100%
+    // -----------------------------------------------------------------------------
+    // Function: EnsureTexture
+    // Description:
+    //   Loads or retrieves a texture handle by path from the ResourceManager cache.
+    //   This function provides a simplified interface for texture access where the
+    //   caller only needs to specify the file path. Internally, it reuses the
+    //   caching logic in LoadTexture() to prevent duplicate loads.
+    //
+    //   Key Notes:
+    //     - Thread-safe through ResourceManager's internal locking
+    //     - Guarantees a valid texture handle if the texture exists
+    //     - Commonly used by GraphicsSystemV2 and EntitySpawner
+    //
+    //   Example Usage:
+    //     TextureHandle tex = resourceManager.EnsureTexture("assets/player.png");
+    //
+    //   Related:
+    //     - ResourceManager::LoadTexture()
+    //     - GraphicsSystemV2::GetTextureForSpriteName()
+    // ============================================================================
+    TextureHandle ResourceManager::EnsureTexture(const std::string& path)
+    {
+        // LoadTexture already dedupes via cache; this just makes intent explicit.
         return LoadTexture(path);
     }
 
@@ -359,37 +385,83 @@ namespace Framework {
         std::lock_guard<std::mutex> lock(resourceMutex);
         return textureCache.find(path) != textureCache.end();
     }
-    MeshHandle ResourceManager::GetMeshHandle(const std::string& name) {
+
+    // ============================================================================
+    // Author:        Tan Wei Leong
+    // Email:         weileong.tan@digipen.edu
+    // Date:          2025-11-06
+    // Contribution:  100%
+    // -----------------------------------------------------------------------------
+    // Function: GetMeshHandle
+    // Description:
+    //   Retrieves a mesh handle by name or file path. The function first checks
+    //   the mesh cache for a quick lookup, then falls back to a full search across
+    //   registered meshes if not found. Ensures consistent access to mesh resources
+    //   without reloading them from disk.
+    //
+    //   Key Notes:
+    //     - Thread-safe lookup using std::mutex
+    //     - Returns INVALID_MESH_HANDLE if not found
+    //     - Used by GraphicsSystemV2 for assigning default meshes
+    //
+    //   Example Usage:
+    //     MeshHandle quadMesh = resourceManager.GetMeshHandle("quad");
+    // ============================================================================
+    MeshHandle ResourceManager::GetMeshHandle(const std::string& name)
+    {
         std::lock_guard<std::mutex> lock(resourceMutex);
 
         // Check cache first (fastest)
         auto it = meshCache.find(name);
-        if (it != meshCache.end()) {
+        if (it != meshCache.end())
             return it->second;
-        }
 
-        // If not in cache, search through all meshes by their stored path/name
-        for (const auto& [handle, entry] : meshes) {
-            if (entry.path == name) {
+        // Search through all registered meshes by their path/name
+        for (const auto& [handle, entry] : meshes)
+        {
+            if (entry.path == name)
                 return handle;
-            }
         }
 
         std::cerr << "WARNING: Mesh '" << name << "' not found\n";
         return INVALID_MESH_HANDLE;
     }
 
-    MaterialHandle ResourceManager::GetMaterialHandle(const std::string& name) {
+
+   // ============================================================================
+   // Author:        Tan Wei Leong
+   // Email:         weileong.tan@digipen.edu
+   // Date:          2025-11-06
+   // Contribution:  100%
+   // -----------------------------------------------------------------------------
+   // Function: GetMaterialHandle
+   // Description:
+   //   Retrieves a material handle based on its assigned name. Iterates through
+   //   all loaded materials and returns the first match. This function enables
+   //   dynamic material retrieval for entities and systems that assign materials
+   //   at runtime.
+   //
+   //   Key Notes:
+   //     - Thread-safe through scoped mutex lock
+   //     - Returns INVALID_MATERIAL_HANDLE if material not found
+   //     - Commonly used by EntitySpawner and GraphicsSystemV2
+   //
+   //   Example Usage:
+   //     MaterialHandle defaultMat = resourceManager.GetMaterialHandle("quad_mat");
+   // ============================================================================
+    MaterialHandle ResourceManager::GetMaterialHandle(const std::string& name)
+    {
         std::lock_guard<std::mutex> lock(resourceMutex);
 
-        // Search through all materials by their name field
-        for (const auto& [handle, entry] : materials) {
-            if (entry.resource && entry.resource->name == name) {
+        // Search through all materials by their assigned name field
+        for (const auto& [handle, entry] : materials)
+        {
+            if (entry.resource && entry.resource->name == name)
                 return handle;
-            }
         }
 
         std::cerr << "WARNING: Material '" << name << "' not found\n";
         return INVALID_MATERIAL_HANDLE;
     }
+
 } // namespace Framework

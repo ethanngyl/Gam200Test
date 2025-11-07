@@ -186,16 +186,51 @@ namespace Framework {
             mr.visible = true;
             mr.tint = glm::vec4(1.0f);
 
+            // ============================================================================
+            // Author:        Tan Wei Leong
+            // Email:         weileong.tan@digipen.edu
+            // Date:          2025-11-06
+            // Contribution:  100% (Dynamic material instancing and mesh assignment)
+            // -----------------------------------------------------------------------------
+            // Description:
+            //   This section ensures that each spawned entity has its own unique
+            //   material instance and properly assigned mesh. It integrates with the
+            //   GraphicsSystemV2 to dynamically bind the correct mesh and base material
+            //   based on the sprite name provided.
+            //
+            //   Implementation Details:
+            //   • Uses GraphicsSystemV2::AssignMeshAndMaterial() to assign the correct
+            //     mesh-material pair to the entity's MeshRenderer component.
+            //   • Creates a shallow clone of the base material for each entity, ensuring
+            //     that material properties (tint, texture, shader uniforms) are not shared
+            //     between entities.
+            //   • This prevents side effects where changing one material (e.g. tint or UVs)
+            //     unintentionally affects all other entities using the same base material.
+            //
+            //   Key Features:
+            //     - One material instance per entity (prevents global state sharing)
+            //     - Material name pattern: "{spriteName}_inst_{entityID}"
+            //     - Fully integrated with ECS and ResourceManager
+            //     - Supports dynamic spawning and per-entity customization
+            //
+            //   Used by:
+            //     - EntitySpawner::SpawnSprite()
+            //     - EntitySpawner::SpawnPlayer()
+            //     - EntitySpawner::SpawnEnemy()
+            // ============================================================================
             // ensure each entity has its own material instance
-            if (CORE && CORE->GetGraphicsSystem()) {
+            if (CORE && CORE->GetGraphicsSystem())
+            {
                 auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
                 gs->AssignMeshAndMaterial(mr, spriteName);
 
                 // create a unique copy of the base material
-                if (mr.material.IsValid()) {
+                if (mr.material.IsValid())
+                {
                     auto* base = gs->GetResourceManager().GetMaterial(mr.material);
                     MaterialHandle clone = gs->GetResourceManager().CreateMaterial(
                         spriteName + "_inst_" + std::to_string(entity.GetID()), base->shader);
+
                     *gs->GetResourceManager().GetMaterial(clone) = *base;  // shallow copy
                     mr.material = clone;
                 }

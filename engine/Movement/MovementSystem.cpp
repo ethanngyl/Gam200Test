@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -97,42 +97,67 @@ namespace Framework
                     if (inputSystem->IsKeyDown(KEY_A)) inputDir.x -= x_mov_displacement;
                     if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += x_mov_displacement;
 
-                    // Face right when pressing D
-                    if (inputDir.x > default_zero) {
+                   // ============================================================================
+                   // Author:        Tan Wei Leong
+                   // Email:         weileong.tan@digipen.edu
+                   // Date:          2025-11-06
+                   // Contribution:  100% (Animation flipping, scaling, and rotation logic)
+                   // -----------------------------------------------------------------------------
+                   // Description:
+                   //   This section handles sprite flipping, scaling, and rotation behaviors
+                   //   in response to player input. It extends the basic MovementSystem to
+                   //   interact directly with the SpriteAnimation and Transform components,
+                   //   enabling visual feedback tied to player movement.
+                   //
+                   //   Features implemented:
+                   //   - Direction-based sprite flipping using flipX
+                   //   - Real-time scaling controls (KEY_3 to enlarge, KEY_4 to shrink)
+                   //   - Rotation controls (KEY_7 / KEY_8)
+                   //   - Clamp enforcement for scaling within Transform bounds
+                   // ============================================================================
+
+                   // ---------------------- Direction-based flipping ----------------------
+                   // When pressing D → face right; A → face left
+                    if (inputDir.x > default_zero)
+                    {
                         if (entityManager->HasComponent<SpriteAnimation>(entity))
+                        {
                             entityManager->GetComponent<SpriteAnimation>(entity).flipX = false;
+                        }
                     }
-
-                    // Face left when pressing A
-                    if (inputDir.x < default_zero) {
+                    if (inputDir.x < default_zero)
+                    {
                         if (entityManager->HasComponent<SpriteAnimation>(entity))
+                        {
                             entityManager->GetComponent<SpriteAnimation>(entity).flipX = true;
+                        }
                     }
 
-                    // === SCALING ===
-                    if (inputSystem->IsKeyDown(KEY_3)) {
+                    // ---------------------- Scaling controls (KEY 3 / 4) ----------------------
+                    if (inputSystem->IsKeyDown(KEY_3))
+                    {
                         transform.scale.x += scale_multiplier * dt;
                         transform.scale.y += scale_multiplier * dt;
                     }
-
-                    if (inputSystem->IsKeyDown(KEY_4)) {
+                    if (inputSystem->IsKeyDown(KEY_4))
+                    {
                         transform.scale.x -= scale_multiplier * dt;
                         transform.scale.y -= scale_multiplier * dt;
                     }
 
-                    // === Scale Clamping ===
+                    // Clamp the scale to prevent excessive shrinking or stretching
                     transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
                     transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
 
-                    // === ROTATION ===
-                    if (inputSystem->IsKeyDown(KEY_7)) {
+                    // ---------------------- Rotation controls (KEY 7 / 8) ----------------------
+                    if (inputSystem->IsKeyDown(KEY_7))
+                    {
                         transform.rotation += rotation_angle * dt;
                     }
-
-                    if (inputSystem->IsKeyDown(KEY_8)) {
+                    if (inputSystem->IsKeyDown(KEY_8))
+                    {
                         transform.rotation -= rotation_angle * dt;
                     }
-
 
                     // Normalize diagonal movement
                     if (inputDir.length() > default_zero) {

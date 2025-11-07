@@ -123,6 +123,26 @@ namespace Framework {
         */
         unsigned int GetVertexCount() const { return vertexCount; }
 
+        /**
+         * @brief Initializes per-instance transformation data for instanced rendering.
+         *
+         * Sets up GPU buffer attributes that allow each instance of a mesh to have
+         * its own unique transformation matrix (model matrix). This enables
+         * efficient batch rendering of multiple entities that share the same mesh
+         * but differ in position, rotation, or scale.
+         *
+         * Implementation Details:
+         * - Creates and binds a vertex buffer object (VBO) for instance matrices.
+         * - Configures vertex attribute divisors so each instance uses its own
+         *   transformation data.
+         * - Works in conjunction with Mesh::DrawInstanced() for batched rendering.
+         *
+         * @note Must be called before DrawInstanced() to initialize per-instance data.
+         * @see Mesh::DrawInstanced
+         * @see GraphicsSystemV2::ExecuteRenderQueue
+         */
+        void SetInstanceData();
+
         void SetInstanceData();
         void DrawInstanced(const std::vector<glm::mat4>& instanceMatrices, GLsizei instanceCount) const;
         GLuint GetInstanceVBO() const { return instanceVBO; }

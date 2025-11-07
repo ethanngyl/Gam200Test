@@ -756,20 +756,55 @@ namespace Framework {
                 cmd.layer = sp.layer;
             }
 
-            // ---------- Transform ----------
+            // ============================================================================
+            // Author:        Tan Wei Leong
+            // Email:         weileong.tan@digipen.edu
+            // Date:          2025-11-06
+            // Contribution:  100% (Transformation matrix + UV animation mapping)
+            // -----------------------------------------------------------------------------
+            // Description:
+            //   This section handles per-entity transformation and sprite sheet UV
+            //   animation logic within the rendering pipeline.
+            //
+            //   • Transformation Block
+            //     Converts ECS Transform component data (position, rotation, scale) into a
+            //     model matrix used by the GPU for world-space rendering.
+            //     Each entity receives its own transform, enabling independent movement
+            //     and scaling across the scene.
+            //
+            //   • UV Animation Block
+            //     Computes UV coordinates for the active animation frame defined by
+            //     SpriteAnimation. It divides the sprite sheet into frame-sized cells and
+            //     dynamically adjusts UVs each frame, also supporting horizontal flipping.
+            //
+            //   Integrated Systems:
+            //     - Uses Transform (position, rotation, scale)
+            //     - Uses SpriteAnimation (frame-based texture slicing)
+            //     - Updates Material UVs before rendering (GraphicsSystemV2)
+            //
+            //   Key Features Implemented:
+            //     - Real-time model matrix composition (translate, rotate, scale)
+            //     - Frame-based UV mapping for sprite sheets
+            //     - Horizontal flip support via flipX
+            //     - UV shrink correction to avoid texture bleeding
+            // ============================================================================
+
+            // ---------- TRANSFORM ----------
             glm::mat4 model(1.0f);
             model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
-            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1});
+            model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
             cmd.modelMatrix = model;
 
+            // Compute depth relative to camera (for correct draw order)
             cmd.depth = glm::distance(
                 glm::vec3(transform.position.x, transform.position.y, 0.0f),
                 mainCamera.GetPosition()
             );
 
             // ---------- SPRITE SHEET UV ANIMATION ----------
-            if (entityManager->HasComponent<SpriteAnimation>(e)) {
+            if (entityManager->HasComponent<SpriteAnimation>(e))
+            {
                 auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
                 Material* mat = resourceManager.GetMaterial(cmd.material);
@@ -780,28 +815,32 @@ namespace Framework {
 
                 const int texW = tex->GetWidth();
                 const int texH = tex->GetHeight();
-                if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0) continue;
+                if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
+                    continue;
 
                 const int cols = texW / anim.frameWidth;
-                const int frame = anim.currentFrame % max(1, anim.frameCount);
+                const int frame = anim.currentFrame % std::max(1, anim.frameCount);
                 const int x = frame % cols;
                 const int y = frame / cols;
 
                 float u0 = (x * anim.frameWidth) / float(texW);
                 float u1 = ((x + anim.uvShrinkPx) * anim.frameWidth) / float(texW);
-
                 float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
                 float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
 
-                // Horizontal flip
-                if (anim.flipX) std::swap(u0, u1);
+                // Apply horizontal flipping if enabled
+                if (anim.flipX)
+                    std::swap(u0, u1);
 
+                // Update material UV bounds
                 mat->u0 = u0;
                 mat->u1 = u1;
                 mat->v0 = v0;
                 mat->v1 = v1;
 
-                if (!mat->albedoTexture.IsValid()) mat->albedoTexture = anim.spriteSheet;
+                // Ensure texture is valid before rendering
+                if (!mat->albedoTexture.IsValid())
+                    mat->albedoTexture = anim.spriteSheet;
             }
 
             renderQueue.Submit(cmd);
