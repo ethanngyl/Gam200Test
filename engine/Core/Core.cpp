@@ -96,14 +96,18 @@ namespace Framework
             //Initializes the subscribers to receive events
             SetupEventListeners();
 
+            //Use a container to store(future)
             if (audioSystem) {
                 LOG_INFO("CORE", "Loading test audio...");
-                bool loaded = audioSystem->LoadSound("assets/leaves.wav", "leaves");
-                if (loaded) {
-                    LOG_INFO("CORE", "Test audio 'leaves' loaded successfully");
+                bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
+                bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
+                bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
+                bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
+                if (imguitestaudio && mainmenubgm && bgm2) {
+                    LOG_INFO("CORE", "All audio loaded successfully");
                 }
                 else {
-                    LOG_WARN("CORE", "Failed to load test audio");
+                    LOG_WARN("CORE", "Failed to load audio");
                 }
             }
 

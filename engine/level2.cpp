@@ -82,6 +82,12 @@ void level2_Update()
     {
         next = mainMenu;
     }
+
+    if (engine && engine->GetInputSystem() &&
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_3))
+    {
+        next = LEVEL_3;
+    }
 }
 
 void level2_Draw()

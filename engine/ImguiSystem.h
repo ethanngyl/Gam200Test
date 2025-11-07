@@ -1,9 +1,22 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           ImGuiSystem.h
- Description:    ImGui integration for visual debugging and entity inspection
-===============================================================================
- */
+File:        ImGuiSystem.h
+Author:      Ethan Ng, Jiahao Zhou
+Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu,
+Date:        2025-11-07
+Contribution: 45%(Ethan), 55%(Jiahao)
+-------------------------------------------------------------------------------
+ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
+OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
+drag–drop, asset browser) to ECS and subsystems.
+
+@brief ImGui editor/overlay declarations: menu bar, panels, level I/O, drag-drop,
+       and play/stop handoff to subsystems.
+
+Safety: Headers only declare interfaces; no heavy logic here. Guard pointers.
+
+*/
+
 
 #pragma once
 #include "Precompiled.h"

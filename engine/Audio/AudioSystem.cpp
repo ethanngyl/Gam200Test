@@ -8,15 +8,16 @@
  ------------------------------------------------------------------------------
   Audio System Implementation
 
-  Design notes:
-     - Integrates initialization, update, and cleanup of all subsystems
-     - Provides a one-click startup routine via InitializeAllSystems()
-     - Uses dependency wiring to ensure correct order and relationships
-     - Automatically logs progress and errors through the Log system
+ Overview:
+    The AudioSystem class provides audio functioanlities for the game engine
+    via use of the FMOD audio library and also is integrated with the current
+    ECS system in place.
 
-  Thread-safety:
-     - Not thread-safe (single-threaded engine model)
-     - All systems created and destroyed on the same thread
+  Design notes:
+     - Inherits from the engineSystem class
+     - ECS Compatible
+     - Currently only supports 2D audio
+     - Multiple validation checks to prevent faulty/uninitialized entities from running
 ===============================================================================
 */
 #include "AudioSystem.h"

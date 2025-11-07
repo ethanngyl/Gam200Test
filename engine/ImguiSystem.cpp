@@ -1,10 +1,43 @@
-﻿/**
+﻿/*
 ===============================================================================
- SIMPLE FIX: Just Add ## to Window Names
+File:        ImGuiSystem.cpp
+Author:      Ethan Ng, Jiahao Zhou
+Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu,
+Date:        2025-11-07
+Contribution: 45%(Ethan), 55%(Jiahao)
+-------------------------------------------------------------------------------
+ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
+OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
+drag–drop, asset browser) to ECS and subsystems.
 
- No docking features needed - just unique IDs to prevent tab drag issues
-===============================================================================
- */
+Responsibilities:
+- Initialize/Shutdown ImGui (context, backends) and per-frame begin/end.
+- Render main menu bar (File/Windows/Editor) and windows:
+  • Entity Inspector, Spawner ,Debug Info ,ImGui Demo ,Assets Browser.
+- Level I/O: Open/Save/Save-As of simple TXT format (Transform/Sprite/Colliders).
+- File Drag-and-Drop: load txt file as level, spawn sprites for image files
+- Editor controls: Play/Stop toggle, default level caching & reload.
+- Editor Camera and camera flow: on Play set follow-target to player; on Stop clear follow & reset
+  editor camera via GraphicsSystemV2.
+- Subsystem hookups: EntityManager, EntitySpawner, AudioSystem (stop all on quit),
+  GraphicsSystemV2 (ImGui render + camera helpers).
+
+Controls for:
+- Menu → File: Open / Open… / Save / Save As… / Exit
+- Menu → Windows: toggle editor panels
+- Menu → Editor: Play (when stopped) / Stop (when playing)
+- Assets Browser: double-click texture to spawn at origin; drag filename to future
+  drop targets; click “<” to go up one folder
+- OS Drag-&-Drop onto window:
+  • .txt → load level (clears scene if requested
+  • .png, .jpg, .jpeg → spawn sprite 
+
+Notes:
+
+
+Safety:
+
+*/
 
 #include "Precompiled.h"
 #include "ImGuiSystem.h"
@@ -957,7 +990,7 @@ namespace Framework {
         ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
 
-        // ✅ FIX: Add ##UniqueID to make this window unique
+        //  FIX: Add ##UniqueID to make this window unique
         if (!ImGui::Begin("Entity Inspector##Inspector1", &showEntityInspector)) {
             ImGui::End();
             return;
@@ -1108,13 +1141,6 @@ namespace Framework {
         //    );
         //}
 
-        //if (ImGui::Button("Spawn Obstacle##Btn4", ImVec2(-1, 0))) {
-        //    entitySpawner->SpawnObstacle(
-        //        Vector2D(spawnX, spawnY),
-        //        Vector2D(0.3f, 0.3f)
-        //    );
-        //}
-
         ImGui::Separator();
 
         static int waveCount = 5;
@@ -1125,9 +1151,9 @@ namespace Framework {
 
         ImGui::Separator();
 
-        if (ImGui::Button("Spawn Circle Pattern##Btn6", ImVec2(-1, 0))) {
-            entitySpawner->SpawnCircle("circle", 12, Vector2D(0, 0), 0.8f);
-        }
+        //if (ImGui::Button("Spawn Circle Pattern##Btn6", ImVec2(-1, 0))) {
+        //    entitySpawner->SpawnCircle("circle", 12, Vector2D(0, 0), 0.8f);
+        //}
 
         if (ImGui::Button("Spawn Grid Pattern##Btn7", ImVec2(-1, 0))) {
             entitySpawner->SpawnGrid("wireframequad",10, 10, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
@@ -1140,7 +1166,7 @@ namespace Framework {
             }
         }
 
-        if (ImGui::Button("Trigger Audio##Btn8", ImVec2(-1, 0))) {
+        if (ImGui::Button("Trigger Leaves SFX##Btn8", ImVec2(-1, 0))) {
             if (audioSystem) {
                 std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("leaves", false);
@@ -1151,7 +1177,40 @@ namespace Framework {
             }
         }
 
-        if (ImGui::Button("Stop All Audio##Btn9", ImVec2(-1, 0))) {
+        if (ImGui::Button("Trigger Shooting SFX##Btn9", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("shooting", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Trigger Menu BGM##Btn9", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("mmbgm", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Trigger In-Game BGM##Btn10", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("bgm", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Stop All Audio##Btn11", ImVec2(-1, 0))) {
             if (audioSystem) {
                 std::cout << "[DEBUG] Stopping all audio\n";
                 audioSystem->StopAllSounds();

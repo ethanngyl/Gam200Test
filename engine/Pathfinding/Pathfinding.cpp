@@ -4,7 +4,7 @@
  Author:         PADILLA CARL JAMESON Z.
  Email:          c.padilla@digipen.edu
  Date:           2025/11/02
- Contribution:   
+ Contribution:   100%
  ------------------------------------------------------------------------------
 
   Design notes:
@@ -163,9 +163,9 @@ namespace Framework {
     }
 
     /**
-     * @brief Handles engine messages (currently unused)
-     * @param msg Pointer to message to process
-     */
+    * @brief Handles engine messages (currently unused)
+    * @param msg Pointer to message to process
+    */
 
     void PathfindingSystem::SendEngineMessage(Message* msg) {
         (void)msg;
@@ -177,14 +177,14 @@ namespace Framework {
 
 
     /**
-     * @brief Calculates Manhattan distance between two grid coordinates
-     * @param a First grid coordinate
-     * @param b Second grid coordinate
-     * @return Manhattan distance (sum of absolute differences in x and y)
-     *
-     * Manhattan distance is the sum of horizontal and vertical distances.
-     * Used as the heuristic for A* pathfinding on a 4-directional grid.
-     */
+    * @brief Calculates Manhattan distance between two grid coordinates
+    * @param a First grid coordinate
+    * @param b Second grid coordinate
+    * @return Manhattan distance (sum of absolute differences in x and y)
+    *
+    * Manhattan distance is the sum of horizontal and vertical distances.
+    * Used as the heuristic for A* pathfinding on a 4-directional grid.
+    */
     int PathfindingSystem::Heuristic(const GridCoord& a, const GridCoord& b) {
         return Abs(a.x - b.x) + Abs(a.y - b.y);
     }
@@ -240,15 +240,15 @@ namespace Framework {
     }
 
     /**
-     * @brief Reconstructs the final path from A* search results
-     * @param nodes 2D array of pathfinding nodes with parent information
-     * @param start Starting grid coordinate
-     * @param goal Goal grid coordinate
-     * @return Vector of coordinates forming the path from start to goal
-     *
-     * Traces backwards through parent pointers from goal to start,
-     * then reverses the result to get a forward-traversal path.
-     */
+    * @brief Reconstructs the final path from A* search results
+    * @param nodes 2D array of pathfinding nodes with parent information
+    * @param start Starting grid coordinate
+    * @param goal Goal grid coordinate
+    * @return Vector of coordinates forming the path from start to goal
+    *
+    * Traces backwards through parent pointers from goal to start,
+    * then reverses the result to get a forward-traversal path.
+    */
     std::vector<GridCoord> PathfindingSystem::ReconstructPath(
         const std::vector<std::vector<PathNode>>& nodes,
         const GridCoord& start,
@@ -274,24 +274,24 @@ namespace Framework {
     // A* PATHFINDING
     // ============================================================================
 
-        /**
-     * @brief Finds optimal path from start to goal using A* algorithm
-     * @param start Starting grid coordinate
-     * @param goal Target grid coordinate
-     * @param grid Grid reference for bounds and neighbor checking
-     * @return Vector of grid coordinates forming the optimal path
-     *
-     * Implements classic A* pathfinding with:
-     * - Priority queue for efficient lowest-cost node selection
-     * - Manhattan distance heuristic for 4-directional movement
-     * - Closed list to prevent revisiting processed nodes
-     * - Early exit when goal is reached
-     *
-     * Returns empty vector if:
-     * - Start or goal coordinates are out of bounds
-     * - Start and goal are the same
-     * - No valid path exists
-     */
+    /**
+    * @brief Finds optimal path from start to goal using A* algorithm
+    * @param start Starting grid coordinate
+    * @param goal Target grid coordinate
+    * @param grid Grid reference for bounds and neighbor checking
+    * @return Vector of grid coordinates forming the optimal path
+    *     
+    * Implements classic A* pathfinding with:
+    * - Priority queue for efficient lowest-cost node selection
+    * - Manhattan distance heuristic for 4-directional movement
+    * - Closed list to prevent revisiting processed nodes
+    * - Early exit when goal is reached
+    *
+    * Returns empty vector if:
+    * - Start or goal coordinates are out of bounds
+    * - Start and goal are the same
+    * - No valid path exists
+    */
     std::vector<GridCoord> PathfindingSystem::FindPath(
         const GridCoord& start,
         const GridCoord& goal,
@@ -357,30 +357,17 @@ namespace Framework {
     // ENEMY SPAWNING
     // ============================================================================
 
-     /**
-     * @brief Spawns an enemy at the furthest walkable tile from the player
-     * @param playerEntity Entity reference for the player
-     * @param entityManager Pointer to entity manager for component operations
-     * @param entitySpawner Pointer to entity spawner for creating enemies
-     * @return Created enemy entity with AI component, or INVALID_ENTITY on failure
-     *
-     * Process:
-     * 1. Validates inputs and checks player has Transform component
-     * 2. Gets player's current tile position
-     * 3. Scans all walkable tiles and calculates Manhattan distance from player
-     * 4. Selects tile with maximum distance
-     * 5. Spawns enemy at that position
-     * 6. Adds EnemyAI component configured to chase player
-     * 7. Marks tile as occupied
-     *
-     * Returns INVALID_ENTITY if:
-     * - entityManager or entitySpawner is null
-     * - Player has no Transform component
-     * - Grid is not initialized
-     * - Player is not on a valid grid tile
-     * - No walkable tiles found
-     * - Enemy spawn fails
-     */
+    /**
+    * @brief Spawns an enemy at the farthest walkable tile from the player.
+    * @param playerEntity Player’s entity reference
+    * @param entityManager Entity manager for component access
+    * @param entitySpawner Entity spawner for creating enemies
+    * @return Enemy entity with AI component, or INVALID_ENTITY if spawn fails
+    *
+    * Finds the player’s tile, checks all walkable tiles for the one farthest away
+    * (by Manhattan distance), then spawns an enemy there with an AI set to chase
+    * the player. Returns INVALID_ENTITY if setup or spawn fails.
+    */
     Entity PathfindingSystem::SpawnEnemyFurthestFromPlayer(
         Entity playerEntity,
         EntityManager* entityManager,

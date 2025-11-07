@@ -1,11 +1,24 @@
-/**
+/******************************************************************************
 ===============================================================================
- File:           PlayerControllerSystem.h
- Description:    Player input controller - Header
+ File:           PlayerManager.h
+ Author:         <MAIN AUTHOR NAME>
+ Co-authors:     PADILLA CARL JAMESON Z.
+ Email:          <main.author@digipen.edu>
+ Date:           2025/11/07
+ Contribution:   PADILLA CARL JAMESON Z.: 10%
+ ------------------------------------------------------------------------------
+  Description:
+  Declares the player control interface for a grid-based, turn-driven game.
+  Exposes movement handlers (click-to-move and arrow-key step) and lightweight
+  visual feedback helpers (tile pulse + border outline) used to confirm input.
 
- Handles player shooting and entity spawning based on keyboard/mouse input.
+  Design notes:
+  - Single-tile movement semantics with bounds/walkability checks
+  - Turn integration: movements can end the player’s turn
+  - Non-blocking, timer-based UI feedback (start/stop pulse; show/hide outline)
+  - Minimal surface area: effects are initiated here and updated per frame
 ===============================================================================
- */
+******************************************************************************/
 
 #pragma once
 #include "Precompiled.h"
@@ -16,8 +29,8 @@ namespace Framework {
     class EntitySpawner;
 
     /**
-     * @brief Player Controller System - Handles player shooting/spawning input
-     */
+    * @brief Player Controller System - Handles player shooting/spawning input
+    */
     class PlayerControllerSystem : public EngineSystem {
     public:
         PlayerControllerSystem();
@@ -53,12 +66,13 @@ namespace Framework {
         void HandleShootDown(const Vector2D& playerPos);
         void HandleShootAtMouse(const Vector2D& playerPos);
 
+        // ========================================================================
+        // PLAYER MOVEMENT HANDLERS
+        // ========================================================================
         void HandleClickToMove();
         void UpdateTilePulseAnimation();
         void UpdateBorderOutlineAnimation();
-
         void HandleArrowKeyMovement();
-
         void StartTilePulse(Framework::Entity tileEntity, float pulseScale, DWORD pulseDurationMs);
         void ShowBorderOutline(const GridCoord& tile, float thicknessFraction, DWORD durationMs);
 
@@ -68,7 +82,6 @@ namespace Framework {
         // ========================================================================
 
         void HandleSpawnEnemy();
-        void HandleSpawnObstacle();
         void HandleSpawnPickup();
 
         // ========================================================================
