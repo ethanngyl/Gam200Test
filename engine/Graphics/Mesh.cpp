@@ -206,7 +206,6 @@ namespace Framework {
 
     void Mesh::SetInstanceData()
     {
-        // Mesh Instancing (Transformation per Instance) By: Wei Leong
         if (instanceVBO == 0)
         {
             glCreateBuffers(1, &instanceVBO);
