@@ -580,6 +580,7 @@ namespace Framework {
                 }
 
 				// begin drag drop source
+
                 if (ImGui::BeginDragDropSource()) {
 					// put a payload of type "Sprite" into the drag drop source
                     ImGui::SetDragDropPayload("Sprite", &label, label.size());
@@ -597,6 +598,7 @@ namespace Framework {
 
     void ImGuiSystem::Update(float dt)
     {
+        (void)dt;
         if (!enabled) {
             return;
         }

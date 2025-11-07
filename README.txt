@@ -1,46 +1,69 @@
-Team Name: Struct Squad
-Team Roster:
-SIM KAH YAN (Graphic Design+Audio)
-TAN WEI LEONG (Programmer)
-ETHAN NG (Tech Lead)
-JOSH ONG (Programmer)
-GE YONG QI (Programmer (DEBUG))
-ZHOU JIAHAO (Collision+physics)
-CARL JAMESON Z PADILLA (Programmer)
-GERARD LOU (Design lead + Story Champion)
-IVAN NG (Product Manager + Programmer)
+STRUCT SQUAD GAME ENGINE
 
-Game Concept:
-The primary cycle of play consists of:
-Movement – Players spend actions to move across the grid.
-One space per action, positioning strategically toward objectives or enemies.
-Combat – When encountering another class or enemy, combat is resolved in a turn-based sequence, with attack order determined by Speed or passives.
-Interaction – Players may interact with the objectives/items
+TEAM NAME:
+Struct Squad
 
-Win Con:
-Defeat all the enemies, collect all the items in the chests around the map and bring them to the main objective
+TEAM ROSTER:
+IVAN NG ...................... Product Manager + Programmer
+ETHAN NG ..................... Tech Lead
+SIM KAH YAN .................. Graphic Design + Audio
+TAN WEI LEONG ............... Programmer
+JOSH ONG ..................... Programmer
+GE YONG QI ................... Programmer (Debug)
+ZHOU JIAHAO .................. Collision + Physics
+CARL JAMESON Z. PADILLA ..... Programmer
+GERARD LOU ................... Design Lead + Story Champion
 
-Lose Con:
-When the player Health is reduced to 0
 
-In-Engine Demo:
-The current demo of the full game is not completed at the moment. An implementation of the grid and path finding AI for the enemy to track the player
-is found in level 3 of the current game engine. Arrow keys can be used to control the player on the grid. Each time the player moves to a grid the
-enemy will move towards it accordingly. The shortest path is always recalculated after every move/turn.
+GAME CONCEPT:
+The core gameplay cycle is based around three main actions — Movement, Combat, and Interaction.
 
-Current Levels:
-The game loads first into the main menu, with a play and exit button. 
-Main Menu: Clicking on play will load up level one, clicking exit will close the application
-Level Selector: Buttons Levels 1 - 3 will be displayed, clicking on them will bring the player to that respective level. A back button will also be displayed to bring them back to the main menu
-Level 1: Currently contains an entity with an animated bird sprite rendered. The entity's animation is only active while 
-the player is moving via the WASD keys. The player can hit space bar to fire a projectile upwards. There is an enemy
-on that level to allow testing for the current subscriber listener system which enables the enemy to take damage upon
-being hit by a projectile. Keys 3 and 4 will allow for upscaling and downscaling of the player entity respectively. 
-Keys 7 and 8 will allow the player to rotate the entity towards the left and right respectively. Key 5 will send the player
-back to the main menu and Key 6 loads up level 2.
-Level 2: Level 2 is a sandbox/level editor level. Functionalities of the ImGui can be tested here. More information on the level
-editor can be found in the LevelEditor document. Key 3 on this level will bring the player to level 3. Level 3 can only be accessed
-via hitting key 3 in level 2.
-Level 3: Level 3 demonstrates the core grid, occupancy, and pathfinding loop that the rest of the game will build on. It validates tile creation, world to tile conversion, entity occupancy, arrow key movement, and enemy pursuit using A*—all within a turn/queue framework. 
-The grid snaps the player to a box and is not allowed to move out of it until it's the players' turn. This level showcases the turn based system that is implemented, one turn and one tile movement per phase. 
-The pathfinding from the enemy is recalculated at every turn, enabling a smarter AI to find its way to the player.
+Movement: Players move one grid space per action. Each move should be made strategically toward objectives or enemies.
+Combat: When a player encounters an enemy, combat occurs in a turn-based manner. Attack order is determined by Speed or passive abilities.
+Interaction: Players can interact with objects or items placed around the map.
+
+WIN CONDITION:
+Defeat all enemies, collect every item found in the map’s chests, and return them to the main objective.
+
+LOSE CONDITION:
+The player loses when their Health is reduced to 0.
+
+IN-ENGINE DEMO:
+The complete demo version of the game is still in progress.
+Currently, Level 3 showcases the grid system and pathfinding AI that allows an enemy to track the player.
+Players can move using the arrow keys. Each time the player moves, the enemy recalculates the shortest path using the A* algorithm and moves toward the player on its turn.
+
+CURRENT LEVELS:
+
+MAIN MENU:
+The game starts at the main menu.
+Selecting “Play” loads Level 1.
+Selecting “Exit” closes the application.
+
+LEVEL SELECTOR:
+Displays buttons for Levels 1 to 3.
+Selecting a level loads it.
+A Back button allows returning to the main menu.
+
+LEVEL 1:
+This level contains an animated bird sprite entity.
+The animation plays only while the player is moving using the WASD keys.
+Pressing the space bar fires a projectile upward.
+An enemy is present for testing the current subscriber-listener system, which allows the enemy to take damage from projectiles.
+Keys 3 and 4 upscale and downscale the player entity.
+Keys 7 and 8 rotate the player to the left and right.
+Key 5 returns to the main menu.
+Key 6 loads Level 2.
+
+LEVEL 2:
+This level functions as a sandbox and level editor for testing ImGui features.
+Further information can be found in the LevelEditor document.
+Pressing Key 3 loads Level 3.
+Level 3 can only be accessed through Level 2.
+
+LEVEL 3:
+This level demonstrates the core grid system, entity occupancy, and enemy pathfinding loop.
+It verifies tile creation, world-to-tile conversion, occupancy tracking, arrow key movement, and enemy pursuit using the A* algorithm.
+The player is locked to one tile per turn and cannot move out of turn.
+Enemy movement is recalculated each turn for smarter pursuit behavior.
+This level forms the foundation for the turn-based gameplay system the rest of the game will build upon.

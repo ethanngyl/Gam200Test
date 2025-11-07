@@ -556,7 +556,7 @@ namespace Framework {
             const Vector2D& startPos,
             const Vector2D& spacing = Vector2D{ 1.0f, 1.0f })
         {
-
+            (void)spriteName;
             auto& record = GetGrid();
             record.rows = rows;
             record.cols = cols;
