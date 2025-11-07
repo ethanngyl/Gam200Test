@@ -17,7 +17,7 @@
 */
 
 #include "Precompiled.h"   
-
+#include "Audio/AudioSystem.h"
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
@@ -67,10 +67,14 @@ void level1_Initialize()
     // Spawn Player - Save the returned entity ID
     // ========================================================================
     auto playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
+    auto audioSystem = engine->GetAudioSystem();
 
     auto enemyEntity = spawner->SpawnEnemy(Vector2D(1.0f, -0.5f));
 
+
     auto* playerController = engine->GetPlayerController();
+    playerController->SetAudioSystem(audioSystem);
+
     if (playerController) {
         playerController->SetPlayerEntity(playerEntity);
         LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
