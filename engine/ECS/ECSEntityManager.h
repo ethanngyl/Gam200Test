@@ -125,7 +125,9 @@ namespace Framework
          * require this function for loading scenes in ImGui system
          */
         void ClearAllEntities();
-
+        void ResetEntityIDCounter() {
+            nextEntityID = 1; // Or whatever your starting ID is
+        }
 
     private:
         EntityID nextEntityID; //Next entitiy id to assign

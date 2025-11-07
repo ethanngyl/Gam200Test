@@ -133,6 +133,7 @@ namespace Framework {
 		// clear all existing entities if clearAll is true
         if (clearAll) {
             entityManager->ClearAllEntities();
+            entityManager->ResetEntityIDCounter();
         }
 		// declare a variable to hold the entity being created
         Framework::Entity Entity;
@@ -1078,10 +1079,10 @@ namespace Framework {
             Entity entity = pageEntities[i];
 
             // Super unique ID
-            ImGui::PushID(static_cast<int>(entity.id * 10000 + i));
+            ImGui::PushID(static_cast<int>(entity.id + i));
 
             char label[128];
-            snprintf(label, sizeof(label), "Entity %u", entity.id);
+            snprintf(label, sizeof(label), "Entity %u", static_cast<int>(i+1));
 
             if (ImGui::CollapsingHeader(label)) {
 
