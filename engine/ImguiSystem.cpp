@@ -1257,6 +1257,7 @@ namespace Framework {
         ImGui::BulletText("up down left right: Move editor camera");
         ImGui::BulletText("Key 1: Zoom in");
         ImGui::BulletText("Key 2: Zoom out");
+        ImGui::BulletText("Key 3: Go to level3");
         ImGui::BulletText("key 0: Reset Camera");
         ImGui::BulletText("click above menu Editor->Play to activate play mode");
         ImGui::BulletText("WASD: Move");

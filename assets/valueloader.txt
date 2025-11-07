@@ -71,6 +71,36 @@ ep_u = 1.0
 ep_v = 0.0
 
 # ============================================================================
+# UI TEXT SETTINGS - LEVEL SELECT
+# ============================================================================
+# Font settings
+levelselect_ui_font_large = Sans48
+
+# Text content
+levelselect_text_level1 = Level 1
+levelselect_text_level2 = Level 2
+levelselect_text_level3 = Level 3
+levelselect_text_back = Back
+
+# Text scale
+levelselect_ui_text_scale = 1.0
+
+# Text colors (RGB values, 0.0 - 1.0)
+levelselect_ui_text_color_r = 1.0
+levelselect_ui_text_color_g = 1.0
+levelselect_ui_text_color_b = 1.0
+
+# Text offset for centering (in pixels)
+levelselect_level1_text_offset_x = -90.0
+levelselect_level1_text_offset_y = -24.0
+levelselect_level2_text_offset_x = -90.0
+levelselect_level2_text_offset_y = -24.0
+levelselect_level3_text_offset_x = -90.0
+levelselect_level3_text_offset_y = -24.0
+levelselect_back_text_offset_x = -60.0
+levelselect_back_text_offset_y = -24.0
+
+# ============================================================================
 # UI TEXT SETTINGS - LEVEL 1
 # ============================================================================
 
@@ -126,3 +156,26 @@ lv2_ui_text_scale = 1.0
 lv2_ui_text_color_r = 1.0
 lv2_ui_text_color_g = 1.0
 lv2_ui_text_color_b = 1.0
+# ============================================================================
+# UI TEXT SETTINGS - MAIN MENU
+# ============================================================================
+# Font settings
+menu_ui_font_large = Sans48
+
+# Text content
+menu_text_play = Play
+menu_text_exit = Exit
+
+# Text scale
+menu_ui_text_scale = 1.0
+
+# Text colors (RGB values, 0.0 - 1.0)
+menu_ui_text_color_r = 1.0
+menu_ui_text_color_g = 1.0
+menu_ui_text_color_b = 1.0
+
+# Text offset for centering (in pixels)
+menu_play_text_offset_x = -60.0
+menu_play_text_offset_y = -24.0
+menu_exit_text_offset_x = -50.0
+menu_exit_text_offset_y = -24.0
