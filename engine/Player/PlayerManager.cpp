@@ -26,7 +26,7 @@
 #include "Precompiled.h"
 #include "PlayerManager.h"
 #include "EntitySpawner.h"
-
+#include "Audio/AudioSystem.h"
 #include "RenderComponents.h"
 
 #include "Grid\GridECS.h"
@@ -303,6 +303,11 @@ namespace Framework {
         window = win;
     }
 
+    void PlayerControllerSystem::SetAudioSystem(AudioSystem* audio)
+    {
+        audioSystem = audio;
+    }
+
     void PlayerControllerSystem::SetShootCooldown(float cooldown)
     {
         shootCooldownTime = cooldown;
@@ -326,7 +331,15 @@ namespace Framework {
                 projectileSpeed
             );
             shootCooldown = shootCooldownTime;
-            std::cout << "[PlayerController] Shoot up!\n";
+
+            // Play shooting sound effect
+            if (audioSystem) {
+                audioSystem->PlaySound("shooting", false);
+                std::cout << "[PlayerController] Shoot up with SFX!\n";
+            }
+            else {
+                std::cout << "[PlayerController] Shoot up! (No audio system)\n";
+            }
         }
     }
 
@@ -339,6 +352,14 @@ namespace Framework {
                 Vector2D(0.0f, -1.0f),  // Shoot down
                 projectileSpeed
             );
+            // Play shooting sound effect
+            if (audioSystem) {
+                audioSystem->PlaySound("shooting", false);
+                std::cout << "[PlayerController] Shoot up with SFX!\n";
+            }
+            else {
+                std::cout << "[PlayerController] Shoot up! (No audio system)\n";
+            }
             shootCooldown = shootCooldownTime;
             std::cout << "[PlayerController] Shoot down!\n";
         }
@@ -371,6 +392,14 @@ namespace Framework {
                     direction,
                     projectileSpeed
                 );
+                // Play shooting sound effect
+                if (audioSystem) {
+                    audioSystem->PlaySound("shooting", false);
+                    std::cout << "[PlayerController] Shoot up with SFX!\n";
+                }
+                else {
+                    std::cout << "[PlayerController] Shoot up! (No audio system)\n";
+                }
                 shootCooldown = shootCooldownTime;
                 std::cout << "[PlayerController] Shoot at mouse!\n";
             }

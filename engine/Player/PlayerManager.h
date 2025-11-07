@@ -49,6 +49,7 @@ namespace Framework {
         void SetInputSystem(InputSystem* is);
         void SetPlayerEntity(Entity player);
         void SetWindow(GLFWwindow* win);
+        void SetAudioSystem(AudioSystem* audio);
 
         // ========================================================================
         // CONFIGURATION
@@ -85,7 +86,8 @@ namespace Framework {
         InputSystem* inputSystem;
         GLFWwindow* window;
         Entity playerEntity;
-
+        AudioSystem* audioSystem;
+        
         // Shooting configuration
         float shootCooldown;
         float shootCooldownTime;

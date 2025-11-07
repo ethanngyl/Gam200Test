@@ -51,6 +51,7 @@ void level2_Initialize()
         graphics->SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));
         graphics->SetCameraZoom(1.0f);
     }
+    auto audioSystem = engine->GetAudioSystem();
 
     auto spawner = engine->GetSpawner();
 
@@ -59,6 +60,8 @@ void level2_Initialize()
 
     playerController->SetPlayerEntity(playerEntity);
     playerController->SetEntitySpawner(spawner);
+    playerController->SetAudioSystem(audioSystem);
+
 
     if (engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->SetPlayerEntity(playerEntity);
