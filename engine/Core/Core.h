@@ -24,6 +24,9 @@
 
 #pragma once
 #include "Precompiled.h"
+#include "Event/Event.h"
+#include "Event/DamageIndicatorSystem.h"
+
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Grid/GridTile.h"
@@ -43,6 +46,8 @@ namespace Framework
     class AudioSystem;
     class AnimationSystem;
     class UISystem;
+    class EventSystem;
+    class DamageIndicatorSystem;
     class PathfindingSystem;
 
     /**
@@ -144,6 +149,7 @@ namespace Framework
         AudioSystem* GetAudioSystem() const { return audioSystem; }
         AnimationSystem* GetAnimationSystem() const { return animationSystem; }
         UISystem* GetUISystem() const { return uiSystem; }
+        EventSystem* GetEventSystem() const { return eventSystem; }
         PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
 
 
@@ -199,6 +205,8 @@ namespace Framework
         AudioSystem* audioSystem;
         AnimationSystem* animationSystem;
         UISystem* uiSystem;
+        EventSystem* eventSystem;
+        DamageIndicatorSystem* damageIndicator;
         PathfindingSystem* pathfindingSystem;
 
 
@@ -213,6 +221,8 @@ namespace Framework
         void WireSystemDependencies();
         void InitializeCriticalSystems();
         void AddSystemsToEngine();
+
+        void SetupEventListeners();
     };
 
     /**

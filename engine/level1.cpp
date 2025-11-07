@@ -68,6 +68,17 @@ void level1_Initialize()
     // ========================================================================
     auto playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
 
+    auto enemyEntity = spawner->SpawnEnemy(Vector2D(1.0f, -0.5f));
+
+    auto* playerController = engine->GetPlayerController();
+    if (playerController) {
+        playerController->SetPlayerEntity(playerEntity);
+        LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
+    }
+    else {
+        LOG_ERROR("LEVEL1", "PlayerController system is null! Shooting disabled.");
+    }
+
     //------------------------------------------------------------------
     //  SPRITE ANIMATION SETUP FOR PLAYER (config-driven)
     //------------------------------------------------------------------

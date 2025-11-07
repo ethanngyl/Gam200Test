@@ -60,6 +60,7 @@ namespace Framework {
         , frameTime(0.0f)
         , entityCount(0)
         , showAssets(true)
+        , graphicsSystem(nullptr)
     {
     }
 
@@ -599,7 +600,7 @@ namespace Framework {
             return;
         }
 
-        frameTime = dt;
+        //frameTime = dt;
         if (entityManager) {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
         }
@@ -610,6 +611,9 @@ namespace Framework {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        frameTime = ImGui::GetIO().DeltaTime;
+
 
         // enable docking -jiahao
         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
@@ -1151,9 +1155,9 @@ namespace Framework {
 
         ImGui::Separator();
 
-        if (ImGui::Button("Spawn Circle Pattern##Btn6", ImVec2(-1, 0))) {
-            entitySpawner->SpawnCircle("circle", 12, Vector2D(0, 0), 0.8f);
-        }
+        //if (ImGui::Button("Spawn Circle Pattern##Btn6", ImVec2(-1, 0))) {
+        //    entitySpawner->SpawnCircle("circle", 12, Vector2D(0, 0), 0.8f);
+        //}
 
         if (ImGui::Button("Spawn Grid Pattern##Btn7", ImVec2(-1, 0))) {
             entitySpawner->SpawnGrid("wireframequad",10, 10, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
@@ -1166,7 +1170,7 @@ namespace Framework {
             }
         }
 
-        if (ImGui::Button("Trigger Audio##Btn8", ImVec2(-1, 0))) {
+        if (ImGui::Button("Trigger Leaves SFX##Btn8", ImVec2(-1, 0))) {
             if (audioSystem) {
                 std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("leaves", false);
@@ -1177,7 +1181,40 @@ namespace Framework {
             }
         }
 
-        if (ImGui::Button("Stop All Audio##Btn9", ImVec2(-1, 0))) {
+        if (ImGui::Button("Trigger Shooting SFX##Btn9", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("shooting", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Trigger Menu BGM##Btn9", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("mmbgm", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Trigger In-Game BGM##Btn10", ImVec2(-1, 0))) {
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("bgm", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
+        }
+
+        if (ImGui::Button("Stop All Audio##Btn11", ImVec2(-1, 0))) {
             if (audioSystem) {
                 std::cout << "[DEBUG] Stopping all audio\n";
                 audioSystem->StopAllSounds();
@@ -1188,12 +1225,12 @@ namespace Framework {
             }
         }
 
-        ImGui::BeginDisabled();
-        {
-            auto p = graphicsSystem->GetCamera().GetPosition();
-            ImGui::DragFloat2("Cam Pos", glm::value_ptr(p));
-        }
-        ImGui::EndDisabled();
+        //ImGui::BeginDisabled();
+        //{
+        //    auto p = graphicsSystem->GetCamera().GetPosition();
+        //    ImGui::DragFloat2("Cam Pos", glm::value_ptr(p));
+        //}
+        //ImGui::EndDisabled();
 
         ImGui::End();
     }

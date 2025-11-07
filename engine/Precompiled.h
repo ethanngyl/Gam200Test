@@ -92,14 +92,14 @@
 #include "DebugConfig.h"
 
 //GSM
-#include "GameStateList.h"
-#include "GameStateManager.h"
+#include "GSM\GameStateList.h"
+#include "GSM\GameStateManager.h"
 
 //UI
-#include "UISystem.h"
+#include "UI\UISystem.h"
 
 //ConfigReader
-#include "ConfigReader.h"
+#include "ConfigReader\ConfigReader.h"
 
 //ECS
 #include "ECSComponent.h"
@@ -111,7 +111,7 @@
 #include "Message.h"
 
 //Event
-#include "Event.h"
+#include "Event\Event.h"
 
 //Grid
 #include "Grid/Grid.h"

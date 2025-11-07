@@ -23,10 +23,14 @@
 #pragma once
 #include "Interface.h"
 #include "ECSEntityManager.h"
+#include "Event/Event.h"
 
 
 namespace Framework
 {
+
+    class EventSystem;
+
     class ProjectileMovementSystem : public EngineSystem
     {
     public:
@@ -67,8 +71,13 @@ namespace Framework
          */
         void SetEntityManager(EntityManager* em) { entityManager = em; }
 
+        void SetEventSystem(EventSystem* es) { eventSystem = es; }
+
 
     private:
         EntityManager* entityManager; //Entity component database
+        EventSystem* eventSystem;
+
+        void CheckProjectileEnemyCollisions();
     };
 }

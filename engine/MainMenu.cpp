@@ -84,6 +84,13 @@ void mainMenu_Initialize()
         graphics->SetCameraZoom(1.0f);
     }
 
+    auto audio = engine->GetAudioSystem();
+    if (audio) {
+        // Start playing the loaded menu music
+        // The PlaySound function manages the channel and automatically applies loop settings
+        audio->PlaySound("mmbgm", true);
+        LOG_INFO("MENU", "Playing menu background music");
+    }
     // ========================================================================
     // GET GLOBAL UI SYSTEM
     // ========================================================================
@@ -131,7 +138,9 @@ void mainMenu_Initialize()
 
 void mainMenu_Update()
 {
-
+     if (engine && engine->GetAudioSystem()) {
+     engine->GetAudioSystem()->Update(0.0f); 
+    }
 }
 
 void mainMenu_Draw()
@@ -143,6 +152,10 @@ void mainMenu_Free()
 {
     LOG_INFO("MENU", "=== Main Menu Free ===");
 
+    if (engine && engine->GetAudioSystem()) {
+        engine->GetAudioSystem()->StopAllSounds();
+        LOG_INFO("MENU", "Stopping all menu sounds");
+    }
     // Clean up buttons using global UI system
     if (engine) {
         auto ui = engine->GetUISystem();
@@ -159,4 +172,9 @@ void mainMenu_Free()
 void mainMenu_Unload()
 {
     LOG_INFO("MENU", "=== Main Menu Unload ===");
+    //Do not use the code below, unloading will completely remove it from the fmod library
+    //if (engine && engine->GetAudioSystem()) {
+    //    engine->GetAudioSystem()->UnloadSound("mmbgm");
+    //    LOG_INFO("MENU", "Unloaded menu audio assets");
+    //}
 }
