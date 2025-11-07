@@ -267,12 +267,6 @@ namespace Framework {
         //Added grid movement with arrow keys
         HandleArrowKeyMovement();
 
-        // ====================================================================
-        // SPAWNING INPUT (Debug/Testing) - Use InputSystem
-        // ====================================================================
-
-        HandleSpawnEnemy();
-        HandleSpawnPickup();
     }
 
     void PlayerControllerSystem::SendEngineMessage(Message* msg)
@@ -597,31 +591,6 @@ namespace Framework {
             << ") to (" << next.x << "," << next.y << ")\n";
 
         EndPlayerTurn();
-    }
-
-    // ============================================================================
-    // ENTITY SPAWNING HANDLERS (Debug/Testing) - Using InputSystem
-    // ============================================================================
-
-    void PlayerControllerSystem::HandleSpawnEnemy()
-    {
-        if (inputSystem->IsKeyPressed(KEY_E)) {
-            // Spawn enemy above screen
-            float randomX = -1.5f + (rand() / (float)RAND_MAX) * 3.0f;
-            spawner->SpawnEnemy(Vector2D(randomX, 0.8f), 0.1f);
-            std::cout << "[PlayerController] Spawned enemy\n";
-        }
-    }
-
-    void PlayerControllerSystem::HandleSpawnPickup()
-    {
-        if (inputSystem->IsKeyPressed(KEY_R)) {
-            // Spawn pickup at random position
-            float randomX = -1.5f + (rand() / (float)RAND_MAX) * 3.0f;
-            float randomY = -0.5f + (rand() / (float)RAND_MAX) * 1.0f;
-            spawner->SpawnSprite("circle", Vector2D(randomX, randomY), Vector2D(0.15f, 0.15f));
-            std::cout << "[PlayerController] Spawned pickup\n";
-        }
     }
 
 } // namespace Framework

@@ -76,14 +76,6 @@ namespace Framework {
         void StartTilePulse(Framework::Entity tileEntity, float pulseScale, DWORD pulseDurationMs);
         void ShowBorderOutline(const GridCoord& tile, float thicknessFraction, DWORD durationMs);
 
-
-        // ========================================================================
-        // ENTITY SPAWNING HANDLERS (Debug/Testing)
-        // ========================================================================
-
-        void HandleSpawnEnemy();
-        void HandleSpawnPickup();
-
         // ========================================================================
         // MEMBER VARIABLES
         // ========================================================================
