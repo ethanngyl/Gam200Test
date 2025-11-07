@@ -1,19 +1,21 @@
-/**
+/*
 ===============================================================================
- File:           Camera.h
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Camera system for managing view and projection transformations.
- Supports orthographic and perspective projections with flexible
- viewport management.
+File:        Camera.h 
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100%
+-------------------------------------------------------------------------------
+Brief:
+Public interface for a Camera supporting orthographic (2D) and perspective (3D)
+projections. Exposes transforms (position, rotation, zoom) and provides view,
+projection, and view-projection matrices. Includes a small factory for common
+2D setups (world-units and pixel-perfect).
 
- Design notes:
- - Supports both 2D (orthographic) and 3D (perspective) rendering
- - Automatic aspect ratio handling
- - View frustum calculation for culling (future)
- - Multiple camera support for split-screen or minimaps
+Notes:
+- Rotation is stored as Euler angles in degrees (pitch=x, yaw=y, roll=z).
+- Orthographic zoom scales the frustum extents by 1/zoom.
+- Call SetAspectRatio() when the framebuffer size changes (perspective only).
 ===============================================================================
 */
 #pragma once
@@ -150,12 +152,6 @@ namespace Framework {
          */
         static Camera Create2DPixelPerfect(int viewportWidth, int viewportHeight);
 
-        /**
-         * @brief Create 3D perspective camera
-         * @param fov Field of view in degrees
-         * @param aspectRatio Width/height ratio
-         */
-        static Camera Create3D(float fov, float aspectRatio);
     };
 
 } // namespace Framework

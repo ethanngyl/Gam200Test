@@ -4,11 +4,10 @@
 /*
 ===============================================================================
 File:        Mesh.cpp
-Author:      TAN WEI LEONG
-co-Author:   Sim Kah Yan
-Email:       weileong.tan@digipen.edu, kahyan.sim@digipen.edu
-Date:        2025-10-02
-Contribution: 70%(TAN WEI LEONG), 30%(Sim Kah Yan)
+Author:      Sim Kah yan, TAN WEI LEONG
+Email:       kahyan.sim@digipen.edu, weileong.tan@digipen.edu
+Date:        2025-11-06
+Contribution: 70%(Sim Kah Yan), 30%(TAN WEI LEONG)
 -------------------------------------------------------------------------------
 Brief:
 Implementation of the Mesh class, which encapsulates OpenGL buffer objects and

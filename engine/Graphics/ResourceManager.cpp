@@ -1,12 +1,29 @@
-/**
+/*
 ===============================================================================
- File:           ResourceManager.cpp
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Implementation of the ResourceManager class for centralized resource
- lifecycle management.
+File:        ResourceManager.cpp
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100% (remaining)
+-------------------------------------------------------------------------------
+Brief:
+Centralized loader/cache for Shaders, Textures, Meshes, and Materials.
+Prevents duplicate loads via hash caches and reference counts. Includes a
+directory scanner (assets/) that auto-loads textures and pairs vertex/fragment
+shaders by matching file stem names (e.g., foo.vert + foo.frag).
+
+Key Points:
+- Thread-safe via a single mutex guarding all resource maps/caches.
+- Ref-counting for release semantics; resources are freed when count hits 0.
+- Cache keys:
+  • Shaders: combined vert+frag path key
+  • Textures: normalized path string
+  • Meshes: logical name key (e.g., "quad")
+- Utility stats and a master Clear() for shutdown.
+
+Safety:
+- Early-outs on missing folders/files and on failed GL/resource creations.
+- Uniform logging for load/release paths.
 ===============================================================================
 */
 #include "Precompiled.h"
@@ -16,8 +33,9 @@
 
 namespace Framework {
 
-    // === SHADER MANAGEMENT ===
-
+    // =========================================================================
+    // Bulk scan under ./assets to auto-load textures and shader pairs
+    // =========================================================================
     void ResourceManager::LoadFiles()
     {
         namespace fs = std::filesystem;
@@ -30,7 +48,6 @@ namespace Framework {
 
         // 1) Collect files by extension
         std::unordered_set<std::string> textureExts = { ".png", ".jpg", ".jpeg", ".bmp", ".tga" };
-        // If you also use .ktx/.dds, add them here
 
         // For shader pairing by stem (e.g., foo.vert + foo.frag)
         std::unordered_map<std::string, fs::path> vertByStem;
@@ -74,11 +91,9 @@ namespace Framework {
                 continue;
             }
 
-            // (Optional) If you have other types later (audio, fonts), detect here
-            // e.g. .wav/.mp3 -> LoadAudio(...), .ttf -> LoadFont(...), etc.
         }
 
-        // 4) Pair & load shaders by stem (only load pairs that exist)
+        // 3) Pair & load shaders by stem (only load pairs that exist)
         for (const auto& [stem, vpath] : vertByStem) {
             auto fit = fragByStem.find(stem);
             if (fit == fragByStem.end()) continue; // no matching fragment shader; skip
@@ -94,7 +109,7 @@ namespace Framework {
             }
         }
 
-        // 5) Summary
+        // 4) Summary
         auto stats = GetStats();
         std::cout << "ResourceManager::LoadFiles: scanned '" << root.generic_string() << "'\n"
             << "  Shaders:  " << stats.shaderCount << "\n"
@@ -103,13 +118,17 @@ namespace Framework {
             << "  Materials:" << stats.materialCount << "\n";
     }
 
+   // =========================================================================
+   // Shader Management
+   // =========================================================================
 
+   // Load (or fetch from cache) a shader program built from vert+frag files
     ShaderHandle ResourceManager::LoadShader(const std::string& vertPath,
                                              const std::string& fragPath,
                                              const std::string& name) {
         std::lock_guard<std::mutex> lock(resourceMutex);
 
-        // Check cache first
+        // Cache key combines both file paths; prevents duplicate programs
         std::string cacheKey = MakeShaderKey(vertPath, fragPath);
         auto cacheIt = shaderCache.find(cacheKey);
         if (cacheIt != shaderCache.end()) {
@@ -118,7 +137,7 @@ namespace Framework {
             return cacheIt->second;
         }
 
-        // Load new shader
+        // Slow path: create program object
         try {
             auto shader = std::make_unique<Shader>(vertPath, fragPath);
             ShaderHandle handle(nextShaderID++);
@@ -137,12 +156,14 @@ namespace Framework {
         }
     }
 
+    // Raw pointer access (non-owning) for a shader by handle
     Shader* ResourceManager::GetShader(ShaderHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = shaders.find(handle);
         return (it != shaders.end()) ? it->second.resource.get() : nullptr;
     }
 
+    // Decrement ref-count and free shader when it reaches zero
     void ResourceManager::ReleaseShader(ShaderHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = shaders.find(handle);
@@ -156,25 +177,28 @@ namespace Framework {
         }
     }
 
-    // === TEXTURE MANAGEMENT ===
+    // =========================================================================
+    // Texture Management
+    // =========================================================================
 
+    // Load (or get) a texture by path. Logical names without an extension are ignored.
     TextureHandle ResourceManager::LoadTexture(const std::string& path) {
         std::lock_guard<std::mutex> lock(resourceMutex);
 
-        // Skip logical names (non-file paths)
+        // Skip non-file identifiers (e.g., sprite names)
         if (path.find('.') == std::string::npos) {
             // e.g., "wireframequad", "circle", etc.
             return INVALID_TEXTURE_HANDLE;
         }
 
-        // Check cache
+        // Cache hit
         auto cacheIt = textureCache.find(path);
         if (cacheIt != textureCache.end()) {
             textures[cacheIt->second].refCount++;
             return cacheIt->second;
         }
 
-        // Load new texture
+        // Load new GL texture
         auto texture = std::make_unique<Texture>();
         if (!texture->LoadFromFile(path)) {
             std::cerr << "ResourceManager: Failed to load texture: " << path << "\n";
@@ -190,6 +214,7 @@ namespace Framework {
         return handle;
     }
 
+    // Create a texture resource placeholder (for future CreateFromMemory)
     TextureHandle ResourceManager::CreateTexture(const std::string& name,
                                                  int width, int height,
                                                  int channels,
@@ -200,7 +225,6 @@ namespace Framework {
 
         // Create texture (implementation would need to be added to Texture class)
         auto texture = std::make_unique<Texture>();
-        // Note: You'd need to add a CreateFromMemory method to Texture class
         
         TextureHandle handle(nextTextureID++);
         ResourceEntry<Texture> entry(std::move(texture), name);
@@ -210,12 +234,14 @@ namespace Framework {
         return handle;
     }
 
+    // Raw pointer access (non-owning) for a texture
     Texture* ResourceManager::GetTexture(TextureHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = textures.find(handle);
         return (it != textures.end()) ? it->second.resource.get() : nullptr;
     }
 
+    // Decrement ref-count and free texture when it reaches zero
     void ResourceManager::ReleaseTexture(TextureHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = textures.find(handle);
@@ -228,13 +254,17 @@ namespace Framework {
         }
     }
 
-    // === MESH MANAGEMENT ===
+    // =========================================================================
+    // Mesh Management
+    // =========================================================================
 
+    // Create (or fetch) a mesh by logical name. Non-indexed or indexed path supported.
     MeshHandle ResourceManager::CreateMesh(const std::string& name,
                                           const std::vector<float>& vertices,
                                           const std::vector<unsigned int>& indices,
                                           GLenum drawMode,
                                           bool hasTexCoords) {
+
         std::lock_guard<std::mutex> lock(resourceMutex);
 
         // Check if already exists
@@ -244,7 +274,7 @@ namespace Framework {
             return cacheIt->second;
         }
 
-        // Create new mesh
+        // Build VAO/VBO/EBO and attribute layout
         std::unique_ptr<Mesh> mesh;
         
         if (indices.empty()) {
@@ -267,12 +297,14 @@ namespace Framework {
         return handle;
     }
 
+    // Raw pointer access (non-owning) for a mesh
     Mesh* ResourceManager::GetMesh(MeshHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = meshes.find(handle);
         return (it != meshes.end()) ? it->second.resource.get() : nullptr;
     }
 
+    // Decrement ref-count and free mesh when it reaches zero
     void ResourceManager::ReleaseMesh(MeshHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = meshes.find(handle);
@@ -285,8 +317,11 @@ namespace Framework {
         }
     }
 
-    // === MATERIAL MANAGEMENT ===
+    // =========================================================================
+    // Material Management
+    // =========================================================================
 
+    // Create a material object that references a shader
     MaterialHandle ResourceManager::CreateMaterial(const std::string& name, ShaderHandle shader) {
         std::lock_guard<std::mutex> lock(resourceMutex);
 
@@ -301,12 +336,14 @@ namespace Framework {
         return handle;
     }
 
+    // Raw pointer access (non-owning) for a material
     Material* ResourceManager::GetMaterial(MaterialHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = materials.find(handle);
         return (it != materials.end()) ? it->second.resource.get() : nullptr;
     }
 
+    // Decrement ref-count and free material when it reaches zero
     void ResourceManager::ReleaseMaterial(MaterialHandle handle) {
         std::lock_guard<std::mutex> lock(resourceMutex);
         auto it = materials.find(handle);
@@ -318,8 +355,11 @@ namespace Framework {
         }
     }
 
-    // === UTILITY ===
+    // =========================================================================
+    // Utility / Stats
+    // =========================================================================
 
+    // Drop all resource maps and caches (used on shutdown)
     void ResourceManager::Clear() {
         std::lock_guard<std::mutex> lock(resourceMutex);
         
@@ -335,6 +375,7 @@ namespace Framework {
         std::cout << "ResourceManager: Cleared all resources\n";
     }
 
+    // Snapshot of current resource counts
     ResourceManager::Stats ResourceManager::GetStats() const {
         std::lock_guard<std::mutex> lock(resourceMutex);
         Stats stats;
@@ -345,6 +386,7 @@ namespace Framework {
         return stats;
     }
 
+    // Check if a texture handle is valid and present
     bool ResourceManager::HasTexture(TextureHandle h) const {
         std::lock_guard<std::mutex> lock(resourceMutex);
         return textures.find(h) != textures.end() && textures.at(h).resource != nullptr;

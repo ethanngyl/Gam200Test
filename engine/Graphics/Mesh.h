@@ -4,12 +4,11 @@
 #include "GL/gl.h"
 /*
 ===============================================================================
-File:        Mesh.h
-Author:      TAN WEI LEONG
-co-Author:   Sim Kah Yan
-Email:       weileong.tan@digipen.edu, kahyan.sim@digipen.edu
-Date:        2025-10-02
-Contribution: 70%(TAN WEI LEONG), 30%(Sim Kah Yan)
+File:        Mesh.cpp
+Author:      Sim Kah yan, TAN WEI LEONG
+Email:       kahyan.sim@digipen.edu, weileong.tan@digipen.edu
+Date:        2025-11-06
+Contribution: 50%(Sim Kah Yan), 50%(TAN WEI LEONG)
 -------------------------------------------------------------------------------
 Brief:
 Declaration of the Mesh class, which encapsulates OpenGL Vertex Array Objects

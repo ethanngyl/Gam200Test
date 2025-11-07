@@ -1,29 +1,37 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           GraphicsSystemV2.h
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Complete overhaul of the graphics system with modern architecture.
- Implements resource management, material system, camera support,
- render queues, and efficient batching.
+File:        GraphicsSystemV2.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 75%
+-------------------------------------------------------------------------------
+Brief:
+Declaration of GraphicsSystemV2, a modern rendering system that manages the full
+2D/3D draw pipeline: resource loading, camera control, render queue population,
+sorting/batching, material binding, mesh drawing, debug visualization, and text.
 
- Key Improvements:
- - Resource management with automatic caching
- - Material system for reusable rendering configs
- - Camera system with multiple viewport support
- - Render queue for efficient draw call sorting
- - Debug rendering utilities
- - Separation of concerns (rendering logic separated from ECS)
- - No hardcoded viewport size
- - Proper resource cleanup
+Details:
+- Owns a ResourceManager for shaders, textures, meshes, and materials.
+- Maintains a Camera for view/projection and optional follow-target logic.
+- Collects MeshRenderer data from the ECS, builds a RenderQueue each frame,
+  sorts/batches, and executes Draw calls with minimal state switches.
+- Provides a DebugRenderQueue for overlays (lines, circles, helpers).
+- Integrates a FreeType-based TextRenderer for UI/HUD text.
+- Supports a configurable background pass (mesh+texture+material).
+- Exposes editor camera helpers (pan/zoom reset) and grid toggles.
 
- Migration from old system:
- - Old: GraphicsSystem
- - New: GraphicsSystemV2
- - Components: Sprite -> Renderable
- - Resources: Raw pointers -> Resource handles
+Notes:
+- Requires GLFW, GLEW/GL, GLM; assumes a valid context on Initialize().
+- Must call SetWindow(...) before Initialize().
+- Uses y-up convention and orthographic camera by default (configurable).
+- Viewport size should be kept in sync via SetViewportSize() on resize.
+
+Safety:
+- All external pointers (GLFWwindow*, EntityManager*) are null-checked before use.
+- Materials/shaders are bound through handles with current-bound caching.
+- No ownership of EntityManager or GLFWwindow; they are provided by the engine.
+
 ===============================================================================
 */
 #pragma once
@@ -49,25 +57,34 @@ namespace Framework {
 
     /**
      * @class GraphicsSystemV2
-     * @brief Modern graphics rendering system
-     * 
-     * Manages the entire rendering pipeline:
-     * 1. Resource loading and caching
-     * 2. Camera management
-     * 3. Render queue population
-     * 4. Sorting and batching
-     * 5. Draw call execution
-     * 6. Debug visualization
+     * @brief Modern graphics rendering system coordinating resources, camera,
+     *        render queues, materials, meshes, debug draw, and text.
+     *
+     * Pipeline overview:
+     * 1) Resource loading and caching (ResourceManager)
+     * 2) Camera management (view/projection, editor helpers, follow target)
+     * 3) Gather renderables into RenderQueue (from ECS MeshRenderer/Transform)
+     * 4) Sort/batch commands to reduce state changes
+     * 5) Execute draw calls (BindMaterial → DrawMesh)
+     * 6) Overlay debug primitives and text (TextRenderer, DebugRenderQueue)
      */
     class GraphicsSystemV2 : public EngineSystem {
     public:
+        // Construct with default state; window/entity manager are set externally.
         GraphicsSystemV2();
+
+        // Release owned GPU/CPU resources and transient caches.
         virtual ~GraphicsSystemV2();
 
-        // === CORE LIFECYCLE ===
+        // === CORE LIFECYCLE ===================================================
         
+        // Initialize OpenGL state, default resources, meshes, materials, background.
         virtual void Initialize() override;
+
+        // Per-frame: begin frame, gather+execute render queue, debug draw, end frame.
         virtual void Update(float dt) override;
+
+        // Respond to engine messages (e.g., quit, reload, resize).
         virtual void SendEngineMessage(Message* message) override;
 
         // === SETUP ===
@@ -86,6 +103,11 @@ namespace Framework {
          * Must be called before Initialize()
          */
         void SetWindow(GLFWwindow* win);
+
+        /**
+         * @brief Assign mesh+material to a MeshRenderer based on a sprite name.
+         *        Keeps legacy sprite-name flow working on the new material system.
+         */
         void AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName);
         /**
          * @brief Set the entity manager for ECS integration
@@ -133,8 +155,13 @@ namespace Framework {
 
 
         //Editor Camera functions - Jiahao
+        // Handle editor-style panning/zooming per-frame.
         void HandleEditorCamera(float dt);
+
+        // Reset editor camera position/zoom to defaults.
         void ResetEditorCamera();
+
+        // Access the built-in quad mesh handle (useful for UI/fullscreen passes).
         MeshHandle GetQuadMesh() const { return quadMesh; }
 
         // === DEBUG RENDERING ===
@@ -156,24 +183,15 @@ namespace Framework {
          * @brief Create default materials for legacy sprite names
          * Maintains backwards compatibility with old Sprite component
          */
-        //void CreateLegacyMaterials();
-
         void RenderImGui();
 
-        ///**
-        // * @brief Get mesh for legacy sprite name
-        // */
-        //MeshHandle GetMeshForSpriteName(const std::string& spriteName);
-
-        ///**
-        // * @brief Get material for legacy sprite name
-        // */
-        //MaterialHandle GetMaterialForSpriteName(const std::string& spriteName);
-
+        // Resolve a sprite name into a texture handle (legacy sprite-to-texture path).
         TextureHandle  GetTextureForSpriteName(const std::string& spriteName);
 
-
+        // Toggle the grid overlay (visual guide).
         void SetShowGrid(bool e) { showGrid = e; }
+
+        // Toggle the blocked-grid overlay/fill (e.g., nav blockers).
         void SetShowGridBlocked(bool e) { showGridBlocked = e; }
 
     private:
@@ -248,9 +266,6 @@ namespace Framework {
          */
         void SetupBackground();
 
-        // Draw grid to the debug queue (implemented in .cpp)
-       // void RenderGridOverlay();  // NEW
-
         // === MEMBER VARIABLES ===
         
         // Core systems
@@ -259,11 +274,11 @@ namespace Framework {
         ResourceManager resourceManager;
 
         // Camera
-        Camera mainCamera;
+        Camera mainCamera;               // View/projection and zoom control.
 
         // Render queues
-        RenderQueue renderQueue;
-        DebugRenderQueue debugQueue;
+        RenderQueue renderQueue;         // Batches of draw commands.
+        DebugRenderQueue debugQueue;     // Overlay primitives.
 
         // Viewport
         int viewportWidth;
@@ -302,40 +317,34 @@ namespace Framework {
         MeshHandle debugLineMesh;
         MeshHandle debugCircleMesh;
 
-        //// Legacy support (for backwards compatibility)
-        //std::unordered_map<std::string, MeshHandle> legacyMeshMap;
-        //std::unordered_map<std::string, MaterialHandle> legacyMaterialMap;
-        //std::unordered_map<std::string, TextureHandle>  
-        // ;
-
         // State tracking
-        MaterialHandle currentBoundMaterial;
-        ShaderHandle currentBoundShader;
-        TextRenderer text_;    // FreeType text renderer
+        MaterialHandle currentBoundMaterial;         // Last bound material.
+        ShaderHandle currentBoundShader;             // Last bound shader.
+        TextRenderer text_;                          // FreeType text renderer
+
         /**
          * @brief Makes the camera follow a target player entity
          */
         void FollowPlayer(EntityManager* em, Entity player);
 
-        
-
+        // Editor camera state
 		glm::vec3 editorCameraStartPos{ 0.0f, 0.0f, 0.0f };
 		float editorCameraZoom{ 1.0f };
 
-        // Camera follow target (optional)
+        // Camera follow target
         Entity followTarget{ 0 };
         bool followEnabled{ false };
 
-        // Statistics
+        // Statistics (for HUD/profiling/ImGui)
         struct RenderStats {
             size_t drawCalls = 0;
             size_t trianglesRendered = 0;
             size_t materialSwitches = 0;
         } stats;
 
-        // State: whether to show the grid overlay/fill
-        bool showGrid = true;         // NEW
-        bool showGridBlocked = true;  // NEW
+        // Grid overlay toggles (editor visualization)
+        bool showGrid = true; 
+        bool showGridBlocked = true; 
     };
 
 } // namespace Framework

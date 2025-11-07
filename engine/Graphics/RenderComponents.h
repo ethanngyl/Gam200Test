@@ -1,18 +1,22 @@
- /**
+/*
 ===============================================================================
- File:           RenderComponents.h
- Author:         Graphics System Overhaul
- Date:           2025-10-07
- ------------------------------------------------------------------------------
- Brief:
- Enhanced rendering components for the ECS system.
- Provides flexible rendering capabilities with material support.
+File:        RenderComponents.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100%
+-------------------------------------------------------------------------------
+Brief:
+ECS components related to rendering. Includes Renderable (MeshRenderer),
+SpriteAnimation, and ParticleEmitter.
 
- Design notes:
- - Renderable component replaces simple Sprite
- - Supports materials for advanced rendering
- - Layer-based sorting
- - Per-instance properties
+- Renderable: core rendering data (mesh/material/texture/tint/layer)
+- SpriteAnimation: frame-based 2D animation metadata
+- ParticleEmitter: basic parameters for particle systems (future use)
+
+Used by:
+- GraphicsSystemV2 (drawing)
+- AnimationSystem (updating SpriteAnimation state)
 ===============================================================================
 */
 #pragma once
