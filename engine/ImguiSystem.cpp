@@ -60,6 +60,7 @@ namespace Framework {
         , frameTime(0.0f)
         , entityCount(0)
         , showAssets(true)
+        , graphicsSystem(nullptr)
     {
     }
 
@@ -1221,12 +1222,12 @@ namespace Framework {
             }
         }
 
-        ImGui::BeginDisabled();
-        {
-            auto p = graphicsSystem->GetCamera().GetPosition();
-            ImGui::DragFloat2("Cam Pos", glm::value_ptr(p));
-        }
-        ImGui::EndDisabled();
+        //ImGui::BeginDisabled();
+        //{
+        //    auto p = graphicsSystem->GetCamera().GetPosition();
+        //    ImGui::DragFloat2("Cam Pos", glm::value_ptr(p));
+        //}
+        //ImGui::EndDisabled();
 
         ImGui::End();
     }

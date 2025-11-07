@@ -1,11 +1,11 @@
 ﻿/******************************************************************************
 ===============================================================================
  File:           PlayerManager.cpp
- Author:         <MAIN AUTHOR NAME>
+ Author:         ETHAN NG YONG LE
  Co-authors:     PADILLA CARL JAMESON Z.
  Email:          <main.author@digipen.edu>
  Date:           2025/11/07
- Contribution:   PADILLA CARL JAMESON Z.: 35%
+ Contribution:   ETHAN NG YONG LE: 65%, PADILLA CARL JAMESON Z.: 35%
  ------------------------------------------------------------------------------
   Description:
   Implements player grid movement and on-tile feedback. Mouse clicks map to a

@@ -87,7 +87,7 @@ namespace Framework {
 
         resourceManager.LoadFiles();// new
 
-        glfwSwapInterval(1);  // ✅ ADD THIS - Enables VSync
+        glfwSwapInterval(1);  //ADD THIS - Enables VSync
 
         text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
 

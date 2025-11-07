@@ -383,7 +383,7 @@ namespace Framework {
             const Vector2D& direction,
             float speed = 0.3f)
         {
-            Entity projectile = SpawnSprite("circle", position, Vector2D(0.1f, 0.1f));
+            Entity projectile = SpawnSprite("quad", position, Vector2D(0.1f, 0.1f));
 
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);

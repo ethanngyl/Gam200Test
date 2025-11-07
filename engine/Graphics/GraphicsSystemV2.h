@@ -77,13 +77,6 @@ namespace Framework {
         */
         TextRenderer& GetTextRenderer() { return text_; }
 
-        /**
-         * @brief Draw text (convenience wrapper)
-         */
-        void DrawText(const std::string& fontKey, const std::string& text,
-            float x, float y, float scale = 1.0f,
-            const glm::vec3& color = glm::vec3(1, 1, 1));
-
         void DrawText4(const std::string& fontKey, const std::string& text,
             float x, float y, float scale = 1.0f,
             const glm::vec3& color = glm::vec3(1, 1, 1));
