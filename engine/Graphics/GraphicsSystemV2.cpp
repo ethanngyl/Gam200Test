@@ -819,7 +819,7 @@ namespace Framework {
                     continue;
 
                 const int cols = texW / anim.frameWidth;
-                const int frame = anim.currentFrame % std::max(1, anim.frameCount);
+                const int frame = anim.currentFrame % max(1, anim.frameCount);
                 const int x = frame % cols;
                 const int y = frame / cols;
 

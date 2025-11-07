@@ -143,7 +143,6 @@ namespace Framework {
          */
         void SetInstanceData();
 
-        void SetInstanceData();
         void DrawInstanced(const std::vector<glm::mat4>& instanceMatrices, GLsizei instanceCount) const;
         GLuint GetInstanceVBO() const { return instanceVBO; }
         friend class GraphicsSystemV2;
