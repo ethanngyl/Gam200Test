@@ -1,8 +1,8 @@
 /*
 ===============================================================================
  File:          LevelSelect.h
- Author:        GE YONGQI
- Email:         yongqi.ge@digipen.edu
+ Author:        TAN WEI LEONG
+ Email:         weileong.tan@digipen.edu
  Date:          2025-10-31
  Contribution:  100%
  ------------------------------------------------------------------------------
