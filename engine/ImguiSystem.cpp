@@ -599,7 +599,7 @@ namespace Framework {
             return;
         }
 
-        frameTime = dt;
+        //frameTime = dt;
         if (entityManager) {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
         }
@@ -610,6 +610,9 @@ namespace Framework {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+        frameTime = ImGui::GetIO().DeltaTime;
+
 
         // enable docking -jiahao
         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
