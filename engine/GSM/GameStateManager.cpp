@@ -26,6 +26,7 @@
 #include "level1.h"
 #include "level2.h"
 #include "level3.h"
+#include "levelSelect.h"
  // ============================================================================
  // GLOBAL VARIABLE DEFINITIONS
  // ============================================================================
@@ -64,6 +65,15 @@ void GSM_Update()
         fpDraw = mainMenu_Draw;
         fpFree = mainMenu_Free;
         fpUnload = mainMenu_Unload;
+        break; 
+    case Level_select:
+        LOG_INFO("GSM", "  -> Level_select Menu state");
+        fpLoad = level_select_Load;
+        fpInitialize = level_select_Initialize;
+        fpUpdate = level_select_Update;
+        fpDraw = level_select_Draw;
+        fpFree = level_select_Free;
+        fpUnload = level_select_Unload;
         break;
 
     case LEVEL_1:

@@ -24,9 +24,9 @@
 
 #include "ImguiSystem.h"
 
- // ============================================================================
- // GLOBAL VARIABLES
- // ============================================================================
+// ============================================================================
+// GLOBAL VARIABLES
+// ============================================================================
 extern Framework::CoreEngine* engine;
 
 // Button pointers (managed by global UISystem)
@@ -40,7 +40,7 @@ static Framework::UIButton* exitButton = nullptr;
 void OnPlayButtonClicked()
 {
     LOG_INFO("MENU", "Play button clicked! Transitioning to Level 1...");
-    next = LEVEL_1;
+    next = Level_select;
 }
 
 void OnExitButtonClicked()
@@ -61,6 +61,12 @@ void mainMenu_Load()
 void mainMenu_Initialize()
 {
     LOG_INFO("MENU", "=== Main Menu Initialize ===");
+
+    // ========================================================================
+    // LOAD CONFIGURATION
+    // ========================================================================
+    ConfigReader::LoadConfig("assets/valueloader.txt");
+    LOG_INFO("MENU", "Loaded menu configuration from valueloader.txt");
 
     if (!engine) {
         LOG_ERROR("MENU", "Engine is null!");
@@ -110,9 +116,9 @@ void mainMenu_Initialize()
 
     // Create Play button - ONE LINE!
     playButton = ui->CreateButton(
-        "assets/ui_play.png",                    // Texture
+        "assets/Ui_btn.png",                    // Texture
         Framework::Vector2D(0.0f, 0.3f),         // Position
-        Framework::Vector2D(0.8f, 0.3f),         // Size
+        Framework::Vector2D(1.0f, 0.5f),         // Size
         OnPlayButtonClicked                       // Callback
     );
 
@@ -122,9 +128,9 @@ void mainMenu_Initialize()
 
     // Create Exit button - ONE LINE!
     exitButton = ui->CreateButton(
-        "assets/ui_exit.png",                    // Texture
+        "assets/Ui_btn.png",                    // Texture
         Framework::Vector2D(0.0f, -0.3f),        // Position
-        Framework::Vector2D(0.8f, 0.3f),         // Size
+        Framework::Vector2D(1.0f, 0.5f),         // Size
         OnExitButtonClicked                       // Callback
     );
 
@@ -138,14 +144,92 @@ void mainMenu_Initialize()
 
 void mainMenu_Update()
 {
-     if (engine && engine->GetAudioSystem()) {
-     engine->GetAudioSystem()->Update(0.0f); 
+    if (engine && engine->GetAudioSystem()) {
+        engine->GetAudioSystem()->Update(0.0f);
     }
 }
 
 void mainMenu_Draw()
 {
+    if (!engine) return;
 
+    auto graphics = engine->GetGraphicsSystem();
+    auto windowSystem = engine->GetWindowSystem();
+    if (!graphics || !windowSystem) return;
+
+    GLFWwindow* window = windowSystem->GetWindow();
+    if (!window) return;
+
+    // ========================================================================
+    // READ UI TEXT SETTINGS FROM CONFIGURATION FILE
+    // ========================================================================
+
+    // Font settings
+    std::string fontLarge = ConfigReader::GetString("menu_ui_font_large", "Sans48");
+
+    // Text content
+    std::string textPlay = ConfigReader::GetString("menu_text_play", "Play");
+    std::string textExit = ConfigReader::GetString("menu_text_exit", "Exit");
+
+    // Text scale and color
+    float textScale = ConfigReader::GetFloat("menu_ui_text_scale", 1.0f);
+    float colorR = ConfigReader::GetFloat("menu_ui_text_color_r", 1.0f);
+    float colorG = ConfigReader::GetFloat("menu_ui_text_color_g", 1.0f);
+    float colorB = ConfigReader::GetFloat("menu_ui_text_color_b", 1.0f);
+    glm::vec3 textColor(colorR, colorG, colorB);
+
+    // Text offsets for centering
+    float playOffsetX = ConfigReader::GetFloat("menu_play_text_offset_x", -60.0f);
+    float playOffsetY = ConfigReader::GetFloat("menu_play_text_offset_y", -24.0f);
+    float exitOffsetX = ConfigReader::GetFloat("menu_exit_text_offset_x", -50.0f);
+    float exitOffsetY = ConfigReader::GetFloat("menu_exit_text_offset_y", -24.0f);
+
+    // ========================================================================
+    // COORDINATE CONVERSION: WORLD TO SCREEN
+    // ========================================================================
+
+    // Get framebuffer size for accurate pixel coordinates
+    int fbWidth, fbHeight;
+    glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+
+    // World coordinate to screen coordinate conversion function
+    auto worldToScreen = [&](float worldX, float worldY) -> glm::vec2 {
+        // Step 1: World coordinates -> NDC (using camera's ViewProjection matrix)
+        glm::mat4 viewProj = graphics->GetCamera().GetViewProjectionMatrix();
+        glm::vec4 clipSpace = viewProj * glm::vec4(worldX, worldY, 0.0f, 1.0f);
+
+        // Step 2: NDC coordinates
+        float ndcX = clipSpace.x;
+        float ndcY = clipSpace.y;
+
+        // Step 3: NDC -> Screen pixel coordinates
+        // NDC range: [-1, 1] -> Screen pixels: [0, fbWidth] and [0, fbHeight]
+        // Note: TextRenderer's origin is at bottom-left, Y-axis points up
+        float screenX = (ndcX + 1.0f) * 0.5f * fbWidth;
+        float screenY = (ndcY + 1.0f) * 0.5f * fbHeight;
+
+        return glm::vec2(screenX, screenY);
+        };
+
+    // ========================================================================
+    // RENDER TEXT ON BUTTONS (using configuration values)
+    // ========================================================================
+
+    // Play button text (world coordinates: 0.0, 0.3)
+    if (playButton) {
+        glm::vec2 screenPos = worldToScreen(playButton->position.x, playButton->position.y);
+        float textX = screenPos.x + playOffsetX;  // Apply offset from config
+        float textY = screenPos.y + playOffsetY;
+        graphics->DrawText4(fontLarge, textPlay, textX, textY, textScale, textColor);
+    }
+
+    // Exit button text (world coordinates: 0.0, -0.3)
+    if (exitButton) {
+        glm::vec2 screenPos = worldToScreen(exitButton->position.x, exitButton->position.y);
+        float textX = screenPos.x + exitOffsetX;  // Apply offset from config
+        float textY = screenPos.y + exitOffsetY;
+        graphics->DrawText4(fontLarge, textExit, textX, textY, textScale, textColor);
+    }
 }
 
 void mainMenu_Free()
