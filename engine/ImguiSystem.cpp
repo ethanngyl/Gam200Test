@@ -1263,7 +1263,6 @@ namespace Framework {
         ImGui::BulletText("SPACE: Shoot Up");
         ImGui::BulletText("SHIFT: Shoot Down");
         ImGui::BulletText("E: Spawn Enemy");
-        ImGui::BulletText("O: Spawn Obstacle");
         ImGui::BulletText("R: Spawn Pickup");
         ImGui::BulletText("Q/ESC: Quit");
 
