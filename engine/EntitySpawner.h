@@ -280,7 +280,7 @@ namespace Framework {
         Entity SpawnPlayer(const Vector2D& position) {
             // Use the actual file path so the renderer will load a texture.
             const std::string spritePath = "quad";
-            Entity player = SpawnSprite(spritePath, position, Vector2D(0.1f, 0.1f));
+            Entity player = SpawnSprite("assets/player.png", position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(player);
             mr.material = GraphicsSystemV2::Material2;
