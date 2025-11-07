@@ -113,6 +113,9 @@ namespace Framework {
 
         float frameTime;
         int entityCount;
+
+        int currentPage = 0;           // Current page in entity inspector
+        int entitiesPerPage = 20;
     };
 
 } // namespace Framework

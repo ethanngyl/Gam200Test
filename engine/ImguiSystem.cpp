@@ -994,29 +994,88 @@ namespace Framework {
         ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
 
-        //  FIX: Add ##UniqueID to make this window unique
         if (!ImGui::Begin("Entity Inspector##Inspector1", &showEntityInspector)) {
             ImGui::End();
             return;
         }
 
-        ImGui::Text("Total Entities: %d", entityCount);
+        std::vector<Entity> allEntities = entityManager->GetAllEntities();
+        const int totalEntities = static_cast<int>(allEntities.size());
+
+        ImGui::Text("Total Entities: %d", totalEntities);
         ImGui::Separator();
 
-        std::vector<Entity> entityCopy = entityManager->GetAllEntities();
+        // ============================================================================
+        // PAGINATION CONTROLS
+        // ============================================================================
+        const int totalPages = (totalEntities + entitiesPerPage - 1) / entitiesPerPage; // Ceiling division
 
-        // Limit display
-        const size_t maxShow = 20;
-        if (entityCopy.size() > maxShow) {
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "Showing %zu/%zu", maxShow, entityCopy.size());
-            entityCopy.resize(maxShow);
+        // Clamp current page to valid range
+        if (currentPage < 0) currentPage = 0;
+        if (currentPage >= totalPages && totalPages > 0) currentPage = totalPages - 1;
+
+        // Page navigation buttons
+        if (totalPages > 1) {
+            ImGui::Text("Page %d / %d", currentPage + 1, totalPages);
+
+            // Previous page button
+            if (ImGui::Button("< Prev##PagePrev")) {
+                if (currentPage > 0) currentPage--;
+            }
+
+            ImGui::SameLine();
+
+            // Next page button
+            if (ImGui::Button("Next >##PageNext")) {
+                if (currentPage < totalPages - 1) currentPage++;
+            }
+
+            ImGui::SameLine();
+
+            // Jump to page input
+            ImGui::SetNextItemWidth(60);
+            int displayPage = currentPage + 1; // Show 1-indexed to user
+            if (ImGui::InputInt("##PageNum", &displayPage, 0, 0)) {
+                currentPage = displayPage - 1; // Convert back to 0-indexed
+                if (currentPage < 0) currentPage = 0;
+                if (currentPage >= totalPages) currentPage = totalPages - 1;
+            }
+
+            ImGui::Separator();
         }
 
+        // ============================================================================
+        // CALCULATE PAGE SLICE - WITHOUT std::min
+        // ============================================================================
+        const int startIdx = currentPage * entitiesPerPage;
+        int endIdx = startIdx + entitiesPerPage;
+        if (endIdx > totalEntities) {
+            endIdx = totalEntities;
+        }
+
+        // Get entities for current page
+        std::vector<Entity> pageEntities;
+        if (startIdx < totalEntities) {
+            pageEntities.assign(
+                allEntities.begin() + startIdx,
+                allEntities.begin() + endIdx
+            );
+        }
+
+        ImGui::Text("Showing %d - %d of %d",
+            startIdx + 1,
+            endIdx,
+            totalEntities);
+        ImGui::Separator();
+
+        // ============================================================================
+        // DISPLAY ENTITIES FOR CURRENT PAGE
+        // ============================================================================
         Entity entityToDelete = { 0 };
         bool shouldDelete = false;
 
-        for (size_t i = 0; i < entityCopy.size(); ++i) {
-            Entity entity = entityCopy[i];
+        for (size_t i = 0; i < pageEntities.size(); ++i) {
+            Entity entity = pageEntities[i];
 
             // Super unique ID
             ImGui::PushID(static_cast<int>(entity.id * 10000 + i));
@@ -1033,7 +1092,7 @@ namespace Framework {
                     Vector2D prevScale = transform.scale;
                     if (ImGui::DragFloat2("Scale##Scl", &prevScale.x, 0.01f, 0.01f, 10.0f))
                     {
-						transform.scale.x = prevScale.x;
+                        transform.scale.x = prevScale.x;
                         transform.scale.y = prevScale.y;
                     }
                 }
@@ -1043,18 +1102,6 @@ namespace Framework {
                     auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
                     std::string testString = "Mesh Sprite: " + meshRenderer.spriteName;
                     ImGui::Text(testString.c_str());
-
-                    /*if (ImGui::BeginDragDropTarget())
-                    {
-                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite"))
-                        {
-                            std::string label(*(std::string*)payload->Data);
-                            
-                            std::string filePath = "assets/" + label;
-                            meshRenderer.spriteName = filePath;
-                        }
-                        ImGui::EndDragDropTarget();
-                    }*/
                 }
 
                 if (entityManager->HasComponent<Movement>(entity)) {
@@ -1063,22 +1110,6 @@ namespace Framework {
                     ImGui::DragFloat2("Direction##Dir", &movement.direction.x, 0.01f, -1.0f, 1.0f);
                     ImGui::DragFloat("Speed##Spd", &movement.moveSpeed, 0.01f, 0.0f, 2.0f);
                 }
-
-                /*if (entityManager->HasComponent<Sprite>(entity)) {
-                    auto& sprite = entityManager->GetComponent<Sprite>(entity);
-                    ImGui::Text("Sprite: %s", sprite.texturePath.c_str());
-
-                    if (ImGui::BeginDragDropTarget())
-                    {
-                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite"))
-                        {
-                            std::string filePath(*(std::string*)payload->Data);
-
-                            sprite.texturePath = filePath;
-                        }
-                        ImGui::EndDragDropTarget();
-                    }
-                }*/
 
                 ImGui::Separator();
 
@@ -1094,11 +1125,15 @@ namespace Framework {
 
         ImGui::End();
 
+        // Handle deletion after UI rendering
         if (shouldDelete && entityToDelete.id != 0) {
             entityManager->DestroyEntity(entityToDelete);
-			//temporary put spatialPartitioningRemove function here
-			//just to show how the spatial partitioning works with entity deletion
-			Framework::SpatialPartitioningRemove(entityToDelete);
+            Framework::SpatialPartitioningRemove(entityToDelete);
+
+            // If we deleted the last entity on the page, go to previous page
+            if (pageEntities.size() == 1 && currentPage > 0) {
+                currentPage--;
+            }
         }
     }
 
@@ -1137,14 +1172,6 @@ namespace Framework {
             Framework::SpatialPartitioningInsert(enemy);
         }
 
-        //if (ImGui::Button("Spawn Projectile##Btn3", ImVec2(-1, 0))) {
-        //    entitySpawner->SpawnProjectile(
-        //        Vector2D(spawnX, spawnY),
-        //        Vector2D(0.0f, 1.0f),
-        //        0.5f
-        //    );
-        //}
-
         ImGui::Separator();
 
         static int waveCount = 5;
@@ -1154,21 +1181,6 @@ namespace Framework {
         }
 
         ImGui::Separator();
-
-        //if (ImGui::Button("Spawn Circle Pattern##Btn6", ImVec2(-1, 0))) {
-        //    entitySpawner->SpawnCircle("circle", 12, Vector2D(0, 0), 0.8f);
-        //}
-
-        if (ImGui::Button("Spawn Grid Pattern##Btn7", ImVec2(-1, 0))) {
-            entitySpawner->SpawnGrid("wireframequad",10, 10, Vector2D(-0.6f, -0.4f), Vector2D(0.1f, 0.1f));
-
-            if (playerEntity.GetID() != INVALID_ENTITY) {
-                PathfindingSystem::SpawnEnemyFurthestFromPlayer(playerEntity, entityManager, entitySpawner);
-            }
-            else {
-                std::cout << "[ImGui] Can't spawn enemy - no player set!\n";
-            }
-        }
 
         if (ImGui::Button("Trigger Leaves SFX##Btn8", ImVec2(-1, 0))) {
             if (audioSystem) {
