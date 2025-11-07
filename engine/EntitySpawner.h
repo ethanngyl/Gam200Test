@@ -574,7 +574,7 @@ namespace Framework {
                         startPos.y + row * spacing.y
                     );
                     const Vector2D tileSize{ 0.1f, 0.1f };
-                    Entity e = SpawnSprite(spriteName, pos, tileSize);
+                    Entity e = SpawnSprite("assets/grid.png", pos, tileSize);
 
                     record.tiles[record.Index(col, row)] = e;
 
