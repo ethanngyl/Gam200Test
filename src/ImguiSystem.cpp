@@ -100,7 +100,7 @@ namespace Framework {
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Enable Docking
-        //io.IniFilename = nullptr;  // Disable settings file
+        io.IniFilename = "./assets/imgui.ini";  
 
         ImGui::StyleColorsDark();
 
@@ -497,7 +497,7 @@ namespace Framework {
     // ============================================================================
     void ImGuiSystem::ShowAssetsWindow() {
 		//set the window size and condition
-        ImGui::SetNextWindowSize(ImVec2(320.0f, 420.0f), ImGuiCond_FirstUseEver);
+        //ImGui::SetNextWindowSize(ImVec2(320.0f, 420.0f), ImGuiCond_FirstUseEver);
 		// begin the window, return if the window is closed
         if (!ImGui::Begin("Assets##Assets", &showAssets))
         {
@@ -994,8 +994,8 @@ namespace Framework {
     {
         if (!entityManager) return;
 
-        ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
+        //ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
+        //ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
 
         if (!ImGui::Begin("Entity Inspector##Inspector1", &showEntityInspector)) {
             ImGui::End();
@@ -1144,8 +1144,8 @@ namespace Framework {
     {
         if (!entitySpawner) return;
 
-        ImGui::SetNextWindowSize(ImVec2(250, 450), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowPos(ImVec2(370, 30), ImGuiCond_FirstUseEver);
+        //ImGui::SetNextWindowSize(ImVec2(250, 450), ImGuiCond_FirstUseEver);
+        //ImGui::SetNextWindowPos(ImVec2(370, 30), ImGuiCond_FirstUseEver);
 
         // FIX: Add ##UniqueID
         if (!ImGui::Begin("Entity Spawner##Spawner1", &showSpawner)) {
@@ -1273,6 +1273,7 @@ namespace Framework {
         ImGui::BulletText("Key 1: Zoom in");
         ImGui::BulletText("Key 2: Zoom out");
         ImGui::BulletText("Key 3: Go to level3");
+        ImGui::BulletText("Key 5: Go to Main Menu");
         ImGui::BulletText("key 0: Reset Camera");
         ImGui::BulletText("click above menu Editor->Play to activate play mode");
         ImGui::BulletText("WASD: Move");

@@ -103,7 +103,7 @@ namespace Framework
                 bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
                 bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
                 bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
-                if (imguitestaudio && mainmenubgm && bgm2) {
+                if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
                     LOG_INFO("CORE", "All audio loaded successfully");
                 }
                 else {

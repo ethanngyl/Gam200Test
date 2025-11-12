@@ -10,8 +10,6 @@ Contribution: 85%(Jiahao), 15%(Ethan)
 Test harness interface for running interactive collision cases.
 
 Responsibilities:
-- Initialize CollTest modes (circle–rect, rect–rect, circle–circle, point tests,
-  triangle tests, bounds checks).
 - (Before render system is done)Create a simple test scenes and routes input to test all collision functions.
 - (After render system is done)Create ECS ...
 
@@ -49,19 +47,12 @@ void CollisionSystem::Initialize()
   // inform system Do NOT create any shapes here—wait until a mode is chosen.
   testActive = false;
   sceneReady = false;
-  mode = CollTest::None;
   collidedLastFrame = false;
 
   //test instructions for user in console, use it to test before render system is done
   //after render system is done, we are using checkECSCollisions() to test collisions in ECS
   //but still keep this for reference
   std::cout << "CollisionSystem: Initialized\n";
-  std::cout << "[T] toggle Collision Test Mode. Type [1,2,3,4,5] choose test when active:\n"
-               " 1) circle-rect  2) rect-rect  3) circle-circle  4) point-circle  5) point-rect\n"
-               " 6) circle-triangle 7) rect-triangle\n"
-               " 8) circle vs bounds  9) rect vs bounds  0) point vs bounds\n"
-               " [R] reset from current test scene.\n WASD moves the active object.\n"
-               "Press [T] to start the test!\n";
 }
 
 void CollisionSystem::Update(float dt)
@@ -86,41 +77,6 @@ void CollisionSystem::Update(float dt)
     }
 
     if (!testActive) return;
-
-    //test instructions for user in console, use it to test before render system is done
-    //after render system is done, we are using checkECSCollisions() to test collisions in ECS
-    //but still keep this for reference
-    // Allow picking a mode only when active
-    /*if (mode == CollTest::None) {
-        if (m_input->IsKeyPressed(KEY_1)) { mode = CollTest::CircleToRect;   setupScene(mode);  std::cout << "Mode: Circle to Rect\n"; }
-        else if (m_input->IsKeyPressed(KEY_2)) { mode = CollTest::RectToRect;     setupScene(mode);  std::cout << "Mode: Rect to Rect\n"; }
-        else if (m_input->IsKeyPressed(KEY_3)) { mode = CollTest::CircleToCircle; setupScene(mode);  std::cout << "Mode: Circle to Circle\n"; }
-        else if (m_input->IsKeyPressed(KEY_4)) { mode = CollTest::PointToCircle;  setupScene(mode);  std::cout << "Mode: Point to Circle (WASD moves point)\n"; }
-        else if (m_input->IsKeyPressed(KEY_5)) { mode = CollTest::PointToRect;    setupScene(mode);  std::cout << "Mode: Point to Rect (WASD moves point)\n"; }
-        else if (m_input->IsKeyPressed(KEY_6)) { mode = CollTest::TriCircle;      setupScene(mode);  std::cout << "Mode: Circle to Triangle\n"; }
-        else if (m_input->IsKeyPressed(KEY_7)) { mode = CollTest::TriRect;        setupScene(mode);  std::cout << "Mode: Rect to Triangle\n"; }
-        else if (m_input->IsKeyPressed(KEY_8)) { mode = CollTest::BoundsCircle;   setupScene(mode); std::cout << "Mode: Circle vs Bounds\n"; }
-        else if (m_input->IsKeyPressed(KEY_9)) { mode = CollTest::BoundsRect;     setupScene(mode); std::cout << "Mode: Rect vs Bounds\n"; }
-        else if (m_input->IsKeyPressed(KEY_0)) { mode = CollTest::BoundsPoint;    setupScene(mode); std::cout << "Mode: Point vs Bounds\n"; }
-        return;
-    }*/
-
-    // Mode is locked now. Ignore further 1..5 until reset.
-    if (m_input->IsKeyPressed(KEY_1) || m_input->IsKeyPressed(KEY_2) ||
-        m_input->IsKeyPressed(KEY_3) || m_input->IsKeyPressed(KEY_4) ||
-        m_input->IsKeyPressed(KEY_5) || m_input->IsKeyPressed(KEY_6) || 
-        m_input->IsKeyPressed(KEY_7) || m_input->IsKeyPressed(KEY_8) || 
-        m_input->IsKeyPressed(KEY_9) || m_input->IsKeyPressed(KEY_0))
-    {
-        std::cout << "[Info] A test is already running. Press [R] to reset, then pick a new mode.\n";
-    }
-
-    // Reset current test and go back to waiting for 1 to 7
-    if (m_input->IsKeyPressed(KEY_R)) {
-        clearScene();
-        std::cout << "[Reset] Cleared. Press [1,2,3,4,5,6,7] to start a new test.\n";
-        return;
-    }
 
     // If somehow not ready yet, bail (defensive)
     if (!sceneReady) return;
@@ -198,27 +154,6 @@ void CollisionSystem::Update(float dt)
             collidedLastFrame = hitAny;
         } break;
 
-        case CollTest::TriCircle: {
-            if (dx || dy) {
-                circle.position.x += dx; circle.position.y += dy;
-                std::cout << "Circle -> (" << circle.position.x << ", " << circle.position.y << ")\n";
-            }
-            bool hit = circle_to_triangle(circle, sTriangle);
-            if (hit) std::cout << "Hit Triangle\n";
-            collidedLastFrame = hit;
-        } break;
-
-        
-        case CollTest::TriRect: {
-            if (dx || dy) {
-                rect.position.x += dx; rect.position.y += dy;
-                std::cout << "Rect -> (" << rect.position.x << ", " << rect.position.y << ")\n";
-            }
-            bool hit = rect_to_triangle(rect, sTriangle);
-            if (hit) std::cout << "Hit Triangle\n";
-            collidedLastFrame = hit;
-        } break;
-
         case CollTest::BoundsCircle: {
             if (dx || dy) {
                 circle.position.x += dx; circle.position.y += dy;
@@ -278,15 +213,9 @@ void CollisionSystem::printCollider(const char* name, const Collider& c)
   if (c.shapeType == ShapeType::Circle) {
     std::cout << name << " (Circle) pos=(" << c.position.x << "," << c.position.y
               << ") r=" << c.circle.radius << "\n";
-  } else if (c.shapeType == ShapeType::Rect) {
+  } else if(c.shapeType == ShapeType::Rect) {
     std::cout << name << " (Rect)   pos=(" << c.position.x << "," << c.position.y
               << ") w=" << c.rect.width << " h=" << c.rect.height << "\n";
-  }
-  else {
-      std::cout << name << " (Triangle)/n"
-          << " v0=(" << c.triangle.v0.x << "," << c.triangle.v0.y << ")\n"
-          << " v1=(" << c.triangle.v1.x << "," << c.triangle.v1.y << ")\n"
-		  << " v2=(" << c.triangle.v2.x << "," << c.triangle.v2.y << ")\n";
   }
 }
 
@@ -302,19 +231,13 @@ void CollisionSystem::CheckECSCollisions()
         }
     }
 
-    std::vector<Entity> rects, triangles, circles;
+    std::vector<Entity> rects, circles;
     for (Entity e : entityManager->GetAllEntities())
     {
         if (entityManager->HasComponent<Transform>(e) &&
             entityManager->HasComponent<BoxCollider>(e))
         {
             rects.push_back(e);
-        }
-
-        if (entityManager->HasComponent<Transform>(e) &&
-            entityManager->HasComponent<TriangleCollider>(e))
-        {
-            triangles.push_back(e);
         }
 
         if (entityManager->HasComponent<Transform>(e) &&
@@ -328,41 +251,6 @@ void CollisionSystem::CheckECSCollisions()
     
     for (Entity rectEnt : rects)
     {
-        // Check rect vs triangle collisions
-        for (Entity triEnt : triangles)
-        {
-            auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
-            auto& rectColl = entityManager->GetComponent<BoxCollider>(rectEnt);
-
-
-            auto& triTransform = entityManager->GetComponent<Transform>(triEnt);
-            auto& triColl = entityManager->GetComponent<TriangleCollider>(triEnt);
-            // Convert to collision system format
-            Collider ecsRect = Collider::create_rect(
-                rectColl.size.x /** rectTransform.scale.x*/,
-                rectColl.size.y /** rectTransform.scale.y*/,
-				rectTransform.position 
-            );
-
-
-            // Triangle vertices in world space
-            Collider triCol = Collider::create_triangle(
-                triTransform.position + triColl.v0,
-                triTransform.position + triColl.v1,
-                triTransform.position + triColl.v2
-            );
-            // Use your existing rect_to_triangle function
-            if (rect_to_triangle(ecsRect, triCol))
-            {
-                std::cout << "Collision: Rect entity " << rectEnt.GetID()
-                    << " hit Triangle entity " << triEnt.GetID() << "\n";
-
-                if (entityManager->HasComponent<Movement>(rectEnt)) {
-                    auto& mv = entityManager->GetComponent<Movement>(rectEnt);
-                    mv.blocked = true;
-                }
-            }
-        }
 
         for (Entity circEnt : circles)
         {
@@ -405,29 +293,6 @@ void CollisionSystem::CheckECSCollisions()
                 cC.radius,
                 cT.position + cC.offset
             );
-
-            // Test this circle against every triangle
-            for (Entity triEnt : triangles)
-            {
-                auto& tT = entityManager->GetComponent<Transform>(triEnt);
-                auto& tC = entityManager->GetComponent<TriangleCollider>(triEnt);
-
-                Collider triCol = Collider::create_triangle(
-                    tT.position + tC.v0,
-                    tT.position + tC.v1,
-                    tT.position + tC.v2
-                );
-
-                if (circle_to_triangle(ecsCircle, triCol)) {
-                    std::cout << "Collision: Circle entity " << circEnt.GetID()
-                        << " hit Triangle entity " << triEnt.GetID() << "\n";
-
-                    if (entityManager->HasComponent<Movement>(circEnt)) {
-                        auto& mv = entityManager->GetComponent<Movement>(circEnt);
-                        mv.blocked = true;
-                    }
-                }
-            }
         }
     }
 }

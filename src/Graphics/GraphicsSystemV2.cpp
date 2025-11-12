@@ -391,24 +391,10 @@ namespace Framework {
     void GraphicsSystemV2::CreateDefaultMeshes() {
         std::cout << "GraphicsSystemV2: Creating default meshes...\n";
         // Create primitive meshes using the factory functions
-        Mesh* triangle = meshFactory.CreateTriangle();
         Mesh* quad = meshFactory.CreateQuad();
         Mesh* line = meshFactory.CreateLine();
         Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
         Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
-
-        // Register meshes with resource manager
-        triangleMesh = resourceManager.CreateMesh("triangle",
-            triangle->GetVertexCount() > 0 ? std::vector<float>() : std::vector<float>(),
-            {}, GL_TRIANGLES, true);
-
-        // Triangle vertices
-        std::vector<float> triVerts = {
-            0.0f,  0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.5f, 1.0f,
-           -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
-            0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f
-        };
-        triangleMesh = resourceManager.CreateMesh("triangle", triVerts, {}, GL_TRIANGLES, true);
 
         // Quad vertices
         std::vector<float> quadVerts = {
@@ -473,7 +459,6 @@ namespace Framework {
         );
 
         // Clean up temporary meshes
-        delete triangle;
         delete quad;
         delete line;
         delete circle;
@@ -494,11 +479,6 @@ namespace Framework {
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
         Material2 = resourceManager.CreateMaterial("color", Shader2);
         // Create materials for each primitive
-        triangleMaterial = resourceManager.CreateMaterial("triangle_mat", defaultShader);
-        auto* triMat = resourceManager.GetMaterial(triangleMaterial);
-        if (triMat) {
-            triMat->tint = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-        }
         // Quad material
         quadMaterial = resourceManager.CreateMaterial("quad_mat", defaultShader);
         auto* quadMat = resourceManager.GetMaterial(quadMaterial);
@@ -1070,7 +1050,6 @@ namespace Framework {
             {"wireframequad", {"wireframequad", "wireframeq_mat"}},
             {"circle", {"circle", "circle_mat"}},
             {"quad", {"quad", "quad_mat"}},
-            {"triangle", {"triangle", "triangle_mat"}},
             {"line", {"line", "line_mat"}}
         };
 

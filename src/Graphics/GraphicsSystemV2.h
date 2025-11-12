@@ -299,14 +299,12 @@ namespace Framework {
         private:
 
         // Default primitive meshes
-        MeshHandle triangleMesh;
         MeshHandle quadMesh;
         MeshHandle lineMesh;
         MeshHandle circleMesh;
         MeshHandle wireframeQMesh;
 
         // Default materials for primitives
-        MaterialHandle triangleMaterial;
         MaterialHandle quadMaterial;
         MaterialHandle lineMaterial;
         MaterialHandle circleMaterial;
@@ -338,7 +336,6 @@ namespace Framework {
         // Statistics (for HUD/profiling/ImGui)
         struct RenderStats {
             size_t drawCalls = 0;
-            size_t trianglesRendered = 0;
             size_t materialSwitches = 0;
         } stats;
 

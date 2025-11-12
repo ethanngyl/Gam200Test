@@ -170,7 +170,6 @@ namespace Framework
             // --- FETCH PROJECTILE COMPONENTS ---
             auto& projTransform = entityManager->GetComponent<Transform>(projectile);
             auto& projCollider = entityManager->GetComponent<CircleCollider>(projectile);
-            auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
 
             Collider projShape = Collider::create_circle(projCollider.radius, projTransform.position);
 

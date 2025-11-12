@@ -43,14 +43,14 @@ namespace Framework {
         void SendEngineMessage(Message* msg) override;
         // Setup methods
         void SetWindow(GLFWwindow* win);
-        
+
         void SetEntityManager(EntityManager* em);
         void SetEntitySpawner(EntitySpawner* spawner);
 
-		// Load/Save level from text file
+        // Load/Save level from text file
         // jiahao
         bool OpenLevelFromTxt(const std::string& file, bool clearAll);
-		bool SaveLevelToTxt(const std::string& file);
+        bool SaveLevelToTxt(const std::string& file);
 
         void SetAudioSystem(AudioSystem* audio);
         void SetGraphicsSystem(GraphicsSystemV2* graphics);
@@ -64,7 +64,7 @@ namespace Framework {
         void Disable() { enabled = false; }
         bool IsEnabled() const { return enabled; }
 
-		//File drag and drop support - jiahao
+        //File drag and drop support - jiahao
         void EnableFileDragAndDrop();
         void SetPlayerEntity(Entity player) { playerEntity = player; }
 
@@ -75,10 +75,10 @@ namespace Framework {
         Entity playerEntity;
         //jiahao
         //the below 2 std::string are used to record the file path
-		//in order to save and load level files
+        //in order to save and load level files
         std::string currentLevelPath;
         std::string openPath;
-		std::string defaultLevelPath = "assets/defaultLevel.txt";
+        std::string defaultLevelPath = "assets/defaultLevel.txt";
 
         AudioSystem* audioSystem;
         GraphicsSystemV2* graphicsSystem;
@@ -89,17 +89,17 @@ namespace Framework {
         void ShowDemoWindow();
         //Asset windows - jiahao
         bool showAssets = false;
-		std::string selectedAssetPath = "";
+        std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
-		void ShowAssetsWindow();
-
+        void ShowAssetsWindow();
+        void SetupDefaultDockLayout();
         //file drop - jiahao
-		static void FileDropCallBack(GLFWwindow* window, int count, const char** paths);
-		void OnFileDrop(int count, const char** paths);
+        static void FileDropCallBack(GLFWwindow* window, int count, const char** paths);
+        void OnFileDrop(int count, const char** paths);
         bool IsLevelFile(const std::filesystem::path& path) const;
-		bool IsTextureFile(const std::filesystem::path& path) const;
+        bool IsTextureFile(const std::filesystem::path& path) const;
 
-        std::filesystem::path rootpath ="assets/";
+        std::filesystem::path rootpath = "assets/";
         std::filesystem::path currentpath = "assets/";
         std::filesystem::path previouspath;
 

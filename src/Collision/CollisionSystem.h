@@ -47,11 +47,9 @@ namespace Framework {
         CircleToCircle = 3,
         PointToCircle = 4,
         PointToRect = 5,
-        TriCircle = 6,
-        TriRect = 7,
-        BoundsCircle = 8,
-	    BoundsRect = 9,
-        BoundsPoint = 10
+        BoundsCircle = 6,
+	    BoundsRect = 7,
+        BoundsPoint = 8
     };
   // A tiny demo/test harness around your Collision utilities.
   class CollisionSystem : public EngineSystem

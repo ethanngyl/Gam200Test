@@ -25,7 +25,7 @@ add_definitions(-DUSE_CSD3151_AUTOMATION=0) # Used for instructor's automation
 
 # ======================= Source Configuration =========================
 
-set(SRC_DIR ./engine)
+set(SRC_DIR ./src)
 file(GLOB_RECURSE APP_SRC 
    "${SRC_DIR}/*.cpp"
    "${SRC_DIR}/*.h"
@@ -37,8 +37,8 @@ file(GLOB_RECURSE APP_SRC
 # -------------------------------------------------------------------
 # Organizes files in the IDE's project view based on their physical location.
 source_group(
-    TREE "${CMAKE_CURRENT_SOURCE_DIR}/engine" # Tells CMake to attempt to replicate the directory structure found under 'engine'.
-    PREFIX "engine"  # Sets the top-level virtual folder name in the IDE to 'engine'.
+    TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" # Tells CMake to attempt to replicate the directory structure found under 'src'.
+    PREFIX "src"  # Sets the top-level virtual folder name in the IDE to 'src'.
     FILES ${APP_SRC} # Applies this grouping structure to all files collected in the ${APP_SRC} variable.
 )
 
@@ -50,7 +50,7 @@ file(COPY "${CMAKE_SOURCE_DIR}/assets"
 
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
-"engine/main.cpp")
+"src/main.cpp")
 
 # MSVC-only: disable noisy integer conversion warnings
 #  - C4244: converting larger numeric types to smaller ones (possible loss of data)
@@ -90,7 +90,7 @@ set_source_files_properties(
 )
 
 # Copy shaders to build directory
-file(COPY ${CMAKE_SOURCE_DIR}/engine/shaders
+file(COPY ${CMAKE_SOURCE_DIR}/src/shaders
      DESTINATION ${CMAKE_BINARY_DIR})
 
 # ======================= Include Directories =========================
@@ -98,25 +98,25 @@ file(COPY ${CMAKE_SOURCE_DIR}/engine/shaders
 # Include directories for the project (fixed to use directory, not files)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${SRC_DIR}
-    ${CMAKE_SOURCE_DIR}/engine
-    ${CMAKE_SOURCE_DIR}/engine/Core
-    ${CMAKE_SOURCE_DIR}/engine/Audio
-    ${CMAKE_SOURCE_DIR}/engine/ECS
-    ${CMAKE_SOURCE_DIR}/engine/GSM
-    ${CMAKE_SOURCE_DIR}/engine/UI
-    ${CMAKE_SOURCE_DIR}/engine/Collision
-    ${CMAKE_SOURCE_DIR}/engine/Movement
-    ${CMAKE_SOURCE_DIR}/engine/Debugger
-    ${CMAKE_SOURCE_DIR}/engine/ConfigReader
-    ${CMAKE_SOURCE_DIR}/engine/Graphics  
-    ${CMAKE_SOURCE_DIR}/engine/Input
-    ${CMAKE_SOURCE_DIR}/engine/Math
-    ${CMAKE_SOURCE_DIR}/engine/Systems
-    ${CMAKE_SOURCE_DIR}/engine/Windows
-    ${CMAKE_SOURCE_DIR}/engine/Components
-    ${CMAKE_SOURCE_DIR}/engine/Player
-    ${CMAKE_SOURCE_DIR}/engine/Event
-    ${CMAKE_SOURCE_DIR}/engine/Pathfinding
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/Core
+    ${CMAKE_SOURCE_DIR}/src/Audio
+    ${CMAKE_SOURCE_DIR}/src/ECS
+    ${CMAKE_SOURCE_DIR}/src/GSM
+    ${CMAKE_SOURCE_DIR}/src/UI
+    ${CMAKE_SOURCE_DIR}/src/Collision
+    ${CMAKE_SOURCE_DIR}/src/Movement
+    ${CMAKE_SOURCE_DIR}/src/Debugger
+    ${CMAKE_SOURCE_DIR}/src/ConfigReader
+    ${CMAKE_SOURCE_DIR}/src/Graphics  
+    ${CMAKE_SOURCE_DIR}/src/Input
+    ${CMAKE_SOURCE_DIR}/src/Math
+    ${CMAKE_SOURCE_DIR}/src/Systems
+    ${CMAKE_SOURCE_DIR}/src/Windows
+    ${CMAKE_SOURCE_DIR}/src/Components
+    ${CMAKE_SOURCE_DIR}/src/Player
+    ${CMAKE_SOURCE_DIR}/src/Event
+    ${CMAKE_SOURCE_DIR}/src/Pathfinding
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -149,7 +149,7 @@ endif()
 # Copy shaders folder
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
-          "${CMAKE_SOURCE_DIR}/engine/shaders" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/shaders")
+          "${CMAKE_SOURCE_DIR}/src/shaders" "$<TARGET_FILE_DIR:${CMAKE_PROJECT_NAME}>/shaders")
 
 # Copy assets folder
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD

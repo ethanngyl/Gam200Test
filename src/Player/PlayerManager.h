@@ -70,7 +70,6 @@ namespace Framework {
         // ========================================================================
         // PLAYER MOVEMENT HANDLERS
         // ========================================================================
-        void HandleClickToMove();
         void UpdateTilePulseAnimation();
         void UpdateBorderOutlineAnimation();
         void HandleArrowKeyMovement();

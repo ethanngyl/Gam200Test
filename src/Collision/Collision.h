@@ -30,12 +30,6 @@ enum class ShapeType { Circle, Rect, Triangle };
 
 struct Circle { float radius {0.0f};};
 struct Rect   { float width{0.0f}, height{0.0f};};
-//struct for triangle, but not implemented in shapetype first
-struct Triangle {
-    Framework::Vector2D v0;
-    Framework::Vector2D v1;
-    Framework::Vector2D v2;
-};
 // ---- Window Bounds------------------------------------
 struct Bounds {
     float left{ -320.0f };
@@ -51,7 +45,6 @@ struct Collider {
     
     Circle circle{};
     Rect rect{};
-    Triangle triangle{};
 
     static Collider create_circle (float radius, Framework::Vector2D position){
         Collider c;
@@ -66,19 +59,6 @@ struct Collider {
         c.rect.width = width;
         c.rect.height = height;
         c.position = position;
-        return c;
-    }
-    static Collider create_triangle(Framework::Vector2D v0,
-        Framework::Vector2D v1,
-        Framework::Vector2D v2) {
-        Collider c;
-        c.shapeType = ShapeType::Triangle;
-        c.triangle.v0 = v0;
-        c.triangle.v1 = v1;
-        c.triangle.v2 = v2;
-        // store a simple center so logging looks same style as others
-        c.position.x = (v0.x + v1.x + v2.x) / 3.0f;
-        c.position.y = (v0.y + v1.y + v2.y) / 3.0f;
         return c;
     }
 
@@ -98,8 +78,3 @@ bool check_collision (const Collider& a, const Collider& b);
 bool circle_out_of_bounds(const Collider& c, const Bounds& b);
 bool rect_out_of_bounds(const Collider& r, const Bounds& b);
 bool point_out_of_bounds(const Framework::Vector2D& p, const Bounds& b);
-
-// Triangle collision function, not implement yet
-bool point_in_triangle(Framework::Vector2D const& p, Triangle const& tri);
-bool circle_to_triangle(const Collider& circle, const Collider& triCol);
-bool rect_to_triangle(const Collider& rectAABB, const Collider& triCol);
