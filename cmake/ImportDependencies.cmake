@@ -31,7 +31,7 @@ macro(import_glm)
         FetchContent_Declare(
             glm
             GIT_REPOSITORY https://github.com/g-truc/glm.git
-            GIT_TAG 0.9.9.8
+            GIT_TAG 1.0.1
         )
         FetchContent_MakeAvailable(glm)
         target_include_directories(glm SYSTEM INTERFACE 
@@ -209,7 +209,7 @@ macro(import_freetype)
         FetchContent_Declare(
             freetype
             GIT_REPOSITORY https://github.com/freetype/freetype.git
-            GIT_TAG VER-2-13-2
+            GIT_TAG VER-2-14-1
         )
         # Prefer a static library to avoid DLL hassle
         set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
