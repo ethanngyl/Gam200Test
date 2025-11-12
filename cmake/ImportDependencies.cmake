@@ -226,6 +226,78 @@ macro(import_freetype)
     endif()
 endmacro()
 
+# Macro to import Lua
+macro(import_lua)
+    if(NOT TARGET lua_static)
+        message(STATUS "Importing Lua...")
+        
+        FetchContent_Declare(
+            lua
+            GIT_REPOSITORY https://github.com/lua/lua.git
+            GIT_TAG v5.4.7
+        )
+        FetchContent_Populate(lua)
+        
+        # Lua source files (core library)
+        set(LUA_CORE_SOURCES
+            ${lua_SOURCE_DIR}/lapi.c
+            ${lua_SOURCE_DIR}/lcode.c
+            ${lua_SOURCE_DIR}/lctype.c
+            ${lua_SOURCE_DIR}/ldebug.c
+            ${lua_SOURCE_DIR}/ldo.c
+            ${lua_SOURCE_DIR}/ldump.c
+            ${lua_SOURCE_DIR}/lfunc.c
+            ${lua_SOURCE_DIR}/lgc.c
+            ${lua_SOURCE_DIR}/llex.c
+            ${lua_SOURCE_DIR}/lmem.c
+            ${lua_SOURCE_DIR}/lobject.c
+            ${lua_SOURCE_DIR}/lopcodes.c
+            ${lua_SOURCE_DIR}/lparser.c
+            ${lua_SOURCE_DIR}/lstate.c
+            ${lua_SOURCE_DIR}/lstring.c
+            ${lua_SOURCE_DIR}/ltable.c
+            ${lua_SOURCE_DIR}/ltm.c
+            ${lua_SOURCE_DIR}/lundump.c
+            ${lua_SOURCE_DIR}/lvm.c
+            ${lua_SOURCE_DIR}/lzio.c
+        )
+        
+        # Lua library sources
+        set(LUA_LIB_SOURCES
+            ${lua_SOURCE_DIR}/lauxlib.c
+            ${lua_SOURCE_DIR}/lbaselib.c
+            ${lua_SOURCE_DIR}/lcorolib.c
+            ${lua_SOURCE_DIR}/ldblib.c
+            ${lua_SOURCE_DIR}/liolib.c
+            ${lua_SOURCE_DIR}/lmathlib.c
+            ${lua_SOURCE_DIR}/loadlib.c
+            ${lua_SOURCE_DIR}/loslib.c
+            ${lua_SOURCE_DIR}/lstrlib.c
+            ${lua_SOURCE_DIR}/ltablib.c
+            ${lua_SOURCE_DIR}/lutf8lib.c
+            ${lua_SOURCE_DIR}/linit.c
+        )
+        
+        # Create Lua static library
+        add_library(lua_static STATIC ${LUA_CORE_SOURCES} ${LUA_LIB_SOURCES})
+        target_include_directories(lua_static PUBLIC ${lua_SOURCE_DIR})
+        
+        # Platform-specific definitions
+        if(UNIX AND NOT APPLE)
+            target_compile_definitions(lua_static PUBLIC LUA_USE_LINUX)
+            target_link_libraries(lua_static PUBLIC m dl)
+        elseif(APPLE)
+            target_compile_definitions(lua_static PUBLIC LUA_USE_MACOSX)
+        elseif(WIN32)
+            target_compile_definitions(lua_static PUBLIC LUA_USE_WINDOWS)
+        endif()
+        
+        # Set C standard
+        set_target_properties(lua_static PROPERTIES C_STANDARD 99)
+        
+        message(STATUS "Lua imported successfully")
+    endif()
+endmacro()
 
 # Main function to import all dependencies
 function(importDependencies)
@@ -239,5 +311,6 @@ function(importDependencies)
     import_imgui()
     import_stb()
     import_fmod()
+    import_lua()
     message(STATUS "=== All Dependencies Imported ===")
 endfunction()
