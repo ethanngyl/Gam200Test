@@ -411,7 +411,9 @@ namespace Framework {
     */
     void PlayerControllerSystem::HandleArrowKeyMovement() {
         // Guards: need input + entity systems, player Transform, and it must be player’s turn
+        if (!gridMovementEnabled) return;
         if (!inputSystem || !entityManager) return;
+
         if (!entityManager->HasComponent<Transform>(playerEntity)) return;
         if (!IsPlayerTurn()) return;
 
@@ -489,6 +491,39 @@ namespace Framework {
             << ") to (" << next.x << "," << next.y << ")\n";
 
         EndPlayerTurn();
+    }
+
+    void PlayerControllerSystem::ResetGridState() {
+        // Clear tile pulse state
+        s_pulseEnt = Framework::Entity{};
+        s_savedScaleX = 1.0f;
+        s_savedScaleY = 1.0f;
+        s_pulseEndMs = 0;
+
+        // Clear border outline state
+        if (s_outlineInit && entityManager) {
+            auto destroyStrip = [&](Framework::Entity& e) {
+                if (e.GetID() != Framework::INVALID_ENTITY) {
+                    entityManager->DestroyEntity(e);
+                    e = Framework::Entity{};
+                }
+                };
+
+            destroyStrip(s_outlineTop);
+            destroyStrip(s_outlineBot);
+            destroyStrip(s_outlineLeft);
+            destroyStrip(s_outlineRight);
+        }
+
+        s_outlineInit = false;
+        s_outlineHideAtMs = 0;
+
+        LOG_INFO("PlayerController", "Grid state reset");
+    }
+
+    void PlayerControllerSystem::SetGridMovementEnabled(bool enabled) {
+        gridMovementEnabled = enabled;
+        LOG_INFO("PlayerController", "Grid movement %s", enabled ? "ENABLED" : "DISABLED");
     }
 
 } // namespace Framework

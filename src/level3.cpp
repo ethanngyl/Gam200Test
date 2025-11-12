@@ -123,7 +123,7 @@ void level3_Initialize()
     playerController->SetEntitySpawner(spawner);
     playerController->SetEntityManager(em);
     playerController->SetInputSystem(input);
-
+    playerController->SetGridMovementEnabled(true);
     // --- Enemy: spawn furthest, uses A* to chase player ---
     gEnemy = PathfindingSystem::SpawnEnemyFurthestFromPlayer(gPlayer, em, spawner);
 
@@ -191,6 +191,10 @@ void level3_Draw() {}
 void level3_Free()
 {
     using namespace Framework;
+    if (CORE && CORE->GetPlayerController()) {
+        CORE->GetPlayerController()->ResetGridState();
+        CORE->GetPlayerController()->SetGridMovementEnabled(false);
+    }
     if (auto* gfx = CORE ? CORE->GetGraphicsSystem() : nullptr) {
         gfx->ClearFollowTarget();
     }

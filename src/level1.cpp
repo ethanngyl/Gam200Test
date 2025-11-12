@@ -77,6 +77,15 @@ void level1_Initialize()
 
     if (playerController) {
         playerController->SetPlayerEntity(playerEntity);
+
+        // ADD THIS LINE - Disable grid movement for level 1
+        playerController->SetGridMovementEnabled(false);
+
+        LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
+    }
+
+    if (playerController) {
+        playerController->SetPlayerEntity(playerEntity);
         LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
     }
     else {

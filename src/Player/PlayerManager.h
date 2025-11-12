@@ -58,6 +58,9 @@ namespace Framework {
         void SetShootCooldown(float cooldown);
         void SetProjectileSpeed(float speed);
 
+        void ResetGridState();
+        void SetGridMovementEnabled(bool enabled);
+
     private:
         // ========================================================================
         // SHOOTING HANDLERS
@@ -91,6 +94,7 @@ namespace Framework {
         float shootCooldown;
         float shootCooldownTime;
         float projectileSpeed;
+        bool gridMovementEnabled = false;
     };
 
 } // namespace Framework
