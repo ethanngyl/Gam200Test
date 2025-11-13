@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           Component.h
  Author:         ETHAN NG YONG LE
@@ -17,6 +17,11 @@
 #include "ECSComponent.h"
 #include "Vector2D.h"
 #include <string>
+
+extern "C" {
+    struct lua_State;
+    void lua_close(struct lua_State* L);  
+}
 
 namespace Framework
 {
@@ -86,23 +91,6 @@ namespace Framework
     };
 
     /**
-     * @struct TriangleCollider
-     * @brief Triangle-shaped collider
-     *
-     * Three-vertex polygon collision shape for more complex collision detection.
-     */
-    struct TriangleCollider : public Component<TriangleCollider>
-    {
-        Vector2D v0, v1, v2;  // Three vertices relative to transform position
-
-        TriangleCollider(Vector2D vertex0 = Vector2D(-0.25f, -0.25f),
-            Vector2D vertex1 = Vector2D(0.25f, -0.25f),
-            Vector2D vertex2 = Vector2D(0.0f, 0.25f))
-            : v0(vertex0), v1(vertex1), v2(vertex2) {
-        }
-    };
-
-    /**
      * @struct CircleCollider
      * @brief Circular collision shape
      *
@@ -132,6 +120,60 @@ namespace Framework
         bool playOnStart = false;
 
         void* fmodChannel = nullptr;
+    };
+
+    struct ScriptComponent : public Component<ScriptComponent>
+    {
+        std::string scriptPath;
+        lua_State* L = nullptr; 
+        bool initialized = false;
+        float updateTimer = 0.0f;
+
+        bool hasOnInit = false;
+        bool hasOnUpdate = false;
+        bool hasOnDestroy = false;
+
+        ScriptComponent() = default;
+        ScriptComponent(const std::string& path) : scriptPath(path) {}
+        ~ScriptComponent() {
+            if (L) {
+                lua_close(L);
+                L = nullptr;
+            }
+        }
+
+        // Prevent copying
+        ScriptComponent(const ScriptComponent&) = delete;
+        ScriptComponent& operator=(const ScriptComponent&) = delete;
+
+        // Move constructor
+        ScriptComponent(ScriptComponent&& other) noexcept
+            : scriptPath(std::move(other.scriptPath))
+            , L(other.L)
+            , initialized(other.initialized)
+            , updateTimer(other.updateTimer)
+            , hasOnInit(other.hasOnInit)
+            , hasOnUpdate(other.hasOnUpdate)
+            , hasOnDestroy(other.hasOnDestroy)
+        {
+            other.L = nullptr;
+        }
+
+        // Move assignment
+        ScriptComponent& operator=(ScriptComponent&& other) noexcept {
+            if (this != &other) {
+                if (L) lua_close(L);
+                scriptPath = std::move(other.scriptPath);
+                L = other.L;
+                initialized = other.initialized;
+                updateTimer = other.updateTimer;
+                hasOnInit = other.hasOnInit;
+                hasOnUpdate = other.hasOnUpdate;
+                hasOnDestroy = other.hasOnDestroy;
+                other.L = nullptr;
+            }
+            return *this;
+        }
     };
 
     /**

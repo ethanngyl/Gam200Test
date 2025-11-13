@@ -29,6 +29,7 @@
 #include "ImguiSystem.h"  
 #include "Event/Event.h"
 #include "Event/DamageIndicatorSystem.h"
+#include "ScriptSystem.h"
 
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
@@ -144,7 +145,10 @@ namespace Framework
         eventSystem = new EventSystem();
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
-
+        scriptSystem = new ScriptSystem();
+        scriptSystem->SetEntityManager(entityManager);
+        scriptSystem->SetCoreEngine(this);
+        scriptSystem->Initialize();
         LOG_INFO("CORE", " All systems created");
     }
 
@@ -358,6 +362,10 @@ namespace Framework
         for (unsigned i = 0; i < Systems.size(); ++i)
         {
             Systems[i]->Update(dt);
+
+        }
+        if (scriptSystem) {
+            scriptSystem->Update(dt);
         }
     }
 
@@ -380,6 +388,11 @@ namespace Framework
         for (unsigned i = 0; i < Systems.size(); ++i)
         {
             delete Systems[Systems.size() - i - 1];
+        }
+        if (scriptSystem) {
+            scriptSystem->Shutdown();
+            delete scriptSystem;
+            scriptSystem = nullptr;
         }
         Systems.clear();
     }

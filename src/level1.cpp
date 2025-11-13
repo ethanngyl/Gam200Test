@@ -21,11 +21,10 @@
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
-
-
+#include "Component.h" 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
-
+using Framework::ScriptComponent;
 
 void level1_Load()
 {
@@ -61,6 +60,21 @@ void level1_Initialize()
         LOG_ERROR("LEVEL1", "Spawner is null!");
         return;
     }
+
+    auto* scriptSystem = engine->GetScriptSystem();
+
+    if (!spawner || !scriptSystem) {
+        LOG_ERROR("LEVEL1", "Missing spawner or script system!");
+        return;
+    }
+
+    // Spawn a test entity
+    auto testEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
+    LOG_INFO("LEVEL1", "Spawned test entity: %u", testEntity.GetID());
+
+    // Load script onto the entity
+    scriptSystem->LoadScript(testEntity, "./assets/scripts/test_simple.lua");
+    LOG_INFO("LEVEL1", "Loaded test script onto entity %u", testEntity.GetID());
 
 
     // ========================================================================
@@ -242,9 +256,21 @@ void level1_Free()
         LOG_INFO("LEVEL1", "Switched back to EDITOR mode");
     }
 
+    if (engine && engine->GetScriptSystem()) {
+        auto* em = engine->GetEntityManager();
+        auto entities = em->GetAllEntities();
+
+        for (auto entity : entities) {
+            if (em->HasComponent<ScriptComponent>(entity)) {
+                engine->GetScriptSystem()->UnloadScript(entity);
+            }
+        }
+    }
+
     // Clean All Entities
     if (engine && engine->GetEntityManager()) {
         auto entities = engine->GetEntityManager()->GetAllEntities();
+
         for (auto entity : entities) {
             engine->GetEntityManager()->DestroyEntity(entity);
         }

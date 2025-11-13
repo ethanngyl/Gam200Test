@@ -30,6 +30,8 @@
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Grid/GridTile.h"
+
+#include "ScriptSystem.h"
 namespace Framework
 {
     // Forward declaration
@@ -184,7 +186,7 @@ namespace Framework
 
         bool IsPlaying() const { return isPlaying; }
         void SetPlaying(bool value) { isPlaying = value; }
-
+        ScriptSystem* GetScriptSystem() { return scriptSystem; }
          //void GameLoop();
 
     private:
@@ -208,7 +210,7 @@ namespace Framework
         EventSystem* eventSystem;
         DamageIndicatorSystem* damageIndicator;
         PathfindingSystem* pathfindingSystem;
-
+        ScriptSystem* scriptSystem = nullptr;
 
         // state
         unsigned LastTime;

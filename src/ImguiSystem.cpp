@@ -240,23 +240,6 @@ namespace Framework {
                     continue;
                 }
             }
-
-            if (word == "TriangleCollider") {
-                float v0x, v0y, v1x, v1y, v2x, v2y;
-                if (iss >> v0x >> v0y >> v1x >> v1y >> v2x >> v2y)
-                {
-                    entityManager->AddComponent<Framework::TriangleCollider>(Entity);
-                    auto& triangleCollider = entityManager->GetComponent<Framework::TriangleCollider>(Entity);
-                    triangleCollider.v0 = Vector2D(v0x, v0y);
-                    triangleCollider.v1 = Vector2D(v1x, v1y);
-                    triangleCollider.v2 = Vector2D(v2x, v2y);
-                }
-                else {
-                    std::cerr << "[ImGuiError] parsing TriangleCollider at line " << lineNumber << "\n";
-                    continue;
-                }
-
-            }
             
         }
         return true;
@@ -289,7 +272,6 @@ namespace Framework {
             const bool hasAny = entityManager->HasComponent<Transform>(entity)
                 || entityManager->HasComponent<Sprite>(entity)
                 || entityManager->HasComponent<CircleCollider>(entity)
-                || entityManager->HasComponent<TriangleCollider>(entity)
                 || entityManager->HasComponent<BoxCollider>(entity);
 
             //if the component doesnt have any entity, skip this entity
@@ -359,16 +341,6 @@ namespace Framework {
                 auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
 				//write the radius and offset(x,y)
                 writeFile << "CircleCollider " << circleCollider.radius << " " << circleCollider.offset.x << " " << circleCollider.offset.y << "\n";
-            }
-
-			// this if else condition is to check if entity has trianglecollider component
-            if (entityManager->HasComponent<TriangleCollider>(entity)) {
-				// get reference to the trianglecollider component
-                auto& triangleCollider = entityManager->GetComponent<TriangleCollider>(entity);
-				//write the 3 vertices (x,y)W
-                writeFile << "TriangleCollider " << triangleCollider.v0.x << " " << triangleCollider.v0.y << " "
-                    << triangleCollider.v1.x << " " << triangleCollider.v1.y << " "
-                    << triangleCollider.v2.x << " " << triangleCollider.v2.y << "\n";
             }
 
             // add this blank line to separate this entity from the next entity
