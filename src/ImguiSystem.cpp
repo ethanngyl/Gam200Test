@@ -44,6 +44,9 @@ Safety:
 #include "EntitySpawner.h"
 #include "AudioSystem.h"
 #include "Pathfinding.h"
+#include <build/_deps/glfw-src/include/GLFW/glfw3.h>
+#include "PrefabEditor/PrefabSerializer.h"
+
 namespace Framework {
 
     ImGuiSystem::ImGuiSystem()
@@ -1085,6 +1088,70 @@ namespace Framework {
                     ImGui::DragFloat2("Direction##Dir", &movement.direction.x, 0.01f, -1.0f, 1.0f);
                     ImGui::DragFloat("Speed##Spd", &movement.moveSpeed, 0.01f, 0.0f, 2.0f);
                 }
+
+                //prefab save/export
+                static char prefabBuffer[128] = "";
+                ImGui::Separator();
+                ImGui::Text("Save Prefab:");
+                ImGui::SetNextItemWidth(160.0f);
+                ImGui::InputText("##PrefabName", prefabBuffer, IM_ARRAYSIZE(prefabBuffer));
+
+                std::string prefabName = prefabBuffer;
+                bool isEmpty = prefabName.empty();
+
+                ImGui::SameLine();
+                if (ImGui::Button("Export##ExportBtn")) {
+                    if (entity.IsValid()) {
+
+                        if (!isEmpty)
+                        {
+                            // mouse click → export
+                            PrefabSerializer::SavePrefab(*entityManager, entity, std::string(prefabName + ".prefab"));
+                            std::cout << prefabName << +".prefab saved.\n";
+
+                        }
+
+                        else
+                        {
+                            std::cout << "Prefab not saved. Input is empty.\n";
+                        }
+                    }
+
+                    else
+                    {
+                        std::cout << "Prefab not saved. Entity is invalid.\n";
+                    }
+
+                    memset(prefabBuffer, 0, 128);
+                }
+
+                //prefab load
+                static char prefabLoadBuffer[128] = "";
+                ImGui::Text("Load Prefab:");
+                ImGui::SetNextItemWidth(160.0f);
+                ImGui::InputText("##PrefabLoadName", prefabLoadBuffer, IM_ARRAYSIZE(prefabLoadBuffer));
+
+                std::string loadName = prefabLoadBuffer;
+                bool loadEmpty = loadName.empty();
+
+                ImGui::SameLine();
+                if (ImGui::Button("Load##LoadBtn")) {
+                    if (!loadEmpty) {
+                        std::string filePath = loadName + ".prefab";
+                        if (std::filesystem::exists(filePath)) {
+                            PrefabSerializer::LoadPrefab(*entityManager, filePath);
+                            std::cout << filePath << " loaded successfully.\n";
+                        }
+                        else {
+                            std::cout << "File not found: " << filePath << "\n";
+                        }
+                    }
+                    else {
+                        std::cout << "Prefab name is empty.\n";
+                    }
+                    memset(prefabLoadBuffer, 0, 128);
+                }
+
 
                 ImGui::Separator();
 
