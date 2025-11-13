@@ -139,10 +139,6 @@ namespace Framework {
         bool hasDestroy = HasLuaFunction("OnDestroy");
 
         LOG_INFO("LevelLoader", "  Functions found:");
-        LOG_INFO("LevelLoader", "    OnInit: %s", hasInit ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnUpdate: %s", hasUpdate ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnDraw: %s", hasDraw ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnDestroy: %s", hasDestroy ? "✓" : "✗");
 
         if (!hasInit) {
             LOG_WARN("LevelLoader", "Level missing OnInit() function!");
