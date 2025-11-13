@@ -210,7 +210,7 @@ namespace Framework {
             return 1;
         }
 
-        // ✅ FIXED: Map to Framework::KeyCode (from Input.h)
+        // Map to Framework::KeyCode (from Input.h)
         KeyCode keyCode = KEY_UNKNOWN;
 
         // Letters
