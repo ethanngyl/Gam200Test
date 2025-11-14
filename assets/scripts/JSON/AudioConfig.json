@@ -1,0 +1,35 @@
+{
+    "sounds": [
+        {
+            "name": "leaves",
+            "filepath": "assets/leaves.wav",
+            "volume": 1,
+            "preload": true
+        },
+        {
+            "name": "mmbgm",
+            "filepath": "assets/Moron3MenuMusic.wav",
+            "volume": 0.8,
+            "preload": true,
+            "loop": true
+        },
+        {
+            "name": "bgm",
+            "filepath": "assets/Moron3BGM.wav",
+            "volume": 0.8,
+            "preload": true,
+            "loop": true
+        },
+        {
+            "name": "shooting",
+            "filepath": "assets/shooting.wav",
+            "volume": 1,
+            "preload": true
+        }
+    ],
+    "settings": {
+        "masterVolume": 1,
+        "musicVolume": 0.8,
+        "sfxVolume": 1
+    }
+}
