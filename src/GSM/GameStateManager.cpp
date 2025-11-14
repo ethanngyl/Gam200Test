@@ -1,22 +1,8 @@
 ﻿/*
 ===============================================================================
- File:          GameStateManager.cpp
- Author:        GE YONGQI
- Email:         yongqi.ge@digipen.edu
- Date:          2025-10-31
- Contribution:  100%
- ------------------------------------------------------------------------------
-  Game State Manager (implementation)
-
-  Responsibilities:
-     - Maintains current, previous, and next game states
-     - Maps each state to its respective function pointer set
-     - Handles GSM_Initialize() and GSM_Update() logic
-
-  Design notes:
-     - Supports modular state transitions (main menu, levels, quit, etc.)
-     - Logs all transitions for debugging via Log system
-     - Function pointers are reset on invalid or undefined states
+ File:          GameStateManager.cpp (With F9 Hot Reload)
+ Features:      1. Lua-scripted menu states
+                2. F9 hot reload support for instant script updates
 ===============================================================================
 */
 
@@ -49,6 +35,7 @@ void GSM_Initialize(int startingState)
     current = previous = next = startingState;
     LOG_INFO("GSM", "Game State Manager initialized with state: %d", startingState);
     LOG_INFO("GSM", "Using LUA-SCRIPTED MainMenu (Pure Lua mode)");
+    LOG_INFO("GSM", "Press F9 to hot reload Lua scripts");
 }
 
 void GSM_Update()
@@ -66,7 +53,6 @@ void GSM_Update()
         fpLoad = []() {
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
-            // FIX: Get reference outside of nested calls
             auto& loader = Framework::LevelLoader::GetInstance();
             bool success = loader.LoadLevel("assets/scripts/MainMenuLevel.lua");
 
@@ -94,9 +80,17 @@ void GSM_Update()
             // Get engine pointer
             extern Framework::CoreEngine* engine;
 
+            // F9 Hot Reload Support
+            if (engine && engine->GetInputSystem()) {
+                auto* input = engine->GetInputSystem();
+                if (input->IsKeyPressed(Framework::KEY_F9)) {
+                    LOG_INFO("GSM", "F9 pressed - Hot reloading MainMenu...");
+                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
+                }
+            }
+
             // Call Lua OnUpdate(dt)
             Framework::LevelLoader::GetInstance().UpdateCurrentLevel(0.016f);
-
             };
 
         // ====================================================================
@@ -131,7 +125,6 @@ void GSM_Update()
         fpLoad = []() {
             LOG_INFO("GSM", "Loading LevelSelect Lua script...");
 
-            // Get reference outside of nested calls
             auto& loader = Framework::LevelLoader::GetInstance();
             bool success = loader.LoadLevel("assets/scripts/LevelSelectLevel.lua");
 
@@ -156,6 +149,18 @@ void GSM_Update()
         // UPDATE
         // ====================================================================
         fpUpdate = []() {
+            // Get engine pointer
+            extern Framework::CoreEngine* engine;
+
+            // F9 Hot Reload Support
+            if (engine && engine->GetInputSystem()) {
+                auto* input = engine->GetInputSystem();
+                if (input->IsKeyPressed(Framework::KEY_F9)) {
+                    LOG_INFO("GSM", "F9 pressed - Hot reloading LevelSelect...");
+                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
+                }
+            }
+
             // Call Lua OnUpdate(dt)
             Framework::LevelLoader::GetInstance().UpdateCurrentLevel(0.016f);
             };

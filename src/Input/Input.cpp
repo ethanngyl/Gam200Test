@@ -89,6 +89,9 @@ namespace Framework
         UpdateKeyState(KEY_9, GetAsyncKeyState(KEY_9));
         UpdateKeyState(KEY_0, GetAsyncKeyState(KEY_0));
 
+        // Function keys 
+        UpdateKeyState(KEY_F9, GetAsyncKeyState(KEY_F9)); 
+
         // Mouse buttons
         UpdateKeyState(MOUSE_LEFT, GetAsyncKeyState(MOUSE_LEFT));
         UpdateKeyState(MOUSE_RIGHT, GetAsyncKeyState(MOUSE_RIGHT));
