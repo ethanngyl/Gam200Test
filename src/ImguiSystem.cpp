@@ -380,63 +380,6 @@ namespace Framework {
     }
 
     // ============================================================================
-    // This is the function to handfle files drop onto the window
-    // author: jiahao zhou 
-    // ============================================================================
-    void ImGuiSystem::OnFileDrop(int count, const char** paths) {
-		//loop through all dropped files
-        for (int i = 0; i < count; ++i) {
-			// convert the file path to std::filesystem::path for easier checks
-			std::filesystem::path path(paths[i]);
-			//if the file is a level file(txt)
-            if (IsLevelFile(path)) {
-				//try to open the level file
-                bool isOpen = OpenLevelFromTxt(path.string(), true);
-				// if opened successfully, record the current level path
-                if (isOpen) {
-                    currentLevelPath = path.string();
-                    std::cout << "[Drop] Opened level file: " << currentLevelPath << "\n";
-                }
-                //else show error message
-                else {
-                    std::cerr << "[DropError] Unsupported file type: " << path << "\n";
-                }
-				//move to next dropped file
-                continue;
-            }
-
-			//check if the file is a texture file(jpg/png/jpeg)
-            if (IsTextureFile(path)) {
-				//make sure entity spawner is valid
-                if (!entitySpawner) {
-					//if not valid, show error message and skip this file
-					std::cerr << "[DropError] Missing EntitySpawner, cannot spawn sprite" << "\n";
-                    continue;
-                }
-
-				//get the file name, (e.g. "bird.png") to use as label
-                std::string label = path.filename().string();
-                //if the filePath is just label, somehow the entity spawner unable to spawn the sprite
-				//after asking help from ASC TAs, they suggest need to add "assets/" in-front of the label
-                std::string filePath = std::string("assets/") + label;
-
-				//spawn the sprite as an entity using entity spawner
-                Framework::Entity entity = entitySpawner->SpawnSprite(
-                    filePath,
-                    Vector2D(0.0f, 0.0f),
-                    Vector2D(1.0f, 1.0f)
-				);
-                std::cout << "[Drop] Spawned sprite from: " << path << " as entity" << entity.id << "\n";
-				//move to next dropped file
-				continue;
-            }
-
-			std::cerr << "[DropError] Unsupported file type: " << path << "\n";
-        }
-
-    }
-
-    // ============================================================================
 	// This is the function to check if the file is a level file
     // author: jiahao.zhou@digipen
     // ============================================================================
@@ -468,75 +411,46 @@ namespace Framework {
     // author: jiahao.zhou@digipen
     // ============================================================================
     void ImGuiSystem::ShowAssetsWindow() {
-		//set the window size and condition
-        //ImGui::SetNextWindowSize(ImVec2(320.0f, 420.0f), ImGuiCond_FirstUseEver);
-		// begin the window, return if the window is closed
+        // Begin always needs an End, regardless of return value
         if (!ImGui::Begin("Assets##Assets", &showAssets))
         {
-			// I learned from ASC TA that need to call End() even if the window is collapsed/closed
-            ImGui::End();
-			// stop drawing this window
-            return;
+            ImGui::End();  // Still need to call End even when collapsed
+            return;        // But return early - don't draw content
         }
 
-		//draw the current path as separator text
+        // Draw separator and back button
         ImGui::SeparatorText(currentpath.string().c_str());
-		// draw back button aligned to the right
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - 10);
 
-		//Draw back button
         if (ImGui::Button("<##Back")) {
-			// go back to previous path only if not in root path
             if (currentpath != rootpath) {
-				// if previous path is not empty, go back to previous path
                 if (!previouspath.empty()) {
-                    
                     currentpath = previouspath;
-					// update previous path to its parent path
                     previouspath = currentpath.parent_path();
                 }
             }
-
         }
-		// loop through all files and directories in the current path
+
+        // Loop through directory entries
         for (auto const& e : std::filesystem::directory_iterator(currentpath)) {
-
-			// get the file path and label
             auto const path = e.path();
-			// get only the filename part as label
             std::string const label = path.filename().string();
-			// create ImGui label, add "->" prefix if it is a directory
             std::string const ImGuilabel = e.is_directory() ? "->" + label : label;
-            //std::string const fullPath = path.string();
             std::string filePath = "assets/" + label;
-			// create selectable item for the file/directory    
-            if (ImGui::Selectable(ImGuilabel.c_str())) {
 
-				//if it is a folder, navigate into the folder
+            if (ImGui::Selectable(ImGuilabel.c_str())) {
                 if (e.is_directory()) {
-					// store the current path as previous path
                     previouspath = currentpath;
-					// navigate into the folder
                     currentpath = e;
                 }
-                //if its a texture file, spawn a sprite entity
-                if (IsTextureFile(path) && entitySpawner) {
-                    
-                    std::string filePath = "assets/" + label;
-                    //entitySpawner->SpawnSprite(filePath, Vector2D(0.0f, 0.0f));
-
-                }
-				// Otherwise, if it is a level file, open the level file
                 else if (IsLevelFile(path)) {
                     OpenLevelFromTxt(filePath, true);
                 }
             }
 
-            //drag and drop asset window
-			// only allow drag and drop for texture files
+            // Texture drag-drop
             if (IsTextureFile(path))
             {
-                //making it double click for now until we add drag and drop target
                 if (ImGui::IsItemHovered()) {
                     if (ImGui::IsMouseDoubleClicked(0)) {
                         if (entitySpawner) {
@@ -545,28 +459,22 @@ namespace Framework {
                                 Vector2D(0.0f, 0.0f),
                                 Vector2D(1.0f, 1.0f)
                             );
-                            std::cout << "[Drop] Spawned sprite from: " << filePath << " as entity" << entity.id << "\n";
+                            std::cout << "[Drop] Spawned sprite from: " << filePath
+                                << " as entity" << entity.id << "\n";
                         }
                     }
-
                 }
 
-				// begin drag drop source
-
                 if (ImGui::BeginDragDropSource()) {
-					// put a payload of type "Sprite" into the drag drop source
                     ImGui::SetDragDropPayload("Sprite", &label, label.size());
-					// display the label while dragging
                     ImGui::Text(label.c_str());
-					// end drag drop source
                     ImGui::EndDragDropSource();
                 }
             }
         }
-    
-		ImGui::End();
-    }
 
+        ImGui::End();  // Only one End() call at the very end
+    }
 
     void ImGuiSystem::Update(float dt)
     {
@@ -1212,12 +1120,27 @@ namespace Framework {
             }
         }
 
-        //ImGui::BeginDisabled();
-        //{
-        //    auto p = graphicsSystem->GetCamera().GetPosition();
-        //    ImGui::DragFloat2("Cam Pos", glm::value_ptr(p));
-        //}
-        //ImGui::EndDisabled();
+        ImGui::Separator();
+        ImGui::Text("Quick Audio Test Zone");
+        ImGui::Text("(Drag audio files here to play)");
+
+        // Create a colored button as drop target
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.8f, 0.4f));
+        ImGui::Button("Drop Audio Here##AudioDropZone", ImVec2(-1, 60));
+        ImGui::PopStyleColor();
+
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Audio")) {
+                const char* audioName = static_cast<const char*>(payload->Data);
+
+                std::cout << "[Spawner] Playing dropped audio: " << audioName << "\n";
+
+                if (audioSystem) {
+                    audioSystem->PlaySound(audioName, false);
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
 
         ImGui::End();
     }
@@ -1258,4 +1181,245 @@ namespace Framework {
         ImGui::End();
     }
 
+
+
+    bool ImGuiSystem::IsAudioFile(const std::filesystem::path& path) const {
+        if (!path.has_extension()) {
+            return false;
+        }
+
+        auto ext = path.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+        // Accept .wav format
+        return ext == ".wav";
+    }
+
+    // ============================================================================
+    // Updated OnFileDrop to handle audio files
+    // author: Ethan Ng (modification)
+    // ============================================================================
+    void ImGuiSystem::OnFileDrop(int count, const char** paths) {
+        std::cout << "\n[FileDrop] Received " << count << " file(s)\n";
+
+        for (int i = 0; i < count; ++i) {
+            std::filesystem::path path(paths[i]);
+            std::cout << "[FileDrop] Processing: " << path.filename() << "\n";
+
+            // Handle level files
+            if (IsLevelFile(path)) {
+                bool isOpen = OpenLevelFromTxt(path.string(), true);
+                if (isOpen) {
+                    currentLevelPath = path.string();
+                    std::cout << "[FileDrop]  Loaded level\n";
+                }
+                else {
+                    std::cerr << "[FileDrop] ❌ Failed to load level\n";
+                }
+                continue;
+            }
+
+            // Handle texture files
+            if (IsTextureFile(path)) {
+                if (!entitySpawner) {
+                    std::cerr << "[FileDrop] ❌ EntitySpawner not available\n";
+                    continue;
+                }
+
+                std::string label = path.filename().string();
+                std::string filePath = std::string("assets/") + label;
+
+                Framework::Entity entity = entitySpawner->SpawnSprite(
+                    filePath,
+                    Vector2D(0.0f, 0.0f),
+                    Vector2D(1.0f, 1.0f)
+                );
+                std::cout << "[FileDrop]  Spawned sprite as entity " << entity.id << "\n";
+                continue;
+            }
+
+            // ====================================================================
+            // Handle AUDIO files - AUTOMATIC JSON UPDATE
+            // ====================================================================
+            std::string errorMsg;
+            if (IsAudioFileSupported(path, errorMsg)) {
+                if (!audioSystem) {
+                    std::cerr << "[FileDrop] ❌ AudioSystem not available\n";
+                    continue;
+                }
+
+                std::string audioName = path.stem().string();
+                std::string fileName = path.filename().string();
+
+                std::cout << "[FileDrop]  Valid audio file: " << audioName << ".wav\n";
+
+                // Copy file to assets folder
+                std::filesystem::path destPath = std::filesystem::path("assets") / fileName;
+
+                if (!std::filesystem::exists(destPath)) {
+                    try {
+                        std::filesystem::copy_file(path, destPath);
+                        std::cout << "[FileDrop] Copied to: " << destPath << "\n";
+                    }
+                    catch (const std::exception& e) {
+                        std::cerr << "[FileDrop] ❌ Failed to copy: " << e.what() << "\n";
+                        continue;
+                    }
+                }
+                else {
+                    std::cout << "[FileDrop] File already in assets\n";
+                }
+
+                // Add to audio.json
+                bool added = AddAudioToJSON(audioName, fileName);
+
+                if (added) {
+                    std::cout << "[FileDrop]  Added to audio.json\n";
+
+                    // Reload audio system
+                    audioSystem->ReloadAudioLibrary();
+                    std::cout << "[FileDrop]  Audio library reloaded\n";
+
+                    // Play new audio
+                    audioSystem->PlaySound(audioName.c_str(), false);
+                    std::cout << "[FileDrop]  Playing: " << audioName << "\n";
+                }
+                else {
+                    std::cerr << "[FileDrop] ❌ Failed to add to audio.json\n";
+                }
+
+                continue;
+            }
+
+            // Unsupported format - show error
+            auto ext = path.extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+            if (ext == ".ogg" || ext == ".mp3" || ext == ".txt" ||
+                ext == ".flac" || ext == ".aiff" || ext == ".aac" || ext == ".m4a") {
+
+                std::cout << "[FileDrop] ❌ Unsupported format: " << ext << "\n";
+                audioErrorMessage = errorMsg;
+                showAudioErrorPopup = true;
+                continue;
+            }
+
+            std::cerr << "[FileDrop] ❌ Unsupported file type\n";
+        }
+
+        std::cout << "[FileDrop] Processing complete\n\n";
+    }
+
+    bool ImGuiSystem::IsAudioFileSupported(const std::filesystem::path& path, std::string& errorMsg) const {
+        if (!path.has_extension()) {
+            errorMsg = "File has no extension";
+            return false;
+        }
+
+        auto ext = path.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+        // Check if it's .wav (supported)
+        if (ext == ".wav") {
+            return true;
+        }
+
+        // Reject other formats
+        if (ext == ".ogg") {
+            errorMsg = "Unsupported audio format: .ogg\n\nPlease use .wav format instead.";
+            return false;
+        }
+
+        if (ext == ".mp3") {
+            errorMsg = "Unsupported audio format: .mp3\n\n";
+            errorMsg += "Please use .wav format instead.\n\n";
+            errorMsg += "To convert:\n";
+            errorMsg += "1. Use Audacity or online converter\n";
+            errorMsg += "2. Export as WAV\n";
+            errorMsg += "3. Drag the .wav file into the editor";
+            return false;
+        }
+
+        if (ext == ".txt") {
+            errorMsg = "Invalid file type: .txt\n\n";
+            errorMsg += "This is a text file, not an audio file.\n\n";
+            errorMsg += "Please drag an audio file (.wav format)";
+            return false;
+        }
+
+        // Other formats
+        errorMsg = "Unsupported audio format: " + ext + "\n\n";
+        errorMsg += "Only .wav format is supported.";
+        return false;
+    }
+
+    bool ImGuiSystem::AddAudioToJSON(const std::string& audioName, const std::string& fileName) {
+        const std::string jsonPath = "assets/audio.json";
+
+        std::cout << "[JSON] Opening: " << jsonPath << "\n";
+
+        // Read existing JSON
+        std::ifstream readFile(jsonPath);
+
+        if (!readFile.is_open()) {
+            std::cerr << "[JSON] ❌ Could not open audio.json for reading\n";
+            return false;
+        }
+
+        std::stringstream buffer;
+        buffer << readFile.rdbuf();
+        readFile.close();
+
+        std::string jsonContent = buffer.str();
+
+        // Check if audio already exists
+        if (jsonContent.find("\"" + audioName + "\"") != std::string::npos) {
+            std::cout << "[JSON] Audio '" << audioName << "' already exists in JSON\n";
+            return true;
+        }
+
+        // Find where to insert
+        size_t lastBrace = jsonContent.rfind('}');
+        if (lastBrace == std::string::npos) {
+            std::cerr << "[JSON] ❌ Malformed JSON - no closing brace\n";
+            return false;
+        }
+
+        size_t insertPos = jsonContent.rfind(',', lastBrace);
+
+        // Build new entry
+        std::string newEntry = ",\n    \"" + audioName + "\": \"" + fileName + "\"";
+
+        if (insertPos == std::string::npos) {
+            size_t openBrace = jsonContent.find('{');
+            if (openBrace != std::string::npos) {
+                insertPos = openBrace;
+                newEntry = "\n    \"" + audioName + "\": \"" + fileName + "\"";
+            }
+            else {
+                std::cerr << "[JSON] ❌ Malformed JSON - no opening brace\n";
+                return false;
+            }
+        }
+
+        // Insert new entry
+        jsonContent.insert(insertPos + 1, newEntry);
+
+        std::cout << "[JSON] Adding entry: \"" << audioName << "\": \"" << fileName << "\"\n";
+
+        // Write updated JSON
+        std::ofstream writeFile(jsonPath);
+
+        if (!writeFile.is_open()) {
+            std::cerr << "[JSON] ❌ Could not open audio.json for writing\n";
+            return false;
+        }
+
+        writeFile << jsonContent;
+        writeFile.close();
+
+        std::cout << "[JSON]  Successfully updated audio.json\n";
+
+        return true;
+    }
 } // namespace Framework
