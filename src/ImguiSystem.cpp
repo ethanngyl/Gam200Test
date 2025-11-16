@@ -61,6 +61,8 @@ namespace Framework {
         , entityCount(0)
         , showAssets(true)
         , graphicsSystem(nullptr)
+        , showAudioErrorPopup(false)        
+        , audioErrorMessage("")
     {
     }
 
@@ -813,6 +815,40 @@ namespace Framework {
             }
             ImGui::EndPopup();
         }
+
+        if (showAudioErrorPopup) {
+            ImGui::OpenPopup("Audio Format Error##AudioError");
+            showAudioErrorPopup = false;
+        }
+
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(550.0f, 350.0f), ImGuiCond_Appearing);
+        ImGui::PushStyleColor(ImGuiCol_TitleBg, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(1.0f, 0.3f, 0.3f, 1.0f));
+
+        if (ImGui::BeginPopupModal("Audio Format Error##AudioError", nullptr,
+            ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+
+            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "⚠️ ERROR");
+            ImGui::Separator();
+            ImGui::Spacing();
+            ImGui::TextWrapped("%s", audioErrorMessage.c_str());
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            float buttonWidth = 120.0f;
+            ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x - buttonWidth) * 0.5f);
+
+            if (ImGui::Button("OK##AudioErrorOK", ImVec2(buttonWidth, 0))) {
+                audioErrorMessage.clear();
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::PopStyleColor(2);
 
         // Show windows
         if (showEntityInspector) ShowEntityInspector();
