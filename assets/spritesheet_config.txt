@@ -1,0 +1,3 @@
+names=Doraemon,Bird
+files=assets/anim_doraemon.txt,assets/anim_bird.txt
+keys=M,N

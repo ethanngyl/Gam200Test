@@ -161,4 +161,104 @@ namespace Framework {
 		// Animation system currently does not react to messages.
 		(void)message; // silence unused variable warning
 	}
+
+	void AnimationSystem::LoadAnimationConfig(const std::string& configPath) {
+		ConfigReader::LoadConfig(configPath);
+
+		std::string names = ConfigReader::GetString("names", "");
+		std::string files = ConfigReader::GetString("files", "");
+		std::string keys = ConfigReader::GetString("keys", "");	
+
+		// Parse comma-separated values
+		std::istringstream nameStream(names);
+		std::istringstream fileStream(files);
+		std::istringstream keyStream(keys);
+		std::string name, file, keyStr;
+		while (std::getline(nameStream, name, ',') &&
+			std::getline(fileStream, file, ',') &&
+			std::getline(keyStream, keyStr, ','))
+		{
+			AnimEntry entry;
+			entry.name = name;
+			entry.file = file;
+			entry.key = keyStr.empty() ? 0 : keyStr[0];
+			animEntries.push_back(entry);
+			LOG_INFO("ANIM", "Added animation: name=%s file=%s key=%c",
+				entry.name.c_str(),
+				entry.file.c_str(),
+				entry.key);
+		}
+		LOG_INFO("ANIM", "Total animations loaded: %zu", animEntries.size());
+	}
+
+	void AnimationSystem::LoadAnimation(Entity e, SpriteAnimation& anim, GraphicsSystemV2* gfx, const std::string& configPath) {
+		// Load the animation config (anim_doraemon.txt or anim_bird.txt)
+		ConfigReader::LoadConfig(configPath);
+
+		LOG_INFO("ANIM", "Loading animation config: %s", configPath.c_str());
+
+		// ----------------------------
+		// 1. Load the REAL sprite sheet
+		// ----------------------------
+		std::string spritePath = ConfigReader::GetString("sprite", "");
+
+		if (spritePath.empty())
+		{
+			LOG_ERROR("ANIM", "Config %s has no 'sprite =' entry!", configPath.c_str());
+			return;
+		}
+
+		TextureHandle tex = gfx->GetResourceManager().LoadTexture(spritePath);
+
+		// Set sprite sheet texture
+		anim.spriteSheet = tex;
+
+		// ----------------------------
+		// 2. Load other animation data
+		// ----------------------------
+		anim.rows = ConfigReader::GetInt("rows", 1);
+		anim.columns = ConfigReader::GetInt("columns", 1);
+		anim.frameCount = ConfigReader::GetInt("frameCount", 1);
+		anim.frameTime = ConfigReader::GetFloat("frameTime", 0.1f);
+		anim.loop = ConfigReader::GetBool("loop", true);
+		anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
+
+		// Retrieve actual Texture* from ResourceManager
+		Framework::Texture* realTex = gfx->GetResourceManager().GetTexture(tex);
+
+		if (!realTex)
+		{
+			LOG_ERROR("ANIM", "Texture pointer is NULL for %s", spritePath.c_str());
+			anim.frameWidth = anim.frameHeight = 0;
+		}
+		else
+		{
+			anim.frameWidth = realTex->GetWidth() / anim.columns;
+			anim.frameHeight = realTex->GetHeight() / anim.rows;
+		}
+
+		anim.currentFrame = 0;
+		anim.elapsedTime = 0;
+
+		// ----------------------------
+		// 3. UPDATE RENDERABLE TEXTURE
+		// ----------------------------
+		if (entityManager->HasComponent<Renderable>(e))
+		{
+			auto& rend = entityManager->GetComponent<Renderable>(e);
+
+			LOG_INFO("ANIM", "Updating Renderable.texture for entity %d", (int)e.id);
+			LOG_INFO("ANIM", "Old TextureHandle: %d", rend.texture);
+			LOG_INFO("ANIM", "New TextureHandle: %d", tex);
+
+			rend.texture = tex;
+		}
+		else
+		{
+			LOG_WARN("ANIM", "Entity %d has no Renderable component!", (int)e.id);
+		}
+
+		LOG_INFO("ANIM", "Switched animation to %s (config=%s)",
+			spritePath.c_str(), configPath.c_str());
+	}
 }

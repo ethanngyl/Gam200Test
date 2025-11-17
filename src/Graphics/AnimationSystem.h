@@ -64,6 +64,13 @@ namespace Framework {
      */
 	class AnimationSystem : public EngineSystem {
 	public:
+        struct AnimEntry {
+            std::string name;
+            std::string file;
+			int key;
+        };
+		std::vector<AnimEntry> animEntries;
+
         /**
         ===============================================================================
          * @brief Constructor - Initializes animation system with default values
@@ -151,6 +158,10 @@ namespace Framework {
         ===============================================================================
          */
 		void SetEntityManager(Framework::EntityManager* em) { entityManager = em; }
+
+        void LoadAnimationConfig(const std::string& configPath);
+
+        void LoadAnimation(Entity e, SpriteAnimation& anim, GraphicsSystemV2* gfx, const std::string& configPath);
 
 	private:
         // ==================== ANIMATION DATA MEMBERS ====================
