@@ -1,40 +1,35 @@
 /*
 ===============================================================================
- File:          GameStateList.h
+ File:          MainMenu.h
  Author:        GE YONGQI
  Email:         yongqi.ge@digipen.edu
  Date:          2025-10-31
  Contribution:  100%
  ------------------------------------------------------------------------------
-  Game state enumeration list
+  Main menu state (header)
 
-  Purpose:
-     Defines all available game states used by the Game State Manager (GSM).
+  Responsibilities:
+     - Declares lifecycle functions for the Main Menu state
+     - Used by the Game State Manager (GSM) for transitions
 
   Notes:
-     - Each enumerator corresponds to a unique game flow state.
-     - Add new states here before extending GSM logic.
+     - Menu buttons are managed globally through the UISystem
+     - All six standard GSM lifecycle functions are defined elsewhere
 ===============================================================================
 */
 
 
 #pragma once
+#include "Precompiled.h"
+
 
 // ============================================================================
-// GAME STATES ENUM
+// MAIN MENU STATE FUNCTIONS
 // ============================================================================
-enum GS_STATES
-{
-    mainMenu = 0,
-    settingsMenu,
-    Level_select,
-    LEVEL_1,
-    LEVEL_2,
-    LEVEL_3,
-    TUTORIAL,
-    GS_QUIT,
-    GS_RESTART,
-    LevelSelectionMenu,
-    Copyright,
-    Credits
-};
+
+void mainMenu_Load();
+void mainMenu_Initialize();
+void mainMenu_Update();
+void mainMenu_Draw();
+void mainMenu_Free();
+void mainMenu_Unload();

@@ -30,7 +30,6 @@
 #include "Event/Event.h"
 #include "Event/DamageIndicatorSystem.h"
 #include "ScriptSystem.h"
-#include "LevelLoader.h"
 
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
@@ -113,12 +112,6 @@ namespace Framework
                 }
             }
 
-
-            LOG_INFO("CORE", "================================================");
-            LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
-            LOG_INFO("CORE", "================================================");
-
-            LevelLoader::GetInstance().Initialize(this);
 
             LOG_INFO("CORE", "================================================");
             LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
@@ -297,9 +290,6 @@ namespace Framework
         LOG_INFO("CORE", "================================================");
         LOG_INFO("CORE", " CoreEngine: Cleaning Up");
         LOG_INFO("CORE", "================================================");
-
-        LOG_INFO("CORE", "Shutting down LevelLoader...");
-        LevelLoader::GetInstance().Shutdown();
 
         // Stop all audio before destroying systems
         if (audioSystem) {
