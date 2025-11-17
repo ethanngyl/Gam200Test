@@ -88,7 +88,7 @@ namespace Framework {
 
      Responsibilities:
      - Tracks animation timing, looping, and playback state
-     - Stores sprite sheet layout (rows ?columns)
+     - Stores sprite sheet layout (rows × columns)
      - Defines frame dimensions for UV slicing
      - Supports horizontal flipping and UV shrink adjustments
 
@@ -119,7 +119,7 @@ namespace Framework {
         /** Number of frames used by this animation (may be less than total cells). */
         int frameCount = 1;
 
-        /** Total number of frames in the sprite sheet (rows ?columns). */
+        /** Total number of frames in the sprite sheet (rows × columns). */
         int totalFrames = 0;
 
         /** Number of horizontal cells (columns) in the sprite sheet. */
@@ -136,7 +136,7 @@ namespace Framework {
 
         /**
          * UV shrink value (in pixels) to reduce edge bleeding between frames.
-         * Typically a small fraction of a pixel (e.g., 0.5?.0).
+         * Typically a small fraction of a pixel (e.g., 0.5–1.0).
          */
         float uvShrinkPx = 0.0f;
 

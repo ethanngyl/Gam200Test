@@ -299,20 +299,6 @@ macro(import_lua)
     endif()
 endmacro()
 
-# Macro to import nlohmann/json
-macro(import_nlohmann_json)
-    if(NOT TARGET nlohmann_json)
-        message(STATUS "Importing nlohmann/json...")
-        FetchContent_Declare(
-            nlohmann_json
-            GIT_REPOSITORY https://github.com/nlohmann/json.git
-            GIT_TAG v3.11.3
-        )
-        FetchContent_MakeAvailable(nlohmann_json)
-        message(STATUS "nlohmann/json imported successfully")
-    endif()
-endmacro()
-
 # Main function to import all dependencies
 function(importDependencies)
     message(STATUS "=== Importing Dependencies ===")
@@ -326,6 +312,5 @@ function(importDependencies)
     import_stb()
     import_fmod()
     import_lua()
-    import_nlohmann_json()
     message(STATUS "=== All Dependencies Imported ===")
 endfunction()

@@ -11,8 +11,6 @@
 #include "Audio/AudioSystem.h"
 #include "GraphicsSystemV2.h"
 #include "Input.h"
-#include "LevelLoader_JSON.h"
-
 
 namespace Framework {
 
@@ -210,7 +208,7 @@ namespace Framework {
             return 1;
         }
 
-        // ✅ FIXED: Map to Framework::KeyCode (from Input.h)
+        // Map to Framework::KeyCode (from Input.h)
         KeyCode keyCode = KEY_UNKNOWN;
 
         // Letters
@@ -251,24 +249,5 @@ namespace Framework {
         lua_pushboolean(L, pressed);
         return 1;
     }
-
-    int LevelLoader::Lua_LoadJSON(lua_State* L) {
-        const char* filepath = luaL_checkstring(L, 1);
-
-        LOG_INFO("LevelLoader", "Loading JSON file: %s", filepath);
-
-        // Load JSON and convert to Lua table
-        bool success = LevelLoaderJSON::LoadJSONToLua(L, filepath);
-
-        if (!success) {
-            LOG_ERROR("LevelLoader", "Failed to load JSON: %s", filepath);
-            lua_pushnil(L);
-            return 1;
-        }
-
-        LOG_INFO("LevelLoader", "JSON successfully loaded as Lua table");
-        return 1;
-    }
-
 
 } // namespace Framework

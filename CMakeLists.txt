@@ -78,7 +78,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     fmod
     Freetype::Freetype
     lua_static  
-    nlohmann_json::nlohmann_json
 )
 
 # Mark shaders as non-compiled

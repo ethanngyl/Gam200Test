@@ -66,7 +66,7 @@ void GSM_Update()
         fpLoad = []() {
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
-            // FIX: Get reference outside of nested calls
+            // Get reference outside of nested calls
             auto& loader = Framework::LevelLoader::GetInstance();
             bool success = loader.LoadLevel("assets/scripts/MainMenuLevel.lua");
 

@@ -151,9 +151,6 @@ namespace Framework {
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
 
-        // JSON API
-        static int Lua_LoadJSON(lua_State* L);
-
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

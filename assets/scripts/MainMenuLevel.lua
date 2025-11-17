@@ -1,45 +1,73 @@
 ﻿-- ============================================================================
--- MainMenuLevel.lua (JSON Configuration Version)
--- Complete Main Menu Level Script with JSON-driven configuration
+-- MainMenuLevel.lua
+-- Complete Main Menu Level Script
 -- ============================================================================
--- This version loads all UI configuration from a JSON file, making it
--- easy for designers to modify the UI without touching Lua code.
+-- This script replaces the hardcoded MainMenu C++ logic with a Lua-driven
+-- approach. It demonstrates how entire game states can be scripted.
 --
--- Author:  GE YONGQI
--- Email:   yongqi.ge@digipen.edu
--- Date:    2025-11-13
+-- Author: GE YONGQI
+-- Date: 2025-11-13
 -- ============================================================================
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
 -- ============================================================================
 
-local buttonIDs = {}
+local playButtonID = 0
+local exitButtonID = 0
 local initialized = false
-local config = nil
+
+-- Audio settings
+local menuMusicName = "mmbgm"
+local menuMusicVolume = 1.0
+
+-- UI Configuration (can be loaded from JSON in the future)
+local uiConfig = {
+    playButton = {
+        texture = "assets/Ui_btn.png",
+        posX = 0.0,
+        posY = 0.3,
+        scaleX = 1.0,
+        scaleY = 0.5,
+        textContent = "Play",
+        textOffsetX = -60.0,
+        textOffsetY = -24.0
+    },
+    
+    exitButton = {
+        texture = "assets/Ui_btn.png",
+        posX = 0.0,
+        posY = -0.3,
+        scaleX = 1.0,
+        scaleY = 0.5,
+        textContent = "Exit",
+        textOffsetX = -50.0,
+        textOffsetY = -24.0
+    },
+    
+    text = {
+        font = "Sans48",
+        scale = 1.0,
+        colorR = 1.0,
+        colorG = 1.0,
+        colorB = 1.0
+    }
+}
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit()
-    Log("MainMenu Level Script Initialized (JSON Version)")
-    Log("Loading configuration from JSON file...")
+    Log("MainMenu Level Script Initialized")
+    Log("This is a fully Lua-scripted game state!")
     
-    -- Load configuration from JSON
-    config = LoadJSON("assets/scripts/JSON/mainmenu_config.json")
+    -- Load configuration from file (future enhancement)
+    -- LoadConfigFromJSON("assets/config/mainmenu.json")
     
-    if not config then
-        Log("ERROR: Failed to load JSON configuration!")
-        return
-    end
-    
-    Log("Successfully loaded configuration for: " .. config.menu.name)
-    
-    -- Apply camera settings from JSON
-    local cam = config.menu.camera
-    SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
-    SetCameraZoom(cam.zoom)
+    -- Set camera position for menu
+    SetCameraPosition(0.0, 0.0, 0.0)
+    SetCameraZoom(1.0)
     
     -- Disable ImGui overlay
     DisableImGui()
@@ -47,60 +75,58 @@ function OnInit()
     -- Set engine to editor mode (non-playing)
     SetEnginePlayState(false)
     
-    -- Start menu background music from JSON config
-    local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
-    Log("Playing menu music: " .. music.name)
+    -- Start menu background music
+    PlaySound(menuMusicName, true, menuMusicVolume)
+    Log("Playing menu music: " .. menuMusicName)
     
     -- Clear any existing UI from previous states
     ClearAllButtons()
     
-    -- Create UI buttons from JSON config
-    CreateButtonsFromConfig()
+    -- Create UI buttons
+    CreateMenuButtons()
     
     initialized = true
     Log("MainMenu initialization complete")
 end
 
 -- ============================================================================
--- UI CREATION FROM JSON
+-- UI CREATION FUNCTIONS
 -- ============================================================================
 
-function CreateButtonsFromConfig()
-    if not config or not config.menu or not config.menu.buttons then
-        Log("ERROR: Invalid configuration - no buttons found!")
-        return
+function CreateMenuButtons()
+    Log("Creating menu buttons...")
+    
+    -- Create Play button
+    playButtonID = CreateButton(
+        uiConfig.playButton.texture,
+        uiConfig.playButton.posX,
+        uiConfig.playButton.posY,
+        uiConfig.playButton.scaleX,
+        uiConfig.playButton.scaleY,
+        "OnPlayButtonClicked"  -- Callback function name
+    )
+    
+    if playButtonID > 0 then
+        Log("Play button created (ID: " .. playButtonID .. ")")
+    else
+        Log("Failed to create Play button!")
     end
     
-    Log("Creating " .. #config.menu.buttons .. " buttons from config...")
+    -- Create Exit button
+    exitButtonID = CreateButton(
+        uiConfig.exitButton.texture,
+        uiConfig.exitButton.posX,
+        uiConfig.exitButton.posY,
+        uiConfig.exitButton.scaleX,
+        uiConfig.exitButton.scaleY,
+        "OnExitButtonClicked"  -- Callback function name
+    )
     
-    -- Iterate through buttons array in JSON
-    for i, button in ipairs(config.menu.buttons) do
-        Log("Creating button: " .. button.id)
-        
-        -- Create button using config data
-        local buttonID = CreateButton(
-            button.texture,
-            button.position.x,
-            button.position.y,
-            button.scale.x,
-            button.scale.y,
-            button.callback  -- Callback function name from JSON
-        )
-        
-        if buttonID > 0 then
-            -- Store button ID with its config
-            buttonIDs[button.id] = {
-                id = buttonID,
-                config = button
-            }
-            Log("  ✓ Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
-        else
-            Log("  ✗ Failed to create button: " .. button.id)
-        end
+    if exitButtonID > 0 then
+        Log("Exit button created (ID: " .. exitButtonID .. ")")
+    else
+        Log("Failed to create Exit button!")
     end
-    
-    Log("Button creation complete!")
 end
 
 -- ============================================================================
@@ -152,27 +178,34 @@ end
 -- ============================================================================
 
 function OnDraw()
-    if not config or not buttonIDs then
-        return
-    end
+    -- Draw UI text on buttons
+    -- Note: This uses world-to-screen coordinate conversion
     
-    -- Draw text on each button using config data
-    for buttonKey, buttonData in pairs(buttonIDs) do
-        local button = buttonData.config
-        local text = button.text
-        
-        DrawButtonText(
-            buttonData.id,
-            text.font,
-            text.content,
-            text.offset.x,
-            text.offset.y,
-            text.scale,
-            text.color.r,
-            text.color.g,
-            text.color.b
-        )
-    end
+    -- Play button text
+    DrawButtonText(
+        playButtonID,
+        uiConfig.text.font,
+        uiConfig.playButton.textContent,
+        uiConfig.playButton.textOffsetX,
+        uiConfig.playButton.textOffsetY,
+        uiConfig.text.scale,
+        uiConfig.text.colorR,
+        uiConfig.text.colorG,
+        uiConfig.text.colorB
+    )
+    
+    -- Exit button text
+    DrawButtonText(
+        exitButtonID,
+        uiConfig.text.font,
+        uiConfig.exitButton.textContent,
+        uiConfig.exitButton.textOffsetX,
+        uiConfig.exitButton.textOffsetY,
+        uiConfig.text.scale,
+        uiConfig.text.colorR,
+        uiConfig.text.colorG,
+        uiConfig.text.colorB
+    )
 end
 
 -- ============================================================================
@@ -188,12 +221,23 @@ function OnDestroy()
     -- Clear UI buttons
     ClearAllButtons()
     
-    -- Reset state
-    buttonIDs = {}
-    config = nil
+    -- Reset button IDs
+    playButtonID = 0
+    exitButtonID = 0
     initialized = false
     
     Log("MainMenu cleanup complete")
+end
+
+-- ============================================================================
+-- UTILITY FUNCTIONS
+-- ============================================================================
+
+function LoadConfigFromJSON(filepath)
+    -- Future enhancement: Load UI configuration from JSON
+    -- This would allow level designers to modify UI without touching code
+    Log("Loading config: " .. filepath)
+    -- Implementation would use a JSON parser exposed from C++
 end
 
 -- ============================================================================
@@ -201,22 +245,10 @@ end
 -- ============================================================================
 
 function PrintConfig()
-    if not config then
-        Log("No configuration loaded!")
-        return
-    end
-    
     Log("═══════════════════════════════════════")
-    Log("MainMenu Configuration (from JSON):")
-    Log("  Menu Name: " .. config.menu.name)
-    Log("  Music: " .. config.menu.music.name)
-    Log("  Camera Zoom: " .. config.menu.camera.zoom)
-    Log("  Button Count: " .. #config.menu.buttons)
-    
-    for i, button in ipairs(config.menu.buttons) do
-        Log("  Button " .. i .. ": " .. button.id .. " at (" .. 
-            button.position.x .. ", " .. button.position.y .. ")")
-    end
-    
+    Log("MainMenu Configuration:")
+    Log("  Music: " .. menuMusicName)
+    Log("  Play Button: (" .. uiConfig.playButton.posX .. ", " .. uiConfig.playButton.posY .. ")")
+    Log("  Exit Button: (" .. uiConfig.exitButton.posX .. ", " .. uiConfig.exitButton.posY .. ")")
     Log("═══════════════════════════════════════")
 end
