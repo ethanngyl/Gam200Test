@@ -98,14 +98,11 @@ namespace Framework {
         void OnFileDrop(int count, const char** paths);
         bool IsLevelFile(const std::filesystem::path& path) const;
         bool IsTextureFile(const std::filesystem::path& path) const;
-        bool IsAudioFile(const std::filesystem::path& path) const;
-        bool AddAudioToJSON(const std::string& audioName, const std::string& fileName);
-        bool IsAudioFileSupported(const std::filesystem::path& path, std::string& errorMsg) const;
+
         std::filesystem::path rootpath = "assets/";
         std::filesystem::path currentpath = "assets/";
         std::filesystem::path previouspath;
-        bool showAudioErrorPopup;
-        std::string audioErrorMessage;
+
         // State
         bool showDemo;
         bool showEntityInspector;
