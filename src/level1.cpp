@@ -171,9 +171,6 @@ void level1_Initialize()
         // 3. Add Transform
         // ============================
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
-        
-        //xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
-        //xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
 
         ConfigReader::LoadConfig("assets/valueloader.txt");
         LOG_INFO("LEVEL1", "Reloaded UI configuration");

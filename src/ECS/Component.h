@@ -38,9 +38,6 @@ namespace Framework
         float rotation = 0.0f;
         Vector2D scale = Vector2D(1.0f, 1.0f);
 
-        float upperLimit = 0.0f;
-        float lowerLimit = 0.0f;
-
         Transform(Vector2D pos = Vector2D()) : position(pos) {}
     };
 
