@@ -91,6 +91,20 @@ namespace Framework {
         bool showAssets = false;
         std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
+
+        //object picking - jiahao
+        void UpdatePicking();
+        Framework::Entity GetSelectedEntity() const {
+            return selectedEntity;
+        };
+
+        //dragging state for object dragging - jiahao
+        bool isDraggingEntity = false;
+        Framework::Entity draggingEntity{};
+        Vector2D dragOffset;
+        void UpdateEntityDragging();
+
+
         void ShowAssetsWindow();
         void SetupDefaultDockLayout();
         //file drop - jiahao
