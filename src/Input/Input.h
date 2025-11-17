@@ -58,9 +58,6 @@ namespace Framework
         MOUSE_LEFT = VK_LBUTTON,
         MOUSE_RIGHT = VK_RBUTTON,
 
-        // Function keys
-        KEY_F9 = VK_F9,
-
         //Shift Key
         KEY_SHIFT = VK_SHIFT
     };
