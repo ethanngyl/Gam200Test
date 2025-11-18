@@ -1,3 +1,5 @@
+//kahyan
+
 #include "PrefabSerializer.h"
 #include <fstream>
 #include <iomanip>   // std::setprecision
@@ -6,6 +8,8 @@
 #include <RenderComponents.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
+#include "PrefabEditor/PrefabTracker.h"
+#include "PrefabEditor/PrefabInstanceRegistry.h"
 
 using namespace Framework;
 
@@ -217,7 +221,9 @@ namespace PrefabSerializer
             c.offset.y = cdata["offset"][1];
         }
 
-        std::cout << "[PrefabLoader] Spawned entity " << e.id << " from prefab: " << path << "\n";
+        Framework::PrefabInstanceTracker::Get().RegisterInstance(e, path);
+        //Framework::PrefabInstanceRegistry::Get().RegisterInstance(e, path);
+
         return e;
     }
 }

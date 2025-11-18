@@ -66,6 +66,7 @@ namespace Framework {
         , graphicsSystem(nullptr)
         , showAudioErrorPopup(false)        
         , audioErrorMessage("")
+        , showPrefabWindow(false)
     {
     }
 
@@ -603,6 +604,8 @@ namespace Framework {
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
 				//Asset window - jiahao
 				ImGui::MenuItem("Assets", nullptr, &showAssets);
+                //prefab window - kahyan
+                ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
                 ImGui::EndMenu();
             }
 
@@ -860,6 +863,8 @@ namespace Framework {
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
 		// show asset window - jiahao
 		if (showAssets) ShowAssetsWindow();
+        // show prefab window - kahyan
+        if (showPrefabWindow) ShowPrefabWindow();
     }
 
     void ImGuiSystem::Render()
@@ -1033,69 +1038,45 @@ namespace Framework {
                     ImGui::DragFloat("Speed##Spd", &movement.moveSpeed, 0.01f, 0.0f, 2.0f);
                 }
 
-                //prefab save/export
+                //prefab save/export kahyan
                 static char prefabBuffer[128] = "";
                 ImGui::Separator();
                 ImGui::Text("Save Prefab:");
                 ImGui::SetNextItemWidth(160.0f);
                 ImGui::InputText("##PrefabName", prefabBuffer, IM_ARRAYSIZE(prefabBuffer));
 
-                std::string prefabName = prefabBuffer;
-                bool isEmpty = prefabName.empty();
-
                 ImGui::SameLine();
                 if (ImGui::Button("Export##ExportBtn")) {
-                    if (entity.IsValid()) {
-
-                        if (!isEmpty)
-                        {
-                            // mouse click → export
-                            PrefabSerializer::SavePrefab(*entityManager, entity, std::string(prefabName + ".prefab"));
-                            std::cout << prefabName << +".prefab saved.\n";
-
-                        }
-
-                        else
-                        {
-                            std::cout << "Prefab not saved. Input is empty.\n";
-                        }
+                    if (!entity.IsValid()) {
+                        std::cout << "[Prefab] Not saved. Entity is invalid.\n";
                     }
-
-                    else
-                    {
-                        std::cout << "Prefab not saved. Entity is invalid.\n";
-                    }
-
-                    memset(prefabBuffer, 0, 128);
-                }
-
-                //prefab load
-                static char prefabLoadBuffer[128] = "";
-                ImGui::Text("Load Prefab:");
-                ImGui::SetNextItemWidth(160.0f);
-                ImGui::InputText("##PrefabLoadName", prefabLoadBuffer, IM_ARRAYSIZE(prefabLoadBuffer));
-
-                std::string loadName = prefabLoadBuffer;
-                bool loadEmpty = loadName.empty();
-
-                ImGui::SameLine();
-                if (ImGui::Button("Load##LoadBtn")) {
-                    if (!loadEmpty) {
-                        std::string filePath = loadName + ".prefab";
-                        if (std::filesystem::exists(filePath)) {
-                            PrefabSerializer::LoadPrefab(*entityManager, filePath);
-                            std::cout << filePath << " loaded successfully.\n";
-                        }
-                        else {
-                            std::cout << "File not found: " << filePath << "\n";
-                        }
+                    else if (prefabBuffer[0] == '\0') {
+                        std::cout << "[Prefab] Not saved. Name is empty.\n";
                     }
                     else {
-                        std::cout << "Prefab name is empty.\n";
-                    }
-                    memset(prefabLoadBuffer, 0, 128);
-                }
+                        //IMPORTANT: save into assets/prefabs/
+                        std::string dir = "assets/prefabs/";
+                        std::string filePath = dir + std::string(prefabBuffer) + ".prefab";
 
+                        // Make sure folder exists
+                        try {
+                            std::filesystem::create_directories(dir);
+                        }
+                        catch (...) {
+                            std::cout << "[Prefab] Failed to create folder: " << dir << "\n";
+                        }
+
+                        if (PrefabSerializer::SavePrefab(*entityManager, entity, filePath)) {
+                            std::cout << "[Prefab] Saved: " << filePath << " from entity " << entity.id << "\n";
+                        }
+                        else {
+                            std::cout << "[Prefab] Failed to save: " << filePath << "\n";
+                        }
+                    }
+
+                    // Clear input after click
+                    memset(prefabBuffer, 0, sizeof(prefabBuffer));
+                }
 
                 ImGui::Separator();
 
@@ -1121,6 +1102,75 @@ namespace Framework {
                 currentPage--;
             }
         }
+    }
+
+    void ImGuiSystem::ShowPrefabWindow()// kahyan
+    {
+        std::cout << "DEBUG: ShowPrefabWindow() called, entityManager = "
+            << (entityManager ? "valid" : "NULL") << "\n";
+
+        if (!entityManager) {
+            return;
+        }
+
+        // Optional: first-use size
+        // ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
+
+        if (!ImGui::Begin("Prefabs##PrefabWindow", &showPrefabWindow)) {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::Text("Prefab Browser");
+        ImGui::Separator();
+
+        namespace fs = std::filesystem;
+        fs::path root = "assets/prefabs";   // 🔸 browse prefabs folder
+
+        // 🔹 This is the declaration you MUST have.
+        // It is a static local variable, so it keeps its value across frames.
+        static std::string selectedPrefabPath;
+
+        // List all .prefab files under assets/prefabs
+        if (fs::exists(root)) {
+            for (auto const& entry : fs::directory_iterator(root)) {
+                if (!entry.is_regular_file())
+                    continue;
+
+                if (entry.path().extension() != ".prefab")
+                    continue;
+
+                std::string filename = entry.path().filename().string();
+                std::string fullPath = entry.path().string();
+
+                bool isSelected = (selectedPrefabPath == fullPath);
+                if (ImGui::Selectable(filename.c_str(), isSelected)) {
+                    selectedPrefabPath = fullPath;
+                }
+            }
+        }
+        else {
+            ImGui::TextColored(ImVec4(1, 0, 0, 1),
+                "assets/prefabs/ folder not found.");
+        }
+
+        ImGui::Separator();
+
+        if (!selectedPrefabPath.empty()) {
+            ImGui::TextWrapped("Selected: %s", selectedPrefabPath.c_str());
+
+            // Spawn a new entity from this prefab
+            if (ImGui::Button("Spawn Instance##SpawnPrefabBtn", ImVec2(-1, 0))) {
+                PrefabSerializer::LoadPrefab(*entityManager, selectedPrefabPath);
+                std::cout << "[PrefabWindow] Spawned instance from: "
+                    << selectedPrefabPath << "\n";
+            }
+        }
+        else {
+            ImGui::TextDisabled("Select a .prefab file from the list.");
+        }
+
+        ImGui::End();
     }
 
     void ImGuiSystem::ShowSpawnerWindow()
