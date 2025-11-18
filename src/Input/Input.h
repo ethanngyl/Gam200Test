@@ -61,6 +61,9 @@ namespace Framework
         // Function keys
         KEY_F9 = VK_F9,
 
+        //Delete key
+		KEY_DELETE = VK_DELETE,
+
         //Shift Key
         KEY_SHIFT = VK_SHIFT
     };

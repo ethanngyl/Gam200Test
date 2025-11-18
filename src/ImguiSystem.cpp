@@ -248,8 +248,53 @@ namespace Framework {
                     continue;
                 }
             }
+            if (word == "SpriteAnimation") {
+                int rows = 0;
+                int columns = 0;
+				int frameCount = 0;
+                float frameTime = 0.0f;
+                int loopInt = 1;
+                float uvShrinkPx = 0.0f;
+
+                if (iss >> rows >> columns >> frameCount >> frameTime >> loopInt >> uvShrinkPx) {
+                    entityManager->AddComponent<Framework::SpriteAnimation>(Entity);
+                    auto& spriteAnimation = entityManager->GetComponent<Framework::SpriteAnimation>(Entity);
+                    spriteAnimation.rows = rows;
+					spriteAnimation.columns = columns;
+					spriteAnimation.frameCount = frameCount;
+					spriteAnimation.frameTime = frameTime;
+					spriteAnimation.loop = (loopInt != 0);
+					spriteAnimation.uvShrinkPx = uvShrinkPx;
+
+					spriteAnimation.playing = true;
+					spriteAnimation.currentFrame = 0;
+
+                    if (graphicsSystem && entityManager->HasComponent<Framework::Sprite>(Entity)) {
+                        auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
+                        if (!sprite.texturePath.empty()) {
+                            auto& rm = graphicsSystem->GetResourceManager();
+                            spriteAnimation.spriteSheet = rm.LoadTexture(sprite.texturePath);
+
+                            if (auto* texture = rm.GetTexture(spriteAnimation.spriteSheet)) {
+                                int colsForSize = (columns > 0) ? columns : 1;
+								int rowsForSize = (rows > 0) ? rows : 1;
+
+                                spriteAnimation.frameWidth = texture->GetWidth() / colsForSize;
+								spriteAnimation.frameHeight = texture->GetHeight() / rowsForSize;
+                            }
+                        }
+                    }
+                    else {
+                        std::cerr << "[ImGuiError] parsing SpriteAnimation at line " << lineNumber << "\n";
+                        continue;
+                    }
+                    continue;
+                }
+            }
+
             
         }
+        RebuildSpatialPartition();
         return true;
     }
 
@@ -280,7 +325,8 @@ namespace Framework {
             const bool hasAny = entityManager->HasComponent<Transform>(entity)
                 || entityManager->HasComponent<Sprite>(entity)
                 || entityManager->HasComponent<CircleCollider>(entity)
-                || entityManager->HasComponent<BoxCollider>(entity);
+                || entityManager->HasComponent<BoxCollider>(entity)
+                || entityManager->HasComponent<SpriteAnimation>(entity);
 
             //if the component doesnt have any entity, skip this entity
             if (!hasAny) {
@@ -298,7 +344,7 @@ namespace Framework {
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 //write position (x,y) and the scale(x,y)
                 writeFile << "Transform " << transform.position.x << " " << transform.position.y << " "
-                    << transform.scale.x << " " << transform.scale.y << "\n";
+                          << transform.scale.x << " " << transform.scale.y << "\n";
             }
 
 			//this if else condition is to check if entity has sprite component
@@ -351,6 +397,13 @@ namespace Framework {
                 writeFile << "CircleCollider " << circleCollider.radius << " " << circleCollider.offset.x << " " << circleCollider.offset.y << "\n";
             }
 
+            if (entityManager->HasComponent<SpriteAnimation>(entity)) {
+                auto& spriteAnimation = entityManager->GetComponent<SpriteAnimation>(entity);
+                const int loopInt = spriteAnimation.loop ? 1 : 0;
+                writeFile << "SpriteAnimation " << spriteAnimation.rows << " " << spriteAnimation.columns << " "
+                          << spriteAnimation.frameCount << " " << spriteAnimation.frameTime << " "
+                          << loopInt << " " << spriteAnimation.uvShrinkPx << "\n";
+			}
             // add this blank line to separate this entity from the next entity
             writeFile << "\n";
         }
@@ -509,6 +562,46 @@ namespace Framework {
         ImGui::End();  // Only one End() call at the very end
     }
 
+    Framework::Vector2D EditorScreenWorld(float screenX, float screenY) {
+        if (!Framework::CORE) {
+			return Framework::Vector2D{0.0f, 0.0f};
+        }
+
+		auto graphics = Framework::CORE->GetGraphicsSystem();
+		auto windowSystem = Framework::CORE->GetWindowSystem();
+
+        if (!graphics || !windowSystem) {
+            return Framework::Vector2D(0.0f, 0.0f);
+        }
+
+		GLFWwindow* window = windowSystem->GetWindow();
+        if (!window) {
+            return Framework::Vector2D(0.0f, 0.0f);
+        }
+
+		int fbWidth, fbHeight;
+        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+
+        int windowWidth, windowHeight;
+        glfwGetWindowSize(window, &windowWidth, &windowHeight);
+
+        if (fbWidth == 0 || fbHeight == 0 || windowWidth == 0 || windowHeight == 0) {
+            return Framework::Vector2D(0.0f, 0.0f);
+        }
+
+        float fbX = screenX * static_cast<float>(fbWidth) / static_cast<float>(windowWidth);
+        float fbY = screenY * static_cast<float>(fbHeight) / static_cast<float>(windowHeight);
+
+        float ndcX = (2.0f * fbX / static_cast<float>(fbWidth)) - 1.0f;
+        float ndcY = 1.0f - (2.0f * fbY / static_cast<float>(fbHeight));
+
+        glm::mat4 invViewProj = glm::inverse(graphics->GetCamera().GetViewProjectionMatrix());
+
+        glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
+
+        return Vector2D(worldPos.x, worldPos.y);
+    }
+
     void ImGuiSystem::Update(float dt)
     {
         (void)dt;
@@ -553,6 +646,33 @@ namespace Framework {
       //      ImGui::EndDragDropTarget();
       //  }
 
+        //object picking
+        UpdatePicking();
+
+        UpdateEntityDragging();
+
+		//delete button to delete selected entity
+        if (!CORE->IsPlaying() && entityManager) {
+			InputSystem* input = Framework::CORE->GetInputSystem();
+
+            if (input && selectedEntity.IsValid()) {
+                if (input->IsKeyPressed(KEY_DELETE))
+                {
+                    std::cout << "[ImGui] Delete key pressed on entity "
+                        << selectedEntity.id << "\n";
+
+                    SpatialPartitioningRemove(selectedEntity);
+
+                    entityManager->DestroyEntity(selectedEntity);
+                    
+
+                    selectedEntity = Framework::Entity{};
+                    draggingEntity = Framework::Entity{};
+                    isDraggingEntity = false;
+                }
+            }
+
+        }
 
         // Draw Menu bar
         if (ImGui::BeginMainMenuBar()) {
@@ -1028,6 +1148,7 @@ namespace Framework {
         Entity entityToDelete = { 0 };
         bool shouldDelete = false;
 
+        //modify it to display the entity when user click on the entity - jiahao
         for (size_t i = 0; i < pageEntities.size(); ++i) {
             Entity entity = pageEntities[i];
 
@@ -1037,7 +1158,20 @@ namespace Framework {
             char label[128];
             snprintf(label, sizeof(label), "Entity %u", static_cast<int>(i+1));
 
-            if (ImGui::CollapsingHeader(label)) {
+			bool isSelected = selectedEntity.IsValid() && (entity.id == selectedEntity.GetID());
+
+            if (isSelected) {
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.5f, 1.0f, 1.0f));
+                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+            }
+
+            bool open = ImGui::CollapsingHeader(label);
+
+            if (isSelected) {
+                ImGui::PopStyleColor();
+            }
+
+            if (open) {
 
                 if (entityManager->HasComponent<Transform>(entity)) {
                     auto& transform = entityManager->GetComponent<Transform>(entity);
@@ -1550,7 +1684,297 @@ namespace Framework {
         ImGui::End();
     }
 
+    //game object picking in editor - jiahao
+    void ImGuiSystem::UpdatePicking() {
+        if (!CORE) {
+            return;
+        }
 
+        if (CORE->IsPlaying()) {
+            return;
+        }
+
+        if (!entityManager) {
+            return;
+        }
+
+        ImGuiIO& io = ImGui::GetIO();
+
+        if (io.WantCaptureMouse) {
+            return;
+        }
+
+        InputSystem* input = Framework::CORE->GetInputSystem();
+
+        UISystem* ui = CORE->GetUISystem();
+
+        if (!input || !ui) {
+            return;
+        }
+
+        if (!input->IsKeyPressed(MOUSE_LEFT)) {
+            return;
+        }
+
+        float mouseX = 0.0f;
+        float mouseY = 0.0f;
+
+        input->GetMousePosition(mouseX, mouseY);
+
+        Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
+
+        Entity picked = INVALID_ENTITY;
+
+        for (Entity e : entityManager->GetAllEntities()) {
+            if (!entityManager->HasComponent<Transform>(e)) {
+                continue;
+            }
+
+            auto& transform = entityManager->GetComponent<Transform>(e);
+
+            if (entityManager->HasComponent<GridTiles>(e)) {
+                continue;
+            }
+
+            Collider collider;
+            bool hasCollider = false;
+
+            if (entityManager->HasComponent<CircleCollider>(e)) {
+                auto& cc = entityManager->GetComponent<CircleCollider>(e);
+
+				float scaleX = transform.scale.x;
+				float scaleY = transform.scale.y;
+
+				float scaleFactor = scaleX > scaleY ? scaleX : scaleY;
+
+                if (scaleFactor < 0.01f) {
+                    scaleFactor = 0.01f;
+                }
+
+				float worldRadius = cc.radius * scaleFactor;
+
+                collider = Collider::create_circle(
+                    worldRadius,
+                    transform.position + cc.offset
+                );
+
+                hasCollider = true;
+            }
+
+            else if (entityManager->HasComponent<BoxCollider>(e)) {
+                auto& bc = entityManager->GetComponent<BoxCollider>(e);
+
+                float scaleX = transform.scale.x;
+                float scaleY = transform.scale.y;
+
+				if (scaleX < 0.01f) scaleX = 0.01f;
+                if (scaleY < 0.01f) scaleY = 0.01f;
+
+                float worldWidth = bc.size.x * scaleX;
+				float worldHeight = bc.size.y * scaleY;
+
+                collider = Collider::create_rect(
+                    worldWidth,
+                    worldHeight,
+                    transform.position
+                );
+
+                hasCollider = true;
+            }
+
+            if (!hasCollider) {
+                continue;
+            }
+
+            if (point_in_collider(mouseWorld, collider)) {
+                picked = e;
+                break;
+            }
+        }
+
+        selectedEntity = picked;
+
+        if (selectedEntity.GetID() != INVALID_ENTITY) {
+            std::cout << "[ImGui Picking] Selected entity ID: "
+                << selectedEntity.GetID() << "\n";
+        }
+        else
+        {
+            std::cout << "[ImGui Picking] Clicked empty space\n";
+        }
+    }
+
+    //
+    void ImGuiSystem::UpdateEntityDragging() {
+        if (!CORE) {
+            return;
+        }
+
+        if (CORE->IsPlaying()) {
+            return;
+        }
+
+        if (!entityManager) {
+            return;
+        }
+
+        ImGuiIO& io = ImGui::GetIO();
+
+        if (io.WantCaptureMouse) {
+            return;
+        }
+
+        InputSystem* input = Framework::CORE->GetInputSystem();
+        UISystem* ui = CORE->GetUISystem();
+
+        if (!input || !ui) {
+            return;
+        }
+
+		float mouseX = 0.0f;
+		float mouseY = 0.0f;
+        input->GetMousePosition(mouseX, mouseY);
+		Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
+
+        if (input->IsKeyPressed(MOUSE_LEFT) || input->IsKeyPressed(MOUSE_RIGHT)) {
+            if (!selectedEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
+				isDraggingEntity = false;
+				isScalingEntity = false;
+				isRotatingEntity = false;
+				draggingEntity = Framework::Entity{ INVALID_ENTITY};
+                return;
+            }
+
+			auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
+
+            if (input->IsKeyPressed(MOUSE_LEFT) && input->IsKeyDown(KEY_SHIFT)) {
+				isScalingEntity = true;
+				isDraggingEntity = false;
+				isRotatingEntity = false;
+
+				draggingEntity = selectedEntity;
+				scaleStartMouse = mouseWorld;
+				scaleStartScale = transform.scale;
+            }
+            else if (input->IsKeyPressed(MOUSE_RIGHT)) {
+				isRotatingEntity = true;
+				isDraggingEntity = false;
+				isScalingEntity = false;
+
+				draggingEntity = selectedEntity;
+
+                Vector2D toMouse = transform.position;
+                rotateStartAngle = std::atan2(toMouse.y, toMouse.x);
+				rotateStartRotation = transform.rotation;
+            }
+
+            else if (input->IsKeyPressed(MOUSE_LEFT)) {
+				isDraggingEntity = true;
+				isScalingEntity = false;
+				isRotatingEntity = false;
+
+				draggingEntity = selectedEntity;
+				dragOffset = transform.position - mouseWorld;
+            }
+        }
+        if (isDraggingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            if (!draggingEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(draggingEntity))
+            {
+                isDraggingEntity = false;
+                return;
+            }
+            float moveX = 0.0f;
+			float moveY = 0.0f;
+			input->GetMousePosition(moveX, moveY);
+            Vector2D moveWorld = ui->ScreenToWorld(moveX, moveY);
+
+			auto& transform =
+                entityManager->GetComponent<Framework::Transform>(draggingEntity);
+
+			transform.position = moveWorld + dragOffset;
+        }
+
+        if (isScalingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            if (!draggingEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) 
+            {
+                isScalingEntity = false;
+                return;
+            }
+
+            float scaleX = 0.0f;
+            float scaleY = 0.0f;
+
+            input->GetMousePosition(scaleX, scaleY);
+            Vector2D scaleMouseWorld = ui->ScreenToWorld(scaleX, scaleY);
+
+            auto& transform =
+                entityManager->GetComponent<Framework::Transform>(draggingEntity);
+
+            Vector2D delta = scaleMouseWorld - scaleStartMouse;
+
+            float factor = 1.0f + delta.x * 0.5f;
+            if (factor < 0.1f) {
+                factor = 0.1f;
+            }
+            if (factor > 5.0f) {
+                factor = 5.0f;
+            }
+
+            transform.scale.x = scaleStartScale.x * factor;
+            transform.scale.y = scaleStartScale.y * factor;
+        }
+        if (isRotatingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+        {
+            /*if (!draggingEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) {
+
+                isRotatingEntity = false;
+                return;
+            }
+
+            float rotX = 0.0f;
+            float rotY = 0.0f;
+            input->GetMousePosition(rotX, rotY);
+            Vector2D rotMouseWorld = ui->ScreenToWorld(rotX, rotY);
+
+            auto& transform =
+                entityManager->GetComponent<Framework::Transform>(draggingEntity);
+
+            Vector2D toMouse = rotMouseWorld - transform.position;
+            float currentAngle = std::atan2(toMouse.y, toMouse.x);
+
+            float deltaAngle = currentAngle - rotateStartAngle;
+            transform.rotation = rotateStartRotation + deltaAngle;*/
+            if (!selectedEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
+				isRotatingEntity = false;
+            }
+            else {
+                auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
+
+				const float rotationSpeed = 0.2f;
+
+				transform.rotation += rotationSpeed;
+            }
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            if (isDraggingEntity || isScalingEntity) {
+                isDraggingEntity = false;
+                isScalingEntity = false;
+                RebuildSpatialPartition();
+            }
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+            
+                isRotatingEntity = false;
+            
+        }
+    }
 
     bool ImGuiSystem::IsAudioFile(const std::filesystem::path& path) const {
         if (!path.has_extension()) {
