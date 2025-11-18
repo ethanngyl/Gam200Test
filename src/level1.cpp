@@ -22,9 +22,11 @@
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
 #include "Component.h" 
+
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::ScriptComponent;
+
 
 void level1_Load()
 {
@@ -37,7 +39,6 @@ void level1_Load()
 void level1_Initialize()
 {
     LOG_INFO("LEVEL1", "=== Level1 Initialize ===");
-
 
     if (!engine) {
         LOG_ERROR("LEVEL1", "Engine is null!");
@@ -201,14 +202,19 @@ void level1_Update()
         {
             auto& anim = em->GetComponent<Framework::SpriteAnimation>(player);
 
-            for (auto& entry : animSys->animEntries)
+            auto& entries = animSys->animEntries;
+
+            if (input->IsKeyPressed(Framework::KEY_M))
             {
-                if (input->IsKeyPressed((Framework::KeyCode)entry.key))
-                {
-                    LOG_INFO("LEVEL1", ">>> Key pressed: %c, switching to %s",
-                        entry.key, entry.file.c_str());
-                    animSys->LoadAnimation(player, anim, gfx, entry.file);
-                }
+				static size_t animIndex = 0;
+				animIndex++;
+                if (animIndex >= entries.size())
+                    animIndex = 0;
+
+                auto& entry = entries[animIndex];
+                animSys->LoadAnimation(player, anim, gfx, entry.file);
+
+				LOG_INFO("LEVEL1", "Switched to animation: %s", entry.name.c_str());
             }
         }
     }

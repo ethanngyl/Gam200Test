@@ -1,3 +1,7 @@
-names=Doraemon,Bird
-files=assets/anim_doraemon.txt,assets/anim_bird.txt
-keys=M,N
+#names=Doraemon,Bird
+#files=assets/anim_doraemon.txt,assets/anim_bird.txt
+#keys=M,M
+
+names=Idle,WalkSide,WalkBack,AttackSide,AttackFront,AttackBack,InjureSide,InjureBack,Death
+files=assets/warrior_idle.txt,assets/warrior_walkSide.txt,assets/warrior_walkBack.txt,assets/warrior_attackSide.txt,assets/warrior_attackFront.txt,assets/warrior_attackBack.txt,assets/warrior_injureSide.txt,assets/warrior_injureBack.txt,assets/warrior_death.txt
+keys=M,M,M,M,M,M,M,M,M

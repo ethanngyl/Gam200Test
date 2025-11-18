@@ -714,15 +714,30 @@ namespace Framework {
                 if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
                     continue;
 
-                const int cols = texW / anim.frameWidth;
+                // Prefer the configured column count if available
+                const int cols = (anim.columns > 0) ? anim.columns : (texW / anim.frameWidth);
+
                 const int frame = anim.currentFrame % max(1, anim.frameCount);
                 const int x = frame % cols;
                 const int y = frame / cols;
 
-                float u0 = (x * anim.frameWidth) / float(texW);
-                float u1 = ((x + anim.uvShrinkPx) * anim.frameWidth) / float(texW);
-                float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
-                float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
+                // Treat uvShrinkPx as pixels trimmed from each side of the frame
+                float shrink = anim.uvShrinkPx;
+                if (shrink < 0.0f) shrink = 0.0f;
+                if (shrink * 2.0f >= anim.frameWidth)  shrink = (anim.frameWidth - 1) * 0.5f;
+                if (shrink * 2.0f >= anim.frameHeight) shrink = (anim.frameHeight - 1) * 0.5f;
+
+                // Pixel coordinates inside the big texture
+                float leftPx = x * anim.frameWidth + shrink;
+                float rightPx = (x + 1) * anim.frameWidth - shrink;
+                float topPx = y * anim.frameHeight + shrink;
+                float bottomPx = (y + 1) * anim.frameHeight - shrink;
+
+                // Convert to UV [0,1]
+                float u0 = leftPx / float(texW);
+                float u1 = rightPx / float(texW);
+                float v1 = 1.0f - (topPx / float(texH));      // top
+                float v0 = 1.0f - (bottomPx / float(texH));   // bottom
 
                 // Apply horizontal flipping if enabled
                 if (anim.flipX)

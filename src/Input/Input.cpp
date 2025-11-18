@@ -78,7 +78,6 @@ namespace Framework
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
 
         UpdateKeyState(KEY_M, GetAsyncKeyState(KEY_M));
-        UpdateKeyState(KEY_N, GetAsyncKeyState(KEY_N));
 
         // Number keys
         UpdateKeyState(KEY_1, GetAsyncKeyState(KEY_1));
