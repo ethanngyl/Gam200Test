@@ -45,8 +45,8 @@ Safety:
 #include "AudioSystem.h"
 #include "Pathfinding.h"
 #include <build/_deps/glfw-src/include/GLFW/glfw3.h>
-#include "PrefabEditor/PrefabSerializer.h"
-
+#include "PrefabSerializer.h"
+#include "PrefabTracker.h"
 namespace Framework {
 
     ImGuiSystem::ImGuiSystem()
@@ -66,7 +66,9 @@ namespace Framework {
         , graphicsSystem(nullptr)
         , showAudioErrorPopup(false)        
         , audioErrorMessage("")
-        , showPrefabWindow(false) //kahyan
+        , showPrefabWindow(true)
+        , selectedEntity{}
+        , selectedPrefabPath("")
     {
     }
 
@@ -474,6 +476,31 @@ namespace Framework {
                 if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload("Sprite", &label, label.size());
                     ImGui::Text(label.c_str());
+                    ImGui::EndDragDropSource();
+                }
+            }
+
+            if (path.extension() == ".prefab" || path.extension() == ".json") {
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Double-click to spawn prefab\nDrag to drop zone");
+
+                    // Double-click to spawn
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        std::string prefabPath = path.string();
+                        Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, prefabPath);
+
+                        if (newEntity.IsValid()) {
+                            std::cout << "[Assets] Spawned prefab: " << label
+                                << " as entity " << newEntity.GetID() << "\n";
+                        }
+                    }
+                }
+
+                // Drag-drop source for prefabs
+                if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
+                    std::string prefabPath = path.string();
+                    ImGui::SetDragDropPayload("Prefab", prefabPath.c_str(), prefabPath.size() + 1);
+                    ImGui::Text("📦 %s", label.c_str());
                     ImGui::EndDragDropSource();
                 }
             }
@@ -1085,6 +1112,35 @@ namespace Framework {
                     entityToDelete = entity;
                     shouldDelete = true;
                 }
+
+                ImGui::SameLine();
+
+                char savePrefabBtnLabel[64];
+                snprintf(savePrefabBtnLabel, sizeof(savePrefabBtnLabel), "Save Prefab##SavePrefab%u", entity.id);
+
+                if (ImGui::Button(savePrefabBtnLabel)) {
+                    // Generate filename from entity ID
+                    std::string prefabPath = "assets/prefabs/entity_" + std::to_string(entity.id) + ".prefab";
+
+                    // Create directory if needed
+                    std::filesystem::create_directories("assets/prefabs");
+
+                    bool saved = PrefabSerializer::SavePrefab(*entityManager, entity, prefabPath);
+
+                    if (saved) {
+                        std::cout << "[Inspector] ✅ Saved entity " << entity.id << " as prefab\n";
+                    }
+                    else {
+                        std::cerr << "[Inspector] ❌ Failed to save prefab\n";
+                    }
+                }
+
+                // Show prefab source if entity came from a prefab
+                std::string prefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
+                if (!prefabSource.empty()) {
+                    ImGui::TextColored(ImVec4(0.5f, 0.8f, 0.5f, 1.0f), "From: %s",
+                        std::filesystem::path(prefabSource).filename().string().c_str());
+                }
             }
 
             ImGui::PopID();
@@ -1104,70 +1160,197 @@ namespace Framework {
         }
     }
 
-    void ImGuiSystem::ShowPrefabWindow()// kahyan
+    void ImGuiSystem::ShowPrefabWindow()
     {
-        std::cout << "DEBUG: ShowPrefabWindow() called, entityManager = "
-            << (entityManager ? "valid" : "NULL") << "\n";
+        if (!entityManager) return;
 
-        if (!entityManager) {
-            return;
-        }
-
-        // Optional: first-use size
-        // ImGui::SetNextWindowSize(ImVec2(300, 400), ImGuiCond_FirstUseEver);
-
-        if (!ImGui::Begin("Prefabs##PrefabWindow", &showPrefabWindow)) {
+        if (!ImGui::Begin("Prefab Editor##PrefabWindow", &showPrefabWindow)) {
             ImGui::End();
             return;
         }
 
-        ImGui::Text("Prefab Browser");
+        ImGui::Text("Prefab System");
         ImGui::Separator();
 
-        namespace fs = std::filesystem;
-        fs::path root = "assets/prefabs";   // 🔸 browse prefabs folder
+        // ========================================================================
+        // SECTION 1: Entity Selection for Saving
+        // ========================================================================
+        ImGui::Text("Save Entity as Prefab:");
+        ImGui::Spacing();
 
-        // 🔹 This is the declaration you MUST have.
-        // It is a static local variable, so it keeps its value across frames.
-        static std::string selectedPrefabPath;
+        // Get all entities
+        std::vector<Entity> allEntities = entityManager->GetAllEntities();
 
-        // List all .prefab files under assets/prefabs
-        if (fs::exists(root)) {
-            for (auto const& entry : fs::directory_iterator(root)) {
-                if (!entry.is_regular_file())
-                    continue;
+        // Entity dropdown
+        static int selectedIdx = 0;
+        if (ImGui::BeginCombo("Select Entity##EntityCombo",
+            selectedEntity.IsValid() ?
+            ("Entity " + std::to_string(selectedEntity.GetID())).c_str() :
+            "None")) {
 
-                if (entry.path().extension() != ".prefab")
-                    continue;
+            for (int i = 0; i < static_cast<int>(allEntities.size()); ++i) {
+                Entity e = allEntities[i];
+                std::string label = "Entity " + std::to_string(e.GetID());
 
-                std::string filename = entry.path().filename().string();
-                std::string fullPath = entry.path().string();
+                // Show component info
+                if (entityManager->HasComponent<MeshRenderer>(e)) {
+                    auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+                    if (!mr.spriteName.empty()) {
+                        label += " (" + mr.spriteName + ")";
+                    }
+                }
 
-                bool isSelected = (selectedPrefabPath == fullPath);
-                if (ImGui::Selectable(filename.c_str(), isSelected)) {
-                    selectedPrefabPath = fullPath;
+                bool isSelected = (selectedEntity.GetID() == e.GetID());
+                if (ImGui::Selectable(label.c_str(), isSelected)) {
+                    selectedEntity = e;
+                    selectedIdx = i;
+                }
+
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+
+        // Prefab name input
+        static char prefabNameBuffer[256] = "my_entity.prefab";
+        ImGui::InputText("Prefab Name##PrefabName", prefabNameBuffer, sizeof(prefabNameBuffer));
+
+        // Save button
+        if (ImGui::Button("Save as Prefab##SaveBtn", ImVec2(-1, 0))) {
+            if (selectedEntity.IsValid()) {
+                std::string path = "assets/prefabs/" + std::string(prefabNameBuffer);
+
+                // Create prefabs directory if it doesn't exist
+                std::filesystem::create_directories("assets/prefabs");
+
+                bool saved = PrefabSerializer::SavePrefab(*entityManager, selectedEntity, path);
+
+                if (saved) {
+                    std::cout << "[Prefab] ✅ Saved entity " << selectedEntity.GetID()
+                        << " to: " << path << "\n";
+                }
+                else {
+                    std::cerr << "[Prefab] ❌ Failed to save prefab to: " << path << "\n";
+                }
+            }
+            else {
+                std::cout << "[Prefab] ⚠️ No entity selected!\n";
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // ========================================================================
+        // SECTION 2: Load Prefab
+        // ========================================================================
+        ImGui::Text("Load Prefab:");
+        ImGui::Spacing();
+
+        // List available prefabs
+        static std::vector<std::string> prefabFiles;
+        static bool needsRefresh = true;
+
+        if (ImGui::Button("Refresh List##RefreshPrefabs")) {
+            needsRefresh = true;
+        }
+
+        if (needsRefresh) {
+            prefabFiles.clear();
+            std::string prefabDir = "assets/prefabs";
+
+            if (std::filesystem::exists(prefabDir)) {
+                for (auto const& entry : std::filesystem::directory_iterator(prefabDir)) {
+                    if (entry.path().extension() == ".prefab" ||
+                        entry.path().extension() == ".json") {
+                        prefabFiles.push_back(entry.path().filename().string());
+                    }
+                }
+            }
+            needsRefresh = false;
+        }
+
+        // Prefab list
+        static int selectedPrefabIdx = -1;
+
+        ImGui::Text("Available Prefabs:");
+        if (ImGui::BeginListBox("##PrefabList", ImVec2(-1, 150))) {
+            for (int i = 0; i < static_cast<int>(prefabFiles.size()); ++i) {
+                bool isSelected = (selectedPrefabIdx == i);
+                if (ImGui::Selectable(prefabFiles[i].c_str(), isSelected)) {
+                    selectedPrefabIdx = i;
+                    selectedPrefabPath = "assets/prefabs/" + prefabFiles[i];
+                }
+
+                if (isSelected) {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndListBox();
+        }
+
+        // Spawn position
+        static float spawnPos[2] = { 0.0f, 0.0f };
+        ImGui::DragFloat2("Spawn Position##SpawnPos", spawnPos, 0.01f, -10.0f, 10.0f);
+
+        // Load button
+        if (ImGui::Button("Load Prefab##LoadBtn", ImVec2(-1, 0))) {
+            if (selectedPrefabIdx >= 0 && selectedPrefabIdx < static_cast<int>(prefabFiles.size())) {
+                Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, selectedPrefabPath);
+
+                if (newEntity.IsValid()) {
+                    // Set spawn position
+                    if (entityManager->HasComponent<Transform>(newEntity)) {
+                        auto& transform = entityManager->GetComponent<Transform>(newEntity);
+                        transform.position.x = spawnPos[0];
+                        transform.position.y = spawnPos[1];
+                    }
+
+                    std::cout << "[Prefab] ✅ Loaded prefab '" << prefabFiles[selectedPrefabIdx]
+                        << "' as entity " << newEntity.GetID() << "\n";
+                }
+                else {
+                    std::cerr << "[Prefab] ❌ Failed to load prefab: " << selectedPrefabPath << "\n";
+                }
+            }
+            else {
+                std::cout << "[Prefab] ⚠️ No prefab selected!\n";
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        // ========================================================================
+        // SECTION 3: Prefab Instance Tracking
+        // ========================================================================
+        ImGui::Text("Prefab Instances:");
+        ImGui::Spacing();
+
+        // Show tracked instances
+        if (selectedPrefabIdx >= 0 && selectedPrefabIdx < static_cast<int>(prefabFiles.size())) {
+            std::string prefabPath = "assets/prefabs/" + prefabFiles[selectedPrefabIdx];
+            auto instances = Framework::PrefabInstanceTracker::Get().GetInstancesOf(prefabPath);
+
+            ImGui::Text("Instances of '%s': %zu", prefabFiles[selectedPrefabIdx].c_str(), instances.size());
+
+            if (instances.size() > 0) {
+                if (ImGui::BeginListBox("##InstanceList", ImVec2(-1, 100))) {
+                    for (auto& inst : instances) {
+                        std::string label = "Entity " + std::to_string(inst.GetID());
+                        ImGui::Selectable(label.c_str(), false);
+                    }
+                    ImGui::EndListBox();
                 }
             }
         }
-        else {
-            ImGui::TextColored(ImVec4(1, 0, 0, 1),
-                "assets/prefabs/ folder not found.");
-        }
 
-        ImGui::Separator();
-
-        if (!selectedPrefabPath.empty()) {
-            ImGui::TextWrapped("Selected: %s", selectedPrefabPath.c_str());
-
-            // Spawn a new entity from this prefab
-            if (ImGui::Button("Spawn Instance##SpawnPrefabBtn", ImVec2(-1, 0))) {
-                PrefabSerializer::LoadPrefab(*entityManager, selectedPrefabPath);
-                std::cout << "[PrefabWindow] Spawned instance from: "
-                    << selectedPrefabPath << "\n";
-            }
-        }
-        else {
-            ImGui::TextDisabled("Select a .prefab file from the list.");
+        // Clear tracking button
+        if (ImGui::Button("Clear All Tracking##ClearTracking", ImVec2(-1, 0))) {
+            Framework::PrefabInstanceTracker::Get().Clear();
+            std::cout << "[Prefab] Cleared all instance tracking\n";
         }
 
         ImGui::End();
@@ -1295,7 +1478,40 @@ namespace Framework {
             ImGui::EndDragDropTarget();
         }
 
+        ImGui::Separator();
+        ImGui::Text("📦 Prefab Drop Zone");
+        ImGui::TextWrapped("Drag prefabs here to spawn");
+
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.4f, 0.8f, 0.4f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.5f, 0.9f, 0.6f));
+        ImGui::Button("Drop Prefab Here##PrefabDropZone", ImVec2(-1, 60));
+        ImGui::PopStyleColor(2);
+
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Prefab")) {
+                const char* prefabPath = static_cast<const char*>(payload->Data);
+
+                std::cout << "[Spawner] Prefab dropped: " << prefabPath << "\n";
+
+                Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, prefabPath);
+
+                if (newEntity.IsValid()) {
+                    // Set spawn position from spawner's X/Y values
+                    if (entityManager->HasComponent<Transform>(newEntity)) {
+                        auto& transform = entityManager->GetComponent<Transform>(newEntity);
+                        transform.position.x = spawnX;
+                        transform.position.y = spawnY;
+                    }
+
+                    std::cout << "[Spawner] ✅ Spawned prefab as entity " << newEntity.GetID() << "\n";
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+
         ImGui::End();
+
+
     }
 
     void ImGuiSystem::ShowDebugWindow()
@@ -1457,8 +1673,23 @@ namespace Framework {
                 continue;
             }
 
+            if (path.extension() == ".prefab" || path.extension() == ".json") {
+                Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, path.string());
+
+                if (newEntity.IsValid()) {
+                    std::cout << "[FileDrop] ✅ Loaded prefab: " << path.filename()
+                        << " as entity " << newEntity.GetID() << "\n";
+                }
+                else {
+                    std::cerr << "[FileDrop] ❌ Failed to load prefab: " << path << "\n";
+                }
+                continue;
+            }
+
             std::cerr << "[FileDrop] ❌ Unsupported file type\n";
         }
+
+
 
         std::cout << "[FileDrop] Processing complete\n\n";
     }

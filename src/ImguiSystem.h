@@ -93,8 +93,6 @@ namespace Framework {
         Framework::Entity selectedEntity{};
         void ShowAssetsWindow();
         void SetupDefaultDockLayout();
-        //Prefab window - kahyan
-        bool showPrefabWindow = false;
         void ShowPrefabWindow();
         void SpawnPrefabAtMouse(const std::string& prefabPath);
 
@@ -116,7 +114,10 @@ namespace Framework {
         bool showEntityInspector;
         bool showSpawner;
         bool showDebug;
-        bool showPrefab;//kahyan
+        bool showPrefabWindow;
+        //
+        // Entity selectedEntity;
+        std::string selectedPrefabPath;
 
         bool enabled;
 
