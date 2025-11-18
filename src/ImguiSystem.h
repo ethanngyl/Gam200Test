@@ -93,6 +93,11 @@ namespace Framework {
         Framework::Entity selectedEntity{};
         void ShowAssetsWindow();
         void SetupDefaultDockLayout();
+        //Prefab window - kahyan
+        bool showPrefabWindow = false;
+        void ShowPrefabWindow();
+        void SpawnPrefabAtMouse(const std::string& prefabPath);
+
         //file drop - jiahao
         static void FileDropCallBack(GLFWwindow* window, int count, const char** paths);
         void OnFileDrop(int count, const char** paths);
@@ -108,6 +113,7 @@ namespace Framework {
         bool showEntityInspector;
         bool showSpawner;
         bool showDebug;
+        bool showPrefab;//kahyan
 
         bool enabled;
 
