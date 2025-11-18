@@ -66,7 +66,7 @@ namespace Framework {
         , graphicsSystem(nullptr)
         , showAudioErrorPopup(false)        
         , audioErrorMessage("")
-        , showPrefabWindow(false)
+        , showPrefabWindow(false) //kahyan
     {
     }
 
