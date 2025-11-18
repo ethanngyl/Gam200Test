@@ -617,6 +617,30 @@ namespace Framework {
         UpdatePicking();
 
         UpdateEntityDragging();
+
+		//delete button to delete selected entity
+        if (!CORE->IsPlaying() && entityManager) {
+			InputSystem* input = Framework::CORE->GetInputSystem();
+
+            if (input && selectedEntity.IsValid()) {
+                if (input->IsKeyPressed(KEY_DELETE))
+                {
+                    std::cout << "[ImGui] Delete key pressed on entity "
+                        << selectedEntity.id << "\n";
+
+                    SpatialPartitioningRemove(selectedEntity);
+
+                    entityManager->DestroyEntity(selectedEntity);
+                    
+
+                    selectedEntity = Framework::Entity{};
+                    draggingEntity = Framework::Entity{};
+                    isDraggingEntity = false;
+                }
+            }
+
+        }
+
         // Draw Menu bar
         if (ImGui::BeginMainMenuBar()) {
             //File bar - jiahao
@@ -1053,6 +1077,7 @@ namespace Framework {
         Entity entityToDelete = { 0 };
         bool shouldDelete = false;
 
+        //modify it to display the entity when user click on the entity - jiahao
         for (size_t i = 0; i < pageEntities.size(); ++i) {
             Entity entity = pageEntities[i];
 
@@ -1062,7 +1087,20 @@ namespace Framework {
             char label[128];
             snprintf(label, sizeof(label), "Entity %u", static_cast<int>(i+1));
 
-            if (ImGui::CollapsingHeader(label)) {
+			bool isSelected = selectedEntity.IsValid() && (entity.id == selectedEntity.GetID());
+
+            if (isSelected) {
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.5f, 1.0f, 1.0f));
+                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+            }
+
+            bool open = ImGui::CollapsingHeader(label);
+
+            if (isSelected) {
+                ImGui::PopStyleColor();
+            }
+
+            if (open) {
 
                 if (entityManager->HasComponent<Transform>(entity)) {
                     auto& transform = entityManager->GetComponent<Transform>(entity);

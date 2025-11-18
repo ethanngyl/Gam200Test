@@ -69,6 +69,7 @@ namespace Framework
         UpdateKeyState(KEY_ESCAPE, GetAsyncKeyState(KEY_ESCAPE));
         UpdateKeyState(KEY_SPACE, GetAsyncKeyState(KEY_SPACE));
         UpdateKeyState(KEY_ENTER, GetAsyncKeyState(KEY_ENTER));
+		UpdateKeyState(KEY_DELETE, GetAsyncKeyState(KEY_DELETE));
 
         // Shooting/spawning keys (for PlayerController)
         UpdateKeyState(KEY_SHIFT, GetAsyncKeyState(KEY_SHIFT));
@@ -95,6 +96,7 @@ namespace Framework
         // Mouse buttons
         UpdateKeyState(MOUSE_LEFT, GetAsyncKeyState(MOUSE_LEFT));
         UpdateKeyState(MOUSE_RIGHT, GetAsyncKeyState(MOUSE_RIGHT));
+
 
         // Check for quit conditions
         if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE))
