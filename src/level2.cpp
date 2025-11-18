@@ -39,6 +39,17 @@ void level2_Initialize()
         LOG_ERROR("LEVEL2", "Engine is null!");
         return;
     }
+
+    // =======================
+    // LOAD SPRITE ANIMATIONS
+    // =======================
+    auto* animSys = engine->GetAnimationSystem();
+    if (animSys)
+    {
+        animSys->LoadAnimationConfig("assets/spritesheet_config.txt");
+        LOG_INFO("LEVEL2", "Loaded spritesheet_config.txt for editor animations");
+    }
+
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Enable();
     }
@@ -80,6 +91,9 @@ void level2_Initialize()
 
 void level2_Update()
 {
+    if (!engine) return;
+
+    // 1. Handle input switching levels
     if (engine && engine->GetInputSystem() &&
         engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
@@ -91,6 +105,14 @@ void level2_Update()
     {
         next = LEVEL_3;
     }
+
+    // =============================================================
+    // 2. UPDATE ANIMATIONS IN LEVEL EDITOR
+    // =============================================================
+    // Animate in level editor using fixed-step (60 FPS)
+    auto* animSys = engine->GetAnimationSystem();
+    if (animSys)
+        animSys->Update(FIXED_DT);
 }
 
 void level2_Draw()
@@ -121,7 +143,7 @@ void level2_Draw()
     float colorB = ConfigReader::GetFloat("lv2_ui_text_color_b", 1.0f);
 
     // ========================================================================
-    // Render UI text (using values ​​from the configuration file)
+    // Render UI text (using values from the configuration file)
     // ========================================================================
     graphics->DrawText4(fontLarge, textScaling, textX, texty, textScale, glm::vec3(colorR, colorG, colorB));
 }

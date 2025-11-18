@@ -703,11 +703,19 @@ namespace Framework {
             {
                 auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
+                // ---------------------------------------------------------------------
+                // REQUIRED FIX:
+                // Override the render command texture so animation always wins
+                // ---------------------------------------------------------------------
+                cmd.texture = anim.spriteSheet;
+
                 Material* mat = resourceManager.GetMaterial(cmd.material);
-                if (!mat) continue;
+                if (mat)
+                    mat->albedoTexture = anim.spriteSheet;
 
                 Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
-                if (!tex) continue;
+                if (!tex)
+                    continue;
 
                 const int texW = tex->GetWidth();
                 const int texH = tex->GetHeight();

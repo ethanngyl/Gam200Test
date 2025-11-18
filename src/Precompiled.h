@@ -14,6 +14,9 @@
 ===============================================================================
  */
 #pragma once
+
+extern const float FIXED_DT;
+
 // Standard C++ libraries
 #include <vector> //Dynamic Array
 #include <string> //String Handling

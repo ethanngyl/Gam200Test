@@ -1088,6 +1088,57 @@ namespace Framework {
 
                 ImGui::Separator();
 
+                // ============================================================================
+                // SPRITE ANIMATION INSPECTOR
+                // ============================================================================
+                auto* animSys = CORE->GetAnimationSystem();
+
+                // --- If the entity DOES NOT have SpriteAnimation yet ---
+                if (!entityManager->HasComponent<SpriteAnimation>(entity))
+                {
+                    // Only show button if entity has something that can animate (Sprite or MeshRenderer)
+                    if (entityManager->HasComponent<MeshRenderer>(entity))
+                    {
+                        ImGui::Text("Sprite Animation:");
+                        if (ImGui::Button("Add Sprite Animation##AddAnim"))
+                        {
+                            entityManager->AddComponent<SpriteAnimation>(entity, SpriteAnimation{});
+                        }
+                    }
+                }
+                else
+                {
+                    // --- Animation Dropdown ---
+                    ImGui::Text("Sprite Animation:");
+
+                    auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
+
+                    // Build list of all available animations
+                    std::vector<const char*> animNames;
+                    animNames.reserve(animSys->animEntries.size());
+                    for (auto& entry : animSys->animEntries)
+                        animNames.push_back(entry.name.c_str());
+
+                    // Persistent per-entity selection
+                    static std::unordered_map<uint32_t, int> selectedAnim;
+                    uint32_t eid = entity.id;
+                    if (!selectedAnim.count(eid))
+                        selectedAnim[eid] = 0;
+
+                    // Dropdown combo
+                    if (ImGui::Combo("Animation##AnimCombo", &selectedAnim[eid],
+                        animNames.data(),
+                        (int)animNames.size()))
+                    {
+                        // Load animation
+                        auto& entry = animSys->animEntries[selectedAnim[eid]];
+                        GraphicsSystemV2* gfx = CORE->GetGraphicsSystem();
+                        animSys->LoadAnimation(entity, anim, gfx, entry.file.c_str());
+                    }
+                }
+
+                ImGui::Separator();
+
                 // Unique button ID
                 if (ImGui::Button("Delete##DelBtn")) {
                     entityToDelete = entity;
