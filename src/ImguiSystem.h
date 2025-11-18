@@ -73,6 +73,7 @@ namespace Framework {
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
         Entity playerEntity;
+
         //jiahao
         //the below 2 std::string are used to record the file path
         //in order to save and load level files
@@ -82,19 +83,25 @@ namespace Framework {
 
         AudioSystem* audioSystem;
         GraphicsSystemV2* graphicsSystem;
+
         // UI Windows
         void ShowEntityInspector();
         void ShowSpawnerWindow();
         void ShowDebugWindow();
         void ShowDemoWindow();
+
         //Asset windows - jiahao
         bool showAssets = false;
         std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
         void ShowAssetsWindow();
         void SetupDefaultDockLayout();
+
+        bool showAudioErrorPopup;
+        std::string audioErrorMessage;
+
         //Prefab window - kahyan
-        bool showPrefabWindow = false;
+        bool showPrefabWindow;
         void ShowPrefabWindow();
         void SpawnPrefabAtMouse(const std::string& prefabPath);
 
