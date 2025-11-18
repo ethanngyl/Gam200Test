@@ -1373,8 +1373,19 @@ namespace Framework {
             if (entityManager->HasComponent<CircleCollider>(e)) {
                 auto& cc = entityManager->GetComponent<CircleCollider>(e);
 
+				float scaleX = transform.scale.x;
+				float scaleY = transform.scale.y;
+
+				float scaleFactor = scaleX > scaleY ? scaleX : scaleY;
+
+                if (scaleFactor < 0.01f) {
+                    scaleFactor = 0.01f;
+                }
+
+				float worldRadius = cc.radius * scaleFactor;
+
                 collider = Collider::create_circle(
-                    cc.radius,
+                    worldRadius,
                     transform.position + cc.offset
                 );
 
@@ -1383,9 +1394,19 @@ namespace Framework {
 
             else if (entityManager->HasComponent<BoxCollider>(e)) {
                 auto& bc = entityManager->GetComponent<BoxCollider>(e);
+
+                float scaleX = transform.scale.x;
+                float scaleY = transform.scale.y;
+
+				if (scaleX < 0.01f) scaleX = 0.01f;
+                if (scaleY < 0.01f) scaleY = 0.01f;
+
+                float worldWidth = bc.size.x * scaleX;
+				float worldHeight = bc.size.y * scaleY;
+
                 collider = Collider::create_rect(
-                    bc.size.x,
-                    bc.size.y,
+                    worldWidth,
+                    worldHeight,
                     transform.position
                 );
 
@@ -1435,57 +1456,154 @@ namespace Framework {
         }
 
         InputSystem* input = Framework::CORE->GetInputSystem();
-
         UISystem* ui = CORE->GetUISystem();
 
         if (!input || !ui) {
             return;
         }
 
-        if (input->IsKeyPressed(MOUSE_LEFT)) {
-            if (selectedEntity.GetID() != INVALID_ENTITY &&
-                entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
+		float mouseX = 0.0f;
+		float mouseY = 0.0f;
+        input->GetMousePosition(mouseX, mouseY);
+		Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
 
-                float mouseX = 0.0f;
-                float mouseY = 0.0f;
-
-                input->GetMousePosition(mouseX, mouseY);
-
-                Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
-
-                auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
-
-                dragOffset = transform.position - mouseWorld;
-
-                draggingEntity = selectedEntity;
-                isDraggingEntity = true;
-            }
-            else {
-                isDraggingEntity = false;
-                draggingEntity = Framework::Entity{ INVALID_ENTITY };
-            }
-        }
-        if (isDraggingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-            if (draggingEntity.GetID() == INVALID_ENTITY || 
-                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) {
-                isDraggingEntity = false;
+        if (input->IsKeyPressed(MOUSE_LEFT) || input->IsKeyPressed(MOUSE_RIGHT)) {
+            if (!selectedEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
+				isDraggingEntity = false;
+				isScalingEntity = false;
+				isRotatingEntity = false;
+				draggingEntity = Framework::Entity{ INVALID_ENTITY};
                 return;
             }
 
-            float mouseX = 0.0f;
-            float mouseY = 0.0f;
+			auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
 
-            input->GetMousePosition(mouseX, mouseY);
-            Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
+            if (input->IsKeyPressed(MOUSE_LEFT) && input->IsKeyDown(KEY_SHIFT)) {
+				isScalingEntity = true;
+				isDraggingEntity = false;
+				isRotatingEntity = false;
+
+				draggingEntity = selectedEntity;
+				scaleStartMouse = mouseWorld;
+				scaleStartScale = transform.scale;
+            }
+            else if (input->IsKeyPressed(MOUSE_RIGHT)) {
+				isRotatingEntity = true;
+				isDraggingEntity = false;
+				isScalingEntity = false;
+
+				draggingEntity = selectedEntity;
+
+                Vector2D toMouse = transform.position;
+                rotateStartAngle = std::atan2(toMouse.y, toMouse.x);
+				rotateStartRotation = transform.rotation;
+            }
+
+            else if (input->IsKeyPressed(MOUSE_LEFT)) {
+				isDraggingEntity = true;
+				isScalingEntity = false;
+				isRotatingEntity = false;
+
+				draggingEntity = selectedEntity;
+				dragOffset = transform.position - mouseWorld;
+            }
+        }
+        if (isDraggingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            if (!draggingEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(draggingEntity))
+            {
+                isDraggingEntity = false;
+                return;
+            }
+            float moveX = 0.0f;
+			float moveY = 0.0f;
+			input->GetMousePosition(moveX, moveY);
+            Vector2D moveWorld = ui->ScreenToWorld(moveX, moveY);
+
+			auto& transform =
+                entityManager->GetComponent<Framework::Transform>(draggingEntity);
+
+			transform.position = moveWorld + dragOffset;
+        }
+
+        if (isScalingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            if (!draggingEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) 
+            {
+                isScalingEntity = false;
+                return;
+            }
+
+            float scaleX = 0.0f;
+            float scaleY = 0.0f;
+
+            input->GetMousePosition(scaleX, scaleY);
+            Vector2D scaleMouseWorld = ui->ScreenToWorld(scaleX, scaleY);
 
             auto& transform =
                 entityManager->GetComponent<Framework::Transform>(draggingEntity);
-            transform.position = mouseWorld + dragOffset;
+
+            Vector2D delta = scaleMouseWorld - scaleStartMouse;
+
+            float factor = 1.0f + delta.x * 0.5f;
+            if (factor < 0.1f) {
+                factor = 0.1f;
+            }
+            if (factor > 5.0f) {
+                factor = 5.0f;
+            }
+
+            transform.scale.x = scaleStartScale.x * factor;
+            transform.scale.y = scaleStartScale.y * factor;
+        }
+        if (isRotatingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Right))
+        {
+            /*if (!draggingEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) {
+
+                isRotatingEntity = false;
+                return;
+            }
+
+            float rotX = 0.0f;
+            float rotY = 0.0f;
+            input->GetMousePosition(rotX, rotY);
+            Vector2D rotMouseWorld = ui->ScreenToWorld(rotX, rotY);
+
+            auto& transform =
+                entityManager->GetComponent<Framework::Transform>(draggingEntity);
+
+            Vector2D toMouse = rotMouseWorld - transform.position;
+            float currentAngle = std::atan2(toMouse.y, toMouse.x);
+
+            float deltaAngle = currentAngle - rotateStartAngle;
+            transform.rotation = rotateStartRotation + deltaAngle;*/
+            if (!selectedEntity.IsValid() ||
+                !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
+				isRotatingEntity = false;
+            }
+            else {
+                auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
+
+				const float rotationSpeed = 0.2f;
+
+				transform.rotation += rotationSpeed;
+            }
         }
 
-        if (isDraggingEntity && ImGui::IsMouseReleased(ImGuiMouseButton_Left)){
-            isDraggingEntity = false;
-            RebuildSpatialPartition();
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            if (isDraggingEntity || isScalingEntity) {
+                isDraggingEntity = false;
+                isScalingEntity = false;
+                RebuildSpatialPartition();
+            }
+        }
+
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+            
+                isRotatingEntity = false;
+            
         }
     }
 

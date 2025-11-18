@@ -100,9 +100,20 @@ namespace Framework {
 
         //dragging state for object dragging - jiahao
         bool isDraggingEntity = false;
+		bool isScalingEntity = false;
+		bool isRotatingEntity = false;
+
         Framework::Entity draggingEntity{};
         Vector2D dragOffset;
+
+        Vector2D scaleStartMouse;
+        Vector2D scaleStartScale;
+
+		float rotateStartAngle = 0.0f;
+        float rotateStartRotation = 0.0f;
+
         void UpdateEntityDragging();
+
 
 
         void ShowAssetsWindow();
