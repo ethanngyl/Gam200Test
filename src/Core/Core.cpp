@@ -37,6 +37,7 @@
 #include "Grid/GridTile.h"
 #include "Pathfinding/Pathfinding.h"
 #include "AudioLoader.h"
+#include "Pause/Pause.h"
 
 namespace Framework
 {
@@ -61,6 +62,7 @@ namespace Framework
         , GameActive(true)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
+		, pauseSystem(nullptr)
     {
         CORE = this;
     }
@@ -151,6 +153,7 @@ namespace Framework
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
+		pauseSystem = new PauseSystem();
         scriptSystem->SetEntityManager(entityManager);
         scriptSystem->SetCoreEngine(this);
         scriptSystem->Initialize();
@@ -187,6 +190,10 @@ namespace Framework
 
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);
+
+        // Pause Event System
+        pauseSystem->SetCoreEngine(this);
+        LOG_INFO("CORE", "PauseSystem wired to CoreEngine");
 
         LOG_INFO("CORE", "Dependencies wired");
     }
@@ -232,6 +239,7 @@ namespace Framework
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
+        AddSystem(pauseSystem);
 
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
@@ -366,6 +374,7 @@ namespace Framework
         animationSystem = nullptr;
         uiSystem = nullptr;
         eventSystem = nullptr;
+        pauseSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {

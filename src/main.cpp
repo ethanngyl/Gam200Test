@@ -29,6 +29,7 @@
 #include "Precompiled.h"
 #include "ImguiSystem.h"
 #include "TimeConstants.h"
+#include "Pause/Pause.h"
 
 // ===============================================================================
 // GLOBAL VARIABLES
