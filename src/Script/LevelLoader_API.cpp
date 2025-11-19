@@ -12,7 +12,7 @@
 #include "GraphicsSystemV2.h"
 #include "Input.h"
 #include "LevelLoader_JSON.h"
-
+#include "ImguiSystem.h"
 
 namespace Framework {
 
@@ -145,53 +145,62 @@ namespace Framework {
         float colorG = luaL_checknumber(L, 8);
         float colorB = luaL_checknumber(L, 9);
 
-        // Convert button ID back to pointer
         UIButton* button = reinterpret_cast<UIButton*>(static_cast<intptr_t>(buttonID));
-
         if (!button) {
             LOG_WARN("LevelLoader", "Invalid button ID for DrawButtonText");
             return 0;
         }
 
-        // Get window system for framebuffer size
-        auto windowSystem = loader->coreEngine->GetWindowSystem();
-        if (!windowSystem) return 0;
-
-        GLFWwindow* window = windowSystem->GetWindow();
-        if (!window) return 0;
-
-        // Get framebuffer size for accurate pixel coordinates
+        // Get correct render target size
         int fbWidth, fbHeight;
-        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 
-        // World to Screen coordinate conversion
-        // Step 1: Get button's world position
+        auto* imgui = loader->coreEngine->GetImGuiSystem();
+        if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport() &&
+            imgui->GetViewportFBO() != 0) {
+            fbWidth = imgui->GetViewportWidth();
+            fbHeight = imgui->GetViewportHeight();
+        }
+        else {
+            auto windowSystem = loader->coreEngine->GetWindowSystem();
+            if (!windowSystem) return 0;
+            GLFWwindow* window = windowSystem->GetWindow();
+            if (!window) return 0;
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+        }
+
         float worldX = button->position.x;
         float worldY = button->position.y;
 
-        // Step 2: Convert world coordinates to NDC using camera's ViewProjection matrix
         glm::mat4 viewProj = loader->graphicsSystem->GetCamera().GetViewProjectionMatrix();
         glm::vec4 clipSpace = viewProj * glm::vec4(worldX, worldY, 0.0f, 1.0f);
 
-        // Step 3: NDC coordinates
         float ndcX = clipSpace.x;
         float ndcY = clipSpace.y;
 
-        // Step 4: NDC to Screen pixel coordinates
-        // NDC range: [-1, 1] -> Screen pixels: [0, fbWidth] and [0, fbHeight]
         float screenX = (ndcX + 1.0f) * 0.5f * fbWidth;
         float screenY = (ndcY + 1.0f) * 0.5f * fbHeight;
 
-        // Step 5: Apply text offset and render
         float textX = screenX + offsetX;
         float textY = screenY + offsetY;
+
+        // ========================================
+        // DEBUG OUTPUT
+        // ========================================
+        static int debugCount = 0;
+        if (debugCount++ % 60 == 0) {  // Print once per second
+            LOG_INFO("LevelLoader", "DrawButtonText: '%s'", text);
+            LOG_INFO("LevelLoader", "  fbSize: %dx%d", fbWidth, fbHeight);
+            LOG_INFO("LevelLoader", "  world: (%.2f, %.2f)", worldX, worldY);
+            LOG_INFO("LevelLoader", "  ndc: (%.2f, %.2f)", ndcX, ndcY);
+            LOG_INFO("LevelLoader", "  screen: (%.2f, %.2f)", textX, textY);
+        }
+        // ========================================
 
         glm::vec3 textColor(colorR, colorG, colorB);
         loader->graphicsSystem->DrawText4(font, text, textX, textY, scale, textColor);
 
         return 0;
     }
-
     // ========================================================================
     // INPUT API (FIXED for InputSystem)
     // ========================================================================
@@ -245,7 +254,9 @@ namespace Framework {
         else if (strcmp(keyName, "8") == 0) keyCode = KEY_8;
         else if (strcmp(keyName, "9") == 0) keyCode = KEY_9;
         else if (strcmp(keyName, "0") == 0) keyCode = KEY_0;
-
+        else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
+        else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
+        else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;
         // Check key state
         bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyPressed(keyCode);
         lua_pushboolean(L, pressed);
@@ -270,5 +281,67 @@ namespace Framework {
         return 1;
     }
 
+    int LevelLoader::Lua_ToggleEditor(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto* imgui = loader->coreEngine->GetImGuiSystem();
+        if (imgui) {
+            bool willBeEnabled = !imgui->IsEnabled();
+            imgui->RequestToggle();
+
+            // ========================================
+            // AUTO-PAUSE WHEN EDITOR OPENS
+            // ========================================
+            if (willBeEnabled) {
+                loader->coreEngine->SetPlaying(false);
+                LOG_INFO("LevelLoader", "Game paused (editor toggled on)");
+            }
+            // ========================================
+
+            lua_pushboolean(L, willBeEnabled);
+        }
+        return 1;
+    }
+
+
+
+    int LevelLoader::Lua_IsEditorEnabled(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto* imgui = loader->coreEngine->GetImGuiSystem();
+        bool enabled = imgui && imgui->IsEnabled();
+        lua_pushboolean(L, enabled);
+
+        return 1;
+    }
+
+    int LevelLoader::Lua_SetEditorMode(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        bool enable = lua_toboolean(L, 1);
+
+        auto* imgui = loader->coreEngine->GetImGuiSystem();
+        if (imgui) {
+            if (enable) {
+                imgui->Enable();
+                LOG_INFO("LevelLoader", "Editor enabled via SetEditorMode");
+            }
+            else {
+                imgui->Disable();
+                LOG_INFO("LevelLoader", "Editor disabled via SetEditorMode");
+            }
+        }
+
+        return 0;
+    }
 
 } // namespace Framework

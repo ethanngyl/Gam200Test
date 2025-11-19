@@ -280,6 +280,9 @@ namespace Framework {
         lua_register(L, "SetNextGameState", Lua_SetNextGameState);
 
         // ImGui
+        lua_register(L, "ToggleEditor", Lua_ToggleEditor);
+        lua_register(L, "IsEditorEnabled", Lua_IsEditorEnabled);
+        lua_register(L, "SetEditorMode", Lua_SetEditorMode);
         lua_register(L, "DisableImGui", Lua_DisableImGui);
         lua_register(L, "EnableImGui", Lua_EnableImGui);
 

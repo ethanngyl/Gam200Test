@@ -183,9 +183,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
                 engine->GetWindowSystem()->GetWindow()) {
                 engine->GetImGuiSystem()->Render();
 
-                if (engine->GetGraphicsSystem()) {
-                    engine->GetGraphicsSystem()->RenderImGui();
-                }
+                //if (engine->GetGraphicsSystem()) {
+                //    engine->GetGraphicsSystem()->RenderImGui();
+                //}
             }
 
             // End performance frame

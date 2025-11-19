@@ -44,7 +44,6 @@ Safety:
 #include "EntitySpawner.h"
 #include "AudioSystem.h"
 #include "Pathfinding.h"
-#include <build/_deps/glfw-src/include/GLFW/glfw3.h>
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
 namespace Framework {
@@ -85,7 +84,7 @@ namespace Framework {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
-
+        DeleteViewportFramebuffer();
         std::cout << "[ImGui] Shutdown complete\n";
     }
 
@@ -116,7 +115,12 @@ namespace Framework {
         ImGui_ImplOpenGL3_Init("#version 330");
 
         EnableFileDragAndDrop();
-        std::cout << "[ImGui] Initialized successfully\n";
+
+        CreateViewportFramebuffer(1280, 720);
+        showGameViewport = true;
+        renderToViewport = true;
+        std::cout << "[ImGuiSystem] Viewport ready - FBO: " << viewportFBO
+            << ", Texture: " << viewportTexture << "\n";
     }
 
     // ============================================================================
@@ -605,10 +609,20 @@ namespace Framework {
     void ImGuiSystem::Update(float dt)
     {
         (void)dt;
+        if (pendingToggle) {
+            enabled = !enabled;
+            pendingToggle = false;
+            std::cout << "[ImGuiSystem] Toggled to: " << (enabled ? "ON" : "OFF") << "\n";
+        }
+
+
         if (!enabled) {
             return;
         }
-
+        // Start ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
         //frameTime = dt;
         if (entityManager) {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
@@ -619,7 +633,6 @@ namespace Framework {
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
 
         frameTime = ImGui::GetIO().DeltaTime;
 
@@ -753,6 +766,9 @@ namespace Framework {
 				ImGui::MenuItem("Assets", nullptr, &showAssets);
                 //prefab window - kahyan
                 ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
+                ImGui::MenuItem("Game Viewport", nullptr, &showGameViewport);  // ADD
+                ImGui::Separator();
+                ImGui::MenuItem("Render to Viewport", nullptr, &renderToViewport);
                 ImGui::EndMenu();
             }
 
@@ -1012,6 +1028,7 @@ namespace Framework {
 		if (showAssets) ShowAssetsWindow();
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
+        if (showGameViewport) ShowGameViewport();
     }
 
     void ImGuiSystem::Render()
@@ -1020,7 +1037,7 @@ namespace Framework {
             return;
         }
 
-        if (!window) return;
+        //if (!window) return;
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -1421,6 +1438,7 @@ namespace Framework {
                 currentPage--;
             }
         }
+        if (showGameViewport) ShowGameViewport();
     }
 
     void ImGuiSystem::ShowPrefabWindow()
@@ -1773,7 +1791,7 @@ namespace Framework {
         }
 
         ImGui::End();
-
+        if (showGameViewport) ShowGameViewport();
 
     }
 
@@ -2358,5 +2376,139 @@ namespace Framework {
         std::cout << "[JSON]  Successfully updated audio.json\n";
 
         return true;
+    }
+
+    void ImGuiSystem::BeginGameRender()
+    {
+        // Bind the framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+        glViewport(0, 0, viewportWidth, viewportHeight);
+
+        // Clear the framebuffer
+        glClearColor(0.1f, 0.1f, 0.15f, 1.0f);  // Dark background
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    void ImGuiSystem::EndGameRender()
+    {
+        // Unbind framebuffer - return to default
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    // ============================================================================
+    // STEP 3: Game Viewport Window
+    // ============================================================================
+
+    void ImGuiSystem::CreateViewportFramebuffer(int width, int height)
+    {
+        viewportWidth = width;
+        viewportHeight = height;
+
+        // Create framebuffer
+        glGenFramebuffers(1, &viewportFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+
+        std::cout << "[ImGuiSystem] Created FBO: " << viewportFBO << "\n";
+
+        // Create color texture
+        glGenTextures(1, &viewportTexture);
+        glBindTexture(GL_TEXTURE_2D, viewportTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, viewportTexture, 0);
+
+        std::cout << "[ImGuiSystem] Created Texture: " << viewportTexture << "\n";
+
+        // Create depth/stencil renderbuffer
+        glGenRenderbuffers(1, &viewportRBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, viewportRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, viewportRBO);
+
+        // Check completeness
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE) {
+            std::cerr << "[ImGuiSystem] ERROR: Framebuffer incomplete! Status: 0x"
+                << std::hex << status << std::dec << "\n";
+        }
+        else {
+            std::cout << "[ImGuiSystem] Framebuffer complete: " << width << "x" << height << "\n";
+        }
+
+        // IMPORTANT: Unbind framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void ImGuiSystem::ResizeViewportFramebuffer(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return;
+        if (width == viewportWidth && height == viewportHeight) return;
+
+        viewportWidth = width;
+        viewportHeight = height;
+
+        // Resize texture
+        glBindTexture(GL_TEXTURE_2D, viewportTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+        // Resize renderbuffer
+        glBindRenderbuffer(GL_RENDERBUFFER, viewportRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+
+        std::cout << "[ImGuiSystem] Viewport resized: " << width << "x" << height << "\n";
+    }
+
+    void ImGuiSystem::DeleteViewportFramebuffer()
+    {
+        if (viewportFBO) {
+            glDeleteFramebuffers(1, &viewportFBO);
+            viewportFBO = 0;
+        }
+        if (viewportTexture) {
+            glDeleteTextures(1, &viewportTexture);
+            viewportTexture = 0;
+        }
+        if (viewportRBO) {
+            glDeleteRenderbuffers(1, &viewportRBO);
+            viewportRBO = 0;
+        }
+    }
+
+    void ImGuiSystem::ShowGameViewport()
+    {
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+        // Set minimum window size
+        ImGui::SetNextWindowSizeConstraints(ImVec2(400, 300), ImVec2(FLT_MAX, FLT_MAX));
+
+        if (ImGui::Begin("Game##GameViewport", &showGameViewport)) {
+
+            ImVec2 size = ImGui::GetContentRegionAvail();
+
+            // Only resize if size is reasonable
+            if (size.x >= 100 && size.y >= 100) {
+                int newW = static_cast<int>(size.x);
+                int newH = static_cast<int>(size.y);
+
+                if (newW != viewportWidth || newH != viewportHeight) {
+                    ResizeViewportFramebuffer(newW, newH);
+                }
+
+                // Display texture
+                ImGui::Image(
+                    (ImTextureID)(intptr_t)viewportTexture,
+                    size,
+                    ImVec2(0, 1),
+                    ImVec2(1, 0)
+                );
+            }
+            else {
+                ImGui::Text("Viewport too small: %.0fx%.0f", size.x, size.y);
+            }
+        }
+        ImGui::End();
+
+        ImGui::PopStyleVar();
     }
 } // namespace Framework

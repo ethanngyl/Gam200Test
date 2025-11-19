@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          Core.cpp
  Author:        GE YONGQI
@@ -400,25 +400,92 @@ namespace Framework
 
     void CoreEngine::UpdateSingleFrame(float dt)
     {
-        DBG_SCOPE_SYS("CoreEngine Frame", eng::debug::Subsystem::Engine);
-
-        // Check if window should close
         if (ShouldWindowClose()) {
             GameActive = false;
-            Message quitMsg(Status::Quit);
-            BroadcastMessage(&quitMsg);
             return;
         }
 
-        // Update all systems
-        for (unsigned i = 0; i < Systems.size(); ++i)
-        {
+        // Update all logic systems
+        for (unsigned i = 0; i < Systems.size(); ++i) {
+            if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
+                dynamic_cast<ImGuiSystem*>(Systems[i])) {
+                continue;
+            }
             Systems[i]->Update(dt);
+        }
 
+        if (scriptSystem) scriptSystem->Update(dt);
+
+        // === RENDER GAME ===
+        bool useViewport = imguiSystem &&
+            imguiSystem->IsEnabled() &&
+            imguiSystem->IsRenderingToViewport() &&
+            imguiSystem->GetViewportFBO() != 0 &&
+            imguiSystem->GetViewportWidth() >= 100 &&
+            imguiSystem->GetViewportHeight() >= 100;
+
+        if (useViewport) {
+            // Render game to viewport texture
+            graphicsSystem->SetRenderTarget(
+                imguiSystem->GetViewportFBO(),
+                imguiSystem->GetViewportWidth(),
+                imguiSystem->GetViewportHeight()
+            );
+            graphicsSystem->Update(dt);
+            glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
+
+            // Setup GL state for text
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            // ========================================
+            // Draw level text INTO the viewport
+            // ========================================
+            graphicsSystem->GetTextRenderer().setScreenSize(
+                imguiSystem->GetViewportWidth(),
+                imguiSystem->GetViewportHeight()
+            );
+            std::cout << "[Core] Drawing text to viewport: "
+                << imguiSystem->GetViewportWidth() << "x"
+                << imguiSystem->GetViewportHeight() << "\n";
+            LevelLoader::GetInstance().DrawCurrentLevel();
+            graphicsSystem->DrawText4("Sans48", "TEST", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            // ========================================
+
+            graphicsSystem->ClearRenderTarget();
+
+            // Clear screen for ImGui
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            int w, h;
+            glfwGetFramebufferSize(windowSystem->GetWindow(), &w, &h);
+            glViewport(0, 0, w, h);
+            glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
-        if (scriptSystem) {
-            scriptSystem->Update(dt);
+        else {
+            // Normal rendering
+            graphicsSystem->Update(dt);
+
+            // ========================================
+            // Draw level text for non-viewport mode
+            // ========================================
+            int fbW, fbH;
+            glfwGetFramebufferSize(windowSystem->GetWindow(), &fbW, &fbH);
+            graphicsSystem->GetTextRenderer().setScreenSize(fbW, fbH);
+            LevelLoader::GetInstance().DrawCurrentLevel();
+            // ========================================
         }
+
+        // === IMGUI ===
+        if (imguiSystem) {
+            imguiSystem->Update(dt);
+            if (imguiSystem->IsEnabled()) {
+                imguiSystem->Render();
+            }
+        }
+
+        glfwSwapBuffers(windowSystem->GetWindow());
+        glfwPollEvents();
     }
 
     void CoreEngine::BroadcastMessage(Message* message)
