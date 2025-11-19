@@ -1065,9 +1065,6 @@ namespace Framework {
     {
         if (!entityManager) return;
 
-        //ImGui::SetNextWindowSize(ImVec2(350, 500), ImGuiCond_FirstUseEver);
-        //ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
-
         if (!ImGui::Begin("Entity Inspector##Inspector1", &showEntityInspector)) {
             ImGui::End();
             return;
@@ -1079,55 +1076,34 @@ namespace Framework {
         ImGui::Text("Total Entities: %d", totalEntities);
         ImGui::Separator();
 
-        // ============================================================================
+        // ========================================================================
         // PAGINATION CONTROLS
-        // ============================================================================
-        const int totalPages = (totalEntities + entitiesPerPage - 1) / entitiesPerPage; // Ceiling division
+        // ========================================================================
+        const int totalPages = (totalEntities + entitiesPerPage - 1) / entitiesPerPage;
 
-        // Clamp current page to valid range
         if (currentPage < 0) currentPage = 0;
         if (currentPage >= totalPages && totalPages > 0) currentPage = totalPages - 1;
 
-        // Page navigation buttons
         if (totalPages > 1) {
             ImGui::Text("Page %d / %d", currentPage + 1, totalPages);
 
-            // Previous page button
             if (ImGui::Button("< Prev##PagePrev")) {
                 if (currentPage > 0) currentPage--;
             }
-
             ImGui::SameLine();
-
-            // Next page button
             if (ImGui::Button("Next >##PageNext")) {
                 if (currentPage < totalPages - 1) currentPage++;
             }
-
-            ImGui::SameLine();
-
-            // Jump to page input
-            ImGui::SetNextItemWidth(60);
-            int displayPage = currentPage + 1; // Show 1-indexed to user
-            if (ImGui::InputInt("##PageNum", &displayPage, 0, 0)) {
-                currentPage = displayPage - 1; // Convert back to 0-indexed
-                if (currentPage < 0) currentPage = 0;
-                if (currentPage >= totalPages) currentPage = totalPages - 1;
-            }
-
             ImGui::Separator();
         }
 
-        // ============================================================================
-        // CALCULATE PAGE SLICE - WITHOUT std::min
-        // ============================================================================
+        // Calculate page slice
         const int startIdx = currentPage * entitiesPerPage;
         int endIdx = startIdx + entitiesPerPage;
         if (endIdx > totalEntities) {
             endIdx = totalEntities;
         }
 
-        // Get entities for current page
         std::vector<Entity> pageEntities;
         if (startIdx < totalEntities) {
             pageEntities.assign(
@@ -1136,112 +1112,261 @@ namespace Framework {
             );
         }
 
-        ImGui::Text("Showing %d - %d of %d",
-            startIdx + 1,
-            endIdx,
-            totalEntities);
+        ImGui::Text("Showing %d - %d of %d", startIdx + 1, endIdx, totalEntities);
         ImGui::Separator();
 
-        // ============================================================================
-        // DISPLAY ENTITIES FOR CURRENT PAGE
-        // ============================================================================
+        // ========================================================================
+        // DISPLAY ENTITIES
+        // ========================================================================
         Entity entityToDelete = { 0 };
         bool shouldDelete = false;
 
-        //modify it to display the entity when user click on the entity - jiahao
         for (size_t i = 0; i < pageEntities.size(); ++i) {
             Entity entity = pageEntities[i];
 
-            // Super unique ID
-            ImGui::PushID(static_cast<int>(entity.id + i));
+            ImGui::PushID(static_cast<int>(entity.GetID()));
 
-            char label[128];
-            snprintf(label, sizeof(label), "Entity %u", static_cast<int>(i+1));
+            // Create label with entity info
+            char label[256];
+            std::string entityInfo = "";
 
-			bool isSelected = selectedEntity.IsValid() && (entity.id == selectedEntity.GetID());
-
-            if (isSelected) {
-                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.3f, 0.5f, 1.0f, 1.0f));
-                ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+            // Add sprite name if available
+            if (entityManager->HasComponent<MeshRenderer>(entity)) {
+                auto& mr = entityManager->GetComponent<MeshRenderer>(entity);
+                if (!mr.spriteName.empty()) {
+                    entityInfo = " (" + mr.spriteName + ")";
+                }
             }
 
-            bool open = ImGui::CollapsingHeader(label);
+            snprintf(label, sizeof(label), "Entity %u%s", entity.GetID(), entityInfo.c_str());
 
-            if (isSelected) {
-                ImGui::PopStyleColor();
-            }
+            if (ImGui::CollapsingHeader(label)) {
 
-            if (open) {
-
+                // ==================================================================
+                // TRANSFORM COMPONENT
+                // ==================================================================
                 if (entityManager->HasComponent<Transform>(entity)) {
-                    auto& transform = entityManager->GetComponent<Transform>(entity);
-                    ImGui::Text("Transform:");
-                    ImGui::DragFloat2("Position##Pos", &transform.position.x, 0.01f, -10.0f, 10.0f);
-                    Vector2D prevScale = transform.scale;
-                    if (ImGui::DragFloat2("Scale##Scl", &prevScale.x, 0.01f, 0.01f, 10.0f))
-                    {
-                        transform.scale.x = prevScale.x;
-                        transform.scale.y = prevScale.y;
+                    if (ImGui::TreeNode("Transform##TransformNode")) {
+                        auto& transform = entityManager->GetComponent<Transform>(entity);
+
+                        ImGui::DragFloat2("Position", &transform.position.x, 0.01f, -100.0f, 100.0f);
+                        ImGui::DragFloat2("Scale", &transform.scale.x, 0.01f, 0.01f, 100.0f);
+                        ImGui::DragFloat("Rotation", &transform.rotation, 0.1f, -360.0f, 360.0f);
+
+                        ImGui::TreePop();
                     }
                 }
 
-                if (entityManager->HasComponent<MeshRenderer>(entity))
-                {
-                    auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
-                    std::string testString = "Mesh Sprite: " + meshRenderer.spriteName;
-                    ImGui::Text(testString.c_str());
+                // ==================================================================
+                // SPRITE COMPONENT
+                // ==================================================================
+                if (entityManager->HasComponent<Sprite>(entity)) {
+                    if (ImGui::TreeNode("Sprite##SpriteNode")) {
+                        auto& sprite = entityManager->GetComponent<Sprite>(entity);
+
+                        // Display texture path
+                        char pathBuffer[256];
+                        strncpy(pathBuffer, sprite.texturePath.c_str(), sizeof(pathBuffer) - 1);
+                        pathBuffer[sizeof(pathBuffer) - 1] = '\0';
+
+                        if (ImGui::InputText("Texture Path", pathBuffer, sizeof(pathBuffer))) {
+                            sprite.texturePath = pathBuffer;
+                        }
+
+                        ImGui::DragInt("Layer", &sprite.layer, 1, -100, 100);
+
+                        ImGui::TreePop();
+                    }
                 }
 
+                // ==================================================================
+                // MESH RENDERER COMPONENT
+                // ==================================================================
+                if (entityManager->HasComponent<MeshRenderer>(entity)) {
+                    if (ImGui::TreeNode("MeshRenderer##MeshRendererNode")) {
+                        auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
+
+                        // Sprite name
+                        char nameBuffer[256];
+                        strncpy(nameBuffer, meshRenderer.spriteName.c_str(), sizeof(nameBuffer) - 1);
+                        nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+
+                        if (ImGui::InputText("Sprite Name", nameBuffer, sizeof(nameBuffer))) {
+                            meshRenderer.spriteName = nameBuffer;
+                        }
+
+                        ImGui::DragInt("Layer", &meshRenderer.layer, 1, -100, 100);
+                        ImGui::DragInt("Order in Layer", &meshRenderer.orderInLayer, 1, -100, 100);
+
+                        // Tint color
+                        float tint[4] = { meshRenderer.tint.r, meshRenderer.tint.g,
+                                          meshRenderer.tint.b, meshRenderer.tint.a };
+                        if (ImGui::ColorEdit4("Tint", tint)) {
+                            meshRenderer.tint.r = tint[0];
+                            meshRenderer.tint.g = tint[1];
+                            meshRenderer.tint.b = tint[2];
+                            meshRenderer.tint.a = tint[3];
+                        }
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ==================================================================
+                // MOVEMENT COMPONENT
+                // ==================================================================
                 if (entityManager->HasComponent<Movement>(entity)) {
-                    auto& movement = entityManager->GetComponent<Movement>(entity);
-                    ImGui::Text("Movement:");
-                    ImGui::DragFloat2("Direction##Dir", &movement.direction.x, 0.01f, -1.0f, 1.0f);
-                    ImGui::DragFloat("Speed##Spd", &movement.moveSpeed, 0.01f, 0.0f, 2.0f);
+                    if (ImGui::TreeNode("Movement##MovementNode")) {
+                        auto& movement = entityManager->GetComponent<Movement>(entity);
+
+                        ImGui::DragFloat("Speed", &movement.moveSpeed, 0.01f, 0.0f, 100.0f);
+                        ImGui::DragFloat2("Direction", &movement.direction.x, 0.01f, -1.0f, 1.0f);
+
+                        ImGui::TreePop();
+                    }
                 }
 
-                //prefab save/export kahyan
-                static char prefabBuffer[128] = "";
-                ImGui::Separator();
-                ImGui::Text("Save Prefab:");
-                ImGui::SetNextItemWidth(160.0f);
-                ImGui::InputText("##PrefabName", prefabBuffer, IM_ARRAYSIZE(prefabBuffer));
+                // ==================================================================
+                // BOX COLLIDER COMPONENT
+                // ==================================================================
+                if (entityManager->HasComponent<BoxCollider>(entity)) {
+                    if (ImGui::TreeNode("BoxCollider##BoxColliderNode")) {
+                        auto& boxCollider = entityManager->GetComponent<BoxCollider>(entity);
 
-                ImGui::SameLine();
-                if (ImGui::Button("Export##ExportBtn")) {
-                    if (!entity.IsValid()) {
-                        std::cout << "[Prefab] Not saved. Entity is invalid.\n";
+                        ImGui::DragFloat2("Size", &boxCollider.size.x, 0.01f, 0.0f, 100.0f);
+                        ImGui::DragFloat2("Offset", &boxCollider.offset.x, 0.01f, -100.0f, 100.0f);
+                        ImGui::Checkbox("Is Trigger", &boxCollider.isTrigger);
+
+                        ImGui::TreePop();
                     }
-                    else if (prefabBuffer[0] == '\0') {
-                        std::cout << "[Prefab] Not saved. Name is empty.\n";
-                    }
-                    else {
-                        //IMPORTANT: save into assets/prefabs/
-                        std::string dir = "assets/prefabs/";
-                        std::string filePath = dir + std::string(prefabBuffer) + ".prefab";
-
-                        // Make sure folder exists
-                        try {
-                            std::filesystem::create_directories(dir);
-                        }
-                        catch (...) {
-                            std::cout << "[Prefab] Failed to create folder: " << dir << "\n";
-                        }
-
-                        if (PrefabSerializer::SavePrefab(*entityManager, entity, filePath)) {
-                            std::cout << "[Prefab] Saved: " << filePath << " from entity " << entity.id << "\n";
-                        }
-                        else {
-                            std::cout << "[Prefab] Failed to save: " << filePath << "\n";
-                        }
-                    }
-
-                    // Clear input after click
-                    memset(prefabBuffer, 0, sizeof(prefabBuffer));
                 }
 
+                // ==================================================================
+                // CIRCLE COLLIDER COMPONENT
+                // ==================================================================
+                if (entityManager->HasComponent<CircleCollider>(entity)) {
+                    if (ImGui::TreeNode("CircleCollider##CircleColliderNode")) {
+                        auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
+
+                        ImGui::DragFloat("Radius", &circleCollider.radius, 0.01f, 0.0f, 100.0f);
+                        ImGui::DragFloat2("Offset", &circleCollider.offset.x, 0.01f, -100.0f, 100.0f);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ==================================================================
+                // SPRITE ANIMATION COMPONENT
+                // ==================================================================
+                //if (entityManager->HasComponent<SpriteAnimation>(entity)) {
+                // 
+                //    if (ImGui::TreeNode("SpriteAnimation##SpriteAnimNode")) {
+                //        auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
+
+                //        ImGui::DragInt("Frame Width", &anim.frameWidth, 1, 1, 1024);
+                //        ImGui::DragInt("Frame Height", &anim.frameHeight, 1, 1, 1024);
+                //        ImGui::DragInt("Frame Count", &anim.frameCount, 1, 1, 100);
+                //        ImGui::DragInt("Current Frame", &anim.currentFrame, 1, 0, anim.frameCount - 1);
+                //        ImGui::DragFloat("Frame Time", &anim.frameTime, 0.01f, 0.0f, 10.0f);
+                //        ImGui::DragFloat("Elapsed", &anim.elapsed, 0.01f, 0.0f, 100.0f);
+                //        ImGui::Checkbox("Flip X", &anim.flipX);
+
+                //        ImGui::TreePop();
+                //    }
+                //}
+
+                // ==================================================================
+                // AUDIO SOURCE COMPONENT (if you have one)
+                // ==================================================================
+                if (entityManager->HasComponent<AudioSource>(entity)) {
+                    if (ImGui::TreeNode("AudioSource##AudioSourceNode")) {
+                        auto& audio = entityManager->GetComponent<AudioSource>(entity);
+
+                        // Display audio name
+                        char audioBuffer[256];
+                        strncpy(audioBuffer, audio.soundName.c_str(), sizeof(audioBuffer) - 1);
+                        audioBuffer[sizeof(audioBuffer) - 1] = '\0';
+
+                        if (ImGui::InputText("Sound Name", audioBuffer, sizeof(audioBuffer))) {
+                            audio.soundName = audioBuffer;
+                        }
+
+                        ImGui::DragFloat("Volume", &audio.volume, 0.01f, 0.0f, 1.0f);
+                        ImGui::DragFloat("Pitch", &audio.pitch, 0.01f, 0.1f, 3.0f);
+                        ImGui::Checkbox("Loop", &audio.loop);
+                        ImGui::Checkbox("Play on Start", &audio.playOnStart);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ==================================================================
+                // SCRIPT COMPONENT
+                // ==================================================================
+                if (entityManager->HasComponent<ScriptComponent>(entity)) {
+                    if (ImGui::TreeNode("Script##ScriptNode")) {
+                        auto& script = entityManager->GetComponent<ScriptComponent>(entity);
+
+                        // Display script path
+                        ImGui::Text("Path: %s", script.scriptPath.c_str());
+
+                        // Extract and show script name
+                        std::string scriptName = std::filesystem::path(script.scriptPath).stem().string();
+                        ImGui::Text("Name: %s", scriptName.c_str());
+
+                        // Status
+                        ImGui::Text("Initialized: %s", script.initialized ? "Yes" : "No");
+                        ImGui::Text("Lua State: %s", script.L ? "Active" : "None");
+
+                        // Functions available
+                        ImGui::Separator();
+                        ImGui::Text("Functions:");
+                        ImGui::BulletText("OnInit: %s", script.hasOnInit ? "Yes" : "No");
+                        ImGui::BulletText("OnUpdate: %s", script.hasOnUpdate ? "Yes" : "No");
+                        ImGui::BulletText("OnDestroy: %s", script.hasOnDestroy ? "Yes" : "No");
+
+                        // Update timer
+                        ImGui::Text("Update Timer: %.3f", script.updateTimer);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ==================================================================
+                // RIGIDBODY COMPONENT (if you have one)
+                // ==================================================================
+                /*
+                if (entityManager->HasComponent<Rigidbody>(entity)) {
+                    if (ImGui::TreeNode("Rigidbody##RigidbodyNode")) {
+                        auto& rb = entityManager->GetComponent<Rigidbody>(entity);
+
+                        ImGui::DragFloat2("Velocity", &rb.velocity.x, 0.01f, -100.0f, 100.0f);
+                        ImGui::DragFloat("Mass", &rb.mass, 0.1f, 0.1f, 1000.0f);
+                        ImGui::DragFloat("Drag", &rb.drag, 0.01f, 0.0f, 10.0f);
+                        ImGui::DragFloat("Gravity Scale", &rb.gravityScale, 0.1f, 0.0f, 10.0f);
+                        ImGui::Checkbox("Is Kinematic", &rb.isKinematic);
+
+                        ImGui::TreePop();
+                    }
+                }
+                */
+
+                // ==================================================================
+                // PREFAB TRACKER INFO
+                // ==================================================================
+                std::string prefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
+                if (!prefabSource.empty()) {
+                    ImGui::Separator();
+                    ImGui::TextColored(ImVec4(0.5f, 0.8f, 0.5f, 1.0f), "Prefab: %s",
+                        std::filesystem::path(prefabSource).filename().string().c_str());
+                }
+
+                // ==================================================================
+                // ENTITY ACTIONS
+                // ==================================================================
                 ImGui::Separator();
 
-                // Unique button ID
+                // Delete button
                 if (ImGui::Button("Delete##DelBtn")) {
                     entityToDelete = entity;
                     shouldDelete = true;
@@ -1249,31 +1374,35 @@ namespace Framework {
 
                 ImGui::SameLine();
 
-                char savePrefabBtnLabel[64];
-                snprintf(savePrefabBtnLabel, sizeof(savePrefabBtnLabel), "Save Prefab##SavePrefab%u", entity.id);
-
-                if (ImGui::Button(savePrefabBtnLabel)) {
-                    // Generate filename from entity ID
-                    std::string prefabPath = "assets/prefabs/entity_" + std::to_string(entity.id) + ".prefab";
-
-                    // Create directory if needed
+                // Save as prefab button
+                if (ImGui::Button("Save Prefab##SavePrefabBtn")) {
+                    std::string prefabPath = "assets/prefabs/entity_" + std::to_string(entity.GetID()) + ".prefab";
                     std::filesystem::create_directories("assets/prefabs");
 
                     bool saved = PrefabSerializer::SavePrefab(*entityManager, entity, prefabPath);
-
                     if (saved) {
-                        std::cout << "[Inspector] ✅ Saved entity " << entity.id << " as prefab\n";
-                    }
-                    else {
-                        std::cerr << "[Inspector] ❌ Failed to save prefab\n";
+                        std::cout << "[Inspector] Saved entity " << entity.GetID() << " as prefab\n";
                     }
                 }
 
-                // Show prefab source if entity came from a prefab
-                std::string prefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
-                if (!prefabSource.empty()) {
-                    ImGui::TextColored(ImVec4(0.5f, 0.8f, 0.5f, 1.0f), "From: %s",
-                        std::filesystem::path(prefabSource).filename().string().c_str());
+                ImGui::SameLine();
+
+                // Duplicate button
+                if (ImGui::Button("Duplicate##DuplicateBtn")) {
+                    // Save to temp prefab and reload
+                    std::string tempPath = "assets/prefabs/_temp_duplicate.prefab";
+                    if (PrefabSerializer::SavePrefab(*entityManager, entity, tempPath)) {
+                        Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, tempPath);
+                        if (newEntity.IsValid()) {
+                            // Offset position slightly
+                            if (entityManager->HasComponent<Transform>(newEntity)) {
+                                auto& t = entityManager->GetComponent<Transform>(newEntity);
+                                t.position.x += 0.5f;
+                                t.position.y += 0.5f;
+                            }
+                            std::cout << "[Inspector] Duplicated as entity " << newEntity.GetID() << "\n";
+                        }
+                    }
                 }
             }
 
@@ -1283,11 +1412,11 @@ namespace Framework {
         ImGui::End();
 
         // Handle deletion after UI rendering
-        if (shouldDelete && entityToDelete.id != 0) {
+        if (shouldDelete && entityToDelete.IsValid()) {
             entityManager->DestroyEntity(entityToDelete);
             Framework::SpatialPartitioningRemove(entityToDelete);
+            Framework::PrefabInstanceTracker::Get().UnregisterInstance(entityToDelete);
 
-            // If we deleted the last entity on the page, go to previous page
             if (pageEntities.size() == 1 && currentPage > 0) {
                 currentPage--;
             }

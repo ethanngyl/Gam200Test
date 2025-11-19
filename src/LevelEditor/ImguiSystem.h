@@ -107,6 +107,7 @@ namespace Framework {
         Vector2D dragOffset;
 
         Vector2D scaleStartMouse;
+
         Vector2D scaleStartScale;
 
 		float rotateStartAngle = 0.0f;
