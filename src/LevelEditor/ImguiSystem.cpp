@@ -44,9 +44,10 @@ Safety:
 #include "EntitySpawner.h"
 #include "AudioSystem.h"
 #include "Pathfinding.h"
-#include <build/_deps/glfw-src/include/GLFW/glfw3.h>
+//#include <build/_deps/glfw-src/include/GLFW/glfw3.h>
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
+
 namespace Framework {
 
     ImGuiSystem::ImGuiSystem()
@@ -602,20 +603,11 @@ namespace Framework {
         return Vector2D(worldPos.x, worldPos.y);
     }
 
-    void ImGuiSystem::Update(float dt)
+    void ImGuiSystem::NewFrame()
     {
-        (void)dt;
         if (!enabled) {
             return;
         }
-
-        //frameTime = dt;
-        if (entityManager) {
-            entityCount = static_cast<int>(entityManager->GetAllEntities().size());
-        }
-
-        static bool wantOpenModal = false;
-        static bool wantSaveAsModal = false;
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -623,37 +615,38 @@ namespace Framework {
 
         frameTime = ImGui::GetIO().DeltaTime;
 
+        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(),
+            ImGuiDockNodeFlags_PassthruCentralNode);
+    }
 
-        // enable docking -jiahao
-        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-      //  if (ImGui::BeginDragDropTarget()) {
-      //      if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite")) {
-      //          if (payload->DataSize == sizeof(std::string)) {
-      //              std::string filePath = *(std::string*)payload->Data;
-      //              if (IsTextureFile(filePath)) {
-      //                  // Handle texture file drop
-      //                  if (entitySpawner) {
-      //                      Framework::Entity entity = entitySpawner->SpawnSprite(
-      //                          filePath,
-      //                          Vector2D(0.0f, 0.0f),
-      //                          Vector2D(1.0f, 1.0f)
-      //                      );
-      //                      std::cout << "[Drop] Spawned sprite from: " << filePath << " as entity" << entity.id << "\n";
-						//}
-      //              }
-      //          }
-      //      }
-      //      ImGui::EndDragDropTarget();
-      //  }
+    void ImGuiSystem::Update(float dt)
+    {
+        (void)dt;
+    }
+
+    void ImGuiSystem::UpdateUI()
+    {
+        if (!enabled) {
+            return;
+        }
+
+        if (entityManager) {
+            entityCount = static_cast<int>(entityManager->GetAllEntities().size());
+        }
+
+        static bool wantOpenModal = false;
+        static bool wantSaveAsModal = false;
+
+        frameTime = ImGui::GetIO().DeltaTime;
 
         //object picking
         UpdatePicking();
 
         UpdateEntityDragging();
 
-		//delete button to delete selected entity
+        //delete button to delete selected entity
         if (!CORE->IsPlaying() && entityManager) {
-			InputSystem* input = Framework::CORE->GetInputSystem();
+            InputSystem* input = Framework::CORE->GetInputSystem();
 
             if (input && selectedEntity.IsValid()) {
                 if (input->IsKeyPressed(KEY_DELETE))
@@ -664,7 +657,7 @@ namespace Framework {
                     SpatialPartitioningRemove(selectedEntity);
 
                     entityManager->DestroyEntity(selectedEntity);
-                    
+
 
                     selectedEntity = Framework::Entity{};
                     draggingEntity = Framework::Entity{};
@@ -682,9 +675,9 @@ namespace Framework {
                 if (CORE->IsPlaying()) {
                     ImGui::BeginDisabled();
                 }
-				// open default level
+                // open default level
                 if (ImGui::MenuItem("Open")) {
-					// open default level if no current level path
+                    // open default level if no current level path
                     bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
                     if (!isOpen) {
                         std::cerr << "[ImGuiError] Failed to open level.txt\n";
@@ -693,50 +686,50 @@ namespace Framework {
                         currentLevelPath = "assets/level1.txt";
                     }
                 }
-				// open level from specified path input by user
+                // open level from specified path input by user
                 if (ImGui::MenuItem("Open...")) {
-					// set default path if current level path is empty
+                    // set default path if current level path is empty
                     if (currentLevelPath.empty()) {
                         currentLevelPath = "assets/level1.txt";
                     }
-					// set the open path to current level path
+                    // set the open path to current level path
                     openPath = currentLevelPath;
                     //ImGui::OpenPopup("Open Level...");
-					// set a flag here to show open modal in next frame
+                    // set a flag here to show open modal in next frame
                     wantOpenModal = true;
                 }
 
-				// save level to current level path
+                // save level to current level path
                 if (ImGui::MenuItem("Save")) {
-					// use default path if current level path is empty
+                    // use default path if current level path is empty
                     const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
-					// try to save level to the path
+                    // try to save level to the path
                     bool isSave = SaveLevelToTxt(path);
                     if (!isSave) {
                         std::cerr << "[ImGuiError] Failed to save level.txt\n";
                     }
                 }
 
-				// save level to specified path input by user
+                // save level to specified path input by user
                 if (ImGui::MenuItem("Save as ...")) {
-					// set default path if current level path is empty
+                    // set default path if current level path is empty
                     if (currentLevelPath.empty()) {
                         currentLevelPath = "assets/level1.txt";
                     }
-					// set the open path to current level path
+                    // set the open path to current level path
                     openPath = currentLevelPath;
                     //ImGui::OpenPopup("Save Level As...");
-					// set a flag here to show save as modal in next frame
+                    // set a flag here to show save as modal in next frame
                     wantSaveAsModal = true;
                 }
 
-				// exit option
+                // exit option
                 if (ImGui::MenuItem("Exit")) {
                     Message quitMsg(Status::Quit);
                     CORE->BroadcastMessage(&quitMsg);
                 }
 
-				// disable function buttons under File when playing
+                // disable function buttons under File when playing
                 if (CORE->IsPlaying()) {
                     ImGui::EndDisabled();
                 }
@@ -749,23 +742,23 @@ namespace Framework {
                 ImGui::MenuItem("Spawner", nullptr, &showSpawner);
                 ImGui::MenuItem("Debug Info", nullptr, &showDebug);
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
-				//Asset window - jiahao
-				ImGui::MenuItem("Assets", nullptr, &showAssets);
+                //Asset window - jiahao
+                ImGui::MenuItem("Assets", nullptr, &showAssets);
                 //prefab window - kahyan
                 ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
                 ImGui::EndMenu();
             }
 
             // ============================================================================
-			// This is the if else condition to control play and stop button in the editor menu
+            // This is the if else condition to control play and stop button in the editor menu
             // author: jiahao.zhou@digipen
             // ============================================================================
             if (ImGui::BeginMenu("Editor")) {
 
-				// if the game is not playing, show play button
+                // if the game is not playing, show play button
                 if (!CORE->IsPlaying()) {
                     if (ImGui::MenuItem("Play")) {
-						//if there is no current level path, save to default level path
+                        //if there is no current level path, save to default level path
                         if (!SaveLevelToTxt(defaultLevelPath)) {
                             std::cerr << "[ImGuiError] Could not create default setting"
                                 << defaultLevelPath << "\n";
@@ -773,18 +766,18 @@ namespace Framework {
                         else {
                             // change engine state into playing
                             CORE->SetPlaying(true);
-							// set camera to follow player entity
+                            // set camera to follow player entity
                             if (auto* gfx = CORE->GetGraphicsSystem())
                             {
                                 if (entityManager)
                                 {
-									//find player entity by checking circle collider radius
+                                    //find player entity by checking circle collider radius
                                     Framework::Entity player{};
                                     for (auto e : entityManager->GetAllEntities())
                                     {
                                         if (entityManager->HasComponent<Framework::CircleCollider>(e))
                                         {
-											// get reference to circle collider component
+                                            // get reference to circle collider component
                                             auto& c = entityManager->GetComponent<Framework::CircleCollider>(e);
                                             if (c.radius > 0.12f && c.radius < 0.18f)
                                             {
@@ -795,10 +788,10 @@ namespace Framework {
                                         }
                                     }
 
-									// set follow target if player entity is valid
+                                    // set follow target if player entity is valid
                                     if (player.IsValid())
                                     {
-										// inform graphics system to follow player
+                                        // inform graphics system to follow player
                                         gfx->SetFollowTarget(player);
                                     }
                                 }
@@ -808,7 +801,7 @@ namespace Framework {
                     }
                 }
 
-				//if the game is playing, show stop button
+                //if the game is playing, show stop button
                 else {
                     if (ImGui::MenuItem("Stop")) {
                         CORE->SetPlaying(false);
@@ -819,10 +812,10 @@ namespace Framework {
                             gfx->ResetEditorCamera();
                         }
 
-						//Reload default level
+                        //Reload default level
                         if (!OpenLevelFromTxt(defaultLevelPath, true)) {
                             if (!currentLevelPath.empty()) {
-								OpenLevelFromTxt(currentLevelPath, true);
+                                OpenLevelFromTxt(currentLevelPath, true);
                             }
                             else {
                                 std::cerr << "[ImGuiError] Could not create default setting " << defaultLevelPath << "\n";
@@ -830,9 +823,9 @@ namespace Framework {
                             }
                         }
 
-						//clear all entities and reload default level
+                        //clear all entities and reload default level
                         entityManager->ClearAllEntities();
-						// reload default level
+                        // reload default level
                         OpenLevelFromTxt(defaultLevelPath, true);
                     }
                 }
@@ -847,12 +840,12 @@ namespace Framework {
         }
 
         // ============================================================================
-		// This is the if else condition to control open and save as modal windows
+        // This is the if else condition to control open and save as modal windows
         // by asking ASC TAs and online research, the ImGUi::BgeginPopupModal takes in char array
-		// std::string will cause errors
+        // std::string will cause errors
         // author: jiahao.zhou@digipen
         // ============================================================================
-		//if the flag is set to open modal, open the modal and reset the flag
+        //if the flag is set to open modal, open the modal and reset the flag
         if (wantOpenModal) {
             // open the modal popup
             ImGui::OpenPopup("Open Level...");
@@ -866,7 +859,7 @@ namespace Framework {
             wantSaveAsModal = false;
         }
 
-		// open level modal window. auto resize to fit content
+        // open level modal window. auto resize to fit content
         if (ImGui::BeginPopupModal("Open Level...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             // according research, openbuffer must be char array
             // when I initially tried std::string, it caused a lot of errors
@@ -874,33 +867,33 @@ namespace Framework {
             static bool openError = false;
             static std::string openErrorMsg = "";
 
-			// when the window first appears, initialize the openBuffer with openPath
+            // when the window first appears, initialize the openBuffer with openPath
             if (ImGui::IsWindowAppearing()) {
                 std::snprintf(openBuffer, sizeof(openBuffer), "%s", openPath.c_str());
                 openError = false;
                 openErrorMsg.clear();
             }
-			// input text box for user to enter path
+            // input text box for user to enter path
             ImGui::InputText("Path", openBuffer, sizeof(openBuffer));
 
             if (openError) {
-				// add spacing
+                // add spacing
                 ImGui::Spacing();
-				// display error message in red color
+                // display error message in red color
                 ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", openErrorMsg.c_str());
 
             }
 
-			// open button
+            // open button
             if (ImGui::Button("Open")) {
-				// set openPath to user input path
+                // set openPath to user input path
                 openPath = openBuffer;
-				// try to open level from the path
+                // try to open level from the path
                 bool isOpen = OpenLevelFromTxt(openPath, true);
                 if (isOpen) {
-					// if opened successfully, record the current level path
+                    // if opened successfully, record the current level path
                     currentLevelPath = openPath;
-					// close the modal
+                    // close the modal
                     ImGui::CloseCurrentPopup();
                 }
                 else {
@@ -910,20 +903,20 @@ namespace Framework {
 
             }
 
-			// put cancel button on the same line as open button
+            // put cancel button on the same line as open button
             ImGui::SameLine();
 
-			// cancel button
+            // cancel button
             if (ImGui::Button("Cancel")) {
 
-				// close the modal
+                // close the modal
                 ImGui::CloseCurrentPopup();
             }
 
             ImGui::EndPopup();
         }
 
-		// save level as modal window. auto resize to fit content
+        // save level as modal window. auto resize to fit content
         if (ImGui::BeginPopupModal("Save Level As...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 
             // same as open modal, use char array for saveBuffer
@@ -1008,10 +1001,15 @@ namespace Framework {
         if (showSpawner) ShowSpawnerWindow();
         if (showDebug) ShowDebugWindow();
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
-		// show asset window - jiahao
-		if (showAssets) ShowAssetsWindow();
+        // show asset window - jiahao
+        if (showAssets) ShowAssetsWindow();
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
+
+        UpdateEntityDragging();
+
+        // ... ALL THE IMGUI WINDOW CODE GOES HERE ...
+        // (Copy everything from line 649 onwards in your current Update())
     }
 
     void ImGuiSystem::Render()
@@ -1020,7 +1018,16 @@ namespace Framework {
             return;
         }
 
-        if (!window) return;
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_SCISSOR_TEST);
+
+        if (window) {
+            int display_w, display_h;
+            glfwGetFramebufferSize(window, &display_w, &display_h);
+            glViewport(0, 0, display_w, display_h);
+        }
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

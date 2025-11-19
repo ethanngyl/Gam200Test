@@ -41,11 +41,16 @@ namespace Framework {
         void Initialize() override;
         void Update(float dt) override;
         void SendEngineMessage(Message* msg) override;
+        void UpdateUI();
+
         // Setup methods
         void SetWindow(GLFWwindow* win);
 
         void SetEntityManager(EntityManager* em);
         void SetEntitySpawner(EntitySpawner* spawner);
+
+        // Call this ONCE per visual frame, BEFORE the physics loop
+        void NewFrame();
 
         // Load/Save level from text file
         // jiahao
