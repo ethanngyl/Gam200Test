@@ -151,40 +151,23 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
         while (next == current)
         {
-            // Check engine and window
             if (!engine->IsActive() || engine->ShouldWindowClose()) {
                 next = GS_QUIT;
                 break;
             }
 
             // ===============================================================================
-            // FIXED DELTA TIME IMPLEMENTATION (PDF Method)
+            // DELTA TIME
             // ===============================================================================
             unsigned currentTime = timeGetTime();
             double deltaTime = (currentTime - lastTime) / 1000.0;
             lastTime = currentTime;
 
-            // Safety clamp for extreme cases (e.g., debugging breakpoints)
             if (deltaTime > 0.25) {
-                deltaTime = 0.25;  // Max 250ms to prevent spiral of death
+                deltaTime = 0.25;
             }
 
-            // Accumulate actual time
             accumulatedTime += deltaTime;
-
-            // Calculate how many fixed steps we need to execute
-            currentNumberOfSteps = 0;
-            while (accumulatedTime >= FIXED_DT) {
-                accumulatedTime -= FIXED_DT;
-                currentNumberOfSteps++;
-
-                // Safety cap: prevent infinite loop if system is too slow
-                if (currentNumberOfSteps >= 5) {
-                    LOG_WARN("CORE", "Frame took too long! Capping at 5 physics steps");
-                    accumulatedTime = 0.0;
-                    break;
-                }
-            }
 
             // ===============================================================================
             // BEGIN FRAME
@@ -193,56 +176,46 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             glfwPollEvents();
 
             // ===============================================================================
-            // FIXED TIME STEP UPDATES (Physics/Logic ONLY)
+            // FIXED TIME STEP UPDATES (Physics/Logic)
             // ===============================================================================
+            currentNumberOfSteps = 0;
+            while (accumulatedTime >= FIXED_DT) {
+                accumulatedTime -= FIXED_DT;
+                currentNumberOfSteps++;
 
-            // Ensure at least one physics step
+                if (currentNumberOfSteps >= 5) {
+                    accumulatedTime = 0.0;
+                    break;
+                }
+            }
+
             if (currentNumberOfSteps == 0) {
                 currentNumberOfSteps = 1;
             }
 
-            // Execute physics/gameplay updates with FIXED_DT, N times
+            // Run physics/logic updates
             for (int step = 0; step < currentNumberOfSteps; ++step) {
-                // Update systems that require fixed timestep
-                // ⚠️ This calls ImGuiSystem::Update() multiple times!
-                // We'll handle this by making ImGui Update() skip if already drawn
-                engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
-
-                // State update (Lua scripts, game logic)
                 if (fpUpdate) {
                     fpUpdate();
                 }
             }
 
             // ===============================================================================
-            // RENDERING (Always happens once per frame)
+            // RENDER ONCE PER FRAME
             // ===============================================================================
+            engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
+
             if (fpDraw) {
                 fpDraw();
-            }
-
-            // ===============================================================================
-            // ImGui Frame (ONCE per visual frame, AFTER game rendering)
-            // ===============================================================================
-
-
-
-            // ===============================================================================
-            // SWAP BUFFERS - Display everything on screen
-            // ===============================================================================
-            if (engine->GetWindowSystem() && engine->GetWindowSystem()->GetWindow()) {
-                glfwSwapBuffers(engine->GetWindowSystem()->GetWindow());
             }
 
             // ===============================================================================
             // END FRAME
             // ===============================================================================
             eng::debug::PerfViewer::end_frame();
-
-            // Update FPS counter with actual deltaTime
             Framework::DebugConfig::GetFpsCounter().tick_with_dt(deltaTime);
 
-            // Debug hotkey: F2 to export performance data
+            // F2 to export performance
             if (GetAsyncKeyState(VK_F2) & 0x0001) {
                 if (eng::debug::PerfViewer::export_csv("performance.csv")) {
                     LOG_INFO("DEBUG", "Performance data exported");
