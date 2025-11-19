@@ -204,7 +204,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             // Execute physics/gameplay updates with FIXED_DT, N times
             for (int step = 0; step < currentNumberOfSteps; ++step) {
                 // Update systems that require fixed timestep
-                // This calls ImGuiSystem::Update() multiple times!
+                // ⚠️ This calls ImGuiSystem::Update() multiple times!
                 // We'll handle this by making ImGui Update() skip if already drawn
                 engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
 
@@ -224,15 +224,14 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             // ===============================================================================
             // ImGui Frame (ONCE per visual frame, AFTER game rendering)
             // ===============================================================================
-            if (engine->GetImGuiSystem()) {
-                engine->GetImGuiSystem()->NewFrame();
-                engine->GetImGuiSystem()->UpdateUI();
-                engine->GetImGuiSystem()->Render();
-            }
 
-                //if (engine->GetGraphicsSystem()) {
-                //    engine->GetGraphicsSystem()->RenderImGui();
-                //}
+
+
+            // ===============================================================================
+            // SWAP BUFFERS - Display everything on screen
+            // ===============================================================================
+            if (engine->GetWindowSystem() && engine->GetWindowSystem()->GetWindow()) {
+                glfwSwapBuffers(engine->GetWindowSystem()->GetWindow());
             }
 
             // ===============================================================================

@@ -41,7 +41,8 @@ namespace Framework {
         void Initialize() override;
         void Update(float dt) override;
         void SendEngineMessage(Message* msg) override;
-        void UpdateUI();
+
+        //void UpdateUI();
 
         // Setup methods
         void SetWindow(GLFWwindow* win);
