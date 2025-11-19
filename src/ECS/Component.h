@@ -207,4 +207,15 @@ namespace Framework
         }
     };
 
+    struct AP : public Component<AP> {
+        int hp = 3;
+        int maxHp = 3;
+        int actionPoints = 3;
+        int maxActionPoints = 3;
+
+        AP(int startHp = 3, int startAp = 3) : hp(startHp), maxHp(startHp), actionPoints(startAp), maxActionPoints(startAp) {
+
+        }
+    };
+
 }
