@@ -42,10 +42,6 @@ source_group(
     FILES ${APP_SRC} # Applies this grouping structure to all files collected in the ${APP_SRC} variable.
 )
 
-# Copy assets at configure time (happens when CMake runs)
-file(COPY "${CMAKE_SOURCE_DIR}/assets" 
-     DESTINATION "${CMAKE_BINARY_DIR}")
-
 # ======================= Target Creation =========================
 
 # Create executable
@@ -78,6 +74,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     fmod
     Freetype::Freetype
     lua_static  
+    nlohmann_json::nlohmann_json
 )
 
 # Mark shaders as non-compiled
@@ -119,6 +116,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Event
     ${CMAKE_SOURCE_DIR}/src/Pathfinding
     ${CMAKE_SOURCE_DIR}/src/Script
+    ${CMAKE_SOURCE_DIR}/src/PrefabEditor
+    ${CMAKE_SOURCE_DIR}/src/LevelEditor
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -164,4 +163,18 @@ add_custom_command(TARGET StructSquad POST_BUILD
         "${CMAKE_SOURCE_DIR}/library/FMOD Studio API Windows/api/core/lib/x64/fmod.dll"
         "${CMAKE_SOURCE_DIR}/library/FMOD Studio API Windows/api/core/lib/x64/fmodL.dll"
         $<TARGET_FILE_DIR:StructSquad>
+)
+
+# Create a custom target that copies assets
+add_custom_target(CopyAssetsAlways ALL
+    COMMAND ${CMAKE_COMMAND} -E echo "Copying assets..."
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:StructSquad>/assets
+    COMMENT "Copying assets to build directory"
+)
+
+# This target ALWAYS runs (even if no code changed)
+set_target_properties(CopyAssetsAlways PROPERTIES
+    EXCLUDE_FROM_ALL FALSE
 )

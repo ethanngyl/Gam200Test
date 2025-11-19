@@ -41,11 +41,16 @@ namespace Framework {
         void Initialize() override;
         void Update(float dt) override;
         void SendEngineMessage(Message* msg) override;
+        void UpdateUI();
+
         // Setup methods
         void SetWindow(GLFWwindow* win);
 
         void SetEntityManager(EntityManager* em);
         void SetEntitySpawner(EntitySpawner* spawner);
+
+        // Call this ONCE per visual frame, BEFORE the physics loop
+        void NewFrame();
 
         // Load/Save level from text file
         // jiahao
@@ -91,23 +96,59 @@ namespace Framework {
         bool showAssets = false;
         std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
+
+        //object picking - jiahao
+        void UpdatePicking();
+        Framework::Entity GetSelectedEntity() const {
+            return selectedEntity;
+        };
+
+        //dragging state for object dragging - jiahao
+        bool isDraggingEntity = false;
+		bool isScalingEntity = false;
+		bool isRotatingEntity = false;
+
+        Framework::Entity draggingEntity{};
+        Vector2D dragOffset;
+
+        Vector2D scaleStartMouse;
+
+        Vector2D scaleStartScale;
+
+		float rotateStartAngle = 0.0f;
+        float rotateStartRotation = 0.0f;
+
+        void UpdateEntityDragging();
+
+
+
         void ShowAssetsWindow();
         void SetupDefaultDockLayout();
+        void ShowPrefabWindow();
+        void SpawnPrefabAtMouse(const std::string& prefabPath);
+
         //file drop - jiahao
         static void FileDropCallBack(GLFWwindow* window, int count, const char** paths);
         void OnFileDrop(int count, const char** paths);
         bool IsLevelFile(const std::filesystem::path& path) const;
         bool IsTextureFile(const std::filesystem::path& path) const;
-
+        bool IsAudioFile(const std::filesystem::path& path) const;
+        bool AddAudioToJSON(const std::string& audioName, const std::string& fileName);
+        bool IsAudioFileSupported(const std::filesystem::path& path, std::string& errorMsg) const;
         std::filesystem::path rootpath = "assets/";
         std::filesystem::path currentpath = "assets/";
         std::filesystem::path previouspath;
-
+        bool showAudioErrorPopup;
+        std::string audioErrorMessage;
         // State
         bool showDemo;
         bool showEntityInspector;
         bool showSpawner;
         bool showDebug;
+        bool showPrefabWindow;
+        //
+        // Entity selectedEntity;
+        std::string selectedPrefabPath;
 
         bool enabled;
 

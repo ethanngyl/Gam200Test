@@ -27,9 +27,11 @@
 #include "Event/Event.h"
 #include "Event/DamageIndicatorSystem.h"
 
+#include "LevelLoader.h"
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Grid/GridTile.h"
+
 
 #include "ScriptSystem.h"
 namespace Framework
@@ -153,6 +155,7 @@ namespace Framework
         UISystem* GetUISystem() const { return uiSystem; }
         EventSystem* GetEventSystem() const { return eventSystem; }
         PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
+        LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
 
 
         /**

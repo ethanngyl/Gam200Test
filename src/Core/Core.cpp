@@ -30,12 +30,13 @@
 #include "Event/Event.h"
 #include "Event/DamageIndicatorSystem.h"
 #include "ScriptSystem.h"
+#include "LevelLoader.h"
 
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Grid/GridTile.h"
 #include "Pathfinding/Pathfinding.h"
-
+#include "AudioLoader.h"
 
 namespace Framework
 {
@@ -99,19 +100,23 @@ namespace Framework
 
             //Use a container to store(future)
             if (audioSystem) {
-                LOG_INFO("CORE", "Loading test audio...");
-                bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
-                bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
-                bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
-                bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
-                if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
-                    LOG_INFO("CORE", "All audio loaded successfully");
+                LOG_INFO("CORE", "Loading audio from configuration...");
+                bool success = AudioLoader::LoadAudioConfig("assets/scripts/JSON/AudioConfig.json", audioSystem);
+
+                if (success) {
+                    LOG_INFO("CORE", "All audio loaded successfully from config");
                 }
                 else {
-                    LOG_WARN("CORE", "Failed to load audio");
+                    LOG_WARN("CORE", "Failed to load audio configuration");
                 }
             }
 
+
+            LOG_INFO("CORE", "================================================");
+            LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
+            LOG_INFO("CORE", "================================================");
+
+            LevelLoader::GetInstance().Initialize(this);
 
             LOG_INFO("CORE", "================================================");
             LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
@@ -253,6 +258,50 @@ namespace Framework
 
             system->Initialize();
         }
+        char exePath[MAX_PATH];
+        GetModuleFileNameA(NULL, exePath, MAX_PATH);
+
+        LOG_INFO("Core", "================================================");
+        LOG_INFO("Core", "EXECUTABLE LOCATION:");
+        LOG_INFO("Core", "  %s", exePath);
+        LOG_INFO("Core", "================================================");
+
+        // Get just the directory
+        std::filesystem::path p(exePath);
+        auto exeDir = p.parent_path();
+        LOG_INFO("Core", "EXE Directory: %s", exeDir.string().c_str());
+
+        // Check if assets folder exists
+        auto assetsPath = exeDir / "assets";
+        if (std::filesystem::exists(assetsPath)) {
+            LOG_INFO("Core", "[OK] assets/ folder found");
+
+            // Check if JSON exists
+            auto jsonPath = assetsPath / "scripts" / "JSON" / "levelselect_config.json";
+            if (std::filesystem::exists(jsonPath)) {
+                LOG_INFO("Core", "[OK] JSON file found at:");
+                LOG_INFO("Core", "  %s", jsonPath.string().c_str());
+
+                // CRITICAL: Show actual file contents
+                std::ifstream file(jsonPath);
+                std::stringstream buffer;
+                buffer << file.rdbuf();
+                LOG_INFO("Core", "");
+                LOG_INFO("Core", "CURRENT FILE CONTENTS:");
+                LOG_INFO("Core", "------------------------------------------------");
+                LOG_INFO("Core", "%s", buffer.str().c_str());
+                LOG_INFO("Core", "------------------------------------------------");
+            }
+            else {
+                LOG_ERROR("Core", "[ERROR] JSON file NOT FOUND at:");
+                LOG_ERROR("Core", "  %s", jsonPath.string().c_str());
+            }
+        }
+        else {
+            LOG_ERROR("Core", "[ERROR] assets/ folder NOT FOUND!");
+        }
+
+        LOG_INFO("Core", "================================================");
 
         LOG_INFO("CORE", "All systems initialized");
     }
@@ -290,6 +339,9 @@ namespace Framework
         LOG_INFO("CORE", "================================================");
         LOG_INFO("CORE", " CoreEngine: Cleaning Up");
         LOG_INFO("CORE", "================================================");
+
+        LOG_INFO("CORE", "Shutting down LevelLoader...");
+        LevelLoader::GetInstance().Shutdown();
 
         // Stop all audio before destroying systems
         if (audioSystem) {
