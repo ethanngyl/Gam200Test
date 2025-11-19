@@ -119,6 +119,9 @@ void level3_Initialize()
     Vector2D   playerWorldPos = TileToWorld({ centerX, centerY });
     gPlayer = spawner->SpawnPlayer(playerWorldPos);
 
+    //  1. ADD PLAYER STATS HERE (Configuration) 
+    em->AddComponent<Framework::AP>(gPlayer, 5, 3);
+
     // Wire controller (minimal, just what's required for movement)
     playerController->SetPlayerEntity(gPlayer);
     playerController->SetEntitySpawner(spawner);
@@ -127,6 +130,9 @@ void level3_Initialize()
     playerController->SetGridMovementEnabled(true);
     // --- Enemy: spawn furthest, uses A* to chase player ---
     gEnemy = PathfindingSystem::SpawnEnemyFurthestFromPlayer(gPlayer, em, spawner);
+
+    //  2. ADD ENEMY STATS HERE (Configuration) 
+    em->AddComponent<Framework::AP>(gEnemy, 2, 3);
 
     // --- Start turns on Player phase ---
     auto& turn = Turn();

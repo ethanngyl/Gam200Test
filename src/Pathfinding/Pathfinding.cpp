@@ -68,97 +68,160 @@ namespace Framework {
         const Grid& grid = GetGrid();
         if (grid.cols <= 0 || grid.rows <= 0 || !grid.em) return;
 
-        bool enemyMoved = false;
 
         // Update all enemies with AI component
         for (Entity entity : entityManager->GetAllEntities()) {
             if (!entityManager->HasComponent<EnemyAI>(entity)) continue;
             if (!entityManager->HasComponent<Transform>(entity)) continue;
 
-            auto& ai = entityManager->GetComponent<EnemyAI>(entity);
-            auto& transform = entityManager->GetComponent<Transform>(entity);
+            if (!entityManager->HasComponent<AP>(entity)) continue;
+            auto& stats = entityManager->GetComponent<AP>(entity);
+            if (stats.hp <= 0) continue;
 
-            // Validate target
-            if (ai.targetEntity.GetID() == INVALID_ENTITY) continue;
-            if (!entityManager->HasComponent<Transform>(ai.targetEntity)) continue;
+                auto& ai = entityManager->GetComponent<EnemyAI>(entity);
+                auto& transform = entityManager->GetComponent<Transform>(entity);
 
-            // Get current and target positions
-            auto enemyTileOpt = WorldToTile(transform.position);
-            if (!enemyTileOpt.has_value()) continue;
-            GridCoord enemyTile = *enemyTileOpt;
+                //// Update movement timer
+                ai.moveTimer -= dt;
+                if (ai.moveTimer > 0.0f) continue;
 
-            auto& targetTransform = entityManager->GetComponent<Transform>(ai.targetEntity);
-            auto targetTileOpt = WorldToTile(targetTransform.position);
-            if (!targetTileOpt.has_value()) continue;
-            GridCoord targetTile = *targetTileOpt;
 
-            // Check if adjacent to target (goal reached)
-            int distance = Heuristic(enemyTile, targetTile);
-            if (distance == 1) {
-                if (!ai.hasReachedTarget) {
-                    std::cout << "[EnemyAI] Enemy " << entity.GetID() << " has reached player!\n";
-                    ai.hasReachedTarget = true;
+                // Validate target
+                if (ai.targetEntity.GetID() == INVALID_ENTITY) continue;
+                if (!entityManager->HasComponent<Transform>(ai.targetEntity)) continue;
+
+                // Get current and target positions
+                auto enemyTileOpt = WorldToTile(transform.position);
+                if (!enemyTileOpt.has_value()) continue;
+                GridCoord enemyTile = *enemyTileOpt;
+
+                auto& targetTransform = entityManager->GetComponent<Transform>(ai.targetEntity);
+                auto targetTileOpt = WorldToTile(targetTransform.position);
+                if (!targetTileOpt.has_value()) continue;
+                GridCoord targetTile = *targetTileOpt;
+
+                // Check if adjacent to target (goal reached)
+                int distance = Heuristic(enemyTile, targetTile);
+                if (distance == 1) {
+                    stats.actionPoints--;
+                    ai.moveTimer = ai.moveDelay;
+                    LOG_INFO("EnemyAI", "Enemy %u ATTACKS player! AP left: %d", entity.GetID(), stats.actionPoints);
+                    //if (!ai.hasReachedTarget) {
+                    //    std::cout << "[EnemyAI] Enemy " << entity.GetID() << " has reached player!\n";
+                    //ai.hasReachedTarget = true;
+                    //}
+
+                    // --- ADD THIS BLOCK TO DEAL DAMAGE ---
+
+                // Get the AI component to find out *who* the target is
+                    auto& ai = entityManager->GetComponent<EnemyAI>(entity);
+                    Entity player = ai.targetEntity;
+
+                    // Check if the player has a Stats component
+                    if (entityManager->HasComponent<AP>(player)) {
+
+                        // Get the player's stats
+                        auto& playerStats = entityManager->GetComponent<AP>(player);
+                        playerStats.hp--; // Subtract 1 HP from player
+
+                        LOG_INFO("Player", "Player was hit! HP remaining: %d", playerStats.hp);
+
+                        // Check for player death
+                        if (playerStats.hp <= 0) {
+                            LOG_ERROR("Player", "PLAYER HAS DIED. (Implement Game Over Logic)");
+                            // You could call EndPlayerTurn() or EndEnemyTurn() to stop the game
+                        }
+                    }
+                    // --- END OF DAMAGE BLOCK ---
+                    continue;  // Stop moving when adjacent
                 }
-                continue;  // Stop moving when adjacent
-            }
-            ai.hasReachedTarget = false;
+                //  ai.hasReachedTarget = false;
 
-            // *** ALWAYS recalculate path every turn ***
-        // This ensures the enemy tracks the player's CURRENT position
-            std::cout << "[EnemyAI] Recalculating path from (" << enemyTile.x << "," << enemyTile.y
-                << ") to player at (" << targetTile.x << "," << targetTile.y << ")\n";
+                  // *** ALWAYS recalculate path every turn ***
+              // This ensures the enemy tracks the player's CURRENT position
+                std::cout << "[EnemyAI] Recalculating path from (" << enemyTile.x << "," << enemyTile.y
+                    << ") to player at (" << targetTile.x << "," << targetTile.y << ")\n";
 
-            ai.currentPath = FindPath(enemyTile, targetTile, grid);
-        //    ai.pathIndex = 0;
-
-            if (ai.currentPath.empty()) {
-                std::cout << "[EnemyAI] No path found for Enemy " << entity.GetID() << "\n";
-                EndEnemyTurn();
-                return;
-            }
-
-            // >>> FIX 1: skip start if present
-            if (ai.currentPath[0].x == enemyTile.x && ai.currentPath[0].y == enemyTile.y) {
-                ai.pathIndex = 1;
-            }
-            else {
-                ai.pathIndex = 0;
-            }
-
-            std::cout << "[EnemyAI] New path has " << ai.currentPath.size() << " tiles\n";
-
-            //*** this follows the original set path first, reaches the end goal then recalculates when path runs out ***
-           /* if (ai.currentPath.empty() || ai.pathIndex >= ai.currentPath.size()) {
                 ai.currentPath = FindPath(enemyTile, targetTile, grid);
-                ai.pathIndex = 0;
-            }*/
+                //    ai.pathIndex = 0;
 
-            //// Update movement timer
-            ai.moveTimer -= dt;
-            if (ai.moveTimer > 0.0f) continue;
-
-            // Move to next tile in path
-            if (ai.pathIndex < ai.currentPath.size()) {
-                GridCoord nextTile = ai.currentPath[ai.pathIndex];
-
-                // >>> allow stepping onto the goal tile
-                const bool passable =
-                    (nextTile.x == targetTile.x && nextTile.y == targetTile.y) || IsWalkable(nextTile);
-                if (!passable) {
-                    ai.currentPath.clear();
-                    continue;
+                if (ai.currentPath.empty()) {
+                    std::cout << "[EnemyAI] No path found for Enemy " << entity.GetID() << "\n";
+                    //EndEnemyTurn();
+                    stats.actionPoints = 0;
+                    return;
                 }
 
-                SetOccupant(enemyTile, Entity{ INVALID_ENTITY });
-                transform.position = TileToWorld(nextTile);
-                SetOccupant(nextTile, entity);
+                // >>> FIX 1: skip start if present
+                if (ai.currentPath[0].x == enemyTile.x && ai.currentPath[0].y == enemyTile.y) {
+                    ai.pathIndex = 1;
+                }
+                else {
+                    ai.pathIndex = 0;
+                }
 
-                ai.moveTimer = ai.moveDelay;
-                ai.pathIndex++;
-                enemyMoved = true;
-                EndEnemyTurn();
-                return;
+                std::cout << "[EnemyAI] New path has " << ai.currentPath.size() << " tiles\n";
+
+                //*** this follows the original set path first, reaches the end goal then recalculates when path runs out ***
+               /* if (ai.currentPath.empty() || ai.pathIndex >= ai.currentPath.size()) {
+                    ai.currentPath = FindPath(enemyTile, targetTile, grid);
+                    ai.pathIndex = 0;
+                }*/
+
+                // Move to next tile in path
+                if (ai.pathIndex < ai.currentPath.size()) {
+                    GridCoord nextTile = ai.currentPath[ai.pathIndex];
+
+                    // >>> allow stepping onto the goal tile
+                    const bool passable =
+                        (nextTile.x == targetTile.x && nextTile.y == targetTile.y) || IsWalkable(nextTile);
+                    if (!passable) {
+                        ai.currentPath.clear();
+                        continue;
+                    }
+
+                    SetOccupant(enemyTile, Entity{ INVALID_ENTITY });
+                    transform.position = TileToWorld(nextTile);
+                    SetOccupant(nextTile, entity);
+
+                    ai.moveTimer = ai.moveDelay;
+                    ai.pathIndex++;
+                    stats.actionPoints--;
+                    /*enemyMoved = true;
+                    EndEnemyTurn();*/
+                    LOG_INFO("EnemyAI", "Enemy %u MOVES. AP left: %d", entity.GetID(), stats.actionPoints);
+                }
+                else {
+                    stats.actionPoints = 0;
+                    break;
+                }
+        }
+        // Re-check the entire system state to see if any enemy has AP left.
+        bool turnStillActive = false;
+        for (Entity entity : entityManager->GetAllEntities()) {
+            if (entityManager->HasComponent<EnemyAI>(entity) && entityManager->HasComponent<AP>(entity)) {
+                auto& stats = entityManager->GetComponent<AP>(entity);
+                if (stats.actionPoints > 0) {
+                    turnStillActive = true;
+                    break;
+                }
             }
+        }
+
+        // If no enemy has AP left, the turn is over.
+        if (!turnStillActive) {
+            LOG_INFO("EnemyTurn", "--- All Enemies Done. Ending Turn. ---");
+
+            // Reset AP for *all enemies* for their *next* turn
+            for (Entity entity : entityManager->GetAllEntities()) {
+                if (entityManager->HasComponent<EnemyAI>(entity) && entityManager->HasComponent<AP>(entity)) {
+                    auto& stats = entityManager->GetComponent<AP>(entity);
+                    stats.actionPoints = stats.maxActionPoints;
+                }
+            }
+
+            // Call the EndEnemyTurn function to flip the turn back to the player
+            EndEnemyTurn();
         }
     }
 
