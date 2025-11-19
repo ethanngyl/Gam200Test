@@ -43,6 +43,7 @@
 #include "Pathfinding.h"
 #include "GraphicsSystemV2.h"
 #include "Turn.h"
+#include "Pause/Pause.h"
 
 namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
@@ -178,7 +179,14 @@ void level3_Update()
  * Placeholder for custom render logic.
  * Usually handled by the graphics system.
  */
-void level3_Draw() {}
+void level3_Draw() {
+
+    extern Framework::CoreEngine* engine;
+    if (engine && engine->GetPauseSystem()) {
+        engine->GetPauseSystem()->Draw();
+    }
+
+}
 
 /**
  * @brief Frees all Level 3 data

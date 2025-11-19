@@ -21,6 +21,7 @@
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
 #include "Pathfinding.h"
+#include "Pause/Pause.h"
 
 
 extern Framework::CoreEngine* engine;
@@ -124,6 +125,10 @@ void level2_Draw()
     // Render UI text (using values ​​from the configuration file)
     // ========================================================================
     graphics->DrawText4(fontLarge, textScaling, textX, texty, textScale, glm::vec3(colorR, colorG, colorB));
+
+    if (engine->GetPauseSystem()) {
+        engine->GetPauseSystem()->Draw();
+    }
 }
 
 void level2_Free()

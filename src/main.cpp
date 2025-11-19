@@ -29,6 +29,7 @@
 #include "Precompiled.h"
 #include "ImguiSystem.h"
 #include "TimeConstants.h"
+#include "Pause/Pause.h"
 
 // ===============================================================================
 // GLOBAL VARIABLES
@@ -201,16 +202,32 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
                 currentNumberOfSteps = 1;
             }
 
+            // *** CHECK PAUSE STATE BEFORE UPDATING GAMEPLAY ***
+            auto* pauseSystem = engine->GetPauseSystem();
+            bool shouldUpdate = true;
+
+            if (pauseSystem) {
+                // Always update pause system itself (it needs to detect unpause)
+                pauseSystem->Update(static_cast<float>(FIXED_DT));
+
+                // Check if we should skip gameplay updates
+                shouldUpdate = !pauseSystem->IsPaused();
+            }
+
             // Execute physics/gameplay updates with FIXED_DT, N times
             for (int step = 0; step < currentNumberOfSteps; ++step) {
                 // Update systems that require fixed timestep
                 // This calls ImGuiSystem::Update() multiple times!
                 // We'll handle this by making ImGui Update() skip if already drawn
-                engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
+                if (shouldUpdate) {
+                    // Update systems that require fixed timestep
+                    // This calls ImGuiSystem::Update() multiple times!
+                    engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
 
-                // State update (Lua scripts, game logic)
-                if (fpUpdate) {
-                    fpUpdate();
+                    // State update (Lua scripts, game logic)
+                    if (fpUpdate) {
+                        fpUpdate();
+                    }
                 }
             }
 

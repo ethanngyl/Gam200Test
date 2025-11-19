@@ -53,6 +53,7 @@ namespace Framework
     class EventSystem;
     class DamageIndicatorSystem;
     class PathfindingSystem;
+	class PauseSystem;
 
     /**
      * @class CoreEngine
@@ -155,6 +156,7 @@ namespace Framework
         UISystem* GetUISystem() const { return uiSystem; }
         EventSystem* GetEventSystem() const { return eventSystem; }
         PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
+        PauseSystem* GetPauseSystem() const { return pauseSystem; }
         LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
 
 
@@ -213,6 +215,7 @@ namespace Framework
         EventSystem* eventSystem;
         DamageIndicatorSystem* damageIndicator;
         PathfindingSystem* pathfindingSystem;
+		PauseSystem* pauseSystem;
         ScriptSystem* scriptSystem = nullptr;
 
         // state
