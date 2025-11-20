@@ -122,6 +122,14 @@ namespace Framework
         void* fmodChannel = nullptr;
     };
 
+    struct TagComponent {
+        std::string tag;           // e.g., "Player", "Enemy", "Collectible"
+        std::vector<std::string> groups;  // Multiple groups: {"Damageable", "Physics"}
+
+        TagComponent() = default;
+        TagComponent(const std::string& t) : tag(t) {}
+    };
+
     struct ScriptComponent : public Component<ScriptComponent>
     {
         std::string scriptPath;
@@ -216,6 +224,15 @@ namespace Framework
         AP(int startHp = 3, int startAp = 3) : hp(startHp), maxHp(startHp), actionPoints(startAp), maxActionPoints(startAp) {
 
         }
+    };
+
+    struct AttackRangeComponent : public Component<AttackRangeComponent> {
+        int minRange = 1;        // Minimum attack distance (in grid cells)
+        int maxRange = 3;        // Maximum attack distance (in grid cells)
+        bool showRange = false;  // Toggle visibility
+
+        AttackRangeComponent() = default;
+        AttackRangeComponent(int min, int max) : minRange(min), maxRange(max) {}
     };
 
 }

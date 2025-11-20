@@ -51,6 +51,7 @@ namespace Framework
     class AnimationSystem;
     class UISystem;
     class EventSystem;
+    class RangeIndicatorSystem;
     class DamageIndicatorSystem;
     class PathfindingSystem;
 	class PauseSystem;
@@ -216,6 +217,7 @@ namespace Framework
         DamageIndicatorSystem* damageIndicator;
         PathfindingSystem* pathfindingSystem;
 		PauseSystem* pauseSystem;
+        RangeIndicatorSystem* rangeIndicatorSystem;
         ScriptSystem* scriptSystem = nullptr;
 
         // state
