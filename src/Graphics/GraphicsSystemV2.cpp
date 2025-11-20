@@ -43,6 +43,7 @@ Safety:
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Debugger/Trace.h"
+#include "Input/Input.h"
 
 namespace Framework {
 
@@ -58,7 +59,9 @@ namespace Framework {
     GraphicsSystemV2::GraphicsSystemV2()
         : window(nullptr)
         , entityManager(nullptr)
+        , inputManager(nullptr)
         , mainCamera(-2.0f, 2.0f, -1.0f, 1.0f, -1.0f, 1.0f)  // Orthographic: left, right, bottom, top, near, far
+        , editorCamera(-2.0f, 2.0f, -1.0f, 1.0f, -1.0f, 1.0f)
         , viewportWidth(1600)
         , viewportHeight(800)
         , debugRenderingEnabled(false)
@@ -161,6 +164,23 @@ namespace Framework {
         glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * 0.016f);
 
         mainCamera.SetPosition(newPos);
+    }
+
+    void GraphicsSystemV2::EditorCamDefaultControl(float dt/*EntityManager* em, Entity player*/)
+    {
+        constexpr float cameraSpeed = 5.f;
+        
+        glm::vec3 delta(0.0f);
+        if (inputManager->IsKeyDown(KeyCode::KEY_W))
+            delta.y += cameraSpeed * dt;
+        if (inputManager->IsKeyDown(KeyCode::KEY_S))
+            delta.y -= cameraSpeed * dt;
+        if (inputManager->IsKeyDown(KeyCode::KEY_D))
+            delta.x += cameraSpeed * dt;
+        if (inputManager->IsKeyDown(KeyCode::KEY_A))
+            delta.x -= cameraSpeed * dt;
+
+        editorCamera.Translate(delta);
     }
 
     // ============================================================================
@@ -272,8 +292,13 @@ namespace Framework {
         }
 
         // === CAMERA FOLLOW LOGIC ===
-        if (followEnabled && entityManager && followTarget.IsValid() && Framework::CORE->IsPlaying()) {
-            FollowPlayer(entityManager, followTarget);
+        if (Framework::CORE->IsPlaying()) {
+            if (followEnabled && entityManager && followTarget.IsValid()/* && Framework::CORE->IsPlaying()*/) {
+                FollowPlayer(entityManager, followTarget);
+            }
+        }
+        else {
+            EditorCamDefaultControl(dt);
         }
 
         // ========================================================================
@@ -348,6 +373,9 @@ namespace Framework {
     // Connect ECS EntityManager for renderable collection and follow logic.
     void GraphicsSystemV2::SetEntityManager(EntityManager* em) {
         entityManager = em;
+    }
+    void GraphicsSystemV2::SetInputSystem(InputSystem* is) {
+        inputManager = is;
     }
     // SetViewportSize: Update GL viewport, camera projection, and text renderer.
     void GraphicsSystemV2::SetViewportSize(int width, int height) {
@@ -788,8 +816,9 @@ namespace Framework {
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         // Camera matrices
-        glm::mat4 projection = mainCamera.GetProjectionMatrix();
-        glm::mat4 view = mainCamera.GetViewMatrix();
+        Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
+        glm::mat4 projection = activeCamera.GetProjectionMatrix();
+        glm::mat4 view = activeCamera.GetViewMatrix();
 
         currentBoundMaterial = INVALID_MATERIAL_HANDLE;
         currentBoundShader = INVALID_SHADER_HANDLE;

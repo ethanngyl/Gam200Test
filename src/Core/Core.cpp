@@ -181,6 +181,7 @@ namespace Framework
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
         movementSystem->SetInputSystem(inputSystem);
+        graphicsSystem->SetInputSystem(inputSystem);
         collisionSystem->SetInput(inputSystem);
         playerController->SetEntitySpawner(spawner);
 

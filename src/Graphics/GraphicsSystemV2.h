@@ -54,6 +54,7 @@ struct GLFWwindow;
 namespace Framework {
     class EntityManager;
     class Mesh;
+    class InputSystem;
 
     /**
      * @class GraphicsSystemV2
@@ -113,6 +114,7 @@ namespace Framework {
          * @brief Set the entity manager for ECS integration
          */
         void SetEntityManager(EntityManager* em);
+        void SetInputSystem(InputSystem* is);
 
         /**
          * @brief Set viewport size (handles window resize)
@@ -285,9 +287,11 @@ namespace Framework {
         GLFWwindow* window;
         EntityManager* entityManager;
         ResourceManager resourceManager;
+        InputSystem* inputManager;
 
         // Camera
         Camera mainCamera;               // View/projection and zoom control.
+        Camera editorCamera;
 
         // Render queues
         RenderQueue renderQueue;         // Batches of draw commands.
@@ -337,6 +341,7 @@ namespace Framework {
          * @brief Makes the camera follow a target player entity
          */
         void FollowPlayer(EntityManager* em, Entity player);
+        void EditorCamDefaultControl(float dt);
 
         // Editor camera state
 		glm::vec3 editorCameraStartPos{ 0.0f, 0.0f, 0.0f };
