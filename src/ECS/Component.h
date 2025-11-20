@@ -62,10 +62,29 @@ namespace Framework
         bool blocked = false;
     };
 
+    enum class AnimGroup {
+        Idle,
+        Walk,
+        Attack,
+        Injured,
+        Death,
+        Count
+    };
+
+    enum class AnimDirection {
+        Front,
+        Back,
+        Side,
+        None
+    };
+
     struct SpriteAnimation : public Component<SpriteAnimation>
     {
-        /** The animation name that maps to JSON key, e.g. "Idle" */
-        std::string animName = "Idle";
+        AnimGroup group = AnimGroup::Idle;
+        AnimDirection direction = AnimDirection::Front;
+
+        /** The animation name that maps to JSON key */
+        std::string animName;     // final JSON animation key
 
         /** Handle to the full sprite sheet */
         TextureHandle spriteSheet;

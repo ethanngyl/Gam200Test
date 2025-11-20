@@ -132,15 +132,69 @@ namespace Framework {
 
 			if (!anim.playing) continue;
 
-			// Movement check
-			if (entityManager->HasComponent<Movement>(e)) {
-				auto& move = entityManager->GetComponent<Movement>(e);
+			// -------------------------------
+			// SELECT JSON ANIMATION BY ENUMS
+			// -------------------------------
+			// ---------------- DEATH OVERRIDE -------------------
+// ----------- DEATH ANIMATION OVERRIDE (FULL) ----------------
+			if (anim.group == AnimGroup::Death)
+			{
+				// ALWAYS use the Death animation (no direction variants)
+				if (anim.animName != "Death")
+				{
+					anim.animName = "Death";
 
-				// If not moving → idle still frame
-				if (fabs(move.direction.x) < max_static_threshold && fabs(move.direction.y) < max_static_threshold) {
-					continue;               // do not animate
+					auto* gfx = CORE->GetGraphicsSystem();
+					LoadAnimation(e, anim, gfx, "Death");
+
+					anim.currentFrame = 0;
+					anim.elapsedTime = 0.0f;
 				}
+
+				// Advance frames even during death
+				anim.elapsedTime += dt;
+
+				if (anim.elapsedTime >= anim.frameTime)
+				{
+					anim.elapsedTime = 0.0f;
+					anim.currentFrame++;
+
+					// Stop on final frame since loop=false
+					if (anim.currentFrame >= anim.frameCount)
+						anim.currentFrame = anim.frameCount - 1;
+				}
+
+				continue; // Skip walking/idle animation logic ENTIRELY
 			}
+
+			// ----------- NORMAL ANIMATION SELECTION -------------------
+			std::string selected =
+				groupMap[anim.group][anim.direction];
+
+			if (anim.animName != selected)
+			{
+				anim.animName = selected;
+				auto* gfx = CORE->GetGraphicsSystem();
+				LoadAnimation(e, anim, gfx, anim.animName);
+			}
+
+			// -------------------------------
+			// FREEZE ONLY WALK WHEN NOT MOVING
+			// -------------------------------
+			bool moving = false;
+			if (entityManager->HasComponent<Movement>(e))
+			{
+				auto& mv = entityManager->GetComponent<Movement>(e);
+				moving = fabs(mv.direction.x) > max_static_threshold ||
+					fabs(mv.direction.y) > max_static_threshold;
+			}
+
+			if (anim.group == AnimGroup::Walk && !moving)
+				continue;
+
+			// -------------------------------
+			// FRAME ADVANCE
+			// -------------------------------
 
 			anim.elapsedTime += dt;
 
@@ -180,8 +234,10 @@ namespace Framework {
 	// ============================================================================
 	// configPath is now the PATH to the combined JSON, e.g. "assets/animations.json"
 	void AnimationSystem::LoadAnimationConfig(const std::string& configPath) {
-		animEntries.clear();
+		
 		g_animationConfigPath = configPath;
+		animEntries.clear();
+		groupMap.clear();
 
 		std::ifstream file(configPath);
 		if (!file.is_open()) {
@@ -203,23 +259,32 @@ namespace Framework {
 			return;
 		}
 
-		for (auto& [name, animObj] : j["animations"].items()) {
+		for (auto& [key, animObj] : j["animations"].items()) {
+			
 			AnimEntry entry;
-			entry.name = name;
+			entry.name = key;
+			entry.file = key;
 
-			// We no longer have per-animation text files,
-			// so we use 'file' to store the animation NAME/key.
-			entry.file = name;
-
-			// Optional: read a 'key' field from JSON, default 0
-			if (animObj.contains("key") && animObj["key"].is_string() && !animObj["key"].get<std::string>().empty()) {
+			if (animObj.contains("key"))
 				entry.key = animObj["key"].get<std::string>()[0];
-			}
-			else {
-				entry.key = 0;
-			}
 
 			animEntries.push_back(entry);
+
+			AnimGroup group;
+			AnimDirection dir = AnimDirection::None;
+
+			if		(key.rfind("Idle_", 0) == 0)		group = AnimGroup::Idle;
+			else if (key.rfind("Walk_", 0) == 0)		group = AnimGroup::Walk;
+			else if (key.rfind("Attack_", 0) == 0)		group = AnimGroup::Attack;
+			else if (key.rfind("Injured_", 0) == 0)	group = AnimGroup::Injured;
+			else if (key == "Death")					        group = AnimGroup::Death;
+
+			if		(key.find("front") != std::string::npos)	 dir = AnimDirection::Front;
+			else if (key.find("back") != std::string::npos)		 dir = AnimDirection::Back;
+			else if (key.find("sideview") != std::string::npos) dir = AnimDirection::Side;
+			else													 dir = AnimDirection::None;
+
+			groupMap[group][dir] = key;
 
 			LOG_INFO("ANIM", "Added animation: name=%s key=%c",
 				entry.name.c_str(),

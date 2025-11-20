@@ -65,12 +65,16 @@ namespace Framework {
      */
 	class AnimationSystem : public EngineSystem {
 	public:
+        // Anim JSON entries (for editor M-cycle)
         struct AnimEntry {
             std::string name;
             std::string file;
-			int key;
+            char key = '\0';
         };
 		std::vector<AnimEntry> animEntries;
+
+        // Mapping: EnumGroup -> EnumDir -> AnimName
+        std::map<AnimGroup, std::map<AnimDirection, std::string>> groupMap;
 
         /**
         ===============================================================================

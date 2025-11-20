@@ -118,19 +118,47 @@ namespace Framework
 
                    // ---------------------- Direction-based flipping ----------------------
                    // When pressing D → face right; A → face left
-                    if (inputDir.x > default_zero)
+                    auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
+
+                    // Determine if moving
+                    bool moving = fabs(inputDir.x) > 0.01f || fabs(inputDir.y) > 0.01f;
+
+                    if (moving)
                     {
-                        if (entityManager->HasComponent<SpriteAnimation>(entity))
+                        if (inputDir.y > 0)       anim.direction = AnimDirection::Back;
+                        else if (inputDir.y < 0)  anim.direction = AnimDirection::Front;
+                        else if (inputDir.x > 0) { anim.direction = AnimDirection::Side; anim.flipX = false; }
+                        else if (inputDir.x < 0) { anim.direction = AnimDirection::Side; anim.flipX = true; }
+                    }
+                    // DO NOT change direction when idle → preserves last direction
+
+                    if (moving)
+                    {
+                        if (anim.group != AnimGroup::Attack &&
+                            anim.group != AnimGroup::Injured &&
+                            anim.group != AnimGroup::Death)
                         {
-                            entityManager->GetComponent<SpriteAnimation>(entity).flipX = false;
+                            anim.group = AnimGroup::Walk;
+                            anim.playing = true;
                         }
                     }
-                    if (inputDir.x < default_zero)
+                    else
                     {
-                        if (entityManager->HasComponent<SpriteAnimation>(entity))
-                        {
-                            entityManager->GetComponent<SpriteAnimation>(entity).flipX = true;
-                        }
+                        if (anim.group == AnimGroup::Walk)
+                            anim.group = AnimGroup::Idle;
+                    }
+
+                    if (inputSystem->IsKeyPressed(KEY_K)) {
+                        anim.group = AnimGroup::Attack;
+                        anim.loop = false;
+                    }
+                    if (inputSystem->IsKeyPressed(KEY_J)) {
+                        anim.group = AnimGroup::Injured;
+                        anim.loop = false;
+                    }
+                    if (inputSystem->IsKeyPressed(KEY_L)) {
+                        anim.group = AnimGroup::Death;
+                        anim.loop = false;
                     }
 
                     // ---------------------- Scaling controls (KEY 3 / 4) ----------------------
