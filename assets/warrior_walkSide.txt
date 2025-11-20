@@ -1,7 +1,0 @@
-sprite = assets/Warriorsideviewwalk.png
-rows = 2
-columns = 2
-frameCount = 3
-frameTime = 0.15
-loop = true
-uvShrinkPx = 0.0

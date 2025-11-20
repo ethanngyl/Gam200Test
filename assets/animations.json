@@ -1,0 +1,94 @@
+{
+  "animations": {
+    "Idle": {
+      "sprite": "assets/Warriorsideview.png",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 5,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "WalkSide": {
+      "sprite": "assets/Warriorsideviewwalk.png",
+      "rows": 2,
+      "columns": 2,
+      "frameCount": 3,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "WalkBack": {
+      "sprite": "assets/WarriorBackview.png",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 6,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "AttackSide": {
+      "sprite": "assets/Warriorsideviewattack.png",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 8,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "AttackFront": {
+      "sprite": "assets/WarriorAttackFront.png",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 5,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "AttackBack": {
+      "sprite": "assets/Warriorattackbackview.png",
+      "rows": 2,
+      "columns": 2,
+      "frameCount": 4,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "InjureSide": {
+      "sprite": "assets/Warriorsideviewinjure.png",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 7,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "InjureBack": {
+      "sprite": "assets/Warriorinjuredbackview.png",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 8,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    },
+    "Death": {
+      "sprite": "assets/Universaldeathanimation.png",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 7,
+      "frameTime": 0.15,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "M"
+    }
+  }
+}

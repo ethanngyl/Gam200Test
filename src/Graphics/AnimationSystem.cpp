@@ -37,6 +37,13 @@ Usage:
 
 #include "Precompiled.h"
 #include "ConfigReader.h"
+#include "Component.h"
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
+// This holds the path to the combined JSON file (e.g. assets/animations.json)
+namespace { std::string g_animationConfigPath; }
 
 namespace Framework {
 	
@@ -56,6 +63,12 @@ namespace Framework {
 		, frameTimer(0.0f)
 		, isPlaying(false)
 		, entityManager(nullptr)
+		, max_static_threshold(0.0f)
+		, default_zero(0.0f)
+		, anim_current_frame(0)
+		, anim_frame_mod(0)
+		, frameDurations()
+		, animationFrames()
 	{}
 
 	/**
@@ -162,103 +175,178 @@ namespace Framework {
 		(void)message; // silence unused variable warning
 	}
 
+	// ============================================================================
+	// JSON-BASED ANIMATION CONFIG LOADING
+	// ============================================================================
+	// configPath is now the PATH to the combined JSON, e.g. "assets/animations.json"
 	void AnimationSystem::LoadAnimationConfig(const std::string& configPath) {
-		ConfigReader::LoadConfig(configPath);
+		animEntries.clear();
+		g_animationConfigPath = configPath;
 
-		std::string names = ConfigReader::GetString("names", "");
-		std::string files = ConfigReader::GetString("files", "");
-		std::string keys = ConfigReader::GetString("keys", "");	
+		std::ifstream file(configPath);
+		if (!file.is_open()) {
+			LOG_ERROR("ANIM", "Failed to open animation JSON: %s", configPath.c_str());
+			return;
+		}
 
-		// Parse comma-separated values
-		std::istringstream nameStream(names);
-		std::istringstream fileStream(files);
-		std::istringstream keyStream(keys);
-		std::string name, file, keyStr;
-		while (std::getline(nameStream, name, ',') &&
-			std::getline(fileStream, file, ',') &&
-			std::getline(keyStream, keyStr, ','))
-		{
+		json j;
+		try {
+			file >> j;
+		}
+		catch (const std::exception& e) {
+			LOG_ERROR("ANIM", "Failed to parse JSON '%s': %s", configPath.c_str(), e.what());
+			return;
+		}
+
+		if (!j.contains("animations") || !j["animations"].is_object()) {
+			LOG_ERROR("ANIM", "JSON '%s' missing 'animations' object", configPath.c_str());
+			return;
+		}
+
+		for (auto& [name, animObj] : j["animations"].items()) {
 			AnimEntry entry;
 			entry.name = name;
-			entry.file = file;
-			entry.key = keyStr.empty() ? 0 : keyStr[0];
+
+			// We no longer have per-animation text files,
+			// so we use 'file' to store the animation NAME/key.
+			entry.file = name;
+
+			// Optional: read a 'key' field from JSON, default 0
+			if (animObj.contains("key") && animObj["key"].is_string() && !animObj["key"].get<std::string>().empty()) {
+				entry.key = animObj["key"].get<std::string>()[0];
+			}
+			else {
+				entry.key = 0;
+			}
+
 			animEntries.push_back(entry);
-			LOG_INFO("ANIM", "Added animation: name=%s file=%s key=%c",
+
+			LOG_INFO("ANIM", "Added animation: name=%s key=%c",
 				entry.name.c_str(),
-				entry.file.c_str(),
-				entry.key);
+				entry.key ? entry.key : '-');
 		}
-		LOG_INFO("ANIM", "Total animations loaded: %zu", animEntries.size());
+
+		LOG_INFO("ANIM", "Total animations loaded from JSON: %zu", animEntries.size());
 	}
 
+	// configPath PARAMETER is now the ANIMATION NAME (e.g. "Idle"),
+	// the JSON PATH comes from g_animationConfigPath.
 	void AnimationSystem::LoadAnimation(Entity e, SpriteAnimation& anim, GraphicsSystemV2* gfx, const std::string& configPath) {
-		// Load the animation config (anim_doraemon.txt or anim_bird.txt)
-		ConfigReader::LoadConfig(configPath);
+		if (!gfx) {
+			LOG_ERROR("ANIM", "GraphicsSystemV2 pointer is null");
+			return;
+		}
 
-		LOG_INFO("ANIM", "Loading animation config: %s", configPath.c_str());
+		if (!entityManager) {
+			LOG_ERROR("ANIM", "EntityManager is null in AnimationSystem::LoadAnimation");
+			return;
+		}
+
+		if (g_animationConfigPath.empty()) {
+			LOG_ERROR("ANIM", "Animation JSON path not set. Call LoadAnimationConfig() first.");
+			return;
+		}
+
+		const std::string animationName = configPath; // reuse parameter as name
+
+		std::ifstream file(g_animationConfigPath);
+		if (!file.is_open()) {
+			LOG_ERROR("ANIM", "Failed to open animation JSON: %s", g_animationConfigPath.c_str());
+			return;
+		}
+
+		json j;
+		try {
+			file >> j;
+		}
+		catch (const std::exception& e) {
+			LOG_ERROR("ANIM", "Failed to parse JSON '%s': %s", g_animationConfigPath.c_str(), e.what());
+			return;
+		}
+
+		if (!j.contains("animations") || !j["animations"].is_object()) {
+			LOG_ERROR("ANIM", "JSON '%s' missing 'animations' object", g_animationConfigPath.c_str());
+			return;
+		}
+
+		auto itAnim = j["animations"].find(animationName);
+		if (itAnim == j["animations"].end()) {
+			LOG_ERROR("ANIM", "Animation '%s' not found in %s",
+				animationName.c_str(), g_animationConfigPath.c_str());
+			return;
+		}
+
+		const json& a = *itAnim;
+
+		LOG_INFO("ANIM", "Loading animation '%s' from JSON '%s'",
+			animationName.c_str(), g_animationConfigPath.c_str());
 
 		// ----------------------------
 		// 1. Load the REAL sprite sheet
 		// ----------------------------
-		std::string spritePath = ConfigReader::GetString("sprite", "");
-
-		if (spritePath.empty())
-		{
-			LOG_ERROR("ANIM", "Config %s has no 'sprite =' entry!", configPath.c_str());
+		std::string spritePath = a.value("sprite", std::string());
+		if (spritePath.empty()) {
+			LOG_ERROR("ANIM", "Animation '%s' in JSON has no 'sprite' field",
+				animationName.c_str());
 			return;
 		}
 
-		TextureHandle tex = gfx->GetResourceManager().LoadTexture(spritePath);
-
-		// Set sprite sheet texture
-		anim.spriteSheet = tex;
-
-		// ----------------------------
-		// 2. Load other animation data
-		// ----------------------------
-		anim.rows = ConfigReader::GetInt("rows", 1);
-		anim.columns = ConfigReader::GetInt("columns", 1);
-		anim.frameCount = ConfigReader::GetInt("frameCount", 1);
-		anim.frameTime = ConfigReader::GetFloat("frameTime", 0.1f);
-		anim.loop = ConfigReader::GetBool("loop", true);
-		anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
-
-		// Retrieve actual Texture* from ResourceManager
-		Framework::Texture* realTex = gfx->GetResourceManager().GetTexture(tex);
-
-		if (!realTex)
-		{
-			LOG_ERROR("ANIM", "Texture pointer is NULL for %s", spritePath.c_str());
-			anim.frameWidth = anim.frameHeight = 0;
-		}
-		else
-		{
-			anim.frameWidth = realTex->GetWidth() / anim.columns;
-			anim.frameHeight = realTex->GetHeight() / anim.rows;
+		auto& resourceManager = gfx->GetResourceManager();
+		anim.spriteSheet = resourceManager.LoadTexture(spritePath);
+		if (!anim.spriteSheet.IsValid()) {
+			LOG_ERROR("ANIM", "Failed to load texture for animation '%s' (sprite=%s)",
+				animationName.c_str(), spritePath.c_str());
+			return;
 		}
 
+		Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
+		if (!tex) {
+			LOG_ERROR("ANIM", "Texture pointer null for '%s'", spritePath.c_str());
+			return;
+		}
+
+		// ----------------------------
+		// 2. Configure layout values
+		// ----------------------------
+		anim.rows = a.value("rows", 1);
+		anim.columns = a.value("columns", 1);
+		anim.frameCount = a.value("frameCount", 1);
+		anim.frameTime = static_cast<float>(a.value("frameTime", 0.0));
+		anim.loop = a.value("loop", true);
+		anim.uvShrinkPx = static_cast<float>(a.value("uvShrinkPx", 0.0));
+
+		if (anim.rows <= 0)    anim.rows = 1;
+		if (anim.columns <= 0) anim.columns = 1;
+
+		anim.frameWidth = tex->GetWidth() / anim.columns;
+		anim.frameHeight = tex->GetHeight() / anim.rows;
+
+		anim.playing = true;
 		anim.currentFrame = 0;
-		anim.elapsedTime = 0;
+		anim.elapsedTime = 0.0f;
 
 		// ----------------------------
-		// 3. UPDATE RENDERABLE TEXTURE
+		// 3. Assign to renderer (MeshRenderer)
 		// ----------------------------
-		if (entityManager->HasComponent<Renderable>(e))
-		{
-			auto& rend = entityManager->GetComponent<Renderable>(e);
-
-			LOG_INFO("ANIM", "Updating Renderable.texture for entity %d", (int)e.id);
-			LOG_INFO("ANIM", "Old TextureHandle: %d", rend.texture);
-			LOG_INFO("ANIM", "New TextureHandle: %d", tex);
-
-			rend.texture = tex;
+		if (!entityManager->HasComponent<MeshRenderer>(e)) {
+			LOG_WARN("ANIM", "Entity %u has no MeshRenderer; sprite loaded but not assigned", (unsigned)e.id);
 		}
-		else
-		{
-			LOG_WARN("ANIM", "Entity %d has no Renderable component!", (int)e.id);
+		else {
+			auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+			mr.spriteName = spritePath;
+
+			// Let GraphicsSystemV2 assign mesh + material for this sprite
+			gfx->AssignMeshAndMaterial(mr, spritePath);
 		}
 
-		LOG_INFO("ANIM", "Switched animation to %s (config=%s)",
-			spritePath.c_str(), configPath.c_str());
+		LOG_INFO("ANIM",
+			"Animation '%s' loaded: sprite=%s rows=%d cols=%d frames=%d frameTime=%.3f loop=%s",
+			animationName.c_str(),
+			spritePath.c_str(),
+			anim.rows,
+			anim.columns,
+			anim.frameCount,
+			anim.frameTime,
+			anim.loop ? "true" : "false");
 	}
 }

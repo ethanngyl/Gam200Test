@@ -1,7 +1,0 @@
-sprite = assets/Warriorsideviewattack.png
-rows = 3
-columns = 3
-frameCount = 8
-frameTime = 0.15
-loop = true
-uvShrinkPx = 0.0

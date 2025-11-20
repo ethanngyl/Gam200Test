@@ -42,6 +42,7 @@ extern const float FIXED_DT;
 #include <string_view> //Non-owning string references
 #include <functional> //Function objects
 #include <queue>
+#include <stdexcept>
 
 //Components
 

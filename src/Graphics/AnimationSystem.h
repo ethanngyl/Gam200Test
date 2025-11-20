@@ -39,6 +39,7 @@ Example:
 #pragma once
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
+#include "Component.h"
 
 namespace Framework {
 

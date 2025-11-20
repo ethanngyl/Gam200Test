@@ -1,7 +1,0 @@
-sprite = assets/Warriorattackbackview.png
-rows = 2
-columns = 2
-frameCount = 4
-frameTime = 0.15
-loop = true
-uvShrinkPx = 0.0

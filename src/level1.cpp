@@ -69,13 +69,13 @@ void level1_Initialize()
         return;
     }
 
-    // Spawn a test entity
-    auto testEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
-    LOG_INFO("LEVEL1", "Spawned test entity: %u", testEntity.GetID());
+   // // Spawn a test entity
+   //auto testEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
+   // LOG_INFO("LEVEL1", "Spawned test entity: %u", testEntity.GetID());
 
-    // Load script onto the entity
-    scriptSystem->LoadScript(testEntity, "./assets/scripts/test_simple.lua");
-    LOG_INFO("LEVEL1", "Loaded test script onto entity %u", testEntity.GetID());
+   // // Load script onto the entity
+   // scriptSystem->LoadScript(testEntity, "./assets/scripts/test_simple.lua");
+   // LOG_INFO("LEVEL1", "Loaded test script onto entity %u", testEntity.GetID());
 
 
     // ========================================================================
@@ -117,34 +117,6 @@ void level1_Initialize()
         // ============================================================================
         // Load animation setting
         // ============================================================================
-        //ConfigReader::LoadConfig("assets/anim_Bird.txt");
-        //LOG_INFO("LEVEL1", "Loaded animation configuration from anim_Bird.txt");
-
-        //// === Give player sprite animation ===
-        //auto& anim = em->AddComponent<Framework::SpriteAnimation>(playerEntity);
-
-        //// Sprite path
-        //std::string spritePath = ConfigReader::GetString("sprite", "");
-        //anim.spriteSheet = gfx->GetResourceManager().LoadTexture(spritePath);
-        //Framework::Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
-
-        //// Sheet layout
-        //anim.rows = ConfigReader::GetInt("rows", 1);
-        //anim.columns = ConfigReader::GetInt("columns", 1);
-        //anim.frameCount = ConfigReader::GetInt("frameCount", 1);
-        //anim.frameTime = ConfigReader::GetFloat("frameTime", 0.0f);
-        //anim.loop = ConfigReader::GetBool("loop", true);
-        //anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
-
-        //// Derived frame size
-        //anim.frameWidth = tex->GetWidth() / anim.columns;
-        //anim.frameHeight = tex->GetHeight() / anim.rows;
-        //anim.playing = true;
-        //anim.currentFrame = 0;
-
-         // ============================================================================
-        // Load animation setting
-        // ============================================================================
         LOG_INFO("LEVEL1", "Loaded animation configuration from file");
 
         // ============================
@@ -155,10 +127,11 @@ void level1_Initialize()
         auto* animSys = engine->GetAnimationSystem();
         if (animSys)
         {
-            animSys->LoadAnimationConfig("assets/spritesheet_config.txt");
+            animSys->LoadAnimationConfig("assets/animations.json");
 
             // default animation
-            animSys->LoadAnimation(playerEntity, anim, gfx, animSys->animEntries[0].file);
+            anim.animName = animSys->animEntries[0].file;
+            animSys->LoadAnimation(playerEntity, anim, gfx, anim.animName);
         }
 
         // ============================
@@ -212,7 +185,8 @@ void level1_Update()
                     animIndex = 0;
 
                 auto& entry = entries[animIndex];
-                animSys->LoadAnimation(player, anim, gfx, entry.file);
+                anim.animName = entry.file;
+                animSys->LoadAnimation(player, anim, gfx, anim.animName);
 
 				LOG_INFO("LEVEL1", "Switched to animation: %s", entry.name.c_str());
             }

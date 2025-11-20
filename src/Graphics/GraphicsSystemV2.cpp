@@ -703,15 +703,25 @@ namespace Framework {
             {
                 auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
-                // ---------------------------------------------------------------------
-                // REQUIRED FIX:
-                // Override the render command texture so animation always wins
-                // ---------------------------------------------------------------------
                 cmd.texture = anim.spriteSheet;
-
+                
+                // Get the material for this command
                 Material* mat = resourceManager.GetMaterial(cmd.material);
-                if (mat)
-                    mat->albedoTexture = anim.spriteSheet;
+
+                // If the material is missing, or using the wrong shader (color-only),
+                // reroute this command to use the default textured material instead.
+                if (!mat || mat->shader != defaultShader)
+                {
+                    cmd.material = defaultMaterial;
+                    mat = resourceManager.GetMaterial(cmd.material);
+                }
+
+                // If still failed for some reason, skip this entity
+                if (!mat)
+                    continue;
+
+                // Ensure the material is bound to this sprite sheet
+                mat->albedoTexture = anim.spriteSheet;
 
                 Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
                 if (!tex)
@@ -839,7 +849,7 @@ namespace Framework {
             if (!mesh) continue;
 
             // ---- STEP 3: Upload instance data and draw ----
-            mesh->SetInstanceData(); // sets up the VAO attributes
+          //  mesh->SetInstanceData(); // sets up the VAO attributes
             // Upload matrices to GPU buffer (modern DSA version)
             glNamedBufferSubData(mesh->instanceVBO, 0,
                 matrices.size() * sizeof(glm::mat4),
