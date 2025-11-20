@@ -473,17 +473,9 @@ namespace Framework
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         else {
-            // Normal rendering
+            // Normal rendering - just draw the game scene
             graphicsSystem->Update(dt);
 
-            // ========================================
-            // Draw level text for non-viewport mode
-            // ========================================
-            int fbW, fbH;
-            glfwGetFramebufferSize(windowSystem->GetWindow(), &fbW, &fbH);
-            graphicsSystem->GetTextRenderer().setScreenSize(fbW, fbH);
-            LevelLoader::GetInstance().DrawCurrentLevel();
-            // ========================================
         }
 
         // === IMGUI ===
@@ -492,13 +484,7 @@ namespace Framework
             if (imguiSystem->IsEnabled()) {
                 imguiSystem->Render();
             }
-            if (engine->GetGraphicsSystem()) {
-                engine->GetGraphicsSystem()->RenderImGui();
-            }
         }
-
-        glfwSwapBuffers(windowSystem->GetWindow());
-        glfwPollEvents();
     }
 
     void CoreEngine::BroadcastMessage(Message* message)
