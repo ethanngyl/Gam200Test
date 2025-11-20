@@ -226,7 +226,7 @@ namespace Framework {
     // Update: Per-frame entry point. Handles viewport changes, camera logic, render queue gather/sort/execute, optional debug pass, and error checks.(continuation from kah yan)
     void GraphicsSystemV2::Update(float dt) {
 
-        DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics); 
+        DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics);
 
         (void)dt;
 
@@ -234,39 +234,56 @@ namespace Framework {
             return;
         }
 
+        // ========================================================================
+        // RENDER TARGET SETUP
+        // ========================================================================
 
-        // Detect window resize each frame and update camera/viewport
-        int fbWidth, fbHeight;
-        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-        if (fbWidth != viewportWidth || fbHeight != viewportHeight) {
-            SetViewportSize(fbWidth, fbHeight);
+        if (renderingToTarget && targetFBO != 0) {
+            // Bind the custom framebuffer (ImGui viewport)
+            glBindFramebuffer(GL_FRAMEBUFFER, targetFBO);
+            glViewport(0, 0, targetWidth, targetHeight);
+
+            // Update camera aspect ratio for the viewport size
+            float aspectRatio = static_cast<float>(targetWidth) / static_cast<float>(targetHeight);
+            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+
+            // Update text renderer for viewport size
+            text_.setScreenSize(targetWidth, targetHeight);
+        }
+        else {
+            // Normal window rendering
+            // Detect window resize each frame and update camera/viewport
+            int fbWidth, fbHeight;
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+            if (fbWidth != viewportWidth || fbHeight != viewportHeight) {
+                SetViewportSize(fbWidth, fbHeight);
+            }
         }
 
-        // ============== CAMERA LOGIC ==============
-        // 
+        // ========================================================================
+        // CAMERA LOGIC
+        // ========================================================================
+
         // === EDITOR CAMERA LOGIC - jiahao
-        // this if else condition is to check when to use editor camera or make camera follow player
-        // LEVEL_2 is editor mode, if the game state current is in editor mode, proceed to the next check
-        // check if current imgui system is in play mode or not
-        // if yes, activate handleEditorCamera function, which the camera not following the player,  
-        // and able to move by arrow key(up down, left, right), key 1 to zoom in, key 2 to zoom out
-        // and key 0  to reset camera
-        //!Framework::CORE->IsPlaying()
         if (current == LEVEL_2) {
             if (!Framework::CORE->IsPlaying()) {
                 HandleEditorCamera(dt);
             }
-            
         }
+
         // === CAMERA FOLLOW LOGIC ===
         if (followEnabled && entityManager && followTarget.IsValid() && Framework::CORE->IsPlaying()) {
-                FollowPlayer(entityManager, followTarget);
+            FollowPlayer(entityManager, followTarget);
         }
-        // ============================================
 
-        // Clear ONCE at the start
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // ========================================================================
+        // CLEAR AND RENDER
+        // ========================================================================
+
+        // Clear the current target (either FBO or screen)
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         // Reset statistics
         stats = RenderStats();
 
@@ -287,6 +304,27 @@ namespace Framework {
         // Clear queues for next frame
         renderQueue.Clear();
         debugQueue.Clear();
+
+        // ========================================================================
+        // UNBIND RENDER TARGET
+        // ========================================================================
+
+        if (renderingToTarget && targetFBO != 0) {
+            // Return to default framebuffer
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            // Restore viewport to window size
+            int fbWidth, fbHeight;
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+            glViewport(0, 0, fbWidth, fbHeight);
+
+            // Restore camera aspect ratio
+            float aspectRatio = static_cast<float>(fbWidth) / static_cast<float>(fbHeight);
+            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+
+            // Restore text renderer
+            text_.setScreenSize(fbWidth, fbHeight);
+        }
 
         // Check for OpenGL errors
         GLenum error = glGetError();
@@ -1037,13 +1075,13 @@ namespace Framework {
         glEnable(GL_DEPTH_TEST);
     }
 
-    void GraphicsSystemV2::RenderImGui() {
-        if (!window) return;
+    //void GraphicsSystemV2::RenderImGui() {
+    //    if (!window) return;
 
-        // Just swap - DON'T clear!
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+    //    // Just swap - DON'T clear!
+    //    glfwSwapBuffers(window);
+    //    glfwPollEvents();
+    //}
 
     void GraphicsSystemV2::AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName) {
         static std::unordered_map<std::string, std::pair<std::string, std::string>> lookup = {
@@ -1062,5 +1100,19 @@ namespace Framework {
             mr.mesh = resourceManager.GetMeshHandle("quad");
             mr.material = Material2;
         }
+    }
+
+    void GraphicsSystemV2::SetRenderTarget(GLuint fbo, int width, int height) {
+        targetFBO = fbo;
+        targetWidth = width;
+        targetHeight = height;
+        renderingToTarget = true;
+    }
+
+    void GraphicsSystemV2::ClearRenderTarget() {
+        targetFBO = 0;
+        targetWidth = 0;
+        targetHeight = 0;
+        renderingToTarget = false;
     }
 } // namespace Framework

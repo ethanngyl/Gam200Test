@@ -179,3 +179,37 @@ menu_play_text_offset_x = -60.0
 menu_play_text_offset_y = -24.0
 menu_exit_text_offset_x = -50.0
 menu_exit_text_offset_y = -24.0
+
+# ============================================================================
+# PAUSE OVERLAY CONFIGURATION
+# ============================================================================
+# Pause text content
+pause_text = PAUSED
+pause_hint_manual = Press P to Resume
+pause_hint_focus = Return to window to resume
+
+# Font
+pause_font = Sans48
+
+# Pause text position (as percentage of window: 0.0 to 1.0)
+# 0.5 = center, 0.0 = left/top edge, 1.0 = right/bottom edge
+pause_text_x_percent = 0.9
+pause_text_y_percent = 0.5
+
+# Hint text offset from pause text (as percentage of window)
+pause_hint_offset_x_percent = 0.1
+pause_hint_offset_y_percent = 0.1
+
+# Text scale
+pause_text_scale = 2.0
+pause_hint_scale = 1.0
+
+# Pause text color (RGB values, 0.0 - 1.0)
+pause_text_color_r = 1.0
+pause_text_color_g = 1.0
+pause_text_color_b = 1.0
+
+# Hint text color (RGB values, 0.0 - 1.0)
+pause_hint_color_r = 0.8
+pause_hint_color_g = 0.8
+pause_hint_color_b = 0.8

@@ -10,6 +10,7 @@
 -- Date:    2025-11-13
 -- ============================================================================
 
+
 -- ============================================================================
 -- LEVEL STATE VARIABLES
 -- ============================================================================
@@ -17,7 +18,7 @@
 local buttonIDs = {}
 local initialized = false
 local config = nil
-
+local editorToggleCooldown = 0  
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -41,7 +42,7 @@ function OnInit()
     SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
     SetCameraZoom(cam.zoom)
     
-    -- Disable ImGui overlay
+    -- Disable ImGui overlay by default for menu
     DisableImGui()
     
     -- Set engine to editor mode (non-playing)
@@ -60,6 +61,7 @@ function OnInit()
     
     initialized = true
     Log("MainMenu initialization complete")
+    Log("Press F1 to toggle editor")
 end
 
 -- ============================================================================
@@ -134,16 +136,30 @@ end
 -- ============================================================================
 
 function OnUpdate(dt)
-    -- Update audio system
     UpdateAudio(dt)
     
-    -- Optional: Add animated background effects here
-    -- Example: Rotating background elements, particle systems, etc.
+    -- DEBUG: Check if F1 is being detected
+    if IsKeyDown("F1") then
+        Log("F1 KEY DETECTED!")  -- Add this line
+        
+        if editorToggleCooldown <= 0 then
+            Log("Attempting to toggle editor...")  -- Add this
+            local newState = ToggleEditor()
+            Log("ToggleEditor returned: " .. tostring(newState))  -- Add this
+            
+            if newState then
+                Log("EDITOR ON")
+            else
+                Log("EDITOR OFF")
+            end
+            editorToggleCooldown = 0.3
+        else
+            Log("Cooldown active: " .. editorToggleCooldown)  -- Add this
+        end
+    end
     
-    -- Optional: Handle debug input
-    if IsKeyDown("Escape") then
-        Log("ESC pressed in menu")
-        OnExitButtonClicked()
+    if editorToggleCooldown > 0 then
+        editorToggleCooldown = editorToggleCooldown - dt
     end
 end
 

@@ -183,7 +183,7 @@ namespace Framework {
          * @brief Create default materials for legacy sprite names
          * Maintains backwards compatibility with old Sprite component
          */
-        void RenderImGui();
+        //void RenderImGui();
 
         // Resolve a sprite name into a texture handle (legacy sprite-to-texture path).
         TextureHandle  GetTextureForSpriteName(const std::string& spriteName);
@@ -193,6 +193,19 @@ namespace Framework {
 
         // Toggle the blocked-grid overlay/fill (e.g., nav blockers).
         void SetShowGridBlocked(bool e) { showGridBlocked = e; }
+
+        // Set a custom render target (framebuffer)
+        void SetRenderTarget(GLuint fbo, int width, int height);
+
+        // Clear render target (return to default screen rendering)
+        void ClearRenderTarget();
+
+        // Check if currently rendering to a target
+        bool IsRenderingToTarget() const { return renderingToTarget; }
+
+        // Get current render dimensions
+        int GetRenderWidth() const { return renderingToTarget ? targetWidth : viewportWidth; }
+        int GetRenderHeight() const { return renderingToTarget ? targetHeight : viewportHeight; }
 
     private:
         // === RENDERING PHASES ===
@@ -342,6 +355,11 @@ namespace Framework {
         // Grid overlay toggles (editor visualization)
         bool showGrid = true; 
         bool showGridBlocked = true; 
+
+        GLuint targetFBO = 0;
+        int targetWidth = 0;
+        int targetHeight = 0;
+        bool renderingToTarget = false;
     };
 
 } // namespace Framework

@@ -77,6 +77,7 @@ namespace Framework
         UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
+        UpdateKeyState(KEY_P, GetAsyncKeyState(KEY_P));
 
         // Number keys
         UpdateKeyState(KEY_1, GetAsyncKeyState(KEY_1));
@@ -91,6 +92,9 @@ namespace Framework
         UpdateKeyState(KEY_0, GetAsyncKeyState(KEY_0));
 
         // Function keys 
+        UpdateKeyState(KEY_F1, GetAsyncKeyState(KEY_F1));
+        UpdateKeyState(KEY_F2, GetAsyncKeyState(KEY_F2));
+        UpdateKeyState(KEY_F3, GetAsyncKeyState(KEY_F3));
         UpdateKeyState(KEY_F9, GetAsyncKeyState(KEY_F9)); 
 
         // Mouse buttons

@@ -44,9 +44,9 @@ Safety:
 #include "EntitySpawner.h"
 #include "AudioSystem.h"
 #include "Pathfinding.h"
-#include <build/_deps/glfw-src/include/GLFW/glfw3.h>
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
+
 namespace Framework {
 
     ImGuiSystem::ImGuiSystem()
@@ -85,7 +85,7 @@ namespace Framework {
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
-
+        DeleteViewportFramebuffer();
         std::cout << "[ImGui] Shutdown complete\n";
     }
 
@@ -116,7 +116,12 @@ namespace Framework {
         ImGui_ImplOpenGL3_Init("#version 330");
 
         EnableFileDragAndDrop();
-        std::cout << "[ImGui] Initialized successfully\n";
+
+        CreateViewportFramebuffer(1280, 720);
+        showGameViewport = true;
+        renderToViewport = true;
+        std::cout << "[ImGuiSystem] Viewport ready - FBO: " << viewportFBO
+            << ", Texture: " << viewportTexture << "\n";
     }
 
     // ============================================================================
@@ -602,13 +607,39 @@ namespace Framework {
         return Vector2D(worldPos.x, worldPos.y);
     }
 
-    void ImGuiSystem::Update(float dt)
+    void ImGuiSystem::NewFrame()
     {
-        (void)dt;
         if (!enabled) {
             return;
         }
 
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        frameTime = ImGui::GetIO().DeltaTime;
+
+        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(),
+            ImGuiDockNodeFlags_PassthruCentralNode);
+    }
+
+    void ImGuiSystem::Update(float dt)
+    {
+        (void)dt;
+        if (pendingToggle) {
+            enabled = !enabled;
+            pendingToggle = false;
+            std::cout << "[ImGuiSystem] Toggled to: " << (enabled ? "ON" : "OFF") << "\n";
+        }
+
+
+        if (!enabled) {
+            return;
+        }
+        // Start ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
         //frameTime = dt;
         if (entityManager) {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
@@ -619,41 +650,17 @@ namespace Framework {
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
 
         frameTime = ImGui::GetIO().DeltaTime;
-
-
-        // enable docking -jiahao
-        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
-      //  if (ImGui::BeginDragDropTarget()) {
-      //      if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite")) {
-      //          if (payload->DataSize == sizeof(std::string)) {
-      //              std::string filePath = *(std::string*)payload->Data;
-      //              if (IsTextureFile(filePath)) {
-      //                  // Handle texture file drop
-      //                  if (entitySpawner) {
-      //                      Framework::Entity entity = entitySpawner->SpawnSprite(
-      //                          filePath,
-      //                          Vector2D(0.0f, 0.0f),
-      //                          Vector2D(1.0f, 1.0f)
-      //                      );
-      //                      std::cout << "[Drop] Spawned sprite from: " << filePath << " as entity" << entity.id << "\n";
-						//}
-      //              }
-      //          }
-      //      }
-      //      ImGui::EndDragDropTarget();
-      //  }
 
         //object picking
         UpdatePicking();
 
         UpdateEntityDragging();
 
-		//delete button to delete selected entity
+        //delete button to delete selected entity
         if (!CORE->IsPlaying() && entityManager) {
-			InputSystem* input = Framework::CORE->GetInputSystem();
+            InputSystem* input = Framework::CORE->GetInputSystem();
 
             if (input && selectedEntity.IsValid()) {
                 if (input->IsKeyPressed(KEY_DELETE))
@@ -664,7 +671,7 @@ namespace Framework {
                     SpatialPartitioningRemove(selectedEntity);
 
                     entityManager->DestroyEntity(selectedEntity);
-                    
+
 
                     selectedEntity = Framework::Entity{};
                     draggingEntity = Framework::Entity{};
@@ -682,9 +689,9 @@ namespace Framework {
                 if (CORE->IsPlaying()) {
                     ImGui::BeginDisabled();
                 }
-				// open default level
+                // open default level
                 if (ImGui::MenuItem("Open")) {
-					// open default level if no current level path
+                    // open default level if no current level path
                     bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
                     if (!isOpen) {
                         std::cerr << "[ImGuiError] Failed to open level.txt\n";
@@ -693,50 +700,50 @@ namespace Framework {
                         currentLevelPath = "assets/level1.txt";
                     }
                 }
-				// open level from specified path input by user
+                // open level from specified path input by user
                 if (ImGui::MenuItem("Open...")) {
-					// set default path if current level path is empty
+                    // set default path if current level path is empty
                     if (currentLevelPath.empty()) {
                         currentLevelPath = "assets/level1.txt";
                     }
-					// set the open path to current level path
+                    // set the open path to current level path
                     openPath = currentLevelPath;
                     //ImGui::OpenPopup("Open Level...");
-					// set a flag here to show open modal in next frame
+                    // set a flag here to show open modal in next frame
                     wantOpenModal = true;
                 }
 
-				// save level to current level path
+                // save level to current level path
                 if (ImGui::MenuItem("Save")) {
-					// use default path if current level path is empty
+                    // use default path if current level path is empty
                     const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
-					// try to save level to the path
+                    // try to save level to the path
                     bool isSave = SaveLevelToTxt(path);
                     if (!isSave) {
                         std::cerr << "[ImGuiError] Failed to save level.txt\n";
                     }
                 }
 
-				// save level to specified path input by user
+                // save level to specified path input by user
                 if (ImGui::MenuItem("Save as ...")) {
-					// set default path if current level path is empty
+                    // set default path if current level path is empty
                     if (currentLevelPath.empty()) {
                         currentLevelPath = "assets/level1.txt";
                     }
-					// set the open path to current level path
+                    // set the open path to current level path
                     openPath = currentLevelPath;
                     //ImGui::OpenPopup("Save Level As...");
-					// set a flag here to show save as modal in next frame
+                    // set a flag here to show save as modal in next frame
                     wantSaveAsModal = true;
                 }
 
-				// exit option
+                // exit option
                 if (ImGui::MenuItem("Exit")) {
                     Message quitMsg(Status::Quit);
                     CORE->BroadcastMessage(&quitMsg);
                 }
 
-				// disable function buttons under File when playing
+                // disable function buttons under File when playing
                 if (CORE->IsPlaying()) {
                     ImGui::EndDisabled();
                 }
@@ -749,23 +756,26 @@ namespace Framework {
                 ImGui::MenuItem("Spawner", nullptr, &showSpawner);
                 ImGui::MenuItem("Debug Info", nullptr, &showDebug);
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
-				//Asset window - jiahao
-				ImGui::MenuItem("Assets", nullptr, &showAssets);
+                //Asset window - jiahao
+                ImGui::MenuItem("Assets", nullptr, &showAssets);
                 //prefab window - kahyan
                 ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
+                ImGui::MenuItem("Game Viewport", nullptr, &showGameViewport);  // ADD
+                ImGui::Separator();
+                ImGui::MenuItem("Render to Viewport", nullptr, &renderToViewport);
                 ImGui::EndMenu();
             }
 
             // ============================================================================
-			// This is the if else condition to control play and stop button in the editor menu
+            // This is the if else condition to control play and stop button in the editor menu
             // author: jiahao.zhou@digipen
             // ============================================================================
             if (ImGui::BeginMenu("Editor")) {
 
-				// if the game is not playing, show play button
+                // if the game is not playing, show play button
                 if (!CORE->IsPlaying()) {
                     if (ImGui::MenuItem("Play")) {
-						//if there is no current level path, save to default level path
+                        //if there is no current level path, save to default level path
                         if (!SaveLevelToTxt(defaultLevelPath)) {
                             std::cerr << "[ImGuiError] Could not create default setting"
                                 << defaultLevelPath << "\n";
@@ -773,18 +783,18 @@ namespace Framework {
                         else {
                             // change engine state into playing
                             CORE->SetPlaying(true);
-							// set camera to follow player entity
+                            // set camera to follow player entity
                             if (auto* gfx = CORE->GetGraphicsSystem())
                             {
                                 if (entityManager)
                                 {
-									//find player entity by checking circle collider radius
+                                    //find player entity by checking circle collider radius
                                     Framework::Entity player{};
                                     for (auto e : entityManager->GetAllEntities())
                                     {
                                         if (entityManager->HasComponent<Framework::CircleCollider>(e))
                                         {
-											// get reference to circle collider component
+                                            // get reference to circle collider component
                                             auto& c = entityManager->GetComponent<Framework::CircleCollider>(e);
                                             if (c.radius > 0.12f && c.radius < 0.18f)
                                             {
@@ -795,10 +805,10 @@ namespace Framework {
                                         }
                                     }
 
-									// set follow target if player entity is valid
+                                    // set follow target if player entity is valid
                                     if (player.IsValid())
                                     {
-										// inform graphics system to follow player
+                                        // inform graphics system to follow player
                                         gfx->SetFollowTarget(player);
                                     }
                                 }
@@ -808,7 +818,7 @@ namespace Framework {
                     }
                 }
 
-				//if the game is playing, show stop button
+                //if the game is playing, show stop button
                 else {
                     if (ImGui::MenuItem("Stop")) {
                         CORE->SetPlaying(false);
@@ -819,10 +829,10 @@ namespace Framework {
                             gfx->ResetEditorCamera();
                         }
 
-						//Reload default level
+                        //Reload default level
                         if (!OpenLevelFromTxt(defaultLevelPath, true)) {
                             if (!currentLevelPath.empty()) {
-								OpenLevelFromTxt(currentLevelPath, true);
+                                OpenLevelFromTxt(currentLevelPath, true);
                             }
                             else {
                                 std::cerr << "[ImGuiError] Could not create default setting " << defaultLevelPath << "\n";
@@ -830,9 +840,9 @@ namespace Framework {
                             }
                         }
 
-						//clear all entities and reload default level
+                        //clear all entities and reload default level
                         entityManager->ClearAllEntities();
-						// reload default level
+                        // reload default level
                         OpenLevelFromTxt(defaultLevelPath, true);
                     }
                 }
@@ -847,12 +857,12 @@ namespace Framework {
         }
 
         // ============================================================================
-		// This is the if else condition to control open and save as modal windows
+        // This is the if else condition to control open and save as modal windows
         // by asking ASC TAs and online research, the ImGUi::BgeginPopupModal takes in char array
-		// std::string will cause errors
+        // std::string will cause errors
         // author: jiahao.zhou@digipen
         // ============================================================================
-		//if the flag is set to open modal, open the modal and reset the flag
+        //if the flag is set to open modal, open the modal and reset the flag
         if (wantOpenModal) {
             // open the modal popup
             ImGui::OpenPopup("Open Level...");
@@ -866,7 +876,7 @@ namespace Framework {
             wantSaveAsModal = false;
         }
 
-		// open level modal window. auto resize to fit content
+        // open level modal window. auto resize to fit content
         if (ImGui::BeginPopupModal("Open Level...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             // according research, openbuffer must be char array
             // when I initially tried std::string, it caused a lot of errors
@@ -874,33 +884,33 @@ namespace Framework {
             static bool openError = false;
             static std::string openErrorMsg = "";
 
-			// when the window first appears, initialize the openBuffer with openPath
+            // when the window first appears, initialize the openBuffer with openPath
             if (ImGui::IsWindowAppearing()) {
                 std::snprintf(openBuffer, sizeof(openBuffer), "%s", openPath.c_str());
                 openError = false;
                 openErrorMsg.clear();
             }
-			// input text box for user to enter path
+            // input text box for user to enter path
             ImGui::InputText("Path", openBuffer, sizeof(openBuffer));
 
             if (openError) {
-				// add spacing
+                // add spacing
                 ImGui::Spacing();
-				// display error message in red color
+                // display error message in red color
                 ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", openErrorMsg.c_str());
 
             }
 
-			// open button
+            // open button
             if (ImGui::Button("Open")) {
-				// set openPath to user input path
+                // set openPath to user input path
                 openPath = openBuffer;
-				// try to open level from the path
+                // try to open level from the path
                 bool isOpen = OpenLevelFromTxt(openPath, true);
                 if (isOpen) {
-					// if opened successfully, record the current level path
+                    // if opened successfully, record the current level path
                     currentLevelPath = openPath;
-					// close the modal
+                    // close the modal
                     ImGui::CloseCurrentPopup();
                 }
                 else {
@@ -910,20 +920,20 @@ namespace Framework {
 
             }
 
-			// put cancel button on the same line as open button
+            // put cancel button on the same line as open button
             ImGui::SameLine();
 
-			// cancel button
+            // cancel button
             if (ImGui::Button("Cancel")) {
 
-				// close the modal
+                // close the modal
                 ImGui::CloseCurrentPopup();
             }
 
             ImGui::EndPopup();
         }
 
-		// save level as modal window. auto resize to fit content
+        // save level as modal window. auto resize to fit content
         if (ImGui::BeginPopupModal("Save Level As...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 
             // same as open modal, use char array for saveBuffer
@@ -1008,10 +1018,11 @@ namespace Framework {
         if (showSpawner) ShowSpawnerWindow();
         if (showDebug) ShowDebugWindow();
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
-		// show asset window - jiahao
-		if (showAssets) ShowAssetsWindow();
+        // show asset window - jiahao
+        if (showAssets) ShowAssetsWindow();
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
+        if (showGameViewport) ShowGameViewport();
     }
 
     void ImGuiSystem::Render()
@@ -1020,7 +1031,7 @@ namespace Framework {
             return;
         }
 
-        if (!window) return;
+        //if (!window) return;
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -1421,6 +1432,7 @@ namespace Framework {
                 currentPage--;
             }
         }
+        if (showGameViewport) ShowGameViewport();
     }
 
     void ImGuiSystem::ShowPrefabWindow()
@@ -1976,7 +1988,7 @@ namespace Framework {
         }
 
         ImGui::End();
-
+        if (showGameViewport) ShowGameViewport();
 
     }
 
@@ -2561,5 +2573,139 @@ namespace Framework {
         std::cout << "[JSON]  Successfully updated audio.json\n";
 
         return true;
+    }
+
+    void ImGuiSystem::BeginGameRender()
+    {
+        // Bind the framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+        glViewport(0, 0, viewportWidth, viewportHeight);
+
+        // Clear the framebuffer
+        glClearColor(0.1f, 0.1f, 0.15f, 1.0f);  // Dark background
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    void ImGuiSystem::EndGameRender()
+    {
+        // Unbind framebuffer - return to default
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    // ============================================================================
+    // STEP 3: Game Viewport Window
+    // ============================================================================
+
+    void ImGuiSystem::CreateViewportFramebuffer(int width, int height)
+    {
+        viewportWidth = width;
+        viewportHeight = height;
+
+        // Create framebuffer
+        glGenFramebuffers(1, &viewportFBO);
+        glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+
+        std::cout << "[ImGuiSystem] Created FBO: " << viewportFBO << "\n";
+
+        // Create color texture
+        glGenTextures(1, &viewportTexture);
+        glBindTexture(GL_TEXTURE_2D, viewportTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, viewportTexture, 0);
+
+        std::cout << "[ImGuiSystem] Created Texture: " << viewportTexture << "\n";
+
+        // Create depth/stencil renderbuffer
+        glGenRenderbuffers(1, &viewportRBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, viewportRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, viewportRBO);
+
+        // Check completeness
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE) {
+            std::cerr << "[ImGuiSystem] ERROR: Framebuffer incomplete! Status: 0x"
+                << std::hex << status << std::dec << "\n";
+        }
+        else {
+            std::cout << "[ImGuiSystem] Framebuffer complete: " << width << "x" << height << "\n";
+        }
+
+        // IMPORTANT: Unbind framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void ImGuiSystem::ResizeViewportFramebuffer(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return;
+        if (width == viewportWidth && height == viewportHeight) return;
+
+        viewportWidth = width;
+        viewportHeight = height;
+
+        // Resize texture
+        glBindTexture(GL_TEXTURE_2D, viewportTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+
+        // Resize renderbuffer
+        glBindRenderbuffer(GL_RENDERBUFFER, viewportRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+
+        std::cout << "[ImGuiSystem] Viewport resized: " << width << "x" << height << "\n";
+    }
+
+    void ImGuiSystem::DeleteViewportFramebuffer()
+    {
+        if (viewportFBO) {
+            glDeleteFramebuffers(1, &viewportFBO);
+            viewportFBO = 0;
+        }
+        if (viewportTexture) {
+            glDeleteTextures(1, &viewportTexture);
+            viewportTexture = 0;
+        }
+        if (viewportRBO) {
+            glDeleteRenderbuffers(1, &viewportRBO);
+            viewportRBO = 0;
+        }
+    }
+
+    void ImGuiSystem::ShowGameViewport()
+    {
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+        // Set minimum window size
+        ImGui::SetNextWindowSizeConstraints(ImVec2(400, 300), ImVec2(FLT_MAX, FLT_MAX));
+
+        if (ImGui::Begin("Game##GameViewport", &showGameViewport)) {
+
+            ImVec2 size = ImGui::GetContentRegionAvail();
+
+            // Only resize if size is reasonable
+            if (size.x >= 100 && size.y >= 100) {
+                int newW = static_cast<int>(size.x);
+                int newH = static_cast<int>(size.y);
+
+                if (newW != viewportWidth || newH != viewportHeight) {
+                    ResizeViewportFramebuffer(newW, newH);
+                }
+
+                // Display texture
+                ImGui::Image(
+                    (ImTextureID)(intptr_t)viewportTexture,
+                    size,
+                    ImVec2(0, 1),
+                    ImVec2(1, 0)
+                );
+            }
+            else {
+                ImGui::Text("Viewport too small: %.0fx%.0f", size.x, size.y);
+            }
+        }
+        ImGui::End();
+
+        ImGui::PopStyleVar();
     }
 } // namespace Framework

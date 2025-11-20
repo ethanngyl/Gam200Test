@@ -43,6 +43,7 @@
 #include "Pathfinding.h"
 #include "GraphicsSystemV2.h"
 #include "Turn.h"
+#include "Pause/Pause.h"
 
 namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
@@ -118,6 +119,9 @@ void level3_Initialize()
     Vector2D   playerWorldPos = TileToWorld({ centerX, centerY });
     gPlayer = spawner->SpawnPlayer(playerWorldPos);
 
+    //  1. ADD PLAYER STATS HERE (Configuration) 
+    em->AddComponent<Framework::AP>(gPlayer, 5, 3);
+
     // Wire controller (minimal, just what's required for movement)
     playerController->SetPlayerEntity(gPlayer);
     playerController->SetEntitySpawner(spawner);
@@ -126,6 +130,9 @@ void level3_Initialize()
     playerController->SetGridMovementEnabled(true);
     // --- Enemy: spawn furthest, uses A* to chase player ---
     gEnemy = PathfindingSystem::SpawnEnemyFurthestFromPlayer(gPlayer, em, spawner);
+
+    //  2. ADD ENEMY STATS HERE (Configuration) 
+    em->AddComponent<Framework::AP>(gEnemy, 2, 3);
 
     // --- Start turns on Player phase ---
     auto& turn = Turn();
@@ -178,7 +185,14 @@ void level3_Update()
  * Placeholder for custom render logic.
  * Usually handled by the graphics system.
  */
-void level3_Draw() {}
+void level3_Draw() {
+
+    extern Framework::CoreEngine* engine;
+    if (engine && engine->GetPauseSystem()) {
+        engine->GetPauseSystem()->Draw();
+    }
+
+}
 
 /**
  * @brief Frees all Level 3 data

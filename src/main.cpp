@@ -1,6 +1,6 @@
 ﻿/*
 ===============================================================================
- File:          main.cpp
+  File:          main.cpp
  Author:        GE YONGQI
  Email:         yongqi.ge@digipen.edu
  Date:          2025-10-31
@@ -21,7 +21,6 @@
 ===============================================================================
 */
 
-
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
@@ -29,23 +28,28 @@
 
 #include "Precompiled.h"
 #include "ImguiSystem.h"
+#include "TimeConstants.h"
+#include "Pause/Pause.h"
 
- // ============================================================================
- // GLOBAL VARIABLES
- // ============================================================================
+// ===============================================================================
+// GLOBAL VARIABLES
+// ===============================================================================
 extern int current, previous, next;
 extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 
 Framework::CoreEngine* engine = nullptr;
-const float FIXED_DT = 1.0f / 60.0f;        // 60 FPS = 16.67ms per step
 
-// ============================================================================
+// Fixed DT Variables
+using namespace Framework::Time;
+double accumulatedTime = 0.0;              // Time debt accumulator
+int currentNumberOfSteps = 0;              // Steps to execute this frame
+
+// ===============================================================================
 // MAIN ENTRY POINT
-// ============================================================================
+// ===============================================================================
 
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 {
-
 #ifdef _DEBUG
     // Debug console setup
     AllocConsole();
@@ -64,18 +68,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     _CrtSetDbgFlag(flags);
 #endif
 
-    // ========================================================================
+    // ===============================================================================
     // INITIALIZE DEBUG SYSTEMS
-    // ========================================================================
+    // ===============================================================================
     Framework::DebugConfig::Initialize();
 
     LOG_INFO("CORE", "=================================================");
     LOG_INFO("CORE", "     StructSquad Engine Starting");
+    LOG_INFO("CORE", "     Fixed DT: %.4f ms (%.0f FPS target)",
+        FIXED_DT * 1000.0, 1.0 / FIXED_DT);
     LOG_INFO("CORE", "=================================================");
 
-    // ========================================================================
+    // ===============================================================================
     // INITIALIZE ENGINE
-    // ========================================================================
+    // ===============================================================================
     engine = new Framework::CoreEngine();
     if (!engine->InitializeAllSystems()) {
         LOG_ERROR("CORE", "Failed to initialize engine!");
@@ -83,29 +89,29 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
         return -1;
     }
 
-    // ========================================================================
-    // ⭐ SETUP FPS COUNTER WITH WINDOW ⭐
-    // ========================================================================
+    // ===============================================================================
+    // SETUP FPS COUNTER WITH WINDOW
+    // ===============================================================================
     if (engine->GetWindowSystem() && engine->GetWindowSystem()->GetWindow()) {
         auto window = engine->GetWindowSystem()->GetWindow();
-        // Reinitialize FPS counter with window (for title updates)
         Framework::DebugConfig::Initialize(window);
     }
 
-    // ========================================================================
+    // ===============================================================================
     // GAME STATE MANAGER
-    // ========================================================================
+    // ===============================================================================
     int initialState = ConfigReader::GetInitialGameState(mainMenu);
     GSM_Initialize(initialState);
 
     LOG_INFO("CORE", "Entering GSM main loop...");
     LOG_INFO("CORE", "Debug Controls: F2 = Export Performance CSV");
 
+    // Time tracking variables
     unsigned lastTime = timeGetTime();
 
-    // ========================================================================
+    // ===============================================================================
     // GAME STATE MANAGER LOOP
-    // ========================================================================
+    // ===============================================================================
     while (current != GS_QUIT)
     {
         // Check for window close
@@ -114,9 +120,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             break;
         }
 
-        // --------------------------------------------------------------------
+        // ===============================================================================
         // STATE TRANSITION
-        // --------------------------------------------------------------------
+        // ===============================================================================
         if (current != GS_RESTART)
         {
             LOG_INFO("CORE", "[GSM] Transitioning to state: %d", current);
@@ -139,64 +145,78 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             fpInitialize();
         }
 
-        // --------------------------------------------------------------------
+        // ===============================================================================
         // STATE LOOP
-        // --------------------------------------------------------------------
+        // ===============================================================================
         LOG_INFO("CORE", "[GSM] Entering state loop...");
 
         while (next == current)
         {
-            // Check engine and window
             if (!engine->IsActive() || engine->ShouldWindowClose()) {
                 next = GS_QUIT;
                 break;
             }
 
-            // Calculate delta time
+            // ===============================================================================
+            // DELTA TIME
+            // ===============================================================================
             unsigned currentTime = timeGetTime();
-            float dt = (currentTime - lastTime) / 1000.0f;
-            if (dt < 0.001f) dt = 0.016f;
+            double deltaTime = (currentTime - lastTime) / 1000.0;
             lastTime = currentTime;
 
-            // Begin performance frame
-            eng::debug::PerfViewer::begin_frame();
-
-            // Poll events
-            glfwPollEvents();
-
-            // Update all systems
-            engine->UpdateSingleFrame(FIXED_DT);
-
-            // State update
-            if (fpUpdate) {
-                fpUpdate();
+            if (deltaTime > 0.25) {
+                deltaTime = 0.25;
             }
 
-            // State draw
+            accumulatedTime += deltaTime;
+
+            // ===============================================================================
+            // BEGIN FRAME
+            // ===============================================================================
+            eng::debug::PerfViewer::begin_frame();
+            glfwPollEvents();
+
+            // ===============================================================================
+            // FIXED TIME STEP UPDATES (Physics/Logic)
+            // ===============================================================================
+            currentNumberOfSteps = 0;
+            while (accumulatedTime >= FIXED_DT) {
+                accumulatedTime -= FIXED_DT;
+                currentNumberOfSteps++;
+
+                if (currentNumberOfSteps >= 5) {
+                    accumulatedTime = 0.0;
+                    break;
+                }
+            }
+
+            if (currentNumberOfSteps == 0) {
+                currentNumberOfSteps = 1;
+            }
+
+            // Run physics/logic updates
+            for (int step = 0; step < currentNumberOfSteps; ++step) {
+                if (fpUpdate) {
+                    fpUpdate();
+                }
+            }
+
+            // ===============================================================================
+            // RENDER ONCE PER FRAME
+            // ===============================================================================
+            engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
+
             if (fpDraw) {
                 fpDraw();
             }
 
-            // ImGui rendering
-            if (engine->GetImGuiSystem() &&
-                engine->GetWindowSystem() &&
-                engine->GetWindowSystem()->GetWindow()) {
-                engine->GetImGuiSystem()->Render();
-
-                if (engine->GetGraphicsSystem()) {
-                    engine->GetGraphicsSystem()->RenderImGui();
-                }
-            }
-
-            // End performance frame
+            // ===============================================================================
+            // END FRAME
+            // ===============================================================================
             eng::debug::PerfViewer::end_frame();
+            Framework::DebugConfig::GetFpsCounter().tick_with_dt(deltaTime);
 
-            // Update FPS counter
-            Framework::DebugConfig::GetFpsCounter().tick_with_dt(
-                static_cast<double>(dt)
-            );
-
-            // ⭐ Debug hotkey: F2 to export performance data
+            // F2 to export performance
             if (GetAsyncKeyState(VK_F2) & 0x0001) {
                 if (eng::debug::PerfViewer::export_csv("performance.csv")) {
                     LOG_INFO("DEBUG", "Performance data exported");
@@ -206,9 +226,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 
         LOG_INFO("CORE", "[GSM] Exiting state loop");
 
-        // --------------------------------------------------------------------
+        // ===============================================================================
         // STATE CLEANUP
-        // --------------------------------------------------------------------
+        // ===============================================================================
         if (fpFree) {
             LOG_INFO("CORE", "[GSM] Free phase...");
             fpFree();
@@ -225,9 +245,9 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
         current = next;
     }
 
-    // ========================================================================
+    // ===============================================================================
     // CLEANUP
-    // ========================================================================
+    // ===============================================================================
     LOG_INFO("CORE", "GSM loop ended. Cleaning up...");
 
     engine->Cleanup();
@@ -238,7 +258,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     LOG_INFO("CORE", "     Engine shutdown complete");
     LOG_INFO("CORE", "=================================================");
 
-    // SHUTDOWN DEBUG SYSTEMS
     Framework::DebugConfig::Shutdown();
 
 #ifdef _DEBUG
