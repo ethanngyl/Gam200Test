@@ -185,7 +185,7 @@ namespace Framework {
          * @brief Create default materials for legacy sprite names
          * Maintains backwards compatibility with old Sprite component
          */
-        //void RenderImGui();
+        void RenderImGui();
 
         // Resolve a sprite name into a texture handle (legacy sprite-to-texture path).
         TextureHandle  GetTextureForSpriteName(const std::string& spriteName);

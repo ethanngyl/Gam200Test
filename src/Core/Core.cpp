@@ -492,6 +492,9 @@ namespace Framework
             if (imguiSystem->IsEnabled()) {
                 imguiSystem->Render();
             }
+            if (engine->GetGraphicsSystem()) {
+                engine->GetGraphicsSystem()->RenderImGui();
+            }
         }
 
         glfwSwapBuffers(windowSystem->GetWindow());
