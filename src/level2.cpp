@@ -46,8 +46,8 @@ void level2_Initialize()
     auto* animSys = engine->GetAnimationSystem();
     if (animSys)
     {
-        animSys->LoadAnimationConfig("assets/spritesheet_config.txt");
-        LOG_INFO("LEVEL2", "Loaded spritesheet_config.txt for editor animations");
+        animSys->LoadAnimationConfig("assets/spritesheet_config.json");
+        LOG_INFO("LEVEL2", "Loaded spritesheet_config.json for editor animations");
     }
 
     if (engine && engine->GetImGuiSystem()) {
