@@ -73,6 +73,7 @@ namespace Framework {
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
         Entity playerEntity;
+        Entity lastSpawnedEntity;
         //jiahao
         //the below 2 std::string are used to record the file path
         //in order to save and load level files

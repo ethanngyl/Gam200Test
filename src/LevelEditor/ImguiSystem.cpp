@@ -1538,6 +1538,8 @@ namespace Framework {
         // Prefab list
         static int selectedPrefabIdx = -1;
 
+        static Framework::Entity selectedInstanceForEdit{};
+
         ImGui::Text("Available Prefabs:");
         if (ImGui::BeginListBox("##PrefabList", ImVec2(-1, 150))) {
             for (int i = 0; i < static_cast<int>(prefabFiles.size()); ++i) {
@@ -1557,6 +1559,8 @@ namespace Framework {
         // Spawn position
         static float spawnPos[2] = { 0.0f, 0.0f };
         ImGui::DragFloat2("Spawn Position##SpawnPos", spawnPos, 0.01f, -10.0f, 10.0f);
+
+        ImGui::Separator();
 
         // Load button
         if (ImGui::Button("Load Prefab##LoadBtn", ImVec2(-1, 0))) {
@@ -1587,20 +1591,22 @@ namespace Framework {
         ImGui::Spacing();
 
         // ========================================================================
-        // SECTION 3: Prefab Instance Tracking
+        // SECTION 3: Prefab-wide Inspector (applies to ALL instances)
         // ========================================================================
         ImGui::Text("Prefab Instances:");
         ImGui::Spacing();
 
-        // Show tracked instances
         if (selectedPrefabIdx >= 0 && selectedPrefabIdx < static_cast<int>(prefabFiles.size())) {
             std::string prefabPath = "assets/prefabs/" + prefabFiles[selectedPrefabIdx];
             auto instances = Framework::PrefabInstanceTracker::Get().GetInstancesOf(prefabPath);
 
-            ImGui::Text("Instances of '%s': %zu", prefabFiles[selectedPrefabIdx].c_str(), instances.size());
+            ImGui::Text("Instances of '%s': %zu",
+                prefabFiles[selectedPrefabIdx].c_str(),
+                instances.size());
 
-            if (instances.size() > 0) {
-                if (ImGui::BeginListBox("##InstanceList", ImVec2(-1, 100))) {
+            // Read-only list of instances (no selection)
+            if (!instances.empty()) {
+                if (ImGui::BeginListBox("##InstanceList", ImVec2(-1, 80))) {
                     for (auto& inst : instances) {
                         std::string label = "Entity " + std::to_string(inst.GetID());
                         ImGui::Selectable(label.c_str(), false);
@@ -1608,13 +1614,210 @@ namespace Framework {
                     ImGui::EndListBox();
                 }
             }
+
+            // Use the FIRST instance as the "template" for editing
+            Framework::Entity templateEntity = instances.empty() ? Framework::Entity{} : instances[0];
+
+            ImGui::Separator();
+            ImGui::Text("Prefab Inspector (applies to ALL instances)");
+            ImGui::Spacing();
+
+            if (templateEntity.IsValid()) {
+
+                // ---------------- TRANSFORM ----------------
+                if (entityManager->HasComponent<Transform>(templateEntity)) {
+                    if (ImGui::TreeNode("Transform##PrefabAllTransform")) {
+                        auto& t = entityManager->GetComponent<Transform>(templateEntity);
+
+                        ImGui::DragFloat2("Position##AllPos", &t.position.x, 0.01f, -100.0f, 100.0f);
+                        ImGui::DragFloat2("Scale##AllScale", &t.scale.x, 0.01f, 0.01f, 100.0f);
+                        ImGui::DragFloat("Rotation##AllRot", &t.rotation, 0.1f, -360.0f, 360.0f);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ---------------- SPRITE ----------------
+                if (entityManager->HasComponent<Sprite>(templateEntity)) {
+                    if (ImGui::TreeNode("Sprite##PrefabAllSprite")) {
+                        auto& s = entityManager->GetComponent<Sprite>(templateEntity);
+
+                        char texBuf[256];
+                        std::strncpy(texBuf, s.texturePath.c_str(), sizeof(texBuf) - 1);
+                        texBuf[sizeof(texBuf) - 1] = '\0';
+
+                        if (ImGui::InputText("Texture Path##AllTex", texBuf, sizeof(texBuf))) {
+                            s.texturePath = texBuf;
+                        }
+
+                        ImGui::DragInt("Layer##AllSpriteLayer", &s.layer, 1, -100, 100);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ---------------- MESH RENDERER ----------------
+                if (entityManager->HasComponent<MeshRenderer>(templateEntity)) {
+                    if (ImGui::TreeNode("MeshRenderer##PrefabAllMesh")) {
+                        auto& mr = entityManager->GetComponent<MeshRenderer>(templateEntity);
+
+                        char nameBuf[256];
+                        std::strncpy(nameBuf, mr.spriteName.c_str(), sizeof(nameBuf) - 1);
+                        nameBuf[sizeof(nameBuf) - 1] = '\0';
+
+                        if (ImGui::InputText("Sprite Name##AllSpriteName", nameBuf, sizeof(nameBuf))) {
+                            mr.spriteName = nameBuf;
+                        }
+
+                        ImGui::DragInt("Layer##AllMeshLayer", &mr.layer, 1, -100, 100);
+                        ImGui::DragInt("Order in Layer##AllOrder", &mr.orderInLayer, 1, -100, 100);
+
+                        float tint[4] = { mr.tint.r, mr.tint.g, mr.tint.b, mr.tint.a };
+                        if (ImGui::ColorEdit4("Tint##AllTint", tint)) {
+                            mr.tint.r = tint[0];
+                            mr.tint.g = tint[1];
+                            mr.tint.b = tint[2];
+                            mr.tint.a = tint[3];
+                        }
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ---------------- MOVEMENT ----------------
+                if (entityManager->HasComponent<Movement>(templateEntity)) {
+                    if (ImGui::TreeNode("Movement##PrefabAllMove")) {
+                        auto& m = entityManager->GetComponent<Movement>(templateEntity);
+
+                        ImGui::DragFloat("Speed##AllSpeed", &m.moveSpeed, 0.01f, 0.0f, 100.0f);
+                        ImGui::DragFloat2("Direction##AllDir", &m.direction.x, 0.01f, -1.0f, 1.0f);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ---------------- BOX COLLIDER ----------------
+                if (entityManager->HasComponent<BoxCollider>(templateEntity)) {
+                    if (ImGui::TreeNode("BoxCollider##PrefabAllBox")) {
+                        auto& bc = entityManager->GetComponent<BoxCollider>(templateEntity);
+
+                        ImGui::DragFloat2("Size##AllBoxSize", &bc.size.x, 0.01f, 0.0f, 100.0f);
+                        ImGui::DragFloat2("Offset##AllBoxOffset", &bc.offset.x, 0.01f, -100.0f, 100.0f);
+                        ImGui::Checkbox("Is Trigger##AllBoxTrigger", &bc.isTrigger);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ---------------- CIRCLE COLLIDER ----------------
+                if (entityManager->HasComponent<CircleCollider>(templateEntity)) {
+                    if (ImGui::TreeNode("CircleCollider##PrefabAllCircle")) {
+                        auto& cc = entityManager->GetComponent<CircleCollider>(templateEntity);
+
+                        ImGui::DragFloat("Radius##AllCircleRadius", &cc.radius, 0.01f, 0.0f, 100.0f);
+                        ImGui::DragFloat2("Offset##AllCircleOffset", &cc.offset.x, 0.01f, -100.0f, 100.0f);
+
+                        ImGui::TreePop();
+                    }
+                }
+
+                // ------------------------------------------------
+                // APPLY TO ALL INSTANCES + SAVE PREFAB
+                // ------------------------------------------------
+                ImGui::Separator();
+                if (ImGui::Button("Apply To All Instances & Save Prefab##ApplyAll2", ImVec2(-1, 0))) {
+
+                    // 1) propagate templateEntity's values to every instance
+                    for (auto& inst : instances) {
+                        if (!inst.IsValid())
+                            continue;
+
+                        // --- Transform (position, scale, rotation) ---
+                        if (entityManager->HasComponent<Transform>(templateEntity) &&
+                            entityManager->HasComponent<Transform>(inst)) {
+
+                            auto& src = entityManager->GetComponent<Transform>(templateEntity);
+                            auto& dst = entityManager->GetComponent<Transform>(inst);
+
+                            //dst.position = src.position;
+                            dst.scale = src.scale;
+                            dst.rotation = src.rotation;
+                        }
+
+                        // --- Sprite ---
+                        if (entityManager->HasComponent<Sprite>(templateEntity) &&
+                            entityManager->HasComponent<Sprite>(inst)) {
+
+                            auto& src = entityManager->GetComponent<Sprite>(templateEntity);
+                            auto& dst = entityManager->GetComponent<Sprite>(inst);
+
+                            dst.texturePath = src.texturePath;
+                            dst.layer = src.layer;
+                        }
+
+                        // --- MeshRenderer ---
+                        if (entityManager->HasComponent<MeshRenderer>(templateEntity) &&
+                            entityManager->HasComponent<MeshRenderer>(inst)) {
+
+                            auto& src = entityManager->GetComponent<MeshRenderer>(templateEntity);
+                            auto& dst = entityManager->GetComponent<MeshRenderer>(inst);
+
+                            dst.spriteName = src.spriteName;
+                            dst.layer = src.layer;
+                            dst.orderInLayer = src.orderInLayer;
+                            dst.tint = src.tint;
+                        }
+
+                        // --- Movement ---
+                        if (entityManager->HasComponent<Movement>(templateEntity) &&
+                            entityManager->HasComponent<Movement>(inst)) {
+
+                            auto& src = entityManager->GetComponent<Movement>(templateEntity);
+                            auto& dst = entityManager->GetComponent<Movement>(inst);
+
+                            dst.moveSpeed = src.moveSpeed;
+                            dst.direction = src.direction;
+                        }
+
+                        // --- BoxCollider ---
+                        if (entityManager->HasComponent<BoxCollider>(templateEntity) &&
+                            entityManager->HasComponent<BoxCollider>(inst)) {
+
+                            auto& src = entityManager->GetComponent<BoxCollider>(templateEntity);
+                            auto& dst = entityManager->GetComponent<BoxCollider>(inst);
+
+                            dst.size = src.size;
+                            dst.offset = src.offset;
+                            dst.isTrigger = src.isTrigger;
+                        }
+
+                        // --- CircleCollider ---
+                        if (entityManager->HasComponent<CircleCollider>(templateEntity) &&
+                            entityManager->HasComponent<CircleCollider>(inst)) {
+
+                            auto& src = entityManager->GetComponent<CircleCollider>(templateEntity);
+                            auto& dst = entityManager->GetComponent<CircleCollider>(inst);
+
+                            dst.radius = src.radius;
+                            dst.offset = src.offset;
+                        }
+                    }
+
+                    // 2) write the prefab file using the template entity
+                    PrefabSerializer::SavePrefab(*entityManager, templateEntity, prefabPath);
+
+                    std::cout << "[Prefab] Applied changes to " << instances.size()
+                        << " instances and saved prefab: " << prefabPath << "\n";
+                }
+            }
         }
 
-        // Clear tracking button
+        // Clear tracking button (can stay as before)
         if (ImGui::Button("Clear All Tracking##ClearTracking", ImVec2(-1, 0))) {
             Framework::PrefabInstanceTracker::Get().Clear();
             std::cout << "[Prefab] Cleared all instance tracking\n";
         }
+
 
         ImGui::End();
     }
