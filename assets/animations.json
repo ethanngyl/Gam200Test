@@ -1,94 +1,134 @@
 {
   "animations": {
-    "Idle": {
-      "sprite": "assets/Warriorsideview.png",
-      "rows": 3,
-      "columns": 2,
-      "frameCount": 5,
-      "frameTime": 0.15,
-      "loop": true,
-      "uvShrinkPx": 0.0,
-      "key": "M"
-    },
-    "WalkSide": {
-      "sprite": "assets/Warriorsideviewwalk.png",
-      "rows": 2,
-      "columns": 2,
-      "frameCount": 3,
-      "frameTime": 0.15,
-      "loop": true,
-      "uvShrinkPx": 0.0,
-      "key": "M"
-    },
-    "WalkBack": {
-      "sprite": "assets/WarriorBackview.png",
-      "rows": 3,
-      "columns": 2,
-      "frameCount": 6,
-      "frameTime": 0.15,
-      "loop": true,
-      "uvShrinkPx": 0.0,
-      "key": "M"
-    },
-    "AttackSide": {
-      "sprite": "assets/Warriorsideviewattack.png",
-      "rows": 3,
-      "columns": 3,
-      "frameCount": 8,
-      "frameTime": 0.15,
-      "loop": true,
-      "uvShrinkPx": 0.0,
-      "key": "M"
-    },
-    "AttackFront": {
-      "sprite": "assets/WarriorAttackFront.png",
-      "rows": 3,
-      "columns": 2,
-      "frameCount": 5,
-      "frameTime": 0.15,
-      "loop": true,
-      "uvShrinkPx": 0.0,
-      "key": "M"
-    },
-    "AttackBack": {
-      "sprite": "assets/Warriorattackbackview.png",
+    "Idle_front": {
+      "sprite": "assets/sprites/static_idle_front.png",
       "rows": 2,
       "columns": 2,
       "frameCount": 4,
-      "frameTime": 0.15,
+      "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "M"
+      "key": "O"
     },
-    "InjureSide": {
-      "sprite": "assets/Warriorsideviewinjure.png",
+    "Idle_back": {
+      "sprite": "assets/sprites/static_idle_back.png",
       "rows": 3,
-      "columns": 3,
-      "frameCount": 7,
-      "frameTime": 0.15,
+      "columns": 2,
+      "frameCount": 6,
+      "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "M"
+      "key": "O"
     },
-    "InjureBack": {
-      "sprite": "assets/Warriorinjuredbackview.png",
+    "Idle_sideview": {
+      "sprite": "assets/sprites/static_idle_sideview.png",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 5,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "O"
+    },
+    "Injured_front": {
+      "sprite": "assets/sprites/static_down_injured.png",
+      "rows": 4,
+      "columns": 3,
+      "frameCount": 11,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "J"
+    },
+    "Injured_back": {
+      "sprite": "assets/sprites/static_up_injured.png",
       "rows": 3,
       "columns": 3,
       "frameCount": 8,
-      "frameTime": 0.15,
+      "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "M"
+      "key": "J"
     },
-    "Death": {
-      "sprite": "assets/Universaldeathanimation.png",
+    "Injured_sideview": {
+      "sprite": "assets/sprites/static_sideview_injured.png",
       "rows": 3,
       "columns": 3,
       "frameCount": 7,
-      "frameTime": 0.15,
+      "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "M"
+      "key": "J"
+    },
+    "Attack_front": {
+      "sprite": "assets/sprites/static_down_atk.png",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 5,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "K"
+    },
+    "Attack_back": {
+      "sprite": "assets/sprites/static_up_atk.png",
+      "rows": 2,
+      "columns": 2,
+      "frameCount": 4,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "K"
+    },
+    "Attack_sideview": {
+      "sprite": "assets/sprites/static_sideview_atk.png",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 8,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "K"
+    },
+    "Walk_front": {
+      "sprite": "assets/sprites/walking_down.png",
+      "rows": 2,
+      "columns": 2,
+      "frameCount": 4,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "S"
+    },
+    "Walk_back": {
+      "sprite": "assets/sprites/walking_up.png",
+      "rows": 3,
+      "columns": 2,
+      "frameCount": 5,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "W"
+    },
+    "Walk_sideview": {
+      "sprite": "assets/sprites/walking_sideview.png",
+      "rows": 2,
+      "columns": 2,
+      "frameCount": 3,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "A"
+    },
+    "Death": {
+      "sprite": "assets/sprites/static_death.png",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 7,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0,
+      "key": "L"
     }
   }
 }
