@@ -211,26 +211,7 @@ namespace Framework {
             glCreateBuffers(1, &instanceVBO);
             glNamedBufferStorage(instanceVBO, num_of_mesh * sizeof(glm::mat4), nullptr, GL_DYNAMIC_STORAGE_BIT);
         }
-
-        glBindVertexArray(VAO);
-
-        // A mat4 is represented as 4 consecutive vec4 attributes
-        for (GLuint i = 0; i < 4; i++)
-        {
-            glEnableVertexArrayAttrib(VAO, 3 + i);
-
-            // Offset advances by one vec4 per column of the mat4
-            glVertexArrayVertexBuffer(VAO, 3 + i, instanceVBO, sizeof(glm::vec4) * i, sizeof(glm::mat4));
-
-            // Specify attribute format: 4 floats per vec4
-            glVertexArrayAttribFormat(VAO, 3 + i, 4, GL_FLOAT, GL_FALSE, 0);
-            glVertexArrayAttribBinding(VAO, 3 + i, 3 + i);
-
-            // Each instance uses its own matrix (advance per instance)
-            glVertexAttribDivisor(3 + i, 1);
-        }
-
-        glBindVertexArray(0);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, instanceVBO);
     }
 
     void Mesh::DrawInstanced(const std::vector<glm::mat4>& instanceMatrices, GLsizei instanceCount) const

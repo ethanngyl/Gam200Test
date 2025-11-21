@@ -38,7 +38,7 @@
 #include "Pathfinding/Pathfinding.h"
 #include "AudioLoader.h"
 #include "Pause/Pause.h"
-
+#include "RangeIndicatorSystem.h"
 namespace Framework
 {
     CoreEngine* CORE = nullptr;
@@ -60,6 +60,7 @@ namespace Framework
         , eventSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
+        , rangeIndicatorSystem(nullptr)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
 		, pauseSystem(nullptr)
@@ -154,6 +155,7 @@ namespace Framework
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
 		pauseSystem = new PauseSystem();
+        rangeIndicatorSystem = new RangeIndicatorSystem();
         scriptSystem->SetEntityManager(entityManager);
         scriptSystem->SetCoreEngine(this);
         scriptSystem->Initialize();
@@ -191,6 +193,10 @@ namespace Framework
 
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);
+
+        // Wire Range Indicator
+        rangeIndicatorSystem->SetEntityManager(entityManager);
+        rangeIndicatorSystem->SetGraphicsSystem(graphicsSystem);
 
         // Pause Event System
         pauseSystem->SetCoreEngine(this);
@@ -241,7 +247,7 @@ namespace Framework
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
         AddSystem(pauseSystem);
-
+        AddSystem(rangeIndicatorSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -473,17 +479,9 @@ namespace Framework
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         else {
-            // Normal rendering
+            // Normal rendering - just draw the game scene
             graphicsSystem->Update(dt);
 
-            // ========================================
-            // Draw level text for non-viewport mode
-            // ========================================
-            int fbW, fbH;
-            glfwGetFramebufferSize(windowSystem->GetWindow(), &fbW, &fbH);
-            graphicsSystem->GetTextRenderer().setScreenSize(fbW, fbH);
-            LevelLoader::GetInstance().DrawCurrentLevel();
-            // ========================================
         }
 
         // === IMGUI ===
@@ -493,9 +491,6 @@ namespace Framework
                 imguiSystem->Render();
             }
         }
-
-        glfwSwapBuffers(windowSystem->GetWindow());
-        glfwPollEvents();
     }
 
     void CoreEngine::BroadcastMessage(Message* message)

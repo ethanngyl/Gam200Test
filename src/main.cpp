@@ -213,6 +213,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             // ===============================================================================
             // END FRAME
             // ===============================================================================
+            
+            // ImGui rendering
+            if (engine->GetImGuiSystem() &&
+                engine->GetWindowSystem() &&
+                engine->GetWindowSystem()->GetWindow()) {
+                engine->GetImGuiSystem()->Render();
+
+                if (engine->GetGraphicsSystem()) {
+                    engine->GetGraphicsSystem()->RenderImGui();
+                }
+            }
+            
+
+            // End performance frame
             eng::debug::PerfViewer::end_frame();
             Framework::DebugConfig::GetFpsCounter().tick_with_dt(deltaTime);
 

@@ -1104,13 +1104,13 @@ namespace Framework {
         glEnable(GL_DEPTH_TEST);
     }
 
-    //void GraphicsSystemV2::RenderImGui() {
-    //    if (!window) return;
+    void GraphicsSystemV2::RenderImGui() {
+        if (!window) return;
 
     //    // Just swap - DON'T clear!
-    //    glfwSwapBuffers(window);
-    //    glfwPollEvents();
-    //}
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 
     void GraphicsSystemV2::AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName) {
         static std::unordered_map<std::string, std::pair<std::string, std::string>> lookup = {

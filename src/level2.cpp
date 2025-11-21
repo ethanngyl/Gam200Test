@@ -6,12 +6,11 @@
  Date:          2025-10-31
  Contribution:  100%
  ------------------------------------------------------------------------------
-  Level 2 gameplay state (implementation)
+  FIXED: Added screen size restoration to prevent text disappearing bug
 
-  Highlights:
-     - Integrates with UISystem and ImGuiSystem for in-game control
-     - Cleans up all entities on state exit
-     - Fully logged for debugging and system verification
+  Changes:
+  1. level2_Draw() - Reset TextRenderer screen size before drawing
+  2. level2_Free() - Restore TextRenderer screen size when leaving Level2
 ===============================================================================
 */
 
@@ -102,9 +101,21 @@ void level2_Draw()
     if (!graphics) return;
 
     // ========================================================================
+    // Reset TextRenderer screen size to window size
+    // This prevents text from disappearing when returning from Level2
+    // ========================================================================
+    if (engine->GetWindowSystem()) {
+        int fbW, fbH;
+        glfwGetFramebufferSize(engine->GetWindowSystem()->GetWindow(), &fbW, &fbH);
+        graphics->GetTextRenderer().setScreenSize(fbW, fbH);
+        // Uncomment for debugging:
+        // LOG_INFO("LEVEL2", "Text renderer screen size set to: %dx%d", fbW, fbH);
+    }
+
+    // ========================================================================
     // Read UI text settings from configuration file
     // ========================================================================
-    
+
     // Font
     std::string fontLarge = ConfigReader::GetString("lv2_ui_font_large", "Sans48");
 
@@ -122,7 +133,7 @@ void level2_Draw()
     float colorB = ConfigReader::GetFloat("lv2_ui_text_color_b", 1.0f);
 
     // ========================================================================
-    // Render UI text (using values ​​from the configuration file)
+    // Render UI text (using values from the configuration file)
     // ========================================================================
     graphics->DrawText4(fontLarge, textScaling, textX, texty, textScale, glm::vec3(colorR, colorG, colorB));
 
@@ -138,7 +149,20 @@ void level2_Free()
 
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Disable();
-        LOG_INFO("MENU", "ImGui disabled in menu");
+        LOG_INFO("LEVEL2", "ImGui disabled");
+    }
+
+    // ========================================================================
+    // Restore TextRenderer screen size to window size
+    // When Level2 enables ImGui viewport mode, TextRenderer gets set to
+    // viewport size (e.g., 800x600). We need to restore it to window size
+    // (e.g., 1920x1080) so other levels can display text correctly.
+    // ========================================================================
+    if (engine && engine->GetGraphicsSystem() && engine->GetWindowSystem()) {
+        int fbW, fbH;
+        glfwGetFramebufferSize(engine->GetWindowSystem()->GetWindow(), &fbW, &fbH);
+        engine->GetGraphicsSystem()->GetTextRenderer().setScreenSize(fbW, fbH);
+        LOG_INFO("LEVEL2", "Restored text renderer to window size: %dx%d", fbW, fbH);
     }
 
     if (engine) {

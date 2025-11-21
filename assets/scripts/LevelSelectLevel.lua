@@ -45,7 +45,7 @@ function OnInit()
     DisableImGui()
     
     -- Set engine to editor mode (non-playing)
-    SetEnginePlayState(false)
+    SetEnginePlayState(true)
     
     -- Start menu background music from JSON config
     local music = config.menu.music
