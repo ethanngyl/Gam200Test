@@ -44,11 +44,37 @@
 #include "GraphicsSystemV2.h"
 #include "Turn.h"
 #include "Pause/Pause.h"
+#include "TileMapLoader.h"
 
 namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
-    Framework::Entity gEnemy{ Framework::INVALID_ENTITY };
+   // Framework::Entity gEnemy{ Framework::INVALID_ENTITY };
+    std::vector<Framework::Entity>gEnemies;
 }
+
+Framework::Entity FindPlayer(Framework::EntityManager* em) {
+    // Player has Movement + CircleCollider but NOT EnemyAI
+    for (Framework::Entity e : em->GetAllEntities()) {
+        if (em->HasComponent<Framework::Movement>(e) &&
+            em->HasComponent<Framework::CircleCollider>(e) &&
+            !em->HasComponent<Framework::EnemyAI>(e)) {
+            return e;
+        }
+    }
+    return Framework::Entity{ Framework::INVALID_ENTITY };
+}
+
+std::vector<Framework::Entity> FindAllEnemies(Framework::EntityManager* em) {
+    std::vector<Framework::Entity> result;
+    for (Framework::Entity e : em->GetAllEntities()) {
+        if (em->HasComponent<Framework::EnemyAI>(e)) {
+            result.push_back(e);
+        }
+    }
+    return result;
+}
+
+
 
 /**
  * @brief Loads Level 3 state
@@ -97,30 +123,86 @@ void level3_Initialize()
     gfx->SetCameraZoom(1.0f);
 
     // --- Grid config (adjust freely) ---
-    const int       gridCols = 16;
-    const int       gridRows = 20;
+    //const int       gridCols = 16;
+    //const int       gridRows = 20;
     const Vector2D  kStart = Vector2D(-0.6f, -0.4f);
     const Vector2D  kSpacing = Vector2D(0.1f, 0.1f);
 
     // Spawn grid immediately
-    spawner->SpawnGrid("wireframequad", gridCols, gridRows, kStart, kSpacing);
+   // spawner->SpawnGrid("wireframequad", gridCols, gridRows, kStart, kSpacing);
 
-    // Link to global grid so movement/pathfinding can query it
-    Grid& grid = GetGrid();
-    grid.cols = gridCols;
-    grid.rows = gridRows;
-    grid.startPos = kStart;
-    grid.spacing = kSpacing;
-    grid.em = em;
+    bool loaded = TileMapLevelLoader::LoadLevel(
+        "assets/scripts/JSON/TileMap.json",
+        spawner,
+        em,
+        kStart,
+        kSpacing
+    );
 
-    // --- Player: spawn at grid center ---
-    const int  centerX = grid.cols / 2;
-    const int  centerY = grid.rows / 2;
-    Vector2D   playerWorldPos = TileToWorld({ centerX, centerY });
-    gPlayer = spawner->SpawnPlayer(playerWorldPos);
+    if (!loaded) {
+        LOG_ERROR("LEVEL3", "Failed to load level from JSON!");
+        return;
+    }
 
-    //  1. ADD PLAYER STATS HERE (Configuration) 
-    em->AddComponent<Framework::AP>(gPlayer, 5, 3);
+    LOG_INFO("LEVEL3", "Level loaded successfully!");
+    LOG_INFO("LEVEL3", "Grid: %d cols × %d rows", GetGrid().cols, GetGrid().rows);
+
+    //// Link to global grid so movement/pathfinding can query it
+    //Grid& grid = GetGrid();
+    //grid.cols = gridCols;
+    //grid.rows = gridRows;
+    //grid.startPos = kStart;
+    //grid.spacing = kSpacing;
+    //grid.em = em;
+
+    //// --- Player: spawn at grid center ---
+    //const int  centerX = grid.cols / 2;
+    //const int  centerY = grid.rows / 2;
+    //Vector2D   playerWorldPos = TileToWorld({ centerX, centerY });
+    //gPlayer = spawner->SpawnPlayer(playerWorldPos);
+
+    ////  1. ADD PLAYER STATS HERE (Configuration) 
+    //em->AddComponent<Framework::AP>(gPlayer, 5, 3);
+
+     // ========================================================================
+    // FIND PLAYER (spawned by loader)
+    // ========================================================================
+
+    gPlayer = FindPlayer(em);
+    if (gPlayer.GetID() == INVALID_ENTITY) {
+        LOG_ERROR("LEVEL3", "No player found in loaded level!");
+        return;
+    }
+
+    LOG_INFO("LEVEL3", "Found Player (ID: %u)", gPlayer.GetID());
+
+    // Add player stats if not already added
+    if (!em->HasComponent<AP>(gPlayer)) {
+        em->AddComponent<AP>(gPlayer, 100, 5);  // 100 HP, 5 AP
+    }
+
+    // ========================================================================
+    // FIND ENEMIES AND SET TARGETS
+    // ========================================================================
+
+    gEnemies = FindAllEnemies(em);
+    LOG_INFO("LEVEL3", "Found %zu enemies", gEnemies.size());
+
+    for (Entity enemy : gEnemies) {
+        // Set AI target
+        if (em->HasComponent<EnemyAI>(enemy)) {
+            auto& ai = em->GetComponent<EnemyAI>(enemy);
+            ai.targetEntity = gPlayer;  // *** CRITICAL! ***
+            ai.moveDelay = 0.7f;
+            LOG_INFO("LEVEL3", "Enemy %u now targeting Player %u",
+                enemy.GetID(), gPlayer.GetID());
+        }
+
+        // Ensure enemy has AP
+        if (!em->HasComponent<AP>(enemy)) {
+            em->AddComponent<AP>(enemy, 50, 3);  // 50 HP, 3 AP
+        }
+    }
 
     // Wire controller (minimal, just what's required for movement)
     playerController->SetPlayerEntity(gPlayer);
@@ -129,19 +211,21 @@ void level3_Initialize()
     playerController->SetInputSystem(input);
     playerController->SetGridMovementEnabled(true);
     // --- Enemy: spawn furthest, uses A* to chase player ---
-    gEnemy = PathfindingSystem::SpawnEnemyFurthestFromPlayer(gPlayer, em, spawner);
+   // gEnemies = PathfindingSystem::SpawnEnemyFurthestFromPlayer(gPlayer, em, spawner);
 
     //  2. ADD ENEMY STATS HERE (Configuration) 
-    em->AddComponent<Framework::AP>(gEnemy, 2, 3);
+   // em->AddComponent<Framework::AP>(gEnemy, 2, 3);
 
     // --- Start turns on Player phase ---
     auto& turn = Turn();
     turn.phase = TurnPhase::Player;
     turn.busy = false;
 
-    LOG_INFO("LEVEL3", "Grid=%dx%d, Player(%u) at (%.3f, %.3f), Enemy(%u)",
-        grid.cols, grid.rows, gPlayer.GetID(), playerWorldPos.x, playerWorldPos.y, gEnemy.GetID());
+   /* LOG_INFO("LEVEL3", "Grid=%dx%d, Player(%u) at (%.3f, %.3f), Enemy(%u)",
+        grid.cols, grid.rows, gPlayer.GetID(), playerWorldPos.x, playerWorldPos.y, gEnemy.GetID());*/
+
 }
+
 
 /**
  * @brief Updates Level 3 every frame
@@ -217,7 +301,8 @@ void level3_Free()
         for (auto e : ents) CORE->GetEntityManager()->DestroyEntity(e);
     }
     gPlayer = Entity{ INVALID_ENTITY };
-    gEnemy = Entity{ INVALID_ENTITY };
+    //gEnemy = Entity{ INVALID_ENTITY };
+    gEnemies.clear();
 }
 
 /**
