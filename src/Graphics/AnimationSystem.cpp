@@ -135,8 +135,7 @@ namespace Framework {
 			// -------------------------------
 			// SELECT JSON ANIMATION BY ENUMS
 			// -------------------------------
-			// ---------------- DEATH OVERRIDE -------------------
-// ----------- DEATH ANIMATION OVERRIDE (FULL) ----------------
+			// ----------- DEATH ANIMATION OVERRIDE ----------------
 			if (anim.group == AnimGroup::Death)
 			{
 				// ALWAYS use the Death animation (no direction variants)
@@ -205,9 +204,8 @@ namespace Framework {
 				if (anim.currentFrame >= anim.frameCount) {
 					anim.currentFrame = anim.loop ? anim_current_frame : anim.frameCount - anim_frame_mod;
 				}
-				
-				// For Debug
-				std::cout << "Frame: " << anim.currentFrame << "\n";
+
+				LOG_INFO("ANIM", "Entity %u Animation '%s' advanced to frame %d", (unsigned)e.id, anim.animName.c_str(), anim.currentFrame);
 			}
 		}
 	}
