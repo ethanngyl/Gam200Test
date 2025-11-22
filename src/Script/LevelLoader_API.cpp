@@ -195,9 +195,15 @@ namespace Framework {
             glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
         }
 
-        float worldX = button->position.x;
-        float worldY = button->position.y;
+        // ========================================
+        // GET BUTTON'S ACTUAL SCREEN POSITION
+        // ========================================
+        // Use the button entity's Transform component for accurate positioning
+        auto& transform = em->GetComponent<Transform>(button->entity);
+        float worldX = transform.position.x;
+        float worldY = transform.position.y;
 
+        // Convert button center from world space to screen space
         glm::mat4 viewProj = loader->graphicsSystem->GetCamera().GetViewProjectionMatrix();
         glm::vec4 clipSpace = viewProj * glm::vec4(worldX, worldY, 0.0f, 1.0f);
 
@@ -232,22 +238,12 @@ namespace Framework {
         finalScale = std::max(MIN_SCALE, std::min(MAX_SCALE, finalScale));
 
         // ========================================
-        // TEXT CENTERING AND POSITIONING
+        // TEXT CENTERING - SNAP TO BUTTON CENTER
         // ========================================
-        // Estimate text width to center it on the button
-        // Adjusted character width for better left alignment
-        const float CHAR_WIDTH_ESTIMATE = 25.0f;  // Reduced from 30 to shift text left
-        float estimatedTextWidth = static_cast<float>(strlen(text)) * CHAR_WIDTH_ESTIMATE * finalScale;
-
-        // Center text horizontally, then shift slightly left for better appearance
-        const float LEFT_SHIFT = 10.0f * viewportScale;  // Additional left shift, scales with viewport
-        float centeredX = screenX - (estimatedTextWidth * 0.5f) - LEFT_SHIFT + offsetX;
-        float centeredY = screenY + offsetY;  // offsetY can adjust vertical position
-
-        // Clamp coordinates to viewport bounds to prevent off-screen rendering
-        const float MARGIN = 10.0f;  // Minimum margin from edges
-        centeredX = std::max(MARGIN, std::min(centeredX, static_cast<float>(fbWidth) - estimatedTextWidth - MARGIN));
-        centeredY = std::max(MARGIN, std::min(centeredY, static_cast<float>(fbHeight) - MARGIN));
+        // Simply center text at button's screen position with optional offsets
+        // The button's screen position IS the center, no need for width estimation
+        float centeredX = screenX + offsetX;
+        float centeredY = screenY + offsetY;
 
         // ========================================
         // DEBUG OUTPUT (Enhanced)
@@ -262,15 +258,11 @@ namespace Framework {
                      editorEnabled ? imgui->GetViewportFBO() : 0);
             LOG_INFO("LevelLoader", "  Viewport: %dx%d", fbWidth, fbHeight);
             LOG_INFO("LevelLoader", "  World pos: (%.2f, %.2f)", worldX, worldY);
-            LOG_INFO("LevelLoader", "  NDC: (%.2f, %.2f)", ndcX, ndcY);
             LOG_INFO("LevelLoader", "  Screen: (%.2f, %.2f)", screenX, screenY);
-            LOG_INFO("LevelLoader", "  Final: (%.2f, %.2f) [CLAMPED]", centeredX, centeredY);
+            LOG_INFO("LevelLoader", "  Final: (%.2f, %.2f) [SNAPPED TO BUTTON]", centeredX, centeredY);
             LOG_INFO("LevelLoader", "  Scale: base=%.2f viewport=%.2f final=%.2f",
                      scale, viewportScale, finalScale);
-            LOG_INFO("LevelLoader", "  Text width: %.2f px | Left shift: %.2f", estimatedTextWidth, LEFT_SHIFT);
-            LOG_INFO("LevelLoader", "  Bounds: X[%.0f to %.0f] Y[%.0f to %.0f]",
-                     MARGIN, static_cast<float>(fbWidth) - MARGIN,
-                     MARGIN, static_cast<float>(fbHeight) - MARGIN);
+            LOG_INFO("LevelLoader", "  Offsets: X=%.2f Y=%.2f", offsetX, offsetY);
             LOG_INFO("LevelLoader", "========================================");
         }
         // ========================================
