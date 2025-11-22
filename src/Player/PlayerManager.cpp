@@ -479,16 +479,40 @@ namespace Framework {
     *        Shows feedback (border + pulse), updates occupancy, and ends player turn.
     */
     void PlayerControllerSystem::HandleArrowKeyMovement() {
-        // Guards: need input + entity systems, player Transform, and it must be player’s turn
-        if (!gridMovementEnabled) return;
-        if (!inputSystem || !entityManager) return;
+        // DEBUG: Log entry to this function
+        static bool firstCall = true;
+        if (firstCall) {
+            LOG_INFO("PlayerManager", "=== HandleArrowKeyMovement FIRST CALL ===");
+            firstCall = false;
+        }
 
-        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
-        if (!IsPlayerTurn()) return;
+        // Guards: need input + entity systems, player Transform, and it must be player's turn
+        if (!gridMovementEnabled) {
+            LOG_WARN("PlayerManager", "Arrow keys BLOCKED: gridMovementEnabled = false");
+            return;
+        }
+
+        if (!inputSystem || !entityManager) {
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: inputSystem=%p entityManager=%p", inputSystem, entityManager);
+            return;
+        }
+
+        if (!entityManager->HasComponent<Transform>(playerEntity)) {
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: Player missing Transform component");
+            return;
+        }
+
+        if (!IsPlayerTurn()) {
+            static int logThrottle = 0;
+            if (logThrottle++ % 60 == 0) { // Log every 60 frames
+                LOG_WARN("PlayerManager", "Arrow keys BLOCKED: Not player's turn (throttled log)");
+            }
+            return;
+        }
 
         if (!entityManager->HasComponent<AP>(playerEntity))
         {
-            LOG_ERROR("PlayerManager", "Player has no Stats component!");
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: Player has no AP component!");
             return;
         }
         auto& stats = entityManager->GetComponent<AP>(playerEntity);
@@ -496,11 +520,21 @@ namespace Framework {
         // Check if player is out of moves
         if (stats.actionPoints <= 0)
         {
+            static int apLogThrottle = 0;
+            if (apLogThrottle++ % 60 == 0) { // Log every 60 frames
+                LOG_WARN("PlayerManager", "Arrow keys BLOCKED: Player out of AP (AP=%d, throttled log)", stats.actionPoints);
+            }
             return;
         }
 
         const Framework::Grid& g = Framework::GetGrid();
-        if (g.cols <= 0 || g.rows <= 0) return;
+        if (g.cols <= 0 || g.rows <= 0) {
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: Invalid grid (cols=%d, rows=%d)", g.cols, g.rows);
+            return;
+        }
+
+        LOG_INFO("PlayerManager", "Arrow key handler ACTIVE: AP=%d/%d, Turn=Player, Grid=%dx%d",
+                 stats.actionPoints, stats.maxActionPoints, g.cols, g.rows);
 
         // Get current player position
         auto& xform = entityManager->GetComponent<Transform>(playerEntity);
