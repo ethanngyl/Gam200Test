@@ -24,10 +24,10 @@ local kSpacingY = 0.1 -- Tile spacing Y
 -- AP Indicator sprites (camera-relative UI)
 local apIndicators = {}
 local maxAP = 5
-local indicatorSize = 0.5   -- TESTING: Increased from 0.08 to make VERY visible
-local indicatorSpacing = 0.15  -- Increased spacing for larger size
-local screenOffsetX = 0.0   -- TESTING: Place directly at camera center
-local screenOffsetY = 0.0   -- TESTING: Place directly at camera center
+local indicatorSize = 0.08  -- Restored to original size
+local indicatorSpacing = 0.1
+local screenOffsetX = -0.2  -- Centered horizontally above player
+local screenOffsetY = 0.4   -- Positioned above player (top of visible area)
 
 -- Debug frame counter
 local debugFrameCounter = 0
