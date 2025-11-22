@@ -634,13 +634,10 @@ namespace Framework {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // Enable depth testing for layer-based 2D rendering
-        // Z-depth is set per layer (layer * 0.001f) to control render order
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LESS);
-
-        // Enable depth write (layers write depth to ensure proper occlusion)
-        glDepthMask(GL_TRUE);
+        // DISABLE depth testing for 2D sprite rendering
+        // Traditional 2D approach: rely on painter's algorithm (render queue sorting)
+        // This avoids AMD GPU precision issues and transparent sprite artifacts
+        glDisable(GL_DEPTH_TEST);
 
         // Enable back-face culling
         glEnable(GL_CULL_FACE);
