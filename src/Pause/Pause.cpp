@@ -1,8 +1,14 @@
 ﻿/*
 ===============================================================================
-  File:         Pause.cpp (With Game State Check)
+File:         Pause.cpp
+Author:       Padilla Carl Jameson Z
+Email:        c.padilla@digipen.edu
+Date:         2025-11-20
+Contribution:
+------------------------------------------------------------------------------
+Pause System for ALT-TAB and CTRL-ALT-DEL handling (Requirements 1701/1702)
 
-  Added feature: Pause only works in gameplay states, not in menus
+This is the production version with minimal logging.
 ===============================================================================
 */
 
@@ -113,7 +119,7 @@ namespace Framework
         wasKeyPressed = isKeyDown;
 
         // ===============================================================================
-        // *** NEW: Check if pause is allowed before toggling ***
+        // Check if pause is allowed before toggling ***
         // ===============================================================================
         if (keyJustPressed && IsPauseAllowedInCurrentState())
         {
@@ -242,7 +248,7 @@ namespace Framework
         }
 
         // ===============================================================================
-        // *** MODIFIED: Only auto-pause on focus loss if in gameplay ***
+        // Only auto-pause on focus loss if in gameplay
         // ===============================================================================
         if (!pauseSystem->IsPauseAllowedInCurrentState()) {
             return;  // Don't auto-pause in menus
@@ -287,7 +293,7 @@ namespace Framework
         }
 
         // ===============================================================================
-        // *** MODIFIED: Only auto-pause on minimize if in gameplay ***
+        // Only auto-pause on minimize if in gameplay
         // ===============================================================================
         if (!pauseSystem->IsPauseAllowedInCurrentState()) {
             return;  // Don't auto-pause in menus

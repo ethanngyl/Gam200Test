@@ -1,6 +1,6 @@
 /*
 ===============================================================================
- File:          Pause.h (With Game State Check)
+ File:          Pause.h
  Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-20
