@@ -1,63 +1,14 @@
 ﻿/*
 ===============================================================================
-  File:         Pause.cpp
-  Author:       
-  Co-Author:    
+  File:         Pause.cpp (PRODUCTION VERSION - Clean)
+  Author:       Padilla Carl Jameson Z
+  Email:        c.padilla@digipen.edu
   Date:         2025-11-20
-  Contribution: 
-  Description:  Manages Game Pause state via Input and Window Events.
-===============================================================================
+  Contribution:
+  ------------------------------------------------------------------------------
+  Pause System for ALT-TAB and CTRL-ALT-DEL handling (Requirements 1701/1702)
 
-  SYSTEM OVERVIEW
-  ----------------
-  This system handles both MANUAL pausing (User presses 'P') and AUTOMATIC
-  pausing (Alt-Tab, Minimize, Focus Loss). It coordinates with the CoreEngine
-  to halt gameplay/physics and mute audio, while keeping the Input system
-  active to detect resume commands.
-
-  KEY FEATURES
-  ------------
-  1. Auto-Pause: Triggered by GLFW Focus Loss (Alt-Tab) or Iconify (Minimize).
-  2. Manual Pause: Triggered by keyboard input.
-  3. Visuals: Renders a configurable UI overlay using GraphicsSystem.
-  4. Audio: Mutes master volume on pause; restores it on resume.
-  5. Scaling: UI adapts to window resolution changes via percentage coordinates.
-
-  INTEGRATION GUIDE
-  -----------------
-  1. Core.cpp:
-     - Initialize PauseSystem in `CreateAllSystems`.
-     - Link dependencies via `SetCoreEngine`.
-  2. Main Loop (main.cpp):
-     - Check `!IsPaused()` before calling `UpdateSingleFrame`.
-     - ALWAYS call `pauseSystem->Update()` (needs to run even when paused).
-  3. Level Files (e.g., level1.cpp):
-     - Call `engine->GetPauseSystem()->Draw()` at the end of the render loop
-       to ensure the overlay appears on top of the game world.
-
-  CONFIGURATION (valueloader.txt)
-  -------------------------------
-  Settings for the pause screen appearance:
-  - Text Content: "pause_text", "pause_hint_manual", "pause_hint_focus"
-  - Styling:      Font name, Scale, and RGB Color values.
-  - Layout:       X/Y Percentages (0.0 to 1.0) for resolution independence.
-
-  USAGE EXAMPLE
-  -------------
-  // Init
-  pauseSystem = new PauseSystem();
-  pauseSystem->SetCoreEngine(this);
-  pauseSystem->Initialize();
-
-  // Game Loop
-  pauseSystem->Update(dt);
-  if (!pauseSystem->IsPaused()) {
-      engine->UpdateSingleFrame(dt);
-  }
-
-  // Render Loop
-  pauseSystem->Draw();
-
+  This is the production version with minimal logging.
 ===============================================================================
 */
 
@@ -81,21 +32,18 @@ namespace Framework
         , focusLostTime(0.0)
         , focusGainedTime(0.0)
         , coreEngine(nullptr)
+        , wasKeyPressed(false)
     {
-        LOG_INFO("PAUSE", "PauseSystem created");
         s_instance = this;
     }
 
     PauseSystem::~PauseSystem()
     {
-        LOG_INFO("PAUSE", "PauseSystem destroyed");
         s_instance = nullptr;
     }
 
     void PauseSystem::Initialize()
     {
-        LOG_INFO("PAUSE", "Initializing PauseSystem");
-
         if (!coreEngine) {
             LOG_ERROR("PAUSE", "CoreEngine not set");
             return;
@@ -114,14 +62,8 @@ namespace Framework
         }
 
         glfwSetWindowFocusCallback(window, WindowFocusCallback);
-        LOG_INFO("PAUSE", "Registered window focus callback");
-
         glfwSetWindowIconifyCallback(window, WindowIconifyCallback);
-        LOG_INFO("PAUSE", "Registered window iconify callback");
-
         glfwSetWindowUserPointer(window, this);
-
-        LOG_INFO("PAUSE", "PauseSystem initialized");
     }
 
     void PauseSystem::Update(float dt)
@@ -131,60 +73,54 @@ namespace Framework
         (void)dt;
 
         if (!coreEngine) {
-            LOG_ERROR("PAUSE", "CoreEngine is null in Update");
             return;
         }
 
         auto* inputSystem = coreEngine->GetInputSystem();
         if (!inputSystem) {
-            LOG_WARN("PAUSE", "InputSystem is null");
             return;
         }
 
-        // Debug: Check if P is being pressed
-        if (inputSystem->IsKeyDown(Framework::KEY_P)) {
-            LOG_INFO("PAUSE", "P key is DOWN");
-        }
+        // ===============================================================================
+        // Key Debouncing - Edge Detection
+        // ===============================================================================
+        bool isKeyDown = inputSystem->IsKeyDown(Framework::KEY_P);
 
-        if (inputSystem->IsKeyPressed(Framework::KEY_P))
+        // Detect rising edge (key just pressed)
+        bool keyJustPressed = isKeyDown && !wasKeyPressed;
+
+        // Update key state for next frame
+        wasKeyPressed = isKeyDown;
+
+        // Toggle pause on key press
+        if (keyJustPressed)
         {
-            LOG_INFO("PAUSE", "P key PRESSED - isPaused=%d, reason=%d", isPaused, (int)pauseReason);
-
             if (isPaused && pauseReason == PauseReason::Manual) {
-                LOG_INFO("PAUSE", "Calling Resume()");
                 Resume();
             }
             else if (!isPaused) {
-                LOG_INFO("PAUSE", "Calling Pause(Manual)");
                 Pause(PauseReason::Manual);
-            }
-            else {
-                LOG_WARN("PAUSE", "Paused but not manual (reason=%d), ignoring P press", (int)pauseReason);
             }
         }
     }
 
     void PauseSystem::Draw()
     {
-        static bool hasLoggedThisPause = false;
-
         if (!isPaused) {
-            hasLoggedThisPause = false;
             return;
         }
 
         auto* graphics = coreEngine->GetGraphicsSystem();
         if (!graphics) {
-            LOG_ERROR("PAUSE", "GraphicsSystem is null");
             return;
         }
 
         auto* windowSystem = coreEngine->GetWindowSystem();
         if (!windowSystem) {
-            LOG_ERROR("PAUSE", "WindowSystem is null");
             return;
         }
 
+        // Load configuration
         std::string pauseText = ConfigReader::GetString("pause_text", "PAUSED");
         std::string resumeHintManual = ConfigReader::GetString("pause_hint_manual", "Press P to Resume");
         std::string resumeHintFocus = ConfigReader::GetString("pause_hint_focus", "Return to window to resume");
@@ -203,12 +139,6 @@ namespace Framework
         float hintOffsetY = windowHeight * hintOffsetYPercent;
         float hintOffsetX = windowWidth * hintOffsetXPercent;
 
-        if (!hasLoggedThisPause) {
-            LOG_INFO("PAUSE", "Pause overlay at (%.1f, %.1f) - Window: %dx%d",
-                centerX, centerY, windowWidth, windowHeight);
-            hasLoggedThisPause = true;
-        }
-
         float pauseTextScale = ConfigReader::GetFloat("pause_text_scale", 2.0f);
         float hintTextScale = ConfigReader::GetFloat("pause_hint_scale", 1.0f);
 
@@ -220,6 +150,7 @@ namespace Framework
         float hintColorG = ConfigReader::GetFloat("pause_hint_color_g", 0.8f);
         float hintColorB = ConfigReader::GetFloat("pause_hint_color_b", 0.8f);
 
+        // Select appropriate hint text
         const char* resumeHint = "";
         if (pauseReason == PauseReason::Manual) {
             resumeHint = resumeHintManual.c_str();
@@ -228,6 +159,7 @@ namespace Framework
             resumeHint = resumeHintFocus.c_str();
         }
 
+        // Draw pause overlay
         graphics->DrawText4(fontName, pauseText, centerX, centerY, pauseTextScale,
             glm::vec3(pauseColorR, pauseColorG, pauseColorB));
 
@@ -240,7 +172,6 @@ namespace Framework
     void PauseSystem::SendEngineMessage(Message* message)
     {
         if (message->MessageId == Status::Quit) {
-            LOG_INFO("PAUSE", "Received quit message");
             if (isPaused) {
                 Resume();
             }
@@ -250,7 +181,6 @@ namespace Framework
     void PauseSystem::Pause(PauseReason reason)
     {
         if (isPaused) {
-            LOG_WARN("PAUSE", "Already paused");
             return;
         }
 
@@ -264,13 +194,12 @@ namespace Framework
     void PauseSystem::Resume()
     {
         if (!isPaused) {
-            LOG_WARN("PAUSE", "Not paused");
             return;
         }
 
+        // Cannot manually resume from window focus pause
         if (pauseReason == PauseReason::WindowFocus ||
             pauseReason == PauseReason::TaskManager) {
-            LOG_WARN("PAUSE", "Cannot manually resume from window focus pause");
             return;
         }
 
@@ -287,21 +216,16 @@ namespace Framework
             glfwGetWindowUserPointer(window));
 
         if (!pauseSystem) {
-            LOG_ERROR("PAUSE", "PauseSystem not found in GLFW user pointer");
             return;
         }
 
         double currentTime = glfwGetTime();
 
         if (focused) {
-            LOG_INFO("PAUSE", "Window gained focus");
-
             pauseSystem->windowHasFocus = true;
             pauseSystem->focusGainedTime = currentTime;
 
-            double outOfFocusTime = currentTime - pauseSystem->focusLostTime;
-            LOG_INFO("PAUSE", "Window was out of focus for %.2f seconds", outOfFocusTime);
-
+            // Resume if paused due to focus loss
             if (pauseSystem->isPaused &&
                 (pauseSystem->pauseReason == PauseReason::WindowFocus ||
                     pauseSystem->pauseReason == PauseReason::TaskManager))
@@ -309,22 +233,17 @@ namespace Framework
                 pauseSystem->isPaused = false;
                 pauseSystem->pauseReason = PauseReason::None;
                 pauseSystem->ResumeAllSystems();
-
-                LOG_INFO("PAUSE", "Game resumed");
             }
         }
         else {
-            LOG_INFO("PAUSE", "Window lost focus");
-
             pauseSystem->windowHasFocus = false;
             pauseSystem->focusLostTime = currentTime;
 
+            // Pause if not already paused
             if (!pauseSystem->isPaused) {
                 pauseSystem->isPaused = true;
                 pauseSystem->pauseReason = PauseReason::WindowFocus;
                 pauseSystem->PauseAllSystems();
-
-                LOG_INFO("PAUSE", "Game paused");
             }
         }
     }
@@ -335,13 +254,10 @@ namespace Framework
             glfwGetWindowUserPointer(window));
 
         if (!pauseSystem) {
-            LOG_ERROR("PAUSE", "PauseSystem not found in GLFW user pointer");
             return;
         }
 
         if (iconified) {
-            LOG_INFO("PAUSE", "Window minimized");
-
             pauseSystem->windowIsMinimized = true;
 
             if (!pauseSystem->isPaused) {
@@ -351,8 +267,6 @@ namespace Framework
             }
         }
         else {
-            LOG_INFO("PAUSE", "Window restored");
-
             pauseSystem->windowIsMinimized = false;
 
             if (pauseSystem->isPaused &&
@@ -367,62 +281,44 @@ namespace Framework
 
     void PauseSystem::PauseAllSystems()
     {
-        LOG_INFO("PAUSE", "Pausing all systems");
-
         if (!coreEngine) {
-            LOG_ERROR("PAUSE", "CoreEngine is null");
             return;
         }
 
         PauseAudio();
-        coreEngine->SetPlaying(false);
-
-        LOG_INFO("PAUSE", "All systems paused");
     }
 
     void PauseSystem::ResumeAllSystems()
     {
-        LOG_INFO("PAUSE", "Resuming all systems");
-
         if (!coreEngine) {
-            LOG_ERROR("PAUSE", "CoreEngine is null");
             return;
         }
 
         ResumeAudio();
-        coreEngine->SetPlaying(true);
-
-        LOG_INFO("PAUSE", "All systems resumed");
     }
 
     void PauseSystem::PauseAudio()
     {
         auto* audioSystem = coreEngine->GetAudioSystem();
         if (!audioSystem) {
-            LOG_WARN("PAUSE", "AudioSystem is null, skipping audio pause");
             return;
         }
 
         savedMasterVolume = 1.0f;
         audioSystem->SetMasterVolume(0.0f);
         audioWasPlaying = true;
-
-        LOG_INFO("PAUSE", "Audio paused");
     }
 
     void PauseSystem::ResumeAudio()
     {
         auto* audioSystem = coreEngine->GetAudioSystem();
         if (!audioSystem) {
-            LOG_WARN("PAUSE", "AudioSystem is null, skipping audio resume");
             return;
         }
 
         if (audioWasPlaying) {
             audioSystem->SetMasterVolume(savedMasterVolume);
             audioWasPlaying = false;
-
-            LOG_INFO("PAUSE", "Audio resumed");
         }
     }
 
@@ -437,10 +333,10 @@ namespace Framework
             case PauseReason::TaskManager: reasonStr = "Task Manager"; break;
             }
 
-            LOG_INFO("PAUSE", "PAUSED - Reason: %s", reasonStr);
+            LOG_INFO("PAUSE", "Game paused - Reason: %s", reasonStr);
         }
         else {
-            LOG_INFO("PAUSE", "RESUMED");
+            LOG_INFO("PAUSE", "Game resumed");
         }
     }
 

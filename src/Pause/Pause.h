@@ -1,25 +1,16 @@
 /*
 ===============================================================================
- File:          Pause.h
+ File:          Pause.h (FIXED - Key Debouncing)
  Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-20
- Contribution:  
+ Contribution:
  ------------------------------------------------------------------------------
   Pause System for ALT-TAB and CTRL-ALT-DEL handling (Requirements 1701/1702)
 
-  Responsibilities:
-     - Detects window focus loss (ALT-TAB, CTRL-ALT-DEL)
-     - Pauses gameplay logic, physics, audio, and input
-     - Automatically resumes when window regains focus
-     - Supports manual pause via ESC key (optional)
-     - Handles window minimize/restore properly
-
-  Implementation:
-     - Uses GLFW window focus callbacks
-     - Coordinates with all engine systems via CoreEngine
-     - Maintains pause state across game state transitions
-
+  FIXED CHANGES:
+  - Added wasKeyPressed for key debouncing
+  - Prevents multiple pause/resume toggles in the same frame
 ===============================================================================
 */
 
@@ -75,6 +66,8 @@ namespace Framework
         double focusGainedTime;
 
         CoreEngine* coreEngine;
+
+        bool wasKeyPressed;
 
         void PauseAllSystems();
         void ResumeAllSystems();
