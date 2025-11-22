@@ -182,6 +182,13 @@ void level3_Initialize()
         em->AddComponent<AP>(gPlayer, 100, 5);  // 100 HP, 5 AP
     }
 
+    // Enable ImGui for this level
+    if (engine->GetImGuiSystem()) {
+        engine->GetImGuiSystem()->Enable();
+        engine->GetImGuiSystem()->SetPlayerEntity(gPlayer);
+        LOG_INFO("LEVEL3", "ImGui enabled and player entity set");
+    }
+
     // ========================================================================
     // FIND ENEMIES AND SET TARGETS - COMMENTED OUT FOR DEBUGGING
     // ========================================================================
@@ -281,9 +288,17 @@ void level3_Draw() {
 
     extern Framework::CoreEngine* engine;
 
-    // Only draw ImGui if enabled (toggle with F1)
-    if (imguiEnabled && engine && engine->GetPauseSystem()) {
-        engine->GetPauseSystem()->Draw();
+    // Draw ImGui if enabled (toggle with F1)
+    if (imguiEnabled && engine) {
+        // Draw pause system UI
+        if (engine->GetPauseSystem()) {
+            engine->GetPauseSystem()->Draw();
+        }
+
+        // Draw ImGui editor/inspector
+        if (engine->GetImGuiSystem()) {
+            engine->GetImGuiSystem()->Draw();
+        }
     }
 
 }
@@ -299,6 +314,13 @@ void level3_Draw() {
 void level3_Free()
 {
     using namespace Framework;
+
+    // Disable ImGui when leaving level
+    if (CORE && CORE->GetImGuiSystem()) {
+        CORE->GetImGuiSystem()->Disable();
+        LOG_INFO("LEVEL3", "ImGui disabled");
+    }
+
     if (CORE && CORE->GetPlayerController()) {
         CORE->GetPlayerController()->ResetGridState();
         CORE->GetPlayerController()->SetGridMovementEnabled(false);
