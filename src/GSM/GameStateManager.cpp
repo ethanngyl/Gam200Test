@@ -19,6 +19,8 @@
 #include "Turn.h"
 #include "Pathfinding.h"  // EnemyAI component
 #include "Component.h"    // Movement, CircleCollider components
+#include "EntitySpawner.h"        // EntitySpawner for AP indicators
+#include "Graphics/RenderLayers.h" // RenderLayers::UI constant
 
 // ============================================================================
 // GLOBAL VARIABLE DEFINITIONS
@@ -226,6 +228,7 @@ void GSM_Update()
         break;
 
     case LEVEL_3:
+    {
         LOG_INFO("GSM", "Level 3 state (Lua-scripted)");
 
         // Shared state for Level 3 (accessible across all lambdas)
@@ -500,6 +503,7 @@ void GSM_Update()
         fpUnload = []() {
             LOG_INFO("GSM", "Level3 Lua script unloaded");
             };
+    }
         break;
 
     case GS_RESTART:
