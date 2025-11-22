@@ -223,6 +223,69 @@ namespace Framework {
             return;
         }
 
+        //// --- NEW, SIMPLER TURN LOGIC ---
+        //if (IsPlayerTurn())
+        //{
+        //    // Check if player is out of actions and auto-end turn
+        //    if (entityManager->HasComponent<AP>(playerEntity))
+        //    {
+        //        auto& stats = entityManager->GetComponent<AP>(playerEntity);
+        //        if (stats.actionPoints <= 0)
+        //        {
+        //            EndPlayerTurn();
+        //            LOG_INFO("PlayerTurn", "Player out of AP. Auto-ending turn.");
+        //        }
+        //    }
+        //}
+
+        if (IsPlayerTurn()) {
+            // Get global turn info
+            auto& globalTurn = Turn();
+
+            // 1. AP Regeneration Check: If the global turn number is newer than the last one we processed
+            if (globalTurn.turnIndex > lastTurnIndex)
+            {
+                // It's a brand new turn! Regen AP.
+                if (entityManager->HasComponent<AP>(playerEntity))
+                {
+                    auto& stats = entityManager->GetComponent<AP>(playerEntity);
+                    stats.actionPoints = stats.maxActionPoints;
+                    LOG_INFO("PlayerTurn", "New Turn Started! AP Refilled to %d", stats.actionPoints);
+                }
+
+                // Update our tracker so we don't regen again this turn
+                lastTurnIndex = globalTurn.turnIndex;
+            }
+
+            // 2. Auto-End Turn Check: Check if player is out of AP and auto-end turn
+            if (entityManager->HasComponent<AP>(playerEntity))
+            {
+                auto& stats = entityManager->GetComponent<AP>(playerEntity);
+                if (stats.actionPoints <= 0)
+                {
+                    EndPlayerTurn();
+                    LOG_INFO("PlayerTurn", "Player out of AP. Auto-ending turn.");
+                    // Return here to stop further actions for this frame
+                    return;
+                }
+            }
+
+            //// --- (Optional) PLAYER ATTACK on SPACE ---
+            //if (inputSystem->IsKeyPressed(KEY_SPACE))
+            //{
+            //    if (entityManager->HasComponent<AP>(playerEntity))
+            //    {
+            //        auto& stats = entityManager->GetComponent<AP>(playerEntity);
+            //        if (stats.actionPoints > 0)
+            //        {
+            //            stats.actionPoints--; // Spend 1 AP to attack
+            //            LOG_INFO("Player", "Player ATTACKS! AP remaining: %d", stats.actionPoints);
+            //            // !! Add attack logic here (find nearby enemy, deal damage) !!
+            //        }
+            //    }
+            //}
+        } // --- End IsPlayerTurn() ---
+
 
         // Get player position
         auto& playerTransform = entityManager->GetComponent<Transform>(playerEntity);
@@ -417,6 +480,19 @@ namespace Framework {
         if (!entityManager->HasComponent<Transform>(playerEntity)) return;
         if (!IsPlayerTurn()) return;
 
+        if (!entityManager->HasComponent<AP>(playerEntity))
+        {
+            LOG_ERROR("PlayerManager", "Player has no Stats component!");
+            return;
+        }
+        auto& stats = entityManager->GetComponent<AP>(playerEntity);
+
+        // Check if player is out of moves
+        if (stats.actionPoints <= 0)
+        {
+            return;
+        }
+
         const Framework::Grid& g = Framework::GetGrid();
         if (g.cols <= 0 || g.rows <= 0) return;
 
@@ -490,7 +566,11 @@ namespace Framework {
         std::cout << "[WASD] Moved from (" << cur.x << "," << cur.y
             << ") to (" << next.x << "," << next.y << ")\n";
 
-        EndPlayerTurn();
+        //EndPlayerTurn();
+
+        // --- AND REPLACE IT WITH THIS ---
+        stats.actionPoints--; // Spend one AP
+        LOG_INFO("PlayerManager", "Player moved. AP Remaining: %d", stats.actionPoints);
     }
 
     void PlayerControllerSystem::ResetGridState() {

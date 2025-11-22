@@ -49,8 +49,10 @@ namespace Framework
     class AnimationSystem;
     class UISystem;
     class EventSystem;
+    class RangeIndicatorSystem;
     class DamageIndicatorSystem;
     class PathfindingSystem;
+	class PauseSystem;
 
     /**
      * @class CoreEngine
@@ -153,6 +155,8 @@ namespace Framework
         UISystem* GetUISystem() const { return uiSystem; }
         EventSystem* GetEventSystem() const { return eventSystem; }
         PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
+        PauseSystem* GetPauseSystem() const { return pauseSystem; }
+        LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
 
 
         /**
@@ -210,6 +214,8 @@ namespace Framework
         EventSystem* eventSystem;
         DamageIndicatorSystem* damageIndicator;
         PathfindingSystem* pathfindingSystem;
+		PauseSystem* pauseSystem;
+        RangeIndicatorSystem* rangeIndicatorSystem;
         ScriptSystem* scriptSystem = nullptr;
 
         // state

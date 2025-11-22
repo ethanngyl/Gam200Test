@@ -100,6 +100,8 @@ namespace Framework {
         float shootCooldownTime;
         float projectileSpeed;
         bool gridMovementEnabled = false;
+
+        uint64_t lastTurnIndex = 0;
     };
 
 } // namespace Framework

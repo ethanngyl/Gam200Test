@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          Core.cpp
  Author:        GE YONGQI
@@ -35,8 +35,9 @@
 #include "Grid/GridECS.h"
 #include "Grid/GridTile.h"
 #include "Pathfinding/Pathfinding.h"
-
-
+#include "AudioLoader.h"
+#include "Pause/Pause.h"
+#include "RangeIndicatorSystem.h"
 namespace Framework
 {
     CoreEngine* CORE = nullptr;
@@ -58,8 +59,10 @@ namespace Framework
         , eventSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
+        , rangeIndicatorSystem(nullptr)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
+		, pauseSystem(nullptr)
     {
         CORE = this;
     }
@@ -146,6 +149,8 @@ namespace Framework
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
+		pauseSystem = new PauseSystem();
+        rangeIndicatorSystem = new RangeIndicatorSystem();
         scriptSystem->SetEntityManager(entityManager);
         scriptSystem->SetCoreEngine(this);
         scriptSystem->Initialize();
@@ -173,6 +178,7 @@ namespace Framework
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
         movementSystem->SetInputSystem(inputSystem);
+        graphicsSystem->SetInputSystem(inputSystem);
         collisionSystem->SetInput(inputSystem);
         playerController->SetEntitySpawner(spawner);
 
@@ -182,6 +188,14 @@ namespace Framework
 
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);
+
+        // Wire Range Indicator
+        rangeIndicatorSystem->SetEntityManager(entityManager);
+        rangeIndicatorSystem->SetGraphicsSystem(graphicsSystem);
+
+        // Pause Event System
+        pauseSystem->SetCoreEngine(this);
+        LOG_INFO("CORE", "PauseSystem wired to CoreEngine");
 
         LOG_INFO("CORE", "Dependencies wired");
     }
@@ -227,7 +241,8 @@ namespace Framework
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
-
+        AddSystem(pauseSystem);
+        AddSystem(rangeIndicatorSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -314,6 +329,7 @@ namespace Framework
         animationSystem = nullptr;
         uiSystem = nullptr;
         eventSystem = nullptr;
+        pauseSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {
@@ -348,24 +364,80 @@ namespace Framework
 
     void CoreEngine::UpdateSingleFrame(float dt)
     {
-        DBG_SCOPE_SYS("CoreEngine Frame", eng::debug::Subsystem::Engine);
-
-        // Check if window should close
         if (ShouldWindowClose()) {
             GameActive = false;
-            Message quitMsg(Status::Quit);
-            BroadcastMessage(&quitMsg);
             return;
         }
 
-        // Update all systems
-        for (unsigned i = 0; i < Systems.size(); ++i)
-        {
+        // Update all logic systems
+        for (unsigned i = 0; i < Systems.size(); ++i) {
+            if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
+                dynamic_cast<ImGuiSystem*>(Systems[i])) {
+                continue;
+            }
             Systems[i]->Update(dt);
+        }
+
+        if (scriptSystem) scriptSystem->Update(dt);
+
+        // === RENDER GAME ===
+        bool useViewport = imguiSystem &&
+            imguiSystem->IsEnabled() &&
+            imguiSystem->IsRenderingToViewport() &&
+            imguiSystem->GetViewportFBO() != 0 &&
+            imguiSystem->GetViewportWidth() >= 100 &&
+            imguiSystem->GetViewportHeight() >= 100;
+
+        if (useViewport) {
+            // Render game to viewport texture
+            graphicsSystem->SetRenderTarget(
+                imguiSystem->GetViewportFBO(),
+                imguiSystem->GetViewportWidth(),
+                imguiSystem->GetViewportHeight()
+            );
+            graphicsSystem->Update(dt);
+            glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
+
+            // Setup GL state for text
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            // ========================================
+            // Draw level text INTO the viewport
+            // ========================================
+            graphicsSystem->GetTextRenderer().setScreenSize(
+                imguiSystem->GetViewportWidth(),
+                imguiSystem->GetViewportHeight()
+            );
+            std::cout << "[Core] Drawing text to viewport: "
+                << imguiSystem->GetViewportWidth() << "x"
+                << imguiSystem->GetViewportHeight() << "\n";
+            LevelLoader::GetInstance().DrawCurrentLevel();
+            graphicsSystem->DrawText4("Sans48", "TEST", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            // ========================================
+
+            graphicsSystem->ClearRenderTarget();
+
+            // Clear screen for ImGui
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            int w, h;
+            glfwGetFramebufferSize(windowSystem->GetWindow(), &w, &h);
+            glViewport(0, 0, w, h);
+            glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
+        else {
+            // Normal rendering - just draw the game scene
+            graphicsSystem->Update(dt);
 
         }
-        if (scriptSystem) {
-            scriptSystem->Update(dt);
+
+        // === IMGUI ===
+        if (imguiSystem) {
+            imguiSystem->Update(dt);
+            if (imguiSystem->IsEnabled()) {
+                imguiSystem->Render();
+            }
         }
     }
 
