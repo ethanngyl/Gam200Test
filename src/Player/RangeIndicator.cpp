@@ -1,5 +1,6 @@
 #include "RangeIndicatorSystem.h"
 #include "Component.h"
+#include "Graphics/RenderLayers.h"
 #include <cmath>
 #include <iostream>
 
