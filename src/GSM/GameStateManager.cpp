@@ -276,6 +276,17 @@ void GSM_Update()
                             LOG_INFO("GSM", "Removed Movement component from player - WASD disabled, arrow keys only");
                         }
 
+                        // Add player stats (AP) if not already added
+                        if (!em->HasComponent<Framework::AP>(player)) {
+                            em->AddComponent<Framework::AP>(player, 100, 5);  // 100 HP, 5 AP
+                            LOG_INFO("GSM", "Added AP component to player: 100 HP, 5 AP");
+                        }
+                        else {
+                            auto& ap = em->GetComponent<Framework::AP>(player);
+                            LOG_INFO("GSM", "Player already has AP: %d HP, %d/%d AP",
+                                     ap.health, ap.actionPoints, ap.maxActionPoints);
+                        }
+
                         // Configure player controller
                         playerController->SetPlayerEntity(player);
                         playerController->SetEntitySpawner(spawner);
@@ -289,6 +300,7 @@ void GSM_Update()
                         }
 
                         LOG_INFO("GSM", "Player controller configured for entity ID: %u", player.GetID());
+                        LOG_INFO("GSM", "Grid movement enabled: TRUE");
                     }
                     else {
                         LOG_ERROR("GSM", "No player entity found!");
@@ -298,6 +310,7 @@ void GSM_Update()
                     auto& turn = Framework::Turn();
                     turn.phase = Framework::TurnPhase::Player;
                     turn.busy = false;
+                    LOG_INFO("GSM", "Turn system initialized: Phase=Player, Busy=false, TurnIndex=%d", turn.turnIndex);
                 }
             }
             };
