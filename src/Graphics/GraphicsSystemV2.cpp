@@ -753,14 +753,17 @@ namespace Framework {
 
             // ---------- TRANSFORM ----------
             glm::mat4 model(1.0f);
-            model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
+            // Use layer for Z-depth to prevent Z-fighting (flickering textures)
+            // Each layer gets 0.001 depth offset (e.g., layer 0 = 0.0, layer 1 = 0.001, etc.)
+            float zDepth = cmd.layer * 0.001f;
+            model = glm::translate(model, { transform.position.x, transform.position.y, zDepth });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
             cmd.modelMatrix = model;
 
             // Compute depth relative to camera (for correct draw order)
             cmd.depth = glm::distance(
-                glm::vec3(transform.position.x, transform.position.y, 0.0f),
+                glm::vec3(transform.position.x, transform.position.y, zDepth),
                 mainCamera.GetPosition()
             );
 
