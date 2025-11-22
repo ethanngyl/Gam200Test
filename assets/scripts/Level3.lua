@@ -27,7 +27,7 @@ local maxAP = 5
 local indicatorSize = 0.08
 local indicatorSpacing = 0.1
 local screenOffsetX = -0.2  -- Offset from camera center (horizontal)
-local screenOffsetY = 0.85  -- Offset from camera center (vertical, near top)
+local screenOffsetY = 0.3   -- Offset from camera center (vertical) - TESTING: reduced from 0.85
 
 -- Debug frame counter
 local debugFrameCounter = 0
