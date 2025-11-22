@@ -22,6 +22,7 @@
 #include "RenderComponents.h"   // for MeshRenderer
 #include "ECSEntityManager.h"   // if not already pulled in through Precompiled.h
 #include "Grid\GridTile.h"
+#include "Graphics/RenderLayers.h"  // for standard layer constants
 
 extern Framework::CoreEngine* engine;
 
@@ -284,6 +285,7 @@ namespace Framework {
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(player);
             mr.material = GraphicsSystemV2::Material2;
+            mr.layer = RenderLayers::Player;  // Player renders on top
 
             entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
@@ -293,7 +295,7 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-            std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
+            std::cout << "[EntitySpawner] Spawned player (testing.png) on layer " << RenderLayers::Player << "\n";
 
             //camera
             //FollowPlayer
@@ -349,6 +351,7 @@ namespace Framework {
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
             mr.material = GraphicsSystemV2::Material2;
+            mr.layer = RenderLayers::Enemies;  // Enemies render below player
             //entityManager->AddComponent<Movement>(enemy);
             //auto& movement = entityManager->GetComponent<Movement>(enemy);
             //movement.moveSpeed = moveSpeed;
@@ -356,13 +359,12 @@ namespace Framework {
 
             // *** NEW: Add Health component (50 HP by default) ***
             entityManager->AddComponent<Health>(enemy, 50);
-            std::cout << "[EntitySpawner] Enemy spawned with 50 HP\n";
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
             collider.size = size;
 
-            std::cout << "[EntitySpawner] Spawned enemy\n";
+            std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << "\n";
             return enemy;
         }
 
@@ -420,6 +422,9 @@ namespace Framework {
         {
             Entity projectile = SpawnSprite("assets/Bullet.png", position, Vector2D(0.1f, 0.1f));
 
+            auto& mr = entityManager->GetComponent<MeshRenderer>(projectile);
+            mr.layer = RenderLayers::Projectiles;  // Projectiles above player
+
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
             movement.moveSpeed = speed;
@@ -429,7 +434,7 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(projectile);
             collider.radius = 0.05f;
 
-            std::cout << "[EntitySpawner] Spawned projectile\n";
+            std::cout << "[EntitySpawner] Spawned projectile on layer " << RenderLayers::Projectiles << "\n";
             return projectile;
         }
 
@@ -582,6 +587,7 @@ namespace Framework {
                     auto& gridTile = entityManager->GetComponent<GridTiles>(e);
                     auto& mr = entityManager->GetComponent<MeshRenderer>(e);
                     mr.material = GraphicsSystemV2::Material2;
+                    mr.layer = RenderLayers::Ground;  // Grid tiles on ground layer
                     gridTile.tileId = nextId++;
                     gridTile.x = col;
                     gridTile.y = row;

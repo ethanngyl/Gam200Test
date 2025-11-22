@@ -168,7 +168,7 @@ namespace Framework {
 
         // Semi-transparent red color
         mr.tint = glm::vec4(1.0f, 0.0f, 0.0f, 0.4f);  // Red with 40% opacity
-        mr.layer = 3;  // Above ground but below characters
+        mr.layer = RenderLayers::RangeIndicators;  // Above ground but below characters
         mr.orderInLayer = 0;
 
         indicatorEntities.push_back(indicator);
