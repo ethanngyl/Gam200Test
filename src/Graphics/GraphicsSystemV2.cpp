@@ -787,9 +787,12 @@ namespace Framework {
 
             // ---------- TRANSFORM ----------
             glm::mat4 model(1.0f);
-            // Use layer for Z-depth to prevent Z-fighting (flickering textures)
-            // Each layer gets 0.001 depth offset (e.g., layer 0 = 0.0, layer 1 = 0.001, etc.)
-            float zDepth = cmd.layer * 0.001f;
+            // Use layer, orderInLayer, and entity ID for Z-depth to prevent Z-fighting
+            // Layer provides major depth separation (0.001 per layer)
+            // OrderInLayer provides minor depth separation within same layer (0.00001 per order)
+            // Entity ID provides unique sub-pixel depth for entities with same layer/order (0.0000001 per ID)
+            // This ensures every entity has a unique Z-depth, preventing flickering
+            float zDepth = (cmd.layer * 0.001f) + (cmd.orderInLayer * 0.00001f) + (e.GetID() * 0.0000001f);
             model = glm::translate(model, { transform.position.x, transform.position.y, zDepth });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
