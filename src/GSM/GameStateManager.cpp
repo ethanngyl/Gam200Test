@@ -108,7 +108,9 @@ void GSM_Update()
         // DRAW
         // ============================================================================
         fpDraw = []() {
-            Framework::LevelLoader::GetInstance().DrawCurrentLevel();
+            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
+            // This prevents double-rendering (once to viewport, once to main window)
+            // No-op for Lua-based levels
             };
 
         // ============================================================================
@@ -182,7 +184,9 @@ void GSM_Update()
         // DRAW
         // ============================================================================
         fpDraw = []() {
-            Framework::LevelLoader::GetInstance().DrawCurrentLevel();
+            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
+            // This prevents double-rendering (once to viewport, once to main window)
+            // No-op for Lua-based levels
             };
 
         // ============================================================================
@@ -380,7 +384,9 @@ void GSM_Update()
         // DRAW
         // ============================================================================
         fpDraw = []() {
-            Framework::LevelLoader::GetInstance().DrawCurrentLevel();
+            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
+            // This prevents double-rendering (once to viewport, once to main window)
+            // No-op for Lua-based levels
             };
 
         // ============================================================================
