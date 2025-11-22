@@ -39,6 +39,7 @@ Safety:
 #include "ECSEntityManager.h"
 #include "Component.h"
 #include "MeshFactory.h"
+#include "Graphics/RenderLayers.h"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -666,7 +667,7 @@ namespace Framework {
             bg.mesh = backgroundMesh;
             bg.material = backgroundMaterial;
             bg.texture = backgroundTexture;
-            bg.layer = -1000;
+            bg.layer = RenderLayers::Background;  // Renders first, behind everything
             bg.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f));
             bg.tint = glm::vec4(1.0f);
             renderQueue.Submit(bg);

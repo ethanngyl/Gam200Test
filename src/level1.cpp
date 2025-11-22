@@ -16,13 +16,14 @@
 ===============================================================================
 */
 
-#include "Precompiled.h"   
+#include "Precompiled.h"
 #include "Audio/AudioSystem.h"
-#include "EntitySpawner.h"      
+#include "EntitySpawner.h"
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
-#include "Component.h" 
+#include "Component.h"
 #include "Pause/Pause.h"
+#include "Graphics/RenderLayers.h"
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::ScriptComponent;
@@ -145,7 +146,7 @@ void level1_Initialize()
         // Renderable
         auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
         rend.visible = true;
-        rend.layer = 1;
+        rend.layer = Framework::RenderLayers::Player;  // Use standard player layer (4)
 
         // Transform
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
