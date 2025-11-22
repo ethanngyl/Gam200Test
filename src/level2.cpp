@@ -105,14 +105,6 @@ void level2_Update()
     {
         next = LEVEL_3;
     }
-
-    // =============================================================
-    // 2. UPDATE ANIMATIONS IN LEVEL EDITOR
-    // =============================================================
-    // Animate in level editor using fixed-step (60 FPS)
-    auto* animSys = engine->GetAnimationSystem();
-    if (animSys)
-        animSys->Update(FIXED_DT);
 }
 
 void level2_Draw()

@@ -27,6 +27,7 @@
 #include "Event/Event.h"
 #include "Event/DamageIndicatorSystem.h"
 
+#include "LevelLoader.h"
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Grid/GridTile.h"
