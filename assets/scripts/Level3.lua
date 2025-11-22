@@ -190,20 +190,20 @@ function OnUpdate(dt)
                 Log("[AP DEBUG] Indicator #1 (ID " .. entityID .. ") updated to: (" .. xPos .. ", " .. yPos .. ")")
             end
 
-            -- Update color based on current AP
-            -- If this indicator index <= currentAP, show as available (green)
-            -- Otherwise show as used (RED) - TESTING with extreme colors
+            -- Update texture based on current AP
+            -- If this indicator index <= currentAP, show filled crystal
+            -- Otherwise show empty crystal
             if i <= currentAP then
-                -- Available AP: WHITE (to see if tint works at all)
-                SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)
+                -- Available AP: Show filled crystal
+                SetSpriteTexture(entityID, "assets/AP Crystal.png")
                 if shouldDebug and i == 1 then
-                    Log("[AP DEBUG] Indicator #" .. i .. " - WHITE (available)")
+                    Log("[AP DEBUG] Indicator #" .. i .. " - FILLED (available)")
                 end
             else
-                -- Used AP: PURE RED (extreme test)
-                SetSpriteColor(entityID, 1.0, 0.0, 0.0, 1.0)
+                -- Used AP: Show empty crystal
+                SetSpriteTexture(entityID, "assets/AP Empty.png")
                 if shouldDebug and i == 1 then
-                    Log("[AP DEBUG] Indicator #" .. i .. " - RED (used)")
+                    Log("[AP DEBUG] Indicator #" .. i .. " - EMPTY (used)")
                 end
             end
         end
