@@ -1,6 +1,6 @@
 /*
 ===============================================================================
- File:          Pause.h (FIXED - Key Debouncing)
+ File:          Pause.h (With Game State Check)
  Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-20
@@ -8,9 +8,7 @@
  ------------------------------------------------------------------------------
   Pause System for ALT-TAB and CTRL-ALT-DEL handling (Requirements 1701/1702)
 
-  FIXED CHANGES:
-  - Added wasKeyPressed for key debouncing
-  - Prevents multiple pause/resume toggles in the same frame
+  NEW: Added game state checking to disable pause in menus
 ===============================================================================
 */
 
@@ -67,7 +65,11 @@ namespace Framework
 
         CoreEngine* coreEngine;
 
+        // Key debouncing state
         bool wasKeyPressed;
+
+        // *** NEW: Helper to check if pause is allowed ***
+        bool IsPauseAllowedInCurrentState();
 
         void PauseAllSystems();
         void ResumeAllSystems();

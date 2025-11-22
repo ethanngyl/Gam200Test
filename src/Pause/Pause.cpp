@@ -1,14 +1,8 @@
 ﻿/*
 ===============================================================================
-  File:         Pause.cpp (PRODUCTION VERSION - Clean)
-  Author:       Padilla Carl Jameson Z
-  Email:        c.padilla@digipen.edu
-  Date:         2025-11-20
-  Contribution:
-  ------------------------------------------------------------------------------
-  Pause System for ALT-TAB and CTRL-ALT-DEL handling (Requirements 1701/1702)
+  File:         Pause.cpp (With Game State Check)
 
-  This is the production version with minimal logging.
+  Added feature: Pause only works in gameplay states, not in menus
 ===============================================================================
 */
 
@@ -66,6 +60,32 @@ namespace Framework
         glfwSetWindowUserPointer(window, this);
     }
 
+    // ===============================================================================
+    // *** NEW: Helper function to check if pause is allowed ***
+    // ===============================================================================
+    bool PauseSystem::IsPauseAllowedInCurrentState()
+    {
+        // Get current game state from extern variable
+        extern int current;
+
+        // Only allow pause in actual gameplay levels
+        // Disable in menus (mainMenu, levelSelect)
+        switch (current)
+        {
+        case mainMenu:      // Main menu
+        case Level_select:   // Level select menu
+            return false;   // Pause DISABLED in menus
+
+        case LEVEL_1:        // Level 1
+        case LEVEL_2:        // Level 2
+        case LEVEL_3:        // Level 3
+            return true;    // Pause ENABLED in gameplay
+
+        default:
+            return true;    // Default: allow pause
+        }
+    }
+
     void PauseSystem::Update(float dt)
     {
         DBG_SCOPE_SYS("Pause System", eng::debug::Subsystem::Engine);
@@ -92,8 +112,10 @@ namespace Framework
         // Update key state for next frame
         wasKeyPressed = isKeyDown;
 
-        // Toggle pause on key press
-        if (keyJustPressed)
+        // ===============================================================================
+        // *** NEW: Check if pause is allowed before toggling ***
+        // ===============================================================================
+        if (keyJustPressed && IsPauseAllowedInCurrentState())
         {
             if (isPaused && pauseReason == PauseReason::Manual) {
                 Resume();
@@ -219,6 +241,13 @@ namespace Framework
             return;
         }
 
+        // ===============================================================================
+        // *** MODIFIED: Only auto-pause on focus loss if in gameplay ***
+        // ===============================================================================
+        if (!pauseSystem->IsPauseAllowedInCurrentState()) {
+            return;  // Don't auto-pause in menus
+        }
+
         double currentTime = glfwGetTime();
 
         if (focused) {
@@ -255,6 +284,13 @@ namespace Framework
 
         if (!pauseSystem) {
             return;
+        }
+
+        // ===============================================================================
+        // *** MODIFIED: Only auto-pause on minimize if in gameplay ***
+        // ===============================================================================
+        if (!pauseSystem->IsPauseAllowedInCurrentState()) {
+            return;  // Don't auto-pause in menus
         }
 
         if (iconified) {
