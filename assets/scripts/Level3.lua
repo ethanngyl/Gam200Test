@@ -24,10 +24,10 @@ local kSpacingY = 0.1 -- Tile spacing Y
 -- AP Indicator sprites (camera-relative UI)
 local apIndicators = {}
 local maxAP = 5
-local indicatorSize = 0.08
-local indicatorSpacing = 0.1
-local screenOffsetX = -0.2  -- Offset from camera center (horizontal)
-local screenOffsetY = 0.3   -- Offset from camera center (vertical) - TESTING: reduced from 0.85
+local indicatorSize = 0.5   -- TESTING: Increased from 0.08 to make VERY visible
+local indicatorSpacing = 0.15  -- Increased spacing for larger size
+local screenOffsetX = 0.0   -- TESTING: Place directly at camera center
+local screenOffsetY = 0.0   -- TESTING: Place directly at camera center
 
 -- Debug frame counter
 local debugFrameCounter = 0
@@ -103,14 +103,14 @@ function OnInit()
 
         -- SpawnSprite(texture, x, y, width, height, layer)
         -- Using AP Crystal.png for visual AP indicators
-        -- Layer 100 = RenderLayers::UI (renders on top)
+        -- TESTING: Layer 0 (Ground) instead of 100 (UI) to test layer rendering
         local entityID = SpawnSprite(
             "assets/AP Crystal.png",
             xPos,
             yPos,
             indicatorSize,
             indicatorSize,
-            100  -- UI layer
+            0  -- Ground layer (same as tiles) for testing
         )
 
         if entityID > 0 then
