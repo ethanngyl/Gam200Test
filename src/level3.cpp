@@ -45,6 +45,7 @@
 #include "Turn.h"
 #include "Pause/Pause.h"
 #include "TileMapLoader.h"
+#include "LevelEditor/ImGuiSystem.h"
 
 namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
