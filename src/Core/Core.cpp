@@ -115,10 +115,6 @@ namespace Framework
             }
 
 
-            LOG_INFO("CORE", "================================================");
-            LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
-            LOG_INFO("CORE", "================================================");
-
             LevelLoader::GetInstance().Initialize(this);
 
             LOG_INFO("CORE", "================================================");
@@ -156,6 +152,40 @@ namespace Framework
         scriptSystem = new ScriptSystem();
 		pauseSystem = new PauseSystem();
         rangeIndicatorSystem = new RangeIndicatorSystem();
+
+        // Check for allocation failures
+        if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
+            !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
+            !playerController || !imguiSystem || !audioSystem || !animationSystem ||
+            !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
+            !scriptSystem || !pauseSystem || !rangeIndicatorSystem) {
+
+            LOG_ERROR("CORE", "Failed to allocate one or more systems!");
+
+            // Clean up any successfully allocated systems
+            delete entityManager;
+            delete windowSystem;
+            delete graphicsSystem;
+            delete inputSystem;
+            delete collisionSystem;
+            delete movementSystem;
+            delete projectileSystem;
+            delete spawner;
+            delete playerController;
+            delete imguiSystem;
+            delete audioSystem;
+            delete animationSystem;
+            delete uiSystem;
+            delete eventSystem;
+            delete damageIndicator;
+            delete pathfindingSystem;
+            delete scriptSystem;
+            delete pauseSystem;
+            delete rangeIndicatorSystem;
+
+            throw std::runtime_error("System allocation failure");
+        }
+
         scriptSystem->SetEntityManager(entityManager);
         scriptSystem->SetCoreEngine(this);
         scriptSystem->Initialize();
