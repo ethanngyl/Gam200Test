@@ -543,31 +543,57 @@ namespace Framework {
 
         // Create default material
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
+        auto* defaultMat = resourceManager.GetMaterial(defaultMaterial);
+        if (defaultMat) {
+            defaultMat->blendMode = BlendMode::AlphaBlend;
+            defaultMat->depthTest = true;
+            defaultMat->depthWrite = false;  // 2D sprites don't write depth
+        }
+
         Material2 = resourceManager.CreateMaterial("color", Shader2);
+        auto* mat2 = resourceManager.GetMaterial(Material2);
+        if (mat2) {
+            mat2->blendMode = BlendMode::AlphaBlend;
+            mat2->depthTest = true;
+            mat2->depthWrite = false;
+        }
+
         // Create materials for each primitive
         // Quad material
         quadMaterial = resourceManager.CreateMaterial("quad_mat", defaultShader);
         auto* quadMat = resourceManager.GetMaterial(quadMaterial);
         if (quadMat) {
             quadMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+            quadMat->blendMode = BlendMode::AlphaBlend;
+            quadMat->depthTest = true;
+            quadMat->depthWrite = false;
         }
         // Line material
         lineMaterial = resourceManager.CreateMaterial("line_mat", defaultShader);
         auto* lineMat = resourceManager.GetMaterial(lineMaterial);
         if (lineMat) {
             lineMat->tint = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+            lineMat->blendMode = BlendMode::AlphaBlend;
+            lineMat->depthTest = true;
+            lineMat->depthWrite = false;
         }
         // Circle material
         circleMaterial = resourceManager.CreateMaterial("circle_mat", defaultShader);
         auto* circleMat = resourceManager.GetMaterial(circleMaterial);
         if (circleMat) {
             circleMat->tint = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+            circleMat->blendMode = BlendMode::AlphaBlend;
+            circleMat->depthTest = true;
+            circleMat->depthWrite = false;
         }
         // Wireframe quad material
         wireframeQMaterial = resourceManager.CreateMaterial("wireframeq_mat", defaultShader);
         auto* wireframeQMat = resourceManager.GetMaterial(wireframeQMaterial);
         if (wireframeQMat) {
             wireframeQMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+            wireframeQMat->blendMode = BlendMode::AlphaBlend;
+            wireframeQMat->depthTest = true;
+            wireframeQMat->depthWrite = false;
         }
 
         std::cout << "Created " << 5 << " default materials\n";
@@ -594,6 +620,9 @@ namespace Framework {
         if (bgMat) {
             bgMat->albedoTexture = backgroundTexture;
             bgMat->tint = glm::vec4(1.0f);  // No tinting
+            bgMat->blendMode = BlendMode::AlphaBlend;
+            bgMat->depthTest = true;
+            bgMat->depthWrite = false;
         }
 
         std::cout << "Background setup complete\n";
@@ -605,8 +634,14 @@ namespace Framework {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // Disable depth testing for 2D rendering (can be enabled for 3D)
-        glDisable(GL_DEPTH_TEST);
+        // Enable depth testing for layer-based 2D rendering
+        // Z-depth is set per layer (layer * 0.001f) to control render order
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+
+        // Disable depth write for 2D transparent sprites
+        // This prevents Z-fighting while maintaining proper layer order
+        glDepthMask(GL_FALSE);
 
         // Enable back-face culling
         glEnable(GL_CULL_FACE);
