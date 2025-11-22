@@ -185,6 +185,30 @@ namespace Framework {
         float textY = screenY + offsetY;
 
         // ========================================
+        // RESPONSIVE TEXT SCALING
+        // ========================================
+        // Scale text proportionally to viewport size
+        // Reference resolution: 1920x1080 (common HD resolution)
+        const float REFERENCE_WIDTH = 1920.0f;
+        const float REFERENCE_HEIGHT = 1080.0f;
+
+        // Calculate scale factors for width and height
+        float scaleX = static_cast<float>(fbWidth) / REFERENCE_WIDTH;
+        float scaleY = static_cast<float>(fbHeight) / REFERENCE_HEIGHT;
+
+        // Use the smaller scale factor to maintain aspect ratio
+        // This prevents text from stretching on non-16:9 aspect ratios
+        float viewportScale = std::min(scaleX, scaleY);
+
+        // Apply viewport scaling to the base text scale from Lua
+        float finalScale = scale * viewportScale;
+
+        // Clamp scale to prevent text from becoming too small or too large
+        const float MIN_SCALE = 0.3f;
+        const float MAX_SCALE = 3.0f;
+        finalScale = std::max(MIN_SCALE, std::min(MAX_SCALE, finalScale));
+
+        // ========================================
         // DEBUG OUTPUT
         // ========================================
         static int debugCount = 0;
@@ -194,6 +218,7 @@ namespace Framework {
             LOG_INFO("LevelLoader", "  world: (%.2f, %.2f)", worldX, worldY);
             LOG_INFO("LevelLoader", "  ndc: (%.2f, %.2f)", ndcX, ndcY);
             LOG_INFO("LevelLoader", "  screen: (%.2f, %.2f)", textX, textY);
+            LOG_INFO("LevelLoader", "  scale: base=%.2f viewport=%.2f final=%.2f", scale, viewportScale, finalScale);
         }
         // ========================================
 
@@ -220,7 +245,8 @@ namespace Framework {
         }
 
         // Draw text to the currently bound framebuffer (viewport or main window)
-        loader->graphicsSystem->DrawText4(font, text, textX, textY, scale, textColor);
+        // Use finalScale for responsive text sizing
+        loader->graphicsSystem->DrawText4(font, text, textX, textY, finalScale, textColor);
 
         // Restore previous framebuffer
         if (needsRestore) {
