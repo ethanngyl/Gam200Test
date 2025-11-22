@@ -5,14 +5,6 @@
  Email:         weileong.tan@digipen.edu
  Date:          2025-10-31
  Contribution:  100%
- ------------------------------------------------------------------------------
-  Level 1 gameplay state (implementation)
-
-  Design notes:
-     - Spawns the player, enemies, and sets up gameplay entities
-     - Links the PlayerControllerSystem to the spawned player entity
-     - Uses the CoreEngine GraphicsSystemV2 for camera tracking
-     - Loads multiple config files for different purposes
 ===============================================================================
 */
 
@@ -22,10 +14,21 @@
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
 #include "Component.h" 
-#include "Pause/Pause.h"
+#include "Pause.h"
+#include "GlobalPauseManager.h"
+
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::ScriptComponent;
+
+// ========================================================================
+// PAUSE STATE (File scope)
+// ========================================================================
+namespace {
+    bool g_isPaused = false;
+    bool g_wasPPressed = false;
+    PauseMenuSimple::PauseMenuState g_pauseMenuState;
+}
 
 void level1_Load()
 {
@@ -33,21 +36,27 @@ void level1_Load()
 
     ConfigReader::LoadConfig("assets/valueloader.txt");
     LOG_INFO("LEVEL1", "Loaded UI configuration from valueloader.txt");
+
+    // Reset pause state
+    g_isPaused = false;
+    g_wasPPressed = false;
+    g_pauseMenuState = PauseMenuSimple::PauseMenuState();
 }
 
 void level1_Initialize()
 {
     LOG_INFO("LEVEL1", "=== Level1 Initialize ===");
 
-
     if (!engine) {
         LOG_ERROR("LEVEL1", "Engine is null!");
         return;
     }
+
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Disable();
         LOG_INFO("MENU", "ImGui disabled in menu");
     }
+
     engine->SetPlaying(true);
 
     auto graphics = engine->GetGraphicsSystem();
@@ -57,11 +66,6 @@ void level1_Initialize()
     }
 
     auto spawner = engine->GetSpawner();
-    if (!spawner) {
-        LOG_ERROR("LEVEL1", "Spawner is null!");
-        return;
-    }
-
     auto* scriptSystem = engine->GetScriptSystem();
 
     if (!spawner || !scriptSystem) {
@@ -69,66 +73,37 @@ void level1_Initialize()
         return;
     }
 
-    // Spawn a test entity
+    // Spawn test entity
     auto testEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
     LOG_INFO("LEVEL1", "Spawned test entity: %u", testEntity.GetID());
-
-    // Load script onto the entity
     scriptSystem->LoadScript(testEntity, "./assets/scripts/test_simple.lua");
-    LOG_INFO("LEVEL1", "Loaded test script onto entity %u", testEntity.GetID());
 
-
-    // ========================================================================
-    // Spawn Player - Save the returned entity ID
-    // ========================================================================
+    // Spawn Player
     auto playerEntity = spawner->SpawnPlayer(Vector2D(0.0f, -0.5f));
     auto audioSystem = engine->GetAudioSystem();
-
     auto enemyEntity = spawner->SpawnEnemy(Vector2D(1.0f, -0.5f));
-
 
     auto* playerController = engine->GetPlayerController();
     playerController->SetAudioSystem(audioSystem);
 
     if (playerController) {
         playerController->SetPlayerEntity(playerEntity);
-
-        // ADD THIS LINE - Disable grid movement for level 1
         playerController->SetGridMovementEnabled(false);
-
-        LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
+        LOG_INFO("LEVEL1", "PlayerController configured");
     }
 
-    if (playerController) {
-        playerController->SetPlayerEntity(playerEntity);
-        LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
-    }
-    else {
-        LOG_ERROR("LEVEL1", "PlayerController system is null! Shooting disabled.");
-    }
-
-    //------------------------------------------------------------------
-    //  SPRITE ANIMATION SETUP FOR PLAYER (config-driven)
-    //------------------------------------------------------------------
+    // Sprite animation setup
     auto* em = engine->GetEntityManager();
     auto* gfx = engine->GetGraphicsSystem();
 
     if (em && gfx) {
-        // ============================================================================
-        // Load animation setting
-        // ============================================================================
         ConfigReader::LoadConfig("assets/anim_Bird.txt");
-        LOG_INFO("LEVEL1", "Loaded animation configuration from anim_Bird.txt");
 
-        // === Give player sprite animation ===
         auto& anim = em->AddComponent<Framework::SpriteAnimation>(playerEntity);
-
-        // Sprite path
         std::string spritePath = ConfigReader::GetString("sprite", "");
         anim.spriteSheet = gfx->GetResourceManager().LoadTexture(spritePath);
         Framework::Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
 
-        // Sheet layout
         anim.rows = ConfigReader::GetInt("rows", 1);
         anim.columns = ConfigReader::GetInt("columns", 1);
         anim.frameCount = ConfigReader::GetInt("frameCount", 1);
@@ -136,47 +111,95 @@ void level1_Initialize()
         anim.loop = ConfigReader::GetBool("loop", true);
         anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
 
-        // Derived frame size
         anim.frameWidth = tex->GetWidth() / anim.columns;
         anim.frameHeight = tex->GetHeight() / anim.rows;
         anim.playing = true;
         anim.currentFrame = 0;
 
-        // Renderable
         auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
         rend.visible = true;
         rend.layer = 1;
 
-        // Transform
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
         xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
         xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
 
         ConfigReader::LoadConfig("assets/valueloader.txt");
-        LOG_INFO("LEVEL1", "Reloaded UI configuration");
     }
 
     graphics->SetFollowTarget(playerEntity);
-    // ========================================================================
-    // Tell the PlayerController who the player entity is
-    // ========================================================================
-
-    LOG_INFO("LEVEL1", "PlayerController configured with entity ID: %u", playerEntity);
-
-
-    LOG_INFO("LEVEL1", "All entities spawned successfully");
+    LOG_INFO("LEVEL1", "Initialization complete");
 }
 
 void level1_Update()
 {
-    if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
-    {
+    if (!engine) return;
+
+    auto* input = engine->GetInputSystem();
+    if (!input) return;
+
+    // ========================================================================
+    // P Key Toggle Pause (USING GLOBAL PAUSE)
+    // ========================================================================
+    bool isPPressed = input->IsKeyDown(Framework::KEY_P);
+
+    if (isPPressed && !g_wasPPressed) {
+        GlobalPause::Toggle();  // Toggle global pause state
+
+        if (GlobalPause::IsPaused()) {
+            LOG_INFO("LEVEL1", "Game PAUSED");
+            if (engine->GetAudioSystem()) {
+                engine->GetAudioSystem()->SetMasterVolume(0.0f);
+            }
+        }
+        else {
+            LOG_INFO("LEVEL1", "Game RESUMED");
+            if (engine->GetAudioSystem()) {
+                engine->GetAudioSystem()->SetMasterVolume(1.0f);
+            }
+        }
+    }
+    g_wasPPressed = isPPressed;
+
+    // ========================================================================
+    // If Paused, Handle Pause Menu Input
+    // ========================================================================
+    if (GlobalPause::IsPaused()) {
+        PauseMenuSimple::PauseMenuCallbacks callbacks;
+
+        callbacks.onResume = []() {
+            GlobalPause::SetPaused(false);
+            if (engine && engine->GetAudioSystem()) {
+                engine->GetAudioSystem()->SetMasterVolume(1.0f);
+            }
+            LOG_INFO("LEVEL1", "Resume selected");
+            };
+
+        // Removed: callbacks.onSettings
+
+        callbacks.onMainMenu = []() {
+            GlobalPause::SetPaused(false);
+            next = mainMenu;
+            LOG_INFO("LEVEL1", "Returning to main menu");
+            };
+
+        callbacks.onExit = []() {
+            next = GS_QUIT;
+            LOG_INFO("LEVEL1", "Exiting game");
+            };
+
+        PauseMenuSimple::UpdatePauseMenu(engine, g_pauseMenuState, callbacks);
+
+        return;  // Skip level-specific logic when paused
+    }
+
+    // ========================================================================
+    // Normal Game Logic (Only when NOT paused)
+    // ========================================================================
+    if (input->IsKeyPressed(Framework::KEY_5)) {
         next = mainMenu;
     }
-    else if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_6))
-    {
+    else if (input->IsKeyPressed(Framework::KEY_6)) {
         next = LEVEL_2;
     }
 }
@@ -189,20 +212,16 @@ void level1_Draw()
     if (!graphics) return;
 
     // ========================================================================
-    // Read UI text settings from configuration file
+    // Normal Game UI (Always render - shows frozen frame when paused)
     // ========================================================================
-
-    // Font
     std::string fontLarge = ConfigReader::GetString("lv1_ui_font_large", "Sans48");
 
-    // Text content
     std::string textScaling = ConfigReader::GetString("lv1_text_scaling", "Scaling Button: 3 & 4");
     std::string textRotation = ConfigReader::GetString("lv1_text_rotation", "Rotation Button: 7 & 8");
     std::string textMovement = ConfigReader::GetString("lv1_text_movement", "Character Movement: W A S D");
     std::string textMenu = ConfigReader::GetString("lv1_text_menu", "Back to Menu: 5");
     std::string textNextLevel = ConfigReader::GetString("lv1_text_next_level", "Next Level: 6");
 
-    // Location
     float textX = ConfigReader::GetFloat("lv1_ui_text_x", 50.0f);
     float textScalingY = ConfigReader::GetFloat("lv1_ui_text_scaling_y", 650.0f);
     float textRotationY = ConfigReader::GetFloat("lv1_ui_text_rotation_y", 550.0f);
@@ -210,34 +229,23 @@ void level1_Draw()
     float textMenuY = ConfigReader::GetFloat("lv1_ui_text_menu_y", 350.0f);
     float textNextLevelY = ConfigReader::GetFloat("lv1_ui_text_next_level_y", 250.0f);
 
-    // Scaling and color
     float textScale = ConfigReader::GetFloat("lv1_ui_text_scale", 1.0f);
     float colorR = ConfigReader::GetFloat("lv1_ui_text_color_r", 1.0f);
     float colorG = ConfigReader::GetFloat("lv1_ui_text_color_g", 1.0f);
     float colorB = ConfigReader::GetFloat("lv1_ui_text_color_b", 1.0f);
     glm::vec3 textColor(colorR, colorG, colorB);
 
+    graphics->DrawText4(fontLarge, textScaling, textX, textScalingY, textScale, textColor);
+    graphics->DrawText4(fontLarge, textRotation, textX, textRotationY, textScale, textColor);
+    graphics->DrawText4(fontLarge, textMovement, textX, textMovementY, textScale, textColor);
+    graphics->DrawText4(fontLarge, textMenu, textX, textMenuY, textScale, textColor);
+    graphics->DrawText4(fontLarge, textNextLevel, textX, textNextLevelY, textScale, textColor);
+
     // ========================================================================
-    // Render UI text (using values from the configuration file)
+    // Pause Menu Overlay (If paused)
     // ========================================================================
-
-    graphics->DrawText4(fontLarge, textScaling,
-        textX, textScalingY, textScale, textColor);
-
-    graphics->DrawText4(fontLarge, textRotation,
-        textX, textRotationY, textScale, textColor);
-
-    graphics->DrawText4(fontLarge, textMovement,
-        textX, textMovementY, textScale, textColor);
-
-    graphics->DrawText4(fontLarge, textMenu,
-        textX, textMenuY, textScale, textColor);
-
-    graphics->DrawText4(fontLarge, textNextLevel,
-        textX, textNextLevelY, textScale, textColor);
-
-    if (engine->GetPauseSystem()) {
-        engine->GetPauseSystem()->Draw();
+    if (GlobalPause::IsPaused()) {
+        PauseMenuSimple::DrawPauseMenu(engine, g_pauseMenuState);
     }
 }
 
@@ -245,10 +253,12 @@ void level1_Free()
 {
     LOG_INFO("LEVEL1", "=== Level1 Free ===");
 
+    // Reset pause state
+    g_isPaused = false;
+    g_wasPPressed = false;
 
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Disable();
-        LOG_INFO("MENU", "ImGui disabled in menu");
     }
 
     if (engine) {
@@ -257,8 +267,6 @@ void level1_Free()
         if (engine->GetGraphicsSystem()) {
             engine->GetGraphicsSystem()->ClearFollowTarget();
         }
-
-        LOG_INFO("LEVEL1", "Switched back to EDITOR mode");
     }
 
     if (engine && engine->GetScriptSystem()) {
@@ -272,10 +280,8 @@ void level1_Free()
         }
     }
 
-    // Clean All Entities
     if (engine && engine->GetEntityManager()) {
         auto entities = engine->GetEntityManager()->GetAllEntities();
-
         for (auto entity : entities) {
             engine->GetEntityManager()->DestroyEntity(entity);
         }

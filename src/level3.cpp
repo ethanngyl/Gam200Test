@@ -7,6 +7,9 @@
  Contribution:   100%
  ------------------------------------------------------------------------------
 
+  Modified: 2025-11-22
+  - Added pause functionality using GlobalPauseManager
+
   Design notes:
   Implements Level 3 setup, update loop, and teardown.
 
@@ -36,7 +39,6 @@
 
 #include "Precompiled.h"
 #include "level3.h"
-
 #include "Core.h"
 #include "EntitySpawner.h"
 #include "PlayerManager.h"
@@ -44,12 +46,16 @@
 #include "GraphicsSystemV2.h"
 #include "Turn.h"
 #include "Pause/Pause.h"
+#include "GlobalPauseManager.h"
 #include "TileMapLoader.h"
 
 namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
-   // Framework::Entity gEnemy{ Framework::INVALID_ENTITY };
     std::vector<Framework::Entity>gEnemies;
+
+    // Pause state
+    bool g_wasPPressed = false;
+    PauseMenuSimple::PauseMenuState g_pauseMenuState;
 }
 
 Framework::Entity FindPlayer(Framework::EntityManager* em) {
@@ -85,6 +91,10 @@ std::vector<Framework::Entity> FindAllEnemies(Framework::EntityManager* em) {
 void level3_Load()
 {
     LOG_INFO("LEVEL3", "Load");
+
+    // Reset pause state
+    g_wasPPressed = false;
+    g_pauseMenuState = PauseMenuSimple::PauseMenuState();
 }
 
 /**
@@ -123,14 +133,10 @@ void level3_Initialize()
     gfx->SetCameraZoom(1.0f);
 
     // --- Grid config (adjust freely) ---
-    //const int       gridCols = 16;
-    //const int       gridRows = 20;
     const Vector2D  kStart = Vector2D(-0.6f, -0.4f);
     const Vector2D  kSpacing = Vector2D(0.1f, 0.1f);
 
-    // Spawn grid immediately
-   // spawner->SpawnGrid("wireframequad", gridCols, gridRows, kStart, kSpacing);
-
+    // Load level from JSON
     bool loaded = TileMapLevelLoader::LoadLevel(
         "assets/scripts/JSON/TileMap.json",
         spawner,
@@ -145,26 +151,9 @@ void level3_Initialize()
     }
 
     LOG_INFO("LEVEL3", "Level loaded successfully!");
-    LOG_INFO("LEVEL3", "Grid: %d cols × %d rows", GetGrid().cols, GetGrid().rows);
+    LOG_INFO("LEVEL3", "Grid: %d cols ?%d rows", GetGrid().cols, GetGrid().rows);
 
-    //// Link to global grid so movement/pathfinding can query it
-    //Grid& grid = GetGrid();
-    //grid.cols = gridCols;
-    //grid.rows = gridRows;
-    //grid.startPos = kStart;
-    //grid.spacing = kSpacing;
-    //grid.em = em;
-
-    //// --- Player: spawn at grid center ---
-    //const int  centerX = grid.cols / 2;
-    //const int  centerY = grid.rows / 2;
-    //Vector2D   playerWorldPos = TileToWorld({ centerX, centerY });
-    //gPlayer = spawner->SpawnPlayer(playerWorldPos);
-
-    ////  1. ADD PLAYER STATS HERE (Configuration) 
-    //em->AddComponent<Framework::AP>(gPlayer, 5, 3);
-
-     // ========================================================================
+    // ========================================================================
     // FIND PLAYER (spawned by loader)
     // ========================================================================
 
@@ -210,20 +199,11 @@ void level3_Initialize()
     playerController->SetEntityManager(em);
     playerController->SetInputSystem(input);
     playerController->SetGridMovementEnabled(true);
-    // --- Enemy: spawn furthest, uses A* to chase player ---
-   // gEnemies = PathfindingSystem::SpawnEnemyFurthestFromPlayer(gPlayer, em, spawner);
-
-    //  2. ADD ENEMY STATS HERE (Configuration) 
-   // em->AddComponent<Framework::AP>(gEnemy, 2, 3);
 
     // --- Start turns on Player phase ---
     auto& turn = Turn();
     turn.phase = TurnPhase::Player;
     turn.busy = false;
-
-   /* LOG_INFO("LEVEL3", "Grid=%dx%d, Player(%u) at (%.3f, %.3f), Enemy(%u)",
-        grid.cols, grid.rows, gPlayer.GetID(), playerWorldPos.x, playerWorldPos.y, gEnemy.GetID());*/
-
 }
 
 
@@ -237,15 +217,58 @@ void level3_Initialize()
  */
 void level3_Update()
 {
-    if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
-    {
-        next = mainMenu;
-    }
-
     using namespace Framework;
     CoreEngine* engine = CORE;
     if (!engine) return;
+
+    auto* input = engine->GetInputSystem();
+    if (!input) return;
+
+    // ========================================================================
+    // P Key Toggle Pause (USING GLOBAL PAUSE)
+    // ========================================================================
+    bool isPPressed = input->IsKeyDown(Framework::KEY_P);
+
+    if (isPPressed && !g_wasPPressed) {
+        GlobalPause::Toggle();  // Toggle global pause state
+    }
+    g_wasPPressed = isPPressed;
+
+    // ========================================================================
+    // If Paused, Handle Pause Menu Input
+    // ========================================================================
+    if (GlobalPause::IsPaused()) {
+        PauseMenuSimple::PauseMenuCallbacks callbacks;
+
+        callbacks.onResume = []() {  //  Capture engine by value
+            GlobalPause::SetPaused(false);
+            LOG_INFO("LEVEL3", "Resume selected");
+            };
+
+        callbacks.onMainMenu = []() {  //  Capture engine by value
+            GlobalPause::SetPaused(false);
+            next = mainMenu;
+            LOG_INFO("LEVEL3", "Returning to main menu");
+            };
+
+        callbacks.onExit = []() {  //  Capture engine by value
+            next = GS_QUIT;
+            LOG_INFO("LEVEL3", "Exiting game");
+            };
+
+        PauseMenuSimple::UpdatePauseMenu(engine, g_pauseMenuState, callbacks);
+
+        return;  // Skip level-specific logic when paused
+    }
+
+    // ========================================================================
+    // Normal Game Logic (Only when NOT paused)
+    // ========================================================================
+
+    if (input->IsKeyPressed(Framework::KEY_5))
+    {
+        next = mainMenu;
+    }
 
     auto* pcs = engine->GetPlayerController();
     auto* pfs = engine->GetPathfindingSystem();
@@ -263,19 +286,28 @@ void level3_Update()
         gfx->SetFollowTarget(gPlayer);
     }
 }
+
 /**
  * @brief Draws Level 3
  *
  * Placeholder for custom render logic.
  * Usually handled by the graphics system.
  */
-void level3_Draw() {
+void level3_Draw()
+{
+    using namespace Framework;
+    CoreEngine* engine = CORE;
+    if (!engine) return;
 
-    extern Framework::CoreEngine* engine;
-    if (engine && engine->GetPauseSystem()) {
-        engine->GetPauseSystem()->Draw();
+    auto* graphics = engine->GetGraphicsSystem();
+    if (!graphics) return;
+
+    // ========================================================================
+    // Pause Menu Overlay (If paused)
+    // ========================================================================
+    if (GlobalPause::IsPaused()) {
+        PauseMenuSimple::DrawPauseMenu(engine, g_pauseMenuState);
     }
-
 }
 
 /**
@@ -289,6 +321,13 @@ void level3_Draw() {
 void level3_Free()
 {
     using namespace Framework;
+
+    LOG_INFO("LEVEL3", "=== Level3 Free ===");
+
+    // Reset pause state
+    g_wasPPressed = false;
+    GlobalPause::SetPaused(false);  // Ensure pause is cleared when leaving level
+
     if (CORE && CORE->GetPlayerController()) {
         CORE->GetPlayerController()->ResetGridState();
         CORE->GetPlayerController()->SetGridMovementEnabled(false);
@@ -301,7 +340,6 @@ void level3_Free()
         for (auto e : ents) CORE->GetEntityManager()->DestroyEntity(e);
     }
     gPlayer = Entity{ INVALID_ENTITY };
-    //gEnemy = Entity{ INVALID_ENTITY };
     gEnemies.clear();
 }
 
