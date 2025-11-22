@@ -583,6 +583,13 @@ namespace Framework {
         auto& mr = em->GetComponent<MeshRenderer>(entity);
         mr.tint = glm::vec4(r, g, b, a);
 
+        // Debug: Log tint changes
+        static int logThrottle = 0;
+        if (logThrottle++ % 60 == 0) {  // Log once per second
+            LOG_INFO("LevelLoader", "SetSpriteColor: Entity %lld -> tint(%.2f, %.2f, %.2f, %.2f)",
+                     entityID, r, g, b, a);
+        }
+
         return 0;
     }
 
