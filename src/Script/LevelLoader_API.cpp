@@ -649,11 +649,11 @@ namespace Framework {
             return 2;
         }
 
-        // Find player entity (has Movement + CircleCollider but NOT EnemyAI)
+        // Find player entity (has CircleCollider but NOT EnemyAI)
+        // Note: Movement component is removed in Level 3 for grid-based movement
         Entity player(INVALID_ENTITY);
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Movement>(e) &&
-                em->HasComponent<CircleCollider>(e) &&
+            if (em->HasComponent<CircleCollider>(e) &&
                 !em->HasComponent<EnemyAI>(e)) {
                 player = e;
                 break;
