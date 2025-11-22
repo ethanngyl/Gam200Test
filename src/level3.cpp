@@ -145,7 +145,7 @@ void level3_Initialize()
     }
 
     LOG_INFO("LEVEL3", "Level loaded successfully!");
-    LOG_INFO("LEVEL3", "Grid: %d cols × %d rows", GetGrid().cols, GetGrid().rows);
+    LOG_INFO("LEVEL3", "Grid: %d cols ï¿½ %d rows", GetGrid().cols, GetGrid().rows);
 
     //// Link to global grid so movement/pathfinding can query it
     //Grid& grid = GetGrid();
@@ -182,9 +182,10 @@ void level3_Initialize()
     }
 
     // ========================================================================
-    // FIND ENEMIES AND SET TARGETS
+    // FIND ENEMIES AND SET TARGETS - COMMENTED OUT FOR DEBUGGING
     // ========================================================================
 
+    /*
     gEnemies = FindAllEnemies(em);
     LOG_INFO("LEVEL3", "Found %zu enemies", gEnemies.size());
 
@@ -203,6 +204,7 @@ void level3_Initialize()
             em->AddComponent<AP>(enemy, 50, 3);  // 50 HP, 3 AP
         }
     }
+    */
 
     // Wire controller (minimal, just what's required for movement)
     playerController->SetPlayerEntity(gPlayer);
@@ -254,8 +256,8 @@ void level3_Update()
     // Player movement & interactions (internally handles click/arrow)
     pcs->Update(0.016f);
 
-    // Enemy pathfinding tick
-    pfs->Update(0.016f);
+    // Enemy pathfinding tick - COMMENTED OUT FOR DEBUGGING
+    // pfs->Update(0.016f);
 
     // Camera follow (keeps existing zoom/offset)
     if (auto* gfx = engine->GetGraphicsSystem()) {
