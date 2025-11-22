@@ -45,7 +45,6 @@
 #include "Turn.h"
 #include "Pause/Pause.h"
 #include "TileMapLoader.h"
-#include "LevelEditor/ImGuiSystem.h"
 
 namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
@@ -289,17 +288,10 @@ void level3_Draw() {
 
     extern Framework::CoreEngine* engine;
 
-    // Draw ImGui if enabled (toggle with F1)
-    if (imguiEnabled && engine) {
-        // Draw pause system UI
-        if (engine->GetPauseSystem()) {
-            engine->GetPauseSystem()->Draw();
-        }
-
-        // Draw ImGui editor/inspector
-        if (engine->GetImGuiSystem()) {
-            engine->GetImGuiSystem()->Draw();
-        }
+    // Draw pause system if enabled (toggle with F1)
+    // Note: ImGui renders automatically when enabled, no Draw() call needed
+    if (imguiEnabled && engine && engine->GetPauseSystem()) {
+        engine->GetPauseSystem()->Draw();
     }
 
 }
