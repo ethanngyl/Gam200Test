@@ -546,16 +546,16 @@ namespace Framework {
         auto* defaultMat = resourceManager.GetMaterial(defaultMaterial);
         if (defaultMat) {
             defaultMat->blendMode = BlendMode::AlphaBlend;
-            defaultMat->depthTest = true;
-            defaultMat->depthWrite = true;
+            defaultMat->depthTest = false;   // Disable for 2D rendering
+            defaultMat->depthWrite = false;
         }
 
         Material2 = resourceManager.CreateMaterial("color", Shader2);
         auto* mat2 = resourceManager.GetMaterial(Material2);
         if (mat2) {
             mat2->blendMode = BlendMode::AlphaBlend;
-            mat2->depthTest = true;
-            mat2->depthWrite = true;
+            mat2->depthTest = false;   // Disable for 2D rendering
+            mat2->depthWrite = false;
         }
 
         // Create materials for each primitive
@@ -565,8 +565,8 @@ namespace Framework {
         if (quadMat) {
             quadMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
             quadMat->blendMode = BlendMode::AlphaBlend;
-            quadMat->depthTest = true;
-            quadMat->depthWrite = true;
+            quadMat->depthTest = false;   // Disable for 2D rendering
+            quadMat->depthWrite = false;
         }
         // Line material
         lineMaterial = resourceManager.CreateMaterial("line_mat", defaultShader);
@@ -574,8 +574,8 @@ namespace Framework {
         if (lineMat) {
             lineMat->tint = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
             lineMat->blendMode = BlendMode::AlphaBlend;
-            lineMat->depthTest = true;
-            lineMat->depthWrite = true;
+            lineMat->depthTest = false;   // Disable for 2D rendering
+            lineMat->depthWrite = false;
         }
         // Circle material
         circleMaterial = resourceManager.CreateMaterial("circle_mat", defaultShader);
@@ -583,8 +583,8 @@ namespace Framework {
         if (circleMat) {
             circleMat->tint = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
             circleMat->blendMode = BlendMode::AlphaBlend;
-            circleMat->depthTest = true;
-            circleMat->depthWrite = true;
+            circleMat->depthTest = false;   // Disable for 2D rendering
+            circleMat->depthWrite = false;
         }
         // Wireframe quad material
         wireframeQMaterial = resourceManager.CreateMaterial("wireframeq_mat", defaultShader);
@@ -592,8 +592,8 @@ namespace Framework {
         if (wireframeQMat) {
             wireframeQMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
             wireframeQMat->blendMode = BlendMode::AlphaBlend;
-            wireframeQMat->depthTest = true;
-            wireframeQMat->depthWrite = true;
+            wireframeQMat->depthTest = false;   // Disable for 2D rendering
+            wireframeQMat->depthWrite = false;
         }
 
         std::cout << "Created " << 5 << " default materials\n";
@@ -621,8 +621,8 @@ namespace Framework {
             bgMat->albedoTexture = backgroundTexture;
             bgMat->tint = glm::vec4(1.0f);  // No tinting
             bgMat->blendMode = BlendMode::AlphaBlend;
-            bgMat->depthTest = true;
-            bgMat->depthWrite = true;
+            bgMat->depthTest = false;   // Disable for 2D rendering
+            bgMat->depthWrite = false;
         }
 
         std::cout << "Background setup complete\n";
