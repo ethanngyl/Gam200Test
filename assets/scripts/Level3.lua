@@ -91,10 +91,10 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         -- SpawnSprite(texture, x, y, width, height, layer)
-        -- Using grid.png as placeholder quad texture
+        -- Using AP Crystal.png for visual AP indicators
         -- Layer 100 = RenderLayers::UI (renders on top)
         local entityID = SpawnSprite(
-            "assets/grid.png",
+            "assets/AP Crystal.png",
             xPos,
             yPos,
             indicatorSize,
