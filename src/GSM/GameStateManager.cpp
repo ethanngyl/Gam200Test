@@ -12,7 +12,14 @@
 #include "level2.h"
 #include "level3.h"
 #include "LevelLoader.h"
-#include "TimeConstants.h"  
+#include "TimeConstants.h"
+
+// Level 3 Lua-specific includes
+#include "PlayerManager.h"
+#include "Turn.h"
+#include "EnemyAI.h"
+#include "Movement.h"
+#include "CircleCollider.h"
 
 // ============================================================================
 // GLOBAL VARIABLE DEFINITIONS
