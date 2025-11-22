@@ -19,8 +19,6 @@
 #include "Turn.h"
 #include "Pathfinding.h"  // EnemyAI component
 #include "Component.h"    // Movement, CircleCollider components
-#include "EntitySpawner.h"        // EntitySpawner for AP indicators
-#include "Graphics/RenderLayers.h" // RenderLayers::UI constant
 
 // ============================================================================
 // GLOBAL VARIABLE DEFINITIONS
@@ -231,9 +229,6 @@ void GSM_Update()
     {
         LOG_INFO("GSM", "Level 3 state (Lua-scripted)");
 
-        // Shared state for Level 3 (accessible across all lambdas)
-        static std::vector<Framework::Entity> level3_apIndicators;
-
         // ============================================================================
         // LOAD
         // ============================================================================
@@ -311,42 +306,6 @@ void GSM_Update()
 
                         LOG_INFO("GSM", "Player controller configured for entity ID: %u", player.GetID());
                         LOG_INFO("GSM", "Grid movement enabled: TRUE");
-
-                        // ============================================================================
-                        // CREATE AP INDICATOR UI
-                        // ============================================================================
-                        // Create 5 quad sprites to show action points (maxActionPoints = 5)
-                        level3_apIndicators.clear(); // Clear any previous indicators
-
-                        const int maxAP = 5;
-                        const float indicatorSize = 0.08f;
-                        const float indicatorSpacing = 0.1f;
-                        const float startX = -0.2f; // Center horizontally
-                        const float yPos = 0.85f;   // Top of screen
-
-                        for (int i = 0; i < maxAP; ++i) {
-                            float xPos = startX + (i * indicatorSpacing);
-                            Framework::Vector2D pos(xPos, yPos);
-                            Framework::Vector2D size(indicatorSize, indicatorSize);
-
-                            // Spawn quad sprite for this AP indicator
-                            Framework::Entity indicator = spawner->SpawnSprite(
-                                "assets/grid.png",  // Using grid texture as placeholder quad
-                                pos,
-                                size
-                            );
-
-                            // Set to UI layer so it renders on top
-                            if (em->HasComponent<Framework::MeshRenderer>(indicator)) {
-                                auto& mr = em->GetComponent<Framework::MeshRenderer>(indicator);
-                                mr.layer = Framework::RenderLayers::UI;
-                                mr.tint = glm::vec4(0.2f, 1.0f, 0.2f, 1.0f); // Green = available AP
-                            }
-
-                            level3_apIndicators.push_back(indicator);
-                        }
-
-                        LOG_INFO("GSM", "Created %d AP indicator sprites on UI layer", maxAP);
                     }
                     else {
                         LOG_ERROR("GSM", "No player entity found!");
@@ -414,35 +373,6 @@ void GSM_Update()
                         gfx->SetFollowTarget(cachedPlayer);
                     }
                 }
-
-                // ============================================================================
-                // UPDATE AP INDICATOR UI
-                // ============================================================================
-                auto* em = engine->GetEntityManager();
-                if (em && cachedPlayer.GetID() != Framework::INVALID_ENTITY &&
-                    em->HasComponent<Framework::AP>(cachedPlayer)) {
-
-                    auto& playerAP = em->GetComponent<Framework::AP>(cachedPlayer);
-                    int currentAP = playerAP.actionPoints;
-                    int maxAP = playerAP.maxActionPoints;
-
-                    // Update indicator colors based on current AP
-                    // Green = AP available, Red/Dark = AP used
-                    for (size_t i = 0; i < level3_apIndicators.size(); ++i) {
-                        Framework::Entity indicator = level3_apIndicators[i];
-                        if (em->HasComponent<Framework::MeshRenderer>(indicator)) {
-                            auto& mr = em->GetComponent<Framework::MeshRenderer>(indicator);
-
-                            // If this indicator index < currentAP, show as available (green)
-                            // Otherwise show as used (dark red)
-                            if (static_cast<int>(i) < currentAP) {
-                                mr.tint = glm::vec4(0.2f, 1.0f, 0.2f, 1.0f); // Bright green
-                            } else {
-                                mr.tint = glm::vec4(0.3f, 0.1f, 0.1f, 0.7f); // Dark red
-                            }
-                        }
-                    }
-                }
             }
 
             // Call Lua OnUpdate
@@ -480,17 +410,13 @@ void GSM_Update()
                     gfx->ClearFollowTarget();
                 }
 
-                // Destroy all entities (including AP indicators)
+                // Destroy all entities
                 if (auto* em = engine->GetEntityManager()) {
                     auto ents = em->GetAllEntities();
                     for (auto e : ents) {
                         em->DestroyEntity(e);
                     }
                 }
-
-                // Clear AP indicator vector
-                level3_apIndicators.clear();
-                LOG_INFO("GSM", "Cleared AP indicators");
             }
 
             // Unload Lua level

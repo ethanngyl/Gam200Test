@@ -506,4 +506,189 @@ namespace Framework {
         return 1;
     }
 
+    // ========================================================================
+    // AP INDICATOR / ENTITY MANAGEMENT API
+    // ========================================================================
+
+    int LevelLoader::Lua_SpawnSprite(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Parse parameters: SpawnSprite(texture, x, y, width, height, layer)
+        const char* texture = luaL_checkstring(L, 1);
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+        float width = luaL_checknumber(L, 4);
+        float height = luaL_checknumber(L, 5);
+        int layer = luaL_optinteger(L, 6, 100);  // Default to UI layer
+
+        auto* spawner = loader->coreEngine->GetSpawner();
+        auto* em = loader->coreEngine->GetEntityManager();
+
+        if (!spawner || !em) {
+            LOG_ERROR("LevelLoader", "SpawnSprite failed: spawner or entity manager not available");
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Spawn sprite entity
+        Entity entity = spawner->SpawnSprite(texture, Vector2D(x, y), Vector2D(width, height));
+
+        if (entity.GetID() == INVALID_ENTITY) {
+            LOG_ERROR("LevelLoader", "Failed to spawn sprite: %s", texture);
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Set render layer
+        if (em->HasComponent<MeshRenderer>(entity)) {
+            auto& mr = em->GetComponent<MeshRenderer>(entity);
+            mr.layer = layer;
+        }
+
+        LOG_INFO("LevelLoader", "Spawned sprite '%s' at (%.2f, %.2f) with size (%.2f, %.2f), layer=%d, ID=%u",
+                 texture, x, y, width, height, layer, entity.GetID());
+
+        // Return entity ID as integer
+        lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
+        return 1;
+    }
+
+    int LevelLoader::Lua_SetSpriteColor(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: SetSpriteColor(entityID, r, g, b, a)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        float r = luaL_checknumber(L, 2);
+        float g = luaL_checknumber(L, 3);
+        float b = luaL_checknumber(L, 4);
+        float a = luaL_optnumber(L, 5, 1.0f);  // Default alpha = 1.0
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) {
+            LOG_WARN("LevelLoader", "SetSpriteColor: Invalid entity or no MeshRenderer (ID=%lld)", entityID);
+            return 0;
+        }
+
+        auto& mr = em->GetComponent<MeshRenderer>(entity);
+        mr.tint = glm::vec4(r, g, b, a);
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetSpritePosition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: SetSpritePosition(entityID, x, y)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
+            LOG_WARN("LevelLoader", "SetSpritePosition: Invalid entity or no Transform (ID=%lld)", entityID);
+            return 0;
+        }
+
+        auto& transform = em->GetComponent<Transform>(entity);
+        transform.position.x = x;
+        transform.position.y = y;
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_DestroyEntity(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: DestroyEntity(entityID)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (entity.IsValid()) {
+            em->DestroyEntity(entity);
+            LOG_INFO("LevelLoader", "Destroyed entity ID=%lld", entityID);
+        } else {
+            LOG_WARN("LevelLoader", "DestroyEntity: Invalid entity (ID=%lld)", entityID);
+        }
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_GetPlayerAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        // Find player entity (has Movement + CircleCollider but NOT EnemyAI)
+        Entity player(INVALID_ENTITY);
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Movement>(e) &&
+                em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
+            }
+        }
+
+        if (player.GetID() == INVALID_ENTITY || !em->HasComponent<AP>(player)) {
+            LOG_WARN("LevelLoader", "GetPlayerAP: Player not found or has no AP component");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& ap = em->GetComponent<AP>(player);
+
+        // Return currentAP, maxAP
+        lua_pushinteger(L, ap.actionPoints);
+        lua_pushinteger(L, ap.maxActionPoints);
+        return 2;
+    }
+
+    int LevelLoader::Lua_GetCameraPosition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->graphicsSystem) {
+            lua_pushnumber(L, 0.0);
+            lua_pushnumber(L, 0.0);
+            lua_pushnumber(L, 0.0);
+            return 3;
+        }
+
+        glm::vec3 camPos = loader->graphicsSystem->GetCamera().GetPosition();
+
+        // Return x, y, z
+        lua_pushnumber(L, camPos.x);
+        lua_pushnumber(L, camPos.y);
+        lua_pushnumber(L, camPos.z);
+        return 3;
+    }
+
 } // namespace Framework

@@ -21,6 +21,14 @@ local kStartY = -0.4  -- Grid start position Y
 local kSpacingX = 0.1 -- Tile spacing X
 local kSpacingY = 0.1 -- Tile spacing Y
 
+-- AP Indicator sprites (camera-relative UI)
+local apIndicators = {}
+local maxAP = 5
+local indicatorSize = 0.08
+local indicatorSpacing = 0.1
+local screenOffsetX = -0.2  -- Offset from camera center (horizontal)
+local screenOffsetY = 0.85  -- Offset from camera center (vertical, near top)
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -69,12 +77,53 @@ function OnInit()
     -- PlayerController is configured in C++ (SetPlayerEntity, SetGridMovementEnabled)
     -- Turn phase is set to Player in C++
 
+    -- ========================================================================
+    -- CREATE AP INDICATOR UI (CAMERA-RELATIVE)
+    -- ========================================================================
+    Log("Creating AP indicators (camera-relative)...")
+
+    -- Get initial camera position
+    local camX, camY, camZ = GetCameraPosition()
+
+    -- Create 5 AP indicator sprites
+    for i = 1, maxAP do
+        local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+        local yPos = camY + screenOffsetY
+
+        -- SpawnSprite(texture, x, y, width, height, layer)
+        -- Using grid.png as placeholder quad texture
+        -- Layer 100 = RenderLayers::UI (renders on top)
+        local entityID = SpawnSprite(
+            "assets/grid.png",
+            xPos,
+            yPos,
+            indicatorSize,
+            indicatorSize,
+            100  -- UI layer
+        )
+
+        if entityID > 0 then
+            -- Store entity ID
+            apIndicators[i] = entityID
+
+            -- Set initial color: green = AP available
+            SetSpriteColor(entityID, 0.2, 1.0, 0.2, 1.0)
+
+            Log("  ✓ Created AP indicator " .. i .. " (ID: " .. entityID .. ")")
+        else
+            Log("  ✗ Failed to create AP indicator " .. i)
+        end
+    end
+
+    Log("AP indicators created: " .. #apIndicators .. "/" .. maxAP)
+
     initialized = true
     Log("========================================")
     Log("Level 3 initialization complete")
     Log("Controls:")
     Log("  - Click tiles or use arrow keys to move")
     Log("  - Press 5 to return to main menu")
+    Log("  - AP indicators shown at top of screen")
     Log("========================================")
 end
 
@@ -91,6 +140,40 @@ function OnUpdate(dt)
     if IsKeyDown("5") then
         Log("KEY_5 pressed - returning to main menu")
         SetNextGameState("mainMenu")
+    end
+
+    -- ========================================================================
+    -- UPDATE AP INDICATORS (CAMERA-RELATIVE POSITIONING + COLOR UPDATES)
+    -- ========================================================================
+    if #apIndicators > 0 then
+        -- Get current camera position
+        local camX, camY, camZ = GetCameraPosition()
+
+        -- Get player's current AP
+        local currentAP, maxPlayerAP = GetPlayerAP()
+
+        -- Update each indicator's position and color
+        for i = 1, #apIndicators do
+            local entityID = apIndicators[i]
+
+            -- Calculate screen-relative position (follows camera)
+            local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+            local yPos = camY + screenOffsetY
+
+            -- Update position to follow camera
+            SetSpritePosition(entityID, xPos, yPos)
+
+            -- Update color based on current AP
+            -- If this indicator index <= currentAP, show as available (green)
+            -- Otherwise show as used (dark red)
+            if i <= currentAP then
+                -- Available AP: bright green
+                SetSpriteColor(entityID, 0.2, 1.0, 0.2, 1.0)
+            else
+                -- Used AP: dark red
+                SetSpriteColor(entityID, 0.3, 0.1, 0.1, 0.7)
+            end
+        end
     end
 
     -- Engine is set to playing mode in C++ during update loop
@@ -115,6 +198,17 @@ function OnDestroy()
     Log("========================================")
     Log("Level 3 cleanup...")
     Log("========================================")
+
+    -- Destroy AP indicator entities
+    for i = 1, #apIndicators do
+        local entityID = apIndicators[i]
+        if entityID > 0 then
+            DestroyEntity(entityID)
+            Log("  Destroyed AP indicator " .. i .. " (ID: " .. entityID .. ")")
+        end
+    end
+    apIndicators = {}
+    Log("AP indicators cleaned up")
 
     -- Note: Entity cleanup, camera reset, and player controller reset
     -- happen in C++ level3_Free() function

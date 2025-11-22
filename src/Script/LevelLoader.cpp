@@ -304,6 +304,14 @@ namespace Framework {
         lua_register(L, "LoadJSON", Lua_LoadJSON);
         lua_register(L, "LoadTileMap", Lua_LoadTileMap);
 
+        // AP Indicator / Entity Management
+        lua_register(L, "SpawnSprite", Lua_SpawnSprite);
+        lua_register(L, "SetSpriteColor", Lua_SetSpriteColor);
+        lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
+        lua_register(L, "DestroyEntity", Lua_DestroyEntity);
+        lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
+        lua_register(L, "GetCameraPosition", Lua_GetCameraPosition);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 
