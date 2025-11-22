@@ -235,4 +235,31 @@ namespace Framework
         AttackRangeComponent(int min, int max) : minRange(min), maxRange(max) {}
     };
 
+    /**
+     * @struct PlayerInventory
+     * @brief Tracks collected items for win condition
+     */
+    struct PlayerInventory : public Component<PlayerInventory>
+    {
+        int chestsCollected = 0;
+        int totalChestsInLevel = 0; // Set this when loading the level
+    };
+
+    /**
+     * @struct Chest
+     * @brief Tag component for chest entities
+     */
+    struct Chest : public Component<Chest>
+    {
+        bool collected = false;
+    };
+
+    /**
+     * @struct Goal
+     * @brief Tag component for the level end point
+     */
+    struct Goal : public Component<Goal>
+    {
+    };
+
 }
