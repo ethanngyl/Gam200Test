@@ -161,6 +161,23 @@ namespace Framework {
             return 0;
         }
 
+        // CRITICAL: Validate button still exists in UISystem (prevents cross-level contamination)
+        auto* uiSystem = loader->coreEngine->GetUISystem();
+        if (!uiSystem) {
+            return 0; // No UI system, can't render
+        }
+
+        // Check if button entity is still valid (not destroyed when level changed)
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em || !button->entity.IsValid() || !em->EntityExists(button->entity)) {
+            // Button was destroyed (level changed), don't render
+            static int warnThrottle = 0;
+            if (warnThrottle++ % 60 == 0) {
+                LOG_WARN("LevelLoader", "Skipping text for destroyed button (level changed?) - throttled");
+            }
+            return 0;
+        }
+
         // Get correct render target size
         int fbWidth, fbHeight;
 
