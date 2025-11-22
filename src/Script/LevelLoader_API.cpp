@@ -184,15 +184,17 @@ namespace Framework {
         auto* imgui = loader->coreEngine->GetImGuiSystem();
         if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport() &&
             imgui->GetViewportFBO() != 0) {
+            // Editor mode: Use viewport dimensions
             fbWidth = imgui->GetViewportWidth();
             fbHeight = imgui->GetViewportHeight();
         }
         else {
+            // Non-editor mode: Use WINDOW size (not framebuffer - avoids DPI scaling issues)
             auto windowSystem = loader->coreEngine->GetWindowSystem();
             if (!windowSystem) return 0;
             GLFWwindow* window = windowSystem->GetWindow();
             if (!window) return 0;
-            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+            glfwGetWindowSize(window, &fbWidth, &fbHeight);  // Changed from glfwGetFramebufferSize
         }
 
         // ========================================
