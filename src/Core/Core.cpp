@@ -481,23 +481,8 @@ namespace Framework
             graphicsSystem->Update(dt);
             glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
 
-            // Setup GL state for text
-            glDisable(GL_DEPTH_TEST);
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            // ========================================
-            // Draw level text INTO the viewport
-            // ========================================
-            graphicsSystem->GetTextRenderer().setScreenSize(
-                imguiSystem->GetViewportWidth(),
-                imguiSystem->GetViewportHeight()
-            );
-            std::cout << "[Core] Drawing text to viewport: "
-                << imguiSystem->GetViewportWidth() << "x"
-                << imguiSystem->GetViewportHeight() << "\n";
+            // Draw level text INTO the viewport (after game rendering)
             LevelLoader::GetInstance().DrawCurrentLevel();
-            graphicsSystem->DrawText4("Sans48", "TEST", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-            // ========================================
 
             graphicsSystem->ClearRenderTarget();
 
@@ -510,8 +495,9 @@ namespace Framework
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         else {
-            // Normal rendering - just draw the game scene
+            // Normal rendering - draw game scene + text to main window
             graphicsSystem->Update(dt);
+            LevelLoader::GetInstance().DrawCurrentLevel();
 
         }
 

@@ -155,6 +155,25 @@ namespace Framework {
         float colorG = luaL_checknumber(L, 8);
         float colorB = luaL_checknumber(L, 9);
 
+        // DEBUG: Track how many times DrawButtonText is called per frame
+        static int frameCounter = 0;
+        static int currentFrame = -1;
+        static int callsThisFrame = 0;
+
+        int thisFrame = static_cast<int>(frameCounter / 60); // Approximate frame number
+        if (thisFrame != currentFrame) {
+            if (callsThisFrame > 2) {  // Expected: 2 calls (Play + Exit buttons)
+                LOG_WARN("LevelLoader", "!!! DrawButtonText called %d times last frame (expected 2) !!!", callsThisFrame);
+            }
+            currentFrame = thisFrame;
+            callsThisFrame = 0;
+        }
+        callsThisFrame++;
+        frameCounter++;
+
+        LOG_INFO("LevelLoader", "DrawButtonText #%d this frame: '%s' (buttonID=%lld)",
+                 callsThisFrame, text, buttonID);
+
         UIButton* button = reinterpret_cast<UIButton*>(static_cast<intptr_t>(buttonID));
         if (!button) {
             LOG_WARN("LevelLoader", "Invalid button ID for DrawButtonText");
