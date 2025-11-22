@@ -216,13 +216,160 @@ void GSM_Update()
         break;
 
     case LEVEL_3:
-        LOG_INFO("GSM", "Level 3 state");
-        fpLoad = level3_Load;
-        fpInitialize = level3_Initialize;
-        fpUpdate = level3_Update;
-        fpDraw = level3_Draw;
-        fpFree = level3_Free;
-        fpUnload = level3_Unload;
+        LOG_INFO("GSM", "Level 3 state (Lua-scripted)");
+
+        // ============================================================================
+        // LOAD
+        // ============================================================================
+        fpLoad = []() {
+            LOG_INFO("GSM", "Loading Level3 Lua script...");
+
+            auto& loader = Framework::LevelLoader::GetInstance();
+            bool success = loader.LoadLevel("assets/scripts/Level3.lua");
+
+            if (!success) {
+                LOG_ERROR("GSM", "CRITICAL: Failed to load Level3 Lua script!");
+                LOG_ERROR("GSM", "Check: assets/scripts/Level3.lua exists");
+                next = GS_QUIT;
+            }
+            else {
+                LOG_INFO("GSM", "Level3 Lua script loaded successfully");
+            }
+            };
+
+        // ============================================================================
+        // INITIALIZE
+        // ============================================================================
+        fpInitialize = []() {
+            LOG_INFO("GSM", "Level3 ready (Lua-scripted)");
+            // Additional C++ initialization (player controller setup)
+            extern Framework::CoreEngine* engine;
+            if (engine) {
+                auto* em = engine->GetEntityManager();
+                auto* playerController = engine->GetPlayerController();
+                auto* spawner = engine->GetSpawner();
+                auto* input = engine->GetInputSystem();
+
+                if (em && playerController && spawner && input) {
+                    // Find player entity (spawned by TileMapLoader in Lua)
+                    Framework::Entity player{ Framework::INVALID_ENTITY };
+                    for (Framework::Entity e : em->GetAllEntities()) {
+                        if (em->HasComponent<Framework::Movement>(e) &&
+                            em->HasComponent<Framework::CircleCollider>(e) &&
+                            !em->HasComponent<Framework::EnemyAI>(e)) {
+                            player = e;
+                            break;
+                        }
+                    }
+
+                    if (player.GetID() != Framework::INVALID_ENTITY) {
+                        // Configure player controller
+                        playerController->SetPlayerEntity(player);
+                        playerController->SetEntitySpawner(spawner);
+                        playerController->SetEntityManager(em);
+                        playerController->SetInputSystem(input);
+                        playerController->SetGridMovementEnabled(true);
+
+                        // Set camera follow
+                        if (auto* gfx = engine->GetGraphicsSystem()) {
+                            gfx->SetFollowTarget(player);
+                        }
+
+                        LOG_INFO("GSM", "Player controller configured for entity ID: %u", player.GetID());
+                    }
+                    else {
+                        LOG_ERROR("GSM", "No player entity found!");
+                    }
+
+                    // Initialize turn system
+                    auto& turn = Framework::Turn();
+                    turn.phase = Framework::TurnPhase::Player;
+                    turn.busy = false;
+                }
+            }
+            };
+
+        // ============================================================================
+        // UPDATE
+        // ============================================================================
+        fpUpdate = []() {
+            extern Framework::CoreEngine* engine;
+
+            // F9 Hot Reload Support
+            if (engine && engine->GetInputSystem()) {
+                auto* input = engine->GetInputSystem();
+                if (input->IsKeyPressed(Framework::KEY_F9)) {
+                    LOG_INFO("GSM", "F9 pressed - Hot reloading Level3...");
+                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
+                }
+            }
+
+            // C++ system updates (player controller, pathfinding)
+            if (engine) {
+                auto* pcs = engine->GetPlayerController();
+                // Pathfinding commented out for debugging
+                // auto* pfs = engine->GetPathfindingSystem();
+
+                if (pcs) {
+                    pcs->Update(Framework::Time::FIXED_DT_F);
+                }
+
+                // Set engine to playing state
+                engine->SetPlaying(true);
+            }
+
+            // Call Lua OnUpdate
+            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
+                Framework::Time::FIXED_DT_F
+            );
+            };
+
+        // ============================================================================
+        // DRAW
+        // ============================================================================
+        fpDraw = []() {
+            Framework::LevelLoader::GetInstance().DrawCurrentLevel();
+            };
+
+        // ============================================================================
+        // FREE
+        // ============================================================================
+        fpFree = []() {
+            LOG_INFO("GSM", "Cleaning up Level3...");
+
+            // C++ cleanup (entities, systems, camera)
+            extern Framework::CoreEngine* engine;
+            if (engine) {
+                // Reset player controller
+                if (auto* pcs = engine->GetPlayerController()) {
+                    pcs->ResetGridState();
+                    pcs->SetGridMovementEnabled(false);
+                }
+
+                // Clear camera follow
+                if (auto* gfx = engine->GetGraphicsSystem()) {
+                    gfx->ClearFollowTarget();
+                }
+
+                // Destroy all entities
+                if (auto* em = engine->GetEntityManager()) {
+                    auto ents = em->GetAllEntities();
+                    for (auto e : ents) {
+                        em->DestroyEntity(e);
+                    }
+                }
+            }
+
+            // Unload Lua level
+            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
+            };
+
+        // ============================================================================
+        // UNLOAD
+        // ============================================================================
+        fpUnload = []() {
+            LOG_INFO("GSM", "Level3 Lua script unloaded");
+            };
         break;
 
     case GS_RESTART:
