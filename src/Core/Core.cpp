@@ -481,6 +481,12 @@ namespace Framework
             graphicsSystem->Update(dt);
             glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
 
+            // Update text renderer for viewport dimensions
+            graphicsSystem->GetTextRenderer().setScreenSize(
+                imguiSystem->GetViewportWidth(),
+                imguiSystem->GetViewportHeight()
+            );
+
             // Draw level text INTO the viewport (after game rendering)
             LevelLoader::GetInstance().DrawCurrentLevel();
 
@@ -497,6 +503,13 @@ namespace Framework
         else {
             // Normal rendering - draw game scene + text to main window
             graphicsSystem->Update(dt);
+
+            // Update text renderer for window dimensions
+            int winWidth, winHeight;
+            glfwGetWindowSize(windowSystem->GetWindow(), &winWidth, &winHeight);
+            graphicsSystem->GetTextRenderer().setScreenSize(winWidth, winHeight);
+
+            // Draw level text to main window
             LevelLoader::GetInstance().DrawCurrentLevel();
 
         }
