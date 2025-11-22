@@ -29,6 +29,9 @@ local indicatorSpacing = 0.1
 local screenOffsetX = -0.2  -- Offset from camera center (horizontal)
 local screenOffsetY = 0.85  -- Offset from camera center (vertical, near top)
 
+-- Debug frame counter
+local debugFrameCounter = 0
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -80,15 +83,22 @@ function OnInit()
     -- ========================================================================
     -- CREATE AP INDICATOR UI (CAMERA-RELATIVE)
     -- ========================================================================
+    Log("========================================")
     Log("Creating AP indicators (camera-relative)...")
+    Log("========================================")
 
     -- Get initial camera position
     local camX, camY, camZ = GetCameraPosition()
+    Log("Initial camera position: (" .. camX .. ", " .. camY .. ", " .. camZ .. ")")
+    Log("Screen offsets: X=" .. screenOffsetX .. ", Y=" .. screenOffsetY)
+    Log("Indicator size: " .. indicatorSize .. ", spacing: " .. indicatorSpacing)
 
     -- Create 5 AP indicator sprites
     for i = 1, maxAP do
         local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
         local yPos = camY + screenOffsetY
+
+        Log("AP Indicator " .. i .. " - Calculated position: (" .. xPos .. ", " .. yPos .. ")")
 
         -- SpawnSprite(texture, x, y, width, height, layer)
         -- Using AP Crystal.png for visual AP indicators
@@ -109,13 +119,14 @@ function OnInit()
             -- Set initial color: green = AP available
             SetSpriteColor(entityID, 0.2, 1.0, 0.2, 1.0)
 
-            Log("  ✓ Created AP indicator " .. i .. " (ID: " .. entityID .. ")")
+            Log("  ✓ Created AP indicator " .. i .. " (ID: " .. entityID .. ") - Layer: 100 (UI)")
         else
-            Log("  ✗ Failed to create AP indicator " .. i)
+            Log("  ✗ FAILED to create AP indicator " .. i)
         end
     end
 
     Log("AP indicators created: " .. #apIndicators .. "/" .. maxAP)
+    Log("========================================")
 
     initialized = true
     Log("========================================")
@@ -152,6 +163,16 @@ function OnUpdate(dt)
         -- Get player's current AP
         local currentAP, maxPlayerAP = GetPlayerAP()
 
+        -- Debug logging (once per second @ 60fps)
+        debugFrameCounter = debugFrameCounter + 1
+        local shouldDebug = (debugFrameCounter % 60 == 0)
+
+        if shouldDebug then
+            Log("[AP DEBUG] Frame " .. debugFrameCounter .. " - Camera: (" .. camX .. ", " .. camY .. ", " .. camZ .. ")")
+            Log("[AP DEBUG] Player AP: " .. currentAP .. "/" .. maxPlayerAP)
+            Log("[AP DEBUG] Active indicators: " .. #apIndicators)
+        end
+
         -- Update each indicator's position and color
         for i = 1, #apIndicators do
             local entityID = apIndicators[i]
@@ -163,15 +184,26 @@ function OnUpdate(dt)
             -- Update position to follow camera
             SetSpritePosition(entityID, xPos, yPos)
 
+            -- Debug first indicator position
+            if shouldDebug and i == 1 then
+                Log("[AP DEBUG] Indicator #1 (ID " .. entityID .. ") updated to: (" .. xPos .. ", " .. yPos .. ")")
+            end
+
             -- Update color based on current AP
             -- If this indicator index <= currentAP, show as available (green)
             -- Otherwise show as used (dark red)
             if i <= currentAP then
                 -- Available AP: bright green
                 SetSpriteColor(entityID, 0.2, 1.0, 0.2, 1.0)
+                if shouldDebug and i == 1 then
+                    Log("[AP DEBUG] Indicator #" .. i .. " - GREEN (available)")
+                end
             else
                 -- Used AP: dark red
                 SetSpriteColor(entityID, 0.3, 0.1, 0.1, 0.7)
+                if shouldDebug and i == 1 then
+                    Log("[AP DEBUG] Indicator #" .. i .. " - RED (used)")
+                end
             end
         end
     end
