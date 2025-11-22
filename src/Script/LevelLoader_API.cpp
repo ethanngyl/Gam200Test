@@ -198,7 +198,34 @@ namespace Framework {
         // ========================================
 
         glm::vec3 textColor(colorR, colorG, colorB);
+
+        // CRITICAL FIX: Bind viewport FBO if editor is enabled
+        // This ensures text renders to the game viewport, not the main window
+        GLuint previousFBO = 0;
+        bool needsRestore = false;
+
+        if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport()) {
+            GLuint viewportFBO = imgui->GetViewportFBO();
+            if (viewportFBO != 0) {
+                // Save current FBO and bind viewport FBO
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&previousFBO));
+                glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+                needsRestore = true;
+
+                static int bindLog = 0;
+                if (bindLog++ % 60 == 0) {
+                    LOG_INFO("LevelLoader", "Text rendering to viewport FBO %u (was %u)", viewportFBO, previousFBO);
+                }
+            }
+        }
+
+        // Draw text to the currently bound framebuffer (viewport or main window)
         loader->graphicsSystem->DrawText4(font, text, textX, textY, scale, textColor);
+
+        // Restore previous framebuffer
+        if (needsRestore) {
+            glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
+        }
 
         return 0;
     }
