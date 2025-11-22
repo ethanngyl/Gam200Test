@@ -15,6 +15,15 @@
 #include "ImguiSystem.h"
 #include "TileMapLoader.h"
 
+// Fix for Windows min/max macro conflicts
+#include <algorithm>
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
 namespace Framework {
 
     // ========================================================================
