@@ -17,9 +17,8 @@
 // Level 3 Lua-specific includes
 #include "PlayerManager.h"
 #include "Turn.h"
-#include "EnemyAI.h"
-#include "Movement.h"
-#include "CircleCollider.h"
+#include "Pathfinding.h"  // EnemyAI component
+#include "Component.h"    // Movement, CircleCollider components
 
 // ============================================================================
 // GLOBAL VARIABLE DEFINITIONS
