@@ -284,7 +284,7 @@ void GSM_Update()
                         else {
                             auto& ap = em->GetComponent<Framework::AP>(player);
                             LOG_INFO("GSM", "Player already has AP: %d HP, %d/%d AP",
-                                     ap.health, ap.actionPoints, ap.maxActionPoints);
+                                     ap.hp, ap.actionPoints, ap.maxActionPoints);
                         }
 
                         // Configure player controller
