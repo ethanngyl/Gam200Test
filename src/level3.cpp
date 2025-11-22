@@ -182,12 +182,13 @@ void level3_Initialize()
         em->AddComponent<AP>(gPlayer, 100, 5);  // 100 HP, 5 AP
     }
 
-    // Enable ImGui for this level
-    if (engine->GetImGuiSystem()) {
-        engine->GetImGuiSystem()->Enable();
-        engine->GetImGuiSystem()->SetPlayerEntity(gPlayer);
-        LOG_INFO("LEVEL3", "ImGui enabled and player entity set");
-    }
+    // DISABLE ImGui for debugging - isolate player + map only
+    // if (engine->GetImGuiSystem()) {
+    //     engine->GetImGuiSystem()->Enable();
+    //     engine->GetImGuiSystem()->SetPlayerEntity(gPlayer);
+    //     LOG_INFO("LEVEL3", "ImGui enabled and player entity set");
+    // }
+    LOG_INFO("LEVEL3", "ImGui DISABLED for debugging - only player + map active");
 
     // ========================================================================
     // FIND ENEMIES AND SET TARGETS - COMMENTED OUT FOR DEBUGGING
@@ -251,11 +252,11 @@ void level3_Update()
     CoreEngine* engine = CORE;
     if (!engine) return;
 
-    // Toggle ImGui with F1 key
-    if (engine->GetInputSystem() && engine->GetInputSystem()->IsKeyPressed(Framework::KEY_F1)) {
-        imguiEnabled = !imguiEnabled;
-        LOG_INFO("LEVEL3", "ImGui %s", imguiEnabled ? "ENABLED" : "DISABLED");
-    }
+    // F1 toggle disabled - ImGui completely off for debugging
+    // if (engine->GetInputSystem() && engine->GetInputSystem()->IsKeyPressed(Framework::KEY_F1)) {
+    //     imguiEnabled = !imguiEnabled;
+    //     LOG_INFO("LEVEL3", "ImGui %s", imguiEnabled ? "ENABLED" : "DISABLED");
+    // }
 
     // Return to main menu with KEY_5
     if (engine->GetInputSystem() && engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5)) {
@@ -286,13 +287,14 @@ void level3_Update()
  */
 void level3_Draw() {
 
-    extern Framework::CoreEngine* engine;
-
-    // Draw pause system if enabled (toggle with F1)
-    // Note: ImGui renders automatically when enabled, no Draw() call needed
-    if (imguiEnabled && engine && engine->GetPauseSystem()) {
-        engine->GetPauseSystem()->Draw();
-    }
+    // DEBUGGING: All UI disabled - only rendering player + map
+    // extern Framework::CoreEngine* engine;
+    //
+    // // Draw pause system if enabled (toggle with F1)
+    // // Note: ImGui renders automatically when enabled, no Draw() call needed
+    // if (imguiEnabled && engine && engine->GetPauseSystem()) {
+    //     engine->GetPauseSystem()->Draw();
+    // }
 
 }
 
@@ -308,11 +310,11 @@ void level3_Free()
 {
     using namespace Framework;
 
-    // Disable ImGui when leaving level
-    if (CORE && CORE->GetImGuiSystem()) {
-        CORE->GetImGuiSystem()->Disable();
-        LOG_INFO("LEVEL3", "ImGui disabled");
-    }
+    // ImGui disabled for debugging, so no need to disable
+    // if (CORE && CORE->GetImGuiSystem()) {
+    //     CORE->GetImGuiSystem()->Disable();
+    //     LOG_INFO("LEVEL3", "ImGui disabled");
+    // }
 
     if (CORE && CORE->GetPlayerController()) {
         CORE->GetPlayerController()->ResetGridState();
