@@ -13,6 +13,7 @@
 #include "Input.h"
 #include "LevelLoader_JSON.h"
 #include "ImguiSystem.h"
+#include "TileMapLoader.h"
 
 namespace Framework {
 
@@ -342,6 +343,48 @@ namespace Framework {
         }
 
         return 0;
+    }
+
+    // ========================================================================
+    // TILEMAP LOADING API
+    // ========================================================================
+
+    int LevelLoader::Lua_LoadTileMap(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Parse parameters: LoadTileMap(jsonPath, startX, startY, spacingX, spacingY)
+        const char* jsonPath = luaL_checkstring(L, 1);
+        float startX = luaL_checknumber(L, 2);
+        float startY = luaL_checknumber(L, 3);
+        float spacingX = luaL_checknumber(L, 4);
+        float spacingY = luaL_checknumber(L, 5);
+
+        auto* spawner = loader->coreEngine->GetSpawner();
+        auto* em = loader->coreEngine->GetEntityManager();
+
+        if (!spawner || !em) {
+            LOG_ERROR("LevelLoader", "LoadTileMap failed: spawner or entity manager not available");
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        Vector2D startPos(startX, startY);
+        Vector2D spacing(spacingX, spacingY);
+
+        bool success = TileMapLevelLoader::LoadLevel(jsonPath, spawner, em, startPos, spacing);
+
+        if (success) {
+            LOG_INFO("LevelLoader", "TileMap loaded successfully from: %s", jsonPath);
+        } else {
+            LOG_ERROR("LevelLoader", "Failed to load TileMap from: %s", jsonPath);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
     }
 
 } // namespace Framework

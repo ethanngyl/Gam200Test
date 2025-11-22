@@ -156,6 +156,9 @@ namespace Framework {
         // JSON API
         static int Lua_LoadJSON(lua_State* L);
 
+        // TileMap Loading API
+        static int Lua_LoadTileMap(lua_State* L);
+
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

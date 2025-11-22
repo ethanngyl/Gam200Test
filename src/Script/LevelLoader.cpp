@@ -300,7 +300,9 @@ namespace Framework {
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
 
+        // JSON and Level Loading
         lua_register(L, "LoadJSON", Lua_LoadJSON);
+        lua_register(L, "LoadTileMap", Lua_LoadTileMap);
 
         LOG_INFO("LevelLoader", "API registered");
     }
