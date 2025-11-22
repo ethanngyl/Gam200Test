@@ -616,7 +616,7 @@ namespace Framework {
         mr.spriteName = texturePath;
 
         // Request graphics system to update the mesh and material for this sprite
-        gfx->AssignMeshAndMaterial(entity, texturePath);
+        gfx->AssignMeshAndMaterial(mr, texturePath);
 
         LOG_INFO("LevelLoader", "SetSpriteTexture: Entity %lld -> texture '%s'", entityID, texturePath);
 
