@@ -12,6 +12,7 @@
 #include "Component.h"
 #include "Core.h"
 #include "RenderComponents.h"
+#include "Graphics/RenderLayers.h"
 #include <fstream>
 
 namespace Framework {
@@ -375,7 +376,7 @@ namespace Framework {
 
         auto& renderable = system->entityManager->AddComponent<Renderable>(entity);
         renderable.visible = true;
-        renderable.layer = 0;
+        renderable.layer = RenderLayers::Ground;  // Default to ground layer
 
         LOG_INFO("ScriptSystem", "Added Renderable to entity %u", entityID);
         lua_pushboolean(L, true);
