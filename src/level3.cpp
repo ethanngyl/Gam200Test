@@ -50,6 +50,7 @@ namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
    // Framework::Entity gEnemy{ Framework::INVALID_ENTITY };
     std::vector<Framework::Entity>gEnemies;
+    bool imguiEnabled = true;  // Toggle ImGui rendering with F1
 }
 
 Framework::Entity FindPlayer(Framework::EntityManager* em) {
@@ -239,15 +240,20 @@ void level3_Initialize()
  */
 void level3_Update()
 {
-    if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
-    {
-        next = mainMenu;
-    }
-
     using namespace Framework;
     CoreEngine* engine = CORE;
     if (!engine) return;
+
+    // Toggle ImGui with F1 key
+    if (engine->GetInputSystem() && engine->GetInputSystem()->IsKeyPressed(Framework::KEY_F1)) {
+        imguiEnabled = !imguiEnabled;
+        LOG_INFO("LEVEL3", "ImGui %s", imguiEnabled ? "ENABLED" : "DISABLED");
+    }
+
+    // Return to main menu with KEY_5
+    if (engine->GetInputSystem() && engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5)) {
+        next = mainMenu;
+    }
 
     auto* pcs = engine->GetPlayerController();
     auto* pfs = engine->GetPathfindingSystem();
@@ -274,7 +280,9 @@ void level3_Update()
 void level3_Draw() {
 
     extern Framework::CoreEngine* engine;
-    if (engine && engine->GetPauseSystem()) {
+
+    // Only draw ImGui if enabled (toggle with F1)
+    if (imguiEnabled && engine && engine->GetPauseSystem()) {
         engine->GetPauseSystem()->Draw();
     }
 
