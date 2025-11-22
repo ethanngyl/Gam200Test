@@ -190,9 +190,6 @@ namespace Framework {
         float screenX = (ndcX + 1.0f) * 0.5f * fbWidth;
         float screenY = (ndcY + 1.0f) * 0.5f * fbHeight;
 
-        float textX = screenX + offsetX;
-        float textY = screenY + offsetY;
-
         // ========================================
         // RESPONSIVE TEXT SCALING
         // ========================================
@@ -218,16 +215,37 @@ namespace Framework {
         finalScale = std::max(MIN_SCALE, std::min(MAX_SCALE, finalScale));
 
         // ========================================
-        // DEBUG OUTPUT
+        // TEXT CENTERING
         // ========================================
+        // Estimate text width to center it on the button
+        // Rough estimate: each character is ~30 pixels wide at scale 1.0
+        const float CHAR_WIDTH_ESTIMATE = 30.0f;
+        float estimatedTextWidth = static_cast<float>(strlen(text)) * CHAR_WIDTH_ESTIMATE * finalScale;
+
+        // Center text horizontally by subtracting half the width
+        float centeredX = screenX - (estimatedTextWidth * 0.5f) + offsetX;
+        float centeredY = screenY + offsetY;  // offsetY can adjust vertical position
+
+        // ========================================
+        // DEBUG OUTPUT (Enhanced)
+        // ========================================
+        bool editorEnabled = imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport();
+
         static int debugCount = 0;
         if (debugCount++ % 60 == 0) {  // Print once per second
-            LOG_INFO("LevelLoader", "DrawButtonText: '%s'", text);
+            LOG_INFO("LevelLoader", "========== DrawButtonText: '%s' ==========", text);
+            LOG_INFO("LevelLoader", "  Editor: %s | FBO: %u",
+                     editorEnabled ? "ENABLED" : "DISABLED",
+                     editorEnabled ? imgui->GetViewportFBO() : 0);
             LOG_INFO("LevelLoader", "  fbSize: %dx%d", fbWidth, fbHeight);
             LOG_INFO("LevelLoader", "  world: (%.2f, %.2f)", worldX, worldY);
             LOG_INFO("LevelLoader", "  ndc: (%.2f, %.2f)", ndcX, ndcY);
-            LOG_INFO("LevelLoader", "  screen: (%.2f, %.2f)", textX, textY);
-            LOG_INFO("LevelLoader", "  scale: base=%.2f viewport=%.2f final=%.2f", scale, viewportScale, finalScale);
+            LOG_INFO("LevelLoader", "  screen: (%.2f, %.2f) -> centered: (%.2f, %.2f)",
+                     screenX, screenY, centeredX, centeredY);
+            LOG_INFO("LevelLoader", "  scale: base=%.2f viewport=%.2f final=%.2f",
+                     scale, viewportScale, finalScale);
+            LOG_INFO("LevelLoader", "  text width estimate: %.2f px", estimatedTextWidth);
+            LOG_INFO("LevelLoader", "========================================");
         }
         // ========================================
 
@@ -254,8 +272,8 @@ namespace Framework {
         }
 
         // Draw text to the currently bound framebuffer (viewport or main window)
-        // Use finalScale for responsive text sizing
-        loader->graphicsSystem->DrawText4(font, text, textX, textY, finalScale, textColor);
+        // Use centered coordinates and finalScale for responsive, centered text
+        loader->graphicsSystem->DrawText4(font, text, centeredX, centeredY, finalScale, textColor);
 
         // Restore previous framebuffer
         if (needsRestore) {
