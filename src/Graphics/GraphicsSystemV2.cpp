@@ -547,7 +547,7 @@ namespace Framework {
         if (defaultMat) {
             defaultMat->blendMode = BlendMode::AlphaBlend;
             defaultMat->depthTest = true;
-            defaultMat->depthWrite = false;  // 2D sprites don't write depth
+            defaultMat->depthWrite = true;
         }
 
         Material2 = resourceManager.CreateMaterial("color", Shader2);
@@ -555,7 +555,7 @@ namespace Framework {
         if (mat2) {
             mat2->blendMode = BlendMode::AlphaBlend;
             mat2->depthTest = true;
-            mat2->depthWrite = false;
+            mat2->depthWrite = true;
         }
 
         // Create materials for each primitive
@@ -566,7 +566,7 @@ namespace Framework {
             quadMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
             quadMat->blendMode = BlendMode::AlphaBlend;
             quadMat->depthTest = true;
-            quadMat->depthWrite = false;
+            quadMat->depthWrite = true;
         }
         // Line material
         lineMaterial = resourceManager.CreateMaterial("line_mat", defaultShader);
@@ -575,7 +575,7 @@ namespace Framework {
             lineMat->tint = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
             lineMat->blendMode = BlendMode::AlphaBlend;
             lineMat->depthTest = true;
-            lineMat->depthWrite = false;
+            lineMat->depthWrite = true;
         }
         // Circle material
         circleMaterial = resourceManager.CreateMaterial("circle_mat", defaultShader);
@@ -584,7 +584,7 @@ namespace Framework {
             circleMat->tint = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
             circleMat->blendMode = BlendMode::AlphaBlend;
             circleMat->depthTest = true;
-            circleMat->depthWrite = false;
+            circleMat->depthWrite = true;
         }
         // Wireframe quad material
         wireframeQMaterial = resourceManager.CreateMaterial("wireframeq_mat", defaultShader);
@@ -593,7 +593,7 @@ namespace Framework {
             wireframeQMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
             wireframeQMat->blendMode = BlendMode::AlphaBlend;
             wireframeQMat->depthTest = true;
-            wireframeQMat->depthWrite = false;
+            wireframeQMat->depthWrite = true;
         }
 
         std::cout << "Created " << 5 << " default materials\n";
@@ -622,7 +622,7 @@ namespace Framework {
             bgMat->tint = glm::vec4(1.0f);  // No tinting
             bgMat->blendMode = BlendMode::AlphaBlend;
             bgMat->depthTest = true;
-            bgMat->depthWrite = false;
+            bgMat->depthWrite = true;
         }
 
         std::cout << "Background setup complete\n";
@@ -639,9 +639,8 @@ namespace Framework {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LESS);
 
-        // Disable depth write for 2D transparent sprites
-        // This prevents Z-fighting while maintaining proper layer order
-        glDepthMask(GL_FALSE);
+        // Enable depth write (layers write depth to ensure proper occlusion)
+        glDepthMask(GL_TRUE);
 
         // Enable back-face culling
         glEnable(GL_CULL_FACE);
