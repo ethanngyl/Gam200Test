@@ -26,6 +26,9 @@ namespace Framework {
     void RangeIndicatorSystem::Update(float dt) {
         (void)dt;
 
+        // DEBUGGING: Disable range indicator entities
+        return;
+
         if (!entityManager) return;
 
         // Check all entities with AttackRangeComponent

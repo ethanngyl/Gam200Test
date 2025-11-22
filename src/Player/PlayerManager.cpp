@@ -143,6 +143,10 @@ namespace Framework {
     * @param durationMs         Duration before auto-hide
     */
     void PlayerControllerSystem::ShowBorderOutline(const Framework::GridCoord& tgt, float thicknessFraction, DWORD durationMs) {
+        // DEBUGGING: Disable outline entities
+        (void)tgt; (void)thicknessFraction; (void)durationMs;
+        return;
+
         const Framework::Grid& g = Framework::GetGrid();
         const float tileW = g.spacing.x;
         const float tileH = g.spacing.y;
