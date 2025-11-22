@@ -232,16 +232,22 @@ namespace Framework {
         finalScale = std::max(MIN_SCALE, std::min(MAX_SCALE, finalScale));
 
         // ========================================
-        // TEXT CENTERING
+        // TEXT CENTERING AND POSITIONING
         // ========================================
         // Estimate text width to center it on the button
-        // Rough estimate: each character is ~30 pixels wide at scale 1.0
-        const float CHAR_WIDTH_ESTIMATE = 30.0f;
+        // Adjusted character width for better left alignment
+        const float CHAR_WIDTH_ESTIMATE = 25.0f;  // Reduced from 30 to shift text left
         float estimatedTextWidth = static_cast<float>(strlen(text)) * CHAR_WIDTH_ESTIMATE * finalScale;
 
-        // Center text horizontally by subtracting half the width
-        float centeredX = screenX - (estimatedTextWidth * 0.5f) + offsetX;
+        // Center text horizontally, then shift slightly left for better appearance
+        const float LEFT_SHIFT = 10.0f * viewportScale;  // Additional left shift, scales with viewport
+        float centeredX = screenX - (estimatedTextWidth * 0.5f) - LEFT_SHIFT + offsetX;
         float centeredY = screenY + offsetY;  // offsetY can adjust vertical position
+
+        // Clamp coordinates to viewport bounds to prevent off-screen rendering
+        const float MARGIN = 10.0f;  // Minimum margin from edges
+        centeredX = std::max(MARGIN, std::min(centeredX, static_cast<float>(fbWidth) - estimatedTextWidth - MARGIN));
+        centeredY = std::max(MARGIN, std::min(centeredY, static_cast<float>(fbHeight) - MARGIN));
 
         // ========================================
         // DEBUG OUTPUT (Enhanced)
@@ -254,14 +260,17 @@ namespace Framework {
             LOG_INFO("LevelLoader", "  Editor: %s | FBO: %u",
                      editorEnabled ? "ENABLED" : "DISABLED",
                      editorEnabled ? imgui->GetViewportFBO() : 0);
-            LOG_INFO("LevelLoader", "  fbSize: %dx%d", fbWidth, fbHeight);
-            LOG_INFO("LevelLoader", "  world: (%.2f, %.2f)", worldX, worldY);
-            LOG_INFO("LevelLoader", "  ndc: (%.2f, %.2f)", ndcX, ndcY);
-            LOG_INFO("LevelLoader", "  screen: (%.2f, %.2f) -> centered: (%.2f, %.2f)",
-                     screenX, screenY, centeredX, centeredY);
-            LOG_INFO("LevelLoader", "  scale: base=%.2f viewport=%.2f final=%.2f",
+            LOG_INFO("LevelLoader", "  Viewport: %dx%d", fbWidth, fbHeight);
+            LOG_INFO("LevelLoader", "  World pos: (%.2f, %.2f)", worldX, worldY);
+            LOG_INFO("LevelLoader", "  NDC: (%.2f, %.2f)", ndcX, ndcY);
+            LOG_INFO("LevelLoader", "  Screen: (%.2f, %.2f)", screenX, screenY);
+            LOG_INFO("LevelLoader", "  Final: (%.2f, %.2f) [CLAMPED]", centeredX, centeredY);
+            LOG_INFO("LevelLoader", "  Scale: base=%.2f viewport=%.2f final=%.2f",
                      scale, viewportScale, finalScale);
-            LOG_INFO("LevelLoader", "  text width estimate: %.2f px", estimatedTextWidth);
+            LOG_INFO("LevelLoader", "  Text width: %.2f px | Left shift: %.2f", estimatedTextWidth, LEFT_SHIFT);
+            LOG_INFO("LevelLoader", "  Bounds: X[%.0f to %.0f] Y[%.0f to %.0f]",
+                     MARGIN, static_cast<float>(fbWidth) - MARGIN,
+                     MARGIN, static_cast<float>(fbHeight) - MARGIN);
             LOG_INFO("LevelLoader", "========================================");
         }
         // ========================================
