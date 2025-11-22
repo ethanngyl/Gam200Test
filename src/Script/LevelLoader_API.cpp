@@ -14,6 +14,8 @@
 #include "LevelLoader_JSON.h"
 #include "ImguiSystem.h"
 #include "TileMapLoader.h"
+#include "Component.h"    // Movement, CircleCollider, AP components
+#include "Pathfinding.h"  // EnemyAI component
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
