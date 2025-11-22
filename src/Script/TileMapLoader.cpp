@@ -4,9 +4,10 @@
 #include <sstream>
 #include <map>
 #include <algorithm>
-#include "RenderComponents.h" 
-#include "Pathfinding.h"   
+#include "RenderComponents.h"
+#include "Pathfinding.h"
 #include "TileMapLoader.h"
+#include "Graphics/RenderLayers.h"
 
 namespace Framework {
 
@@ -129,14 +130,18 @@ namespace Framework {
                     startPos.y + r * spacing.y
                 );
 
-                //  A. Spawn the Base Tile Entity 
+                //  A. Spawn the Base Tile Entity
                 Entity tileEntity = spawner->SpawnSprite(def.texture, pos, Vector2D(spacing.x * 0.9f, spacing.y * 0.9f));
 
-                // Add GridTiles Component 
+                // Add GridTiles Component
                 em->AddComponent<GridTiles>(tileEntity);
                 auto& gridTile = em->GetComponent<GridTiles>(tileEntity);
                 auto& mr = em->GetComponent<MeshRenderer>(tileEntity);
                 mr.material = GraphicsSystemV2::Material2;
+
+                // Set render layer to prevent Z-fighting
+                // Solid tiles (walls) render slightly above ground tiles
+                mr.layer = def.solid ? RenderLayers::Props : RenderLayers::Ground;
 
                 // Check if the tile definition marks it as solid
                 gridTile.blocked = def.solid; //  THIS IS WHERE WALL BLOCKING IS SET 
