@@ -161,7 +161,7 @@ namespace Framework {
                 // Store in Grid for fast lookups
                 grid.tiles[grid.Index(c, r)] = tileEntity;
 
-                //  B. Spawn Special Entity (Player, Enemy, etc.) 
+                //  B. Spawn Special Entity (Player, Enemy, etc.) - ENEMY SPAWNING DISABLED FOR DEBUGGING
                 if (!def.entityType.empty()) {
                     Entity specialEntity = { INVALID_ENTITY };
 
@@ -170,8 +170,10 @@ namespace Framework {
                         LOG_INFO("LevelLoader", "Spawned Player at (%d, %d)", c, r);
                     }
                     else if (def.entityType == "Enemy") {
+                        // COMMENTED OUT FOR DEBUGGING - DISABLE ENEMY SPAWNING
+                        /*
                         specialEntity = spawner->SpawnEnemy(pos);
-                        // Add EnemyAI and AP manually 
+                        // Add EnemyAI and AP manually
                         if (!em->HasComponent<EnemyAI>(specialEntity)) {
                             em->AddComponent<EnemyAI>(specialEntity);
                         }
@@ -179,6 +181,8 @@ namespace Framework {
                             em->AddComponent<AP>(specialEntity, 2, 3); // 2 HP, 3 AP
                         }
                         LOG_INFO("LevelLoader", "Spawned Enemy at (%d, %d)", c, r);
+                        */
+                        LOG_INFO("LevelLoader", "Skipped Enemy spawn at (%d, %d) - DEBUG MODE", c, r);
                     }
                     // Add logic for Chest (S) and Goal (M) here...
 
