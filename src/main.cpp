@@ -53,9 +53,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 #ifdef _DEBUG
     // Debug console setup
     AllocConsole();
-    freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-    freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
-    freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
+    FILE* fp_stdout = nullptr;
+    FILE* fp_stderr = nullptr;
+    FILE* fp_stdin = nullptr;
+    freopen_s(&fp_stdout, "CONOUT$", "w", stdout);
+    freopen_s(&fp_stderr, "CONOUT$", "w", stderr);
+    freopen_s(&fp_stdin, "CONIN$", "r", stdin);
 
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);

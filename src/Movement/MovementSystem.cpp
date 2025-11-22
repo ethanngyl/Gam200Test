@@ -78,7 +78,6 @@ namespace Framework
         DBG_SCOPE_SYS("Movement System", eng::debug::Subsystem::Gameplay);
 
         if (!entityManager || !inputSystem) return;
-        //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
 
         if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
 
@@ -92,8 +91,8 @@ namespace Framework
                     auto& transform = entityManager->GetComponent<Transform>(entity);
                     auto& movement = entityManager->GetComponent<Movement>(entity);
 
-                    // Get input direction from WASD
-                    Vector2D inputDir(input_dir_x, input_dir_y);
+                    // Get input direction from WASD (start from zero, not config values)
+                    Vector2D inputDir(0.0f, 0.0f);
 
                     if (inputSystem->IsKeyDown(KEY_W)) inputDir.y += y_mov_displacement;
                     if (inputSystem->IsKeyDown(KEY_S)) inputDir.y -= y_mov_displacement;
@@ -174,9 +173,10 @@ namespace Framework
                     if (!movement.blocked) {
                         transform.position += movement.direction * movement.moveSpeed * dt;
                     }
-                    else {
-                        transform.position -= movement.direction * movement.moveSpeed * dt;
-                    }
+                    // If blocked, don't move at all (not backwards)
+                    // else {
+                    //     transform.position -= movement.direction * movement.moveSpeed * dt;
+                    // }
 
                     //// Optional: Keep on screen
                     if (transform.position.x > x_bound) transform.position.x = x_bound;
