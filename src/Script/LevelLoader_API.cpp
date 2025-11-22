@@ -593,6 +593,36 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_SetSpriteTexture(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: SetSpriteTexture(entityID, texturePath)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* texturePath = luaL_checkstring(L, 2);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gfx = loader->coreEngine->GetGraphicsSystem();
+        if (!em || !gfx) return 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) {
+            LOG_WARN("LevelLoader", "SetSpriteTexture: Invalid entity or no MeshRenderer (ID=%lld)", entityID);
+            return 0;
+        }
+
+        auto& mr = em->GetComponent<MeshRenderer>(entity);
+        mr.spriteName = texturePath;
+
+        // Request graphics system to update the mesh and material for this sprite
+        gfx->AssignMeshAndMaterial(entity, texturePath);
+
+        LOG_INFO("LevelLoader", "SetSpriteTexture: Entity %lld -> texture '%s'", entityID, texturePath);
+
+        return 0;
+    }
+
     int LevelLoader::Lua_SetSpritePosition(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;
