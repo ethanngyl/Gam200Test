@@ -300,6 +300,7 @@ void GSM_Update()
         // ============================================================================
         fpUpdate = []() {
             extern Framework::CoreEngine* engine;
+            static Framework::Entity cachedPlayer{ Framework::INVALID_ENTITY };
 
             // F9 Hot Reload Support
             if (engine && engine->GetInputSystem()) {
@@ -307,6 +308,7 @@ void GSM_Update()
                 if (input->IsKeyPressed(Framework::KEY_F9)) {
                     LOG_INFO("GSM", "F9 pressed - Hot reloading Level3...");
                     Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
+                    cachedPlayer = Framework::Entity{ Framework::INVALID_ENTITY }; // Reset cache
                 }
             }
 
@@ -316,12 +318,36 @@ void GSM_Update()
                 // Pathfinding commented out for debugging
                 // auto* pfs = engine->GetPathfindingSystem();
 
+                // Update player controller
                 if (pcs) {
                     pcs->Update(Framework::Time::FIXED_DT_F);
                 }
 
-                // Set engine to playing state
-                engine->SetPlaying(true);
+                // Camera follow (MUST be set every frame like original level3_Update)
+                if (auto* gfx = engine->GetGraphicsSystem()) {
+                    // Set engine to playing state
+                    engine->SetPlaying(true);
+
+                    // Find and cache player entity if needed
+                    if (cachedPlayer.GetID() == Framework::INVALID_ENTITY) {
+                        auto* em = engine->GetEntityManager();
+                        if (em) {
+                            for (Framework::Entity e : em->GetAllEntities()) {
+                                if (em->HasComponent<Framework::Movement>(e) &&
+                                    em->HasComponent<Framework::CircleCollider>(e) &&
+                                    !em->HasComponent<Framework::EnemyAI>(e)) {
+                                    cachedPlayer = e;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Set camera follow target every frame (matches original)
+                    if (cachedPlayer.GetID() != Framework::INVALID_ENTITY) {
+                        gfx->SetFollowTarget(cachedPlayer);
+                    }
+                }
             }
 
             // Call Lua OnUpdate
