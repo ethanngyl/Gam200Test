@@ -28,6 +28,7 @@
 #include "EntitySpawner.h"
 #include "Audio/AudioSystem.h"
 #include "RenderComponents.h"
+#include "Graphics/RenderLayers.h"
 
 #include "Grid\GridECS.h"
 #include "Grid\Grid.h"
