@@ -192,16 +192,16 @@ function OnUpdate(dt)
 
             -- Update color based on current AP
             -- If this indicator index <= currentAP, show as available (green)
-            -- Otherwise show as used (dark red)
+            -- Otherwise show as used (RED) - TESTING with extreme colors
             if i <= currentAP then
-                -- Available AP: bright green
-                SetSpriteColor(entityID, 0.2, 1.0, 0.2, 1.0)
+                -- Available AP: WHITE (to see if tint works at all)
+                SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)
                 if shouldDebug and i == 1 then
-                    Log("[AP DEBUG] Indicator #" .. i .. " - GREEN (available)")
+                    Log("[AP DEBUG] Indicator #" .. i .. " - WHITE (available)")
                 end
             else
-                -- Used AP: dark red
-                SetSpriteColor(entityID, 0.3, 0.1, 0.1, 0.7)
+                -- Used AP: PURE RED (extreme test)
+                SetSpriteColor(entityID, 1.0, 0.0, 0.0, 1.0)
                 if shouldDebug and i == 1 then
                     Log("[AP DEBUG] Indicator #" .. i .. " - RED (used)")
                 end
