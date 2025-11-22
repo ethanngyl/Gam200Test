@@ -258,10 +258,10 @@ void GSM_Update()
 
                 if (em && playerController && spawner && input) {
                     // Find player entity (spawned by TileMapLoader in Lua)
+                    // Player has CircleCollider but NOT EnemyAI (distinguishes from enemies)
                     Framework::Entity player{ Framework::INVALID_ENTITY };
                     for (Framework::Entity e : em->GetAllEntities()) {
-                        if (em->HasComponent<Framework::Movement>(e) &&
-                            em->HasComponent<Framework::CircleCollider>(e) &&
+                        if (em->HasComponent<Framework::CircleCollider>(e) &&
                             !em->HasComponent<Framework::EnemyAI>(e)) {
                             player = e;
                             break;
@@ -269,6 +269,13 @@ void GSM_Update()
                     }
 
                     if (player.GetID() != Framework::INVALID_ENTITY) {
+                        // DISABLE WASD movement: Remove Movement component to prevent MovementSystem from processing player
+                        // Grid movement via arrow keys only (handled by PlayerControllerSystem)
+                        if (em->HasComponent<Framework::Movement>(player)) {
+                            em->RemoveComponent<Framework::Movement>(player);
+                            LOG_INFO("GSM", "Removed Movement component from player - WASD disabled, arrow keys only");
+                        }
+
                         // Configure player controller
                         playerController->SetPlayerEntity(player);
                         playerController->SetEntitySpawner(spawner);
@@ -329,12 +336,12 @@ void GSM_Update()
                     engine->SetPlaying(true);
 
                     // Find and cache player entity if needed
+                    // Player has CircleCollider but NOT EnemyAI (Movement component removed for grid movement)
                     if (cachedPlayer.GetID() == Framework::INVALID_ENTITY) {
                         auto* em = engine->GetEntityManager();
                         if (em) {
                             for (Framework::Entity e : em->GetAllEntities()) {
-                                if (em->HasComponent<Framework::Movement>(e) &&
-                                    em->HasComponent<Framework::CircleCollider>(e) &&
+                                if (em->HasComponent<Framework::CircleCollider>(e) &&
                                     !em->HasComponent<Framework::EnemyAI>(e)) {
                                     cachedPlayer = e;
                                     break;
