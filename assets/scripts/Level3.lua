@@ -99,6 +99,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         Log("AP Indicator " .. i .. " - Calculated position: (" .. xPos .. ", " .. yPos .. ")")
+        Log("  Calling SpawnSprite with size: " .. indicatorSize .. " x " .. indicatorSize)
 
         -- SpawnSprite(texture, x, y, width, height, layer)
         -- Using AP Crystal.png for visual AP indicators
