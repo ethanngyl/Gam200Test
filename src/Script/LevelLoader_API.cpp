@@ -169,7 +169,7 @@ namespace Framework {
 
         // Check if button entity is still valid (not destroyed when level changed)
         auto* em = loader->coreEngine->GetEntityManager();
-        if (!em || !button->entity.IsValid() || !em->EntityExists(button->entity)) {
+        if (!em || !button->entity.IsValid() || !em->HasComponent<Transform>(button->entity)) {
             // Button was destroyed (level changed), don't render
             static int warnThrottle = 0;
             if (warnThrottle++ % 60 == 0) {
