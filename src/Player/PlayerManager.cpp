@@ -193,6 +193,7 @@ namespace Framework {
         , inputSystem(nullptr)
         , window(nullptr)
         , playerEntity(0)
+        , audioSystem(nullptr)  // Fix: Initialize to nullptr to prevent garbage pointer
         , shootCooldown(0.0f)
         , shootCooldownTime(0.2f)
         , projectileSpeed(0.5f)

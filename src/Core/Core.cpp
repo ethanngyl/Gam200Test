@@ -217,7 +217,8 @@ namespace Framework
         collisionSystem->SetInput(inputSystem);
         playerController->SetEntitySpawner(spawner);
 
-        // Wire AudioSystem to ImGuiSystem
+        // Wire AudioSystem
+        playerController->SetAudioSystem(audioSystem);  // Fix: PlayerController needs AudioSystem!
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
