@@ -24,10 +24,10 @@ local kSpacingY = 0.1 -- Tile spacing Y
 -- AP Indicator sprites (camera-relative UI)
 local apIndicators = {}
 local maxAP = 5
-local indicatorSize = 0.08  -- Restored to original size
+local indicatorSize = 0.08
 local indicatorSpacing = 0.1
-local screenOffsetX = -0.2  -- Centered horizontally above player
-local screenOffsetY = 0.4   -- Positioned above player (top of visible area)
+local screenOffsetX = -0.7  -- Bottom left corner of screen
+local screenOffsetY = -0.7  -- Bottom left corner of screen
 
 -- Debug frame counter
 local debugFrameCounter = 0
