@@ -788,11 +788,12 @@ namespace Framework {
             // ---------- TRANSFORM ----------
             glm::mat4 model(1.0f);
             // Use layer, orderInLayer, and entity ID for Z-depth to prevent Z-fighting
-            // Layer provides major depth separation (0.001 per layer)
-            // OrderInLayer provides minor depth separation within same layer (0.00001 per order)
-            // Entity ID provides unique sub-pixel depth for entities with same layer/order (0.0000001 per ID)
-            // This ensures every entity has a unique Z-depth, preventing flickering
-            float zDepth = (cmd.layer * 0.001f) + (cmd.orderInLayer * 0.00001f) + (e.GetID() * 0.0000001f);
+            // Increased multipliers to avoid floating-point precision issues on AMD GPUs
+            // Layer provides major depth separation (0.01 per layer = 100x precision margin)
+            // OrderInLayer provides minor separation (0.0001 per order = 1.67x precision margin)
+            // Entity ID provides guaranteed uniqueness (0.000001 per ID = 16.7x precision margin)
+            // 24-bit depth precision ≈ 0.00000006, these values are well above that threshold
+            float zDepth = (cmd.layer * 0.01f) + (cmd.orderInLayer * 0.0001f) + (e.GetID() * 0.000001f);
             model = glm::translate(model, { transform.position.x, transform.position.y, zDepth });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
