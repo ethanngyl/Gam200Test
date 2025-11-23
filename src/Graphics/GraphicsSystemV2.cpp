@@ -845,7 +845,10 @@ namespace Framework {
                 mat->v0 = v0;
                 mat->v1 = v1;
 
-                // Ensure texture is valid before rendering
+                // **CRITICAL**: Override render command texture with animation sprite sheet
+                cmd.texture = anim.spriteSheet;
+
+                // Ensure material texture is also set
                 if (!mat->albedoTexture.IsValid())
                     mat->albedoTexture = anim.spriteSheet;
             }
