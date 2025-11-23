@@ -116,6 +116,25 @@ namespace Framework {
         grid.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
         LOG_INFO("LevelLoader", "Configured Grid %dx%d", cols, rows);
 
+        // ========================================================================
+        // CHEST TRACKING - Count total chests in level
+        // ========================================================================
+        int totalChests = 0;
+        int nextChestID = 1;
+
+        // First pass: count chests
+        for (int r = 0; r < rows; ++r) {
+            std::string rowStr = rowStrings[r];
+            for (int c = 0; c < cols; ++c) {
+                char tileChar = (c < rowStr.length()) ? rowStr[c] : '0';
+                if (tileChar == 'S') {  // 'S' = Chest in your JSON
+                    totalChests++;
+                }
+            }
+        }
+
+        LOG_INFO("LevelLoader", "Found %d chests in level", totalChests);
+
         // --- 3. Spawn Entities ---
 
         for (int r = 0; r < rows; ++r) {
@@ -195,7 +214,48 @@ namespace Framework {
                         
                         LOG_INFO("LevelLoader", "Skipped Enemy spawn at (%d, %d) - DEBUG MODE", c, r);
                     }
-                    // Add logic for Chest (S) and Goal (M) here...
+                    // ============================================================
+                // CHEST - Blocks enemies, collectable by player
+                // ============================================================
+                    else if (def.entityType == "Chest") {
+                        // Spawn chest entity
+                        /*specialEntity = spawner->SpawnSprite(
+                            def.texture,
+                            pos,
+                            Vector2D(spacing.x * 0.8f, spacing.y * 0.8f)
+                        );*/
+
+                        // Add Chest component
+                        em->AddComponent<Chest>(specialEntity, nextChestID);
+
+                        // CRITICAL: Mark tile as BLOCKED for enemies
+                       // gridTile.blocked = true;
+
+                        LOG_INFO("LevelLoader", "Spawned Chest %d at (%d, %d) - BLOCKED for enemies",
+                            nextChestID, c, r);
+
+                        nextChestID++;
+                    }
+                    // ============================================================
+                    // GOAL - Level exit, requires all chests
+                    // ============================================================
+                    else if (def.entityType == "Goal") {
+                        // Spawn goal entity
+                       /* specialEntity = spawner->SpawnSprite(
+                            def.texture,
+                            pos,
+                            Vector2D(spacing.x * 0.9f, spacing.y * 0.9f)
+                        );*/
+
+                        // Add Goal component
+                        em->AddComponent<Goal>(specialEntity, totalChests);
+
+                        // CRITICAL: Mark tile as BLOCKED for enemies
+                        //gridTile.blocked = true;
+
+                        LOG_INFO("LevelLoader", "Spawned Goal at (%d, %d) - Requires %d chests - BLOCKED for enemies",
+                            c, r, totalChests);
+                    }
 
                     if (specialEntity.GetID() != INVALID_ENTITY) {
                         gridTile.occupant = specialEntity;

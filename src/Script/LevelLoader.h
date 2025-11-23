@@ -167,6 +167,10 @@ namespace Framework {
         static int Lua_DestroyEntity(lua_State* L);
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
+        static int Lua_FindPlayer(lua_State* L);
+        static int Lua_GetAllEnemies(lua_State* L);
+        static int Lua_SetEnemyTarget(lua_State* L);
+        static int Lua_GetCurrentTurn(lua_State* L);
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

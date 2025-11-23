@@ -313,6 +313,12 @@ namespace Framework {
         lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
         lua_register(L, "GetCameraPosition", Lua_GetCameraPosition);
 
+        // Enemy AI Configuration
+        lua_register(L, "FindPlayer", Lua_FindPlayer);
+        lua_register(L, "GetAllEnemies", Lua_GetAllEnemies);
+        lua_register(L, "SetEnemyTarget", Lua_SetEnemyTarget);
+        lua_register(L, "GetCurrentTurn", Lua_GetCurrentTurn);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 
