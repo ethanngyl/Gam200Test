@@ -304,6 +304,12 @@ namespace Framework
 
             system->Initialize();
         }
+
+        // Load animation configuration
+        LOG_INFO("CORE", "Loading animation configuration...");
+        animationSystem->LoadAnimationConfig("assets/animations.json");
+        LOG_INFO("CORE", "Animation configuration loaded");
+
         char exePath[MAX_PATH];
         GetModuleFileNameA(NULL, exePath, MAX_PATH);
 
