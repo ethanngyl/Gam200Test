@@ -295,6 +295,20 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
+            // Add SpriteAnimation component for player animations
+            entityManager->AddComponent<SpriteAnimation>(player);
+            auto& anim = entityManager->GetComponent<SpriteAnimation>(player);
+            anim.group = AnimGroup::Idle;           // Start with Idle animation
+            anim.direction = AnimDirection::Front;   // Facing front by default
+            anim.playing = true;                     // Auto-play animations
+
+            // Load the initial animation (Idle_front)
+            auto* gfx = engine->GetGraphicsSystem();
+            auto* animSys = engine->GetAnimationSystem();
+            if (animSys && gfx) {
+                animSys->LoadAnimation(player, anim, gfx, "Idle_front");
+            }
+
             std::cout << "[EntitySpawner] Spawned player (testing.png) on layer " << RenderLayers::Player << "\n";
 
             //camera

@@ -3,11 +3,11 @@
     "cellSize": 128,
     "TileDefinitions": {
       "W": {
-        "texture": "assets/grid.png",
+        "texture": "assets/Tree_block.png",
         "solid": 1
       },
       "0": {
-        "texture": "assets/grid.png",
+        "texture": "assets/Grass_block.png",
         "solid": 0
       },
       "P": {
@@ -21,7 +21,7 @@
         "entityType": "Enemy"
       },
       "S": {
-        "texture": "assets/Doraemon.png",
+        "texture": "assets/Atk_Up.png",
         "solid": 0,
         "entityType": "Chest"
       },

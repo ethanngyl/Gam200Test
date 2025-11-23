@@ -159,6 +159,15 @@ namespace Framework {
         // TileMap Loading API
         static int Lua_LoadTileMap(lua_State* L);
 
+        // AP Indicator / Entity Management API
+        static int Lua_SpawnSprite(lua_State* L);
+        static int Lua_SetSpriteColor(lua_State* L);
+        static int Lua_SetSpriteTexture(lua_State* L);
+        static int Lua_SetSpritePosition(lua_State* L);
+        static int Lua_DestroyEntity(lua_State* L);
+        static int Lua_GetPlayerAP(lua_State* L);
+        static int Lua_GetCameraPosition(lua_State* L);
+
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

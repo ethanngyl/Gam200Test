@@ -819,15 +819,21 @@ namespace Framework {
                 if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
                     continue;
 
-                const int cols = texW / anim.frameWidth;
+                const int cols = anim.columns;
+                const int rows = anim.rows;
                 const int frame = anim.currentFrame % max(1, anim.frameCount);
                 const int x = frame % cols;
                 const int y = frame / cols;
 
-                float u0 = (x * anim.frameWidth) / float(texW);
-                float u1 = ((x + anim.uvShrinkPx) * anim.frameWidth) / float(texW);
-                float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
-                float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
+                // Calculate UV coordinates for this frame
+                const float frameW = 1.0f / cols;  // Width of one frame in UV space
+                const float frameH = 1.0f / rows;  // Height of one frame in UV space
+                const float shrink = anim.uvShrinkPx / texW;  // Shrink in UV space
+
+                float u0 = (x * frameW) + shrink;
+                float u1 = ((x + 1) * frameW) - shrink;
+                float v0 = (y * frameH) + shrink;
+                float v1 = ((y + 1) * frameH) - shrink;
 
                 // Apply horizontal flipping if enabled
                 if (anim.flipX)
@@ -839,7 +845,10 @@ namespace Framework {
                 mat->v0 = v0;
                 mat->v1 = v1;
 
-                // Ensure texture is valid before rendering
+                // **CRITICAL**: Override render command texture with animation sprite sheet
+                cmd.texture = anim.spriteSheet;
+
+                // Ensure material texture is also set
                 if (!mat->albedoTexture.IsValid())
                     mat->albedoTexture = anim.spriteSheet;
             }
