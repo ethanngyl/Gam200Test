@@ -16,6 +16,7 @@
 #include "TileMapLoader.h"
 #include "Component.h"    // Movement, CircleCollider, AP components
 #include "Pathfinding.h"  // EnemyAI component
+#include "Turn.h"         // Turn system
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -728,6 +729,127 @@ namespace Framework {
         lua_pushnumber(L, camPos.y);
         lua_pushnumber(L, camPos.z);
         return 3;
+    }
+
+    /**
+ * @brief Finds the player entity
+ * Lua usage: local playerID = FindPlayer()
+ * @return Player entity ID or 0 if not found
+ */
+    int LevelLoader::Lua_FindPlayer(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Find player entity (has CircleCollider but NOT EnemyAI)
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
+                LOG_INFO("LevelLoader", "FindPlayer: Found player entity ID=%u", e.GetID());
+                lua_pushinteger(L, e.GetID());
+                return 1;
+            }
+        }
+
+        LOG_WARN("LevelLoader", "FindPlayer: No player found");
+        lua_pushinteger(L, 0);
+        return 1;
+    }
+
+    /**
+     * @brief Gets all enemy entities
+     * Lua usage: local enemies = GetAllEnemies() -- returns table of enemy IDs
+     * @return Lua table of enemy entity IDs
+     */
+    int LevelLoader::Lua_GetAllEnemies(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_newtable(L);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_newtable(L);
+            return 1;
+        }
+
+        lua_newtable(L);
+        int index = 1;
+
+        // Find all entities with EnemyAI component
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<EnemyAI>(e)) {
+                lua_pushinteger(L, index++);
+                lua_pushinteger(L, e.GetID());
+                lua_settable(L, -3);
+                LOG_INFO("LevelLoader", "GetAllEnemies: Found enemy ID=%u", e.GetID());
+            }
+        }
+
+        LOG_INFO("LevelLoader", "GetAllEnemies: Found %d enemies total", index - 1);
+        return 1;
+    }
+
+    /**
+     * @brief Sets an enemy's target entity (what it chases)
+     * Lua usage: SetEnemyTarget(enemyID, playerID)
+     * @param enemyID Enemy entity ID
+     * @param targetID Target entity ID (usually player)
+     * @return true if successful, false otherwise
+     */
+    int LevelLoader::Lua_SetEnemyTarget(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        uint32_t enemyID = (uint32_t)lua_tointeger(L, 1);
+        uint32_t targetID = (uint32_t)lua_tointeger(L, 2);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        Entity enemy{ enemyID };
+        Entity target{ targetID };
+
+        // Set the enemy's AI target
+        if (em->HasComponent<EnemyAI>(enemy)) {
+            auto& ai = em->GetComponent<EnemyAI>(enemy);
+            ai.targetEntity = target;
+            ai.moveDelay = 0.7f;
+
+            LOG_INFO("LevelLoader", "SetEnemyTarget: Enemy %u now targeting %u", enemyID, targetID);
+            lua_pushboolean(L, 1);
+            return 1;
+        }
+
+        LOG_WARN("LevelLoader", "SetEnemyTarget: Enemy %u has no EnemyAI component", enemyID);
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    /**
+     * @brief Gets the current turn phase
+     * Lua usage: local turn = GetCurrentTurn() -- 0 = Player, 1 = Enemy
+     * @return 0 for Player turn, 1 for Enemy turn
+     */
+    int LevelLoader::Lua_GetCurrentTurn(lua_State* L) {
+        auto& turn = Turn();
+        lua_pushinteger(L, turn.phase == TurnPhase::Player ? 0 : 1);
+        return 1;
     }
 
 } // namespace Framework

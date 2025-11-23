@@ -83,6 +83,58 @@ function OnInit()
     -- Turn phase is set to Player in C++
 
     -- ========================================================================
+    -- CONFIGURE ENEMIES 
+    -- ========================================================================
+    Log("========================================")
+    Log("Configuring Enemy AI...")
+    Log("========================================")
+    
+    -- Find the player entity
+    local playerID = FindPlayer()
+    
+    if not playerID or playerID == 0 then
+        Log("ERROR: Player not found! Cannot configure enemies.")
+        Log("  Make sure TileMap.json has a 'P' tile for player spawn")
+        return
+    end
+    
+    Log("✓ Found Player (Entity ID: " .. playerID .. ")")
+    
+    -- Find all enemy entities
+    local enemies = GetAllEnemies()
+    
+    if not enemies then
+        Log("WARNING: GetAllEnemies() returned nil")
+        enemies = {}
+    end
+    
+    local enemyCount = 0
+    for _ in pairs(enemies) do
+        enemyCount = enemyCount + 1
+    end
+    
+    if enemyCount == 0 then
+        Log("WARNING: No enemies found in level")
+        Log("  Check if TileMap.json has 'E' tiles for enemy spawns")
+        Log("  Check if TileMapLoader.cpp has enemy spawning enabled")
+    else
+        Log("Found " .. enemyCount .. " enemies")
+        
+        -- Configure each enemy to target the player
+        for i, enemyID in ipairs(enemies) do
+            local success = SetEnemyTarget(enemyID, playerID)
+            
+            if success then
+                Log("  ✓ Enemy " .. enemyID .. " configured to chase Player " .. playerID)
+            else
+                Log("  ✗ FAILED to configure Enemy " .. enemyID)
+            end
+        end
+    end
+    
+    Log("========================================")
+
+    -- ========================================================================
     -- CREATE AP INDICATOR UI (CAMERA-RELATIVE) - TWO-LAYER SYSTEM
     -- ========================================================================
     Log("========================================")
@@ -158,6 +210,7 @@ function OnInit()
     Log("========================================")
 end
 
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnUpdate
 -- ============================================================================
@@ -211,6 +264,7 @@ function OnUpdate(dt)
             end
         end
 
+        
         -- Handle AP changes: destroy/create filled crystals
         if currentAP ~= lastKnownAP then
             Log("[AP CHANGE] AP changed from " .. lastKnownAP .. " to " .. currentAP)
@@ -224,6 +278,17 @@ function OnUpdate(dt)
                         apIndicatorsFilled[i] = nil
                     end
                 end
+
+                 --  FIX: Verify destruction
+                local remainingCount = 0
+                for i = 1, maxAP do
+                    if apIndicatorsFilled[i] ~= nil then
+                        remainingCount = remainingCount + 1
+                    end
+                end
+                Log("  After deletion: " .. remainingCount .. " crystals remaining (expected: " .. currentAP .. ")")
+                
+
             elseif currentAP > lastKnownAP then
                 -- AP INCREASED: Create new filled crystals
                 for i = lastKnownAP + 1, currentAP do
@@ -252,7 +317,6 @@ function OnUpdate(dt)
             lastKnownAP = currentAP
         end
     end
-
     -- Engine is set to playing mode in C++ during update loop
     -- Graphics system handles camera follow automatically
 end

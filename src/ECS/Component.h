@@ -301,30 +301,45 @@ namespace Framework
     };
 
     /**
-     * @struct PlayerInventory
-     * @brief Tracks collected items for win condition
-     */
-    struct PlayerInventory : public Component<PlayerInventory>
-    {
-        int chestsCollected = 0;
-        int totalChestsInLevel = 0; // Set this when loading the level
+ * @brief Chest component - collectible items that block enemies
+ */
+    struct Chest : public Component<Chest> {
+        bool collected = false;     // Has player collected this chest?
+        int chestID = 0;            // Unique ID for this chest
+
+        Chest() = default;
+        Chest(int id) : chestID(id) {}
     };
 
     /**
-     * @struct Chest
-     * @brief Tag component for chest entities
+     * @brief Goal component - level exit that checks for chest completion
      */
-    struct Chest : public Component<Chest>
-    {
-        bool collected = false;
+    struct Goal : public Component<Goal> {
+        int chestsRequired = 0;     // How many chests needed to complete level
+        bool canExit = false;       // Can player exit now?
+
+        Goal() = default;
+        Goal(int required) : chestsRequired(required) {}
     };
 
     /**
-     * @struct Goal
-     * @brief Tag component for the level end point
+     * @brief Player inventory - tracks collected chests
      */
-    struct Goal : public Component<Goal>
-    {
+    struct Inventory : public Component<Inventory> {
+        std::vector<int> collectedChests;  // IDs of collected chests
+
+        int GetChestCount() const { return static_cast<int>(collectedChests.size()); }
+
+        bool HasChest(int chestID) const {
+            return std::find(collectedChests.begin(), collectedChests.end(), chestID)
+                != collectedChests.end();
+        }
+
+        void AddChest(int chestID) {
+            if (!HasChest(chestID)) {
+                collectedChests.push_back(chestID);
+            }
+        }
     };
 
 }
