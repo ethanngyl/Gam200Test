@@ -36,8 +36,10 @@ Usage:
  */
 
 #include "Precompiled.h"
+#include "AnimationSystem.h"
 #include "ConfigReader.h"
-#include "Component.h"
+#include "ECS/Component.h"
+#include "GraphicsSystemV2.h"
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
