@@ -1,7 +1,7 @@
 {
   "animations": {
     "Idle_front": {
-      "sprite": "assets/sprites/static_idle_front.png",
+      "sprite": "assets/Warrior/FrontView/WarriorTopDownView.png",
       "rows": 2,
       "columns": 2,
       "frameCount": 4,
@@ -11,7 +11,7 @@
       "key": "O"
     },
     "Idle_back": {
-      "sprite": "assets/sprites/static_idle_back.png",
+      "sprite": "assets/Warrior/BackView/WarriorBackView.png",
       "rows": 3,
       "columns": 2,
       "frameCount": 6,
@@ -21,7 +21,7 @@
       "key": "O"
     },
     "Idle_sideview": {
-      "sprite": "assets/sprites/static_idle_sideview.png",
+      "sprite": "assets/Warrior/SideView/WarriorSideView.png",
       "rows": 3,
       "columns": 2,
       "frameCount": 5,
@@ -31,7 +31,7 @@
       "key": "O"
     },
     "Injured_front": {
-      "sprite": "assets/sprites/static_down_injured.png",
+      "sprite": "assets/Warrior/FrontView/WarriorInjuredTopDownView.png",
       "rows": 4,
       "columns": 3,
       "frameCount": 11,
@@ -41,7 +41,7 @@
       "key": "J"
     },
     "Injured_back": {
-      "sprite": "assets/sprites/static_up_injured.png",
+      "sprite": "assets/Warrior/WarriorInjuredBackView.png",
       "rows": 3,
       "columns": 3,
       "frameCount": 8,
@@ -51,7 +51,7 @@
       "key": "J"
     },
     "Injured_sideview": {
-      "sprite": "assets/sprites/static_sideview_injured.png",
+      "sprite": "assets/Warrior/SideView/WarriorSideViewInjure.png",
       "rows": 3,
       "columns": 3,
       "frameCount": 7,
@@ -61,7 +61,7 @@
       "key": "J"
     },
     "Attack_front": {
-      "sprite": "assets/sprites/static_down_atk.png",
+      "sprite": "assets/Warrior/FrontView/WarriorAttackFront.png",
       "rows": 3,
       "columns": 2,
       "frameCount": 5,
@@ -71,7 +71,7 @@
       "key": "K"
     },
     "Attack_back": {
-      "sprite": "assets/sprites/static_up_atk.png",
+      "sprite": "assets/Warrior/BackView/WarriroAttackBackView.png",
       "rows": 2,
       "columns": 2,
       "frameCount": 4,
@@ -81,7 +81,7 @@
       "key": "K"
     },
     "Attack_sideview": {
-      "sprite": "assets/sprites/static_sideview_atk.png",
+      "sprite": "assets/Warrior/WarriorSideViewAttack.png",
       "rows": 3,
       "columns": 3,
       "frameCount": 8,
@@ -91,7 +91,7 @@
       "key": "K"
     },
     "Walk_front": {
-      "sprite": "assets/sprites/walking_down.png",
+      "sprite": "assets/Warrior/FrontView/WarriorWalkingFront.png",
       "rows": 2,
       "columns": 2,
       "frameCount": 4,
@@ -101,7 +101,7 @@
       "key": "S"
     },
     "Walk_back": {
-      "sprite": "assets/sprites/walking_up.png",
+      "sprite": "assets/Warrior/BackView/WarriorWalkBackView.png",
       "rows": 3,
       "columns": 2,
       "frameCount": 5,
@@ -111,7 +111,7 @@
       "key": "W"
     },
     "Walk_sideview": {
-      "sprite": "assets/sprites/walking_sideview.png",
+      "sprite": "assets/Warrior/SideView/WarriorSideViewWalk.png",
       "rows": 2,
       "columns": 2,
       "frameCount": 3,
@@ -121,7 +121,7 @@
       "key": "A"
     },
     "Death": {
-      "sprite": "assets/sprites/static_death.png",
+      "sprite": "assets/Warrior/FrontView/WarriorDeath.png",
       "rows": 3,
       "columns": 3,
       "frameCount": 7,
