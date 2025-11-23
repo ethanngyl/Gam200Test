@@ -75,6 +75,11 @@ namespace Framework {
                         size_t valPos = line.find(":");
                         tileDefs[currentDefKey].entityType = CleanString(line.substr(valPos + 1));
                     }
+                    if (line.find("\"layer\":") != std::string::npos) {
+                        size_t valPos = line.find(":");
+                        std::string val = CleanString(line.substr(valPos + 1));
+                        tileDefs[currentDefKey].layer = std::stoi(val);
+                    }
                 }
             }
 
@@ -140,8 +145,14 @@ namespace Framework {
                 mr.material = GraphicsSystemV2::Material2;
 
                 // Set render layer to prevent Z-fighting
-                // Solid tiles (walls) render slightly above ground tiles
-                mr.layer = def.solid ? RenderLayers::Props : RenderLayers::Ground;
+                // Use explicit layer if specified in JSON, otherwise use default based on solid flag
+                if (def.layer != -1) {
+                    // Explicit layer specified in tile definition
+                    mr.layer = def.layer;
+                } else {
+                    // Default behavior: solid tiles (walls) render slightly above ground tiles
+                    mr.layer = def.solid ? RenderLayers::Props : RenderLayers::Ground;
+                }
 
                 // Check if the tile definition marks it as solid
                 gridTile.blocked = def.solid; //  THIS IS WHERE WALL BLOCKING IS SET 

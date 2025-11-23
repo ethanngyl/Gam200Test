@@ -39,6 +39,7 @@ namespace Framework {
             std::string texture;
             bool solid = false;
             std::string entityType;
+            int layer = -1;  // Render layer (-1 = use default based on solid flag)
         };
 
         static std::string CleanString(std::string s);
