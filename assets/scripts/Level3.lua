@@ -21,6 +21,19 @@ local kStartY = -0.4  -- Grid start position Y
 local kSpacingX = 0.1 -- Tile spacing X
 local kSpacingY = 0.1 -- Tile spacing Y
 
+-- AP Indicator sprites (camera-relative UI) - Two-layer system
+local apIndicatorsEmpty = {}   -- Background layer: always visible (5 empty crystals)
+local apIndicatorsFilled = {}  -- Foreground layer: destroyed/recreated based on AP
+local maxAP = 5
+local indicatorSize = 0.08
+local indicatorSpacing = 0.1
+local screenOffsetX = -0.7  -- Bottom left corner of screen
+local screenOffsetY = -0.7  -- Bottom left corner of screen
+local lastKnownAP = 0  -- Track AP changes
+
+-- Debug frame counter
+local debugFrameCounter = 0
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -69,12 +82,79 @@ function OnInit()
     -- PlayerController is configured in C++ (SetPlayerEntity, SetGridMovementEnabled)
     -- Turn phase is set to Player in C++
 
+    -- ========================================================================
+    -- CREATE AP INDICATOR UI (CAMERA-RELATIVE) - TWO-LAYER SYSTEM
+    -- ========================================================================
+    Log("========================================")
+    Log("Creating AP indicators (two-layer system)...")
+    Log("========================================")
+
+    -- Get initial camera position
+    local camX, camY, camZ = GetCameraPosition()
+    Log("Initial camera position: (" .. camX .. ", " .. camY .. ", " .. camZ .. ")")
+    Log("Screen offsets: X=" .. screenOffsetX .. ", Y=" .. screenOffsetY)
+    Log("Indicator size: " .. indicatorSize .. ", spacing: " .. indicatorSpacing)
+
+    -- LAYER 1: Create 5 EMPTY AP crystals (background - always visible)
+    Log("Creating EMPTY crystal background layer...")
+    for i = 1, maxAP do
+        local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+        local yPos = camY + screenOffsetY
+
+        local entityID = SpawnSprite(
+            "assets/AP Empty.png",
+            xPos,
+            yPos,
+            indicatorSize,
+            indicatorSize,
+            0  -- Ground layer
+        )
+
+        if entityID > 0 then
+            apIndicatorsEmpty[i] = entityID
+            Log("  ✓ Empty crystal " .. i .. " (ID: " .. entityID .. ")")
+        else
+            Log("  ✗ FAILED to create empty crystal " .. i)
+        end
+    end
+
+    -- LAYER 2: Create 5 FILLED AP crystals (foreground - will be destroyed/recreated)
+    Log("Creating FILLED crystal foreground layer...")
+    for i = 1, maxAP do
+        local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+        local yPos = camY + screenOffsetY
+
+        local entityID = SpawnSprite(
+            "assets/AP Crystal.png",
+            xPos,
+            yPos,
+            indicatorSize,
+            indicatorSize,
+            0  -- Same layer, rendered on top due to creation order
+        )
+
+        if entityID > 0 then
+            apIndicatorsFilled[i] = entityID
+            Log("  ✓ Filled crystal " .. i .. " (ID: " .. entityID .. ")")
+        else
+            Log("  ✗ FAILED to create filled crystal " .. i)
+        end
+    end
+
+    -- Set initial AP tracking
+    lastKnownAP = maxAP
+
+    Log("Empty crystals: " .. #apIndicatorsEmpty .. "/" .. maxAP)
+    Log("Filled crystals: " .. #apIndicatorsFilled .. "/" .. maxAP)
+    Log("========================================")
+
     initialized = true
     Log("========================================")
     Log("Level 3 initialization complete")
     Log("Controls:")
     Log("  - Click tiles or use arrow keys to move")
     Log("  - Press 5 to return to main menu")
+    Log("  - AP indicators shown at top of screen")
     Log("========================================")
 end
 
@@ -91,6 +171,86 @@ function OnUpdate(dt)
     if IsKeyDown("5") then
         Log("KEY_5 pressed - returning to main menu")
         SetNextGameState("mainMenu")
+    end
+
+    -- ========================================================================
+    -- UPDATE AP INDICATORS (TWO-LAYER SYSTEM)
+    -- ========================================================================
+    if #apIndicatorsEmpty > 0 then
+        -- Get current camera position
+        local camX, camY, camZ = GetCameraPosition()
+
+        -- Get player's current AP
+        local currentAP, maxPlayerAP = GetPlayerAP()
+
+        -- Debug logging (once per second @ 60fps)
+        debugFrameCounter = debugFrameCounter + 1
+        local shouldDebug = (debugFrameCounter % 60 == 0)
+
+        if shouldDebug then
+            Log("[AP DEBUG] Frame " .. debugFrameCounter .. " - Camera: (" .. camX .. ", " .. camY .. ", " .. camZ .. ")")
+            Log("[AP DEBUG] Player AP: " .. currentAP .. "/" .. maxPlayerAP .. " (last known: " .. lastKnownAP .. ")")
+            Log("[AP DEBUG] Filled crystals active: " .. #apIndicatorsFilled)
+        end
+
+        -- Update positions of EMPTY crystals (background layer - always visible)
+        for i = 1, #apIndicatorsEmpty do
+            local entityID = apIndicatorsEmpty[i]
+            local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+            local yPos = camY + screenOffsetY
+            SetSpritePosition(entityID, xPos, yPos)
+        end
+
+        -- Update positions of FILLED crystals (foreground layer)
+        for i = 1, #apIndicatorsFilled do
+            local entityID = apIndicatorsFilled[i]
+            if entityID ~= nil then
+                local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + screenOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
+            end
+        end
+
+        -- Handle AP changes: destroy/create filled crystals
+        if currentAP ~= lastKnownAP then
+            Log("[AP CHANGE] AP changed from " .. lastKnownAP .. " to " .. currentAP)
+
+            if currentAP < lastKnownAP then
+                -- AP DECREASED: Destroy filled crystals from the end
+                for i = lastKnownAP, currentAP + 1, -1 do
+                    if apIndicatorsFilled[i] ~= nil then
+                        Log("  Destroying filled crystal #" .. i .. " (ID: " .. apIndicatorsFilled[i] .. ")")
+                        DestroyEntity(apIndicatorsFilled[i])
+                        apIndicatorsFilled[i] = nil
+                    end
+                end
+            elseif currentAP > lastKnownAP then
+                -- AP INCREASED: Create new filled crystals
+                for i = lastKnownAP + 1, currentAP do
+                    local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+                    local yPos = camY + screenOffsetY
+
+                    local entityID = SpawnSprite(
+                        "assets/AP Crystal.png",
+                        xPos,
+                        yPos,
+                        indicatorSize,
+                        indicatorSize,
+                        0  -- Ground layer
+                    )
+
+                    if entityID > 0 then
+                        apIndicatorsFilled[i] = entityID
+                        Log("  Created filled crystal #" .. i .. " (ID: " .. entityID .. ")")
+                    else
+                        Log("  ✗ FAILED to create filled crystal #" .. i)
+                    end
+                end
+            end
+
+            -- Update tracking
+            lastKnownAP = currentAP
+        end
     end
 
     -- Engine is set to playing mode in C++ during update loop
@@ -115,6 +275,27 @@ function OnDestroy()
     Log("========================================")
     Log("Level 3 cleanup...")
     Log("========================================")
+
+    -- Destroy AP indicator entities (both layers)
+    for i = 1, #apIndicatorsEmpty do
+        local entityID = apIndicatorsEmpty[i]
+        if entityID > 0 then
+            DestroyEntity(entityID)
+            Log("  Destroyed empty crystal " .. i .. " (ID: " .. entityID .. ")")
+        end
+    end
+
+    for i = 1, #apIndicatorsFilled do
+        local entityID = apIndicatorsFilled[i]
+        if entityID ~= nil and entityID > 0 then
+            DestroyEntity(entityID)
+            Log("  Destroyed filled crystal " .. i .. " (ID: " .. entityID .. ")")
+        end
+    end
+
+    apIndicatorsEmpty = {}
+    apIndicatorsFilled = {}
+    Log("AP indicators cleaned up (both layers)")
 
     -- Note: Entity cleanup, camera reset, and player controller reset
     -- happen in C++ level3_Free() function

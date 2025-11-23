@@ -39,8 +39,11 @@ Example:
 #pragma once
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
+#include "ECS/Component.h"
 
 namespace Framework {
+
+    class GraphicsSystemV2; // forward declaration
 
     /**
     ===============================================================================
@@ -64,6 +67,17 @@ namespace Framework {
      */
 	class AnimationSystem : public EngineSystem {
 	public:
+        // Anim JSON entries (for editor M-cycle)
+        struct AnimEntry {
+            std::string name;
+            std::string file;
+            char key = '\0';
+        };
+		std::vector<AnimEntry> animEntries;
+
+        // Mapping: EnumGroup -> EnumDir -> AnimName
+        std::map<AnimGroup, std::map<AnimDirection, std::string>> groupMap;
+
         /**
         ===============================================================================
          * @brief Constructor - Initializes animation system with default values
@@ -151,6 +165,10 @@ namespace Framework {
         ===============================================================================
          */
 		void SetEntityManager(Framework::EntityManager* em) { entityManager = em; }
+
+        void LoadAnimationConfig(const std::string& configPath);
+
+        void LoadAnimation(Entity e, SpriteAnimation& anim, GraphicsSystemV2* gfx, const std::string& configPath);
 
 	private:
         // ==================== ANIMATION DATA MEMBERS ====================
