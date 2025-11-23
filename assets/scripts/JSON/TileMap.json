@@ -4,11 +4,13 @@
     "TileDefinitions": {
       "W": {
         "texture": "assets/Tree_block.png",
-        "solid": 1
+        "solid": 1,
+        "layer": 0
       },
       "0": {
         "texture": "assets/Grass_block.png",
-        "solid": 0
+        "solid": 0,
+        "layer": 0
       },
       "P": {
         "texture": "assets/player.png",
