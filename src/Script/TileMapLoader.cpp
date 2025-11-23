@@ -136,7 +136,7 @@ namespace Framework {
                 );
 
                 //  A. Spawn the Base Tile Entity
-                Entity tileEntity = spawner->SpawnSprite(def.texture, pos, Vector2D(spacing.x * 0.9f, spacing.y * 0.9f));
+                Entity tileEntity = spawner->SpawnSprite(def.texture, pos, Vector2D(spacing.x * 1.0f, spacing.y * 1.0f));
 
                 // Add GridTiles Component
                 em->AddComponent<GridTiles>(tileEntity);
