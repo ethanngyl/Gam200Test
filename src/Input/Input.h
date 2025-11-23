@@ -68,7 +68,10 @@ namespace Framework
 		KEY_DELETE = VK_DELETE,
 
         //Shift Key
-        KEY_SHIFT = VK_SHIFT
+        KEY_SHIFT = VK_SHIFT,
+
+        KEY_LEFT_CONTROL = VK_LCONTROL,
+        KEY_RIGHT_CONTROL = VK_RCONTROL
     };
 
     /**

@@ -816,7 +816,8 @@ namespace Framework {
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         // Camera matrices
-        Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
+        //Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
+		Camera& activeCamera = mainCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
         glm::mat4 view = activeCamera.GetViewMatrix();
 
