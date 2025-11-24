@@ -1,6 +1,6 @@
 ﻿/*
 ===============================================================================
-  File:          main.cpp
+ File:          main.cpp
  Author:        GE YONGQI
  Email:         yongqi.ge@digipen.edu
  Date:          2025-10-31
@@ -8,7 +8,7 @@
  ------------------------------------------------------------------------------
   Main entry point of the StructSquad Engine
 
-  Responsibilities:
+Responsibilities:
      - Initializes debug console, logging, and memory leak detection
      - Sets up the CoreEngine and initializes all subsystems
      - Manages the Game State Manager (GSM) lifecycle
@@ -104,7 +104,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     GSM_Initialize(initialState);
 
     LOG_INFO("CORE", "Entering GSM main loop...");
-    LOG_INFO("CORE", "Debug Controls: F2 = Export Performance CSV");
+    LOG_INFO("CORE", "Debug Controls: F2 = Export Performance CSV, P = Pause/Resume");
 
     // Time tracking variables
     unsigned lastTime = timeGetTime();
@@ -176,44 +176,82 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             eng::debug::PerfViewer::begin_frame();
             glfwPollEvents();
 
+            if (engine->GetInputSystem()) {
+                engine->GetInputSystem()->Update(static_cast<float>(FIXED_DT));
+            }
             // ===============================================================================
-            // FIXED TIME STEP UPDATES (Physics/Logic)
+            // *** CRITICAL: UPDATE PAUSE SYSTEM FIRST (ALWAYS) ***
+            // This must happen even when paused so we can detect resume input
             // ===============================================================================
-            currentNumberOfSteps = 0;
-            while (accumulatedTime >= FIXED_DT) {
-                accumulatedTime -= FIXED_DT;
-                currentNumberOfSteps++;
+            if (engine->GetPauseSystem()) {
+                engine->GetPauseSystem()->Update(static_cast<float>(FIXED_DT));
+            }
 
-                if (currentNumberOfSteps >= 5) {
-                    accumulatedTime = 0.0;
-                    break;
+            // ===============================================================================
+            // *** CHECK PAUSE STATE ***
+            // ===============================================================================
+            bool isPaused = engine->GetPauseSystem() &&
+                engine->GetPauseSystem()->IsPaused();
+
+            if (!isPaused)
+            {
+                // ===============================================================================
+                // FIXED TIME STEP UPDATES (Physics/Logic) - ONLY WHEN NOT PAUSED
+                // ===============================================================================
+                currentNumberOfSteps = 0;
+                while (accumulatedTime >= FIXED_DT) {
+                    accumulatedTime -= FIXED_DT;
+                    currentNumberOfSteps++;
+
+                    if (currentNumberOfSteps >= 5) {
+                        accumulatedTime = 0.0;
+                        break;
+                    }
+                }
+
+                if (currentNumberOfSteps == 0) {
+                    currentNumberOfSteps = 1;
+                }
+
+                // Run physics/logic updates
+                for (int step = 0; step < currentNumberOfSteps; ++step) {
+                    if (fpUpdate) {
+                        fpUpdate();
+                    }
+                }
+
+                // ===============================================================================
+                // RENDER ONCE PER FRAME
+                // ===============================================================================
+                engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
+
+                if (fpDraw) {
+                    fpDraw();
+                }
+            }
+            else
+            {
+                // ===============================================================================
+                // PAUSED: Still render the frozen frame but don't update logic
+                // ===============================================================================
+                // Optional: render the last frame in paused state
+                if (fpDraw) {
+                    fpDraw();
                 }
             }
 
-            if (currentNumberOfSteps == 0) {
-                currentNumberOfSteps = 1;
-            }
-
-            // Run physics/logic updates
-            for (int step = 0; step < currentNumberOfSteps; ++step) {
-                if (fpUpdate) {
-                    fpUpdate();
-                }
-            }
-
             // ===============================================================================
-            // RENDER ONCE PER FRAME
+            // *** DRAW PAUSE OVERLAY (ALWAYS, if paused) ***
+            // This draws the "PAUSED" text over the game
             // ===============================================================================
-            engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
-
-            if (fpDraw) {
-                fpDraw();
+            if (engine->GetPauseSystem()) {
+                engine->GetPauseSystem()->Draw();
             }
 
             // ===============================================================================
             // END FRAME
             // ===============================================================================
-            
+
             // ImGui rendering
             if (engine->GetImGuiSystem() &&
                 engine->GetWindowSystem() &&
@@ -224,7 +262,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
                     engine->GetGraphicsSystem()->RenderImGui();
                 }
             }
-            
+
 
             // End performance frame
             eng::debug::PerfViewer::end_frame();
