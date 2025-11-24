@@ -29,6 +29,7 @@
 #include "Audio/AudioSystem.h"
 #include "RenderComponents.h"
 #include "Graphics/RenderLayers.h"
+#include "MathABS.h"
 
 #include "Grid\GridECS.h"
 #include "Grid\Grid.h"
@@ -259,6 +260,13 @@ namespace Framework {
                     LOG_INFO("PlayerTurn", "New Turn Started! AP Refilled to %d", stats.actionPoints);
                 }
 
+                //Regen attack AP
+                if (entityManager->HasComponent<AttackAP>(playerEntity)) {                  
+                    auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);        
+                    aap.points = aap.maxPoints;                                             
+                    LOG_INFO("PlayerTurn", "Attack AP refilled to %d", aap.points);         
+                }
+
                 // Update our tracker so we don't regen again this turn
                 lastTurnIndex = globalTurn.turnIndex;
             }
@@ -275,6 +283,8 @@ namespace Framework {
                     return;
                 }
             }
+
+            HandleAttackAction();
 
             //// --- (Optional) PLAYER ATTACK on SPACE ---
             //if (inputSystem->IsKeyPressed(KEY_SPACE))
@@ -320,9 +330,9 @@ namespace Framework {
         // SHOOTING INPUT - Use InputSystem
         // ====================================================================
 
-        HandleShootUp(playerPos);
+        /*HandleShootUp(playerPos);
         HandleShootDown(playerPos);
-        HandleShootAtMouse(playerPos);
+        HandleShootAtMouse(playerPos);*/
 
 
         // ====================================================================
@@ -585,6 +595,11 @@ namespace Framework {
             return;
         }
 
+        if (!HandleTileInteraction(next)) {
+            // Interaction blocked movement (e.g., goal without all chests)
+            return;
+        }
+
         if (!Framework::IsWalkable(next)) {
             std::cout << "[WASD] Tile blocked! (" << next.x << "," << next.y << ")\n";
             return;
@@ -644,6 +659,187 @@ namespace Framework {
     void PlayerControllerSystem::SetGridMovementEnabled(bool enabled) {
         gridMovementEnabled = enabled;
         LOG_INFO("PlayerController", "Grid movement %s", enabled ? "ENABLED" : "DISABLED");
+    }
+
+    /**
+ * @brief Checks and handles chest collection and goal interaction
+ * @param nextTile The tile the player is moving to
+ * @return true if movement should proceed, false if blocked
+ */
+    bool PlayerControllerSystem::HandleTileInteraction(const Framework::GridCoord& nextTile) {
+        const Framework::Grid& grid = Framework::GetGrid();
+        Framework::Entity tileEntity = grid.TileAt(nextTile.x, nextTile.y);
+
+        if (tileEntity.GetID() == Framework::INVALID_ENTITY) return true;
+        if (!entityManager->HasComponent<Framework::GridTiles>(tileEntity)) return true;
+
+        auto& gridTile = entityManager->GetComponent<Framework::GridTiles>(tileEntity);
+        Framework::Entity occupant = gridTile.occupant;
+
+        if (occupant.GetID() == Framework::INVALID_ENTITY) return true;
+
+        // ========================================================================
+        // CHEST COLLECTION
+        // ========================================================================
+        if (entityManager->HasComponent<Framework::Chest>(occupant)) {
+            auto& chest = entityManager->GetComponent<Framework::Chest>(occupant);
+
+            if (!chest.collected) {
+                // Add to player inventory
+                if (entityManager->HasComponent<Framework::Inventory>(playerEntity)) {
+                    auto& inventory = entityManager->GetComponent<Framework::Inventory>(playerEntity);
+                    inventory.AddChest(chest.chestID);
+
+                    LOG_INFO("PlayerManager", "Player collected Chest %d! Total: %d",
+                        chest.chestID, inventory.GetChestCount());
+                }
+
+                // Mark chest as collected
+                chest.collected = true;
+
+                // UNBLOCK the tile so enemies can pass
+                //gridTile.blocked = false;
+
+                // Visual feedback: hide chest or change appearance
+                if (entityManager->HasComponent<Framework::Renderable>(occupant)) {
+                    auto& renderable = entityManager->GetComponent<Framework::Renderable>(occupant);
+                    renderable.visible = false;  // Hide collected chest
+                }
+
+                // Clear occupant
+                gridTile.occupant = Framework::Entity{ Framework::INVALID_ENTITY };
+
+                LOG_INFO("PlayerManager", "Tile (%d, %d) UNBLOCKED after chest collection",
+                    nextTile.x, nextTile.y);
+            }
+
+            return true;  // Allow movement onto chest tile
+        }
+
+        // ========================================================================
+        // GOAL INTERACTION
+        // ========================================================================
+        if (entityManager->HasComponent<Goal>(occupant)) {
+            auto& goal = entityManager->GetComponent<Goal>(occupant);
+
+            // Check if player has all required chests
+            if (entityManager->HasComponent<Inventory>(playerEntity)) {
+                auto& inventory = entityManager->GetComponent<Inventory>(playerEntity);
+                int chestsCollected = inventory.GetChestCount();
+                int chestsRequired = goal.chestsRequired;
+
+                LOG_INFO("PlayerManager", "Player at GOAL: %d/%d chests collected",
+                    chestsCollected, chestsRequired);
+
+                if (chestsCollected >= chestsRequired) {
+                    // VICTORY! Player can exit
+                    LOG_INFO("PlayerManager", "=== LEVEL COMPLETE! ===");
+                    LOG_INFO("PlayerManager", "All chests collected! Returning to main menu...");
+
+                    // Trigger level completion (you can customize this)
+                    // Option 1: Return to main menu
+                    next = mainMenu;
+
+                    // Option 2: Load next level
+                    // next = LEVEL_4;
+
+                    // Option 3: Show victory screen
+                    // next = victoryScreen;
+
+                    return true;  // Allow movement onto goal
+                }
+                else {
+                    // Not enough chests
+                    LOG_WARN("PlayerManager", "Cannot exit! Need %d more chests",
+                        chestsRequired - chestsCollected);
+
+                    // Block movement onto goal
+                    return false;
+                }
+            }
+            else {
+                LOG_WARN("PlayerManager", "Player has no inventory!");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // 
+    Entity PlayerControllerSystem::FindFirstEnemyInRange(int minRange, int maxRange) {
+        if (!entityManager || !entityManager->HasComponent<Transform>(playerEntity)) return {};
+        auto& ptf = entityManager->GetComponent<Transform>(playerEntity);
+
+        auto optPlayerTile = WorldToTile(ptf.position);
+        if (!optPlayerTile) return {};
+
+        GridCoord p = *optPlayerTile;
+
+        // Iterate all entities: pick first with EnemyAI + Health in manhattan range
+        for (Entity e : entityManager->GetAllEntities()) {
+            if (!entityManager->HasComponent<EnemyAI>(e)) continue;
+            if (!entityManager->HasComponent<Health>(e)) continue;
+
+            // enemy world → tile
+            if (!entityManager->HasComponent<Transform>(e)) continue;
+            auto& etf = entityManager->GetComponent<Transform>(e);
+            auto optETile = WorldToTile(etf.position);
+            if (!optETile) continue;
+
+            GridCoord q = *optETile;
+            int manhattan = Abs(q.x - p.x) + Abs(q.y - p.y);
+            if (manhattan >= minRange && manhattan <= maxRange) {
+                return e; // first match
+            }
+        }
+        return {};
+    }
+
+    // NEW
+    void PlayerControllerSystem::HandleAttackAction() {
+        if (!inputSystem || !entityManager) return;
+        if (!IsPlayerTurn()) return;
+        if (!inputSystem->IsKeyPressed(KEY_SPACE)) return; // edge trigger
+
+        if (!entityManager->HasComponent<AttackAP>(playerEntity)) {
+            // No attack AP component → fall back to existing shooting behavior
+            return;
+        }
+        auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);
+        if (aap.points <= 0) {
+            LOG_WARN("PlayerAttack", "No attack AP left");
+            return;
+        }
+
+        int minR = 1, maxR = 1;
+        /*if (entityManager->HasComponent<AttackRangeComponent>(playerEntity)) {
+            auto& rng = entityManager->GetComponent<AttackRangeComponent>(playerEntity);
+            minR = rng.minRange;
+            maxR = rng.maxRange;
+        }*/
+
+        Entity target = FindFirstEnemyInRange(minR, maxR);
+        if (target.GetID() == INVALID_ENTITY) {
+            LOG_INFO("PlayerAttack", "No enemy in range [%d..%d]", minR, maxR);
+            return;
+        }
+
+        // Deal damage (flat 1 for now)
+        auto& hp = entityManager->GetComponent<Health>(target);
+        hp.TakeDamage(1);
+        aap.points--; // consume attack AP
+
+        LOG_INFO("PlayerAttack", "Hit enemy %u for 1. Enemy HP now %d/%d. AttackAP=%d/%d",
+            target.GetID(), hp.currentHealth, hp.maxHealth, aap.points, aap.maxPoints);
+
+        // Optional SFX
+        //if (audioSystem) audioSystem->PlaySound("hit", false);
+
+        // Optional: if enemy died, hide/cleanup
+        if (hp.isDead && entityManager->HasComponent<Renderable>(target)) {
+            entityManager->GetComponent<Renderable>(target).visible = false;
+        }
     }
 
 } // namespace Framework

@@ -86,11 +86,13 @@ namespace Framework {
 
             for (Entity entity : entityManager->GetAllEntities()) {
                 if (entityManager->HasComponent<EnemyAI>(entity) &&
+                    entityManager->HasComponent<Health>(entity)  && 
                     entityManager->HasComponent<AP>(entity)) {
-                    auto& stats = entityManager->GetComponent<AP>(entity);
+                    auto& hp = entityManager->GetComponent<Health>(entity);
+					auto& stats = entityManager->GetComponent<AP>(entity);
 
                     // Skip dead enemies
-                    if (stats.hp <= 0) continue;
+                    if (hp.isDead || hp.currentHealth <= 0) continue;
 
                     // Regenerate AP
                     stats.actionPoints = stats.maxActionPoints;
@@ -111,9 +113,10 @@ namespace Framework {
             if (!entityManager->HasComponent<EnemyAI>(entity)) continue;
             if (!entityManager->HasComponent<Transform>(entity)) continue;
             if (!entityManager->HasComponent<AP>(entity)) continue;
+            if (!entityManager->HasComponent<Health>(entity)) continue;
 
-            auto& stats = entityManager->GetComponent<AP>(entity);
-            if (stats.hp > 0) {  // Only alive enemies
+            auto& hp = entityManager->GetComponent<Health>(entity);                    
+            if (hp.currentHealth > 0 && !hp.isDead) {                                 
                 livingEnemies.push_back(entity);
             }
         }
@@ -143,6 +146,7 @@ namespace Framework {
         auto& ai = entityManager->GetComponent<EnemyAI>(currentEnemy);
         auto& transform = entityManager->GetComponent<Transform>(currentEnemy);
         auto& stats = entityManager->GetComponent<AP>(currentEnemy);
+		auto& hp = entityManager->GetComponent<Health>(currentEnemy);
 
         // Check if this enemy has AP left
         if (stats.actionPoints <= 0) {
@@ -203,13 +207,14 @@ namespace Framework {
                 currentEnemy.GetID(), stats.actionPoints);
 
             // Deal damage to target
-            if (entityManager->HasComponent<AP>(ai.targetEntity)) {
-                auto& targetStats = entityManager->GetComponent<AP>(ai.targetEntity);
-                targetStats.hp--;
+            if (entityManager->HasComponent<Health>(ai.targetEntity)) {
+                auto& targetHp = entityManager->GetComponent<Health>(ai.targetEntity);
+                targetHp.currentHealth -= 1;
+                LOG_INFO("Combat", "Target hit! HP: %d", targetHp.currentHealth);
 
-                LOG_INFO("Combat", "Target hit! HP: %d", targetStats.hp);
-
-                if (targetStats.hp <= 0) {
+                if (targetHp.currentHealth <= 0) {                                              // NEW
+                    targetHp.currentHealth = 0;                                                 // NEW
+                    targetHp.isDead = true;                                                     // NEW
                     LOG_ERROR("Combat", "TARGET DEFEATED!");
                 }
             }

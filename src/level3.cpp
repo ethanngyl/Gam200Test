@@ -178,9 +178,9 @@ void level3_Initialize()
     LOG_INFO("LEVEL3", "Found Player (ID: %u)", gPlayer.GetID());
 
     // Add player stats if not already added
-    if (!em->HasComponent<AP>(gPlayer)) {
-        em->AddComponent<AP>(gPlayer, 100, 5);  // 100 HP, 5 AP
-    }
+    //if (!em->HasComponent<AP>(gPlayer)) {
+    //    em->AddComponent<AP>(gPlayer, AP{ 5 });  // 100 HP, 5 AP
+    //}
 
     // DISABLE ImGui for debugging - isolate player + map only
     // if (engine->GetImGuiSystem()) {
@@ -210,7 +210,7 @@ void level3_Initialize()
 
         // Ensure enemy has AP
         if (!em->HasComponent<AP>(enemy)) {
-            em->AddComponent<AP>(enemy, 50, 3);  // 50 HP, 3 AP
+            em->AddComponent<AP>(enemy, 3);  // 50 HP, 3 AP
         }
     }
     */

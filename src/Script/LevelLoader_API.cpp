@@ -852,4 +852,62 @@ namespace Framework {
         return 1;
     }
 
+    /**
+ * @brief Gets player's chest collection progress
+ * Lua usage: local collected, required = GetChestProgress()
+ * @return collected count, required count
+ */
+    int LevelLoader::Lua_GetChestProgress(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        // Find player entity
+        Entity player(INVALID_ENTITY);
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
+            }
+        }
+
+        if (player.GetID() == INVALID_ENTITY) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        // Get inventory
+        int collected = 0;
+        if (em->HasComponent<Inventory>(player)) {
+            auto& inventory = em->GetComponent<Inventory>(player);
+            collected = inventory.GetChestCount();
+        }
+
+        // Find goal to get required count
+        int required = 0;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Goal>(e)) {
+                auto& goal = em->GetComponent<Goal>(e);
+                required = goal.chestsRequired;
+                break;
+            }
+        }
+
+        lua_pushinteger(L, collected);
+        lua_pushinteger(L, required);
+        return 2;
+    }
+
 } // namespace Framework

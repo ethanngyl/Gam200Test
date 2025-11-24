@@ -318,6 +318,7 @@ namespace Framework {
         lua_register(L, "GetAllEnemies", Lua_GetAllEnemies);
         lua_register(L, "SetEnemyTarget", Lua_SetEnemyTarget);
         lua_register(L, "GetCurrentTurn", Lua_GetCurrentTurn);
+        lua_register(L, "GetChestProgress", Lua_GetChestProgress);
 
         LOG_INFO("LevelLoader", "API registered");
     }
