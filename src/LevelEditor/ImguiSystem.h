@@ -90,6 +90,11 @@ namespace Framework {
                 viewportHeight >= 100;
         }
         void RequestToggle() { pendingToggle = true; }
+
+        bool IsAudioFile(const std::filesystem::path& path) const;
+        bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
+        bool AddAudioToJSON(const std::string& jsonPath, const std::string& audioPath);
+
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
@@ -116,6 +121,9 @@ namespace Framework {
         bool showAssets = false;
         std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
+
+        bool showAudioErrorPopup = false;
+        std::string audioErrorMessage = "";
 
         //object picking - jiahao
         void UpdatePicking();

@@ -32,6 +32,8 @@
 #include "Grid/GridTile.h"
 
 #include "ScriptSystem.h"
+#include "LevelLoader.h"
+
 namespace Framework
 {
     // Forward declaration

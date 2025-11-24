@@ -43,6 +43,8 @@ Example:
 
 namespace Framework {
 
+    class GraphicsSystemV2; // Forward Declaration
+
     /**
     ===============================================================================
      * @class AnimationSystem

@@ -156,6 +156,7 @@ namespace Framework
         scriptSystem->SetEntityManager(entityManager);
         scriptSystem->SetCoreEngine(this);
         scriptSystem->Initialize();
+        LevelLoader::GetInstance().Initialize(this);
         LOG_INFO("CORE", " All systems created");
     }
 

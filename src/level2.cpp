@@ -21,6 +21,7 @@
 #include "ImguiSystem.h"
 #include "Pathfinding.h"
 #include "Pause/Pause.h"
+#include "TimeConstants.h"
 
 
 extern Framework::CoreEngine* engine;
@@ -112,7 +113,7 @@ void level2_Update()
     // Animate in level editor using fixed-step (60 FPS)
     auto* animSys = engine->GetAnimationSystem();
     if (animSys)
-        animSys->Update(FIXED_DT);
+        animSys->Update(Framework::Time::FIXED_DT);
 }
 
 void level2_Draw()

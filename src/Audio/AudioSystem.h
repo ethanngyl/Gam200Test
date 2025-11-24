@@ -280,7 +280,7 @@ namespace Framework {
          * @note Does not take ownership (non-owning pointer)
          */
         void SetEntityManager(EntityManager* em) { entityManager = em; };
-
+        void ReloadAudioLibrary();
     private:
         /**
          * @brief Updates all AudioSource components attached to entities
