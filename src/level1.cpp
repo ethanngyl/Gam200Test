@@ -22,7 +22,7 @@
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
 #include "Component.h" 
-
+#include "Pause/Pause.h"
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::ScriptComponent;
@@ -284,6 +284,10 @@ void level1_Draw()
 
     graphics->DrawText4(fontLarge, textNextLevel,
         textX, textNextLevelY, textScale, textColor);
+
+    if (engine->GetPauseSystem()) {
+        engine->GetPauseSystem()->Draw();
+    }
 }
 
 void level1_Free()

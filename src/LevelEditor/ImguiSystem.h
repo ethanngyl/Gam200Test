@@ -41,11 +41,17 @@ namespace Framework {
         void Initialize() override;
         void Update(float dt) override;
         void SendEngineMessage(Message* msg) override;
+
+        //void UpdateUI();
+
         // Setup methods
         void SetWindow(GLFWwindow* win);
 
         void SetEntityManager(EntityManager* em);
         void SetEntitySpawner(EntitySpawner* spawner);
+
+        // Call this ONCE per visual frame, BEFORE the physics loop
+        void NewFrame();
 
         // Load/Save level from text file
         // jiahao
@@ -67,13 +73,29 @@ namespace Framework {
         //File drag and drop support - jiahao
         void EnableFileDragAndDrop();
         void SetPlayerEntity(Entity player) { playerEntity = player; }
-
+        // Call this to bind the framebuffer before game rendering
+        void BeginGameRender();
+        // Call this to unbind after game rendering
+        void EndGameRender();
+        // Get the framebuffer ID for external use
+        GLuint GetViewportFBO() const { return viewportFBO; }
+        int GetViewportWidth() const { return viewportWidth; }
+        int GetViewportHeight() const { return viewportHeight; }
+        bool IsRenderingToViewport() const {
+            return renderToViewport &&
+                enabled &&
+                showGameViewport &&
+                viewportFBO != 0 &&
+                viewportWidth >= 100 &&
+                viewportHeight >= 100;
+        }
+        void RequestToggle() { pendingToggle = true; }
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
         Entity playerEntity;
-
+        Entity lastSpawnedEntity;
         //jiahao
         //the below 2 std::string are used to record the file path
         //in order to save and load level files
@@ -94,14 +116,34 @@ namespace Framework {
         bool showAssets = false;
         std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
+
+        //object picking - jiahao
+        void UpdatePicking();
+        Framework::Entity GetSelectedEntity() const {
+            return selectedEntity;
+        };
+
+        //dragging state for object dragging - jiahao
+        bool isDraggingEntity = false;
+		bool isScalingEntity = false;
+		bool isRotatingEntity = false;
+
+        Framework::Entity draggingEntity{};
+        Vector2D dragOffset;
+
+        Vector2D scaleStartMouse;
+
+        Vector2D scaleStartScale;
+
+		float rotateStartAngle = 0.0f;
+        float rotateStartRotation = 0.0f;
+
+        void UpdateEntityDragging();
+
+
+
         void ShowAssetsWindow();
         void SetupDefaultDockLayout();
-
-        bool showAudioErrorPopup;
-        std::string audioErrorMessage;
-
-        //Prefab window - kahyan
-        bool showPrefabWindow;
         void ShowPrefabWindow();
         void SpawnPrefabAtMouse(const std::string& prefabPath);
 
@@ -120,7 +162,11 @@ namespace Framework {
         bool showEntityInspector;
         bool showSpawner;
         bool showDebug;
-        bool showPrefab;//kahyan
+        bool showPrefabWindow;
+        bool pendingToggle = false;
+        //
+        // Entity selectedEntity;
+        std::string selectedPrefabPath;
 
         bool enabled;
 
@@ -129,6 +175,20 @@ namespace Framework {
 
         int currentPage = 0;           // Current page in entity inspector
         int entitiesPerPage = 20;
+
+        // Game viewport framebuffer
+        GLuint viewportFBO = 0;
+        GLuint viewportTexture = 0;
+        GLuint viewportRBO = 0;
+        int viewportWidth = 1280;
+        int viewportHeight = 720;
+        bool showGameViewport = true;
+        bool renderToViewport = true;
+
+        void CreateViewportFramebuffer(int width, int height);
+        void ResizeViewportFramebuffer(int width, int height);
+        void DeleteViewportFramebuffer();
+        void ShowGameViewport();
     };
 
 } // namespace Framework

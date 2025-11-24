@@ -58,6 +58,15 @@ namespace Framework
         MOUSE_LEFT = VK_LBUTTON,
         MOUSE_RIGHT = VK_RBUTTON,
 
+        // Function keys
+        KEY_F1 = VK_F1,
+        KEY_F2 = VK_F2,
+        KEY_F3 = VK_F3,
+        KEY_F9 = VK_F9,
+
+        //Delete key
+		KEY_DELETE = VK_DELETE,
+
         //Shift Key
         KEY_SHIFT = VK_SHIFT
     };

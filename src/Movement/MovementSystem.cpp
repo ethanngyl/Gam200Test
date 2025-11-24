@@ -79,6 +79,9 @@ namespace Framework
 
         if (!entityManager || !inputSystem) return;
         //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
+
+        if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
+
         if(Framework::CORE->IsPlaying())
         {
             for (Entity entity : entityManager->GetAllEntities())

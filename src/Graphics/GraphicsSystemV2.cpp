@@ -43,6 +43,7 @@ Safety:
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Debugger/Trace.h"
+#include "Input/Input.h"
 
 namespace Framework {
 
@@ -58,7 +59,9 @@ namespace Framework {
     GraphicsSystemV2::GraphicsSystemV2()
         : window(nullptr)
         , entityManager(nullptr)
+        , inputManager(nullptr)
         , mainCamera(-2.0f, 2.0f, -1.0f, 1.0f, -1.0f, 1.0f)  // Orthographic: left, right, bottom, top, near, far
+        , editorCamera(-2.0f, 2.0f, -1.0f, 1.0f, -1.0f, 1.0f)
         , viewportWidth(1600)
         , viewportHeight(800)
         , debugRenderingEnabled(false)
@@ -163,6 +166,23 @@ namespace Framework {
         mainCamera.SetPosition(newPos);
     }
 
+    void GraphicsSystemV2::EditorCamDefaultControl(float dt/*EntityManager* em, Entity player*/)
+    {
+        constexpr float cameraSpeed = 5.f;
+        
+        glm::vec3 delta(0.0f);
+        if (inputManager->IsKeyDown(KeyCode::KEY_W))
+            delta.y += cameraSpeed * dt;
+        if (inputManager->IsKeyDown(KeyCode::KEY_S))
+            delta.y -= cameraSpeed * dt;
+        if (inputManager->IsKeyDown(KeyCode::KEY_D))
+            delta.x += cameraSpeed * dt;
+        if (inputManager->IsKeyDown(KeyCode::KEY_A))
+            delta.x -= cameraSpeed * dt;
+
+        editorCamera.Translate(delta);
+    }
+
     // ============================================================================
     // /definition of ResetEditorCamera - Jiahao
     // // author: jiahao Zhou
@@ -226,7 +246,7 @@ namespace Framework {
     // Update: Per-frame entry point. Handles viewport changes, camera logic, render queue gather/sort/execute, optional debug pass, and error checks.(continuation from kah yan)
     void GraphicsSystemV2::Update(float dt) {
 
-        DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics); 
+        DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics);
 
         (void)dt;
 
@@ -234,39 +254,61 @@ namespace Framework {
             return;
         }
 
+        // ========================================================================
+        // RENDER TARGET SETUP
+        // ========================================================================
 
-        // Detect window resize each frame and update camera/viewport
-        int fbWidth, fbHeight;
-        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-        if (fbWidth != viewportWidth || fbHeight != viewportHeight) {
-            SetViewportSize(fbWidth, fbHeight);
+        if (renderingToTarget && targetFBO != 0) {
+            // Bind the custom framebuffer (ImGui viewport)
+            glBindFramebuffer(GL_FRAMEBUFFER, targetFBO);
+            glViewport(0, 0, targetWidth, targetHeight);
+
+            // Update camera aspect ratio for the viewport size
+            float aspectRatio = static_cast<float>(targetWidth) / static_cast<float>(targetHeight);
+            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+
+            // Update text renderer for viewport size
+            text_.setScreenSize(targetWidth, targetHeight);
+        }
+        else {
+            // Normal window rendering
+            // Detect window resize each frame and update camera/viewport
+            int fbWidth, fbHeight;
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+            if (fbWidth != viewportWidth || fbHeight != viewportHeight) {
+                SetViewportSize(fbWidth, fbHeight);
+            }
         }
 
-        // ============== CAMERA LOGIC ==============
-        // 
+        // ========================================================================
+        // CAMERA LOGIC
+        // ========================================================================
+
         // === EDITOR CAMERA LOGIC - jiahao
-        // this if else condition is to check when to use editor camera or make camera follow player
-        // LEVEL_2 is editor mode, if the game state current is in editor mode, proceed to the next check
-        // check if current imgui system is in play mode or not
-        // if yes, activate handleEditorCamera function, which the camera not following the player,  
-        // and able to move by arrow key(up down, left, right), key 1 to zoom in, key 2 to zoom out
-        // and key 0  to reset camera
-        //!Framework::CORE->IsPlaying()
         if (current == LEVEL_2) {
             if (!Framework::CORE->IsPlaying()) {
                 HandleEditorCamera(dt);
             }
-            
         }
-        // === CAMERA FOLLOW LOGIC ===
-        if (followEnabled && entityManager && followTarget.IsValid() && Framework::CORE->IsPlaying()) {
-                FollowPlayer(entityManager, followTarget);
-        }
-        // ============================================
 
-        // Clear ONCE at the start
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // === CAMERA FOLLOW LOGIC ===
+        if (Framework::CORE->IsPlaying()) {
+            if (followEnabled && entityManager && followTarget.IsValid()/* && Framework::CORE->IsPlaying()*/) {
+                FollowPlayer(entityManager, followTarget);
+            }
+        }
+        else {
+            EditorCamDefaultControl(dt);
+        }
+
+        // ========================================================================
+        // CLEAR AND RENDER
+        // ========================================================================
+
+        // Clear the current target (either FBO or screen)
         glClearColor(0.1f, 0.1f, 0.15f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         // Reset statistics
         stats = RenderStats();
 
@@ -287,6 +329,27 @@ namespace Framework {
         // Clear queues for next frame
         renderQueue.Clear();
         debugQueue.Clear();
+
+        // ========================================================================
+        // UNBIND RENDER TARGET
+        // ========================================================================
+
+        if (renderingToTarget && targetFBO != 0) {
+            // Return to default framebuffer
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            // Restore viewport to window size
+            int fbWidth, fbHeight;
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+            glViewport(0, 0, fbWidth, fbHeight);
+
+            // Restore camera aspect ratio
+            float aspectRatio = static_cast<float>(fbWidth) / static_cast<float>(fbHeight);
+            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+
+            // Restore text renderer
+            text_.setScreenSize(fbWidth, fbHeight);
+        }
 
         // Check for OpenGL errors
         GLenum error = glGetError();
@@ -310,6 +373,9 @@ namespace Framework {
     // Connect ECS EntityManager for renderable collection and follow logic.
     void GraphicsSystemV2::SetEntityManager(EntityManager* em) {
         entityManager = em;
+    }
+    void GraphicsSystemV2::SetInputSystem(InputSystem* is) {
+        inputManager = is;
     }
     // SetViewportSize: Update GL viewport, camera projection, and text renderer.
     void GraphicsSystemV2::SetViewportSize(int width, int height) {
@@ -783,8 +849,9 @@ namespace Framework {
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         // Camera matrices
-        glm::mat4 projection = mainCamera.GetProjectionMatrix();
-        glm::mat4 view = mainCamera.GetViewMatrix();
+        Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
+        glm::mat4 projection = activeCamera.GetProjectionMatrix();
+        glm::mat4 view = activeCamera.GetViewMatrix();
 
         currentBoundMaterial = INVALID_MATERIAL_HANDLE;
         currentBoundShader = INVALID_SHADER_HANDLE;
@@ -1073,7 +1140,7 @@ namespace Framework {
     void GraphicsSystemV2::RenderImGui() {
         if (!window) return;
 
-        // Just swap - DON'T clear!
+    //    // Just swap - DON'T clear!
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -1095,5 +1162,19 @@ namespace Framework {
             mr.mesh = resourceManager.GetMeshHandle("quad");
             mr.material = Material2;
         }
+    }
+
+    void GraphicsSystemV2::SetRenderTarget(GLuint fbo, int width, int height) {
+        targetFBO = fbo;
+        targetWidth = width;
+        targetHeight = height;
+        renderingToTarget = true;
+    }
+
+    void GraphicsSystemV2::ClearRenderTarget() {
+        targetFBO = 0;
+        targetWidth = 0;
+        targetHeight = 0;
+        renderingToTarget = false;
     }
 } // namespace Framework

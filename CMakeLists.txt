@@ -2,6 +2,11 @@
 cmake_minimum_required(VERSION 3.5)
 project(StructSquad)
 
+# Enable /MP for all targets globally
+if(MSVC)
+    add_compile_options(/MP)
+endif()
+
 # Set C++ standard early
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -120,6 +125,10 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Event
     ${CMAKE_SOURCE_DIR}/src/Pathfinding
     ${CMAKE_SOURCE_DIR}/src/Script
+    ${CMAKE_SOURCE_DIR}/src/PrefabEditor
+    ${CMAKE_SOURCE_DIR}/src/LevelEditor
+    ${CMAKE_SOURCE_DIR}/src/Pause
+
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

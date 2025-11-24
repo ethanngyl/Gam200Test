@@ -269,6 +269,7 @@ void TextRenderer::draw(const std::string& fontKey,
     if (it == fonts_.end()) return;
 
     glUseProgram(program_);
+
     // Set RGB color for this draw (alpha comes from glyph texture)
     glUniform3f(uTextColor_, color.r, color.g, color.b);
 

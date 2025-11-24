@@ -54,6 +54,7 @@ struct GLFWwindow;
 namespace Framework {
     class EntityManager;
     class Mesh;
+    class InputSystem;
 
     /**
      * @class GraphicsSystemV2
@@ -113,6 +114,7 @@ namespace Framework {
          * @brief Set the entity manager for ECS integration
          */
         void SetEntityManager(EntityManager* em);
+        void SetInputSystem(InputSystem* is);
 
         /**
          * @brief Set viewport size (handles window resize)
@@ -194,6 +196,19 @@ namespace Framework {
         // Toggle the blocked-grid overlay/fill (e.g., nav blockers).
         void SetShowGridBlocked(bool e) { showGridBlocked = e; }
 
+        // Set a custom render target (framebuffer)
+        void SetRenderTarget(GLuint fbo, int width, int height);
+
+        // Clear render target (return to default screen rendering)
+        void ClearRenderTarget();
+
+        // Check if currently rendering to a target
+        bool IsRenderingToTarget() const { return renderingToTarget; }
+
+        // Get current render dimensions
+        int GetRenderWidth() const { return renderingToTarget ? targetWidth : viewportWidth; }
+        int GetRenderHeight() const { return renderingToTarget ? targetHeight : viewportHeight; }
+
     private:
         // === RENDERING PHASES ===
         MeshFactory meshFactory;
@@ -272,9 +287,11 @@ namespace Framework {
         GLFWwindow* window;
         EntityManager* entityManager;
         ResourceManager resourceManager;
+        InputSystem* inputManager;
 
         // Camera
         Camera mainCamera;               // View/projection and zoom control.
+        Camera editorCamera;
 
         // Render queues
         RenderQueue renderQueue;         // Batches of draw commands.
@@ -324,6 +341,7 @@ namespace Framework {
          * @brief Makes the camera follow a target player entity
          */
         void FollowPlayer(EntityManager* em, Entity player);
+        void EditorCamDefaultControl(float dt);
 
         // Editor camera state
 		glm::vec3 editorCameraStartPos{ 0.0f, 0.0f, 0.0f };
@@ -342,6 +360,11 @@ namespace Framework {
         // Grid overlay toggles (editor visualization)
         bool showGrid = true; 
         bool showGridBlocked = true; 
+
+        GLuint targetFBO = 0;
+        int targetWidth = 0;
+        int targetHeight = 0;
+        bool renderingToTarget = false;
     };
 
 } // namespace Framework
