@@ -27,15 +27,16 @@ local apIndicatorsFilled = {}  -- Foreground layer: destroyed/recreated based on
 local maxAP = 5
 local indicatorSize = 0.08
 local indicatorSpacing = 0.1
-local screenOffsetX = -0.7  -- Bottom left corner of screen
-local screenOffsetY = -0.7  -- Bottom left corner of screen
+-- Adjusted for zoom 0.6: offsets scaled to match viewport size
+local screenOffsetX = -0.42  -- Bottom left corner (adjusted for zoom)
+local screenOffsetY = -0.42  -- Bottom left corner (adjusted for zoom)
 local lastKnownAP = 0  -- Track AP changes
 
 -- Chest UI indicators
 local chestIndicatorsEmpty = {}
 local chestIndicatorsFilled = {}
-local chestUIOffsetX = 0.5
-local chestUIOffsetY = -0.7
+local chestUIOffsetX = 0.3   -- Adjusted for zoom 0.6
+local chestUIOffsetY = -0.42  -- Adjusted for zoom 0.6
 local lastKnownChests = 0
 local totalChestsRequired = 0
 
