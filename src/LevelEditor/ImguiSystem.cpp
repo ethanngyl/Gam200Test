@@ -572,9 +572,22 @@ namespace Framework {
                     }
                 }
 
-                if (ImGui::BeginDragDropSource()) {
+                /*if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload("Sprite", &label, label.size());
                     ImGui::Text(label.c_str());
+                    ImGui::EndDragDropSource();
+                }*/
+
+                if (ImGui::BeginDragDropSource())
+                {
+                    // Send full texture path, e.g. "assets/player.png"
+                    ImGui::SetDragDropPayload(
+                        "Sprite",
+                        filePath.c_str(),
+                        filePath.size() + 1
+                    );
+
+                    ImGui::Text("%s", label.c_str());
                     ImGui::EndDragDropSource();
                 }
             }
@@ -1239,6 +1252,19 @@ namespace Framework {
                             sprite.texturePath = pathBuffer;
                         }
 
+                        if (ImGui::BeginDragDropTarget())
+                        {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite"))
+                            {
+                                const char* droppedPath = static_cast<const char*>(payload->Data);
+                                if (droppedPath && payload->DataSize > 0)
+                                {
+                                    sprite.texturePath = droppedPath;
+                                }
+                            }
+                            ImGui::EndDragDropTarget();
+                        }
+
                         ImGui::DragInt("Layer", &sprite.layer, 1, -100, 100);
 
                         ImGui::TreePop();
@@ -1259,6 +1285,30 @@ namespace Framework {
 
                         if (ImGui::InputText("Sprite Name", nameBuffer, sizeof(nameBuffer))) {
                             meshRenderer.spriteName = nameBuffer;
+                        }
+
+                        if (ImGui::BeginDragDropTarget())
+                        {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite"))
+                            {
+                                const char* droppedPath = static_cast<const char*>(payload->Data);
+                                if (droppedPath && payload->DataSize > 0)
+                                {
+                                    // Use full path so GraphicsSystemV2 can LoadTexture(droppedPath)
+                                    meshRenderer.spriteName = droppedPath;
+
+                                    meshRenderer.texture = TextureHandle();
+
+                                    // Optional: keep Sprite component in sync if it exists
+                                    if (entityManager->HasComponent<Sprite>(entity))
+                                    {
+                                        auto& spriteFromRenderer =
+                                            entityManager->GetComponent<Sprite>(entity);
+                                        spriteFromRenderer.texturePath = droppedPath;
+                                    }
+                                }
+                            }
+                            ImGui::EndDragDropTarget();
                         }
 
                         ImGui::DragInt("Layer", &meshRenderer.layer, 1, -100, 100);
