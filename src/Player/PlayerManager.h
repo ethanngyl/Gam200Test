@@ -60,6 +60,7 @@ namespace Framework {
 
         void ResetGridState();
         void SetGridMovementEnabled(bool enabled);
+		bool HandleTileInteraction(const GridCoord& tileCoord);
 
     private:
         // ========================================================================
@@ -69,6 +70,8 @@ namespace Framework {
         void HandleShootUp(const Vector2D& playerPos);
         void HandleShootDown(const Vector2D& playerPos);
         void HandleShootAtMouse(const Vector2D& playerPos);
+        void HandleAttackAction();
+		Entity FindFirstEnemyInRange(int minRange, int maxRange);
 
         // ========================================================================
         // PLAYER MOVEMENT HANDLERS

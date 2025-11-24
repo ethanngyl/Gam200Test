@@ -127,7 +127,7 @@ namespace Framework {
             std::string rowStr = rowStrings[r];
             for (int c = 0; c < cols; ++c) {
                 char tileChar = (c < rowStr.length()) ? rowStr[c] : '0';
-                if (tileChar == 'S') {  // 'S' = Chest in your JSON
+                if (tileChar == 'S') {  // 'S' = Chest in JSON
                     totalChests++;
                 }
             }
@@ -197,6 +197,9 @@ namespace Framework {
 
                     if (def.entityType == "Player") {
                         specialEntity = spawner->SpawnPlayer(pos);
+                        if(!em->HasComponent<Inventory>(specialEntity)) {
+                            em->AddComponent<Inventory>(specialEntity);
+						}
                         LOG_INFO("LevelLoader", "Spawned Player at (%d, %d)", c, r);
                     }
                     else if (def.entityType == "Enemy") {
@@ -208,28 +211,28 @@ namespace Framework {
                             em->AddComponent<EnemyAI>(specialEntity);
                         }
                         if (!em->HasComponent<AP>(specialEntity)) {
-                            em->AddComponent<AP>(specialEntity, 2, 3); // 2 HP, 3 AP
+                            em->AddComponent<AP>(specialEntity, 3); // 3 AP
                         }
                         LOG_INFO("LevelLoader", "Spawned Enemy at (%d, %d)", c, r);
                         
                         LOG_INFO("LevelLoader", "Skipped Enemy spawn at (%d, %d) - DEBUG MODE", c, r);
                     }
-                    // ============================================================
+                // ============================================================
                 // CHEST - Blocks enemies, collectable by player
                 // ============================================================
                     else if (def.entityType == "Chest") {
                         // Spawn chest entity
-                        /*specialEntity = spawner->SpawnSprite(
+                        specialEntity = spawner->SpawnSprite(
                             def.texture,
                             pos,
                             Vector2D(spacing.x * 0.8f, spacing.y * 0.8f)
-                        );*/
+                        );
 
                         // Add Chest component
                         em->AddComponent<Chest>(specialEntity, nextChestID);
 
                         // CRITICAL: Mark tile as BLOCKED for enemies
-                       // gridTile.blocked = true;
+                        //gridTile.blocked = true;
 
                         LOG_INFO("LevelLoader", "Spawned Chest %d at (%d, %d) - BLOCKED for enemies",
                             nextChestID, c, r);
@@ -241,11 +244,11 @@ namespace Framework {
                     // ============================================================
                     else if (def.entityType == "Goal") {
                         // Spawn goal entity
-                       /* specialEntity = spawner->SpawnSprite(
+                        specialEntity = spawner->SpawnSprite(
                             def.texture,
                             pos,
                             Vector2D(spacing.x * 0.9f, spacing.y * 0.9f)
-                        );*/
+                        );
 
                         // Add Goal component
                         em->AddComponent<Goal>(specialEntity, totalChests);

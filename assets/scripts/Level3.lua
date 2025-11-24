@@ -31,6 +31,14 @@ local screenOffsetX = -0.7  -- Bottom left corner of screen
 local screenOffsetY = -0.7  -- Bottom left corner of screen
 local lastKnownAP = 0  -- Track AP changes
 
+-- Chest UI indicators
+local chestIndicatorsEmpty = {}
+local chestIndicatorsFilled = {}
+local chestUIOffsetX = 0.5
+local chestUIOffsetY = -0.7
+local lastKnownChests = 0
+local totalChestsRequired = 0
+
 -- Debug frame counter
 local debugFrameCounter = 0
 
@@ -208,6 +216,40 @@ function OnInit()
     Log("  - Press 5 to return to main menu")
     Log("  - AP indicators shown at top of screen")
     Log("========================================")
+
+    -- ========================================================================
+    -- CREATE CHEST PROGRESS UI
+    -- ========================================================================
+    Log("Creating Chest indicators...")
+    
+    local collected, required = GetChestProgress()
+    totalChestsRequired = required
+    Log("Chest progress: " .. collected .. "/" .. required)
+
+    -- Create empty chest indicators
+    for i = 1, totalChestsRequired do
+        local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
+        local yPos = camY + chestUIOffsetY
+
+        local entityID = SpawnSprite(
+            "assets/AP Empty.png",
+            xPos, yPos,
+            indicatorSize, indicatorSize,
+            0
+        )
+
+        if entityID > 0 then
+            chestIndicatorsEmpty[i] = entityID
+            Log("  ✓ Empty chest indicator " .. i)
+        else
+            chestIndicatorsEmpty[i] = 0
+        end
+    end
+
+    lastKnownChests = 0
+
+    initialized = true
+    Log("Level 3 initialization complete!")
 end
 
 
@@ -319,6 +361,68 @@ function OnUpdate(dt)
     end
     -- Engine is set to playing mode in C++ during update loop
     -- Graphics system handles camera follow automatically
+
+    -- ========================================================================
+    -- UPDATE CHEST PROGRESS UI
+    -- ========================================================================
+    if #chestIndicatorsEmpty > 0 then
+        local collected, required = GetChestProgress()
+        local camX, camY, camZ = GetCameraPosition()
+
+        -- Update positions of empty chest indicators
+        for i = 1, #chestIndicatorsEmpty do
+            local entityID = chestIndicatorsEmpty[i]
+            if entityID and entityID > 0 then
+                local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + chestUIOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
+            end
+        end
+
+        -- Update positions of filled chest indicators
+        for i = 1, #chestIndicatorsFilled do
+            local entityID = chestIndicatorsFilled[i]
+            if entityID ~= nil and entityID > 0 then
+                local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + chestUIOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
+            end
+        end
+
+        -- Handle chest collection
+        if collected ~= lastKnownChests then
+            Log("[CHEST] Collected " .. collected .. "/" .. required .. " chests!")
+
+            if collected > lastKnownChests then
+                -- Create filled chest indicators
+                for i = lastKnownChests + 1, collected do
+                    local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
+                    local yPos = camY + chestUIOffsetY
+
+                    local entityID = SpawnSprite(
+                        "assets/AP Crystal.png",
+                        xPos, yPos,
+                        indicatorSize, indicatorSize,
+                        0
+                    )
+
+                    if entityID > 0 then
+                        chestIndicatorsFilled[i] = entityID
+                        Log("  ✓ Created filled chest indicator " .. i)
+                    else
+                        chestIndicatorsFilled[i] = 0
+                    end
+                end
+            end
+
+            lastKnownChests = collected
+
+            if collected >= required then
+                Log("=== ALL CHESTS COLLECTED! ===")
+                Log("Go to the GOAL to complete the level!")
+            end
+        end
+    end
 end
 
 -- ============================================================================
@@ -357,8 +461,24 @@ function OnDestroy()
         end
     end
 
+    -- Destroy chest indicators (empty)
+    for i = 1, #chestIndicatorsEmpty do
+        if chestIndicatorsEmpty[i] and chestIndicatorsEmpty[i] > 0 then
+            DestroyEntity(chestIndicatorsEmpty[i])
+        end
+    end
+
+    -- Destroy chest indicators (filled)
+    for i = 1, #chestIndicatorsFilled do
+        if chestIndicatorsFilled[i] ~= nil and chestIndicatorsFilled[i] > 0 then
+            DestroyEntity(chestIndicatorsFilled[i])
+        end
+    end
+
     apIndicatorsEmpty = {}
     apIndicatorsFilled = {}
+    chestIndicatorsEmpty = {}
+    chestIndicatorsFilled = {}
     Log("AP indicators cleaned up (both layers)")
 
     -- Note: Entity cleanup, camera reset, and player controller reset

@@ -287,13 +287,23 @@ namespace Framework {
             mr.material = GraphicsSystemV2::Material2;
             mr.layer = RenderLayers::Player;  // Player renders on top
 
-            entityManager->AddComponent<Movement>(player);
+            /*entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
-            movement.moveSpeed = 0.2f;
+            movement.moveSpeed = 0.2f;*/
 
             entityManager->AddComponent<CircleCollider>(player);
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
+
+			entityManager->AddComponent<Inventory>(player);
+
+			entityManager->AddComponent<Health>(player, 5); // max 5 health points
+
+			entityManager->AddComponent<AttackAP>(player, 3); // max 3 attack points
+
+			entityManager->AddComponent<AP>(player, 5); // max 5 action points
+
+			//entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
 
             // Add SpriteAnimation component for player animations
             entityManager->AddComponent<SpriteAnimation>(player);
@@ -372,7 +382,7 @@ namespace Framework {
             //movement.direction = Vector2D(0.0f, -1.0f);
 
             // *** NEW: Add Health component (50 HP by default) ***
-            entityManager->AddComponent<Health>(enemy, 50);
+            entityManager->AddComponent<Health>(enemy, 2);
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);

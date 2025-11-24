@@ -281,14 +281,11 @@ namespace Framework
     };
 
     struct AP : public Component<AP> {
-        int hp = 3;
-        int maxHp = 3;
         int actionPoints = 3;
         int maxActionPoints = 3;
 
-        AP(int startHp = 3, int startAp = 3) : hp(startHp), maxHp(startHp), actionPoints(startAp), maxActionPoints(startAp) {
-
-        }
+        AP() = default;
+		AP(int maxAP) : actionPoints(maxAP), maxActionPoints(maxAP) {}
     };
 
     struct AttackRangeComponent : public Component<AttackRangeComponent> {
@@ -342,4 +339,10 @@ namespace Framework
         }
     };
 
+    struct AttackAP : public Component<AttackAP> {
+        int points = 1; //current attack points
+        int maxPoints = 3; //max attack points per player turn
+
+        AttackAP(int start = 1) : points(start), maxPoints(start) {}
+    };
 }

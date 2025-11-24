@@ -283,13 +283,13 @@ void GSM_Update()
 
                         // Add player stats (AP) if not already added
                         if (!em->HasComponent<Framework::AP>(player)) {
-                            em->AddComponent<Framework::AP>(player, 100, 5);  // 100 HP, 5 AP
+                            em->AddComponent<Framework::AP>(player, 5);  // 100 HP, 5 AP
                             LOG_INFO("GSM", "Added AP component to player: 100 HP, 5 AP");
                         }
                         else {
                             auto& ap = em->GetComponent<Framework::AP>(player);
-                            LOG_INFO("GSM", "Player already has AP: %d HP, %d/%d AP",
-                                     ap.hp, ap.actionPoints, ap.maxActionPoints);
+                            LOG_INFO("GSM", "Player already has AP: %d/%d AP",
+                                     ap.actionPoints, ap.maxActionPoints);
                         }
 
                         // Configure player controller
