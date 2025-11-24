@@ -126,8 +126,8 @@ namespace Framework {
         text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
 
         //set the editor camera to default position - jiahao
-        editorCameraStartPos = mainCamera.GetPosition();
-        editorCameraZoom = mainCamera.GetZoom();
+        editorCameraStartPos = editorCamera.GetPosition();
+        editorCameraZoom = editorCamera.GetZoom();
 
         // Load fonts (keys must match what DrawText uses)
         text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48);
@@ -192,8 +192,8 @@ namespace Framework {
     // ============================================================================
     
     void GraphicsSystemV2::ResetEditorCamera() {
-        mainCamera.SetPosition(editorCameraStartPos);
-        mainCamera.SetZoom(editorCameraZoom);
+        editorCamera.SetPosition(editorCameraStartPos);
+        editorCamera.SetZoom(editorCameraZoom);
     }
 
     // ============================================================================
@@ -212,28 +212,28 @@ namespace Framework {
         //Panning with arrow keys
 		//Basically move the camera position based on arrow key input
         if (GetAsyncKeyState(Framework::KEY_LEFT)) {
-            mainCamera.Translate({ -panSpeed, 0.0f, 0.0f });
+            editorCamera.Translate({ -panSpeed, 0.0f, 0.0f });
         }
         if (GetAsyncKeyState(Framework::KEY_RIGHT)) {
-            mainCamera.Translate({ panSpeed, 0.0f, 0.0f });
+            editorCamera.Translate({ panSpeed, 0.0f, 0.0f });
         }
         if (GetAsyncKeyState(Framework::KEY_UP)) {
-            mainCamera.Translate({ 0.0f, panSpeed, 0.0f });
+            editorCamera.Translate({ 0.0f, panSpeed, 0.0f });
         }
         if (GetAsyncKeyState(Framework::KEY_DOWN)) {
-            mainCamera.Translate({ 0.0f, -panSpeed, 0.0f });
+            editorCamera.Translate({ 0.0f, -panSpeed, 0.0f });
         }
 
         //Zooming 
 		// key 1 to zoom in, key 2 to zoom out
         if (GetAsyncKeyState(Framework::KEY_1)) {
-            float zoom = mainCamera.GetZoom();
-            mainCamera.SetZoom(zoom * (1.0f + zoomSpeed));
+            float zoom = editorCamera.GetZoom();
+            editorCamera.SetZoom(zoom * (1.0f + zoomSpeed));
         }
 
         if (GetAsyncKeyState(Framework::KEY_2)) {
-            float zoom = mainCamera.GetZoom();
-            mainCamera.SetZoom(zoom * (1.0f - zoomSpeed));
+            float zoom = editorCamera.GetZoom();
+            editorCamera.SetZoom(zoom * (1.0f - zoomSpeed));
         }
 
         //Reset camera position 
@@ -816,8 +816,8 @@ namespace Framework {
         //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         // Camera matrices
-        //Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
-		Camera& activeCamera = mainCamera;
+        Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
+		//Camera& activeCamera = mainCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
         glm::mat4 view = activeCamera.GetViewMatrix();
 

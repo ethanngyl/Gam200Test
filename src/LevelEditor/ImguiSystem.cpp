@@ -296,7 +296,31 @@ namespace Framework {
                     continue;
                 }
             }
+            if (word == "AudioSource") {
+                std::string name;
+                float vol, pitch;
+                int loop, playOnStart;
+                // Read the data 
+                if (iss >> name >> vol >> pitch >> loop >> playOnStart) {
+                    entityManager->AddComponent<Framework::AudioSource>(Entity);
+                    auto& audio = entityManager->GetComponent<Framework::AudioSource>(Entity);
+                    audio.soundName = name;
+                    audio.volume = vol;
+                    audio.pitch = pitch;
+                    audio.loop = (loop != 0);
+                    audio.playOnStart = (playOnStart != 0);
+                }
+            }
 
+            if (word == "Script") {
+                std::string path;
+                // Read the script path
+                if (iss >> path) {
+                    entityManager->AddComponent<Framework::ScriptComponent>(Entity);
+                    auto& script = entityManager->GetComponent<Framework::ScriptComponent>(Entity);
+                    script.scriptPath = path;
+                }
+            }
             
         }
         RebuildSpatialPartition();
