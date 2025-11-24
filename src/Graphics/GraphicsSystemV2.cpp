@@ -808,18 +808,47 @@ namespace Framework {
             {
                 auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
+                // DEBUG: Log animation state (only log every 60 frames to avoid spam)
+                static int debugFrameCounter = 0;
+                bool shouldDebug = (++debugFrameCounter % 60 == 0);
+                if (shouldDebug) {
+                    LOG_INFO("ANIM_RENDER", "=== Entity %u SpriteAnimation Debug ===", (unsigned)e.id);
+                    LOG_INFO("ANIM_RENDER", "  animName='%s' group=%d dir=%d playing=%d",
+                        anim.animName.c_str(), (int)anim.group, (int)anim.direction, anim.playing);
+                    LOG_INFO("ANIM_RENDER", "  Frame: current=%d/%d  elapsed=%.3f/%.3f",
+                        anim.currentFrame, anim.frameCount, anim.elapsedTime, anim.frameTime);
+                    LOG_INFO("ANIM_RENDER", "  Layout: rows=%d cols=%d  spriteSheet.id=%u",
+                        anim.rows, anim.columns, anim.spriteSheet.GetID());
+                }
+
                 Material* mat = resourceManager.GetMaterial(cmd.material);
-                if (!mat) continue;
+                if (!mat) {
+                    if (shouldDebug) LOG_WARN("ANIM_RENDER", "  FAIL: Material is NULL");
+                    continue;
+                }
 
                 Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
-                if (!tex) continue;
+                if (!tex) {
+                    if (shouldDebug) LOG_WARN("ANIM_RENDER", "  FAIL: Texture is NULL (handle=%u)",
+                        anim.spriteSheet.GetID());
+                    continue;
+                }
 
                 const int texW = tex->GetWidth();
                 const int texH = tex->GetHeight();
 
+                if (shouldDebug) {
+                    LOG_INFO("ANIM_RENDER", "  Texture size: %dx%d", texW, texH);
+                }
+
                 // Validate texture dimensions and animation data
-                if (texW <= 0 || texH <= 0 || anim.columns <= 0 || anim.rows <= 0)
+                if (texW <= 0 || texH <= 0 || anim.columns <= 0 || anim.rows <= 0) {
+                    if (shouldDebug) {
+                        LOG_WARN("ANIM_RENDER", "  FAIL: Validation failed! texW=%d texH=%d cols=%d rows=%d",
+                            texW, texH, anim.columns, anim.rows);
+                    }
                     continue;
+                }
 
                 const int cols = anim.columns;
                 const int rows = anim.rows;
@@ -837,6 +866,11 @@ namespace Framework {
                 float v0 = (y * frameH) + shrink;
                 float v1 = ((y + 1) * frameH) - shrink;
 
+                if (shouldDebug) {
+                    LOG_INFO("ANIM_RENDER", "  UV Calc: frame=%d grid(%d,%d) -> UV(%.3f,%.3f)-(%.3f,%.3f)",
+                        frame, x, y, u0, v0, u1, v1);
+                }
+
                 // Apply horizontal flipping if enabled
                 if (anim.flipX)
                     std::swap(u0, u1);
@@ -849,6 +883,11 @@ namespace Framework {
 
                 // **CRITICAL**: Override render command texture with animation sprite sheet
                 cmd.texture = anim.spriteSheet;
+
+                if (shouldDebug) {
+                    LOG_INFO("ANIM_RENDER", "  SUCCESS: UVs applied, texture overridden to handle=%u",
+                        anim.spriteSheet.GetID());
+                }
 
                 // Ensure material texture is also set
                 if (!mat->albedoTexture.IsValid())
