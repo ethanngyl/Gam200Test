@@ -816,7 +816,9 @@ namespace Framework {
 
                 const int texW = tex->GetWidth();
                 const int texH = tex->GetHeight();
-                if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
+
+                // Validate texture dimensions and animation data
+                if (texW <= 0 || texH <= 0 || anim.columns <= 0 || anim.rows <= 0)
                     continue;
 
                 const int cols = anim.columns;
