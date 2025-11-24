@@ -53,7 +53,7 @@ function OnInit()
 
     -- Set camera to default position
     SetCameraPosition(0.0, 0.0, 0.0)
-    SetCameraZoom(0.6)  -- Zoomed in closer to player (0.5-0.7 recommended for gameplay)
+    SetCameraZoom(2.0)  -- Zoomed in closer to player (0.5-0.7 recommended for gameplay)
     Log("Camera initialized: pos(0,0,0), zoom=0.6 (closer view)")
 
     -- Disable ImGui for debugging (isolating player + map for AMD GPU flickering)
