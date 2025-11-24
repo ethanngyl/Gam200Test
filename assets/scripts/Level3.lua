@@ -28,7 +28,7 @@ local maxAP = 5
 local indicatorSize = 0.08
 local indicatorSpacing = 0.1
 -- Adjusted for zoom 0.6: offsets scaled to match viewport size
-local screenOffsetX = -0.42  -- Bottom left corner (adjusted for zoom)
+local screenOffsetX = -0.82  -- Bottom left corner (adjusted for zoom)
 local screenOffsetY = -0.42  -- Bottom left corner (adjusted for zoom)
 local lastKnownAP = 0  -- Track AP changes
 
