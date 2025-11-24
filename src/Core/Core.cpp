@@ -121,6 +121,12 @@ namespace Framework
             LOG_INFO("CORE", " CoreEngine: All Systems Ready!");
             LOG_INFO("CORE", "================================================");
 
+            // *************** IMPORTANT ***************
+            // Initialize LevelLoader BEFORE GSM starts
+            // This creates Lua, loads API, etc.
+            // ******************************************
+            Framework::LevelLoader::GetInstance().Initialize(this);
+
             return true;
         }
         catch (const std::exception& e) {
