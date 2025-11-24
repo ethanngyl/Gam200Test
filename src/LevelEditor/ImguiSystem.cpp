@@ -641,7 +641,7 @@ namespace Framework {
         float ndcX = (2.0f * fbX / static_cast<float>(fbWidth)) - 1.0f;
         float ndcY = 1.0f - (2.0f * fbY / static_cast<float>(fbHeight));
 
-        glm::mat4 invViewProj = glm::inverse(graphics->GetCamera().GetViewProjectionMatrix());
+        glm::mat4 invViewProj = glm::inverse(graphics->GetEditorCamera().GetViewProjectionMatrix());
 
         glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
 
