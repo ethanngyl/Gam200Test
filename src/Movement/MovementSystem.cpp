@@ -121,6 +121,12 @@ namespace Framework
 
                    // ---------------------- Direction-based flipping ----------------------
                    // When pressing D → face right; A → face left
+                    // -----------------------------------------------------------
+                    // SAFETY CHECK: Only animated entities should use animation
+                    // -----------------------------------------------------------
+                    if (!entityManager->HasComponent<SpriteAnimation>(entity))
+                        continue;  // <-- prevents crash!
+
                     auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
 
                     // Determine if moving
