@@ -18,7 +18,8 @@
 local buttonIDs = {}
 local initialized = false
 local config = nil
-local editorToggleCooldown = 0  
+local editorToggleCooldown = 0
+local backgroundSpriteID = 0  -- Store background sprite entity ID  
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -41,21 +42,49 @@ function OnInit()
     local cam = config.menu.camera
     SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
     SetCameraZoom(cam.zoom)
-    
+
     -- Disable ImGui overlay by default for menu
     DisableImGui()
-    
+
     -- Set engine to editor mode (non-playing)
     SetEnginePlayState(true)
-    
+
+    -- ========================================================================
+    -- CREATE BACKGROUND SPRITE
+    -- ========================================================================
+    -- Load background configuration (use default if not in JSON)
+    local background = config.menu.background or {
+        texture = "assets/Background/DefaultMenuBackground.png",
+        position = { x = 0.0, y = 0.0 },
+        scale = { x = 2.0, y = 2.0 },
+        layer = -10  -- Behind everything
+    }
+
+    Log("Creating background sprite: " .. background.texture)
+    backgroundSpriteID = SpawnSprite(
+        background.texture,
+        background.position.x,
+        background.position.y,
+        background.scale.x,
+        background.scale.y,
+        background.layer
+    )
+
+    if backgroundSpriteID > 0 then
+        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
+    else
+        Log("✗ WARNING: Failed to create background sprite")
+    end
+    -- ========================================================================
+
     -- Start menu background music from JSON config
     local music = config.menu.music
     PlaySound(music.name, music.loop, music.volume)
     Log("Playing menu music: " .. music.name)
-    
+
     -- Clear any existing UI from previous states
     ClearAllButtons()
-    
+
     -- Create UI buttons from JSON config
     CreateButtonsFromConfig()
     
@@ -197,18 +226,25 @@ end
 
 function OnDestroy()
     Log("MainMenu cleanup...")
-    
+
     -- Stop all sounds
     StopAllSounds()
-    
+
     -- Clear UI buttons
     ClearAllButtons()
-    
+
+    -- Destroy background sprite
+    if backgroundSpriteID > 0 then
+        DestroyEntity(backgroundSpriteID)
+        Log("Background sprite destroyed")
+    end
+
     -- Reset state
     buttonIDs = {}
     config = nil
     initialized = false
-    
+    backgroundSpriteID = 0
+
     Log("MainMenu cleanup complete")
 end
 
