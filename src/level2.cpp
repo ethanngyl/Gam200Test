@@ -21,6 +21,7 @@
 #include "ImguiSystem.h"
 #include "Pathfinding.h"
 #include "Pause/Pause.h"
+#include "TimeConstants.h"
 
 
 extern Framework::CoreEngine* engine;
@@ -39,6 +40,17 @@ void level2_Initialize()
         LOG_ERROR("LEVEL2", "Engine is null!");
         return;
     }
+
+    // =======================
+    // LOAD SPRITE ANIMATIONS
+    // =======================
+    auto* animSys = engine->GetAnimationSystem();
+    if (animSys)
+    {
+        animSys->LoadAnimationConfig("assets/animations.json");
+        LOG_INFO("LEVEL2", "Loaded animations.json for editor animations");
+    }
+
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Enable();
     }
@@ -80,6 +92,9 @@ void level2_Initialize()
 
 void level2_Update()
 {
+    if (!engine) return;
+
+    // 1. Handle input switching levels
     if (engine && engine->GetInputSystem() &&
         engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
@@ -91,6 +106,14 @@ void level2_Update()
     {
         next = LEVEL_3;
     }
+
+    // =============================================================
+    // 2. UPDATE ANIMATIONS IN LEVEL EDITOR
+    // =============================================================
+    // Animate in level editor using fixed-step (60 FPS)
+    auto* animSys = engine->GetAnimationSystem();
+    if (animSys)
+        animSys->Update(Framework::Time::FIXED_DT);
 }
 
 void level2_Draw()

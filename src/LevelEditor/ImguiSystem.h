@@ -30,6 +30,17 @@ namespace Framework {
     class EntitySpawner;
     class EntityManager;
 
+    /*
+	* @brief declare a structure to store the undo step information
+    */
+
+    struct UndoStep {
+        //the entity that user select and need to undo
+        Entity entity;          
+		//the previous position of the entity before user move it
+        Vector2D oldPosition;   
+    };
+
     /**
      * @brief ImGui System - Provides visual debugging and entity inspection UI
      */
@@ -90,6 +101,17 @@ namespace Framework {
                 viewportHeight >= 100;
         }
         void RequestToggle() { pendingToggle = true; }
+
+		//undo function - jiahao
+		void PerformUndo();
+        void RecordUndoStep(Entity entity);
+
+
+
+        bool IsAudioFile(const std::filesystem::path& path) const;
+        bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
+        bool AddAudioToJSON(const std::string& jsonPath, const std::string& audioPath);
+
     private:
         GLFWwindow* window;
         EntityManager* entityManager;
@@ -105,15 +127,20 @@ namespace Framework {
 
         AudioSystem* audioSystem;
         GraphicsSystemV2* graphicsSystem;
+
         // UI Windows
         void ShowEntityInspector();
         void ShowSpawnerWindow();
         void ShowDebugWindow();
         void ShowDemoWindow();
+
         //Asset windows - jiahao
         bool showAssets = false;
         std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
+
+        bool showAudioErrorPopup = false;
+        std::string audioErrorMessage = "";
 
         //object picking - jiahao
         void UpdatePicking();
@@ -150,14 +177,11 @@ namespace Framework {
         void OnFileDrop(int count, const char** paths);
         bool IsLevelFile(const std::filesystem::path& path) const;
         bool IsTextureFile(const std::filesystem::path& path) const;
-        bool IsAudioFile(const std::filesystem::path& path) const;
-        bool AddAudioToJSON(const std::string& audioName, const std::string& fileName);
-        bool IsAudioFileSupported(const std::filesystem::path& path, std::string& errorMsg) const;
+
         std::filesystem::path rootpath = "assets/";
         std::filesystem::path currentpath = "assets/";
         std::filesystem::path previouspath;
-        bool showAudioErrorPopup;
-        std::string audioErrorMessage;
+
         // State
         bool showDemo;
         bool showEntityInspector;
@@ -190,6 +214,10 @@ namespace Framework {
         void ResizeViewportFramebuffer(int width, int height);
         void DeleteViewportFramebuffer();
         void ShowGameViewport();
+
+
+        //undo step - jiahao
+		std::vector<UndoStep> undoStack;
     };
 
 } // namespace Framework

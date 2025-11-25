@@ -16,7 +16,7 @@
 #pragma once
 #include "ECSComponent.h"
 #include "Vector2D.h"
-#include "ResourceHandle.h"
+#include "ResourceHandle.h"   // <-- REQUIRED for TextureHandle
 #include <string>
 
 extern "C" {
@@ -38,9 +38,6 @@ namespace Framework
         Vector2D position;
         float rotation = 0.0f;
         Vector2D scale = Vector2D(1.0f, 1.0f);
-
-        float upperLimit = 0.0f;
-        float lowerLimit = 0.0f;
 
         Transform(Vector2D pos = Vector2D()) : position(pos) {}
     };
@@ -65,10 +62,6 @@ namespace Framework
         bool blocked = false;
     };
 
-    /**
-     * @enum AnimGroup
-     * @brief Animation group categories for entity animations
-     */
     enum class AnimGroup {
         Idle,
         Walk,
@@ -78,10 +71,6 @@ namespace Framework
         Count
     };
 
-    /**
-     * @enum AnimDirection
-     * @brief Direction variants for directional animations
-     */
     enum class AnimDirection {
         Front,
         Back,
@@ -89,13 +78,6 @@ namespace Framework
         None
     };
 
-    /**
-     * @struct SpriteAnimation
-     * @brief Component for sprite-based frame animations
-     *
-     * Manages sprite sheet animations with multiple frames, directions, and states.
-     * Used by AnimationSystem to update frame progression based on time and movement.
-     */
     struct SpriteAnimation : public Component<SpriteAnimation>
     {
         AnimGroup group = AnimGroup::Idle;

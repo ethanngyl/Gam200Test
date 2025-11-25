@@ -14,6 +14,7 @@
 ===============================================================================
  */
 #pragma once
+
 // Standard C++ libraries
 #include <vector> //Dynamic Array
 #include <string> //String Handling
@@ -39,6 +40,7 @@
 #include <string_view> //Non-owning string references
 #include <functional> //Function objects
 #include <queue>
+#include <stdexcept>
 
 //Components
 

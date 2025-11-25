@@ -120,19 +120,63 @@ namespace Framework
 
                    // ---------------------- Direction-based flipping ----------------------
                    // When pressing D → face right; A → face left
-                    if (inputDir.x > default_zero)
+                    // -----------------------------------------------------------
+                    // SAFETY CHECK: Only animated entities should use animation
+                    // -----------------------------------------------------------
+                    if (!entityManager->HasComponent<SpriteAnimation>(entity))
+                        continue;  // <-- prevents crash!
+
+                    auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
+
+                    // -----------------------------------------
+                    // BLOCK MOVEMENT WHEN DEATH ANIMATION PLAYS
+                    // -----------------------------------------
+                    if (anim.group == AnimGroup::Death)
                     {
-                        if (entityManager->HasComponent<SpriteAnimation>(entity))
+                        movement.direction = { 0, 0 };           // stop all motion
+                        transform.rotation = transform.rotation; // (optional) allow no rotation changes
+                        continue;                                // skip ALL movement logic
+                    }
+
+                    // Determine if moving
+                    bool moving = fabs(inputDir.x) > 0.01f || fabs(inputDir.y) > 0.01f;
+
+                    if (moving)
+                    {
+                        if (inputDir.y > 0)       anim.direction = AnimDirection::Back;
+                        else if (inputDir.y < 0)  anim.direction = AnimDirection::Front;
+                        else if (inputDir.x > 0) { anim.direction = AnimDirection::Side; anim.flipX = false; }
+                        else if (inputDir.x < 0) { anim.direction = AnimDirection::Side; anim.flipX = true; }
+                    }
+                    // DO NOT change direction when idle → preserves last direction
+
+                    if (moving)
+                    {
+                        if (anim.group != AnimGroup::Attack &&
+                            anim.group != AnimGroup::Injured &&
+                            anim.group != AnimGroup::Death)
                         {
-                            entityManager->GetComponent<SpriteAnimation>(entity).flipX = false;
+                            anim.group = AnimGroup::Walk;
+                            anim.playing = true;
                         }
                     }
-                    if (inputDir.x < default_zero)
+                    else
                     {
-                        if (entityManager->HasComponent<SpriteAnimation>(entity))
-                        {
-                            entityManager->GetComponent<SpriteAnimation>(entity).flipX = true;
-                        }
+                        if (anim.group == AnimGroup::Walk)
+                            anim.group = AnimGroup::Idle;
+                    }
+
+                    if (inputSystem->IsKeyPressed(KEY_K)) {
+                        anim.group = AnimGroup::Attack;
+                        anim.loop = false;
+                    }
+                    if (inputSystem->IsKeyPressed(KEY_J)) {
+                        anim.group = AnimGroup::Injured;
+                        anim.loop = false;
+                    }
+                    if (inputSystem->IsKeyPressed(KEY_L)) {
+                        anim.group = AnimGroup::Death;
+                        anim.loop = false;
                     }
 
                     // ---------------------- Scaling controls (KEY 3 / 4) ----------------------
@@ -146,10 +190,6 @@ namespace Framework
                         transform.scale.x -= scale_multiplier * dt;
                         transform.scale.y -= scale_multiplier * dt;
                     }
-
-                    // Clamp the scale to prevent excessive shrinking or stretching
-                    //transform.scale.x = std::clamp(transform.scale.x, transform.lowerLimit, transform.upperLimit);
-                    //transform.scale.y = std::clamp(transform.scale.y, transform.lowerLimit, transform.upperLimit);
 
                     // ---------------------- Rotation controls (KEY 7 / 8) ----------------------
                     if (inputSystem->IsKeyDown(KEY_7))
