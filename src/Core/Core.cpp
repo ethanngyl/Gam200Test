@@ -424,7 +424,8 @@ namespace Framework
         // Update all logic systems
         for (unsigned i = 0; i < Systems.size(); ++i) {
             if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
-                dynamic_cast<ImGuiSystem*>(Systems[i])) {
+                dynamic_cast<ImGuiSystem*>(Systems[i]) ||
+                dynamic_cast<InputSystem*>(Systems[i])) {
                 continue;
             }
             Systems[i]->Update(dt);
