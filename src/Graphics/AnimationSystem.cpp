@@ -455,8 +455,12 @@ namespace Framework {
             auto& mr = entityManager->GetComponent<MeshRenderer>(e);
             mr.spriteName = spritePath;
 
-            // Let GraphicsSystemV2 assign mesh + material for this sprite
-            gfx->AssignMeshAndMaterial(mr, spritePath);
+            // DON'T call AssignMeshAndMaterial - it overwrites the unique material instance!
+            // The entity already has its material set up from spawning.
+            // Just update the sprite name so the animation texture is referenced.
+            // gfx->AssignMeshAndMaterial(mr, spritePath);  // COMMENTED OUT - preserves unique materials
+
+            LOG_INFO("ANIM", "Updated MeshRenderer spriteName to '%s' (preserved existing material)", spritePath.c_str());
         }
 
         LOG_INFO("ANIM",
