@@ -15,7 +15,7 @@
       "zoom": 1.0
     },
     "background": {
-      "texture": "assets/Background/DefaultMenuBackground.png",
+      "texture": "assets/UI/WoodBackground.png",
       "position": {
         "x": 0.0,
         "y": 0.0
