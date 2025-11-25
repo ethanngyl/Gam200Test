@@ -808,11 +808,15 @@ namespace Framework {
             {
                 auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
-                // DEBUG: Log animation state (only log every 60 frames to avoid spam)
+                // DEBUG: Log animation state (ALWAYS LOG FOR DEBUGGING - will reduce later)
                 static int debugFrameCounter = 0;
                 bool shouldDebug = (++debugFrameCounter % 60 == 0);
-                if (shouldDebug) {
-                    LOG_INFO("ANIM_RENDER", "=== Entity %u SpriteAnimation Debug ===", (unsigned)e.id);
+
+                // TEMP: Always log first render to confirm this code path is reached
+                static bool firstRender = true;
+                if (firstRender || shouldDebug) {
+                    firstRender = false;
+                    LOG_INFO("ANIM_RENDER", "=== Entity %u SpriteAnimation RENDERING ===", (unsigned)e.id);
                     LOG_INFO("ANIM_RENDER", "  animName='%s' group=%d dir=%d playing=%d",
                         anim.animName.c_str(), (int)anim.group, (int)anim.direction, anim.playing);
                     LOG_INFO("ANIM_RENDER", "  Frame: current=%d/%d  elapsed=%.3f/%.3f",
@@ -1107,14 +1111,13 @@ namespace Framework {
         shader->Bind();
         currentBoundShader = material->shader;
 
-        // DEBUG: Log UV rect being passed to shader (every 60 frames)
+        // DEBUG: Log UV rect being passed to shader (ALWAYS LOG FOR DEBUGGING)
         static int uvRectLogCounter = 0;
         bool shouldLogUVRect = (++uvRectLogCounter % 60 == 0);
-        if (shouldLogUVRect && (material->u0 != 0.0f || material->u1 != 1.0f ||
-                                material->v0 != 0.0f || material->v1 != 1.0f)) {
-            LOG_INFO("UV_SHADER", "BindMaterial: Setting uUVRect=(%.3f,%.3f,%.3f,%.3f) for material %s",
-                material->u0, material->v0, material->u1, material->v1,
-                material->name.c_str());
+        if (shouldLogUVRect) {
+            LOG_INFO("UV_SHADER", "BindMaterial: material='%s' handle=%u uUVRect=(%.3f,%.3f,%.3f,%.3f)",
+                material->name.c_str(), materialHandle.GetID(),
+                material->u0, material->v0, material->u1, material->v1);
         }
 
         glUniform4f(glGetUniformLocation(shader->GetID(), "uUVRect"),
