@@ -38,8 +38,8 @@ Usage:
 #include "Precompiled.h"
 #include "AnimationSystem.h"
 #include "ConfigReader.h"
-#include "ECS/Component.h"
-#include "GraphicsSystemV2.h"
+#include "Component.h"
+#include "TimeConstants.h"
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -48,7 +48,37 @@ using json = nlohmann::json;
 namespace { std::string g_animationConfigPath; }
 
 namespace Framework {
-    
+    // Helper: convert string from JSON to AnimGroup enum
+    static AnimGroup ParseAnimGroup(const std::string& s)
+    {
+        std::string lower = s;
+        std::transform(lower.begin(), lower.end(), lower.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        if (lower == "idle")      return AnimGroup::Idle;
+        if (lower == "walk")      return AnimGroup::Walk;
+        if (lower == "attack")    return AnimGroup::Attack;
+        if (lower == "injured")   return AnimGroup::Injured;
+        if (lower == "death")     return AnimGroup::Death;
+
+        return AnimGroup::Count; // invalid / unknown
+    }
+
+    // Helper: convert string from JSON to AnimDirection enum
+    static AnimDirection ParseAnimDirection(const std::string& s)
+    {
+        std::string lower = s;
+        std::transform(lower.begin(), lower.end(), lower.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        if (lower == "front")     return AnimDirection::Front;
+        if (lower == "back")      return AnimDirection::Back;
+        if (lower == "side")      return AnimDirection::Side;
+        if (lower.empty())        return AnimDirection::None;
+
+        return AnimDirection::None;
+    }
+
     /**
     ===============================================================================
      * @brief Constructor - Initializes animation system with default values
@@ -134,6 +164,19 @@ namespace Framework {
 
             if (!anim.playing) continue;
 
+            // -----------------------------------------
+            // RESET ANIMATION TO IDLE WHEN 'O' PRESSED
+            // -----------------------------------------
+            auto* input = CORE->GetInputSystem();
+            if (input && input->IsKeyPressed(KEY_O))
+            {
+                anim.group = AnimGroup::Idle;
+                anim.direction = AnimDirection::Front; // or keep previous direction
+                anim.currentFrame = 0;
+                anim.elapsedTime = 0.0f;
+                anim.playing = true;
+            }
+
             // -------------------------------
             // SELECT JSON ANIMATION BY ENUMS
             // -------------------------------
@@ -153,7 +196,7 @@ namespace Framework {
                 }
 
                 // Advance frames even during death
-                anim.elapsedTime += dt;
+                anim.elapsedTime += Framework::Time::FIXED_DT;
 
                 if (anim.elapsedTime >= anim.frameTime)
                 {
@@ -234,7 +277,6 @@ namespace Framework {
     // ============================================================================
     // configPath is now the PATH to the combined JSON, e.g. "assets/animations.json"
     void AnimationSystem::LoadAnimationConfig(const std::string& configPath) {
-        
         g_animationConfigPath = configPath;
         animEntries.clear();
         groupMap.clear();
@@ -263,31 +305,44 @@ namespace Framework {
             
             AnimEntry entry;
             entry.name = key;
-            entry.file = key;
+            entry.file = key;  // you can change this if needed for editor use
 
-            if (animObj.contains("key"))
-                entry.key = animObj["key"].get<std::string>()[0];
+            // Optional: key binding (like 'O', 'W', 'S', etc.)
+            if (animObj.contains("key") && animObj["key"].is_string()) {
+                const std::string keyStr = animObj["key"].get<std::string>();
+                if (!keyStr.empty())
+                    entry.key = keyStr[0];
+            }
 
             animEntries.push_back(entry);
 
-            AnimGroup group;
-            AnimDirection dir = AnimDirection::None;
+            // -----------------------------
+            // NEW: Read group & direction from JSON
+            // -----------------------------
+            std::string groupStr = animObj.value("group", std::string{});
+            std::string dirStr = animObj.value("direction", std::string{});
 
-            if		(key.rfind("Idle_", 0) == 0)		group = AnimGroup::Idle;
-            else if (key.rfind("Walk_", 0) == 0)		group = AnimGroup::Walk;
-            else if (key.rfind("Attack_", 0) == 0)		group = AnimGroup::Attack;
-            else if (key.rfind("Injured_", 0) == 0)	group = AnimGroup::Injured;
-            else if (key == "Death")					        group = AnimGroup::Death;
+            AnimGroup group = ParseAnimGroup(groupStr);
+            AnimDirection direction = ParseAnimDirection(dirStr);
 
-            if		(key.find("front") != std::string::npos)	 dir = AnimDirection::Front;
-            else if (key.find("back") != std::string::npos)		 dir = AnimDirection::Back;
-            else if (key.find("sideview") != std::string::npos) dir = AnimDirection::Side;
-            else													 dir = AnimDirection::None;
+            if (group == AnimGroup::Count) {
+                LOG_WARN("ANIM",
+                    "Animation '%s' has invalid or missing group='%s'; skipping groupMap entry",
+                    key.c_str(), groupStr.c_str());
+                continue;
+            }
 
-            groupMap[group][dir] = key;
+            // For Death animation, we don't care about direction
+            if (group == AnimGroup::Death) {
+                direction = AnimDirection::None;
+            }
 
-            LOG_INFO("ANIM", "Added animation: name=%s key=%c",
+            groupMap[group][direction] = key;
+
+            LOG_INFO("ANIM", "Added animation: name=%s group=%s dir=%s key=%c",
                 entry.name.c_str(),
+                groupStr.c_str(),
+                dirStr.c_str(),
                 entry.key ? entry.key : '-');
         }
 

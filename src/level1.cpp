@@ -28,6 +28,7 @@ extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::ScriptComponent;
 
+
 void level1_Load()
 {
     LOG_INFO("LEVEL1", "=== Level1 Load ===");
@@ -39,7 +40,6 @@ void level1_Load()
 void level1_Initialize()
 {
     LOG_INFO("LEVEL1", "=== Level1 Initialize ===");
-
 
     if (!engine) {
         LOG_ERROR("LEVEL1", "Engine is null!");
@@ -70,13 +70,13 @@ void level1_Initialize()
         return;
     }
 
-    // Spawn a test entity
-    auto testEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
-    LOG_INFO("LEVEL1", "Spawned test entity: %u", testEntity.GetID());
+   // // Spawn a test entity
+   //auto testEntity = spawner->SpawnPlayer(Vector2D(0.0f, 0.0f));
+   // LOG_INFO("LEVEL1", "Spawned test entity: %u", testEntity.GetID());
 
-    // Load script onto the entity
-    scriptSystem->LoadScript(testEntity, "./assets/scripts/test_simple.lua");
-    LOG_INFO("LEVEL1", "Loaded test script onto entity %u", testEntity.GetID());
+   // // Load script onto the entity
+   // scriptSystem->LoadScript(testEntity, "./assets/scripts/test_simple.lua");
+   // LOG_INFO("LEVEL1", "Loaded test script onto entity %u", testEntity.GetID());
 
 
     // ========================================================================
@@ -118,40 +118,36 @@ void level1_Initialize()
         // ============================================================================
         // Load animation setting
         // ============================================================================
-        ConfigReader::LoadConfig("assets/anim_Bird.txt");
-        LOG_INFO("LEVEL1", "Loaded animation configuration from anim_Bird.txt");
+        LOG_INFO("LEVEL1", "Loaded animation configuration from file");
 
-        // === Give player sprite animation ===
+        // ============================
+        // 1. Add SpriteAnimation
+        // ============================
         auto& anim = em->AddComponent<Framework::SpriteAnimation>(playerEntity);
 
-        // Sprite path
-        std::string spritePath = ConfigReader::GetString("sprite", "");
-        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(spritePath);
-        Framework::Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+        auto* animSys = engine->GetAnimationSystem();
+        if (animSys)
+        {
+            animSys->LoadAnimationConfig("assets/animations.json");
 
-        // Sheet layout
-        anim.rows = ConfigReader::GetInt("rows", 1);
-        anim.columns = ConfigReader::GetInt("columns", 1);
-        anim.frameCount = ConfigReader::GetInt("frameCount", 1);
-        anim.frameTime = ConfigReader::GetFloat("frameTime", 0.0f);
-        anim.loop = ConfigReader::GetBool("loop", true);
-        anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
+            // default animation
+            anim.animName = "";
+            anim.playing = true;
+            anim.group = Framework::AnimGroup::Idle;
+            anim.direction = Framework::AnimDirection::Front;
+        }
 
-        // Derived frame size
-        anim.frameWidth = tex->GetWidth() / anim.columns;
-        anim.frameHeight = tex->GetHeight() / anim.rows;
-        anim.playing = true;
-        anim.currentFrame = 0;
-
-        // Renderable
+        // ============================
+        // 2. Add Renderable
+        // ============================
         auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
         rend.visible = true;
         rend.layer = Framework::RenderLayers::Player;  // Use standard player layer (4)
 
-        // Transform
+        // ============================
+        // 3. Add Transform
+        // ============================
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
-        xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
-        xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
 
         ConfigReader::LoadConfig("assets/valueloader.txt");
         LOG_INFO("LEVEL1", "Reloaded UI configuration");
@@ -170,6 +166,22 @@ void level1_Initialize()
 
 void level1_Update()
 {
+    auto* animSys = engine->GetAnimationSystem();
+    auto* input = engine->GetInputSystem();
+    auto* em = engine->GetEntityManager();
+    auto* gfx = engine->GetGraphicsSystem();
+    auto player = engine->GetPlayerController()->GetPlayerEntity();
+
+    if (animSys && em && gfx && player.IsValid())
+    {
+        if (em->HasComponent<Framework::SpriteAnimation>(player))
+        {
+            auto& anim = em->GetComponent<Framework::SpriteAnimation>(player);
+
+            auto& entries = animSys->animEntries;
+        }
+    }
+
     if (engine && engine->GetInputSystem() &&
         engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {

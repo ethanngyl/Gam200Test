@@ -39,11 +39,11 @@ Example:
 #pragma once
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
-#include "ECS/Component.h"
+#include "Component.h"
 
 namespace Framework {
 
-    class GraphicsSystemV2; // forward declaration
+    class GraphicsSystemV2; // Forward Declaration
 
     /**
     ===============================================================================

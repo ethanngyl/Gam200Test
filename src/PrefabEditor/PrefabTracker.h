@@ -1,3 +1,35 @@
+﻿/*
+===============================================================================
+File:        PrefabTracker.h
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100%
+-------------------------------------------------------------------------------
+Brief:
+Central registry for tracking all active prefab instances in the engine.
+Whenever a prefab is loaded, this tracker records the entity → prefab
+relationship so that editor tools and runtime systems can locate, update, or
+synchronize all instances that originate from the same prefab asset.
+
+Details:
+- RegisterInstance(): Records that an entity was created from a specific prefab
+  file path. Stored in both directions (entity → prefab, and prefab → list of
+  entities).
+- UnregisterInstance(): Removes an entity from the registry when destroyed,
+  keeping lists clean and avoiding stale references.
+- GetInstancesOf(): Returns all entities created from a given prefab file.
+- GetPrefabOf(): Returns the prefab file path that an entity came from.
+- Clear(): Resets the entire registry, typically used when changing scenes.
+
+Notes:
+- Implemented as a lightweight singleton (static Get()) for global access.
+- Used by PrefabSerializer::LoadPrefab() to automatically track instances.
+- Enables future features such as: automatic prefab reapply, batch editing,
+  inspector syncing, and prefab-based scene updates.
+===============================================================================
+*/
+
 #pragma once
 #include <string>
 #include <unordered_map>

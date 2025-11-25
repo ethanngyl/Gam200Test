@@ -68,18 +68,6 @@ namespace Framework {
     using MeshRenderer = Renderable;
 
     /**
-     * NOTE: SpriteAnimation component is now defined in ECS/Component.h
-     *
-     * This was moved to support enhanced animation features including:
-     * - AnimGroup and AnimDirection enums for directional animations
-     * - JSON-driven animation configuration
-     * - Movement-aware animation switching
-     *
-     * See: src/ECS/Component.h for the current SpriteAnimation definition
-     * See: AnimationSystem for the animation update logic
-     */
-
-    /**
      * @struct ParticleEmitter
      * @brief Component for particle effects
      * 
