@@ -819,6 +819,7 @@ namespace Framework {
                         anim.currentFrame, anim.frameCount, anim.elapsedTime, anim.frameTime);
                     LOG_INFO("ANIM_RENDER", "  Layout: rows=%d cols=%d  spriteSheet.id=%u",
                         anim.rows, anim.columns, anim.spriteSheet.GetID());
+                    LOG_INFO("ANIM_RENDER", "  RenderCmd material handle: %u", cmd.material.GetID());
                 }
 
                 Material* mat = resourceManager.GetMaterial(cmd.material);
