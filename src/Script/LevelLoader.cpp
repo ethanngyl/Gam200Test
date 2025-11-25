@@ -320,6 +320,9 @@ namespace Framework {
         lua_register(L, "GetCurrentTurn", Lua_GetCurrentTurn);
         lua_register(L, "GetChestProgress", Lua_GetChestProgress);
 
+        // Animation
+        lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 
@@ -419,6 +422,56 @@ namespace Framework {
         if (imgui) {
             imgui->Enable();
         }
+        return 0;
+    }
+
+    // --- Animation ---
+
+    int LevelLoader::Lua_LoadPlayerAnimation(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine || !loader->entityManager) {
+            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: Invalid loader state");
+            return 0;
+        }
+
+        const char* animName = luaL_checkstring(L, 1);
+
+        // Find player entity (CircleCollider + no EnemyAI)
+        Entity player{ INVALID_ENTITY };
+        for (Entity e : loader->entityManager->GetAllEntities()) {
+            if (loader->entityManager->HasComponent<CircleCollider>(e)) {
+                player = e;
+                break;
+            }
+        }
+
+        if (player.GetID() == INVALID_ENTITY) {
+            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: Player not found");
+            return 0;
+        }
+
+        // Add SpriteAnimation component if not present
+        if (!loader->entityManager->HasComponent<SpriteAnimation>(player)) {
+            loader->entityManager->AddComponent<SpriteAnimation>(player);
+            LOG_INFO("LevelLoader", "Added SpriteAnimation component to player %u", player.GetID());
+        }
+
+        // Get animation component
+        auto& anim = loader->entityManager->GetComponent<SpriteAnimation>(player);
+        anim.playing = true;
+
+        // Load animation
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (animSys && gfx) {
+            animSys->LoadAnimation(player, anim, gfx, animName);
+            LOG_INFO("LevelLoader", "Loaded animation '%s' for player %u: rows=%d cols=%d frames=%d",
+                animName, player.GetID(), anim.rows, anim.columns, anim.frameCount);
+        } else {
+            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: AnimationSystem or GraphicsSystem not available");
+        }
+
         return 0;
     }
 

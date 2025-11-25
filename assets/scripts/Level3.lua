@@ -91,6 +91,10 @@ function OnInit()
     -- PlayerController is configured in C++ (SetPlayerEntity, SetGridMovementEnabled)
     -- Turn phase is set to Player in C++
 
+    -- Load player animation (after player is spawned by TileMapLoader)
+    LoadPlayerAnimation("Idle_front")
+    Log("✓ Player animation 'Idle_front' loaded")
+
     -- ========================================================================
     -- CONFIGURE ENEMIES 
     -- ========================================================================

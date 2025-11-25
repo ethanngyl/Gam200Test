@@ -803,22 +803,6 @@ namespace Framework {
                 mainCamera.GetPosition()
             );
 
-            // DEBUG: Check SpriteAnimation component status for each entity
-            static int componentCheckCounter = 0;
-            static Entity lastPlayerEntity = Entity(INVALID_ENTITY);
-            bool isComponentCheckFrame = (++componentCheckCounter % 60 == 0);
-
-            // Track player entity using SAME criteria as GameStateManager
-            if (entityManager->HasComponent<CircleCollider>(e) &&
-                !entityManager->HasComponent<EnemyAI>(e)) {
-                lastPlayerEntity = e;
-                if (isComponentCheckFrame) {
-                    bool hasSpriteAnim = entityManager->HasComponent<SpriteAnimation>(e);
-                    LOG_INFO("ANIM_CHECK", "Player entity %u (CircleCollider+NoEnemyAI): HasSpriteAnimation=%d",
-                        (unsigned)e.id, hasSpriteAnim);
-                }
-            }
-
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (entityManager->HasComponent<SpriteAnimation>(e))
             {

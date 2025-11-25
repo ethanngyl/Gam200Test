@@ -305,32 +305,8 @@ namespace Framework {
 
 			//entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
 
-            // Add SpriteAnimation component for player animations
-            LOG_INFO("SPAWNER", "=== SpawnPlayer: Adding SpriteAnimation component ===");
-            LOG_INFO("SPAWNER", "Player entity ID: %u", player.GetID());
-
-            entityManager->AddComponent<SpriteAnimation>(player);
-            auto& anim = entityManager->GetComponent<SpriteAnimation>(player);
-            anim.group = AnimGroup::Idle;           // Start with Idle animation
-            anim.direction = AnimDirection::Front;   // Facing front by default
-            anim.playing = true;                     // Auto-play animations
-
-            LOG_INFO("SPAWNER", "SpriteAnimation component added successfully");
-            LOG_INFO("SPAWNER", "  Initial state: group=%d dir=%d playing=%d",
-                (int)anim.group, (int)anim.direction, anim.playing);
-
-            // Load the initial animation (Idle_front)
-            auto* gfx = engine->GetGraphicsSystem();
-            auto* animSys = engine->GetAnimationSystem();
-            if (animSys && gfx) {
-                LOG_INFO("SPAWNER", "Loading initial animation 'Idle_front'...");
-                animSys->LoadAnimation(player, anim, gfx, "Idle_front");
-                LOG_INFO("SPAWNER", "Animation loaded: rows=%d cols=%d frameCount=%d spriteSheet.id=%u",
-                    anim.rows, anim.columns, anim.frameCount, anim.spriteSheet.GetID());
-            } else {
-                LOG_ERROR("SPAWNER", "FAILED to load animation: animSys=%p gfx=%p",
-                    (void*)animSys, (void*)gfx);
-            }
+            // NOTE: SpriteAnimation component is now loaded via Lua (LoadPlayerAnimation)
+            // This allows for more flexible animation management per level
 
             std::cout << "[EntitySpawner] Spawned player (testing.png) on layer " << RenderLayers::Player << "\n";
 
