@@ -803,6 +803,21 @@ namespace Framework {
                 mainCamera.GetPosition()
             );
 
+            // DEBUG: Check SpriteAnimation component status for each entity
+            static int componentCheckCounter = 0;
+            static Entity lastPlayerEntity = Entity(INVALID_ENTITY);
+            bool isComponentCheckFrame = (++componentCheckCounter % 60 == 0);
+
+            // Track player entity specifically
+            if (entityManager->HasComponent<AP>(e) && entityManager->HasComponent<Health>(e)) {
+                lastPlayerEntity = e;
+                if (isComponentCheckFrame) {
+                    bool hasSpriteAnim = entityManager->HasComponent<SpriteAnimation>(e);
+                    LOG_INFO("ANIM_CHECK", "Player entity %u: HasSpriteAnimation=%d",
+                        (unsigned)e.id, hasSpriteAnim);
+                }
+            }
+
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (entityManager->HasComponent<SpriteAnimation>(e))
             {
