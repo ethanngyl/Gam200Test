@@ -213,6 +213,8 @@ namespace Framework {
 
     void PlayerControllerSystem::Update(float dt)
     {
+
+        if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
         // Check if we have all required systems
         if (!spawner || !entityManager || !inputSystem) {
             return;

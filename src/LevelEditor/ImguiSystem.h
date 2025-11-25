@@ -30,6 +30,17 @@ namespace Framework {
     class EntitySpawner;
     class EntityManager;
 
+    /*
+	* @brief declare a structure to store the undo step information
+    */
+
+    struct UndoStep {
+        //the entity that user select and need to undo
+        Entity entity;          
+		//the previous position of the entity before user move it
+        Vector2D oldPosition;   
+    };
+
     /**
      * @brief ImGui System - Provides visual debugging and entity inspection UI
      */
@@ -90,6 +101,12 @@ namespace Framework {
                 viewportHeight >= 100;
         }
         void RequestToggle() { pendingToggle = true; }
+
+		//undo function - jiahao
+		void PerformUndo();
+        void RecordUndoStep(Entity entity);
+
+
 
         bool IsAudioFile(const std::filesystem::path& path) const;
         bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
@@ -197,6 +214,10 @@ namespace Framework {
         void ResizeViewportFramebuffer(int width, int height);
         void DeleteViewportFramebuffer();
         void ShowGameViewport();
+
+
+        //undo step - jiahao
+		std::vector<UndoStep> undoStack;
     };
 
 } // namespace Framework

@@ -296,7 +296,31 @@ namespace Framework {
                     continue;
                 }
             }
+            if (word == "AudioSource") {
+                std::string name;
+                float vol, pitch;
+                int loop, playOnStart;
+                // Read the data 
+                if (iss >> name >> vol >> pitch >> loop >> playOnStart) {
+                    entityManager->AddComponent<Framework::AudioSource>(Entity);
+                    auto& audio = entityManager->GetComponent<Framework::AudioSource>(Entity);
+                    audio.soundName = name;
+                    audio.volume = vol;
+                    audio.pitch = pitch;
+                    audio.loop = (loop != 0);
+                    audio.playOnStart = (playOnStart != 0);
+                }
+            }
 
+            if (word == "Script") {
+                std::string path;
+                // Read the script path
+                if (iss >> path) {
+                    entityManager->AddComponent<Framework::ScriptComponent>(Entity);
+                    auto& script = entityManager->GetComponent<Framework::ScriptComponent>(Entity);
+                    script.scriptPath = path;
+                }
+            }
             
         }
         RebuildSpatialPartition();
@@ -409,6 +433,23 @@ namespace Framework {
                           << spriteAnimation.frameCount << " " << spriteAnimation.frameTime << " "
                           << loopInt << " " << spriteAnimation.uvShrinkPx << "\n";
 			}
+
+			// save audio source component
+            if (entityManager->HasComponent<AudioSource>(entity)) {
+                auto& audio = entityManager->GetComponent<AudioSource>(entity);
+                writeFile << "AudioSource " << audio.soundName << " "
+                    << audio.volume << " " << audio.pitch << " "
+                    << (audio.loop ? 1 : 0) << " "
+                    << (audio.playOnStart ? 1 : 0) << "\n";
+            }
+
+            //save script component
+            if (entityManager->HasComponent<ScriptComponent>(entity)) {
+                auto& script = entityManager->GetComponent<ScriptComponent>(entity);
+                if (!script.scriptPath.empty()) {
+                    writeFile << "Script " << script.scriptPath << "\n";
+                }
+            }
             // add this blank line to separate this entity from the next entity
             writeFile << "\n";
         }
@@ -531,9 +572,22 @@ namespace Framework {
                     }
                 }
 
-                if (ImGui::BeginDragDropSource()) {
+                /*if (ImGui::BeginDragDropSource()) {
                     ImGui::SetDragDropPayload("Sprite", &label, label.size());
                     ImGui::Text(label.c_str());
+                    ImGui::EndDragDropSource();
+                }*/
+
+                if (ImGui::BeginDragDropSource())
+                {
+                    // Send full texture path, e.g. "assets/player.png"
+                    ImGui::SetDragDropPayload(
+                        "Sprite",
+                        filePath.c_str(),
+                        filePath.size() + 1
+                    );
+
+                    ImGui::Text("%s", label.c_str());
                     ImGui::EndDragDropSource();
                 }
             }
@@ -600,7 +654,7 @@ namespace Framework {
         float ndcX = (2.0f * fbX / static_cast<float>(fbWidth)) - 1.0f;
         float ndcY = 1.0f - (2.0f * fbY / static_cast<float>(fbHeight));
 
-        glm::mat4 invViewProj = glm::inverse(graphics->GetCamera().GetViewProjectionMatrix());
+        glm::mat4 invViewProj = glm::inverse(graphics->GetEditorCamera().GetViewProjectionMatrix());
 
         glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
 
@@ -657,6 +711,20 @@ namespace Framework {
         UpdatePicking();
 
         UpdateEntityDragging();
+        InputSystem* input = Framework::CORE->GetInputSystem();
+        if (input) {
+            // Check if either Left Control or Right Control is being held down
+            bool isCtrlHeld = input->IsKeyDown(KEY_LEFT_CONTROL) || input->IsKeyDown(KEY_RIGHT_CONTROL);
+
+            // Check if the 'Z' key was just pressed this frame
+            bool isZPressed = input->IsKeyPressed(KEY_Z);
+
+            // If both Ctrl and Z are active, trigger the Undo
+            if (isCtrlHeld && isZPressed) {
+                std::cout << "[Editor] Ctrl+Z pressed - Attempting Undo...\n";
+                PerformUndo();
+            }
+        }
 
         //delete button to delete selected entity
         if (!CORE->IsPlaying() && entityManager) {
@@ -1184,6 +1252,19 @@ namespace Framework {
                             sprite.texturePath = pathBuffer;
                         }
 
+                        if (ImGui::BeginDragDropTarget())
+                        {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite"))
+                            {
+                                const char* droppedPath = static_cast<const char*>(payload->Data);
+                                if (droppedPath && payload->DataSize > 0)
+                                {
+                                    sprite.texturePath = droppedPath;
+                                }
+                            }
+                            ImGui::EndDragDropTarget();
+                        }
+
                         ImGui::DragInt("Layer", &sprite.layer, 1, -100, 100);
 
                         ImGui::TreePop();
@@ -1204,6 +1285,30 @@ namespace Framework {
 
                         if (ImGui::InputText("Sprite Name", nameBuffer, sizeof(nameBuffer))) {
                             meshRenderer.spriteName = nameBuffer;
+                        }
+
+                        if (ImGui::BeginDragDropTarget())
+                        {
+                            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Sprite"))
+                            {
+                                const char* droppedPath = static_cast<const char*>(payload->Data);
+                                if (droppedPath && payload->DataSize > 0)
+                                {
+                                    // Use full path so GraphicsSystemV2 can LoadTexture(droppedPath)
+                                    meshRenderer.spriteName = droppedPath;
+
+                                    meshRenderer.texture = TextureHandle();
+
+                                    // Optional: keep Sprite component in sync if it exists
+                                    if (entityManager->HasComponent<Sprite>(entity))
+                                    {
+                                        auto& spriteFromRenderer =
+                                            entityManager->GetComponent<Sprite>(entity);
+                                        spriteFromRenderer.texturePath = droppedPath;
+                                    }
+                                }
+                            }
+                            ImGui::EndDragDropTarget();
                         }
 
                         ImGui::DragInt("Layer", &meshRenderer.layer, 1, -100, 100);
@@ -2189,6 +2294,7 @@ namespace Framework {
 				draggingEntity = Framework::Entity{ INVALID_ENTITY};
                 return;
             }
+            RecordUndoStep(selectedEntity);
 
 			auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
 
@@ -2318,6 +2424,62 @@ namespace Framework {
                 isRotatingEntity = false;
             
         }
+    }
+    //undo - jiahao
+    void ImGuiSystem::RecordUndoStep(Entity entity) {
+        // First, check if the entity is valid and has a Transform to save
+        if (!entityManager || !entity.IsValid() || !entityManager->HasComponent<Transform>(entity)) {
+            return; // Safety check failed, do nothing
+        }
+
+        // Get the CURRENT position of the entity (before the user moves it)
+        auto& transform = entityManager->GetComponent<Transform>(entity);
+
+        // Create a new undo step with this info
+        UndoStep step;
+        step.entity = entity;
+        step.oldPosition = transform.position;
+
+        // Add this step to the end of our history list
+        undoStack.push_back(step);
+
+        // Check if we have exceeded our memory limit (e.g., 20 steps)
+        if (undoStack.size() > 20) {
+            // Remove the oldest step (the one at the front/beginning)
+            undoStack.erase(undoStack.begin());
+        }
+
+        // Log for debugging purposes
+        std::cout << "[Editor] Recorded undo step for Entity " << entity.GetID() << "\n";
+    }
+    //undo - jiahao
+    void ImGuiSystem::PerformUndo() {
+        // 1. Check if we have anything to undo
+        if (undoStack.empty()) {
+            std::cout << "[Editor] Nothing to undo.\n";
+            return;
+        }
+
+        // 2. Get the last action we recorded (the one at the back of the vector)
+        UndoStep lastStep = undoStack.back();
+
+        // 3. Verify the entity still exists (it might have been deleted since we saved it!)
+        if (entityManager && entityManager->HasComponent<Transform>(lastStep.entity)) {
+
+            // Get access to the entity's transform component
+            auto& transform = entityManager->GetComponent<Transform>(lastStep.entity);
+
+            // 4. Restore the position to what it was in the saved step
+            transform.position = lastStep.oldPosition;
+
+            std::cout << "[Editor] Undid movement for Entity " << lastStep.entity.GetID() << "\n";
+        }
+        else {
+            std::cout << "[Editor] Cannot undo: Entity no longer exists.\n";
+        }
+
+        // 5. Remove this step from the history since we just used it
+        undoStack.pop_back();
     }
 
     bool ImGuiSystem::IsAudioFile(const std::filesystem::path& path) const {

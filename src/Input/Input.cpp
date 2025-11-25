@@ -70,7 +70,9 @@ namespace Framework
         UpdateKeyState(KEY_SPACE, GetAsyncKeyState(KEY_SPACE));
         UpdateKeyState(KEY_ENTER, GetAsyncKeyState(KEY_ENTER));
 		UpdateKeyState(KEY_DELETE, GetAsyncKeyState(KEY_DELETE));
-
+        UpdateKeyState(KEY_Z, GetAsyncKeyState(KEY_Z));
+        UpdateKeyState(KEY_LEFT_CONTROL, GetAsyncKeyState(KEY_LEFT_CONTROL));
+        UpdateKeyState(KEY_RIGHT_CONTROL, GetAsyncKeyState(KEY_RIGHT_CONTROL));
         // Shooting/spawning keys (for PlayerController)
         UpdateKeyState(KEY_SHIFT, GetAsyncKeyState(KEY_SHIFT));
         UpdateKeyState(KEY_E, GetAsyncKeyState(KEY_E));

@@ -133,7 +133,14 @@ namespace Framework {
         /**
          * @brief Get the main camera
          */
-        Camera& GetCamera() { return mainCamera; }
+        Camera& GetCamera() { 
+            
+            return mainCamera;
+        }
+
+        Camera& GetEditorCamera() {
+            return editorCamera;
+		}
 
         /**
          * @brief Set camera position
