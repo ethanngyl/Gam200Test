@@ -321,6 +321,7 @@ namespace Framework {
         lua_register(L, "GetChestProgress", Lua_GetChestProgress);
 
         // Animation
+        lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
 
         LOG_INFO("LevelLoader", "API registered");
@@ -426,6 +427,28 @@ namespace Framework {
     }
 
     // --- Animation ---
+
+    int LevelLoader::Lua_LoadAnimationConfig(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LUA_ANIM", "Invalid loader state");
+            return 0;
+        }
+
+        const char* configPath = luaL_checkstring(L, 1);
+        LOG_INFO("LUA_ANIM", "=== LoadAnimationConfig called: '%s' ===", configPath);
+
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        if (!animSys) {
+            LOG_ERROR("LUA_ANIM", "AnimationSystem not available");
+            return 0;
+        }
+
+        animSys->LoadAnimationConfig(configPath);
+        LOG_INFO("LUA_ANIM", "✅ Animation config loaded from '%s'", configPath);
+
+        return 0;
+    }
 
     int LevelLoader::Lua_LoadPlayerAnimation(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
