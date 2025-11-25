@@ -49,12 +49,12 @@ namespace Framework {
         bool visible = true;       // Is this renderable visible?
         bool castShadows = false;  // Cast shadows (future)
         bool receiveShadows = false; // Receive shadows (future)
-        
+
         // Per-instance overrides
         glm::vec4 tint = glm::vec4(1.0f);  // Color tint multiplier
 
         Renderable() = default;
-        
+
         // Constructor for quick setup
         Renderable(MeshHandle m, MaterialHandle mat, int lyr = 0)
             : mesh(m), material(mat), layer(lyr) {}
@@ -62,6 +62,9 @@ namespace Framework {
         // Legacy constructor using sprite names
         explicit Renderable(const std::string& name)
             : spriteName(name) {}
+
+        // Destructor to release resources
+        ~Renderable();
     };
 
     // New name, same type. Can attach/get MeshRenderer in ECS code
