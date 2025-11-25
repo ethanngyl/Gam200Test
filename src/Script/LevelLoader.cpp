@@ -429,17 +429,23 @@ namespace Framework {
 
     int LevelLoader::Lua_LoadPlayerAnimation(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine || !loader->entityManager) {
+        if (!loader || !loader->coreEngine) {
             LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: EntityManager not available");
             return 0;
         }
 
         const char* animName = luaL_checkstring(L, 1);
 
-        // Find player entity (CircleCollider + no EnemyAI)
+        // Find player entity (CircleCollider)
         Entity player{ INVALID_ENTITY };
-        for (Entity e : loader->entityManager->GetAllEntities()) {
-            if (loader->entityManager->HasComponent<CircleCollider>(e)) {
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e)) {
                 player = e;
                 break;
             }
@@ -451,13 +457,13 @@ namespace Framework {
         }
 
         // Add SpriteAnimation component if not present
-        if (!loader->entityManager->HasComponent<SpriteAnimation>(player)) {
-            loader->entityManager->AddComponent<SpriteAnimation>(player);
+        if (!em->HasComponent<SpriteAnimation>(player)) {
+            em->AddComponent<SpriteAnimation>(player);
             LOG_INFO("LevelLoader", "Added SpriteAnimation component to player %u", player.GetID());
         }
 
         // Get animation component
-        auto& anim = loader->entityManager->GetComponent<SpriteAnimation>(player);
+        auto& anim = em->GetComponent<SpriteAnimation>(player);
         anim.playing = true;
 
         // Load animation
