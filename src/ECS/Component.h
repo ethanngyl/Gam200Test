@@ -108,6 +108,9 @@ namespace Framework
         bool loop = true;
         bool playing = true;
         bool flipX = false;
+
+        // Destructor to release texture resource
+        ~SpriteAnimation();
     };
 
     /**
