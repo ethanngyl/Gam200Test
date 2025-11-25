@@ -576,26 +576,26 @@ namespace Framework {
 
         if (inputSystem->IsKeyPressed(KEY_UP)) {
             stepY = 1;  // Move up (increase Y)
-            animationName = "Walk_back";
+            animationName = "Idle_back";
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
             std::cout << "[Arrow] Moving UP\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
             stepY = -1; // Move down (decrease Y)
-            animationName = "Walk_front";
+            animationName = "Idle_front";
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
             std::cout << "[Arrow] Moving DOWN\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
             stepX = -1; // Move left (decrease X)
-            animationName = "Walk_sideview";
+            animationName = "Idle_sideview";
             flipAnimation = true;  // Flip sprite to face left
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
             std::cout << "[Arrow] Moving LEFT\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
             stepX = 1;  // Move right (increase X)
-            animationName = "Walk_sideview";
+            animationName = "Idle_sideview";
             flipAnimation = false;  // Normal orientation for right
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
             std::cout << "[Arrow] Moving RIGHT\n";
