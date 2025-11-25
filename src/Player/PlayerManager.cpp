@@ -30,6 +30,7 @@
 #include "RenderComponents.h"
 #include "Graphics/RenderLayers.h"
 #include "MathABS.h"
+#include "AnimationSystem.h"
 
 #include "Grid\GridECS.h"
 #include "Grid\Grid.h"
@@ -570,29 +571,50 @@ namespace Framework {
 
         // Check for Arrow Key input (use IsKeyPressed for one-time press detection)
         int stepX = 0, stepY = 0;
+        std::string animationName = "";
+        bool flipAnimation = false;
 
         if (inputSystem->IsKeyPressed(KEY_UP)) {
             stepY = 1;  // Move up (increase Y)
+            animationName = "Walk_back";
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
             std::cout << "[Arrow] Moving UP\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
             stepY = -1; // Move down (decrease Y)
+            animationName = "Walk_front";
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
             std::cout << "[Arrow] Moving DOWN\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
             stepX = -1; // Move left (decrease X)
+            animationName = "Walk_sideview";
+            flipAnimation = true;  // Flip sprite to face left
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
             std::cout << "[Arrow] Moving LEFT\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
             stepX = 1;  // Move right (increase X)
+            animationName = "Walk_sideview";
+            flipAnimation = false;  // Normal orientation for right
             LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
             std::cout << "[Arrow] Moving RIGHT\n";
         }
         else {
             return; // No movement input
+        }
+
+        // Switch animation based on movement direction
+        if (!animationName.empty() && CORE && CORE->GetAnimationSystem()) {
+            auto* animSys = CORE->GetAnimationSystem();
+            auto* gfx = CORE->GetGraphicsSystem();
+
+            if (entityManager->HasComponent<SpriteAnimation>(playerEntity)) {
+                auto& anim = entityManager->GetComponent<SpriteAnimation>(playerEntity);
+                animSys->LoadAnimation(playerEntity, anim, gfx, animationName);
+                anim.flipX = flipAnimation;
+                LOG_INFO("PlayerManager", "Switched to animation: %s (flip: %d)", animationName.c_str(), flipAnimation);
+            }
         }
 
         // Calculate next tile
