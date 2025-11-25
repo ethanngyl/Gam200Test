@@ -287,17 +287,33 @@ namespace Framework {
 
             // Create unique material instance for player (don't use shared Material2!)
             // This ensures UV bounds for animations won't affect other entities
+            LOG_INFO("SPAWN_PLAYER", "=== Creating Material Instance for Player %u ===", player.GetID());
             if (CORE && CORE->GetGraphicsSystem()) {
                 auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
                 auto* baseMat = gs->GetResourceManager().GetMaterial(GraphicsSystemV2::Material2);
                 if (baseMat) {
+                    LOG_INFO("SPAWN_PLAYER", "  Base Material2: name='%s' shader=%u",
+                        baseMat->name.c_str(), baseMat->shader.GetID());
+
                     MaterialHandle playerMat = gs->GetResourceManager().CreateMaterial(
                         "player_material_" + std::to_string(player.GetID()),
                         baseMat->shader
                     );
-                    *gs->GetResourceManager().GetMaterial(playerMat) = *baseMat;  // Copy properties
+
+                    auto* newMat = gs->GetResourceManager().GetMaterial(playerMat);
+                    *newMat = *baseMat;  // Copy properties
+
+                    LOG_INFO("SPAWN_PLAYER", "  Created unique material: name='%s' handle=%u",
+                        newMat->name.c_str(), playerMat.GetID());
+                    LOG_INFO("SPAWN_PLAYER", "  Initial UV bounds: (%.3f,%.3f,%.3f,%.3f)",
+                        newMat->u0, newMat->v0, newMat->u1, newMat->v1);
+
                     mr.material = playerMat;  // Use unique instance
+                } else {
+                    LOG_ERROR("SPAWN_PLAYER", "  FAILED: Material2 is NULL!");
                 }
+            } else {
+                LOG_ERROR("SPAWN_PLAYER", "  FAILED: CORE or GraphicsSystem is NULL!");
             }
 
             mr.layer = RenderLayers::Player;  // Player renders on top

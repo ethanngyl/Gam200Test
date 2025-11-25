@@ -430,36 +430,46 @@ namespace Framework {
     int LevelLoader::Lua_LoadPlayerAnimation(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: Invalid loader state");
+            LOG_ERROR("LOAD_ANIM", "Invalid loader state");
             return 0;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: EntityManager not available");
+            LOG_ERROR("LOAD_ANIM", "EntityManager not available");
             return 0;
         }
 
         const char* animName = luaL_checkstring(L, 1);
+        LOG_INFO("LOAD_ANIM", "=== LoadPlayerAnimation called: '%s' ===", animName);
 
         // Find player entity (CircleCollider)
         Entity player{ INVALID_ENTITY };
         for (Entity e : em->GetAllEntities()) {
             if (em->HasComponent<CircleCollider>(e)) {
                 player = e;
+                LOG_INFO("LOAD_ANIM", "Found player entity: %u", player.GetID());
                 break;
             }
         }
 
         if (player.GetID() == INVALID_ENTITY) {
-            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: Player not found");
+            LOG_ERROR("LOAD_ANIM", "Player not found!");
             return 0;
+        }
+
+        // Check player's current material
+        if (em->HasComponent<MeshRenderer>(player)) {
+            auto& mr = em->GetComponent<MeshRenderer>(player);
+            LOG_INFO("LOAD_ANIM", "Player material handle: %u", mr.material.GetID());
         }
 
         // Add SpriteAnimation component if not present
         if (!em->HasComponent<SpriteAnimation>(player)) {
             em->AddComponent<SpriteAnimation>(player);
-            LOG_INFO("LevelLoader", "Added SpriteAnimation component to player %u", player.GetID());
+            LOG_INFO("LOAD_ANIM", "✅ Added SpriteAnimation component");
+        } else {
+            LOG_INFO("LOAD_ANIM", "Player already has SpriteAnimation");
         }
 
         // Get animation component
@@ -472,10 +482,14 @@ namespace Framework {
 
         if (animSys && gfx) {
             animSys->LoadAnimation(player, anim, gfx, animName);
-            LOG_INFO("LevelLoader", "Loaded animation '%s' for player %u: rows=%d cols=%d frames=%d",
-                animName, player.GetID(), anim.rows, anim.columns, anim.frameCount);
+            LOG_INFO("LOAD_ANIM", "✅ Animation loaded:");
+            LOG_INFO("LOAD_ANIM", "  - Name: '%s'", anim.animName.c_str());
+            LOG_INFO("LOAD_ANIM", "  - Grid: %dx%d", anim.rows, anim.columns);
+            LOG_INFO("LOAD_ANIM", "  - Frames: %d", anim.frameCount);
+            LOG_INFO("LOAD_ANIM", "  - SpriteSheet: %u", anim.spriteSheet.GetID());
+            LOG_INFO("LOAD_ANIM", "  - Playing: %d", anim.playing);
         } else {
-            LOG_ERROR("LevelLoader", "Lua_LoadPlayerAnimation: AnimationSystem or GraphicsSystem not available");
+            LOG_ERROR("LOAD_ANIM", "AnimationSystem or GraphicsSystem not available");
         }
 
         return 0;
