@@ -14,6 +14,18 @@
       },
       "zoom": 1.0
     },
+    "background": {
+      "texture": "assets/Background/DefaultMenuBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 2.0,
+        "y": 2.0
+      },
+      "layer": -10
+    },
     "buttons": [
       {
         "id": "play",
