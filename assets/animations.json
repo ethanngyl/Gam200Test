@@ -8,7 +8,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "O"
+      "key": "O",
+      "group": "Idle",
+      "direction": "Front"
     },
     "Idle_back": {
       "sprite": "assets/sprites/static_idle_back.png",
@@ -18,7 +20,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "O"
+      "key": "O",
+      "group": "Idle",
+      "direction": "Back"
     },
     "Idle_sideview": {
       "sprite": "assets/sprites/static_idle_sideview.png",
@@ -28,7 +32,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "O"
+      "key": "O",
+      "group": "Idle",
+      "direction": "Side"
     },
     "Injured_front": {
       "sprite": "assets/sprites/static_down_injured.png",
@@ -38,7 +44,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "J"
+      "key": "J",
+      "group": "Injured",
+      "direction": "Front"
     },
     "Injured_back": {
       "sprite": "assets/sprites/static_up_injured.png",
@@ -48,7 +56,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "J"
+      "key": "J",
+      "group": "Injured",
+      "direction": "Back"
     },
     "Injured_sideview": {
       "sprite": "assets/sprites/static_sideview_injured.png",
@@ -58,7 +68,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "J"
+      "key": "J",
+      "group": "Injured",
+      "direction": "Side"
     },
     "Attack_front": {
       "sprite": "assets/sprites/static_down_atk.png",
@@ -68,7 +80,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "K"
+      "key": "K",
+      "group": "Attack",
+      "direction": "Front"
     },
     "Attack_back": {
       "sprite": "assets/sprites/static_up_atk.png",
@@ -78,7 +92,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "K"
+      "key": "K",
+      "group": "Attack",
+      "direction": "Back"
     },
     "Attack_sideview": {
       "sprite": "assets/sprites/static_sideview_atk.png",
@@ -88,7 +104,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "K"
+      "key": "K",
+      "group": "Attack",
+      "direction": "Side"
     },
     "Walk_front": {
       "sprite": "assets/sprites/walking_down.png",
@@ -98,7 +116,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "S"
+      "key": "S",
+      "group": "Walk",
+      "direction": "Front"
     },
     "Walk_back": {
       "sprite": "assets/sprites/walking_up.png",
@@ -108,7 +128,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "W"
+      "key": "W",
+      "group": "Walk",
+      "direction": "Back"
     },
     "Walk_sideview": {
       "sprite": "assets/sprites/walking_sideview.png",
@@ -118,7 +140,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "A"
+      "key": "A",
+      "group": "Walk",
+      "direction": "Side"
     },
     "Death": {
       "sprite": "assets/sprites/static_death.png",
@@ -128,7 +152,9 @@
       "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0,
-      "key": "L"
+      "key": "L",
+      "group": "Death",
+      "direction": ""
     }
   }
 }

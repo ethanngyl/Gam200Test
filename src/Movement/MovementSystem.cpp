@@ -129,6 +129,16 @@ namespace Framework
 
                     auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
 
+                    // -----------------------------------------
+                    // BLOCK MOVEMENT WHEN DEATH ANIMATION PLAYS
+                    // -----------------------------------------
+                    if (anim.group == AnimGroup::Death)
+                    {
+                        movement.direction = { 0, 0 };           // stop all motion
+                        transform.rotation = transform.rotation; // (optional) allow no rotation changes
+                        continue;                                // skip ALL movement logic
+                    }
+
                     // Determine if moving
                     bool moving = fabs(inputDir.x) > 0.01f || fabs(inputDir.y) > 0.01f;
 

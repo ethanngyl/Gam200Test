@@ -178,43 +178,6 @@ void level1_Update()
             auto& anim = em->GetComponent<Framework::SpriteAnimation>(player);
 
             auto& entries = animSys->animEntries;
-
-            if (input->IsKeyPressed(Framework::KEY_M))
-            {
-                auto* animSys = engine->GetAnimationSystem();
-                auto* em = engine->GetEntityManager();
-
-                if (!animSys || !em) return;
-
-                if (!em->HasComponent<Framework::SpriteAnimation>(player))
-                    return;
-
-                auto& anim = em->GetComponent<Framework::SpriteAnimation>(player);
-                auto& entries = animSys->animEntries;
-
-                static size_t animIndex = 0;
-                animIndex = (animIndex + 1) % entries.size();
-
-                auto& entry = entries[animIndex];
-                const std::string& name = entry.name;
-
-                // -------- map string -> enum group --------
-                if (name.rfind("Idle_", 0) == 0) anim.group = Framework::AnimGroup::Idle;
-                else if (name.rfind("Walk_", 0) == 0) anim.group = Framework::AnimGroup::Walk;
-                else if (name.rfind("Attack_", 0) == 0) anim.group = Framework::AnimGroup::Attack;
-                else if (name.rfind("Injured_", 0) == 0) anim.group = Framework::AnimGroup::Injured;
-                else if (name == "Death")               anim.group = Framework::AnimGroup::Death;
-
-                // -------- map string -> enum direction --------
-                if (name.find("front") != std::string::npos) anim.direction = Framework::AnimDirection::Front;
-                else if (name.find("back") != std::string::npos) anim.direction = Framework::AnimDirection::Back;
-                else if (name.find("sideview") != std::string::npos) anim.direction = Framework::AnimDirection::Side;
-                else                                                  anim.direction = Framework::AnimDirection::Front;
-
-                LOG_INFO("LEVEL1", "Switched to animation group via M: %s", name.c_str());
-                // IMPORTANT: do NOT call LoadAnimation here.
-                // AnimationSystem::Update() will see new group+direction and load correct sprite.
-            }
         }
     }
 
