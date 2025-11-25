@@ -119,6 +119,15 @@ void level3_Initialize()
         return;
     }
 
+    // --- Load Animation Configuration ---
+    auto* animSys = engine->GetAnimationSystem();
+    if (animSys) {
+        animSys->LoadAnimationConfig("assets/animations.json");
+        LOG_INFO("LEVEL3", "Animation config loaded from assets/animations.json");
+    } else {
+        LOG_ERROR("LEVEL3", "AnimationSystem is null!");
+    }
+
     // --- Camera: simple baseline to match other levels ---
     gfx->SetCameraPosition(glm::vec3(0.0f, 0.0f, 0.0f));
     gfx->SetCameraZoom(1.0f);
