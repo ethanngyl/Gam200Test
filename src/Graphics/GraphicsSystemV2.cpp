@@ -524,11 +524,6 @@ namespace Framework {
             true
         );
 
-        // Clean up temporary meshes
-        delete quad;
-        delete line;
-        delete circle;
-        delete wireframeQ;
         std::cout << "Created " << 4 << " default meshes\n";
     }
 
@@ -920,7 +915,7 @@ namespace Framework {
             if (!mesh) continue;
 
             // ---- STEP 3: Upload instance data and draw ----
-          //  mesh->SetInstanceData(); // sets up the VAO attributes
+           mesh->SetInstanceData(); // sets up the VAO attributes
             // Upload matrices to GPU buffer (modern DSA version)
             glNamedBufferSubData(mesh->instanceVBO, 0,
                 matrices.size() * sizeof(glm::mat4),
