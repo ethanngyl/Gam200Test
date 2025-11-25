@@ -493,10 +493,14 @@ namespace Framework {
     void PlayerControllerSystem::HandleArrowKeyMovement() {
         // DEBUG: Log entry to this function
         static bool firstCall = true;
+        static int callCounter = 0;
         if (firstCall) {
             LOG_INFO("PlayerManager", "=== HandleArrowKeyMovement FIRST CALL ===");
             firstCall = false;
         }
+
+        callCounter++;
+        LOG_INFO("PlayerManager", ">>> HandleArrowKeyMovement called (call #%d this frame)", callCounter);
 
         // Guards: need input + entity systems, player Transform, and it must be player's turn
         if (!gridMovementEnabled) {
@@ -569,18 +573,22 @@ namespace Framework {
 
         if (inputSystem->IsKeyPressed(KEY_UP)) {
             stepY = 1;  // Move up (increase Y)
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
             std::cout << "[Arrow] Moving UP\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
             stepY = -1; // Move down (decrease Y)
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
             std::cout << "[Arrow] Moving DOWN\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
             stepX = -1; // Move left (decrease X)
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
             std::cout << "[Arrow] Moving LEFT\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
             stepX = 1;  // Move right (increase X)
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
             std::cout << "[Arrow] Moving RIGHT\n";
         }
         else {
@@ -626,7 +634,10 @@ namespace Framework {
         //EndPlayerTurn();
 
         // --- AND REPLACE IT WITH THIS ---
+        int apBefore = stats.actionPoints;
         stats.actionPoints--; // Spend one AP
+        int apAfter = stats.actionPoints;
+        LOG_INFO("PlayerManager", "***** AP CONSUMED: %d -> %d (delta: -1) *****", apBefore, apAfter);
         LOG_INFO("PlayerManager", "Player moved. AP Remaining: %d", stats.actionPoints);
     }
 
