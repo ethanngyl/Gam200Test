@@ -284,7 +284,22 @@ namespace Framework {
             Entity player = SpawnSprite("assets/player.png", position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(player);
-            mr.material = GraphicsSystemV2::Material2;
+
+            // Create unique material instance for player (don't use shared Material2!)
+            // This ensures UV bounds for animations won't affect other entities
+            if (CORE && CORE->GetGraphicsSystem()) {
+                auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
+                auto* baseMat = gs->GetResourceManager().GetMaterial(GraphicsSystemV2::Material2);
+                if (baseMat) {
+                    MaterialHandle playerMat = gs->GetResourceManager().CreateMaterial(
+                        "player_material_" + std::to_string(player.GetID()),
+                        baseMat->shader
+                    );
+                    *gs->GetResourceManager().GetMaterial(playerMat) = *baseMat;  // Copy properties
+                    mr.material = playerMat;  // Use unique instance
+                }
+            }
+
             mr.layer = RenderLayers::Player;  // Player renders on top
 
             /*entityManager->AddComponent<Movement>(player);
