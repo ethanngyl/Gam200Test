@@ -896,6 +896,11 @@ namespace Framework {
                 mat->v0 = v0;
                 mat->v1 = v1;
 
+                if (shouldDebug) {
+                    LOG_INFO("ANIM_RENDER", "  Material UV bounds updated: (%.3f,%.3f,%.3f,%.3f) on material '%s'",
+                        mat->u0, mat->v0, mat->u1, mat->v1, mat->name.c_str());
+                }
+
                 // **CRITICAL**: Override render command texture with animation sprite sheet
                 cmd.texture = anim.spriteSheet;
 
@@ -1115,6 +1120,16 @@ namespace Framework {
 
         shader->Bind();
         currentBoundShader = material->shader;
+
+        // DEBUG: Log UV rect being passed to shader (every 60 frames)
+        static int uvRectLogCounter = 0;
+        bool shouldLogUVRect = (++uvRectLogCounter % 60 == 0);
+        if (shouldLogUVRect && (material->u0 != 0.0f || material->u1 != 1.0f ||
+                                material->v0 != 0.0f || material->v1 != 1.0f)) {
+            LOG_INFO("UV_SHADER", "BindMaterial: Setting uUVRect=(%.3f,%.3f,%.3f,%.3f) for material %s",
+                material->u0, material->v0, material->u1, material->v1,
+                material->name.c_str());
+        }
 
         glUniform4f(glGetUniformLocation(shader->GetID(), "uUVRect"),
             material->u0, material->v0, material->u1, material->v1);
