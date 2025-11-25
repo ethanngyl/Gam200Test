@@ -88,13 +88,14 @@ namespace Framework {
             return 1;
         }
 
-        // Parse parameters
+        // Parse parameters (layer is optional, defaults to 10)
         const char* texture = luaL_checkstring(L, 1);
         float posX = luaL_checknumber(L, 2);
         float posY = luaL_checknumber(L, 3);
         float scaleX = luaL_checknumber(L, 4);
         float scaleY = luaL_checknumber(L, 5);
         const char* callbackName = luaL_checkstring(L, 6);
+        int layer = luaL_optinteger(L, 7, 10);  // Optional 7th parameter, defaults to 10
 
         // Store callback name
         std::string cbName = callbackName;
@@ -126,6 +127,8 @@ namespace Framework {
         );
 
         if (button) {
+            button->layer = layer;  // Set the layer after creation
+            LOG_INFO("LevelLoader", "Button created with layer %d", layer);
             lua_pushinteger(L, static_cast<lua_Integer>(reinterpret_cast<intptr_t>(button)));
         }
         else {
