@@ -1,4 +1,34 @@
-//kahyan
+/*
+===============================================================================
+File:        PrefabSerializer.cpp
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2025-11-07
+Contribution: 100%
+-------------------------------------------------------------------------------
+Brief:
+Implements PrefabSerializer, the system responsible for saving and loading
+entities (prefabs) from JSON files. Each prefab stores its components’
+properties (Transform, Sprite, MeshRenderer, Collider, etc.) so they can be
+recreated at runtime or reused across scenes.
+
+Details:
+- SavePrefab() writes all active components of an entity into a JSON file,
+  including position, rotation, scale, and rendering data.
+- LoadPrefab() reads the JSON file, creates a new entity, and re-adds
+  components with their saved properties.
+- Supports Transform, Sprite, MeshRenderer, Movement, BoxCollider,
+  CircleCollider, and SpriteAnimation components.
+- Integrates with PrefabInstanceTracker to register loaded prefab instances
+  for real-time updates or editor synchronization.
+
+Notes:
+- Uses nlohmann::json for serialization and deserialization.
+- Ensures floating-point values are written with fixed precision for clean output.
+- Provides simple, human-readable JSON formatting compatible with the engine’s
+  editor tools.
+===============================================================================
+*/
 
 #include "PrefabSerializer.h"
 #include <fstream>
