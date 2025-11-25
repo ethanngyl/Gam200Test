@@ -21,11 +21,14 @@
 
 extern "C" {
     struct lua_State;
-    void lua_close(struct lua_State* L);  
+    void lua_close(struct lua_State* L);
 }
 
 namespace Framework
 {
+    // Forward declarations for destructor implementations
+    class CoreEngine;
+    class GraphicsSystemV2;
     /**
      * @struct Transform
      * @brief Spatial transformation component
@@ -330,4 +333,22 @@ namespace Framework
 
         AttackAP(int start = 1) : points(start), maxPoints(start) {}
     };
-}
+
+    // ========================================================================
+    // INLINE DESTRUCTOR IMPLEMENTATIONS
+    // ========================================================================
+    // These must be inline to be available where components are instantiated
+    // in template code (ECS maps/containers).
+    // ========================================================================
+
+    inline SpriteAnimation::~SpriteAnimation() {
+        // Release the sprite sheet texture when this component is destroyed
+        extern CoreEngine* CORE;  // Declare extern here
+        if (spriteSheet.IsValid() && CORE && CORE->GetGraphicsSystem()) {
+            auto* gfx = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
+            auto& resourceManager = gfx->GetResourceManager();
+            resourceManager.ReleaseTexture(spriteSheet);
+        }
+    }
+
+} // namespace Framework
