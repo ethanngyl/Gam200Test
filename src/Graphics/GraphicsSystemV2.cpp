@@ -808,12 +808,13 @@ namespace Framework {
             static Entity lastPlayerEntity = Entity(INVALID_ENTITY);
             bool isComponentCheckFrame = (++componentCheckCounter % 60 == 0);
 
-            // Track player entity specifically
-            if (entityManager->HasComponent<AP>(e) && entityManager->HasComponent<Health>(e)) {
+            // Track player entity using SAME criteria as GameStateManager
+            if (entityManager->HasComponent<CircleCollider>(e) &&
+                !entityManager->HasComponent<EnemyAI>(e)) {
                 lastPlayerEntity = e;
                 if (isComponentCheckFrame) {
                     bool hasSpriteAnim = entityManager->HasComponent<SpriteAnimation>(e);
-                    LOG_INFO("ANIM_CHECK", "Player entity %u: HasSpriteAnimation=%d",
+                    LOG_INFO("ANIM_CHECK", "Player entity %u (CircleCollider+NoEnemyAI): HasSpriteAnimation=%d",
                         (unsigned)e.id, hasSpriteAnim);
                 }
             }
