@@ -28,6 +28,10 @@ Used by:
 
 namespace Framework {
 
+    // Forward declarations for destructor implementations
+    class CoreEngine;
+    class GraphicsSystemV2;
+
     /**
      * @struct Renderable
      * @brief Enhanced rendering component with material support
@@ -84,5 +88,36 @@ namespace Framework {
         float lifetime = 2.0f;
         bool emit = true;
     };
+
+    // ========================================================================
+    // INLINE DESTRUCTOR IMPLEMENTATIONS
+    // ========================================================================
+    // These must be inline to be available where components are instantiated
+    // in template code (ECS maps/containers).
+    // ========================================================================
+
+    inline Renderable::~Renderable() {
+        // Release resources when this component is destroyed
+        extern CoreEngine* CORE;  // Declare extern here
+        if (CORE && CORE->GetGraphicsSystem()) {
+            auto* gfx = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
+            auto& resourceManager = gfx->GetResourceManager();
+
+            // Release texture if valid
+            if (texture.IsValid()) {
+                resourceManager.ReleaseTexture(texture);
+            }
+
+            // Release mesh if valid
+            if (mesh.IsValid()) {
+                resourceManager.ReleaseMesh(mesh);
+            }
+
+            // Release material if valid
+            if (material.IsValid()) {
+                resourceManager.ReleaseMaterial(material);
+            }
+        }
+    }
 
 } // namespace Framework
