@@ -108,15 +108,17 @@ function CreateButtonsFromConfig()
     -- Iterate through buttons array in JSON
     for i, button in ipairs(config.menu.buttons) do
         Log("Creating button: " .. button.id)
-        
-        -- Create button using config data
+
+        -- Create button using config data (layer is optional, defaults to 10)
+        local layer = button.layer or 10
         local buttonID = CreateButton(
             button.texture,
             button.position.x,
             button.position.y,
             button.scale.x,
             button.scale.y,
-            button.callback  -- Callback function name from JSON
+            button.callback,  -- Callback function name from JSON
+            layer             -- Layer for rendering order
         )
         
         if buttonID > 0 then

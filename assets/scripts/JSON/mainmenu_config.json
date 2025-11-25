@@ -38,6 +38,7 @@
           "x": 1.0,
           "y": 0.5
         },
+        "layer": 10,
         "text": {
           "content": "Play",
           "font": "Sans48",
@@ -65,6 +66,7 @@
           "x": 1.0,
           "y": 0.5
         },
+        "layer": 10,
         "text": {
           "content": "Exit",
           "font": "Sans48",
