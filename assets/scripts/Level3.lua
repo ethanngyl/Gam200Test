@@ -16,6 +16,7 @@
 -- ============================================================================
 
 local initialized = false
+local editorToggleCooldown = 0  -- Cooldown for F1 editor toggle
 local kStartX = -0.6  -- Grid start position X
 local kStartY = -0.4  -- Grid start position Y
 local kSpacingX = 0.1 -- Tile spacing X
@@ -57,9 +58,9 @@ function OnInit()
     SetCameraZoom(2.0)  -- Zoomed in closer to player (0.5-0.7 recommended for gameplay)
     Log("Camera initialized: pos(0,0,0), zoom=0.6 (closer view)")
 
-    -- Disable ImGui for debugging (isolating player + map for AMD GPU flickering)
+    -- Disable ImGui by default (can be toggled with F1)
     DisableImGui()
-    Log("ImGui DISABLED for debugging - only player + map active")
+    Log("ImGui disabled by default - press F1 to toggle editor")
 
     -- Set engine to playing state (required for physics/movement)
     SetEnginePlayState(false)  -- Start paused for initialization
@@ -222,6 +223,7 @@ function OnInit()
     Log("Level 3 initialization complete")
     Log("Controls:")
     Log("  - Click tiles or use arrow keys to move")
+    Log("  - Press F1 to toggle editor")
     Log("  - Press 5 to return to main menu")
     Log("  - AP indicators shown at top of screen")
     Log("========================================")
@@ -270,6 +272,23 @@ function OnUpdate(dt)
     -- Note: Player controller and pathfinding updates happen in C++ systems
     -- Camera follow is set in C++ (SetFollowTarget on player entity)
     -- Turn system ticks in C++
+
+    -- Toggle ImGui editor with F1
+    if IsKeyDown("F1") then
+        if editorToggleCooldown <= 0 then
+            local newState = ToggleEditor()
+            if newState then
+                Log("EDITOR ON")
+            else
+                Log("EDITOR OFF")
+            end
+            editorToggleCooldown = 0.3
+        end
+    end
+
+    if editorToggleCooldown > 0 then
+        editorToggleCooldown = editorToggleCooldown - dt
+    end
 
     -- Check for return to main menu (KEY_5)
     if IsKeyDown("5") then
