@@ -8,9 +8,13 @@
  ------------------------------------------------------------------------------
   FIXED: Added screen size restoration to prevent text disappearing bug
 
+  Modified: 2025-11-22
+  - Added pause functionality using GlobalPauseManager
+
   Changes:
   1. level2_Draw() - Reset TextRenderer screen size before drawing
   2. level2_Free() - Restore TextRenderer screen size when leaving Level2
+  3. Added pause menu support
 ===============================================================================
 */
 
@@ -21,16 +25,30 @@
 #include "ImguiSystem.h"
 #include "Pathfinding.h"
 #include "Pause/Pause.h"
+#include "GlobalPauseManager.h"
+#include "Audio/AudioSystem.h"
 #include "TimeConstants.h"
 
 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 
+// ========================================================================
+// PAUSE STATE (File scope)
+// ========================================================================
+namespace {
+    bool g_wasPPressed = false;
+    PauseMenuSimple::PauseMenuState g_pauseMenuState;
+}
+
 
 void level2_Load()
 {
     ConfigReader::LoadConfig("assets/valueloader.txt");
+
+    // Reset pause state
+    g_wasPPressed = false;
+    g_pauseMenuState = PauseMenuSimple::PauseMenuState();
 }
 
 void level2_Initialize()
@@ -54,7 +72,9 @@ void level2_Initialize()
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Enable();
     }
-    engine->SetPlaying(false);
+
+    // Enable playing mode so player can move
+    engine->SetPlaying(true);
 
 
     auto graphics = engine->GetGraphicsSystem();
@@ -73,6 +93,9 @@ void level2_Initialize()
     playerController->SetPlayerEntity(playerEntity);
     playerController->SetEntitySpawner(spawner);
     playerController->SetAudioSystem(audioSystem);
+
+    // Disable grid movement for free movement (like Level1)
+    playerController->SetGridMovementEnabled(false);
 
 
     if (engine->GetImGuiSystem()) {
@@ -94,21 +117,79 @@ void level2_Update()
 {
     if (!engine) return;
 
-    // 1. Handle input switching levels
-    if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
+    auto* input = engine->GetInputSystem();
+    if (!input) return;
+
+    // ========================================================================
+    // P Key Toggle Pause (USING GLOBAL PAUSE)
+    // ========================================================================
+    bool isPPressed = input->IsKeyDown(Framework::KEY_P);
+
+    if (isPPressed && !g_wasPPressed) {
+        GlobalPause::Toggle();  // Toggle global pause state
+
+        if (GlobalPause::IsPaused()) {
+            LOG_INFO("LEVEL2", "Game PAUSED");
+            if (engine->GetAudioSystem()) {
+                engine->GetAudioSystem()->SetMasterVolume(0.0f);
+            }
+        }
+        else {
+            LOG_INFO("LEVEL2", "Game RESUMED");
+            if (engine->GetAudioSystem()) {
+                engine->GetAudioSystem()->SetMasterVolume(1.0f);
+            }
+        }
+    }
+    g_wasPPressed = isPPressed;
+
+    // ========================================================================
+    // If Paused, Handle Pause Menu Input
+    // ========================================================================
+    if (GlobalPause::IsPaused()) {
+        PauseMenuSimple::PauseMenuCallbacks callbacks;
+
+        callbacks.onResume = []() {
+            GlobalPause::SetPaused(false);
+            if (engine && engine->GetAudioSystem()) {
+                engine->GetAudioSystem()->SetMasterVolume(1.0f);
+            }
+            LOG_INFO("LEVEL2", "Resume selected");
+            };
+
+        callbacks.onMainMenu = []() {
+            GlobalPause::SetPaused(false);
+            next = mainMenu;
+            LOG_INFO("LEVEL2", "Returning to main menu");
+            };
+
+        callbacks.onExit = []() {
+            next = GS_QUIT;
+            LOG_INFO("LEVEL2", "Exiting game");
+            };
+
+        PauseMenuSimple::UpdatePauseMenu(engine, g_pauseMenuState, callbacks);
+
+        return;  // Skip level-specific logic when paused
+    }
+
+    // ========================================================================
+    // Normal Game Logic (Only when NOT paused)
+    // ========================================================================
+
+    // Handle input switching levels
+    if (input->IsKeyPressed(Framework::KEY_5))
     {
         next = mainMenu;
     }
 
-    if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_3))
+    if (input->IsKeyPressed(Framework::KEY_3))
     {
         next = LEVEL_3;
     }
 
     // =============================================================
-    // 2. UPDATE ANIMATIONS IN LEVEL EDITOR
+    // UPDATE ANIMATIONS IN LEVEL EDITOR
     // =============================================================
     // Animate in level editor using fixed-step (60 FPS)
     auto* animSys = engine->GetAnimationSystem();
@@ -160,8 +241,11 @@ void level2_Draw()
     // ========================================================================
     graphics->DrawText4(fontLarge, textScaling, textX, texty, textScale, glm::vec3(colorR, colorG, colorB));
 
-    if (engine->GetPauseSystem()) {
-        engine->GetPauseSystem()->Draw();
+    // ========================================================================
+    // Pause Menu Overlay (If paused)
+    // ========================================================================
+    if (GlobalPause::IsPaused()) {
+        PauseMenuSimple::DrawPauseMenu(engine, g_pauseMenuState);
     }
 }
 
@@ -169,6 +253,9 @@ void level2_Free()
 {
     LOG_INFO("LEVEL2", "=== Level2 Free ===");
 
+    // Reset pause state
+    g_wasPPressed = false;
+    GlobalPause::SetPaused(false);  // Ensure pause is cleared when leaving level
 
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Disable();
@@ -195,7 +282,7 @@ void level2_Free()
             engine->GetGraphicsSystem()->ClearFollowTarget();
         }
 
-        LOG_INFO("LEVEL2", "Switched back to EDITOR mode");
+        LOG_INFO("LEVEL2", "Exited Level2, returned to non-playing mode");
     }
 
     // Clean All Entities
