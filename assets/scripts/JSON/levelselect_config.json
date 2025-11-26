@@ -38,7 +38,8 @@
             "r": 1.0,
             "g": 1.0,
             "b": 1.0
-          }
+          },
+          "layer": 10
         },
         "callback": "OnLevel1ButtonClicked"
       },
@@ -53,6 +54,7 @@
           "x": 1.0,
           "y": 0.4
         },
+        "layer": 10,
         "text": {
           "content": "Level 2",
           "font": "Sans48",
@@ -80,6 +82,7 @@
           "x": 1.0,
           "y": 0.4
         },
+        "layer": 10,
         "text": {
           "content": "Level 3",
           "font": "Sans48",
@@ -107,6 +110,7 @@
           "x": 1.0,
           "y": 0.4
         },
+        "layer": 10,
         "text": {
           "content": "Back",
           "font": "Sans48",

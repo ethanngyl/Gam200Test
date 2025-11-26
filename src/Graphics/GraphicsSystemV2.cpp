@@ -880,94 +880,95 @@ namespace Framework {
         }
     }
 
+    // GraphicsSystemV2.cpp
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
         if (commands.empty()) return;
-        //glEnable(GL_BLEND);
-        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // ========================================================================
+    // DEBUG: PRINT DRAW ORDER (Run this once to verify sorting)
+    // ========================================================================
+        static int frameCount = 0;
+        if (frameCount == 0) { // Only log on the very first frame to avoid spam
+            std::cout << "\n=== RENDER QUEUE DRAW ORDER (Frame 0) ===" << std::endl;
+            int i = 0;
+            for (const auto& cmd : commands) {
+                std::cout << "Cmd [" << i << "]: "
+                    << " Layer: " << cmd.layer
+                    << " | Mesh: " << cmd.mesh.GetID()
+                    << " | Z-Depth: " << cmd.depth << std::endl;
+                i++;
+            }
+            std::cout << "=========================================\n" << std::endl;
+        }
+        frameCount++;
 
-        // Camera matrices
         Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
-		//Camera& activeCamera = mainCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
         glm::mat4 view = activeCamera.GetViewMatrix();
 
         currentBoundMaterial = INVALID_MATERIAL_HANDLE;
         currentBoundShader = INVALID_SHADER_HANDLE;
 
-        // ---- STEP 1: Group by (mesh + material + texture) ----
-        struct Key {
-            MeshHandle mesh;
-            MaterialHandle mat;
-            TextureHandle tex;
-        };
-        struct KeyHash {
-            size_t operator()(const Key& k) const noexcept {
-                return ((size_t)k.mesh.GetID() << 32) ^ (size_t)k.mat.GetID() ^ (size_t)k.tex.GetID();
-            }
-        };
-        struct KeyEq {
-            bool operator()(const Key& a, const Key& b) const noexcept {
-                return a.mesh == b.mesh && a.mat == b.mat && a.tex == b.tex;
-            }
-        };
+        // Linear Batching: This ensures Layer -10 draws BEFORE Layer 0
+        std::vector<glm::mat4> batchMatrices;
+        const RenderCommand* batchBase = nullptr;
 
-        std::unordered_map<Key, std::vector<glm::mat4>, KeyHash, KeyEq> batches;
+        auto FlushBatch = [&]() {
+            if (batchMatrices.empty() || !batchBase) return;
 
-        for (const auto& cmd : commands) {
-            if (!cmd.visible) continue;
-            batches[{cmd.mesh, cmd.material, cmd.texture}].push_back(cmd.modelMatrix);
-        }
-
-        // ---- STEP 2: Render each batch once ----
-        for (auto& [key, matrices] : batches) {
-            if (matrices.empty()) continue;
-
-            // Bind material and shader once
-            if (key.mat != currentBoundMaterial) {
-                if (BindMaterial(key.mat, glm::vec4(1.0f))) { // tint uniform already handled
-                    currentBoundMaterial = key.mat;
-                    stats.materialSwitches++;
-                }
+            // 1. Bind Material
+            if (batchBase->material != currentBoundMaterial) {
+                BindMaterial(batchBase->material, glm::vec4(1.0f));
+                currentBoundMaterial = batchBase->material;
             }
 
             Shader* shader = resourceManager.GetShader(currentBoundShader);
-            if (!shader) continue;
+            if (shader) {
+                // 2. Update Camera
+                GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
+                GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
+                if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+                if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-            GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
-            GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
-            if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-            if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+                // 3. Bind Texture (CRITICAL FIX for switching between Wood and Button)
+                if (batchBase->texture.IsValid()) {
+                    glBindTextureUnit(0, batchBase->texture.GetID());
+                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                }
+                else {
+                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
+                }
 
-            // Texture binding
-            if (key.tex.IsValid()) {
-                glBindTextureUnit(0, key.tex.GetID());
-                GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
-                if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
+                // 4. Draw
+                Mesh* mesh = resourceManager.GetMesh(batchBase->mesh);
+                if (mesh) {
+                    mesh->SetInstanceData();
+                    glNamedBufferSubData(mesh->instanceVBO, 0, batchMatrices.size() * sizeof(glm::mat4), batchMatrices.data());
+                    mesh->DrawInstanced(batchMatrices, static_cast<GLsizei>(batchMatrices.size()));
+                    stats.drawCalls++;
+                }
             }
-            else {
-                GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
-                if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+            batchMatrices.clear();
+            };
+
+        for (const auto& cmd : commands) {
+            if (!cmd.visible) continue;
+
+            bool isSameBatch = false;
+            if (batchBase && cmd.mesh == batchBase->mesh &&
+                cmd.material == batchBase->material &&
+                cmd.texture == batchBase->texture) {
+                isSameBatch = true;
             }
 
-            // Get mesh
-            Mesh* mesh = resourceManager.GetMesh(key.mesh);
-            if (!mesh) continue;
-
-            // ---- STEP 3: Upload instance data and draw ----
-            mesh->SetInstanceData(); // sets up the VAO attributes
-            // Upload matrices to GPU buffer (modern DSA version)
-            glNamedBufferSubData(mesh->instanceVBO, 0,
-                matrices.size() * sizeof(glm::mat4),
-                matrices.data());
-
-            // Draw once for all instances
-            mesh->DrawInstanced(matrices, static_cast<GLsizei>(matrices.size()));
-
-            stats.drawCalls++;
+            if (!isSameBatch) {
+                FlushBatch();
+                batchBase = &cmd;
+            }
+            batchMatrices.push_back(cmd.modelMatrix);
         }
+        FlushBatch(); // Draw final batch
 
-        // Cleanup
         if (currentBoundShader.IsValid()) {
             if (auto* sh = resourceManager.GetShader(currentBoundShader)) sh->Unbind();
         }

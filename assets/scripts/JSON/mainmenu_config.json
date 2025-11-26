@@ -21,10 +21,10 @@
         "y": 0.0
       },
       "scale": {
-        "x": 2.0,
-        "y": 2.0
+        "x": 4.0,
+        "y": 4.0
       },
-      "layer": -10
+      "layer": 1
     },
     "buttons": [
       {
@@ -38,7 +38,7 @@
           "x": 1.0,
           "y": 0.5
         },
-        "layer": 10,
+        "layer": 2,
         "text": {
           "content": "Play",
           "font": "Sans48",
@@ -67,7 +67,7 @@
           "x": 1.0,
           "y": 0.5
         },
-        "layer": 10,
+        "layer": 2,
         "text": {
           "content": "Exit",
           "font": "Sans48",
