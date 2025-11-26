@@ -239,7 +239,7 @@ namespace Framework {
             // FRAME ADVANCE
             // -------------------------------
 
-            anim.elapsedTime += dt;
+            anim.elapsedTime += Framework::Time::FIXED_DT;
 
             if (anim.elapsedTime >= anim.frameTime) {
                 anim.elapsedTime = default_zero;
