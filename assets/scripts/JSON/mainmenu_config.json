@@ -26,6 +26,18 @@
       },
       "layer": 1
     },
+    "logo": {
+      "texture": "assets/UI/MainMenuLogo.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.7
+      },
+      "scale": {
+        "x": 1.5,
+        "y": 1.5
+      },
+      "layer": 3
+    },
     "cornerSprites": [
       {
         "id": "topLeft",
