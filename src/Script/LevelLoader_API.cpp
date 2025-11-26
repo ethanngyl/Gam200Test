@@ -90,12 +90,15 @@ namespace Framework {
 
         // Parse parameters (layer is optional, defaults to 10)
         const char* texture = luaL_checkstring(L, 1);
-        float posX = luaL_checknumber(L, 2);
-        float posY = luaL_checknumber(L, 3);
-        float scaleX = luaL_checknumber(L, 4);
-        float scaleY = luaL_checknumber(L, 5);
+        float posX = (float)luaL_checknumber(L, 2);
+        float posY = (float)luaL_checknumber(L, 3);
+        float scaleX = (float)luaL_checknumber(L, 4);
+        float scaleY = (float)luaL_checknumber(L, 5);
         const char* callbackName = luaL_checkstring(L, 6);
-        int layer = luaL_optinteger(L, 7, 10);  // Optional 7th parameter, defaults to 10
+
+        // Check for optional 7th argument (Layer)
+        // If Lua sends 7 args, use the 7th. If Lua sends 6, default to 10.
+        int layer = (int)luaL_optinteger(L, 7, 10);
 
         // Store callback name
         std::string cbName = callbackName;
@@ -118,16 +121,18 @@ namespace Framework {
             }
             };
 
-        // Create button through UISystem
+        // Create button through UISystem, PASSING THE LAYER DIRECTLY
         UIButton* button = loader->uiSystem->CreateButton(
             texture,
             Vector2D(posX, posY),
             Vector2D(scaleX, scaleY),
-            callback
+            callback,
+            layer // <--- PASSED AS ARGUMENT
         );
 
         if (button) {
-            button->layer = layer;  // Set the layer after creation
+            // Note: We don't need 'button->layer = layer' here anymore 
+            // because the CreateButton function inside UISystem handles it.
             LOG_INFO("LevelLoader", "Button created with layer %d", layer);
             lua_pushinteger(L, static_cast<lua_Integer>(reinterpret_cast<intptr_t>(button)));
         }
