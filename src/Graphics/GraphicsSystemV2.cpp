@@ -126,8 +126,8 @@ namespace Framework {
         text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
 
         //set the editor camera to default position - jiahao
-        editorCameraStartPos = mainCamera.GetPosition();
-        editorCameraZoom = mainCamera.GetZoom();
+        editorCameraStartPos = editorCamera.GetPosition();
+        editorCameraZoom = editorCamera.GetZoom();
 
         // Load fonts (keys must match what DrawText uses)
         text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48);
@@ -192,8 +192,8 @@ namespace Framework {
     // ============================================================================
     
     void GraphicsSystemV2::ResetEditorCamera() {
-        mainCamera.SetPosition(editorCameraStartPos);
-        mainCamera.SetZoom(editorCameraZoom);
+        editorCamera.SetPosition(editorCameraStartPos);
+        editorCamera.SetZoom(editorCameraZoom);
     }
 
     // ============================================================================
@@ -212,28 +212,28 @@ namespace Framework {
         //Panning with arrow keys
 		//Basically move the camera position based on arrow key input
         if (GetAsyncKeyState(Framework::KEY_LEFT)) {
-            mainCamera.Translate({ -panSpeed, 0.0f, 0.0f });
+            editorCamera.Translate({ -panSpeed, 0.0f, 0.0f });
         }
         if (GetAsyncKeyState(Framework::KEY_RIGHT)) {
-            mainCamera.Translate({ panSpeed, 0.0f, 0.0f });
+            editorCamera.Translate({ panSpeed, 0.0f, 0.0f });
         }
         if (GetAsyncKeyState(Framework::KEY_UP)) {
-            mainCamera.Translate({ 0.0f, panSpeed, 0.0f });
+            editorCamera.Translate({ 0.0f, panSpeed, 0.0f });
         }
         if (GetAsyncKeyState(Framework::KEY_DOWN)) {
-            mainCamera.Translate({ 0.0f, -panSpeed, 0.0f });
+            editorCamera.Translate({ 0.0f, -panSpeed, 0.0f });
         }
 
         //Zooming 
 		// key 1 to zoom in, key 2 to zoom out
         if (GetAsyncKeyState(Framework::KEY_1)) {
-            float zoom = mainCamera.GetZoom();
-            mainCamera.SetZoom(zoom * (1.0f + zoomSpeed));
+            float zoom = editorCamera.GetZoom();
+            editorCamera.SetZoom(zoom * (1.0f + zoomSpeed));
         }
 
         if (GetAsyncKeyState(Framework::KEY_2)) {
-            float zoom = mainCamera.GetZoom();
-            mainCamera.SetZoom(zoom * (1.0f - zoomSpeed));
+            float zoom = editorCamera.GetZoom();
+            editorCamera.SetZoom(zoom * (1.0f - zoomSpeed));
         }
 
         //Reset camera position 
@@ -524,11 +524,6 @@ namespace Framework {
             true
         );
 
-        // Clean up temporary meshes
-        delete quad;
-        delete line;
-        delete circle;
-        delete wireframeQ;
         std::cout << "Created " << 4 << " default meshes\n";
     }
 
@@ -765,45 +760,82 @@ namespace Framework {
             );
 
             // ---------- SPRITE SHEET UV ANIMATION ----------
-            if (entityManager->HasComponent<SpriteAnimation>(e))
+            if (!entityManager->HasComponent<SpriteAnimation>(e))
             {
-                auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
-
-                Material* mat = resourceManager.GetMaterial(cmd.material);
-                if (!mat) continue;
-
-                Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
-                if (!tex) continue;
-
-                const int texW = tex->GetWidth();
-                const int texH = tex->GetHeight();
-                if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
-                    continue;
-
-                const int cols = texW / anim.frameWidth;
-                const int frame = anim.currentFrame % max(1, anim.frameCount);
-                const int x = frame % cols;
-                const int y = frame / cols;
-
-                float u0 = (x * anim.frameWidth) / float(texW);
-                float u1 = ((x + anim.uvShrinkPx) * anim.frameWidth) / float(texW);
-                float v1 = 1.0f - (y * anim.frameHeight) / float(texH);
-                float v0 = 1.0f - ((y + anim.uvShrinkPx) * anim.frameHeight) / float(texH);
-
-                // Apply horizontal flipping if enabled
-                if (anim.flipX)
-                    std::swap(u0, u1);
-
-                // Update material UV bounds
-                mat->u0 = u0;
-                mat->u1 = u1;
-                mat->v0 = v0;
-                mat->v1 = v1;
-
-                // Ensure texture is valid before rendering
-                if (!mat->albedoTexture.IsValid())
-                    mat->albedoTexture = anim.spriteSheet;
+                // Entity has no animation → safe to submit as-is
+                renderQueue.Submit(cmd);
+                continue;
             }
+
+            auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
+
+            cmd.texture = anim.spriteSheet;
+                
+            // Get the material for this command
+            Material* mat = resourceManager.GetMaterial(cmd.material);
+
+            // If the material is missing, or using the wrong shader (color-only),
+            // reroute this command to use the default textured material instead.
+            if (!mat || mat->shader != defaultShader)
+            {
+                cmd.material = defaultMaterial;
+                mat = resourceManager.GetMaterial(cmd.material);
+            }
+
+            // If still failed for some reason, skip this entity
+            if (!mat)
+                continue;
+
+            // Ensure the material is bound to this sprite sheet
+            mat->albedoTexture = anim.spriteSheet;
+
+            Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
+            if (!tex)
+                continue;
+
+            const int texW = tex->GetWidth();
+            const int texH = tex->GetHeight();
+            if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
+                continue;
+
+            // Prefer the configured column count if available
+            const int cols = (anim.columns > 0) ? anim.columns : (texW / anim.frameWidth);
+
+            const int frame = anim.currentFrame % max(1, anim.frameCount);
+            const int x = frame % cols;
+            const int y = frame / cols;
+
+            // Treat uvShrinkPx as pixels trimmed from each side of the frame
+            float shrink = anim.uvShrinkPx;
+            if (shrink < 0.0f) shrink = 0.0f;
+            if (shrink * 2.0f >= anim.frameWidth)  shrink = (anim.frameWidth - 1) * 0.5f;
+            if (shrink * 2.0f >= anim.frameHeight) shrink = (anim.frameHeight - 1) * 0.5f;
+
+            // Pixel coordinates inside the big texture
+            float leftPx = x * anim.frameWidth + shrink;
+            float rightPx = (x + 1) * anim.frameWidth - shrink;
+            float topPx = y * anim.frameHeight + shrink;
+            float bottomPx = (y + 1) * anim.frameHeight - shrink;
+
+            // Convert to UV [0,1]
+            float u0 = leftPx / float(texW);
+            float u1 = rightPx / float(texW);
+            float v1 = 1.0f - (topPx / float(texH));      // top
+            float v0 = 1.0f - (bottomPx / float(texH));   // bottom
+
+            // Apply horizontal flipping if enabled
+            if (anim.flipX)
+                std::swap(u0, u1);
+
+            // Update material UV bounds
+            mat->u0 = u0;
+            mat->u1 = u1;
+            mat->v0 = v0;
+            mat->v1 = v1;
+
+            // Ensure texture is valid before rendering
+            if (!mat->albedoTexture.IsValid())
+                mat->albedoTexture = anim.spriteSheet;
 
             renderQueue.Submit(cmd);
         }
@@ -817,6 +849,7 @@ namespace Framework {
 
         // Camera matrices
         Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
+		//Camera& activeCamera = mainCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
         glm::mat4 view = activeCamera.GetViewMatrix();
 

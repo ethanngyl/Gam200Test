@@ -407,7 +407,19 @@ namespace Framework {
         // STEP 5: Convert NDC to world space
         // ========================================================================
 
-        glm::mat4 invViewProj = glm::inverse(graphics->GetCamera().GetViewProjectionMatrix());
+        glm::mat4 invViewProj;
+        if (engine->IsPlaying())
+        {
+            // Gameplay: use main camera
+            invViewProj =
+                glm::inverse(graphics->GetCamera().GetViewProjectionMatrix());
+        }
+        else
+        {
+            // Editor mode: use editor camera
+            invViewProj =
+                glm::inverse(graphics->GetEditorCamera().GetViewProjectionMatrix());
+        }
         glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
 
         // The camera's view-projection matrix transforms world -> NDC

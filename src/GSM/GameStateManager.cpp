@@ -1,4 +1,4 @@
-﻿/*
+/*
 ============================================================================
  File:          GameStateManager.cpp (With F9 Hot Reload + Fixed DT)
  Features:      1. Lua-scripted menu states
@@ -6,6 +6,7 @@
                 3. Proper Fixed DT integration
 ============================================================================
 */
+
 
 #include "Precompiled.h"
 #include "level1.h"
@@ -196,7 +197,7 @@ void GSM_Update()
         break;
 
     case LEVEL_1:
-        LOG_INFO("GSM", "Level 1 state");
+        LOG_INFO("GSM", "  -> Level 1 state (NOT IMPLEMENTED)");
         fpLoad = level1_Load;
         fpInitialize = level1_Initialize;
         fpUpdate = level1_Update;
@@ -206,7 +207,7 @@ void GSM_Update()
         break;
 
     case LEVEL_2:
-        LOG_INFO("GSM", "Level 2 state");
+        LOG_INFO("GSM", "  -> Level 2 state (NOT IMPLEMENTED)");
         fpLoad = level2_Load;
         fpInitialize = level2_Initialize;
         fpUpdate = level2_Update;
@@ -216,7 +217,7 @@ void GSM_Update()
         break;
 
     case LEVEL_3:
-        LOG_INFO("GSM", "Level 3 state");
+        LOG_INFO("GSM", "  -> Level 3 state");
         fpLoad = level3_Load;
         fpInitialize = level3_Initialize;
         fpUpdate = level3_Update;
@@ -226,15 +227,15 @@ void GSM_Update()
         break;
 
     case GS_RESTART:
-        LOG_INFO("GSM", "Restart state");
+        LOG_INFO("GSM", "  -> Restart state");
         break;
 
     case GS_QUIT:
-        LOG_INFO("GSM", "Quit state");
+        LOG_INFO("GSM", "  -> Quit state");
         break;
 
     default:
-        LOG_ERROR("GSM", "Unknown state: %d", current);
+        LOG_ERROR("GSM", "  -> Unknown state: %d", current);
         fpLoad = nullptr;
         fpInitialize = nullptr;
         fpUpdate = nullptr;

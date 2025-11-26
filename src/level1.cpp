@@ -25,7 +25,6 @@ using Framework::ScriptComponent;
 // PAUSE STATE (File scope)
 // ========================================================================
 namespace {
-    bool g_isPaused = false;
     bool g_wasPPressed = false;
     PauseMenuSimple::PauseMenuState g_pauseMenuState;
 }
@@ -38,7 +37,7 @@ void level1_Load()
     LOG_INFO("LEVEL1", "Loaded UI configuration from valueloader.txt");
 
     // Reset pause state
-    g_isPaused = false;
+    GlobalPause::SetPaused(false);
     g_wasPPressed = false;
     g_pauseMenuState = PauseMenuSimple::PauseMenuState();
 }
@@ -97,32 +96,39 @@ void level1_Initialize()
     auto* gfx = engine->GetGraphicsSystem();
 
     if (em && gfx) {
-        ConfigReader::LoadConfig("assets/anim_Bird.txt");
+        // ============================================================================
+        // Load animation configuration
+        // ============================================================================
+        LOG_INFO("LEVEL1", "Loaded animation configuration from file");
 
+        // ============================
+        // 1. Add SpriteAnimation
+        // ============================
         auto& anim = em->AddComponent<Framework::SpriteAnimation>(playerEntity);
-        std::string spritePath = ConfigReader::GetString("sprite", "");
-        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(spritePath);
-        Framework::Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
 
-        anim.rows = ConfigReader::GetInt("rows", 1);
-        anim.columns = ConfigReader::GetInt("columns", 1);
-        anim.frameCount = ConfigReader::GetInt("frameCount", 1);
-        anim.frameTime = ConfigReader::GetFloat("frameTime", 0.0f);
-        anim.loop = ConfigReader::GetBool("loop", true);
-        anim.uvShrinkPx = ConfigReader::GetFloat("uvShrinkPx", 0.0f);
+        auto* animSys = engine->GetAnimationSystem();
+        if (animSys)
+        {
+            animSys->LoadAnimationConfig("assets/animations.json");
 
-        anim.frameWidth = tex->GetWidth() / anim.columns;
-        anim.frameHeight = tex->GetHeight() / anim.rows;
-        anim.playing = true;
-        anim.currentFrame = 0;
+            // Set default animation
+            anim.animName = "";
+            anim.playing = true;
+            anim.group = Framework::AnimGroup::Idle;
+            anim.direction = Framework::AnimDirection::Front;
+        }
 
+        // ============================
+        // 2. Add Renderable
+        // ============================
         auto& rend = em->AddComponent<Framework::Renderable>(playerEntity);
         rend.visible = true;
         rend.layer = 1;
 
+        // ============================
+        // 3. Add Transform
+        // ============================
         auto& xform = em->AddComponent<Framework::Transform>(playerEntity);
-        xform.upperLimit = ConfigReader::GetFloat("upperLimit", 0.0f);
-        xform.lowerLimit = ConfigReader::GetFloat("lowerLimit", 0.0f);
 
         ConfigReader::LoadConfig("assets/valueloader.txt");
     }
@@ -175,8 +181,6 @@ void level1_Update()
             LOG_INFO("LEVEL1", "Resume selected");
             };
 
-        // Removed: callbacks.onSettings
-
         callbacks.onMainMenu = []() {
             GlobalPause::SetPaused(false);
             next = mainMenu;
@@ -196,6 +200,24 @@ void level1_Update()
     // ========================================================================
     // Normal Game Logic (Only when NOT paused)
     // ========================================================================
+
+    // Update animations (from Ethan's branch)
+    auto* animSys = engine->GetAnimationSystem();
+    auto* em = engine->GetEntityManager();
+    auto* gfx = engine->GetGraphicsSystem();
+    auto player = engine->GetPlayerController()->GetPlayerEntity();
+
+    if (animSys && em && gfx && player.IsValid())
+    {
+        if (em->HasComponent<Framework::SpriteAnimation>(player))
+        {
+            auto& anim = em->GetComponent<Framework::SpriteAnimation>(player);
+            // Animation entries are handled by AnimationSystem
+            auto& entries = animSys->animEntries;
+        }
+    }
+
+    // Level switching
     if (input->IsKeyPressed(Framework::KEY_5)) {
         next = mainMenu;
     }
@@ -254,7 +276,7 @@ void level1_Free()
     LOG_INFO("LEVEL1", "=== Level1 Free ===");
 
     // Reset pause state
-    g_isPaused = false;
+    GlobalPause::SetPaused(false);
     g_wasPPressed = false;
 
     if (engine && engine->GetImGuiSystem()) {

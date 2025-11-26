@@ -16,6 +16,7 @@
 #pragma once
 #include "ECSComponent.h"
 #include "Vector2D.h"
+#include "ResourceHandle.h"   // <-- REQUIRED for TextureHandle
 #include <string>
 
 extern "C" {
@@ -37,9 +38,6 @@ namespace Framework
         Vector2D position;
         float rotation = 0.0f;
         Vector2D scale = Vector2D(1.0f, 1.0f);
-
-        float upperLimit = 0.0f;
-        float lowerLimit = 0.0f;
 
         Transform(Vector2D pos = Vector2D()) : position(pos) {}
     };
@@ -63,6 +61,55 @@ namespace Framework
         Vector2D direction;
         bool blocked = false;
     };
+
+    enum class AnimGroup {
+        Idle,
+        Walk,
+        Attack,
+        Injured,
+        Death,
+        Count
+    };
+
+    enum class AnimDirection {
+        Front,
+        Back,
+        Side,
+        None
+    };
+
+    struct SpriteAnimation : public Component<SpriteAnimation>
+    {
+        AnimGroup group = AnimGroup::Idle;
+        AnimDirection direction = AnimDirection::Front;
+
+        /** The animation name that maps to JSON key */
+        std::string animName;     // final JSON animation key
+
+        /** Handle to the full sprite sheet */
+        TextureHandle spriteSheet;
+
+        /** Frame stepping */
+        int currentFrame = 0;
+        float elapsedTime = 0.0f;
+
+        /** Animation data (ALL data-driven from JSON) */
+        int frameCount = 1;
+        int rows = 1;
+        int columns = 1;
+        float frameTime = 0.1f;
+
+        /** Frame layout */
+        int frameWidth = 0;
+        int frameHeight = 0;
+
+        /** UV correction + flipping */
+        float uvShrinkPx = 0.0f;
+        bool loop = true;
+        bool playing = true;
+        bool flipX = false;
+    };
+
     /**
      * @struct Sprite
      * @brief Visual rendering component
