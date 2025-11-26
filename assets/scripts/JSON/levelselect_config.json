@@ -16,34 +16,6 @@
     },
     "buttons": [
       {
-        "id": "level1",
-        "texture": "assets/Ui_btn.png",
-        "position": {
-          "x": 0.0,
-          "y": 0.6
-        },
-        "scale": {
-          "x": 1.0,
-          "y": 0.4
-        },
-        "text": {
-          "content": "Level 1",
-          "font": "Sans48",
-          "offset": {
-            "x": -90.0,
-            "y": -24.0
-          },
-          "scale": 1.0,
-          "color": {
-            "r": 1.0,
-            "g": 1.0,
-            "b": 1.0
-          },
-          "layer": 10
-        },
-        "callback": "OnLevel1ButtonClicked"
-      },
-      {
         "id": "level2",
         "texture": "assets/Ui_btn.png",
         "position": {
@@ -56,10 +28,10 @@
         },
         "layer": 10,
         "text": {
-          "content": "Level 2",
+          "content": "Level Editor",
           "font": "Sans48",
           "offset": {
-            "x": -90.0,
+            "x": -120.0,
             "y": -24.0
           },
           "scale": 1.0,
@@ -84,10 +56,10 @@
         },
         "layer": 10,
         "text": {
-          "content": "Level 3",
+          "content": "Demo",
           "font": "Sans48",
           "offset": {
-            "x": -90.0,
+            "x": -50.0,
             "y": -24.0
           },
           "scale": 1.0,
