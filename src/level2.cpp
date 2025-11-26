@@ -130,12 +130,24 @@ void level2_Update()
 
         if (GlobalPause::IsPaused()) {
             LOG_INFO("LEVEL2", "Game PAUSED");
+
+            // Disable ImGui to prevent interference with pause menu text
+            if (engine->GetImGuiSystem()) {
+                engine->GetImGuiSystem()->Disable();
+            }
+
             if (engine->GetAudioSystem()) {
                 engine->GetAudioSystem()->SetMasterVolume(0.0f);
             }
         }
         else {
-            LOG_INFO("LEVEL2", "Game RESUMED");
+            LOG_INFO("LEVEL2", "Game RESUMED (P key)");
+
+            // Re-enable ImGui when resuming via P key
+            if (engine->GetImGuiSystem()) {
+                engine->GetImGuiSystem()->Enable();
+            }
+
             if (engine->GetAudioSystem()) {
                 engine->GetAudioSystem()->SetMasterVolume(1.0f);
             }
@@ -151,6 +163,13 @@ void level2_Update()
 
         callbacks.onResume = []() {
             GlobalPause::SetPaused(false);
+
+            // ⭐ FIX: Re-enable ImGui when resuming from pause menu
+            // This is critical because the menu bypass P key detection
+            if (engine && engine->GetImGuiSystem()) {
+                engine->GetImGuiSystem()->Enable();
+            }
+
             if (engine && engine->GetAudioSystem()) {
                 engine->GetAudioSystem()->SetMasterVolume(1.0f);
             }
@@ -159,6 +178,12 @@ void level2_Update()
 
         callbacks.onMainMenu = []() {
             GlobalPause::SetPaused(false);
+
+            // Also re-enable ImGui before leaving level
+            if (engine && engine->GetImGuiSystem()) {
+                engine->GetImGuiSystem()->Enable();
+            }
+
             next = mainMenu;
             LOG_INFO("LEVEL2", "Returning to main menu");
             };
