@@ -329,6 +329,14 @@ namespace Framework {
             shootCooldown -= dt;
         }
 
+        // Update arrow movement cooldown
+        if (arrowMoveCooldown > 0.0f) {
+            arrowMoveCooldown -= dt;
+            if (arrowMoveCooldown < 0.0f) {
+                arrowMoveCooldown = 0.0f;
+            }
+        }
+
         // ====================================================================
         // SHOOTING INPUT - Use InputSystem
         // ====================================================================
@@ -503,6 +511,12 @@ namespace Framework {
         callCounter++;
         LOG_INFO("PlayerManager", ">>> HandleArrowKeyMovement called (call #%d this frame)", callCounter);
 
+        // FIX: Check cooldown to prevent double AP consumption from same key press
+        if (arrowMoveCooldown > 0.0f) {
+            LOG_INFO("PlayerManager", "Arrow movement blocked by cooldown (%.3fs remaining)", arrowMoveCooldown);
+            return;
+        }
+
         // Guards: need input + entity systems, player Transform, and it must be player's turn
         if (!gridMovementEnabled) {
             LOG_WARN("PlayerManager", "Arrow keys BLOCKED: gridMovementEnabled = false");
@@ -661,6 +675,10 @@ namespace Framework {
         int apAfter = stats.actionPoints;
         LOG_INFO("PlayerManager", "***** AP CONSUMED: %d -> %d (delta: -1) *****", apBefore, apAfter);
         LOG_INFO("PlayerManager", "Player moved. AP Remaining: %d", stats.actionPoints);
+
+        // FIX: Set cooldown to prevent double AP consumption (200ms = 0.2 seconds)
+        arrowMoveCooldown = 0.2f;
+        LOG_INFO("PlayerManager", "Arrow move cooldown activated (0.2s)");
     }
 
     void PlayerControllerSystem::ResetGridState() {

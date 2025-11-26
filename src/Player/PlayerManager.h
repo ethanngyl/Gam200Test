@@ -14,7 +14,7 @@
 
   Design notes:
   - Single-tile movement semantics with bounds/walkability checks
-  - Turn integration: movements can end the player’s turn
+  - Turn integration: movements can end the playerï¿½s turn
   - Non-blocking, timer-based UI feedback (start/stop pulse; show/hide outline)
   - Minimal surface area: effects are initiated here and updated per frame
 ===============================================================================
@@ -103,6 +103,9 @@ namespace Framework {
         float shootCooldownTime;
         float projectileSpeed;
         bool gridMovementEnabled = false;
+
+        // Arrow key movement cooldown to prevent double AP consumption
+        float arrowMoveCooldown = 0.0f;
 
         uint64_t lastTurnIndex = 0;
     };
