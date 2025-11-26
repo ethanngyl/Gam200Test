@@ -17,6 +17,7 @@
 local buttonIDs = {}
 local initialized = false
 local config = nil
+local editorToggleCooldown = 0  -- Cooldown for F1 editor toggle
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -60,6 +61,7 @@ function OnInit()
     
     initialized = true
     Log("LevelSelect initialization complete")
+    Log("Press F1 to toggle editor")
 end
 
 -- ============================================================================
@@ -147,10 +149,27 @@ end
 function OnUpdate(dt)
     -- Update audio system
     UpdateAudio(dt)
-    
+
+    -- Toggle ImGui editor with F1
+    if IsKeyDown("F1") then
+        if editorToggleCooldown <= 0 then
+            local newState = ToggleEditor()
+            if newState then
+                Log("EDITOR ON")
+            else
+                Log("EDITOR OFF")
+            end
+            editorToggleCooldown = 0.3
+        end
+    end
+
+    if editorToggleCooldown > 0 then
+        editorToggleCooldown = editorToggleCooldown - dt
+    end
+
     -- Optional: Add animated background effects here
     -- Example: Rotating background elements, particle systems, etc.
-    
+
     -- Optional: Handle debug input
     if IsKeyDown("Escape") then
         Log("ESC pressed in level select")
