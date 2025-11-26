@@ -458,10 +458,10 @@ namespace Framework {
     void GraphicsSystemV2::CreateDefaultMeshes() {
         std::cout << "GraphicsSystemV2: Creating default meshes...\n";
         // Create primitive meshes using the factory functions
-        Mesh* quad = meshFactory.CreateQuad();
-        Mesh* line = meshFactory.CreateLine();
-        Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
-        Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
+        //Mesh* quad = meshFactory.CreateQuad();
+        //Mesh* line = meshFactory.CreateLine();
+        //Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
+        //Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
 
         // Quad vertices
         std::vector<float> quadVerts = {
