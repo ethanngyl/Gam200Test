@@ -20,6 +20,7 @@ local initialized = false
 local config = nil
 local editorToggleCooldown = 0
 local backgroundSpriteID = 0  -- Store background sprite entity ID
+local logoSpriteID = 0        -- Store logo sprite entity ID
 local cornerSpriteIDs = {}    -- Store corner sprite entity IDs  
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -75,6 +76,32 @@ function OnInit()
         Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("✗ WARNING: Failed to create background sprite")
+    end
+    -- ========================================================================
+
+    -- ========================================================================
+    -- CREATE LOGO SPRITE
+    -- ========================================================================
+    if config.menu.logo then
+        local logo = config.menu.logo
+        Log("Creating logo sprite: " .. logo.texture)
+
+        logoSpriteID = SpawnSprite(
+            logo.texture,
+            logo.position.x,
+            logo.position.y,
+            logo.scale.x,
+            logo.scale.y,
+            logo.layer
+        )
+
+        if logoSpriteID > 0 then
+            Log("✓ Logo sprite created (ID: " .. logoSpriteID .. ")")
+        else
+            Log("✗ WARNING: Failed to create logo sprite")
+        end
+    else
+        Log("No logo configuration found in JSON")
     end
     -- ========================================================================
 
@@ -271,6 +298,12 @@ function OnDestroy()
         Log("Background sprite destroyed")
     end
 
+    -- Destroy logo sprite
+    if logoSpriteID > 0 then
+        DestroyEntity(logoSpriteID)
+        Log("Logo sprite destroyed")
+    end
+
     -- Destroy corner sprites
     for cornerID, spriteID in pairs(cornerSpriteIDs) do
         if spriteID > 0 then
@@ -284,6 +317,7 @@ function OnDestroy()
     config = nil
     initialized = false
     backgroundSpriteID = 0
+    logoSpriteID = 0
     cornerSpriteIDs = {}
 
     Log("MainMenu cleanup complete")
