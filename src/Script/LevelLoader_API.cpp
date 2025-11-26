@@ -272,10 +272,14 @@ namespace Framework {
         // ========================================
         // TEXT CENTERING - SNAP TO BUTTON CENTER
         // ========================================
-        // Simply center text at button's screen position with optional offsets
-        // The button's screen position IS the center, no need for width estimation
-        float centeredX = screenX + offsetX;
-        float centeredY = screenY + offsetY;
+        // Scale offsets proportionally to viewport size (like text scale)
+        // This ensures text stays properly aligned when window is resized
+        float scaledOffsetX = offsetX * viewportScale;
+        float scaledOffsetY = offsetY * viewportScale;
+
+        // Center text at button's screen position with scaled offsets
+        float centeredX = screenX + scaledOffsetX;
+        float centeredY = screenY + scaledOffsetY;
 
         // ========================================
         // DEBUG OUTPUT (Enhanced)
@@ -294,7 +298,8 @@ namespace Framework {
             LOG_INFO("LevelLoader", "  Final: (%.2f, %.2f) [SNAPPED TO BUTTON]", centeredX, centeredY);
             LOG_INFO("LevelLoader", "  Scale: base=%.2f viewport=%.2f final=%.2f",
                      scale, viewportScale, finalScale);
-            LOG_INFO("LevelLoader", "  Offsets: X=%.2f Y=%.2f", offsetX, offsetY);
+            LOG_INFO("LevelLoader", "  Offsets: raw=(%.2f, %.2f) scaled=(%.2f, %.2f)",
+                     offsetX, offsetY, scaledOffsetX, scaledOffsetY);
             LOG_INFO("LevelLoader", "========================================");
         }
         // ========================================
