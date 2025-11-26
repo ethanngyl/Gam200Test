@@ -533,13 +533,14 @@ namespace Framework {
             return 1;
         }
 
-        // Parse parameters: SpawnSprite(texture, x, y, width, height, layer)
+        // Parse parameters: SpawnSprite(texture, x, y, width, height, layer, rotation)
         const char* texture = luaL_checkstring(L, 1);
         float x = luaL_checknumber(L, 2);
         float y = luaL_checknumber(L, 3);
         float width = luaL_checknumber(L, 4);
         float height = luaL_checknumber(L, 5);
         int layer = luaL_optinteger(L, 6, 100);  // Default to UI layer
+        float rotation = luaL_optnumber(L, 7, 0.0f);  // Optional rotation in degrees, default 0
 
         auto* spawner = loader->coreEngine->GetSpawner();
         auto* em = loader->coreEngine->GetEntityManager();
@@ -565,8 +566,14 @@ namespace Framework {
             mr.layer = layer;
         }
 
-        LOG_INFO("LevelLoader", "Spawned sprite '%s' at (%.2f, %.2f) with size (%.2f, %.2f), layer=%d, ID=%u",
-                 texture, x, y, width, height, layer, entity.GetID());
+        // Set rotation (convert degrees to radians if needed, depends on your Transform component)
+        if (em->HasComponent<Transform>(entity)) {
+            auto& transform = em->GetComponent<Transform>(entity);
+            transform.rotation = rotation;  // Assuming rotation is stored in degrees
+        }
+
+        LOG_INFO("LevelLoader", "Spawned sprite '%s' at (%.2f, %.2f) size (%.2f, %.2f), layer=%d, rotation=%.1f°, ID=%u",
+                 texture, x, y, width, height, layer, rotation, entity.GetID());
 
         // Return entity ID as integer
         lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
