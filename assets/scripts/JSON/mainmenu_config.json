@@ -29,58 +29,58 @@
     "cornerSprites": [
       {
         "id": "topLeft",
-        "texture": "assets/UI/CornerDecoration.png",
+        "texture": "assets/UI/menucorner.png",
         "offset": {
-          "x": -0.85,
+          "x": -1.8,
           "y": 0.85
         },
         "scale": {
-          "x": 0.3,
-          "y": 0.3
+          "x": 1.0,
+          "y": 1.0
         },
         "rotation": 0,
         "layer": 5
       },
       {
         "id": "topRight",
-        "texture": "assets/UI/CornerDecoration.png",
+        "texture": "assets/UI/menucorner.png",
         "offset": {
-          "x": 0.85,
+          "x": 1.8,
           "y": 0.85
         },
         "scale": {
-          "x": 0.3,
-          "y": 0.3
+          "x": 1.0,
+          "y": 1.0
         },
-        "rotation": 90,
+        "rotation": 270,
         "layer": 5
       },
       {
         "id": "bottomRight",
-        "texture": "assets/UI/CornerDecoration.png",
+        "texture": "assets/UI/menucorner.png",
         "offset": {
-          "x": 0.85,
+          "x": 1.8,
           "y": -0.85
         },
         "scale": {
-          "x": 0.3,
-          "y": 0.3
+          "x": 1.0,
+          "y": 1.0
         },
         "rotation": 180,
         "layer": 5
       },
       {
         "id": "bottomLeft",
-        "texture": "assets/UI/CornerDecoration.png",
+        "texture": "assets/UI/menucorner.png",
         "offset": {
-          "x": -0.85,
+          "x": -1.8,
           "y": -0.85
         },
         "scale": {
-          "x": 0.3,
-          "y": 0.3
+          "x": 1.0,
+          "y": 1.0
         },
-        "rotation": 270,
+        "rotation": 90,
         "layer": 5
       }
     ],
