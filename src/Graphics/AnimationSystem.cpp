@@ -109,9 +109,18 @@ namespace Framework {
      *
      * Currently handles basic cleanup. Can be extended for
      * resource deallocation if needed in the future.
+     * 
     ===============================================================================
      */
-    AnimationSystem::~AnimationSystem() {}
+    AnimationSystem::~AnimationSystem() {
+        LOG_INFO("ANIMATION", "Destroying Animation System...");
+
+        //// 1. Clear any maps or vectors
+        //for (auto& anim : loadedAnimations) {
+        //    delete anim.second; // If you stored pointers to Animation objects
+        //}
+        //loadedAnimations.clear();
+    }
 
     // ==================== CORE LIFECYCLE METHODS ====================
 

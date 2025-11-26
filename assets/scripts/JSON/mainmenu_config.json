@@ -51,7 +51,8 @@
             "r": 1.0,
             "g": 1.0,
             "b": 1.0
-          }
+          },
+          "layer": 11
         },
         "callback": "OnPlayButtonClicked"
       },
@@ -79,7 +80,8 @@
             "r": 1.0,
             "g": 1.0,
             "b": 1.0
-          }
+          },
+          "layer": 11
         },
         "callback": "OnExitButtonClicked"
       }
