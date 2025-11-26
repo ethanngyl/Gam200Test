@@ -27,7 +27,7 @@
       "layer": 1
     },
     "logo": {
-      "texture": "assets/UI/MainMenuLogo.png",
+      "texture": "assets/UI/gamelogo.png",
       "position": {
         "x": 0.0,
         "y": 0.7
