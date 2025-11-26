@@ -27,6 +27,7 @@
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
 #include "Audio/AudioSystem.h"
+
 #include "TimeConstants.h"
 
 
@@ -72,9 +73,7 @@ void level2_Initialize()
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Enable();
     }
-
-    // Enable playing mode so player can move
-    engine->SetPlaying(true);
+    engine->SetPlaying(false);
 
 
     auto graphics = engine->GetGraphicsSystem();
@@ -93,9 +92,6 @@ void level2_Initialize()
     playerController->SetPlayerEntity(playerEntity);
     playerController->SetEntitySpawner(spawner);
     playerController->SetAudioSystem(audioSystem);
-
-    // Disable grid movement for free movement (like Level1)
-    playerController->SetGridMovementEnabled(false);
 
 
     if (engine->GetImGuiSystem()) {
@@ -176,9 +172,10 @@ void level2_Update()
     // ========================================================================
     // Normal Game Logic (Only when NOT paused)
     // ========================================================================
-
-    // Handle input switching levels
     if (input->IsKeyPressed(Framework::KEY_5))
+    // 1. Handle input switching levels
+    if (engine && engine->GetInputSystem() &&
+        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
     {
         next = mainMenu;
     }
@@ -189,7 +186,7 @@ void level2_Update()
     }
 
     // =============================================================
-    // UPDATE ANIMATIONS IN LEVEL EDITOR
+    // 2. UPDATE ANIMATIONS IN LEVEL EDITOR
     // =============================================================
     // Animate in level editor using fixed-step (60 FPS)
     auto* animSys = engine->GetAnimationSystem();
@@ -282,7 +279,7 @@ void level2_Free()
             engine->GetGraphicsSystem()->ClearFollowTarget();
         }
 
-        LOG_INFO("LEVEL2", "Exited Level2, returned to non-playing mode");
+        LOG_INFO("LEVEL2", "Switched back to EDITOR mode");
     }
 
     // Clean All Entities
