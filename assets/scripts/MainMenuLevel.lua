@@ -19,7 +19,8 @@ local buttonIDs = {}
 local initialized = false
 local config = nil
 local editorToggleCooldown = 0
-local backgroundSpriteID = 0  -- Store background sprite entity ID  
+local backgroundSpriteID = 0  -- Store background sprite entity ID
+local cornerSpriteIDs = {}    -- Store corner sprite entity IDs  
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -74,6 +75,35 @@ function OnInit()
         Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("✗ WARNING: Failed to create background sprite")
+    end
+    -- ========================================================================
+
+    -- ========================================================================
+    -- CREATE CORNER SPRITES
+    -- ========================================================================
+    if config.menu.cornerSprites then
+        Log("Creating corner decorations...")
+
+        for i, corner in ipairs(config.menu.cornerSprites) do
+            local spriteID = SpawnSprite(
+                corner.texture,
+                corner.offset.x,
+                corner.offset.y,
+                corner.scale.x,
+                corner.scale.y,
+                corner.layer,
+                corner.rotation  -- Rotation in degrees
+            )
+
+            if spriteID > 0 then
+                cornerSpriteIDs[corner.id] = spriteID
+                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+            else
+                Log("  ✗ FAILED to create corner sprite: " .. corner.id)
+            end
+        end
+
+        Log("Corner decorations complete!")
     end
     -- ========================================================================
 
@@ -241,11 +271,20 @@ function OnDestroy()
         Log("Background sprite destroyed")
     end
 
+    -- Destroy corner sprites
+    for cornerID, spriteID in pairs(cornerSpriteIDs) do
+        if spriteID > 0 then
+            DestroyEntity(spriteID)
+            Log("Corner sprite '" .. cornerID .. "' destroyed")
+        end
+    end
+
     -- Reset state
     buttonIDs = {}
     config = nil
     initialized = false
     backgroundSpriteID = 0
+    cornerSpriteIDs = {}
 
     Log("MainMenu cleanup complete")
 end
