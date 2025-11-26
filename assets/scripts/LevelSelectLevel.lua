@@ -107,20 +107,9 @@ end
 -- BUTTON CALLBACKS
 -- ============================================================================
 
-function OnLevel1ButtonClicked()
-    Log("LEVEL 1 button clicked!")
-    Log("Transitioning to Level 1...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Transition to Level 1
-    SetNextGameState("LEVEL_1")
-end
-
 function OnLevel2ButtonClicked()
-    Log("LEVEL 2 button clicked!")
-    Log("Transitioning to Level 2...")
+    Log("LEVEL EDITOR button clicked!")
+    Log("Transitioning to Level Editor...")
     
     -- Play click sound effect (optional)
     -- PlaySound("button_click", false, 1.0)
@@ -130,8 +119,8 @@ function OnLevel2ButtonClicked()
 end
 
 function OnLevel3ButtonClicked()
-    Log("LEVEL 3 button clicked!")
-    Log("Transitioning to Level 3...")
+    Log("DEMO button clicked!")
+    Log("Transitioning to Demo...")
     
     -- Play click sound effect (optional)
     -- PlaySound("button_click", false, 1.0)
@@ -169,14 +158,11 @@ function OnUpdate(dt)
     end
     
     -- Optional: Quick level selection with number keys
-    if IsKeyDown("1") then
-        Log("Quick select: Level 1")
-        OnLevel1ButtonClicked()
-    elseif IsKeyDown("2") then
-        Log("Quick select: Level 2")
+    if IsKeyDown("2") then
+        Log("Quick select: Level Editor")
         OnLevel2ButtonClicked()
     elseif IsKeyDown("3") then
-        Log("Quick select: Level 3")
+        Log("Quick select: Demo")
         OnLevel3ButtonClicked()
     end
 end
