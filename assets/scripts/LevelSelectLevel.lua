@@ -28,7 +28,7 @@ function OnInit()
     Log("Loading configuration from JSON file...")
     
     -- Load configuration from JSON
-    config = LoadJSON("assets/scripts/JSON/levelselect_config.json")
+    config = LoadJSON("assets/JSON/levelselect_config.json")
     
     if not config then
         Log("ERROR: Failed to load JSON configuration!")

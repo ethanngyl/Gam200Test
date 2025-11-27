@@ -1,31 +1,37 @@
 {
     "sounds": [
         {
-            "name": "leaves",
-            "filepath": "assets/leaves.wav",
+            "name": "walk1",
+            "filepath": "assets/Audio/Walk_Sfx_Random/walk_1.wav",
             "volume": 1,
             "preload": true
         },
         {
             "name": "mmbgm",
-            "filepath": "assets/Moron3MenuMusic.wav",
+            "filepath": "assets/Audio/Menu_Bgm/Main_Menu_Bgm.wav",
             "volume": 0.8,
             "preload": true,
             "loop": true
         },
         {
-            "name": "bgm",
-            "filepath": "assets/Moron3BGM.wav",
+            "name": "igbgm",
+            "filepath": "assets/Audio/Menu_Bgm/In_Game_Bgm.wav",
             "volume": 0.8,
             "preload": true,
             "loop": true
         },
-        {
-            "name": "shooting",
-            "filepath": "assets/shooting.wav",
-            "volume": 1,
-            "preload": true
-        }
+      {
+        "name": "dmgb",
+        "filepath": "assets/Audio/Dmg_Sfx_Tiers/Damage_Basic.wav",
+        "volume": 1,
+        "preload": true
+      },
+      {
+        "name": "takedmg",
+        "filepath": "assets/Audio/Take_Dmg_Sfx/Take_Dmg.wav",
+        "volume": 1,
+        "preload": true
+      }
     ],
     "settings": {
         "masterVolume": 1,

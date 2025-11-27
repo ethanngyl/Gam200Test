@@ -15,7 +15,7 @@
       "zoom": 1.0
     },
     "background": {
-      "texture": "assets/UI/WoodBackground.png",
+      "texture": "assets/Menu/WoodBackground.png",
       "position": {
         "x": 0.0,
         "y": 0.0
@@ -27,7 +27,7 @@
       "layer": 1
     },
     "logo": {
-      "texture": "assets/UI/gamelogo.png",
+      "texture": "assets/Menu/gamelogo.png",
       "position": {
         "x": 0.0,
         "y": 0.4
@@ -41,7 +41,7 @@
     "cornerSprites": [
       {
         "id": "topLeft",
-        "texture": "assets/UI/menucorner.png",
+        "texture": "assets/Menu/menucorner.png",
         "offset": {
           "x": -1.8,
           "y": 0.85
@@ -55,7 +55,7 @@
       },
       {
         "id": "topRight",
-        "texture": "assets/UI/menucorner.png",
+        "texture": "assets/Menu/menucorner.png",
         "offset": {
           "x": 1.8,
           "y": 0.85
@@ -69,7 +69,7 @@
       },
       {
         "id": "bottomRight",
-        "texture": "assets/UI/menucorner.png",
+        "texture": "assets/Menu/menucorner.png",
         "offset": {
           "x": 1.8,
           "y": -0.85
@@ -83,7 +83,7 @@
       },
       {
         "id": "bottomLeft",
-        "texture": "assets/UI/menucorner.png",
+        "texture": "assets/Menu/menucorner.png",
         "offset": {
           "x": -1.8,
           "y": -0.85
@@ -99,7 +99,7 @@
     "buttons": [
       {
         "id": "play",
-        "texture": "assets/Ui_btn.png",
+        "texture": "assets/Menu/Ui_btn.png",
         "position": {
           "x": 0.0,
           "y": -0.3
@@ -128,7 +128,7 @@
       },
       {
         "id": "exit",
-        "texture": "assets/Ui_btn.png",
+        "texture": "assets/Menu/Ui_btn.png",
         "position": {
           "x": 0.0,
           "y": -0.6

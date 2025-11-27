@@ -128,7 +128,7 @@ void level1_Initialize()
         auto* animSys = engine->GetAnimationSystem();
         if (animSys)
         {
-            animSys->LoadAnimationConfig("assets/animations.json");
+            animSys->LoadAnimationConfig("assets/JSON/animations.json");
 
             // default animation
             anim.animName = "";
