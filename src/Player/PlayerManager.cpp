@@ -264,10 +264,10 @@ namespace Framework {
                 }
 
                 //Regen attack AP
-                if (entityManager->HasComponent<AttackAP>(playerEntity)) {                  
-                    auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);        
-                    aap.points = aap.maxPoints;                                             
-                    LOG_INFO("PlayerTurn", "Attack AP refilled to %d", aap.points);         
+                if (entityManager->HasComponent<AttackAP>(playerEntity)) {
+                    auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);
+                    aap.points = aap.maxPoints;
+                    LOG_INFO("PlayerTurn", "Attack AP refilled to %d", aap.points);
                 }
 
                 // Update our tracker so we don't regen again this turn
@@ -329,6 +329,7 @@ namespace Framework {
             shootCooldown -= dt;
         }
 
+
         // Update arrow movement cooldown
         if (arrowMoveCooldown > 0.0f) {
             arrowMoveCooldown -= dt;
@@ -337,13 +338,12 @@ namespace Framework {
             }
         }
 
+
         // ====================================================================
         // SHOOTING INPUT - Use InputSystem
         // ====================================================================
 
-        /*HandleShootUp(playerPos);
-        HandleShootDown(playerPos);
-        HandleShootAtMouse(playerPos);*/
+        
 
 
         // ====================================================================
@@ -499,6 +499,7 @@ namespace Framework {
     * @brief Arrow-key single-step grid movement (validates bounds/walkability).
     *        Shows feedback (border + pulse), updates occupancy, and ends player turn.
     */
+
     void PlayerControllerSystem::HandleArrowKeyMovement() {
         // DEBUG: Log entry to this function
         static bool firstCall = true;
@@ -754,9 +755,17 @@ namespace Framework {
                 //gridTile.blocked = false;
 
                 // Visual feedback: hide chest or change appearance
-                if (entityManager->HasComponent<Framework::Renderable>(occupant)) {
-                    auto& renderable = entityManager->GetComponent<Framework::Renderable>(occupant);
-                    renderable.visible = false;  // Hide collected chest
+                if (entityManager->HasComponent<Framework::Renderable>(occupant) && entityManager->HasComponent<Framework::Chest>(occupant)
+                    && !entityManager->HasComponent<EnemyAI>(occupant)) {
+                    auto& chest = entityManager->GetComponent<Framework::Chest>(occupant);
+
+                    // only hide the same entity you just marked collected
+                    if (chest.collected) {
+                        auto& renderable = entityManager->GetComponent<Framework::Renderable>(occupant);
+                        renderable.visible = false;
+                    }
+
+
                 }
 
                 // Clear occupant

@@ -116,6 +116,13 @@ namespace Framework {
         grid.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
         LOG_INFO("LevelLoader", "Configured Grid %dx%d", cols, rows);
 
+        auto baseTileFor = [&](const TileDef& def) -> const TileDef& {
+            const bool isEntity = !def.entityType.empty();
+            // '0' is guaranteed in your JSON; it’s the grass/ground tile.
+            const TileDef& ground = tileDefs.at('0');
+            return isEntity ? ground : def;
+            };
+
         // ========================================================================
         // CHEST TRACKING - Count total chests in level
         // ========================================================================
@@ -155,7 +162,8 @@ namespace Framework {
                 );
 
                 //  A. Spawn the Base Tile Entity
-                Entity tileEntity = spawner->SpawnSprite(def.texture, pos, Vector2D(spacing.x * 1.0f, spacing.y * 1.0f));
+                const TileDef& baseDef = baseTileFor(def);
+                Entity tileEntity = spawner->SpawnSprite(baseDef.texture, pos, Vector2D(spacing.x * 1.0f, spacing.y * 1.0f));
 
                 // Add GridTiles Component
                 em->AddComponent<GridTiles>(tileEntity);
@@ -213,6 +221,13 @@ namespace Framework {
                         if (!em->HasComponent<AP>(specialEntity)) {
                             em->AddComponent<AP>(specialEntity, 3); // 3 AP
                         }
+
+                        if (em->HasComponent<Renderable>(specialEntity)) {             // NEW
+                            auto& rend = em->GetComponent<Renderable>(specialEntity);   // NEW
+                            rend.visible = true;                                        // NEW
+                            rend.layer = RenderLayers::Enemies;                       // NEW
+                        }
+
                         LOG_INFO("LevelLoader", "Spawned Enemy at (%d, %d)", c, r);
                         
                         LOG_INFO("LevelLoader", "Skipped Enemy spawn at (%d, %d) - DEBUG MODE", c, r);
@@ -221,7 +236,8 @@ namespace Framework {
                 // CHEST - Blocks enemies, collectable by player
                 // ============================================================
                     else if (def.entityType == "Chest") {
-                        // Spawn chest entity
+                        // Spawn 
+                        // entity
                         specialEntity = spawner->SpawnSprite(
                             def.texture,
                             pos,
