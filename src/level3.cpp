@@ -7,8 +7,8 @@
  Contribution:   100%
  ------------------------------------------------------------------------------
 
-  Modified: 2025-11-22
-  - Added pause functionality using GlobalPauseManager
+  Modified: 2025-11-27
+  - Removed all pause-related code
 
   Design notes:
   Implements Level 3 setup, update loop, and teardown.
@@ -45,17 +45,11 @@
 #include "Pathfinding.h"
 #include "GraphicsSystemV2.h"
 #include "Turn.h"
-#include "Pause/Pause.h"
-#include "GlobalPauseManager.h"
 #include "TileMapLoader.h"
 
 namespace {
     Framework::Entity gPlayer{ Framework::INVALID_ENTITY };
     std::vector<Framework::Entity>gEnemies;
-
-    // Pause state
-    bool g_wasPPressed = false;
-    PauseMenuSimple::PauseMenuState g_pauseMenuState;
 }
 
 Framework::Entity FindPlayer(Framework::EntityManager* em) {
@@ -91,10 +85,6 @@ std::vector<Framework::Entity> FindAllEnemies(Framework::EntityManager* em) {
 void level3_Load()
 {
     LOG_INFO("LEVEL3", "Load");
-
-    // Reset pause state
-    g_wasPPressed = false;
-    g_pauseMenuState = PauseMenuSimple::PauseMenuState();
 }
 
 /**
@@ -225,44 +215,7 @@ void level3_Update()
     if (!input) return;
 
     // ========================================================================
-    // P Key Toggle Pause (USING GLOBAL PAUSE)
-    // ========================================================================
-    bool isPPressed = input->IsKeyDown(Framework::KEY_P);
-
-    if (isPPressed && !g_wasPPressed) {
-        GlobalPause::Toggle();  // Toggle global pause state
-    }
-    g_wasPPressed = isPPressed;
-
-    // ========================================================================
-    // If Paused, Handle Pause Menu Input
-    // ========================================================================
-    if (GlobalPause::IsPaused()) {
-        PauseMenuSimple::PauseMenuCallbacks callbacks;
-
-        callbacks.onResume = []() {  //  Capture engine by value
-            GlobalPause::SetPaused(false);
-            LOG_INFO("LEVEL3", "Resume selected");
-            };
-
-        callbacks.onMainMenu = []() {  //  Capture engine by value
-            GlobalPause::SetPaused(false);
-            next = mainMenu;
-            LOG_INFO("LEVEL3", "Returning to main menu");
-            };
-
-        callbacks.onExit = []() {  //  Capture engine by value
-            next = GS_QUIT;
-            LOG_INFO("LEVEL3", "Exiting game");
-            };
-
-        PauseMenuSimple::UpdatePauseMenu(engine, g_pauseMenuState, callbacks);
-
-        return;  // Skip level-specific logic when paused
-    }
-
-    // ========================================================================
-    // Normal Game Logic (Only when NOT paused)
+    // Normal Game Logic
     // ========================================================================
 
     if (input->IsKeyPressed(Framework::KEY_5))
@@ -295,19 +248,7 @@ void level3_Update()
  */
 void level3_Draw()
 {
-    using namespace Framework;
-    CoreEngine* engine = CORE;
-    if (!engine) return;
-
-    auto* graphics = engine->GetGraphicsSystem();
-    if (!graphics) return;
-
-    // ========================================================================
-    // Pause Menu Overlay (If paused)
-    // ========================================================================
-    if (GlobalPause::IsPaused()) {
-        PauseMenuSimple::DrawPauseMenu(engine, g_pauseMenuState);
-    }
+    // Nothing to draw
 }
 
 /**
@@ -323,10 +264,6 @@ void level3_Free()
     using namespace Framework;
 
     LOG_INFO("LEVEL3", "=== Level3 Free ===");
-
-    // Reset pause state
-    g_wasPPressed = false;
-    GlobalPause::SetPaused(false);  // Ensure pause is cleared when leaving level
 
     if (CORE && CORE->GetPlayerController()) {
         CORE->GetPlayerController()->ResetGridState();

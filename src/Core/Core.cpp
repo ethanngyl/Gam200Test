@@ -8,6 +8,9 @@
  ------------------------------------------------------------------------------
   Core engine manager (implementation)
 
+  Modified: 2025-11-27
+  - Removed all pause-related code
+
   Design notes:
      - Integrates initialization, update, and cleanup of all subsystems
      - Provides a one-click startup routine via InitializeAllSystems()
@@ -36,9 +39,7 @@
 #include "Grid/GridTile.h"
 #include "Pathfinding/Pathfinding.h"
 #include "AudioLoader.h"
-#include "Pause/Pause.h"
 #include "RangeIndicatorSystem.h"
-#include "GlobalPauseManager.h"
 
 namespace Framework
 {
@@ -174,7 +175,7 @@ namespace Framework
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
 
-       
+
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -194,9 +195,6 @@ namespace Framework
         rangeIndicatorSystem->SetEntityManager(entityManager);
         rangeIndicatorSystem->SetGraphicsSystem(graphicsSystem);
 
-        // Pause Event System
-        LOG_INFO("CORE", "PauseSystem wired to CoreEngine");
-
         LOG_INFO("CORE", "Dependencies wired");
     }
 
@@ -210,7 +208,7 @@ namespace Framework
 
         // Set window dependencies
         graphicsSystem->SetWindow(windowSystem->GetWindow());
-        inputSystem->SetWindow(windowSystem->GetWindow());  
+        inputSystem->SetWindow(windowSystem->GetWindow());
 
         imguiSystem->SetWindow(windowSystem->GetWindow());
         imguiSystem->SetEntitySpawner(spawner);
@@ -232,8 +230,8 @@ namespace Framework
         AddSystem(spawner);
         AddSystem(playerController);
         AddSystem(movementSystem);
-        AddSystem(collisionSystem);
         AddSystem(projectileSystem);
+        AddSystem(collisionSystem);
         AddSystem(graphicsSystem);
         AddSystem(imguiSystem);
         AddSystem(audioSystem);
@@ -243,37 +241,24 @@ namespace Framework
         AddSystem(pathfindingSystem);
         AddSystem(rangeIndicatorSystem);
 
-        LOG_INFO("CORE", "%zu systems added", Systems.size());
+        LOG_INFO("CORE", "Systems added to engine");
     }
-
-    // ========================================================================
-    // Original Initialize (initialize the remaining systems)
-    // ========================================================================
 
     void CoreEngine::Initialize()
     {
         LOG_INFO("CORE", "[5/5] Initializing remaining systems...");
 
-        // WindowSystem and GraphicsSystem already initialized
-        // Just initialize the others
-        for (auto system : Systems)
+        for (unsigned i = 0; i < Systems.size(); ++i)
         {
-            // Skip already initialized systems
-            if (dynamic_cast<WindowSystem*>(system) != nullptr ||
-                dynamic_cast<GraphicsSystemV2*>(system) != nullptr)
-            {
+            if (dynamic_cast<WindowSystem*>(Systems[i]) ||
+                dynamic_cast<GraphicsSystemV2*>(Systems[i])) {
                 continue;
             }
-
-            system->Initialize();
+            Systems[i]->Initialize();
         }
 
         LOG_INFO("CORE", "All systems initialized");
     }
-
-    // ========================================================================
-    // Event Subscribers
-   // ========================================================================
 
     void CoreEngine::SetupEventListeners() {
         LOG_INFO("CORE", "Setting up event listeners...");
@@ -282,47 +267,28 @@ namespace Framework
             LOG_WARN("CORE", "EventSystem or DamageIndicator is null, skipping listener setup");
             return;
         }
-
-        // *** THIS IS THE CRITICAL SUBSCRIPTION STEP ***
-
-        // 1. Register for damage events (ENEMY_DAMAGED)
-        eventSystem->RegisterObserver(Framework::MessageIds::enemyDamaged, damageIndicator);
-        LOG_INFO("CORE", "Registered DamageIndicator for ENEMY_DAMAGED events");
-
-        // 2. Register for death events (ENEMY_DEATH)
-        eventSystem->RegisterObserver(Framework::MessageIds::enemyDeath, damageIndicator);
-        LOG_INFO("CORE", "Registered DamageIndicator for ENEMY_DEATH events");
     }
-
-
     // ========================================================================
-    // Clean all systems
-   // ========================================================================
+    // Cleanup all systems and resources
+    // ========================================================================
 
     void CoreEngine::Cleanup()
     {
-        LOG_INFO("CORE", "================================================");
-        LOG_INFO("CORE", " CoreEngine: Cleaning Up");
-        LOG_INFO("CORE", "================================================");
+        LOG_INFO("CORE", "Beginning cleanup...");
 
-        // Stop all audio before destroying systems
-        if (audioSystem) {
-            LOG_INFO("CORE", "Stopping all audio...");
-            audioSystem->StopAllSounds();
-        }
-
-        // Destroy all systems added to engine
+        // Clear Systems pointers (they will be deleted by DestroySystems)
         DestroySystems();
+        Systems.clear();
 
-        // Clear system pointers
+        // Set other system pointers to null
         windowSystem = nullptr;
+        graphicsSystem = nullptr;
         inputSystem = nullptr;
+        collisionSystem = nullptr;
+        movementSystem = nullptr;
+        projectileSystem = nullptr;
         spawner = nullptr;
         playerController = nullptr;
-        movementSystem = nullptr;
-        collisionSystem = nullptr;
-        projectileSystem = nullptr;
-        graphicsSystem = nullptr;
         imguiSystem = nullptr;
         audioSystem = nullptr;
         animationSystem = nullptr;
@@ -366,46 +332,25 @@ namespace Framework
             GameActive = false;
             return;
         }
-        // ====================================================================
-        // CHECK PAUSE STATE
-        // ====================================================================
-        bool isPaused = GlobalPause::IsPaused();
 
         // ====================================================================
-        // ALWAYS UPDATE (Even when paused)
+        // UPDATE ALL SYSTEMS
         // ====================================================================
 
-        // Input - needed for pause menu interaction
+        // Input
         if (inputSystem) {
             inputSystem->Update(dt);
         }
 
-        // Graphics - CRITICAL: Always update to prevent ghosting
-        // Even when paused, this will:
-        // 1. Clear screen buffer (prevents ghosting)
-        // 2. Render current frozen game state
-        // 3. Swap buffers
+        // Graphics
         if (graphicsSystem) {
             graphicsSystem->Update(dt);
         }
 
-        // UI System - needed for pause menu
+        // UI System
         if (uiSystem) {
             uiSystem->Update(dt);
         }
-
-        // ====================================================================
-        // SKIP GAME LOGIC WHEN PAUSED
-        // ====================================================================
-        if (isPaused) {
-            // Game is paused - don't update game logic
-            // Graphics already rendered frozen frame above
-            return;
-        }
-
-        // ====================================================================
-        // NORMAL GAME UPDATES (Only when NOT paused)
-        // ====================================================================
 
         // Movement & Physics
         if (movementSystem) {
@@ -433,7 +378,7 @@ namespace Framework
             pathfindingSystem->Update(dt);
         }
 
-        // Animation - IMPORTANT: Only update when not paused
+        // Animation
         if (animationSystem) {
             animationSystem->Update(dt);
         }
@@ -443,17 +388,15 @@ namespace Framework
             eventSystem->Update(dt);
         }
 
-
         if (rangeIndicatorSystem) {
             rangeIndicatorSystem->Update(dt);
         }
 
-        // Audio - continue updating (for pause menu sounds)
-        // Volume is controlled by level1.cpp when pausing
+        // Audio
         if (audioSystem) {
             audioSystem->Update(dt);
         }
-    
+
         // Update all logic systems
         for (unsigned i = 0; i < Systems.size(); ++i) {
             if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||

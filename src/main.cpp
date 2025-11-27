@@ -8,10 +8,8 @@
  ------------------------------------------------------------------------------
   Main entry point of the StructSquad Engine
 
-  Modified: 2025-11-22
-  - Simplified pause handling (moved to Core.cpp)
-  - Removed duplicate pause checks
-  - Engine systems now handle pause state internally
+  Modified: 2025-11-27
+  - Removed all pause-related code
 
 Responsibilities:
      - Initializes debug console, logging, and memory leak detection
@@ -34,8 +32,6 @@ Responsibilities:
 #include "Precompiled.h"
 #include "ImguiSystem.h"
 #include "TimeConstants.h"
-#include "Pause/Pause.h"
-#include "GlobalPauseManager.h"
 
 
 // ===============================================================================
@@ -111,7 +107,7 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     GSM_Initialize(initialState);
 
     LOG_INFO("CORE", "Entering GSM main loop...");
-    LOG_INFO("CORE", "Debug Controls: F2 = Export Performance CSV, P = Pause/Resume");
+    LOG_INFO("CORE", "Debug Controls: F2 = Export Performance CSV");
 
     // Time tracking variables
     unsigned lastTime = timeGetTime();
@@ -184,10 +180,10 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             glfwPollEvents();
 
             // ===============================================================================
-            // LEVEL UPDATE (Handles pause toggle and level-specific input)
+            // LEVEL UPDATE
             // ===============================================================================
             if (fpUpdate) {
-                fpUpdate();  // This is level1_Update() - handles pause detection
+                fpUpdate();
             }
 
             // ===============================================================================
@@ -209,20 +205,17 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             }
 
             // ===============================================================================
-            // ENGINE UPDATE (Handles pause internally)
+            // ENGINE UPDATE
             // ===============================================================================
-            // CoreEngine::UpdateSingleFrame will:
-            // - Always update Input and Graphics (prevents ghosting)
-            // - Skip game logic systems when GlobalPause::IsPaused() is true
             for (int step = 0; step < currentNumberOfSteps; ++step) {
                 engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
             }
 
             // ===============================================================================
-            // LEVEL DRAW (Game-specific UI and pause menu overlay)
+            // LEVEL DRAW
             // ===============================================================================
             if (fpDraw) {
-                fpDraw();  // level1_Draw() - draws UI + pause menu if paused
+                fpDraw();
             }
 
             // ===============================================================================

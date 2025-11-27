@@ -5,6 +5,9 @@
  Email:         weileong.tan@digipen.edu
  Date:          2025-10-31
  Contribution:  100%
+
+ Modified: 2025-11-27
+ - Removed all pause-related code
 ===============================================================================
 */
 
@@ -14,20 +17,10 @@
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
 #include "Component.h" 
-#include "Pause.h"
-#include "GlobalPauseManager.h"
 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 using Framework::ScriptComponent;
-
-// ========================================================================
-// PAUSE STATE (File scope)
-// ========================================================================
-namespace {
-    bool g_wasPPressed = false;
-    PauseMenuSimple::PauseMenuState g_pauseMenuState;
-}
 
 void level1_Load()
 {
@@ -35,11 +28,6 @@ void level1_Load()
 
     ConfigReader::LoadConfig("assets/valueloader.txt");
     LOG_INFO("LEVEL1", "Loaded UI configuration from valueloader.txt");
-
-    // Reset pause state
-    GlobalPause::SetPaused(false);
-    g_wasPPressed = false;
-    g_pauseMenuState = PauseMenuSimple::PauseMenuState();
 }
 
 void level1_Initialize()
@@ -145,60 +133,7 @@ void level1_Update()
     if (!input) return;
 
     // ========================================================================
-    // P Key Toggle Pause (USING GLOBAL PAUSE)
-    // ========================================================================
-    bool isPPressed = input->IsKeyDown(Framework::KEY_P);
-
-    if (isPPressed && !g_wasPPressed) {
-        GlobalPause::Toggle();  // Toggle global pause state
-
-        if (GlobalPause::IsPaused()) {
-            LOG_INFO("LEVEL1", "Game PAUSED");
-            if (engine->GetAudioSystem()) {
-                engine->GetAudioSystem()->SetMasterVolume(0.0f);
-            }
-        }
-        else {
-            LOG_INFO("LEVEL1", "Game RESUMED");
-            if (engine->GetAudioSystem()) {
-                engine->GetAudioSystem()->SetMasterVolume(1.0f);
-            }
-        }
-    }
-    g_wasPPressed = isPPressed;
-
-    // ========================================================================
-    // If Paused, Handle Pause Menu Input
-    // ========================================================================
-    if (GlobalPause::IsPaused()) {
-        PauseMenuSimple::PauseMenuCallbacks callbacks;
-
-        callbacks.onResume = []() {
-            GlobalPause::SetPaused(false);
-            if (engine && engine->GetAudioSystem()) {
-                engine->GetAudioSystem()->SetMasterVolume(1.0f);
-            }
-            LOG_INFO("LEVEL1", "Resume selected");
-            };
-
-        callbacks.onMainMenu = []() {
-            GlobalPause::SetPaused(false);
-            next = mainMenu;
-            LOG_INFO("LEVEL1", "Returning to main menu");
-            };
-
-        callbacks.onExit = []() {
-            next = GS_QUIT;
-            LOG_INFO("LEVEL1", "Exiting game");
-            };
-
-        PauseMenuSimple::UpdatePauseMenu(engine, g_pauseMenuState, callbacks);
-
-        return;  // Skip level-specific logic when paused
-    }
-
-    // ========================================================================
-    // Normal Game Logic (Only when NOT paused)
+    // Normal Game Logic
     // ========================================================================
 
     // Update animations (from Ethan's branch)
@@ -234,7 +169,7 @@ void level1_Draw()
     if (!graphics) return;
 
     // ========================================================================
-    // Normal Game UI (Always render - shows frozen frame when paused)
+    // Normal Game UI
     // ========================================================================
     std::string fontLarge = ConfigReader::GetString("lv1_ui_font_large", "Sans48");
 
@@ -262,22 +197,11 @@ void level1_Draw()
     graphics->DrawText4(fontLarge, textMovement, textX, textMovementY, textScale, textColor);
     graphics->DrawText4(fontLarge, textMenu, textX, textMenuY, textScale, textColor);
     graphics->DrawText4(fontLarge, textNextLevel, textX, textNextLevelY, textScale, textColor);
-
-    // ========================================================================
-    // Pause Menu Overlay (If paused)
-    // ========================================================================
-    if (GlobalPause::IsPaused()) {
-        PauseMenuSimple::DrawPauseMenu(engine, g_pauseMenuState);
-    }
 }
 
 void level1_Free()
 {
     LOG_INFO("LEVEL1", "=== Level1 Free ===");
-
-    // Reset pause state
-    GlobalPause::SetPaused(false);
-    g_wasPPressed = false;
 
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Disable();
