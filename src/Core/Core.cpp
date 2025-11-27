@@ -38,7 +38,7 @@
 #include "AudioLoader.h"
 #include "Pause/Pause.h"
 #include "RangeIndicatorSystem.h"
-
+#include "GlobalPauseManager.h"
 
 namespace Framework
 {
@@ -64,7 +64,6 @@ namespace Framework
         , rangeIndicatorSystem(nullptr)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
-		, pauseSystem(nullptr)
     {
         CORE = this;
     }
@@ -151,7 +150,6 @@ namespace Framework
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
-		pauseSystem = new PauseSystem();
         rangeIndicatorSystem = new RangeIndicatorSystem();
 
         // Check for allocation failures
@@ -232,7 +230,6 @@ namespace Framework
         rangeIndicatorSystem->SetGraphicsSystem(graphicsSystem);
 
         // Pause Event System
-        pauseSystem->SetCoreEngine(this);
         LOG_INFO("CORE", "PauseSystem wired to CoreEngine");
 
         LOG_INFO("CORE", "Dependencies wired");
@@ -279,7 +276,6 @@ namespace Framework
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
-        AddSystem(pauseSystem);
         AddSystem(rangeIndicatorSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
@@ -367,7 +363,6 @@ namespace Framework
         animationSystem = nullptr;
         uiSystem = nullptr;
         eventSystem = nullptr;
-        pauseSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {
@@ -406,7 +401,94 @@ namespace Framework
             GameActive = false;
             return;
         }
+        // ====================================================================
+        // CHECK PAUSE STATE
+        // ====================================================================
+        bool isPaused = GlobalPause::IsPaused();
 
+        // ====================================================================
+        // ALWAYS UPDATE (Even when paused)
+        // ====================================================================
+
+        // Input - needed for pause menu interaction
+        if (inputSystem) {
+            inputSystem->Update(dt);
+        }
+
+        // Graphics - CRITICAL: Always update to prevent ghosting
+        // Even when paused, this will:
+        // 1. Clear screen buffer (prevents ghosting)
+        // 2. Render current frozen game state
+        // 3. Swap buffers
+        if (graphicsSystem) {
+            graphicsSystem->Update(dt);
+        }
+
+        // UI System - needed for pause menu
+        if (uiSystem) {
+            uiSystem->Update(dt);
+        }
+
+        // ====================================================================
+        // SKIP GAME LOGIC WHEN PAUSED
+        // ====================================================================
+        if (isPaused) {
+            // Game is paused - don't update game logic
+            // Graphics already rendered frozen frame above
+            return;
+        }
+
+        // ====================================================================
+        // NORMAL GAME UPDATES (Only when NOT paused)
+        // ====================================================================
+
+        // Movement & Physics
+        if (movementSystem) {
+            movementSystem->Update(dt);
+        }
+
+        if (projectileSystem) {
+            projectileSystem->Update(dt);
+        }
+
+        if (collisionSystem) {
+            collisionSystem->Update(dt);
+        }
+
+        // Game Logic
+        if (scriptSystem) {
+            scriptSystem->Update(dt);
+        }
+
+        if (playerController) {
+            playerController->Update(dt);
+        }
+
+        if (pathfindingSystem) {
+            pathfindingSystem->Update(dt);
+        }
+
+        // Animation - IMPORTANT: Only update when not paused
+        if (animationSystem) {
+            animationSystem->Update(dt);
+        }
+
+        // Events & Indicators
+        if (eventSystem) {
+            eventSystem->Update(dt);
+        }
+
+
+        if (rangeIndicatorSystem) {
+            rangeIndicatorSystem->Update(dt);
+        }
+
+        // Audio - continue updating (for pause menu sounds)
+        // Volume is controlled by level1.cpp when pausing
+        if (audioSystem) {
+            audioSystem->Update(dt);
+        }
+    
         // Update all logic systems
         for (unsigned i = 0; i < Systems.size(); ++i) {
             if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
