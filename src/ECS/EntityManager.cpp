@@ -37,17 +37,17 @@ namespace Framework
         {
             id = freeEntityIDs.back();
             freeEntityIDs.pop_back();
-            LOG_INFO("EntityManager", "Created entity ID %u (recycled from free list, %zu free IDs remaining)", id, freeEntityIDs.size());
+            std::cout << "[EntityManager] Created entity ID " << id << " (recycled from free list, " << freeEntityIDs.size() << " free IDs remaining)\n";
         }
         else
         {
             id = nextEntityID++;
-            LOG_INFO("EntityManager", "Created entity ID %u (new, next ID will be %u)", id, nextEntityID);
+            std::cout << "[EntityManager] Created entity ID " << id << " (new, next ID will be " << nextEntityID << ")\n";
         }
 
         Entity entity(id);
         allEntities.push_back(entity);
-        LOG_INFO("EntityManager", "  Total entities now: %zu", allEntities.size());
+        std::cout << "[EntityManager]   Total entities now: " << allEntities.size() << "\n";
         return entity;
     }
 
@@ -99,23 +99,23 @@ namespace Framework
         size_t componentTypeCount = components.size();
         size_t freeIDCount = freeEntityIDs.size();
 
-        LOG_INFO("EntityManager", "===== CLEARING ALL ENTITIES =====");
-        LOG_INFO("EntityManager", "Before clear:");
-        LOG_INFO("EntityManager", "  - Entities: %zu", entityCount);
-        LOG_INFO("EntityManager", "  - Component types: %zu", componentTypeCount);
-        LOG_INFO("EntityManager", "  - Free IDs: %zu", freeIDCount);
-        LOG_INFO("EntityManager", "  - Next entity ID: %u", nextEntityID);
+        std::cout << "[EntityManager] ===== CLEARING ALL ENTITIES =====\n";
+        std::cout << "[EntityManager] Before clear:\n";
+        std::cout << "[EntityManager]   - Entities: " << entityCount << "\n";
+        std::cout << "[EntityManager]   - Component types: " << componentTypeCount << "\n";
+        std::cout << "[EntityManager]   - Free IDs: " << freeIDCount << "\n";
+        std::cout << "[EntityManager]   - Next entity ID: " << nextEntityID << "\n";
 
         components.clear();
         allEntities.clear();
         freeEntityIDs.clear();
         nextEntityID = 1;
 
-        LOG_INFO("EntityManager", "After clear:");
-        LOG_INFO("EntityManager", "  - Entities: %zu", allEntities.size());
-        LOG_INFO("EntityManager", "  - Component types: %zu", components.size());
-        LOG_INFO("EntityManager", "  - Free IDs: %zu", freeEntityIDs.size());
-        LOG_INFO("EntityManager", "  - Next entity ID: %u", nextEntityID);
-        LOG_INFO("EntityManager", "===== CLEAR COMPLETE =====");
+        std::cout << "[EntityManager] After clear:\n";
+        std::cout << "[EntityManager]   - Entities: " << allEntities.size() << "\n";
+        std::cout << "[EntityManager]   - Component types: " << components.size() << "\n";
+        std::cout << "[EntityManager]   - Free IDs: " << freeEntityIDs.size() << "\n";
+        std::cout << "[EntityManager]   - Next entity ID: " << nextEntityID << "\n";
+        std::cout << "[EntityManager] ===== CLEAR COMPLETE =====\n";
 	}
 }
