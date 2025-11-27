@@ -157,7 +157,7 @@ namespace Framework
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !pauseSystem || !rangeIndicatorSystem) {
+            !scriptSystem || !rangeIndicatorSystem) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -179,7 +179,6 @@ namespace Framework
             delete damageIndicator;
             delete pathfindingSystem;
             delete scriptSystem;
-            delete pauseSystem;
             delete rangeIndicatorSystem;
 
             throw std::runtime_error("System allocation failure");
