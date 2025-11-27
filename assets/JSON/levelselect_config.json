@@ -17,7 +17,7 @@
     "buttons": [
       {
         "id": "level2",
-        "texture": "assets/Ui_btn.png",
+        "texture": "assets/Menu/Ui_btn.png",
         "position": {
           "x": 0.0,
           "y": 0.3
@@ -45,7 +45,7 @@
       },
       {
         "id": "level3",
-        "texture": "assets/Ui_btn.png",
+        "texture": "assets/Menu/Ui_btn.png",
         "position": {
           "x": 0.0,
           "y": 0.0
@@ -73,7 +73,7 @@
       },
       {
         "id": "back",
-        "texture": "assets/Ui_btn.png",
+        "texture": "assets/Menu/Ui_btn.png",
         "position": {
           "x": 0.0,
           "y": -0.3

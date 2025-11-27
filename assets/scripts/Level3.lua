@@ -67,12 +67,12 @@ function OnInit()
 
     -- Load the tilemap from JSON
     -- Parameters: LoadTileMap(jsonPath, startX, startY, spacingX, spacingY)
-    Log("Loading tilemap from: assets/scripts/JSON/TileMap.json")
+    Log("Loading tilemap from: assets/JSON/TileMap.json")
     Log("  Grid start: (" .. kStartX .. ", " .. kStartY .. ")")
     Log("  Tile spacing: (" .. kSpacingX .. ", " .. kSpacingY .. ")")
 
     local success = LoadTileMap(
-        "assets/scripts/JSON/TileMap.json",
+        "assets/JSON/TileMap.json",
         kStartX,
         kStartY,
         kSpacingX,
@@ -93,8 +93,8 @@ function OnInit()
     -- Turn phase is set to Player in C++
 
     -- Load animation configuration BEFORE loading player animation
-    LoadAnimationConfig("assets/animations.json")
-    Log("✓ Animation config loaded from assets/animations.json")
+    LoadAnimationConfig("assets/JSON/animations.json")
+    Log("✓ Animation config loaded from assets/JSON/animations.json")
 
     -- Load player animation (after player is spawned by TileMapLoader)
     LoadPlayerAnimation("Idle_front")
@@ -172,7 +172,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         local entityID = SpawnSprite(
-            "assets/AP Empty.png",
+            "assets/UI/AP_Empty.png",
             xPos,
             yPos,
             indicatorSize,
@@ -195,7 +195,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         local entityID = SpawnSprite(
-            "assets/AP Crystal.png",
+            "assets/UI/AP_Crystal.png",
             xPos,
             yPos,
             indicatorSize,
@@ -243,7 +243,7 @@ function OnInit()
         local yPos = camY + chestUIOffsetY
 
         local entityID = SpawnSprite(
-            "assets/AP Empty.png",
+            "assets/UI/AP_Empty.png",
             xPos, yPos,
             indicatorSize, indicatorSize,
             0
@@ -366,7 +366,7 @@ function OnUpdate(dt)
                     local yPos = camY + screenOffsetY
 
                     local entityID = SpawnSprite(
-                        "assets/AP Crystal.png",
+                        "assets/UI/AP_Crystal.png",
                         xPos,
                         yPos,
                         indicatorSize,
@@ -428,7 +428,7 @@ function OnUpdate(dt)
                     local yPos = camY + chestUIOffsetY
 
                     local entityID = SpawnSprite(
-                        "assets/AP Crystal.png",
+                        "assets/UI/AP_Crystal.png",
                         xPos, yPos,
                         indicatorSize, indicatorSize,
                         0

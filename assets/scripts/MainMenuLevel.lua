@@ -31,7 +31,7 @@ function OnInit()
     Log("Loading configuration from JSON file...")
     
     -- Load configuration from JSON
-    config = LoadJSON("assets/scripts/JSON/mainmenu_config.json")
+    config = LoadJSON("assets/JSON/mainmenu_config.json")
     
     if not config then
         Log("ERROR: Failed to load JSON configuration!")
@@ -56,7 +56,7 @@ function OnInit()
     -- ========================================================================
     -- Load background configuration (use default if not in JSON)
     local background = config.menu.background or {
-        texture = "assets/Background/DefaultMenuBackground.png",
+        texture = "assets/Menu/WoodBackground.png",
         position = { x = 0.0, y = 0.0 },
         scale = { x = 2.0, y = 2.0 },
         layer = -10  -- Behind everything
