@@ -52,12 +52,6 @@ local lastKnownAttackAP = 0       -- NEW
 -- Debug frame counter
 local debugFrameCounter = 0
 
--- PERFORMANCE OPTIMIZATION: Cache camera position to avoid redundant updates
-local lastCamX = 0
-local lastCamY = 0
-local lastCamZ = 0
-local cameraMoveThreshold = 0.001  -- Only update UI if camera moves more than this
-
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -177,11 +171,6 @@ function OnInit()
     local camX, camY, camZ = GetCameraPosition()
     Log("Initial camera position: (" .. camX .. ", " .. camY .. ", " .. camZ .. ")")
     Log("Screen offsets: X=" .. screenOffsetX .. ", Y=" .. screenOffsetY)
-
-    -- Initialize camera cache for performance optimization
-    lastCamX = camX
-    lastCamY = camY
-    lastCamZ = camZ
     Log("Indicator size: " .. indicatorSize .. ", spacing: " .. indicatorSpacing)
 
     -- LAYER 1: Create 5 EMPTY AP crystals (background - always visible)
@@ -383,26 +372,12 @@ function OnUpdate(dt)
     end
 
     -- ========================================================================
-    -- PERFORMANCE OPTIMIZED UI UPDATE
-    -- ========================================================================
-    -- Cache camera position ONCE per frame (was called 3 times before!)
-    local camX, camY, camZ = GetCameraPosition()
-
-    -- Check if camera moved significantly
-    local cameraMoved = math.abs(camX - lastCamX) > cameraMoveThreshold or
-                       math.abs(camY - lastCamY) > cameraMoveThreshold or
-                       math.abs(camZ - lastCamZ) > cameraMoveThreshold
-
-    if cameraMoved then
-        lastCamX = camX
-        lastCamY = camY
-        lastCamZ = camZ
-    end
-
-    -- ========================================================================
     -- UPDATE AP INDICATORS (TWO-LAYER SYSTEM)
     -- ========================================================================
     if #apIndicatorsEmpty > 0 then
+        -- Get current camera position
+        local camX, camY, camZ = GetCameraPosition()
+
         -- Get player's current AP
         local currentAP, maxPlayerAP = GetPlayerAP()
 
@@ -416,28 +391,25 @@ function OnUpdate(dt)
             Log("[AP DEBUG] Filled crystals active: " .. #apIndicatorsFilled)
         end
 
-        -- OPTIMIZATION: Only update positions if camera moved
-        if cameraMoved then
-            -- Update positions of EMPTY crystals (background layer - always visible)
-            for i = 1, #apIndicatorsEmpty do
-                local entityID = apIndicatorsEmpty[i]
+        -- Update positions of EMPTY crystals (background layer - always visible)
+        for i = 1, #apIndicatorsEmpty do
+            local entityID = apIndicatorsEmpty[i]
+            local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
+            local yPos = camY + screenOffsetY
+            SetSpritePosition(entityID, xPos, yPos)
+        end
+
+        -- Update positions of FILLED crystals (foreground layer)
+        for i = 1, #apIndicatorsFilled do
+            local entityID = apIndicatorsFilled[i]
+            if entityID ~= nil then
                 local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
                 local yPos = camY + screenOffsetY
                 SetSpritePosition(entityID, xPos, yPos)
             end
-
-            -- Update positions of FILLED crystals (foreground layer)
-            for i = 1, #apIndicatorsFilled do
-                local entityID = apIndicatorsFilled[i]
-                if entityID ~= nil then
-                    local xPos = camX + screenOffsetX + ((i - 1) * indicatorSpacing)
-                    local yPos = camY + screenOffsetY
-                    SetSpritePosition(entityID, xPos, yPos)
-                end
-            end
         end
 
-
+        
         -- Handle AP changes: destroy/create filled crystals
         if currentAP ~= lastKnownAP then
             Log("[AP CHANGE] AP changed from " .. lastKnownAP .. " to " .. currentAP)
@@ -494,31 +466,29 @@ function OnUpdate(dt)
     -- Graphics system handles camera follow automatically
 
     -- ========================================================================
-    -- UPDATE ATTACK AP INDICATORS (OPTIMIZED)
+    -- NEW: UPDATE ATTACK AP INDICATORS
     -- ========================================================================
     if #atkIndicatorsEmpty > 0 then
+        local camX, camY, camZ = GetCameraPosition()
         local currentAtkAP, maxPlayerAtkAP = GetPlayerAttackAP()
 
-        -- OPTIMIZATION: Only update positions if camera moved
-        if cameraMoved then
-            -- Reposition empty icons
-            for i = 1, #atkIndicatorsEmpty do
-                local entityID = atkIndicatorsEmpty[i]
-                if entityID and entityID > 0 then
-                    local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
-                    local yPos = camY + atkOffsetY
-                    SetSpritePosition(entityID, xPos, yPos)
-                end
+        -- Reposition empty icons
+        for i = 1, #atkIndicatorsEmpty do
+            local entityID = atkIndicatorsEmpty[i]
+            if entityID and entityID > 0 then
+                local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + atkOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
             end
+        end
 
-            -- Reposition filled icons
-            for i = 1, #atkIndicatorsFilled do
-                local entityID = atkIndicatorsFilled[i]
-                if entityID and entityID > 0 then
-                    local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
-                    local yPos = camY + atkOffsetY
-                    SetSpritePosition(entityID, xPos, yPos)
-                end
+        -- Reposition filled icons
+        for i = 1, #atkIndicatorsFilled do
+            local entityID = atkIndicatorsFilled[i]
+            if entityID and entityID > 0 then
+                local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + atkOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
             end
         end
 
@@ -562,31 +532,29 @@ function OnUpdate(dt)
     end
 
     -- ========================================================================
-    -- UPDATE CHEST PROGRESS UI (OPTIMIZED)
+    -- UPDATE CHEST PROGRESS UI
     -- ========================================================================
     if #chestIndicatorsEmpty > 0 then
         local collected, required = GetChestProgress()
+        local camX, camY, camZ = GetCameraPosition()
 
-        -- OPTIMIZATION: Only update positions if camera moved
-        if cameraMoved then
-            -- Update positions of empty chest indicators
-            for i = 1, #chestIndicatorsEmpty do
-                local entityID = chestIndicatorsEmpty[i]
-                if entityID and entityID > 0 then
-                    local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
-                    local yPos = camY + chestUIOffsetY
-                    SetSpritePosition(entityID, xPos, yPos)
-                end
+        -- Update positions of empty chest indicators
+        for i = 1, #chestIndicatorsEmpty do
+            local entityID = chestIndicatorsEmpty[i]
+            if entityID and entityID > 0 then
+                local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + chestUIOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
             end
+        end
 
-            -- Update positions of filled chest indicators
-            for i = 1, #chestIndicatorsFilled do
-                local entityID = chestIndicatorsFilled[i]
-                if entityID ~= nil and entityID > 0 then
-                    local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
-                    local yPos = camY + chestUIOffsetY
-                    SetSpritePosition(entityID, xPos, yPos)
-                end
+        -- Update positions of filled chest indicators
+        for i = 1, #chestIndicatorsFilled do
+            local entityID = chestIndicatorsFilled[i]
+            if entityID ~= nil and entityID > 0 then
+                local xPos = camX + chestUIOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + chestUIOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
             end
         end
 
