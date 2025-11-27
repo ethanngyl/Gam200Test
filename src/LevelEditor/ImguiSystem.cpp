@@ -1084,7 +1084,7 @@ namespace Framework {
                 }
             }
 
-            snprintf(label, sizeof(label), "Entity %u%s", entity.GetID(), entityInfo.c_str());
+            snprintf(label, sizeof(label), "Entity %u%s###Entity_%u", entity.GetID(), entityInfo.c_str(), entity.GetID());
 
             if (ImGui::CollapsingHeader(label)) {
 
