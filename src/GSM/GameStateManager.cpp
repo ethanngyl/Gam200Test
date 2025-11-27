@@ -120,15 +120,14 @@ void GSM_Update()
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up MainMenu Lua script...");
 
-            // Destroy all entities before unloading
+            // Clear all entities and components
             extern Framework::CoreEngine* engine;
             if (engine) {
                 if (auto* em = engine->GetEntityManager()) {
-                    auto ents = em->GetAllEntities();
-                    LOG_INFO("GSM", "Destroying %zu MainMenu entities...", ents.size());
-                    for (auto e : ents) {
-                        em->DestroyEntity(e);
-                    }
+                    size_t count = em->GetAllEntities().size();
+                    LOG_INFO("GSM", "Clearing %zu MainMenu entities...", count);
+                    em->ClearAllEntities();
+                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
 
                 // Clear camera follow
@@ -214,15 +213,14 @@ void GSM_Update()
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up LevelSelect Lua script...");
 
-            // Destroy all entities before unloading
+            // Clear all entities and components
             extern Framework::CoreEngine* engine;
             if (engine) {
                 if (auto* em = engine->GetEntityManager()) {
-                    auto ents = em->GetAllEntities();
-                    LOG_INFO("GSM", "Destroying %zu LevelSelect entities...", ents.size());
-                    for (auto e : ents) {
-                        em->DestroyEntity(e);
-                    }
+                    size_t count = em->GetAllEntities().size();
+                    LOG_INFO("GSM", "Clearing %zu LevelSelect entities...", count);
+                    em->ClearAllEntities();
+                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
 
                 // Clear camera follow
@@ -447,12 +445,12 @@ void GSM_Update()
                     gfx->ClearFollowTarget();
                 }
 
-                // Destroy all entities
+                // Clear all entities and components
                 if (auto* em = engine->GetEntityManager()) {
-                    auto ents = em->GetAllEntities();
-                    for (auto e : ents) {
-                        em->DestroyEntity(e);
-                    }
+                    size_t count = em->GetAllEntities().size();
+                    LOG_INFO("GSM", "Clearing %zu Level3 entities...", count);
+                    em->ClearAllEntities();
+                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
             }
 
