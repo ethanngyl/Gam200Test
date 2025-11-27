@@ -136,7 +136,8 @@ void GSM_Update()
                 }
             }
 
-            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
+            // Complete Lua state reset for fresh reload
+            Framework::LevelLoader::GetInstance().ResetLuaState();
             };
 
         // ============================================================================
@@ -229,7 +230,8 @@ void GSM_Update()
                 }
             }
 
-            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
+            // Complete Lua state reset for fresh reload
+            Framework::LevelLoader::GetInstance().ResetLuaState();
             };
 
         // ============================================================================
@@ -454,8 +456,8 @@ void GSM_Update()
                 }
             }
 
-            // Unload Lua level
-            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
+            // Complete Lua state reset for fresh reload
+            Framework::LevelLoader::GetInstance().ResetLuaState();
             };
 
         // ============================================================================
