@@ -119,6 +119,24 @@ void GSM_Update()
         // ============================================================================
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up MainMenu Lua script...");
+
+            // Destroy all entities before unloading
+            extern Framework::CoreEngine* engine;
+            if (engine) {
+                if (auto* em = engine->GetEntityManager()) {
+                    auto ents = em->GetAllEntities();
+                    LOG_INFO("GSM", "Destroying %zu MainMenu entities...", ents.size());
+                    for (auto e : ents) {
+                        em->DestroyEntity(e);
+                    }
+                }
+
+                // Clear camera follow
+                if (auto* gfx = engine->GetGraphicsSystem()) {
+                    gfx->ClearFollowTarget();
+                }
+            }
+
             Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
             };
 
@@ -195,6 +213,24 @@ void GSM_Update()
         // ============================================================================
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up LevelSelect Lua script...");
+
+            // Destroy all entities before unloading
+            extern Framework::CoreEngine* engine;
+            if (engine) {
+                if (auto* em = engine->GetEntityManager()) {
+                    auto ents = em->GetAllEntities();
+                    LOG_INFO("GSM", "Destroying %zu LevelSelect entities...", ents.size());
+                    for (auto e : ents) {
+                        em->DestroyEntity(e);
+                    }
+                }
+
+                // Clear camera follow
+                if (auto* gfx = engine->GetGraphicsSystem()) {
+                    gfx->ClearFollowTarget();
+                }
+            }
+
             Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
             };
 
