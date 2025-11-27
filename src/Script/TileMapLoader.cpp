@@ -4,9 +4,10 @@
 #include <sstream>
 #include <map>
 #include <algorithm>
-#include "RenderComponents.h" 
-#include "Pathfinding.h"   
+#include "RenderComponents.h"
+#include "Pathfinding.h"
 #include "TileMapLoader.h"
+#include "Graphics/RenderLayers.h"
 
 namespace Framework {
 
@@ -23,7 +24,8 @@ namespace Framework {
         EntitySpawner* spawner,
         EntityManager* em,
         const Vector2D& startPos,
-        const Vector2D& spacing)
+        const Vector2D& spacing,
+        const Vector2D& tileSize)
     {
         std::ifstream file(filepath);
         if (!file.is_open()) {
@@ -74,6 +76,11 @@ namespace Framework {
                         size_t valPos = line.find(":");
                         tileDefs[currentDefKey].entityType = CleanString(line.substr(valPos + 1));
                     }
+                    if (line.find("\"layer\":") != std::string::npos) {
+                        size_t valPos = line.find(":");
+                        std::string val = CleanString(line.substr(valPos + 1));
+                        tileDefs[currentDefKey].layer = std::stoi(val);
+                    }
                 }
             }
 
@@ -107,8 +114,35 @@ namespace Framework {
         grid.startPos = startPos;
         grid.spacing = spacing;
         grid.em = em;
+		grid.tileSize = tileSize;
         grid.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
         LOG_INFO("LevelLoader", "Configured Grid %dx%d", cols, rows);
+
+        auto baseTileFor = [&](const TileDef& def) -> const TileDef& {
+            const bool isEntity = !def.entityType.empty();
+            // '0' is guaranteed in your JSON; it’s the grass/ground tile.
+            const TileDef& ground = tileDefs.at('0');
+            return isEntity ? ground : def;
+            };
+
+        // ========================================================================
+        // CHEST TRACKING - Count total chests in level
+        // ========================================================================
+        int totalChests = 0;
+        int nextChestID = 1;
+
+        // First pass: count chests
+        for (int r = 0; r < rows; ++r) {
+            std::string rowStr = rowStrings[r];
+            for (int c = 0; c < cols; ++c) {
+                char tileChar = (c < rowStr.length()) ? rowStr[c] : '0';
+                if (tileChar == 'S') {  // 'S' = Chest in JSON
+                    totalChests++;
+                }
+            }
+        }
+
+        LOG_INFO("LevelLoader", "Found %d chests in level", totalChests);
 
         // --- 3. Spawn Entities ---
 
@@ -129,14 +163,25 @@ namespace Framework {
                     startPos.y + r * spacing.y
                 );
 
-                //  A. Spawn the Base Tile Entity 
-                Entity tileEntity = spawner->SpawnSprite(def.texture, pos, Vector2D(spacing.x * 0.9f, spacing.y * 0.9f));
+                //  A. Spawn the Base Tile Entity
+                const TileDef& baseDef = baseTileFor(def);
+                Entity tileEntity = spawner->SpawnSprite(baseDef.texture, pos, tileSize);
 
-                // Add GridTiles Component 
+                // Add GridTiles Component
                 em->AddComponent<GridTiles>(tileEntity);
                 auto& gridTile = em->GetComponent<GridTiles>(tileEntity);
                 auto& mr = em->GetComponent<MeshRenderer>(tileEntity);
                 mr.material = GraphicsSystemV2::Material2;
+
+                // Set render layer to prevent Z-fighting
+                // Use explicit layer if specified in JSON, otherwise use default based on solid flag
+                if (def.layer != -1) {
+                    // Explicit layer specified in tile definition
+                    mr.layer = def.layer;
+                } else {
+                    // Default behavior: solid tiles (walls) render slightly above ground tiles
+                    mr.layer = def.solid ? RenderLayers::Props : RenderLayers::Ground;
+                }
 
                 // Check if the tile definition marks it as solid
                 gridTile.blocked = def.solid; //  THIS IS WHERE WALL BLOCKING IS SET 
@@ -156,26 +201,82 @@ namespace Framework {
                 // Store in Grid for fast lookups
                 grid.tiles[grid.Index(c, r)] = tileEntity;
 
-                //  B. Spawn Special Entity (Player, Enemy, etc.) 
+                //  B. Spawn Special Entity (Player, Enemy, etc.) - ENEMY SPAWNING DISABLED FOR DEBUGGING
                 if (!def.entityType.empty()) {
                     Entity specialEntity = { INVALID_ENTITY };
 
                     if (def.entityType == "Player") {
                         specialEntity = spawner->SpawnPlayer(pos);
+                        if(!em->HasComponent<Inventory>(specialEntity)) {
+                            em->AddComponent<Inventory>(specialEntity);
+						}
                         LOG_INFO("LevelLoader", "Spawned Player at (%d, %d)", c, r);
                     }
                     else if (def.entityType == "Enemy") {
+                        // COMMENTED OUT FOR DEBUGGING - DISABLE ENEMY SPAWNING
+                        
                         specialEntity = spawner->SpawnEnemy(pos);
-                        // Add EnemyAI and AP manually 
+                        // Add EnemyAI and AP manually
                         if (!em->HasComponent<EnemyAI>(specialEntity)) {
                             em->AddComponent<EnemyAI>(specialEntity);
                         }
                         if (!em->HasComponent<AP>(specialEntity)) {
-                            em->AddComponent<AP>(specialEntity, 2, 3); // 2 HP, 3 AP
+                            em->AddComponent<AP>(specialEntity, 3); // 3 AP
                         }
+
+                        if (em->HasComponent<Renderable>(specialEntity)) {             // NEW
+                            auto& rend = em->GetComponent<Renderable>(specialEntity);   // NEW
+                            rend.visible = true;                                        // NEW
+                            rend.layer = RenderLayers::Enemies;                       // NEW
+                        }
+
                         LOG_INFO("LevelLoader", "Spawned Enemy at (%d, %d)", c, r);
+                        
+                        LOG_INFO("LevelLoader", "Skipped Enemy spawn at (%d, %d) - DEBUG MODE", c, r);
                     }
-                    // Add logic for Chest (S) and Goal (M) here...
+                // ============================================================
+                // CHEST - Blocks enemies, collectable by player
+                // ============================================================
+                    else if (def.entityType == "Chest") {
+                        // Spawn 
+                        // entity
+                        specialEntity = spawner->SpawnSprite(
+                            def.texture,
+                            pos,
+                            Vector2D(spacing.x * 0.8f, spacing.y * 0.8f)
+                        );
+
+                        // Add Chest component
+                        em->AddComponent<Chest>(specialEntity, nextChestID);
+
+                        // CRITICAL: Mark tile as BLOCKED for enemies
+                        //gridTile.blocked = true;
+
+                        LOG_INFO("LevelLoader", "Spawned Chest %d at (%d, %d) - BLOCKED for enemies",
+                            nextChestID, c, r);
+
+                        nextChestID++;
+                    }
+                    // ============================================================
+                    // GOAL - Level exit, requires all chests
+                    // ============================================================
+                    else if (def.entityType == "Goal") {
+                        // Spawn goal entity
+                        specialEntity = spawner->SpawnSprite(
+                            def.texture,
+                            pos,
+                            Vector2D(spacing.x * 0.9f, spacing.y * 0.9f)
+                        );
+
+                        // Add Goal component
+                        em->AddComponent<Goal>(specialEntity, totalChests);
+
+                        // CRITICAL: Mark tile as BLOCKED for enemies
+                        //gridTile.blocked = true;
+
+                        LOG_INFO("LevelLoader", "Spawned Goal at (%d, %d) - Requires %d chests - BLOCKED for enemies",
+                            c, r, totalChests);
+                    }
 
                     if (specialEntity.GetID() != INVALID_ENTITY) {
                         gridTile.occupant = specialEntity;

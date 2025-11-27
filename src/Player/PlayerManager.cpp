@@ -28,6 +28,9 @@
 #include "EntitySpawner.h"
 #include "Audio/AudioSystem.h"
 #include "RenderComponents.h"
+#include "Graphics/RenderLayers.h"
+#include "MathABS.h"
+#include "AnimationSystem.h"
 
 #include "Grid\GridECS.h"
 #include "Grid\Grid.h"
@@ -142,6 +145,10 @@ namespace Framework {
     * @param durationMs         Duration before auto-hide
     */
     void PlayerControllerSystem::ShowBorderOutline(const Framework::GridCoord& tgt, float thicknessFraction, DWORD durationMs) {
+        // DEBUGGING: Disable outline entities
+        (void)tgt; (void)thicknessFraction; (void)durationMs;
+        return;
+
         const Framework::Grid& g = Framework::GetGrid();
         const float tileW = g.spacing.x;
         const float tileH = g.spacing.y;
@@ -192,6 +199,7 @@ namespace Framework {
         , inputSystem(nullptr)
         , window(nullptr)
         , playerEntity(0)
+        , audioSystem(nullptr)  // Fix: Initialize to nullptr to prevent garbage pointer
         , shootCooldown(0.0f)
         , shootCooldownTime(0.2f)
         , projectileSpeed(0.5f)
@@ -255,6 +263,13 @@ namespace Framework {
                     LOG_INFO("PlayerTurn", "New Turn Started! AP Refilled to %d", stats.actionPoints);
                 }
 
+                //Regen attack AP
+                if (entityManager->HasComponent<AttackAP>(playerEntity)) {
+                    auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);
+                    aap.points = aap.maxPoints;
+                    LOG_INFO("PlayerTurn", "Attack AP refilled to %d", aap.points);
+                }
+
                 // Update our tracker so we don't regen again this turn
                 lastTurnIndex = globalTurn.turnIndex;
             }
@@ -271,6 +286,8 @@ namespace Framework {
                     return;
                 }
             }
+
+            HandleAttackAction();
 
             //// --- (Optional) PLAYER ATTACK on SPACE ---
             //if (inputSystem->IsKeyPressed(KEY_SPACE))
@@ -299,11 +316,11 @@ namespace Framework {
             if (!tinted) {
                 auto& rend = entityManager->GetComponent<Renderable>(playerEntity);
                 rend.visible = true;
-                rend.layer = 1;
+                rend.layer = RenderLayers::Player;  // Use standard player layer (4)
 
                 //rend.tint = glm::vec4(1.0f, 0.85f, 0.2f, 1.0f);    // yellow/gold
 
-                tinted = true; // don’t set it every frame
+                tinted = true; // don't set it every frame
             }
         }
 
@@ -312,13 +329,21 @@ namespace Framework {
             shootCooldown -= dt;
         }
 
+
+        // Update arrow movement cooldown
+        if (arrowMoveCooldown > 0.0f) {
+            arrowMoveCooldown -= dt;
+            if (arrowMoveCooldown < 0.0f) {
+                arrowMoveCooldown = 0.0f;
+            }
+        }
+
+
         // ====================================================================
         // SHOOTING INPUT - Use InputSystem
         // ====================================================================
 
-        HandleShootUp(playerPos);
-        HandleShootDown(playerPos);
-        HandleShootAtMouse(playerPos);
+        
 
 
         // ====================================================================
@@ -474,17 +499,52 @@ namespace Framework {
     * @brief Arrow-key single-step grid movement (validates bounds/walkability).
     *        Shows feedback (border + pulse), updates occupancy, and ends player turn.
     */
-    void PlayerControllerSystem::HandleArrowKeyMovement() {
-        // Guards: need input + entity systems, player Transform, and it must be player’s turn
-        if (!gridMovementEnabled) return;
-        if (!inputSystem || !entityManager) return;
 
-        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
-        if (!IsPlayerTurn()) return;
+    void PlayerControllerSystem::HandleArrowKeyMovement() {
+        // DEBUG: Log entry to this function
+        static bool firstCall = true;
+        static int callCounter = 0;
+        if (firstCall) {
+            LOG_INFO("PlayerManager", "=== HandleArrowKeyMovement FIRST CALL ===");
+            firstCall = false;
+        }
+
+        callCounter++;
+        LOG_INFO("PlayerManager", ">>> HandleArrowKeyMovement called (call #%d this frame)", callCounter);
+
+        // FIX: Check cooldown to prevent double AP consumption from same key press
+        if (arrowMoveCooldown > 0.0f) {
+            LOG_INFO("PlayerManager", "Arrow movement blocked by cooldown (%.3fs remaining)", arrowMoveCooldown);
+            return;
+        }
+
+        // Guards: need input + entity systems, player Transform, and it must be player's turn
+        if (!gridMovementEnabled) {
+            LOG_WARN("PlayerManager", "Arrow keys BLOCKED: gridMovementEnabled = false");
+            return;
+        }
+
+        if (!inputSystem || !entityManager) {
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: inputSystem=%p entityManager=%p", inputSystem, entityManager);
+            return;
+        }
+
+        if (!entityManager->HasComponent<Transform>(playerEntity)) {
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: Player missing Transform component");
+            return;
+        }
+
+        if (!IsPlayerTurn()) {
+            static int logThrottle = 0;
+            if (logThrottle++ % 60 == 0) { // Log every 60 frames
+                LOG_WARN("PlayerManager", "Arrow keys BLOCKED: Not player's turn (throttled log)");
+            }
+            return;
+        }
 
         if (!entityManager->HasComponent<AP>(playerEntity))
         {
-            LOG_ERROR("PlayerManager", "Player has no Stats component!");
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: Player has no AP component!");
             return;
         }
         auto& stats = entityManager->GetComponent<AP>(playerEntity);
@@ -492,11 +552,21 @@ namespace Framework {
         // Check if player is out of moves
         if (stats.actionPoints <= 0)
         {
+            static int apLogThrottle = 0;
+            if (apLogThrottle++ % 60 == 0) { // Log every 60 frames
+                LOG_WARN("PlayerManager", "Arrow keys BLOCKED: Player out of AP (AP=%d, throttled log)", stats.actionPoints);
+            }
             return;
         }
 
         const Framework::Grid& g = Framework::GetGrid();
-        if (g.cols <= 0 || g.rows <= 0) return;
+        if (g.cols <= 0 || g.rows <= 0) {
+            LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: Invalid grid (cols=%d, rows=%d)", g.cols, g.rows);
+            return;
+        }
+
+        LOG_INFO("PlayerManager", "Arrow key handler ACTIVE: AP=%d/%d, Turn=Player, Grid=%dx%d",
+                 stats.actionPoints, stats.maxActionPoints, g.cols, g.rows);
 
         // Get current player position
         auto& xform = entityManager->GetComponent<Transform>(playerEntity);
@@ -516,25 +586,50 @@ namespace Framework {
 
         // Check for Arrow Key input (use IsKeyPressed for one-time press detection)
         int stepX = 0, stepY = 0;
+        std::string animationName = "";
+        bool flipAnimation = false;
 
         if (inputSystem->IsKeyPressed(KEY_UP)) {
             stepY = 1;  // Move up (increase Y)
+            animationName = "Idle_back";
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
             std::cout << "[Arrow] Moving UP\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
             stepY = -1; // Move down (decrease Y)
+            animationName = "Idle_front";
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
             std::cout << "[Arrow] Moving DOWN\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
             stepX = -1; // Move left (decrease X)
+            animationName = "Idle_sideview";
+            flipAnimation = true;  // Flip sprite to face left
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
             std::cout << "[Arrow] Moving LEFT\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
             stepX = 1;  // Move right (increase X)
+            animationName = "Idle_sideview";
+            flipAnimation = false;  // Normal orientation for right
+            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
             std::cout << "[Arrow] Moving RIGHT\n";
         }
         else {
             return; // No movement input
+        }
+
+        // Switch animation based on movement direction
+        if (!animationName.empty() && CORE && CORE->GetAnimationSystem()) {
+            auto* animSys = CORE->GetAnimationSystem();
+            auto* gfx = CORE->GetGraphicsSystem();
+
+            if (entityManager->HasComponent<SpriteAnimation>(playerEntity)) {
+                auto& anim = entityManager->GetComponent<SpriteAnimation>(playerEntity);
+                animSys->LoadAnimation(playerEntity, anim, gfx, animationName);
+                anim.flipX = flipAnimation;
+                LOG_INFO("PlayerManager", "Switched to animation: %s (flip: %d)", animationName.c_str(), flipAnimation);
+            }
         }
 
         // Calculate next tile
@@ -544,6 +639,11 @@ namespace Framework {
         if (!Framework::InBounds(next)) {
             std::cout << "[WASD] Out of bounds! Current(" << cur.x << "," << cur.y
                 << ") -> Next(" << next.x << "," << next.y << ")\n";
+            return;
+        }
+
+        if (!HandleTileInteraction(next)) {
+            // Interaction blocked movement (e.g., goal without all chests)
             return;
         }
 
@@ -571,8 +671,15 @@ namespace Framework {
         //EndPlayerTurn();
 
         // --- AND REPLACE IT WITH THIS ---
+        int apBefore = stats.actionPoints;
         stats.actionPoints--; // Spend one AP
+        int apAfter = stats.actionPoints;
+        LOG_INFO("PlayerManager", "***** AP CONSUMED: %d -> %d (delta: -1) *****", apBefore, apAfter);
         LOG_INFO("PlayerManager", "Player moved. AP Remaining: %d", stats.actionPoints);
+
+        // FIX: Set cooldown to prevent double AP consumption (200ms = 0.2 seconds)
+        arrowMoveCooldown = 0.2f;
+        LOG_INFO("PlayerManager", "Arrow move cooldown activated (0.2s)");
     }
 
     void PlayerControllerSystem::ResetGridState() {
@@ -606,6 +713,269 @@ namespace Framework {
     void PlayerControllerSystem::SetGridMovementEnabled(bool enabled) {
         gridMovementEnabled = enabled;
         LOG_INFO("PlayerController", "Grid movement %s", enabled ? "ENABLED" : "DISABLED");
+    }
+
+    /**
+ * @brief Checks and handles chest collection and goal interaction
+ * @param nextTile The tile the player is moving to
+ * @return true if movement should proceed, false if blocked
+ */
+    bool PlayerControllerSystem::HandleTileInteraction(const Framework::GridCoord& nextTile) {
+        const Framework::Grid& grid = Framework::GetGrid();
+        Framework::Entity tileEntity = grid.TileAt(nextTile.x, nextTile.y);
+
+        if (tileEntity.GetID() == Framework::INVALID_ENTITY) return true;
+        if (!entityManager->HasComponent<Framework::GridTiles>(tileEntity)) return true;
+
+        auto& gridTile = entityManager->GetComponent<Framework::GridTiles>(tileEntity);
+        Framework::Entity occupant = gridTile.occupant;
+
+        if (occupant.GetID() == Framework::INVALID_ENTITY) return true;
+
+        // ========================================================================
+        // CHEST COLLECTION
+        // ========================================================================
+        if (entityManager->HasComponent<Framework::Chest>(occupant)) {
+            auto& chest = entityManager->GetComponent<Framework::Chest>(occupant);
+
+            if (!chest.collected) {
+                // Add to player inventory
+                if (entityManager->HasComponent<Framework::Inventory>(playerEntity)) {
+                    auto& inventory = entityManager->GetComponent<Framework::Inventory>(playerEntity);
+                    inventory.AddChest(chest.chestID);
+
+                    LOG_INFO("PlayerManager", "Player collected Chest %d! Total: %d",
+                        chest.chestID, inventory.GetChestCount());
+                }
+
+                // Mark chest as collected
+                chest.collected = true;
+
+                // UNBLOCK the tile so enemies can pass
+                //gridTile.blocked = false;
+
+                // Visual feedback: hide chest or change appearance
+                if (entityManager->HasComponent<Framework::Renderable>(occupant) && entityManager->HasComponent<Framework::Chest>(occupant)
+                    && !entityManager->HasComponent<EnemyAI>(occupant)) {
+                    auto& chest = entityManager->GetComponent<Framework::Chest>(occupant);
+
+                    // only hide the same entity you just marked collected
+                    if (chest.collected) {
+                        auto& renderable = entityManager->GetComponent<Framework::Renderable>(occupant);
+                        renderable.visible = false;
+                    }
+
+
+                }
+
+                // Clear occupant
+                gridTile.occupant = Framework::Entity{ Framework::INVALID_ENTITY };
+
+                LOG_INFO("PlayerManager", "Tile (%d, %d) UNBLOCKED after chest collection",
+                    nextTile.x, nextTile.y);
+            }
+
+            return true;  // Allow movement onto chest tile
+        }
+
+        // ========================================================================
+        // GOAL INTERACTION
+        // ========================================================================
+        if (entityManager->HasComponent<Goal>(occupant)) {
+            auto& goal = entityManager->GetComponent<Goal>(occupant);
+
+            // Check if player has all required chests
+            if (entityManager->HasComponent<Inventory>(playerEntity)) {
+                auto& inventory = entityManager->GetComponent<Inventory>(playerEntity);
+                int chestsCollected = inventory.GetChestCount();
+                int chestsRequired = goal.chestsRequired;
+
+                LOG_INFO("PlayerManager", "Player at GOAL: %d/%d chests collected",
+                    chestsCollected, chestsRequired);
+
+                if (chestsCollected >= chestsRequired) {
+                    // VICTORY! Player can exit
+                    LOG_INFO("PlayerManager", "=== LEVEL COMPLETE! ===");
+                    LOG_INFO("PlayerManager", "All chests collected! Returning to main menu...");
+
+                    // Trigger level completion (you can customize this)
+                    // Option 1: Return to main menu
+                    next = mainMenu;
+
+                    // Option 2: Load next level
+                    // next = LEVEL_4;
+
+                    // Option 3: Show victory screen
+                    // next = victoryScreen;
+
+                    return true;  // Allow movement onto goal
+                }
+                else {
+                    // Not enough chests
+                    LOG_WARN("PlayerManager", "Cannot exit! Need %d more chests",
+                        chestsRequired - chestsCollected);
+
+                    // Block movement onto goal
+                    return false;
+                }
+            }
+            else {
+                LOG_WARN("PlayerManager", "Player has no inventory!");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // CHANGED: Cross-shaped range check using tile occupancy (up/down/left/right)
+    Entity PlayerControllerSystem::FindFirstEnemyInRange(int minRange, int maxRange) {
+        if (!entityManager || !entityManager->HasComponent<Transform>(playerEntity))
+            return {};
+
+        auto& ptf = entityManager->GetComponent<Transform>(playerEntity);
+        auto optPlayerTile = WorldToTile(ptf.position);
+        if (!optPlayerTile) return {};
+
+        GridCoord p = *optPlayerTile;
+        const Grid& grid = GetGrid();
+
+        // Clamp / sanity
+        if (minRange < 1) minRange = 1;
+        if (maxRange < minRange) maxRange = minRange;
+
+        // Scan outwards in a CROSS (no diagonals)
+        for (int r = minRange; r <= maxRange; ++r) {
+            GridCoord candidates[4] = {
+                { p.x + r, p.y     }, // right
+                { p.x - r, p.y     }, // left
+                { p.x,     p.y + r }, // up
+                { p.x,     p.y - r }  // down
+            };
+
+            for (GridCoord c : candidates) {
+                if (!InBounds(c)) continue;
+
+                Entity tileEnt = grid.TileAt(c.x, c.y);
+                if (!tileEnt.IsValid() ||
+                    !entityManager->HasComponent<GridTiles>(tileEnt))
+                    continue;
+
+                auto& tile = entityManager->GetComponent<GridTiles>(tileEnt);
+                Entity occ = tile.occupant;
+                if (!occ.IsValid()) continue;
+
+                if (entityManager->HasComponent<EnemyAI>(occ) &&
+                    entityManager->HasComponent<Health>(occ)) {
+                    return occ; // found enemy in cross range
+                }
+            }
+        }
+
+        return {};
+    }
+
+    // NEW
+    void PlayerControllerSystem::HandleAttackAction() {
+        if (!inputSystem || !entityManager) return;
+        if (!IsPlayerTurn()) return;
+        if (!inputSystem->IsKeyPressed(KEY_SPACE)) return; // edge trigger
+        
+
+        std::string animationName = "";
+		bool flipAnimation = false;
+
+        //// Switch animation based on movement direction
+        //if (!animationName.empty() && CORE && CORE->GetAnimationSystem()) {
+        //    auto* animSys = CORE->GetAnimationSystem();
+        //    auto* gfx = CORE->GetGraphicsSystem();
+
+        //    if (entityManager->HasComponent<SpriteAnimation>(playerEntity)) {
+        //        auto& anim = entityManager->GetComponent<SpriteAnimation>(playerEntity);
+        //        animSys->LoadAnimation(playerEntity, anim, gfx, animationName);
+        //        anim.flipX = flipAnimation;
+        //        LOG_INFO("PlayerManager", "Switched to animation: %s (flip: %d)", animationName.c_str(), flipAnimation);
+        //    }
+        //}
+
+        if (!entityManager->HasComponent<AttackAP>(playerEntity)) {
+            // No attack AP component → fall back to existing shooting behavior
+            return;
+        }
+        auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);
+        if (aap.points <= 0) {
+            LOG_WARN("PlayerAttack", "No attack AP left");
+            return;
+        }
+
+        int minR = 1, maxR = 1;
+        /*if (entityManager->HasComponent<AttackRangeComponent>(playerEntity)) {
+            auto& rng = entityManager->GetComponent<AttackRangeComponent>(playerEntity);
+            minR = rng.minRange;
+            maxR = rng.maxRange;
+        }*/
+
+        //if (inputSystem->IsKeyPressed(KEY_SPACE)) {
+        //    // Space key pressed - no movement, just attack
+        //    animationName = "Attack_front";
+        //    flipAnimation = false;
+        //    LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: SPACE (ATTACK) >>>");
+        //    std::cout << "[Arrow] SPACE pressed - attack\n";
+        //    return;
+        //}
+
+        Entity target = FindFirstEnemyInRange(minR, maxR);
+        if (target.GetID() == INVALID_ENTITY) {
+            LOG_INFO("PlayerAttack", "No enemy in range [%d..%d]", minR, maxR);
+            return;
+        }
+        // Deal damage (flat 1 for now)
+        auto& hp = entityManager->GetComponent<Health>(target);
+        hp.TakeDamage(1);
+        aap.points--; // consume attack AP
+
+        LOG_INFO("PlayerAttack", "Hit enemy %u for 1. Enemy HP now %d/%d. AttackAP=%d/%d",
+            target.GetID(), hp.currentHealth, hp.maxHealth, aap.points, aap.maxPoints);
+
+        // Optional SFX
+        //if (audioSystem) audioSystem->PlaySound("hit", false);
+
+        if (hp.isDead) {
+            LOG_INFO("PlayerAttack", "Enemy %u defeated!", target.GetID());
+
+            // 1) Find the TILE the enemy is on (using WorldToTile → optional)
+            const Framework::Grid& grid = Framework::GetGrid();
+
+            auto optTile = Framework::WorldToTile(
+                entityManager->GetComponent<Framework::Transform>(target).position
+            );
+            if (optTile) {
+                Framework::GridCoord ec = *optTile; // dereference std::optional
+
+                Framework::Entity tileEntity = grid.TileAt(ec.x, ec.y);
+                if (tileEntity.IsValid() &&
+                    entityManager->HasComponent<Framework::GridTiles>(tileEntity))
+                {
+                    auto& tile = entityManager->GetComponent<Framework::GridTiles>(tileEntity);
+
+                    // 2) Clear the occupant ONLY if it matches the dead enemy
+                    if (tile.occupant == target) {
+                        tile.occupant = Framework::Entity{ Framework::INVALID_ENTITY };
+                        tile.blocked = false; // IMPORTANT: make this tile walkable again
+                    }
+                }
+            }
+
+            //// 3) Hide sprite (optional; you’re going to destroy anyway)
+            //if (entityManager->HasComponent<Framework::Renderable>(target)) {
+            //    entityManager->GetComponent<Framework::Renderable>(target).visible = false;
+            //}
+
+            // 4) FINALLY, delete the enemy entity from ECS
+            entityManager->DestroyEntity(target);
+
+            return; // done with this attack
+        }
     }
 
 } // namespace Framework

@@ -104,6 +104,9 @@ namespace Framework {
         const std::vector<unsigned int>& indices,
         const std::vector<int>& attribSizes)
     {
+        if (VAO != 0) glDeleteVertexArrays(1, &VAO);
+        if (VBO != 0) glDeleteBuffers(1, &VBO);
+        if (EBO != 0) glDeleteBuffers(1, &EBO);
         this->vertice = vertices;
         vertexCount = static_cast<unsigned int>(vertices.size());
         indexCount = static_cast<unsigned int>(indices.size());

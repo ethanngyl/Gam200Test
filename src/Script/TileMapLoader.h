@@ -31,7 +31,8 @@ namespace Framework {
             EntitySpawner* spawner,
             EntityManager* em,
             const Vector2D& startPos,
-            const Vector2D& spacing);
+            const Vector2D& spacing,
+            const Vector2D& tileSize);
 
     private:
         // Helper struct for tile definitions
@@ -39,9 +40,11 @@ namespace Framework {
             std::string texture;
             bool solid = false;
             std::string entityType;
+            int layer = -1;  // Render layer (-1 = use default based on solid flag)
         };
 
         static std::string CleanString(std::string s);
+
     };
 
 }
