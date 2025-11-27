@@ -4,7 +4,7 @@ File:        ImGuiSystem.h
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
 Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-11-07
-Contribution: 42%(Ethan), 53%(Jiahao), 5%(kahyan)
+Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
@@ -178,7 +178,9 @@ namespace Framework {
 
         void ShowAssetsWindow();
         void SetupDefaultDockLayout();
+        //prefab window - kahyan
         void ShowPrefabWindow();
+        //prefab - kahyan
         void SpawnPrefabAtMouse(const std::string& prefabPath);
 
         //file drop - jiahao
@@ -196,6 +198,7 @@ namespace Framework {
         bool showEntityInspector;
         bool showSpawner;
         bool showDebug;
+        //prefab window - kahyan
         bool showPrefabWindow;
         bool pendingToggle = false;
         //

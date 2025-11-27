@@ -171,6 +171,19 @@ namespace Framework {
         }
     }
 
+    glm::vec2 Camera::GetOrthoHalfExtents() const
+    {
+        if (projectionType != ProjectionType::Orthographic) {
+            return glm::vec2(0.0f);
+        }
+
+        // Current visible width/height in world units after zoom
+        const float width = (orthoRight - orthoLeft) / zoom;
+        const float height = (orthoTop - orthoBottom) / zoom;
+
+        return glm::vec2(width * 0.5f, height * 0.5f);
+    }
+
     // =========================================================================
     // Camera Factory
     // =========================================================================

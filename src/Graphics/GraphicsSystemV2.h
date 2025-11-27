@@ -121,6 +121,7 @@ namespace Framework {
          */
         void SetViewportSize(int width, int height);
 
+
         // === RESOURCE MANAGEMENT ===
         
         /**
@@ -215,6 +216,12 @@ namespace Framework {
         // Get current render dimensions
         int GetRenderWidth() const { return renderingToTarget ? targetWidth : viewportWidth; }
         int GetRenderHeight() const { return renderingToTarget ? targetHeight : viewportHeight; }
+
+        void SetWorldBounds(const glm::vec2& minBounds, const glm::vec2& maxBounds)
+        {
+            worldMin = minBounds;
+            worldMax = maxBounds;
+        }
 
     private:
         // === RENDERING PHASES ===
@@ -357,6 +364,10 @@ namespace Framework {
         // Camera follow target
         Entity followTarget{ 0 };
         bool followEnabled{ false };
+
+        // World rectangle in world coordinates.
+        glm::vec2 worldMin{ -50.0f, -30.0f };
+        glm::vec2 worldMax{ 50.0f,  30.0f };
 
         // Statistics (for HUD/profiling/ImGui)
         struct RenderStats {

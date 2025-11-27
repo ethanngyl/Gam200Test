@@ -64,6 +64,8 @@ namespace Framework {
         const glm::mat4& GetProjectionMatrix() const { return projectionMatrix; }
         glm::mat4 GetViewProjectionMatrix() const { return projectionMatrix * viewMatrix; }
 
+        glm::vec2 GetOrthoHalfExtents() const;
+
         const glm::vec3& GetPosition() const { return position; }
         const glm::vec3& GetRotation() const { return rotation; }
         float GetZoom() const { return zoom; }

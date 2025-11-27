@@ -40,6 +40,7 @@ Safety:
 #include "Component.h"
 #include "MeshFactory.h"
 #include <iostream>
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Debugger/Trace.h"
@@ -125,7 +126,7 @@ namespace Framework {
 
         text_.init(viewportWidth, viewportHeight, "shaders/text.vert", "shaders/text.frag");
 
-        //set the editor camera to default position - jiahao
+        //set the editor camera to default position - Jiahao
         editorCameraStartPos = editorCamera.GetPosition();
         editorCameraZoom = editorCamera.GetZoom();
 
@@ -161,7 +162,24 @@ namespace Framework {
         // Smoothly interpolate camera position toward target (simple exponential smoothing)
         glm::vec3 currentPos = mainCamera.GetPosition();
         float smoothSpeed = 5.0f;  // Tune responsiveness
-        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * 0.016f);
+        float dt = 0.016f;          // or pass your actual deltaTime into this function
+        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * dt);
+
+        if (worldMax.x > worldMin.x) { // avoid weird if uninitialized
+            newPos.x = std::clamp(
+                newPos.x,
+                worldMin.x + mainCamera.GetOrthoHalfExtents().x,
+                worldMax.x - mainCamera.GetOrthoHalfExtents().x
+            );
+        }
+
+        if (worldMax.y > worldMin.y) {
+            newPos.y = std::clamp(
+                newPos.y,
+                worldMin.y + mainCamera.GetOrthoHalfExtents().y,
+                worldMax.y - mainCamera.GetOrthoHalfExtents().y
+            );
+        }
 
         mainCamera.SetPosition(newPos);
     }
@@ -184,8 +202,8 @@ namespace Framework {
     }
 
     // ============================================================================
-    // /definition of ResetEditorCamera - Jiahao
-    // // author: jiahao Zhou
+    // definition of ResetEditorCamera - Jiahao
+    // author: jiahao Zhou
     // Currently the editor camera share same class as main camera which is "Camera"
 	// It is just in editor mode, the camera has different control method
 	// so it still using mainCamera variable to represent editor camera
@@ -197,7 +215,7 @@ namespace Framework {
     }
 
     // ============================================================================
-    // /definition of HandleEditorCamera- Jiahao
+    // definition of HandleEditorCamera- Jiahao
     // author: jiahao Zhou
     // Currently the editor camera share same class as main camera which is "Camera"
     // It is just in editor mode, the camera has different control method
@@ -1140,7 +1158,7 @@ namespace Framework {
     void GraphicsSystemV2::RenderImGui() {
         if (!window) return;
 
-    //    // Just swap - DON'T clear!
+        // Just swap - DON'T clear!
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
