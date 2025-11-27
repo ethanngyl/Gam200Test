@@ -41,6 +41,14 @@ local chestUIOffsetY = -0.42  -- Adjusted for zoom 0.6
 local lastKnownChests = 0
 local totalChestsRequired = 0
 
+-- NEW: Attack AP Indicator sprites (separate bar near sword icon)
+local atkIndicatorsEmpty = {}     -- NEW
+local atkIndicatorsFilled = {}    -- NEW
+local maxAttackAP = 3             -- NEW (will be overridden by component) 
+local atkOffsetX = -0.82          -- NEW (same X as AP; tweak as needed)
+local atkOffsetY = -0.30          -- NEW (slightly above AP row)
+local lastKnownAttackAP = 0       -- NEW
+
 -- Debug frame counter
 local debugFrameCounter = 0
 
@@ -213,6 +221,62 @@ function OnInit()
 
     -- Set initial AP tracking
     lastKnownAP = maxAP
+
+    -- ========================================================================
+    -- NEW: CREATE ATTACK AP INDICATOR UI
+    -- ========================================================================
+    Log("Creating Attack AP indicators...")
+
+    local currentAtkAP, maxPlayerAtkAP = GetPlayerAttackAP()
+    if maxPlayerAtkAP ~= nil and maxPlayerAtkAP > 0 then
+        maxAttackAP = maxPlayerAtkAP
+    end
+    lastKnownAttackAP = currentAtkAP or 0
+
+    -- Use same camera position we already read earlier
+    -- (camX, camY, camZ are still in scope here)
+
+    -- Empty attack AP icons (background)
+    for i = 1, maxAttackAP do
+        local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
+        local yPos = camY + atkOffsetY
+
+        local entityID = SpawnSprite(
+            "assets/AP Empty.png",   -- TODO: swap to your ATTACK AP empty sprite
+            xPos, yPos,
+            indicatorSize, indicatorSize,
+            0
+        )
+
+        if entityID > 0 then
+            atkIndicatorsEmpty[i] = entityID
+            Log("  ✓ Empty Attack AP " .. i .. " (ID: " .. entityID .. ")")
+        else
+            atkIndicatorsEmpty[i] = 0
+            Log("  ✗ FAILED to create empty Attack AP " .. i)
+        end
+    end
+
+    -- Filled attack AP icons (foreground)
+    for i = 1, lastKnownAttackAP do
+        local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
+        local yPos = camY + atkOffsetY
+
+        local entityID = SpawnSprite(
+            "assets/AP Crystal.png", -- TODO: swap to your ATTACK AP filled sprite
+            xPos, yPos,
+            indicatorSize, indicatorSize,
+            0
+        )
+
+        if entityID > 0 then
+            atkIndicatorsFilled[i] = entityID
+            Log("  ✓ Filled Attack AP " .. i .. " (ID: " .. entityID .. ")")
+        else
+            atkIndicatorsFilled[i] = 0
+            Log("  ✗ FAILED to create filled Attack AP " .. i)
+        end
+    end
 
     Log("Empty crystals: " .. #apIndicatorsEmpty .. "/" .. maxAP)
     Log("Filled crystals: " .. #apIndicatorsFilled .. "/" .. maxAP)
@@ -391,6 +455,72 @@ function OnUpdate(dt)
     -- Graphics system handles camera follow automatically
 
     -- ========================================================================
+    -- NEW: UPDATE ATTACK AP INDICATORS
+    -- ========================================================================
+    if #atkIndicatorsEmpty > 0 then
+        local camX, camY, camZ = GetCameraPosition()
+        local currentAtkAP, maxPlayerAtkAP = GetPlayerAttackAP()
+
+        -- Reposition empty icons
+        for i = 1, #atkIndicatorsEmpty do
+            local entityID = atkIndicatorsEmpty[i]
+            if entityID and entityID > 0 then
+                local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + atkOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
+            end
+        end
+
+        -- Reposition filled icons
+        for i = 1, #atkIndicatorsFilled do
+            local entityID = atkIndicatorsFilled[i]
+            if entityID and entityID > 0 then
+                local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
+                local yPos = camY + atkOffsetY
+                SetSpritePosition(entityID, xPos, yPos)
+            end
+        end
+
+        -- React to value change
+        if currentAtkAP ~= lastKnownAttackAP then
+            Log("[ATK AP] changed from " .. lastKnownAttackAP .. " to " .. currentAtkAP)
+
+            if currentAtkAP < lastKnownAttackAP then
+                -- Lose points: destroy filled icons from the end
+                for i = lastKnownAttackAP, currentAtkAP + 1, -1 do
+                    if atkIndicatorsFilled[i] ~= nil then
+                        DestroyEntity(atkIndicatorsFilled[i])
+                        atkIndicatorsFilled[i] = nil
+                        Log("  Destroyed Attack AP crystal #" .. i)
+                    end
+                end
+            elseif currentAtkAP > lastKnownAttackAP then
+                -- Gain points: create new filled icons
+                for i = lastKnownAttackAP + 1, currentAtkAP do
+                    local xPos = camX + atkOffsetX + ((i - 1) * indicatorSpacing)
+                    local yPos = camY + atkOffsetY
+
+                    local entityID = SpawnSprite(
+                        "assets/AP Crystal.png", -- TODO: attack filled sprite
+                        xPos, yPos,
+                        indicatorSize, indicatorSize,
+                        0
+                    )
+
+                    if entityID > 0 then
+                        atkIndicatorsFilled[i] = entityID
+                        Log("  Created Attack AP crystal #" .. i .. " (ID: " .. entityID .. ")")
+                    else
+                        Log("  ✗ FAILED to create Attack AP crystal #" .. i)
+                    end
+                end
+            end
+
+            lastKnownAttackAP = currentAtkAP
+        end
+    end
+
+    -- ========================================================================
     -- UPDATE CHEST PROGRESS UI
     -- ========================================================================
     if #chestIndicatorsEmpty > 0 then
@@ -503,10 +633,28 @@ function OnDestroy()
         end
     end
 
+     -- Destroy Attack AP indicators (empty)
+    for i = 1, #atkIndicatorsEmpty do
+        local id = atkIndicatorsEmpty[i]
+        if id and id > 0 then
+            DestroyEntity(id)
+        end
+    end
+
+    -- Destroy Attack AP indicators (filled)
+    for i = 1, #atkIndicatorsFilled do
+        local id = atkIndicatorsFilled[i]
+        if id and id > 0 then
+            DestroyEntity(id)
+        end
+    end
+
     apIndicatorsEmpty = {}
     apIndicatorsFilled = {}
     chestIndicatorsEmpty = {}
     chestIndicatorsFilled = {}
+    atkIndicatorsEmpty = {}
+    atkIndicatorsFilled = {}
     Log("AP indicators cleaned up (both layers)")
 
     -- Note: Entity cleanup, camera reset, and player controller reset

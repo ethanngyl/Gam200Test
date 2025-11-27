@@ -174,6 +174,8 @@ namespace Framework {
 		static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
+		static int Lua_GetPlayerAttackAP(lua_State* L);
+		static int Lua_GetPlayerHP(lua_State* L);
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

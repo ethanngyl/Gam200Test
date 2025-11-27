@@ -828,33 +828,50 @@ namespace Framework {
         return true;
     }
 
-    // 
+    // CHANGED: Cross-shaped range check using tile occupancy (up/down/left/right)
     Entity PlayerControllerSystem::FindFirstEnemyInRange(int minRange, int maxRange) {
-        if (!entityManager || !entityManager->HasComponent<Transform>(playerEntity)) return {};
-        auto& ptf = entityManager->GetComponent<Transform>(playerEntity);
+        if (!entityManager || !entityManager->HasComponent<Transform>(playerEntity))
+            return {};
 
+        auto& ptf = entityManager->GetComponent<Transform>(playerEntity);
         auto optPlayerTile = WorldToTile(ptf.position);
         if (!optPlayerTile) return {};
 
         GridCoord p = *optPlayerTile;
+        const Grid& grid = GetGrid();
 
-        // Iterate all entities: pick first with EnemyAI + Health in manhattan range
-        for (Entity e : entityManager->GetAllEntities()) {
-            if (!entityManager->HasComponent<EnemyAI>(e)) continue;
-            if (!entityManager->HasComponent<Health>(e)) continue;
+        // Clamp / sanity
+        if (minRange < 1) minRange = 1;
+        if (maxRange < minRange) maxRange = minRange;
 
-            // enemy world → tile
-            if (!entityManager->HasComponent<Transform>(e)) continue;
-            auto& etf = entityManager->GetComponent<Transform>(e);
-            auto optETile = WorldToTile(etf.position);
-            if (!optETile) continue;
+        // Scan outwards in a CROSS (no diagonals)
+        for (int r = minRange; r <= maxRange; ++r) {
+            GridCoord candidates[4] = {
+                { p.x + r, p.y     }, // right
+                { p.x - r, p.y     }, // left
+                { p.x,     p.y + r }, // up
+                { p.x,     p.y - r }  // down
+            };
 
-            GridCoord q = *optETile;
-            int manhattan = Abs(q.x - p.x) + Abs(q.y - p.y);
-            if (manhattan >= minRange && manhattan <= maxRange) {
-                return e; // first match
+            for (GridCoord c : candidates) {
+                if (!InBounds(c)) continue;
+
+                Entity tileEnt = grid.TileAt(c.x, c.y);
+                if (!tileEnt.IsValid() ||
+                    !entityManager->HasComponent<GridTiles>(tileEnt))
+                    continue;
+
+                auto& tile = entityManager->GetComponent<GridTiles>(tileEnt);
+                Entity occ = tile.occupant;
+                if (!occ.IsValid()) continue;
+
+                if (entityManager->HasComponent<EnemyAI>(occ) &&
+                    entityManager->HasComponent<Health>(occ)) {
+                    return occ; // found enemy in cross range
+                }
             }
         }
+
         return {};
     }
 
@@ -863,6 +880,23 @@ namespace Framework {
         if (!inputSystem || !entityManager) return;
         if (!IsPlayerTurn()) return;
         if (!inputSystem->IsKeyPressed(KEY_SPACE)) return; // edge trigger
+        
+
+        std::string animationName = "";
+		bool flipAnimation = false;
+
+        //// Switch animation based on movement direction
+        //if (!animationName.empty() && CORE && CORE->GetAnimationSystem()) {
+        //    auto* animSys = CORE->GetAnimationSystem();
+        //    auto* gfx = CORE->GetGraphicsSystem();
+
+        //    if (entityManager->HasComponent<SpriteAnimation>(playerEntity)) {
+        //        auto& anim = entityManager->GetComponent<SpriteAnimation>(playerEntity);
+        //        animSys->LoadAnimation(playerEntity, anim, gfx, animationName);
+        //        anim.flipX = flipAnimation;
+        //        LOG_INFO("PlayerManager", "Switched to animation: %s (flip: %d)", animationName.c_str(), flipAnimation);
+        //    }
+        //}
 
         if (!entityManager->HasComponent<AttackAP>(playerEntity)) {
             // No attack AP component → fall back to existing shooting behavior
@@ -881,12 +915,20 @@ namespace Framework {
             maxR = rng.maxRange;
         }*/
 
+        //if (inputSystem->IsKeyPressed(KEY_SPACE)) {
+        //    // Space key pressed - no movement, just attack
+        //    animationName = "Attack_front";
+        //    flipAnimation = false;
+        //    LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: SPACE (ATTACK) >>>");
+        //    std::cout << "[Arrow] SPACE pressed - attack\n";
+        //    return;
+        //}
+
         Entity target = FindFirstEnemyInRange(minR, maxR);
         if (target.GetID() == INVALID_ENTITY) {
             LOG_INFO("PlayerAttack", "No enemy in range [%d..%d]", minR, maxR);
             return;
         }
-
         // Deal damage (flat 1 for now)
         auto& hp = entityManager->GetComponent<Health>(target);
         hp.TakeDamage(1);
@@ -898,9 +940,41 @@ namespace Framework {
         // Optional SFX
         //if (audioSystem) audioSystem->PlaySound("hit", false);
 
-        // Optional: if enemy died, hide/cleanup
-        if (hp.isDead && entityManager->HasComponent<Renderable>(target)) {
-            entityManager->GetComponent<Renderable>(target).visible = false;
+        if (hp.isDead) {
+            LOG_INFO("PlayerAttack", "Enemy %u defeated!", target.GetID());
+
+            // 1) Find the TILE the enemy is on (using WorldToTile → optional)
+            const Framework::Grid& grid = Framework::GetGrid();
+
+            auto optTile = Framework::WorldToTile(
+                entityManager->GetComponent<Framework::Transform>(target).position
+            );
+            if (optTile) {
+                Framework::GridCoord ec = *optTile; // dereference std::optional
+
+                Framework::Entity tileEntity = grid.TileAt(ec.x, ec.y);
+                if (tileEntity.IsValid() &&
+                    entityManager->HasComponent<Framework::GridTiles>(tileEntity))
+                {
+                    auto& tile = entityManager->GetComponent<Framework::GridTiles>(tileEntity);
+
+                    // 2) Clear the occupant ONLY if it matches the dead enemy
+                    if (tile.occupant == target) {
+                        tile.occupant = Framework::Entity{ Framework::INVALID_ENTITY };
+                        tile.blocked = false; // IMPORTANT: make this tile walkable again
+                    }
+                }
+            }
+
+            //// 3) Hide sprite (optional; you’re going to destroy anyway)
+            //if (entityManager->HasComponent<Framework::Renderable>(target)) {
+            //    entityManager->GetComponent<Framework::Renderable>(target).visible = false;
+            //}
+
+            // 4) FINALLY, delete the enemy entity from ECS
+            entityManager->DestroyEntity(target);
+
+            return; // done with this attack
         }
     }
 

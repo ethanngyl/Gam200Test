@@ -509,8 +509,9 @@ namespace Framework {
 
         Vector2D startPos(startX, startY);
         Vector2D spacing(spacingX, spacingY);
+		Vector2D tileSize(spacingX, spacingY); // Assuming tile size equals spacing
 
-        bool success = TileMapLevelLoader::LoadLevel(jsonPath, spawner, em, startPos, spacing);
+        bool success = TileMapLevelLoader::LoadLevel(jsonPath, spawner, em, startPos, spacing,tileSize);
 
         if (success) {
             LOG_INFO("LevelLoader", "TileMap loaded successfully from: %s", jsonPath);
@@ -733,6 +734,48 @@ namespace Framework {
         return 2;
     }
 
+    // Get player's Attack AP (AttackAP component)
+    int LevelLoader::Lua_GetPlayerAttackAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        // Find player entity (CircleCollider but NOT EnemyAI)
+        Entity player(INVALID_ENTITY);
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
+            }
+        }
+
+        if (player.GetID() == INVALID_ENTITY ||
+            !em->HasComponent<AttackAP>(player)) {
+            LOG_WARN("LevelLoader", "GetPlayerAttackAP: Player not found or no AttackAP");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& aap = em->GetComponent<AttackAP>(player);
+
+        // Return currentAttackAP, maxAttackAP
+        lua_pushinteger(L, aap.points);
+        lua_pushinteger(L, aap.maxPoints);
+        return 2;
+    }
+
     int LevelLoader::Lua_GetCameraPosition(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->graphicsSystem) {
@@ -927,6 +970,39 @@ namespace Framework {
 
         lua_pushinteger(L, collected);
         lua_pushinteger(L, required);
+        return 2;
+    }
+
+    int LevelLoader::Lua_GetPlayerHP(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+
+        Entity player(INVALID_ENTITY);
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Health>(e) &&
+                em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
+            }
+        }
+
+        if (player.IsValid()) {
+            auto& hp = em->GetComponent<Health>(player);
+            lua_pushinteger(L, hp.currentHealth);
+            lua_pushinteger(L, hp.maxHealth);
+            return 2;
+        }
+
+        lua_pushinteger(L, 0);
+        lua_pushinteger(L, 0);
         return 2;
     }
 

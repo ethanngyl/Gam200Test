@@ -31,7 +31,8 @@ namespace Framework {
             EntitySpawner* spawner,
             EntityManager* em,
             const Vector2D& startPos,
-            const Vector2D& spacing);
+            const Vector2D& spacing,
+            const Vector2D& tileSize);
 
     private:
         // Helper struct for tile definitions
