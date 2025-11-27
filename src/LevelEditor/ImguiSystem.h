@@ -204,6 +204,8 @@ namespace Framework {
 
         bool enabled;
 
+        bool imguiInitialized = false;  // Track if ImGui was successfully initialized
+
         float frameTime;
         int entityCount;
 
