@@ -102,19 +102,19 @@ namespace Framework
             SetupEventListeners();
 
             //Use a container to store(future)
-            //if (audioSystem) {
-              //  LOG_INFO("CORE", "Loading test audio...");
-                //bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
-                //bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
-                //bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
-                //bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
-                //if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
-                  //  LOG_INFO("CORE", "All audio loaded successfully");
-                //}
-                //else {
-                  //  LOG_WARN("CORE", "Failed to load audio");
-                //}
-            //}
+            if (audioSystem) {
+                LOG_INFO("CORE", "Loading test audio...");
+                bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
+                bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
+                bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
+                bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
+                if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
+                    LOG_INFO("CORE", "All audio loaded successfully");
+                }
+                else {
+                    LOG_WARN("CORE", "Failed to load audio");
+                }
+            }
 
 
             LOG_INFO("CORE", "================================================");
@@ -151,40 +151,6 @@ namespace Framework
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
         rangeIndicatorSystem = new RangeIndicatorSystem();
-
-        // Check for allocation failures
-        if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
-            !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
-            !playerController || !imguiSystem || !audioSystem || !animationSystem ||
-            !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !pauseSystem || !rangeIndicatorSystem) {
-
-            LOG_ERROR("CORE", "Failed to allocate one or more systems!");
-
-            // Clean up any successfully allocated systems
-            delete entityManager;
-            delete windowSystem;
-            delete graphicsSystem;
-            delete inputSystem;
-            delete collisionSystem;
-            delete movementSystem;
-            delete projectileSystem;
-            delete spawner;
-            delete playerController;
-            delete imguiSystem;
-            delete audioSystem;
-            delete animationSystem;
-            delete uiSystem;
-            delete eventSystem;
-            delete damageIndicator;
-            delete pathfindingSystem;
-            delete scriptSystem;
-            delete pauseSystem;
-            delete rangeIndicatorSystem;
-
-            throw std::runtime_error("System allocation failure");
-        }
-
         scriptSystem->SetEntityManager(entityManager);
         scriptSystem->SetCoreEngine(this);
         scriptSystem->Initialize();
@@ -217,8 +183,7 @@ namespace Framework
         collisionSystem->SetInput(inputSystem);
         playerController->SetEntitySpawner(spawner);
 
-        // Wire AudioSystem
-        playerController->SetAudioSystem(audioSystem);  // Fix: PlayerController needs AudioSystem!
+        // Wire AudioSystem to ImGuiSystem
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
@@ -519,14 +484,23 @@ namespace Framework
             graphicsSystem->Update(dt);
             glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
 
-            // Update text renderer for viewport dimensions
+            // Setup GL state for text
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            // ========================================
+            // Draw level text INTO the viewport
+            // ========================================
             graphicsSystem->GetTextRenderer().setScreenSize(
                 imguiSystem->GetViewportWidth(),
                 imguiSystem->GetViewportHeight()
             );
-
-            // Draw level text INTO the viewport (after game rendering)
+            std::cout << "[Core] Drawing text to viewport: "
+                << imguiSystem->GetViewportWidth() << "x"
+                << imguiSystem->GetViewportHeight() << "\n";
             LevelLoader::GetInstance().DrawCurrentLevel();
+            graphicsSystem->DrawText4("Sans48", "TEST", 50.0f, 50.0f, 1.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+            // ========================================
 
             graphicsSystem->ClearRenderTarget();
 
@@ -539,16 +513,8 @@ namespace Framework
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         else {
-            // Normal rendering - draw game scene + text to main window
+            // Normal rendering - just draw the game scene
             graphicsSystem->Update(dt);
-
-            // Update text renderer for window dimensions
-            int winWidth, winHeight;
-            glfwGetWindowSize(windowSystem->GetWindow(), &winWidth, &winHeight);
-            graphicsSystem->GetTextRenderer().setScreenSize(winWidth, winHeight);
-
-            // Draw level text to main window
-            LevelLoader::GetInstance().DrawCurrentLevel();
 
         }
 

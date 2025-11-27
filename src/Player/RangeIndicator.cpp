@@ -1,6 +1,5 @@
 #include "RangeIndicatorSystem.h"
 #include "Component.h"
-#include "Graphics/RenderLayers.h"
 #include <cmath>
 #include <iostream>
 
@@ -25,9 +24,6 @@ namespace Framework {
 
     void RangeIndicatorSystem::Update(float dt) {
         (void)dt;
-
-        // DEBUGGING: Disable range indicator entities
-        return;
 
         if (!entityManager) return;
 
@@ -172,7 +168,7 @@ namespace Framework {
 
         // Semi-transparent red color
         mr.tint = glm::vec4(1.0f, 0.0f, 0.0f, 0.4f);  // Red with 40% opacity
-        mr.layer = RenderLayers::RangeIndicators;  // Above ground but below characters
+        mr.layer = 3;  // Above ground but below characters
         mr.orderInLayer = 0;
 
         indicatorEntities.push_back(indicator);

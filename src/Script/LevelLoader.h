@@ -156,27 +156,6 @@ namespace Framework {
         // JSON API
         static int Lua_LoadJSON(lua_State* L);
 
-        // TileMap Loading API
-        static int Lua_LoadTileMap(lua_State* L);
-
-        // AP Indicator / Entity Management API
-        static int Lua_SpawnSprite(lua_State* L);
-        static int Lua_SetSpriteColor(lua_State* L);
-        static int Lua_SetSpriteTexture(lua_State* L);
-        static int Lua_SetSpritePosition(lua_State* L);
-        static int Lua_DestroyEntity(lua_State* L);
-        static int Lua_GetPlayerAP(lua_State* L);
-        static int Lua_GetCameraPosition(lua_State* L);
-        static int Lua_FindPlayer(lua_State* L);
-        static int Lua_GetAllEnemies(lua_State* L);
-        static int Lua_SetEnemyTarget(lua_State* L);
-        static int Lua_GetCurrentTurn(lua_State* L);
-		static int Lua_GetChestProgress(lua_State* L);
-        static int Lua_LoadAnimationConfig(lua_State* L);
-        static int Lua_LoadPlayerAnimation(lua_State* L);
-		static int Lua_GetPlayerAttackAP(lua_State* L);
-		static int Lua_GetPlayerHP(lua_State* L);
-
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

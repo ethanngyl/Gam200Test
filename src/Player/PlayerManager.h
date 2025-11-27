@@ -14,7 +14,7 @@
 
   Design notes:
   - Single-tile movement semantics with bounds/walkability checks
-  - Turn integration: movements can end the playerï¿½s turn
+  - Turn integration: movements can end the player’s turn
   - Non-blocking, timer-based UI feedback (start/stop pulse; show/hide outline)
   - Minimal surface area: effects are initiated here and updated per frame
 ===============================================================================
@@ -65,7 +65,6 @@ namespace Framework {
 
         void ResetGridState();
         void SetGridMovementEnabled(bool enabled);
-		bool HandleTileInteraction(const GridCoord& tileCoord);
 
     private:
         // ========================================================================
@@ -75,8 +74,6 @@ namespace Framework {
         void HandleShootUp(const Vector2D& playerPos);
         void HandleShootDown(const Vector2D& playerPos);
         void HandleShootAtMouse(const Vector2D& playerPos);
-        void HandleAttackAction();
-		Entity FindFirstEnemyInRange(int minRange, int maxRange);
 
         // ========================================================================
         // PLAYER MOVEMENT HANDLERS
@@ -103,9 +100,6 @@ namespace Framework {
         float shootCooldownTime;
         float projectileSpeed;
         bool gridMovementEnabled = false;
-
-        // Arrow key movement cooldown to prevent double AP consumption
-        float arrowMoveCooldown = 0.0f;
 
         uint64_t lastTurnIndex = 0;
     };

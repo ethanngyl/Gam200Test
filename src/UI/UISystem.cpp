@@ -203,18 +203,12 @@ namespace Framework {
     // BUTTON CREATION
     // ========================================================================
 
-// ========================================================================
-// BUTTON CREATION
-// ========================================================================
-
     UIButton* UISystem::CreateButton(
         const std::string& texturePath,
         const Vector2D& position,
         const Vector2D& size,
-        ButtonCallback onClick,
-        int layer) // <--- 1. Added parameter
+        ButtonCallback onClick)
     {
-        LOG_INFO("UI_DEBUG", "CreateButton C++ called. Layer value: %d", layer);
         if (!engine) {
             LOG_ERROR("UI", "Engine is null, cannot create button");
             return nullptr;
@@ -227,17 +221,14 @@ namespace Framework {
         button->size = size;
         button->onClick = onClick;
 
-        // Apply default configuration (Sets default layer, tints, etc.)
+        // Apply default configuration
         ApplyDefaultConfig(button.get());
 
-        // 2. Override the layer with the specific function argument
-        button->layer = layer;
-
-        // Spawn entity (Now uses the specific layer)
+        // Spawn entity
         SpawnButtonEntity(button.get());
 
-        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f) on layer %d",
-            position.x, position.y, size.x, size.y, layer);
+        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f)",
+            position.x, position.y, size.x, size.y);
 
         // Store button and return raw pointer
         UIButton* rawPtr = button.get();
@@ -252,10 +243,8 @@ namespace Framework {
         const Vector2D& size,
         ButtonCallback onClick,
         const glm::vec4& normalTint,
-        const glm::vec4& hoverTint,
-        int layer) // <--- 1. Added parameter
+        const glm::vec4& hoverTint)
     {
-        LOG_INFO("UI_DEBUG", "CreateButton C++ called. Layer value: %d", layer);
         if (!engine) {
             LOG_ERROR("UI", "Engine is null, cannot create button");
             return nullptr;
@@ -275,14 +264,11 @@ namespace Framework {
         button->normalTint = normalTint;
         button->hoverTint = hoverTint;
 
-        // 2. Override the layer
-        button->layer = layer;
-
         // Spawn entity
         SpawnButtonEntity(button.get());
 
-        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f) with custom tints on layer %d",
-            position.x, position.y, size.x, size.y, layer);
+        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f) with custom tints",
+            position.x, position.y, size.x, size.y);
 
         // Store button and return raw pointer
         UIButton* rawPtr = button.get();

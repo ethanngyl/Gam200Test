@@ -115,8 +115,8 @@ camera_viewport_height = 10.0
 # ============================================================================
 
 # --- Button Visual Settings ---
-# Default button rendering layer (RenderLayers::UI = 100, ensures UI renders on top)
-ui_button_default_layer = 100
+# Default button rendering layer
+ui_button_default_layer = 10
 
 # Default button tint colors (RGBA, values 0.0-2.0)
 # Normal state

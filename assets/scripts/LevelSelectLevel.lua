@@ -17,7 +17,6 @@
 local buttonIDs = {}
 local initialized = false
 local config = nil
-local editorToggleCooldown = 0  -- Cooldown for F1 editor toggle
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -28,7 +27,7 @@ function OnInit()
     Log("Loading configuration from JSON file...")
     
     -- Load configuration from JSON
-    config = LoadJSON("assets/JSON/levelselect_config.json")
+    config = LoadJSON("assets/scripts/JSON/levelselect_config.json")
     
     if not config then
         Log("ERROR: Failed to load JSON configuration!")
@@ -61,7 +60,6 @@ function OnInit()
     
     initialized = true
     Log("LevelSelect initialization complete")
-    Log("Press F1 to toggle editor")
 end
 
 -- ============================================================================
@@ -109,9 +107,20 @@ end
 -- BUTTON CALLBACKS
 -- ============================================================================
 
+function OnLevel1ButtonClicked()
+    Log("LEVEL 1 button clicked!")
+    Log("Transitioning to Level 1...")
+    
+    -- Play click sound effect (optional)
+    -- PlaySound("button_click", false, 1.0)
+    
+    -- Transition to Level 1
+    SetNextGameState("LEVEL_1")
+end
+
 function OnLevel2ButtonClicked()
-    Log("LEVEL EDITOR button clicked!")
-    Log("Transitioning to Level Editor...")
+    Log("LEVEL 2 button clicked!")
+    Log("Transitioning to Level 2...")
     
     -- Play click sound effect (optional)
     -- PlaySound("button_click", false, 1.0)
@@ -121,8 +130,8 @@ function OnLevel2ButtonClicked()
 end
 
 function OnLevel3ButtonClicked()
-    Log("DEMO button clicked!")
-    Log("Transitioning to Demo...")
+    Log("LEVEL 3 button clicked!")
+    Log("Transitioning to Level 3...")
     
     -- Play click sound effect (optional)
     -- PlaySound("button_click", false, 1.0)
@@ -149,27 +158,10 @@ end
 function OnUpdate(dt)
     -- Update audio system
     UpdateAudio(dt)
-
-    -- Toggle ImGui editor with F1
-    if IsKeyDown("F1") then
-        if editorToggleCooldown <= 0 then
-            local newState = ToggleEditor()
-            if newState then
-                Log("EDITOR ON")
-            else
-                Log("EDITOR OFF")
-            end
-            editorToggleCooldown = 0.3
-        end
-    end
-
-    if editorToggleCooldown > 0 then
-        editorToggleCooldown = editorToggleCooldown - dt
-    end
-
+    
     -- Optional: Add animated background effects here
     -- Example: Rotating background elements, particle systems, etc.
-
+    
     -- Optional: Handle debug input
     if IsKeyDown("Escape") then
         Log("ESC pressed in level select")
@@ -177,11 +169,14 @@ function OnUpdate(dt)
     end
     
     -- Optional: Quick level selection with number keys
-    if IsKeyDown("2") then
-        Log("Quick select: Level Editor")
+    if IsKeyDown("1") then
+        Log("Quick select: Level 1")
+        OnLevel1ButtonClicked()
+    elseif IsKeyDown("2") then
+        Log("Quick select: Level 2")
         OnLevel2ButtonClicked()
     elseif IsKeyDown("3") then
-        Log("Quick select: Demo")
+        Log("Quick select: Level 3")
         OnLevel3ButtonClicked()
     end
 end

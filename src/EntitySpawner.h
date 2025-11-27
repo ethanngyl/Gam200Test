@@ -22,7 +22,6 @@
 #include "RenderComponents.h"   // for MeshRenderer
 #include "ECSEntityManager.h"   // if not already pulled in through Precompiled.h
 #include "Grid\GridTile.h"
-#include "Graphics/RenderLayers.h"  // for standard layer constants
 
 extern Framework::CoreEngine* engine;
 
@@ -284,68 +283,17 @@ namespace Framework {
             Entity player = SpawnSprite("assets/player.png", position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(player);
+            mr.material = GraphicsSystemV2::Material2;
 
-            // Create unique material instance for player (don't use shared Material2!)
-            // This ensures UV bounds for animations won't affect other entities
-            LOG_INFO("SPAWN_PLAYER", "=== Creating Material Instance for Player %u ===", player.GetID());
-            if (CORE && CORE->GetGraphicsSystem()) {
-                auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
-                auto* baseMat = gs->GetResourceManager().GetMaterial(GraphicsSystemV2::Material2);
-                if (baseMat) {
-                    LOG_INFO("SPAWN_PLAYER", "  Base Material2: name='%s' shader=%u",
-                        baseMat->name.c_str(), baseMat->shader.GetID());
-
-                    MaterialHandle playerMat = gs->GetResourceManager().CreateMaterial(
-                        "player_material_" + std::to_string(player.GetID()),
-                        baseMat->shader
-                    );
-
-                    auto* newMat = gs->GetResourceManager().GetMaterial(playerMat);
-                    *newMat = *baseMat;  // Copy properties
-
-                    LOG_INFO("SPAWN_PLAYER", "  Created unique material: name='%s' handle=%u",
-                        newMat->name.c_str(), playerMat.GetID());
-                    LOG_INFO("SPAWN_PLAYER", "  Initial UV bounds: (%.3f,%.3f,%.3f,%.3f)",
-                        newMat->u0, newMat->v0, newMat->u1, newMat->v1);
-
-                    mr.material = playerMat;  // Use unique instance
-                } else {
-                    LOG_ERROR("SPAWN_PLAYER", "  FAILED: Material2 is NULL!");
-                }
-            } else {
-                LOG_ERROR("SPAWN_PLAYER", "  FAILED: CORE or GraphicsSystem is NULL!");
-            }
-
-            mr.layer = RenderLayers::Player;  // Player renders on top
-
-            /*if(entityManager->HasComponent<Transform>(player))
-            {
-                auto& transform = entityManager->GetComponent<Transform>(player);
-                transform.position = position;
-                transform.scale = Vector2D(0.1f, 0.1f);
-			}*/
-           /* entityManager->AddComponent<Movement>(player);
+            entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
-            movement.moveSpeed = 0.2f;*/
+            movement.moveSpeed = 0.2f;
 
             entityManager->AddComponent<CircleCollider>(player);
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-			entityManager->AddComponent<Inventory>(player);
-
-			entityManager->AddComponent<Health>(player, 5); // max 5 health points
-
-			entityManager->AddComponent<AttackAP>(player, 3); // max 3 attack points
-
-			entityManager->AddComponent<AP>(player, 5); // max 5 action points
-
-			//entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
-
-            // NOTE: SpriteAnimation component is now loaded via Lua (LoadPlayerAnimation)
-            // This allows for more flexible animation management per level
-
-            std::cout << "[EntitySpawner] Spawned player (testing.png) on layer " << RenderLayers::Player << "\n";
+            std::cout << "[EntitySpawner] Spawned player (testing.png)\n";
 
             //camera
             //FollowPlayer
@@ -401,20 +349,20 @@ namespace Framework {
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
             mr.material = GraphicsSystemV2::Material2;
-            mr.layer = RenderLayers::Enemies;  // Enemies render below player
             //entityManager->AddComponent<Movement>(enemy);
             //auto& movement = entityManager->GetComponent<Movement>(enemy);
             //movement.moveSpeed = moveSpeed;
             //movement.direction = Vector2D(0.0f, -1.0f);
 
             // *** NEW: Add Health component (50 HP by default) ***
-            entityManager->AddComponent<Health>(enemy, 2);
+            entityManager->AddComponent<Health>(enemy, 50);
+            std::cout << "[EntitySpawner] Enemy spawned with 50 HP\n";
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
             collider.size = size;
 
-            std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << "\n";
+            std::cout << "[EntitySpawner] Spawned enemy\n";
             return enemy;
         }
 
@@ -472,9 +420,6 @@ namespace Framework {
         {
             Entity projectile = SpawnSprite("assets/Bullet.png", position, Vector2D(0.1f, 0.1f));
 
-            auto& mr = entityManager->GetComponent<MeshRenderer>(projectile);
-            mr.layer = RenderLayers::Projectiles;  // Projectiles above player
-
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
             movement.moveSpeed = speed;
@@ -484,7 +429,7 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(projectile);
             collider.radius = 0.05f;
 
-            std::cout << "[EntitySpawner] Spawned projectile on layer " << RenderLayers::Projectiles << "\n";
+            std::cout << "[EntitySpawner] Spawned projectile\n";
             return projectile;
         }
 
@@ -629,7 +574,7 @@ namespace Framework {
                         startPos.y + row * spacing.y
                     );
                     const Vector2D tileSize{ 0.1f, 0.1f };
-                    Entity e = SpawnSprite("assets/TileMap/Grass_Block_Alt.png", pos, tileSize);
+                    Entity e = SpawnSprite("assets/grid.png", pos, tileSize);
 
                     record.tiles[record.Index(col, row)] = e;
 
@@ -637,7 +582,6 @@ namespace Framework {
                     auto& gridTile = entityManager->GetComponent<GridTiles>(e);
                     auto& mr = entityManager->GetComponent<MeshRenderer>(e);
                     mr.material = GraphicsSystemV2::Material2;
-                    mr.layer = RenderLayers::Ground;  // Grid tiles on ground layer
                     gridTile.tileId = nextId++;
                     gridTile.x = col;
                     gridTile.y = row;

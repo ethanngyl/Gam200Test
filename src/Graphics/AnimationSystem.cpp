@@ -36,7 +36,6 @@ Usage:
  */
 
 #include "Precompiled.h"
-#include "AnimationSystem.h"
 #include "ConfigReader.h"
 #include "Component.h"
 #include "TimeConstants.h"
@@ -109,18 +108,9 @@ namespace Framework {
      *
      * Currently handles basic cleanup. Can be extended for
      * resource deallocation if needed in the future.
-     * 
     ===============================================================================
      */
-    AnimationSystem::~AnimationSystem() {
-        LOG_INFO("ANIMATION", "Destroying Animation System...");
-
-        //// 1. Clear any maps or vectors
-        //for (auto& anim : loadedAnimations) {
-        //    delete anim.second; // If you stored pointers to Animation objects
-        //}
-        //loadedAnimations.clear();
-    }
+    AnimationSystem::~AnimationSystem() {}
 
     // ==================== CORE LIFECYCLE METHODS ====================
 
@@ -464,12 +454,8 @@ namespace Framework {
             auto& mr = entityManager->GetComponent<MeshRenderer>(e);
             mr.spriteName = spritePath;
 
-            // DON'T call AssignMeshAndMaterial - it overwrites the unique material instance!
-            // The entity already has its material set up from spawning.
-            // Just update the sprite name so the animation texture is referenced.
-            // gfx->AssignMeshAndMaterial(mr, spritePath);  // COMMENTED OUT - preserves unique materials
-
-            LOG_INFO("ANIM", "Updated MeshRenderer spriteName to '%s' (preserved existing material)", spritePath.c_str());
+            // Let GraphicsSystemV2 assign mesh + material for this sprite
+            gfx->AssignMeshAndMaterial(mr, spritePath);
         }
 
         LOG_INFO("ANIM",

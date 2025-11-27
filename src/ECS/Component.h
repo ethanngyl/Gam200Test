@@ -21,7 +21,7 @@
 
 extern "C" {
     struct lua_State;
-    void lua_close(struct lua_State* L);
+    void lua_close(struct lua_State* L);  
 }
 
 namespace Framework
@@ -263,11 +263,14 @@ namespace Framework
     };
 
     struct AP : public Component<AP> {
+        int hp = 3;
+        int maxHp = 3;
         int actionPoints = 3;
         int maxActionPoints = 3;
 
-        AP() = default;
-		AP(int maxAP) : actionPoints(maxAP), maxActionPoints(maxAP) {}
+        AP(int startHp = 3, int startAp = 3) : hp(startHp), maxHp(startHp), actionPoints(startAp), maxActionPoints(startAp) {
+
+        }
     };
 
     struct AttackRangeComponent : public Component<AttackRangeComponent> {
@@ -279,53 +282,4 @@ namespace Framework
         AttackRangeComponent(int min, int max) : minRange(min), maxRange(max) {}
     };
 
-    /**
- * @brief Chest component - collectible items that block enemies
- */
-    struct Chest : public Component<Chest> {
-        bool collected = false;     // Has player collected this chest?
-        int chestID = 0;            // Unique ID for this chest
-
-        Chest() = default;
-        Chest(int id) : chestID(id) {}
-    };
-
-    /**
-     * @brief Goal component - level exit that checks for chest completion
-     */
-    struct Goal : public Component<Goal> {
-        int chestsRequired = 0;     // How many chests needed to complete level
-        bool canExit = false;       // Can player exit now?
-
-        Goal() = default;
-        Goal(int required) : chestsRequired(required) {}
-    };
-
-    /**
-     * @brief Player inventory - tracks collected chests
-     */
-    struct Inventory : public Component<Inventory> {
-        std::vector<int> collectedChests;  // IDs of collected chests
-
-        int GetChestCount() const { return static_cast<int>(collectedChests.size()); }
-
-        bool HasChest(int chestID) const {
-            return std::find(collectedChests.begin(), collectedChests.end(), chestID)
-                != collectedChests.end();
-        }
-
-        void AddChest(int chestID) {
-            if (!HasChest(chestID)) {
-                collectedChests.push_back(chestID);
-            }
-        }
-    };
-
-    struct AttackAP : public Component<AttackAP> {
-        int points = 1; //current attack points
-        int maxPoints = 3; //max attack points per player turn
-
-        AttackAP(int start = 1) : points(start), maxPoints(start) {}
-    };
-
-} // namespace Framework
+}

@@ -411,7 +411,7 @@ namespace Framework {
         // ========================================================================
         std::cout << "[AudioSystem] Reading audio.json...\n";
 
-        const std::string jsonPath = "assets/JSON/audio.json";
+        const std::string jsonPath = "assets/audio.json";
         std::ifstream file(jsonPath);
 
         if (!file.is_open()) {
@@ -477,7 +477,7 @@ namespace Framework {
             // ====================================================================
             // STEP 5: Load this sound into FMOD
             // ====================================================================
-            std::string fullPath = "assets/Audio/" + fileName;
+            std::string fullPath = "assets/" + fileName;
 
             std::cout << "[AudioSystem] Loading: \"" << audioName << "\" -> " << fullPath << "\n";
 

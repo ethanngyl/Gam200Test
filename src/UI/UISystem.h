@@ -143,8 +143,7 @@ namespace Framework {
             const std::string& texturePath,
             const Vector2D& position,
             const Vector2D& size,
-            ButtonCallback onClick,
-            int layer
+            ButtonCallback onClick
         );
 
         /**
@@ -156,8 +155,7 @@ namespace Framework {
             const Vector2D& size,
             ButtonCallback onClick,
             const glm::vec4& normalTint,
-            const glm::vec4& hoverTint,
-            int layer
+            const glm::vec4& hoverTint
         );
 
         // ====================================================================

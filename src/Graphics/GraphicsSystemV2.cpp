@@ -39,7 +39,6 @@ Safety:
 #include "ECSEntityManager.h"
 #include "Component.h"
 #include "MeshFactory.h"
-#include "Graphics/RenderLayers.h"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -131,9 +130,9 @@ namespace Framework {
         editorCameraZoom = editorCamera.GetZoom();
 
         // Load fonts (keys must match what DrawText uses)
-        text_.loadFont("Sans48", "assets/Font/Orbitron-VariableFont_wght.ttf", 48);
-        text_.loadFont("Serif32", "assets/Font/Roboto-VariableFont_wdth,wght.ttf", 32);
-        text_.loadFont("Serif32", "assets/Font/EBGaramond_Italic_VariableFont_wght.ttf", 48);
+        text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48);
+        text_.loadFont("Serif32", "assets/Roboto-VariableFont_wdth,wght.ttf", 32);
+
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
@@ -458,10 +457,10 @@ namespace Framework {
     void GraphicsSystemV2::CreateDefaultMeshes() {
         std::cout << "GraphicsSystemV2: Creating default meshes...\n";
         // Create primitive meshes using the factory functions
-        //Mesh* quad = meshFactory.CreateQuad();
-        //Mesh* line = meshFactory.CreateLine();
-        //Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
-        //Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
+        Mesh* quad = meshFactory.CreateQuad();
+        Mesh* line = meshFactory.CreateLine();
+        Mesh* circle = meshFactory.CreateCircle(40, 0.5f);
+        Mesh* wireframeQ = meshFactory.CreateWireframeQuad();
 
         // Quad vertices
         std::vector<float> quadVerts = {
@@ -539,57 +538,31 @@ namespace Framework {
 
         // Create default material
         defaultMaterial = resourceManager.CreateMaterial("default", defaultShader);
-        auto* defaultMat = resourceManager.GetMaterial(defaultMaterial);
-        if (defaultMat) {
-            defaultMat->blendMode = BlendMode::AlphaBlend;
-            defaultMat->depthTest = false;   // Disable for 2D rendering
-            defaultMat->depthWrite = false;
-        }
-
         Material2 = resourceManager.CreateMaterial("color", Shader2);
-        auto* mat2 = resourceManager.GetMaterial(Material2);
-        if (mat2) {
-            mat2->blendMode = BlendMode::AlphaBlend;
-            mat2->depthTest = false;   // Disable for 2D rendering
-            mat2->depthWrite = false;
-        }
-
         // Create materials for each primitive
         // Quad material
         quadMaterial = resourceManager.CreateMaterial("quad_mat", defaultShader);
         auto* quadMat = resourceManager.GetMaterial(quadMaterial);
         if (quadMat) {
             quadMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-            quadMat->blendMode = BlendMode::AlphaBlend;
-            quadMat->depthTest = false;   // Disable for 2D rendering
-            quadMat->depthWrite = false;
         }
         // Line material
         lineMaterial = resourceManager.CreateMaterial("line_mat", defaultShader);
         auto* lineMat = resourceManager.GetMaterial(lineMaterial);
         if (lineMat) {
             lineMat->tint = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-            lineMat->blendMode = BlendMode::AlphaBlend;
-            lineMat->depthTest = false;   // Disable for 2D rendering
-            lineMat->depthWrite = false;
         }
         // Circle material
         circleMaterial = resourceManager.CreateMaterial("circle_mat", defaultShader);
         auto* circleMat = resourceManager.GetMaterial(circleMaterial);
         if (circleMat) {
             circleMat->tint = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-            circleMat->blendMode = BlendMode::AlphaBlend;
-            circleMat->depthTest = false;   // Disable for 2D rendering
-            circleMat->depthWrite = false;
         }
         // Wireframe quad material
         wireframeQMaterial = resourceManager.CreateMaterial("wireframeq_mat", defaultShader);
         auto* wireframeQMat = resourceManager.GetMaterial(wireframeQMaterial);
         if (wireframeQMat) {
             wireframeQMat->tint = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-            wireframeQMat->blendMode = BlendMode::AlphaBlend;
-            wireframeQMat->depthTest = false;   // Disable for 2D rendering
-            wireframeQMat->depthWrite = false;
         }
 
         std::cout << "Created " << 5 << " default materials\n";
@@ -600,7 +573,7 @@ namespace Framework {
         std::cout << "GraphicsSystemV2: Setting up background...\n";
 
         // Load background texture
-        backgroundTexture = resourceManager.LoadTexture("assets/Menu/Wood_Background.png");
+        backgroundTexture = resourceManager.LoadTexture("assets/background.png");
 
         if (!backgroundTexture.IsValid()) {
             std::cerr << "WARNING: Failed to load background texture\n";
@@ -616,9 +589,6 @@ namespace Framework {
         if (bgMat) {
             bgMat->albedoTexture = backgroundTexture;
             bgMat->tint = glm::vec4(1.0f);  // No tinting
-            bgMat->blendMode = BlendMode::AlphaBlend;
-            bgMat->depthTest = false;   // Disable for 2D rendering
-            bgMat->depthWrite = false;
         }
 
         std::cout << "Background setup complete\n";
@@ -630,9 +600,7 @@ namespace Framework {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // DISABLE depth testing for 2D sprite rendering
-        // Traditional 2D approach: rely on painter's algorithm (render queue sorting)
-        // This avoids AMD GPU precision issues and transparent sprite artifacts
+        // Disable depth testing for 2D rendering (can be enabled for 3D)
         glDisable(GL_DEPTH_TEST);
 
         // Enable back-face culling
@@ -662,7 +630,7 @@ namespace Framework {
             bg.mesh = backgroundMesh;
             bg.material = backgroundMaterial;
             bg.texture = backgroundTexture;
-            bg.layer = RenderLayers::Background;  // Renders first, behind everything
+            bg.layer = -1000;
             bg.modelMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(4.0f));
             bg.tint = glm::vec4(1.0f);
             renderQueue.Submit(bg);
@@ -780,21 +748,14 @@ namespace Framework {
 
             // ---------- TRANSFORM ----------
             glm::mat4 model(1.0f);
-            // Use layer, orderInLayer, and entity ID for Z-depth to prevent Z-fighting
-            // Increased multipliers to avoid floating-point precision issues on AMD GPUs
-            // Layer provides major depth separation (0.01 per layer = 100x precision margin)
-            // OrderInLayer provides minor separation (0.0001 per order = 1.67x precision margin)
-            // Entity ID provides guaranteed uniqueness (0.000001 per ID = 16.7x precision margin)
-            // 24-bit depth precision ≈ 0.00000006, these values are well above that threshold
-            float zDepth = (cmd.layer * 0.01f) + (cmd.orderInLayer * 0.0001f) + (e.GetID() * 0.000001f);
-            model = glm::translate(model, { transform.position.x, transform.position.y, zDepth });
+            model = glm::translate(model, { transform.position.x, transform.position.y, 0.0f });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
             model = glm::scale(model, { transform.scale.x, transform.scale.y, 1.0f });
             cmd.modelMatrix = model;
 
             // Compute depth relative to camera (for correct draw order)
             cmd.depth = glm::distance(
-                glm::vec3(transform.position.x, transform.position.y, zDepth),
+                glm::vec3(transform.position.x, transform.position.y, 0.0f),
                 mainCamera.GetPosition()
             );
 
@@ -880,95 +841,94 @@ namespace Framework {
         }
     }
 
-    // GraphicsSystemV2.cpp
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
         if (commands.empty()) return;
-        // ========================================================================
-    // DEBUG: PRINT DRAW ORDER (Run this once to verify sorting)
-    // ========================================================================
-        static int frameCount = 0;
-        if (frameCount == 0) { // Only log on the very first frame to avoid spam
-            std::cout << "\n=== RENDER QUEUE DRAW ORDER (Frame 0) ===" << std::endl;
-            int i = 0;
-            for (const auto& cmd : commands) {
-                std::cout << "Cmd [" << i << "]: "
-                    << " Layer: " << cmd.layer
-                    << " | Mesh: " << cmd.mesh.GetID()
-                    << " | Z-Depth: " << cmd.depth << std::endl;
-                i++;
-            }
-            std::cout << "=========================================\n" << std::endl;
-        }
-        frameCount++;
+        //glEnable(GL_BLEND);
+        //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+        // Camera matrices
         Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
+		//Camera& activeCamera = mainCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
         glm::mat4 view = activeCamera.GetViewMatrix();
 
         currentBoundMaterial = INVALID_MATERIAL_HANDLE;
         currentBoundShader = INVALID_SHADER_HANDLE;
 
-        // Linear Batching: This ensures Layer -10 draws BEFORE Layer 0
-        std::vector<glm::mat4> batchMatrices;
-        const RenderCommand* batchBase = nullptr;
-
-        auto FlushBatch = [&]() {
-            if (batchMatrices.empty() || !batchBase) return;
-
-            // 1. Bind Material
-            if (batchBase->material != currentBoundMaterial) {
-                BindMaterial(batchBase->material, glm::vec4(1.0f));
-                currentBoundMaterial = batchBase->material;
+        // ---- STEP 1: Group by (mesh + material + texture) ----
+        struct Key {
+            MeshHandle mesh;
+            MaterialHandle mat;
+            TextureHandle tex;
+        };
+        struct KeyHash {
+            size_t operator()(const Key& k) const noexcept {
+                return ((size_t)k.mesh.GetID() << 32) ^ (size_t)k.mat.GetID() ^ (size_t)k.tex.GetID();
             }
-
-            Shader* shader = resourceManager.GetShader(currentBoundShader);
-            if (shader) {
-                // 2. Update Camera
-                GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
-                GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
-                if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-                if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
-                // 3. Bind Texture (CRITICAL FIX for switching between Wood and Button)
-                if (batchBase->texture.IsValid()) {
-                    glBindTextureUnit(0, batchBase->texture.GetID());
-                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
-                }
-                else {
-                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
-                }
-
-                // 4. Draw
-                Mesh* mesh = resourceManager.GetMesh(batchBase->mesh);
-                if (mesh) {
-                    mesh->SetInstanceData();
-                    glNamedBufferSubData(mesh->instanceVBO, 0, batchMatrices.size() * sizeof(glm::mat4), batchMatrices.data());
-                    mesh->DrawInstanced(batchMatrices, static_cast<GLsizei>(batchMatrices.size()));
-                    stats.drawCalls++;
-                }
+        };
+        struct KeyEq {
+            bool operator()(const Key& a, const Key& b) const noexcept {
+                return a.mesh == b.mesh && a.mat == b.mat && a.tex == b.tex;
             }
-            batchMatrices.clear();
-            };
+        };
+
+        std::unordered_map<Key, std::vector<glm::mat4>, KeyHash, KeyEq> batches;
 
         for (const auto& cmd : commands) {
             if (!cmd.visible) continue;
-
-            bool isSameBatch = false;
-            if (batchBase && cmd.mesh == batchBase->mesh &&
-                cmd.material == batchBase->material &&
-                cmd.texture == batchBase->texture) {
-                isSameBatch = true;
-            }
-
-            if (!isSameBatch) {
-                FlushBatch();
-                batchBase = &cmd;
-            }
-            batchMatrices.push_back(cmd.modelMatrix);
+            batches[{cmd.mesh, cmd.material, cmd.texture}].push_back(cmd.modelMatrix);
         }
-        FlushBatch(); // Draw final batch
 
+        // ---- STEP 2: Render each batch once ----
+        for (auto& [key, matrices] : batches) {
+            if (matrices.empty()) continue;
+
+            // Bind material and shader once
+            if (key.mat != currentBoundMaterial) {
+                if (BindMaterial(key.mat, glm::vec4(1.0f))) { // tint uniform already handled
+                    currentBoundMaterial = key.mat;
+                    stats.materialSwitches++;
+                }
+            }
+
+            Shader* shader = resourceManager.GetShader(currentBoundShader);
+            if (!shader) continue;
+
+            GLint projLoc = glGetUniformLocation(shader->GetID(), "uProjection");
+            GLint viewLoc = glGetUniformLocation(shader->GetID(), "uView");
+            if (projLoc != -1) glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+            if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+            // Texture binding
+            if (key.tex.IsValid()) {
+                glBindTextureUnit(0, key.tex.GetID());
+                GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
+                if (useTexLoc != -1) glUniform1i(useTexLoc, 1);
+            }
+            else {
+                GLint useTexLoc = glGetUniformLocation(shader->GetID(), "uUseTexture");
+                if (useTexLoc != -1) glUniform1i(useTexLoc, 0);
+            }
+
+            // Get mesh
+            Mesh* mesh = resourceManager.GetMesh(key.mesh);
+            if (!mesh) continue;
+
+            // ---- STEP 3: Upload instance data and draw ----
+            mesh->SetInstanceData(); // sets up the VAO attributes
+            // Upload matrices to GPU buffer (modern DSA version)
+            glNamedBufferSubData(mesh->instanceVBO, 0,
+                matrices.size() * sizeof(glm::mat4),
+                matrices.data());
+
+            // Draw once for all instances
+            mesh->DrawInstanced(matrices, static_cast<GLsizei>(matrices.size()));
+
+            stats.drawCalls++;
+        }
+
+        // Cleanup
         if (currentBoundShader.IsValid()) {
             if (auto* sh = resourceManager.GetShader(currentBoundShader)) sh->Unbind();
         }
@@ -1084,15 +1044,6 @@ namespace Framework {
 
         shader->Bind();
         currentBoundShader = material->shader;
-
-        // DEBUG: Log UV rect being passed to shader (ALWAYS LOG FOR DEBUGGING)
-        static int uvRectLogCounter = 0;
-        bool shouldLogUVRect = (++uvRectLogCounter % 60 == 0);
-        if (shouldLogUVRect) {
-            LOG_INFO("UV_SHADER", "BindMaterial: material='%s' handle=%u uUVRect=(%.3f,%.3f,%.3f,%.3f)",
-                material->name.c_str(), materialHandle.GetID(),
-                material->u0, material->v0, material->u1, material->v1);
-        }
 
         glUniform4f(glGetUniformLocation(shader->GetID(), "uUVRect"),
             material->u0, material->v0, material->u1, material->v1);

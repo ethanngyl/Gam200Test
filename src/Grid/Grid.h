@@ -35,7 +35,6 @@ namespace Framework {
 		int rows = 0, cols = 0;
 		Vector2D startPos{ 0.0f, 0.0f };
 		Vector2D spacing{ 1.0f, 1.0f };
-		Vector2D tileSize{ 1.0f, 1.0f };
 		std::vector<Entity> tiles;
 		EntityManager* em = nullptr;
 

@@ -2450,7 +2450,7 @@ namespace Framework {
     }
 
     bool ImGuiSystem::AddAudioToJSON(const std::string& audioName, const std::string& fileName) {
-        const std::string jsonPath = "assets/JSON/audio.json";
+        const std::string jsonPath = "assets/audio.json";
 
         std::cout << "[JSON] Opening: " << jsonPath << "\n";
 
