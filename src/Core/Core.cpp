@@ -103,19 +103,19 @@ namespace Framework
             SetupEventListeners();
 
             //Use a container to store(future)
-            if (audioSystem) {
-                LOG_INFO("CORE", "Loading test audio...");
-                bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
-                bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
-                bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
-                bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
-                if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
-                    LOG_INFO("CORE", "All audio loaded successfully");
-                }
-                else {
-                    LOG_WARN("CORE", "Failed to load audio");
-                }
-            }
+            //if (audioSystem) {
+              //  LOG_INFO("CORE", "Loading test audio...");
+                //bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
+                //bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
+                //bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
+                //bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
+                //if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
+                  //  LOG_INFO("CORE", "All audio loaded successfully");
+                //}
+                //else {
+                  //  LOG_WARN("CORE", "Failed to load audio");
+                //}
+            //}
 
 
             LOG_INFO("CORE", "================================================");

@@ -1,0 +1,70 @@
+{
+  "TileMap": {
+    "cellSize": 128,
+    "TileDefinitions": {
+      "W": {
+        "texture": "assets/TileMap/Tree_Block.png",
+        "solid": 1,
+        "layer": 0
+      },
+      "0": {
+        "texture": "assets/TileMap/Grass_Block.png",
+        "solid": 0,
+        "layer": 0
+      },
+      "1": {
+        "texture": "assets/TileMap/Grass_Block_Alt.png",
+        "solid": 0,
+        "layer": 0
+      },
+      "P": {
+        "texture": "assets/player.png",
+        "solid": 0,
+        "entityType": "Player"
+      },
+      "E": {
+        "texture": "assets/player.png",
+        "solid": 0,
+        "entityType": "Enemy"
+      },
+      "S": {
+        "texture": "assets/TileMap/Chest_1.png",
+        "solid": 0,
+        "entityType": "Chest"
+      },
+      "M": {
+        "texture": "assets/background.png",
+        "solid": 0,
+        "entityType": "Goal"
+      }
+    },
+    "Tiles": {
+      "Row0": "WWWWWWWWWWWWWWWWWWWWW",
+      "Row1": "W0101010101010101010W",
+      "Row2": "W1010101010101010101W",
+      "Row3": "W01010101M1010101010W",
+      "Row4": "W1010101010101010101W",
+      "Row5": "W0101010E0S010101010W",
+      "Row6": "W1010101010101010101W",
+      "Row7": "W0101010101010101010W",
+      "Row8": "W1010101010101010101W",
+      "Row9": "W0101010101010101010W",
+      "Row10": "W1010101010101010101W",
+      "Row11": "W010101E1S1010101010W",
+      "Row12": "W1010101010101010101W",
+      "Row13": "W0101010101010101010W",
+      "Row14": "WWWWWWW1010WWWWWWWWWW",
+      "Row15": "W0101010101010101010W",
+      "Row16": "W1010101010101010101W",
+      "Row17": "W0101010101010101010W",
+      "Row18": "W1010101010101010101W",
+      "Row19": "W0101WWW101WWW101010W",
+      "Row20": "W1010W0101010W010101W",
+      "Row21": "W0101W101S101W101010W",
+      "Row22": "W1010W0101010W010101W",
+      "Row23": "W0101010101010101010W",
+      "Row24": "W1010W010P010W010101W",
+      "Row25": "WWWWWWWWWWWWWWWWWWWWW"
+    }
+  }
+}
