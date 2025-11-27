@@ -74,6 +74,12 @@ namespace Framework {
 
     void ImGuiSystem::Shutdown()
     {
+        // Prevent double shutdown
+        if (!imguiInitialized) {
+            std::cout << "[ImGui] Already shutdown or never initialized - skipping\n";
+            return;
+        }
+
         std::cout << "[ImGui] Shutting down...\n";
 
         // Stop all audio if audio system exists
@@ -86,6 +92,8 @@ namespace Framework {
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
         DeleteViewportFramebuffer();
+
+        imguiInitialized = false;  // Mark as shutdown
         std::cout << "[ImGui] Shutdown complete\n";
     }
 
@@ -98,6 +106,7 @@ namespace Framework {
     {
         if (!window) {
             std::cout << "[ImGui] Error: Window not set!\n";
+            imguiInitialized = false;
             return;
         }
 
@@ -108,7 +117,7 @@ namespace Framework {
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Enable Docking
-        io.IniFilename = "./assets/imgui.ini";  
+        io.IniFilename = "./assets/imgui.ini";
 
         ImGui::StyleColorsDark();
 
@@ -122,6 +131,9 @@ namespace Framework {
         renderToViewport = true;
         std::cout << "[ImGuiSystem] Viewport ready - FBO: " << viewportFBO
             << ", Texture: " << viewportTexture << "\n";
+
+        imguiInitialized = true;  // Mark as successfully initialized
+        std::cout << "[ImGui] Initialization complete\n";
     }
 
     // ============================================================================
