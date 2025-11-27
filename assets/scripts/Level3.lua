@@ -287,7 +287,7 @@ function OnInit()
     Log("Level 3 initialization complete")
     Log("Controls:")
     Log("  - Click tiles or use arrow keys to move")
-    Log("  - Press ESC to pause/resume game")
+    Log("  - Press P to pause/resume game")
     Log("  - Press F1 to toggle editor")
     Log("  - Press 5 to return to main menu")
     Log("  - AP indicators shown at top of screen")
@@ -355,8 +355,8 @@ function OnUpdate(dt)
         editorToggleCooldown = editorToggleCooldown - dt
     end
 
-    -- Toggle pause with ESC key
-    if IsKeyPressed("Escape") then
+    -- Toggle pause with P key
+    if IsKeyPressed("P") then
         TogglePause()
         if IsPaused() then
             Log("GAME PAUSED")
