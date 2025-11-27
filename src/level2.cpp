@@ -263,9 +263,6 @@ void level2_Draw()
     // Font
     std::string fontLarge = ConfigReader::GetString("lv2_ui_font_large", "Sans48");
 
-    // Text content
-    std::string textScaling = ConfigReader::GetString("lv2_text_info", "This level is for Level editor testing");
-
     // Location
     float textX = ConfigReader::GetFloat("lv2_ui_text_info_x", 500.0f);
     float texty = ConfigReader::GetFloat("lv2_ui_text_info_y", 350.0f);
@@ -279,7 +276,6 @@ void level2_Draw()
     // ========================================================================
     // Render UI text (using values from the configuration file)
     // ========================================================================
-    graphics->DrawText4(fontLarge, textScaling, textX, texty, textScale, glm::vec3(colorR, colorG, colorB));
 
     // ========================================================================
     // Pause Menu Overlay (Only if paused AND in playing mode)
