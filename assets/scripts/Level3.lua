@@ -248,7 +248,7 @@ function OnInit()
         local yPos = camY + atkOffsetY
 
         local entityID = SpawnSprite(
-            "assets/AP Empty.png",   -- TODO: swap to your ATTACK AP empty sprite
+            "assets/UI/AP_Empty.png",   -- TODO: swap to your ATTACK AP empty sprite
             xPos, yPos,
             indicatorSize, indicatorSize,
             0
@@ -269,7 +269,7 @@ function OnInit()
         local yPos = camY + atkOffsetY
 
         local entityID = SpawnSprite(
-            "assets/AP Crystal.png", -- TODO: swap to your ATTACK AP filled sprite
+            "assets/UI/AP_Crystal.png", -- TODO: swap to your ATTACK AP filled sprite
             xPos, yPos,
             indicatorSize, indicatorSize,
             0
@@ -538,7 +538,7 @@ function OnUpdate(dt)
                     local yPos = camY + atkOffsetY
 
                     local entityID = SpawnSprite(
-                        "assets/AP Crystal.png", -- TODO: attack filled sprite
+                        "assets/UI/AP_Crystal.png", -- TODO: attack filled sprite
                         xPos, yPos,
                         indicatorSize, indicatorSize,
                         0
