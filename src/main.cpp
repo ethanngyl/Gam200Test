@@ -8,6 +8,11 @@
  ------------------------------------------------------------------------------
   Main entry point of the StructSquad Engine
 
+  Modified: 2025-11-22
+  - Simplified pause handling (moved to Core.cpp)
+  - Removed duplicate pause checks
+  - Engine systems now handle pause state internally
+
 Responsibilities:
      - Initializes debug console, logging, and memory leak detection
      - Sets up the CoreEngine and initializes all subsystems
@@ -30,6 +35,8 @@ Responsibilities:
 #include "ImguiSystem.h"
 #include "TimeConstants.h"
 #include "Pause/Pause.h"
+#include "GlobalPauseManager.h"
+
 
 // ===============================================================================
 // GLOBAL VARIABLES
@@ -179,76 +186,46 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             eng::debug::PerfViewer::begin_frame();
             glfwPollEvents();
 
-            if (engine->GetInputSystem()) {
-                engine->GetInputSystem()->Update(static_cast<float>(FIXED_DT));
-            }
             // ===============================================================================
-            // *** CRITICAL: UPDATE PAUSE SYSTEM FIRST (ALWAYS) ***
-            // This must happen even when paused so we can detect resume input
+            // LEVEL UPDATE (Handles pause toggle and level-specific input)
             // ===============================================================================
-            if (engine->GetPauseSystem()) {
-                engine->GetPauseSystem()->Update(static_cast<float>(FIXED_DT));
+            if (fpUpdate) {
+                fpUpdate();  // This is level1_Update() - handles pause detection
             }
 
             // ===============================================================================
-            // *** CHECK PAUSE STATE ***
+            // FIXED TIME STEP UPDATES
             // ===============================================================================
-            bool isPaused = engine->GetPauseSystem() &&
-                engine->GetPauseSystem()->IsPaused();
+            currentNumberOfSteps = 0;
+            while (accumulatedTime >= FIXED_DT) {
+                accumulatedTime -= FIXED_DT;
+                currentNumberOfSteps++;
 
-            if (!isPaused)
-            {
-                // ===============================================================================
-                // FIXED TIME STEP UPDATES (Physics/Logic) - ONLY WHEN NOT PAUSED
-                // ===============================================================================
-                currentNumberOfSteps = 0;
-                while (accumulatedTime >= FIXED_DT) {
-                    accumulatedTime -= FIXED_DT;
-                    currentNumberOfSteps++;
-
-                    if (currentNumberOfSteps >= 5) {
-                        accumulatedTime = 0.0;
-                        break;
-                    }
+                if (currentNumberOfSteps >= 5) {
+                    accumulatedTime = 0.0;
+                    break;
                 }
+            }
 
-                if (currentNumberOfSteps == 0) {
-                    currentNumberOfSteps = 1;
-                }
+            if (currentNumberOfSteps == 0) {
+                currentNumberOfSteps = 1;
+            }
 
-                // Run physics/logic updates
-                for (int step = 0; step < currentNumberOfSteps; ++step) {
-                    if (fpUpdate) {
-                        fpUpdate();
-                    }
-                }
-
-                // ===============================================================================
-                // RENDER ONCE PER FRAME
-                // ===============================================================================
+            // ===============================================================================
+            // ENGINE UPDATE (Handles pause internally)
+            // ===============================================================================
+            // CoreEngine::UpdateSingleFrame will:
+            // - Always update Input and Graphics (prevents ghosting)
+            // - Skip game logic systems when GlobalPause::IsPaused() is true
+            for (int step = 0; step < currentNumberOfSteps; ++step) {
                 engine->UpdateSingleFrame(static_cast<float>(FIXED_DT));
-
-                if (fpDraw) {
-                    fpDraw();
-                }
-            }
-            else
-            {
-                // ===============================================================================
-                // PAUSED: Still render the frozen frame but don't update logic
-                // ===============================================================================
-                // Optional: render the last frame in paused state
-                if (fpDraw) {
-                    fpDraw();
-                }
             }
 
             // ===============================================================================
-            // *** DRAW PAUSE OVERLAY (ALWAYS, if paused) ***
-            // This draws the "PAUSED" text over the game
+            // LEVEL DRAW (Game-specific UI and pause menu overlay)
             // ===============================================================================
-            if (engine->GetPauseSystem()) {
-                engine->GetPauseSystem()->Draw();
+            if (fpDraw) {
+                fpDraw();  // level1_Draw() - draws UI + pause menu if paused
             }
 
             // ===============================================================================
@@ -265,7 +242,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
                     engine->GetGraphicsSystem()->RenderImGui();
                 }
             }
-
 
             // End performance frame
             eng::debug::PerfViewer::end_frame();

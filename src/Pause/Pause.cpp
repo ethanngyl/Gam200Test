@@ -1,385 +1,171 @@
 ﻿/*
 ===============================================================================
-File:         Pause.cpp
-Author:       Padilla Carl Jameson Z
-Email:        c.padilla@digipen.edu
-Date:         2025-11-20
-Contribution:
-------------------------------------------------------------------------------
-Pause System for ALT-TAB and CTRL-ALT-DEL handling (Requirements 1701/1702)
+ File:          Pause.h (With Game State Check)
+ Author:        Padilla Carl Jameson Z
+ Email:         c.padilla@digipen.edu
+ Date:          2025-11-20
+ Contribution:
+ ------------------------------------------------------------------------------
+  Simple Text-Based Pause Menu Implementation
 
-This is the production version with minimal logging.
+
 ===============================================================================
 */
 
-#include "Precompiled.h"
 #include "Pause.h"
 #include "Core.h"
-#include "Audio/AudioSystem.h"
+#include "GraphicsSystemV2.h"
 #include "WindowSystem.h"
 
-namespace Framework
+namespace PauseMenuSimple
 {
-    PauseSystem* PauseSystem::s_instance = nullptr;
-
-    PauseSystem::PauseSystem()
-        : isPaused(false)
-        , pauseReason(PauseReason::None)
-        , windowHasFocus(true)
-        , windowIsMinimized(false)
-        , savedMasterVolume(1.0f)
-        , audioWasPlaying(false)
-        , focusLostTime(0.0)
-        , focusGainedTime(0.0)
-        , coreEngine(nullptr)
-        , wasKeyPressed(false)
+    bool UpdatePauseMenu(Framework::CoreEngine* engine,
+        PauseMenuState& state,
+        const PauseMenuCallbacks& callbacks)
     {
-        s_instance = this;
-    }
+        if (!engine) return false;
 
-    PauseSystem::~PauseSystem()
-    {
-        s_instance = nullptr;
-    }
+        auto* input = engine->GetInputSystem();
+        if (!input) return false;
 
-    void PauseSystem::Initialize()
-    {
-        if (!coreEngine) {
-            LOG_ERROR("PAUSE", "CoreEngine not set");
-            return;
+        // ====================================================================
+        // Arrow key navigation
+        // ====================================================================
+        bool isUpPressed = input->IsKeyDown(Framework::KEY_UP) ||
+            input->IsKeyDown(Framework::KEY_W);
+        bool isDownPressed = input->IsKeyDown(Framework::KEY_DOWN) ||
+            input->IsKeyDown(Framework::KEY_S);
+        bool isEnterPressed = input->IsKeyDown(Framework::KEY_ENTER) ||
+            input->IsKeyDown(Framework::KEY_SPACE);
+
+        // Edge detection (now only 3 options: 0=Resume, 1=MainMenu, 2=Exit)
+        if (isUpPressed && !state.wasUpPressed) {
+            state.selectedOption--;
+            if (state.selectedOption < 0) state.selectedOption = 2;
         }
 
-        auto* windowSystem = coreEngine->GetWindowSystem();
-        if (!windowSystem) {
-            LOG_ERROR("PAUSE", "WindowSystem is null");
-            return;
+        if (isDownPressed && !state.wasDownPressed) {
+            state.selectedOption++;
+            if (state.selectedOption > 2) state.selectedOption = 0;
         }
 
-        GLFWwindow* window = windowSystem->GetWindow();
-        if (!window) {
-            LOG_ERROR("PAUSE", "GLFW window is null");
-            return;
+        state.wasUpPressed = isUpPressed;
+        state.wasDownPressed = isDownPressed;
+
+        // ====================================================================
+        // Number key shortcuts (1=Resume, 2=MainMenu, 3=Exit)
+        // ====================================================================
+        if (input->IsKeyPressed(Framework::KEY_1)) {
+            if (callbacks.onResume) callbacks.onResume();
+            return true;
+        }
+        else if (input->IsKeyPressed(Framework::KEY_2)) {
+            if (callbacks.onMainMenu) callbacks.onMainMenu();
+            return true;
+        }
+        else if (input->IsKeyPressed(Framework::KEY_3)) {
+            if (callbacks.onExit) callbacks.onExit();
+            return true;
         }
 
-        glfwSetWindowFocusCallback(window, WindowFocusCallback);
-        glfwSetWindowIconifyCallback(window, WindowIconifyCallback);
-        glfwSetWindowUserPointer(window, this);
-    }
-
-    // ===============================================================================
-    // *** NEW: Helper function to check if pause is allowed ***
-    // ===============================================================================
-    bool PauseSystem::IsPauseAllowedInCurrentState()
-    {
-        // Get current game state from extern variable
-        extern int current;
-
-        // Only allow pause in actual gameplay levels
-        // Disable in menus (mainMenu, levelSelect)
-        switch (current)
-        {
-        case mainMenu:      // Main menu
-        case Level_select:   // Level select menu
-            return false;   // Pause DISABLED in menus
-
-        case LEVEL_1:        // Level 1
-        case LEVEL_2:        // Level 2
-        case LEVEL_3:        // Level 3
-            return true;    // Pause ENABLED in gameplay
-
-        default:
-            return true;    // Default: allow pause
-        }
-    }
-
-    void PauseSystem::Update(float dt)
-    {
-        DBG_SCOPE_SYS("Pause System", eng::debug::Subsystem::Engine);
-
-        (void)dt;
-
-        if (!coreEngine) {
-            return;
-        }
-
-        auto* inputSystem = coreEngine->GetInputSystem();
-        if (!inputSystem) {
-            return;
-        }
-
-        // ===============================================================================
-        // Key Debouncing - Edge Detection
-        // ===============================================================================
-        bool isKeyDown = inputSystem->IsKeyDown(Framework::KEY_P);
-
-        // Detect rising edge (key just pressed)
-        bool keyJustPressed = isKeyDown && !wasKeyPressed;
-
-        // Update key state for next frame
-        wasKeyPressed = isKeyDown;
-
-        // ===============================================================================
-        // Check if pause is allowed before toggling ***
-        // ===============================================================================
-        if (keyJustPressed && IsPauseAllowedInCurrentState())
-        {
-            if (isPaused && pauseReason == PauseReason::Manual) {
-                Resume();
-            }
-            else if (!isPaused) {
-                Pause(PauseReason::Manual);
+        // ====================================================================
+        // Enter key to select
+        // ====================================================================
+        if (isEnterPressed && !state.wasEnterPressed) {
+            switch (state.selectedOption) {
+            case 0:  // Resume
+                if (callbacks.onResume) callbacks.onResume();
+                return true;
+            case 1:  // Main Menu
+                if (callbacks.onMainMenu) callbacks.onMainMenu();
+                return true;
+            case 2:  // Exit
+                if (callbacks.onExit) callbacks.onExit();
+                return true;
             }
         }
+
+        state.wasEnterPressed = isEnterPressed;
+
+        return false;
     }
 
-    void PauseSystem::Draw()
+    void DrawPauseMenu(Framework::CoreEngine* engine,
+        const PauseMenuState& state)
     {
-        if (!isPaused) {
-            return;
-        }
+        if (!engine) return;
 
-        auto* graphics = coreEngine->GetGraphicsSystem();
-        if (!graphics) {
-            return;
-        }
+        auto* graphics = engine->GetGraphicsSystem();
+        auto* windowSystem = engine->GetWindowSystem();
 
-        auto* windowSystem = coreEngine->GetWindowSystem();
-        if (!windowSystem) {
-            return;
-        }
-
-        // Load configuration
-        std::string pauseText = ConfigReader::GetString("pause_text", "PAUSED");
-        std::string resumeHintManual = ConfigReader::GetString("pause_hint_manual", "Press P to Resume");
-        std::string resumeHintFocus = ConfigReader::GetString("pause_hint_focus", "Return to window to resume");
-        std::string fontName = ConfigReader::GetString("pause_font", "Sans48");
+        if (!graphics || !windowSystem) return;
 
         int windowWidth = windowSystem->GetWidth();
         int windowHeight = windowSystem->GetHeight();
 
-        float centerXPercent = ConfigReader::GetFloat("pause_text_x_percent", 0.5f);
-        float centerYPercent = ConfigReader::GetFloat("pause_text_y_percent", 0.5f);
-        float hintOffsetYPercent = ConfigReader::GetFloat("pause_hint_offset_y_percent", 0.1f);
-        float hintOffsetXPercent = ConfigReader::GetFloat("pause_hint_offset_x_percent", 0.1f);
+        float centerX = windowWidth * 0.5f;
+        float centerY = windowHeight * 0.5f;
 
-        float centerX = windowWidth * centerXPercent;
-        float centerY = windowHeight * centerYPercent;
-        float hintOffsetY = windowHeight * hintOffsetYPercent;
-        float hintOffsetX = windowWidth * hintOffsetXPercent;
+        // ====================================================================
+        // TITLE
+        // ====================================================================
+        graphics->DrawText4("Sans48", "PAUSED",
+            centerX - 120, centerY + 200, 2.5f,
+            glm::vec3(1.0f, 1.0f, 1.0f));
 
-        float pauseTextScale = ConfigReader::GetFloat("pause_text_scale", 2.0f);
-        float hintTextScale = ConfigReader::GetFloat("pause_hint_scale", 1.0f);
+        // ====================================================================
+        // MENU OPTIONS (Now only 3 options)
+        // ====================================================================
+        float menuStartY = centerY + 80;
+        float menuSpacing = 70.0f;
+        float textOffsetX = centerX - 150;
 
-        float pauseColorR = ConfigReader::GetFloat("pause_text_color_r", 1.0f);
-        float pauseColorG = ConfigReader::GetFloat("pause_text_color_g", 1.0f);
-        float pauseColorB = ConfigReader::GetFloat("pause_text_color_b", 1.0f);
-
-        float hintColorR = ConfigReader::GetFloat("pause_hint_color_r", 0.8f);
-        float hintColorG = ConfigReader::GetFloat("pause_hint_color_g", 0.8f);
-        float hintColorB = ConfigReader::GetFloat("pause_hint_color_b", 0.8f);
-
-        // Select appropriate hint text
-        const char* resumeHint = "";
-        if (pauseReason == PauseReason::Manual) {
-            resumeHint = resumeHintManual.c_str();
-        }
-        else if (pauseReason == PauseReason::WindowFocus) {
-            resumeHint = resumeHintFocus.c_str();
-        }
-
-        // Draw pause overlay
-        graphics->DrawText4(fontName, pauseText, centerX, centerY, pauseTextScale,
-            glm::vec3(pauseColorR, pauseColorG, pauseColorB));
-
-        if (resumeHint[0] != '\0') {
-            graphics->DrawText4(fontName, resumeHint, centerX - hintOffsetX, centerY - hintOffsetY,
-                hintTextScale, glm::vec3(hintColorR, hintColorG, hintColorB));
-        }
-    }
-
-    void PauseSystem::SendEngineMessage(Message* message)
-    {
-        if (message->MessageId == Status::Quit) {
-            if (isPaused) {
-                Resume();
-            }
-        }
-    }
-
-    void PauseSystem::Pause(PauseReason reason)
-    {
-        if (isPaused) {
-            return;
-        }
-
-        isPaused = true;
-        pauseReason = reason;
-
-        LogPauseState(true, reason);
-        PauseAllSystems();
-    }
-
-    void PauseSystem::Resume()
-    {
-        if (!isPaused) {
-            return;
-        }
-
-        // Cannot manually resume from window focus pause
-        if (pauseReason == PauseReason::WindowFocus ||
-            pauseReason == PauseReason::TaskManager) {
-            return;
-        }
-
-        isPaused = false;
-        pauseReason = PauseReason::None;
-
-        LogPauseState(false, PauseReason::None);
-        ResumeAllSystems();
-    }
-
-    void PauseSystem::WindowFocusCallback(GLFWwindow* window, int focused)
-    {
-        PauseSystem* pauseSystem = static_cast<PauseSystem*>(
-            glfwGetWindowUserPointer(window));
-
-        if (!pauseSystem) {
-            return;
-        }
-
-        // ===============================================================================
-        // Only auto-pause on focus loss if in gameplay
-        // ===============================================================================
-        if (!pauseSystem->IsPauseAllowedInCurrentState()) {
-            return;  // Don't auto-pause in menus
-        }
-
-        double currentTime = glfwGetTime();
-
-        if (focused) {
-            pauseSystem->windowHasFocus = true;
-            pauseSystem->focusGainedTime = currentTime;
-
-            // Resume if paused due to focus loss
-            if (pauseSystem->isPaused &&
-                (pauseSystem->pauseReason == PauseReason::WindowFocus ||
-                    pauseSystem->pauseReason == PauseReason::TaskManager))
-            {
-                pauseSystem->isPaused = false;
-                pauseSystem->pauseReason = PauseReason::None;
-                pauseSystem->ResumeAllSystems();
-            }
+        // Option 0: Resume
+        if (state.selectedOption == 0) {
+            graphics->DrawText4("Sans48", "> 1. Resume <",
+                textOffsetX, menuStartY, 1.3f,
+                glm::vec3(1.0f, 1.0f, 0.3f));
         }
         else {
-            pauseSystem->windowHasFocus = false;
-            pauseSystem->focusLostTime = currentTime;
-
-            // Pause if not already paused
-            if (!pauseSystem->isPaused) {
-                pauseSystem->isPaused = true;
-                pauseSystem->pauseReason = PauseReason::WindowFocus;
-                pauseSystem->PauseAllSystems();
-            }
-        }
-    }
-
-    void PauseSystem::WindowIconifyCallback(GLFWwindow* window, int iconified)
-    {
-        PauseSystem* pauseSystem = static_cast<PauseSystem*>(
-            glfwGetWindowUserPointer(window));
-
-        if (!pauseSystem) {
-            return;
+            graphics->DrawText4("Sans48", "  1. Resume",
+                textOffsetX, menuStartY, 1.2f,
+                glm::vec3(0.7f, 0.7f, 0.7f));
         }
 
-        // ===============================================================================
-        // Only auto-pause on minimize if in gameplay
-        // ===============================================================================
-        if (!pauseSystem->IsPauseAllowedInCurrentState()) {
-            return;  // Don't auto-pause in menus
-        }
-
-        if (iconified) {
-            pauseSystem->windowIsMinimized = true;
-
-            if (!pauseSystem->isPaused) {
-                pauseSystem->isPaused = true;
-                pauseSystem->pauseReason = PauseReason::WindowFocus;
-                pauseSystem->PauseAllSystems();
-            }
+        // Option 1: Main Menu
+        if (state.selectedOption == 1) {
+            graphics->DrawText4("Sans48", "> 2. Main Menu <",
+                textOffsetX, menuStartY - menuSpacing, 1.3f,
+                glm::vec3(1.0f, 1.0f, 0.3f));
         }
         else {
-            pauseSystem->windowIsMinimized = false;
-
-            if (pauseSystem->isPaused &&
-                pauseSystem->pauseReason == PauseReason::WindowFocus)
-            {
-                pauseSystem->isPaused = false;
-                pauseSystem->pauseReason = PauseReason::None;
-                pauseSystem->ResumeAllSystems();
-            }
-        }
-    }
-
-    void PauseSystem::PauseAllSystems()
-    {
-        if (!coreEngine) {
-            return;
+            graphics->DrawText4("Sans48", "  2. Main Menu",
+                textOffsetX, menuStartY - menuSpacing, 1.2f,
+                glm::vec3(0.7f, 0.7f, 0.7f));
         }
 
-        PauseAudio();
-    }
-
-    void PauseSystem::ResumeAllSystems()
-    {
-        if (!coreEngine) {
-            return;
-        }
-
-        ResumeAudio();
-    }
-
-    void PauseSystem::PauseAudio()
-    {
-        auto* audioSystem = coreEngine->GetAudioSystem();
-        if (!audioSystem) {
-            return;
-        }
-
-        savedMasterVolume = 1.0f;
-        audioSystem->SetMasterVolume(0.0f);
-        audioWasPlaying = true;
-    }
-
-    void PauseSystem::ResumeAudio()
-    {
-        auto* audioSystem = coreEngine->GetAudioSystem();
-        if (!audioSystem) {
-            return;
-        }
-
-        if (audioWasPlaying) {
-            audioSystem->SetMasterVolume(savedMasterVolume);
-            audioWasPlaying = false;
-        }
-    }
-
-    void PauseSystem::LogPauseState(bool pausing, PauseReason reason)
-    {
-        if (pausing) {
-            const char* reasonStr = "Unknown";
-            switch (reason) {
-            case PauseReason::None: reasonStr = "None"; break;
-            case PauseReason::WindowFocus: reasonStr = "Window Focus Loss"; break;
-            case PauseReason::Manual: reasonStr = "Manual"; break;
-            case PauseReason::TaskManager: reasonStr = "Task Manager"; break;
-            }
-
-            LOG_INFO("PAUSE", "Game paused - Reason: %s", reasonStr);
+        // Option 2: Exit
+        if (state.selectedOption == 2) {
+            graphics->DrawText4("Sans48", "> 3. Exit Game <",
+                textOffsetX, menuStartY - menuSpacing * 2, 1.3f,
+                glm::vec3(1.0f, 1.0f, 0.3f));
         }
         else {
-            LOG_INFO("PAUSE", "Game resumed");
+            graphics->DrawText4("Sans48", "  3. Exit Game",
+                textOffsetX, menuStartY - menuSpacing * 2, 1.2f,
+                glm::vec3(0.7f, 0.7f, 0.7f));
         }
+
+        // ====================================================================
+        // CONTROLS HINT
+        // ====================================================================
+        graphics->DrawText4("Sans48", "Press P to Resume | W/S or Arrow Keys to Navigate",
+            centerX - 420, centerY - 250, 0.75f,
+            glm::vec3(0.5f, 0.5f, 0.5f));
+
+        graphics->DrawText4("Sans48", "Enter/Space to Select | 1-3 for Quick Select",
+            centerX - 360, centerY - 300, 0.75f,
+            glm::vec3(0.5f, 0.5f, 0.5f));
     }
 
-} // namespace Framework
+} // namespace PauseMenuSimple
