@@ -622,7 +622,8 @@ namespace Framework {
         ImGui::End();  // Only one End() call at the very end
     }
 
-    Framework::Vector2D EditorScreenWorld(float screenX, float screenY) {
+    // jiahao
+    Framework::Vector2D ImGuiSystem::EditorScreenWorld() {
         if (!Framework::CORE) {
             return Framework::Vector2D{ 0.0f, 0.0f };
         }
@@ -639,24 +640,46 @@ namespace Framework {
             return Framework::Vector2D(0.0f, 0.0f);
         }
 
-        int fbWidth, fbHeight;
-        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+        // 1. Get Global Mouse Position
+        ImVec2 mousePos = ImGui::GetMousePos();
+        float mouseX = mousePos.x;
+        float mouseY = mousePos.y;
 
-        int windowWidth, windowHeight;
-        glfwGetWindowSize(window, &windowWidth, &windowHeight);
+        // 2. Determine Screen Dimensions for NDC Calculation
+        float screenX = 0.0f;
+        float screenY = 0.0f;
+        float screenW = 0.0f;
+        float screenH = 0.0f;
 
-        if (fbWidth == 0 || fbHeight == 0 || windowWidth == 0 || windowHeight == 0) {
-            return Framework::Vector2D(0.0f, 0.0f);
+        // Check if we are rendering to the ImGui Viewport
+        if (IsRenderingToViewport()) {
+            // --- VIEWPORT MODE ---
+            screenX = m_viewportPos.x;
+            screenY = m_viewportPos.y;
+            screenW = m_viewportSize.x;
+            screenH = m_viewportSize.y;
+        }
+        else {
+            // --- FULLSCREEN MODE (Fallback) ---
+            int w, h;
+            glfwGetWindowSize(window, &w, &h);
+            screenW = (float)w;
+            screenH = (float)h;
         }
 
-        float fbX = screenX * static_cast<float>(fbWidth) / static_cast<float>(windowWidth);
-        float fbY = screenY * static_cast<float>(fbHeight) / static_cast<float>(windowHeight);
+        // 3. Convert to Normalized Device Coordinates (NDC) [-1 to 1]
+        float localX = mouseX - screenX;
+        float localY = mouseY - screenY;
 
-        float ndcX = (2.0f * fbX / static_cast<float>(fbWidth)) - 1.0f;
-        float ndcY = 1.0f - (2.0f * fbY / static_cast<float>(fbHeight));
+        float ndcX = (2.0f * localX / screenW) - 1.0f;
 
-        glm::mat4 invViewProj = glm::inverse(graphics->GetEditorCamera().GetViewProjectionMatrix());
+        // FLIP Y: ImGui (0=Top) vs OpenGL (0=Bottom)
+        float ndcY = 1.0f - (2.0f * localY / screenH);
 
+        // 4. Unproject using the Active Camera
+        Camera& camera = CORE->IsPlaying() ? graphics->GetCamera() : graphics->GetEditorCamera();
+
+        glm::mat4 invViewProj = glm::inverse(camera.GetViewProjectionMatrix());
         glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
 
         return Vector2D(worldPos.x, worldPos.y);
@@ -1979,105 +2002,65 @@ namespace Framework {
 
     //game object picking in editor - jiahao
     void ImGuiSystem::UpdatePicking() {
-        if (!CORE) {
-            return;
-        }
-
-        if (CORE->IsPlaying()) {
-            return;
-        }
-
-        if (!entityManager) {
-            return;
-        }
+        if (!CORE) return;
+        if (CORE->IsPlaying()) return;
+        if (!entityManager) return;
 
         ImGuiIO& io = ImGui::GetIO();
 
-        if (io.WantCaptureMouse) {
+        // --- NEW LOGIC: Only block picking if not hovering the viewport ---
+        // We REMOVED "if (io.WantCaptureMouse) return;" because it breaks the viewport
+        if (IsRenderingToViewport() && !m_isViewportHovered) {
             return;
         }
 
         InputSystem* input = Framework::CORE->GetInputSystem();
-
         UISystem* ui = CORE->GetUISystem();
 
-        if (!input || !ui) {
-            return;
-        }
+        if (!input || !ui) return;
 
-        if (!input->IsKeyPressed(MOUSE_LEFT)) {
-            return;
-        }
+        if (!input->IsKeyPressed(MOUSE_LEFT)) return;
 
-        float mouseX = 0.0f;
-        float mouseY = 0.0f;
-
-        input->GetMousePosition(mouseX, mouseY);
-
-        Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
+        // --- NEW: Use the updated coordinate helper ---
+        Vector2D mouseWorld = EditorScreenWorld();
 
         Entity picked = INVALID_ENTITY;
 
         for (Entity e : entityManager->GetAllEntities()) {
-            if (!entityManager->HasComponent<Transform>(e)) {
-                continue;
-            }
+            if (!entityManager->HasComponent<Transform>(e)) continue;
 
             auto& transform = entityManager->GetComponent<Transform>(e);
 
-            if (entityManager->HasComponent<GridTiles>(e)) {
-                continue;
-            }
+            if (entityManager->HasComponent<GridTiles>(e)) continue;
 
             Collider collider;
             bool hasCollider = false;
 
             if (entityManager->HasComponent<CircleCollider>(e)) {
                 auto& cc = entityManager->GetComponent<CircleCollider>(e);
-
                 float scaleX = transform.scale.x;
                 float scaleY = transform.scale.y;
-
                 float scaleFactor = scaleX > scaleY ? scaleX : scaleY;
-
-                if (scaleFactor < 0.01f) {
-                    scaleFactor = 0.01f;
-                }
+                if (scaleFactor < 0.01f) scaleFactor = 0.01f;
 
                 float worldRadius = cc.radius * scaleFactor;
-
-                collider = Collider::create_circle(
-                    worldRadius,
-                    transform.position + cc.offset
-                );
-
+                collider = Collider::create_circle(worldRadius, transform.position + cc.offset);
                 hasCollider = true;
             }
-
             else if (entityManager->HasComponent<BoxCollider>(e)) {
                 auto& bc = entityManager->GetComponent<BoxCollider>(e);
-
                 float scaleX = transform.scale.x;
                 float scaleY = transform.scale.y;
-
                 if (scaleX < 0.01f) scaleX = 0.01f;
                 if (scaleY < 0.01f) scaleY = 0.01f;
 
                 float worldWidth = bc.size.x * scaleX;
                 float worldHeight = bc.size.y * scaleY;
-
-                collider = Collider::create_rect(
-                    worldWidth,
-                    worldHeight,
-                    transform.position
-                );
-
+                collider = Collider::create_rect(worldWidth, worldHeight, transform.position);
                 hasCollider = true;
             }
 
-            if (!hasCollider) {
-                continue;
-            }
+            if (!hasCollider) continue;
 
             if (point_in_collider(mouseWorld, collider)) {
                 picked = e;
@@ -2088,46 +2071,36 @@ namespace Framework {
         selectedEntity = picked;
 
         if (selectedEntity.GetID() != INVALID_ENTITY) {
-            std::cout << "[ImGui Picking] Selected entity ID: "
-                << selectedEntity.GetID() << "\n";
+            std::cout << "[ImGui Picking] Selected entity ID: " << selectedEntity.GetID() << "\n";
         }
-        else
-        {
+        else {
             std::cout << "[ImGui Picking] Clicked empty space\n";
         }
     }
 
     //
     void ImGuiSystem::UpdateEntityDragging() {
-        if (!CORE) {
-            return;
-        }
-
-        if (CORE->IsPlaying()) {
-            return;
-        }
-
-        if (!entityManager) {
-            return;
-        }
+        if (!CORE) return;
+        if (CORE->IsPlaying()) return;
+        if (!entityManager) return;
 
         ImGuiIO& io = ImGui::GetIO();
 
-        if (io.WantCaptureMouse) {
-            return;
+        // --- NEW LOGIC: Allow dragging if we are hovering OR already dragging ---
+        if (!isDraggingEntity && !isScalingEntity && !isRotatingEntity) {
+            // If we aren't doing anything yet, we must be hovering the viewport to start
+            if (IsRenderingToViewport() && !m_isViewportHovered) {
+                return;
+            }
         }
 
         InputSystem* input = Framework::CORE->GetInputSystem();
         UISystem* ui = CORE->GetUISystem();
 
-        if (!input || !ui) {
-            return;
-        }
+        if (!input || !ui) return;
 
-        float mouseX = 0.0f;
-        float mouseY = 0.0f;
-        input->GetMousePosition(mouseX, mouseY);
-        Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
+        // --- NEW: Calculate mouse world position once for the whole function ---
+        Vector2D mouseWorld = EditorScreenWorld();
 
         if (input->IsKeyPressed(MOUSE_LEFT) || input->IsKeyPressed(MOUSE_RIGHT)) {
             if (!selectedEntity.IsValid() ||
@@ -2146,8 +2119,9 @@ namespace Framework {
                 isScalingEntity = true;
                 isDraggingEntity = false;
                 isRotatingEntity = false;
-
                 draggingEntity = selectedEntity;
+
+                // Use new mouseWorld
                 scaleStartMouse = mouseWorld;
                 scaleStartScale = transform.scale;
             }
@@ -2155,23 +2129,23 @@ namespace Framework {
                 isRotatingEntity = true;
                 isDraggingEntity = false;
                 isScalingEntity = false;
-
                 draggingEntity = selectedEntity;
 
                 Vector2D toMouse = transform.position;
                 rotateStartAngle = std::atan2(toMouse.y, toMouse.x);
                 rotateStartRotation = transform.rotation;
             }
-
             else if (input->IsKeyPressed(MOUSE_LEFT)) {
                 isDraggingEntity = true;
                 isScalingEntity = false;
                 isRotatingEntity = false;
-
                 draggingEntity = selectedEntity;
+
+                // Use new mouseWorld
                 dragOffset = transform.position - mouseWorld;
             }
         }
+
         if (isDraggingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             if (!draggingEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(draggingEntity))
@@ -2179,15 +2153,11 @@ namespace Framework {
                 isDraggingEntity = false;
                 return;
             }
-            float moveX = 0.0f;
-            float moveY = 0.0f;
-            input->GetMousePosition(moveX, moveY);
-            Vector2D moveWorld = ui->ScreenToWorld(moveX, moveY);
 
-            auto& transform =
-                entityManager->GetComponent<Framework::Transform>(draggingEntity);
+            auto& transform = entityManager->GetComponent<Framework::Transform>(draggingEntity);
 
-            transform.position = moveWorld + dragOffset;
+            // Update position using the mouseWorld we calculated earlier
+            transform.position = mouseWorld + dragOffset;
         }
 
         if (isScalingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -2198,59 +2168,29 @@ namespace Framework {
                 return;
             }
 
-            float scaleX = 0.0f;
-            float scaleY = 0.0f;
+            auto& transform = entityManager->GetComponent<Framework::Transform>(draggingEntity);
 
-            input->GetMousePosition(scaleX, scaleY);
-            Vector2D scaleMouseWorld = ui->ScreenToWorld(scaleX, scaleY);
-
-            auto& transform =
-                entityManager->GetComponent<Framework::Transform>(draggingEntity);
-
-            Vector2D delta = scaleMouseWorld - scaleStartMouse;
+            // Use mouseWorld for delta calculation
+            Vector2D delta = mouseWorld - scaleStartMouse;
 
             float factor = 1.0f + delta.x * 0.5f;
-            if (factor < 0.1f) {
-                factor = 0.1f;
-            }
-            if (factor > 5.0f) {
-                factor = 5.0f;
-            }
+            if (factor < 0.1f) factor = 0.1f;
+            if (factor > 5.0f) factor = 5.0f;
 
             transform.scale.x = scaleStartScale.x * factor;
             transform.scale.y = scaleStartScale.y * factor;
         }
+
         if (isRotatingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Right))
         {
-            /*if (!draggingEntity.IsValid() ||
-                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) {
-
-                isRotatingEntity = false;
-                return;
-            }
-
-            float rotX = 0.0f;
-            float rotY = 0.0f;
-            input->GetMousePosition(rotX, rotY);
-            Vector2D rotMouseWorld = ui->ScreenToWorld(rotX, rotY);
-
-            auto& transform =
-                entityManager->GetComponent<Framework::Transform>(draggingEntity);
-
-            Vector2D toMouse = rotMouseWorld - transform.position;
-            float currentAngle = std::atan2(toMouse.y, toMouse.x);
-
-            float deltaAngle = currentAngle - rotateStartAngle;
-            transform.rotation = rotateStartRotation + deltaAngle;*/
             if (!selectedEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
                 isRotatingEntity = false;
             }
             else {
                 auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
-
+                // Simple constant rotation
                 const float rotationSpeed = 0.2f;
-
                 transform.rotation += rotationSpeed;
             }
         }
@@ -2264,9 +2204,7 @@ namespace Framework {
         }
 
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-
             isRotatingEntity = false;
-
         }
     }
     //undo - jiahao
@@ -2868,6 +2806,11 @@ namespace Framework {
 
         // No size constraints - let docking system control size
         if (ImGui::Begin("Game##GameViewport", &showGameViewport)) {
+
+            // --- NEW: Track Focus/Hover State ---
+            m_isViewportFocused = ImGui::IsWindowFocused();
+            m_isViewportHovered = ImGui::IsWindowHovered();
+
             ImVec2 size = ImGui::GetContentRegionAvail();
 
             // Only resize if size is reasonable
@@ -2886,6 +2829,10 @@ namespace Framework {
                     ImVec2(0, 1),
                     ImVec2(1, 0)
                 );
+
+                // --- NEW: Capture Position/Size AFTER drawing the image ---
+                m_viewportPos = ImGui::GetItemRectMin();  // Screen coordinates of top-left
+                m_viewportSize = ImGui::GetItemRectSize(); // Size in pixels
             }
             else {
                 ImGui::Text("Viewport too small: %.0fx%.0f", size.x, size.y);
