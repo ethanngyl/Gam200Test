@@ -43,6 +43,7 @@ namespace Framework {
         };
 
         static std::string CleanString(std::string s);
+
     };
 
 }

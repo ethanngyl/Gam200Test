@@ -318,7 +318,13 @@ namespace Framework {
 
             mr.layer = RenderLayers::Player;  // Player renders on top
 
-            /*entityManager->AddComponent<Movement>(player);
+            /*if(entityManager->HasComponent<Transform>(player))
+            {
+                auto& transform = entityManager->GetComponent<Transform>(player);
+                transform.position = position;
+                transform.scale = Vector2D(0.1f, 0.1f);
+			}*/
+           /* entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
             movement.moveSpeed = 0.2f;*/
 
