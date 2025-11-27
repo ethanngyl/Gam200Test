@@ -37,14 +37,17 @@ namespace Framework
         {
             id = freeEntityIDs.back();
             freeEntityIDs.pop_back();
+            LOG_INFO("EntityManager", "Created entity ID %u (recycled from free list, %zu free IDs remaining)", id, freeEntityIDs.size());
         }
         else
         {
             id = nextEntityID++;
+            LOG_INFO("EntityManager", "Created entity ID %u (new, next ID will be %u)", id, nextEntityID);
         }
 
         Entity entity(id);
         allEntities.push_back(entity);
+        LOG_INFO("EntityManager", "  Total entities now: %zu", allEntities.size());
         return entity;
     }
 
@@ -92,9 +95,27 @@ namespace Framework
      */
     void EntityManager::ClearAllEntities()
     {
+        size_t entityCount = allEntities.size();
+        size_t componentTypeCount = components.size();
+        size_t freeIDCount = freeEntityIDs.size();
+
+        LOG_INFO("EntityManager", "===== CLEARING ALL ENTITIES =====");
+        LOG_INFO("EntityManager", "Before clear:");
+        LOG_INFO("EntityManager", "  - Entities: %zu", entityCount);
+        LOG_INFO("EntityManager", "  - Component types: %zu", componentTypeCount);
+        LOG_INFO("EntityManager", "  - Free IDs: %zu", freeIDCount);
+        LOG_INFO("EntityManager", "  - Next entity ID: %u", nextEntityID);
+
         components.clear();
         allEntities.clear();
         freeEntityIDs.clear();
         nextEntityID = 1;
+
+        LOG_INFO("EntityManager", "After clear:");
+        LOG_INFO("EntityManager", "  - Entities: %zu", allEntities.size());
+        LOG_INFO("EntityManager", "  - Component types: %zu", components.size());
+        LOG_INFO("EntityManager", "  - Free IDs: %zu", freeEntityIDs.size());
+        LOG_INFO("EntityManager", "  - Next entity ID: %u", nextEntityID);
+        LOG_INFO("EntityManager", "===== CLEAR COMPLETE =====");
 	}
 }
