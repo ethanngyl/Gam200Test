@@ -1,14 +1,17 @@
 ﻿/*
 ===============================================================================
- File:          Pause.h (With Game State Check)
- Author:        Padilla Carl Jameson Z
+ File:          Pause.cpp (Fixed Version - Config-Driven Layout)
+ Author:        Padilla Carl Jameson Z + Claude Assistant
  Email:         c.padilla@digipen.edu
- Date:          2025-11-20
- Contribution:
+ Date:          2025-11-27
+ Contribution:  Original: Carl | Fix: Claude
  ------------------------------------------------------------------------------
-  Simple Text-Based Pause Menu Implementation
+  Text-Based Pause Menu with Framebuffer-Aware Positioning
 
-
+  Changes:
+  - Uses glfwGetFramebufferSize() instead of window size (fixes DPI scaling)
+  - All layout values read from valueloader.txt (easy adjustment)
+  - Consistent with Level1 UI style
 ===============================================================================
 */
 
@@ -16,6 +19,7 @@
 #include "Core.h"
 #include "GraphicsSystemV2.h"
 #include "WindowSystem.h"
+#include "ConfigReader.h"  // Make sure this is included!
 
 namespace PauseMenuSimple
 {
@@ -38,7 +42,7 @@ namespace PauseMenuSimple
         bool isEnterPressed = input->IsKeyDown(Framework::KEY_ENTER) ||
             input->IsKeyDown(Framework::KEY_SPACE);
 
-        // Edge detection (now only 3 options: 0=Resume, 1=MainMenu, 2=Exit)
+        // Edge detection (3 options: 0=Resume, 1=MainMenu, 2=Exit)
         if (isUpPressed && !state.wasUpPressed) {
             state.selectedOption--;
             if (state.selectedOption < 0) state.selectedOption = 2;
@@ -100,72 +104,124 @@ namespace PauseMenuSimple
 
         if (!graphics || !windowSystem) return;
 
-        int windowWidth = windowSystem->GetWidth();
-        int windowHeight = windowSystem->GetHeight();
+        // ====================================================================
+        // FIX: Use framebuffer size instead of window size
+        // This correctly handles high-DPI displays (e.g., Retina, 4K)
+        // ====================================================================
+        int fbWidth, fbHeight;
+        glfwGetFramebufferSize(windowSystem->GetWindow(), &fbWidth, &fbHeight);
 
-        float centerX = windowWidth * 0.5f;
-        float centerY = windowHeight * 0.5f;
+        // Load layout configuration from valueloader.txt
+        float centerRatioX = ConfigReader::GetFloat("pause_menu_center_x_ratio", 0.5f);
+        float centerRatioY = ConfigReader::GetFloat("pause_menu_center_y_ratio", 0.5f);
+
+        float centerX = fbWidth * centerRatioX;
+        float centerY = fbHeight * centerRatioY;
 
         // ====================================================================
-        // TITLE
+        // TITLE CONFIGURATION
         // ====================================================================
-        graphics->DrawText4("Sans48", "PAUSED",
-            centerX, centerY+400, 2.5f,
-            glm::vec3(1.0f, 1.0f, 0.3f));
+        std::string titleText = ConfigReader::GetString("pause_menu_title_text", "PAUSED");
+        float titleOffsetX = ConfigReader::GetFloat("pause_menu_title_offset_x", -120.0f);
+        float titleOffsetY = ConfigReader::GetFloat("pause_menu_title_offset_y", 200.0f);
+        float titleScale = ConfigReader::GetFloat("pause_menu_title_scale", 2.5f);
 
-        // ====================================================================
-        // MENU OPTIONS (Now only 3 options)
-        // ====================================================================
-        float menuStartY = centerY + 160;
-        float menuSpacing = 70.0f;
-        float textOffsetX = centerX+80;
-
-        // Option 0: Resume
-        if (state.selectedOption == 0) {
-            graphics->DrawText4("Sans48", "> Resume <",
-                textOffsetX, menuStartY, 1.3f,
-                glm::vec3(1.0f, 1.0f, 0.3f));
-        }
-        else {
-            graphics->DrawText4("Sans48", "  Resume",
-                textOffsetX, menuStartY, 1.2f,
-                glm::vec3(0.7f, 0.7f, 0.7f));
-        }
-
-        // Option 1: Main Menu
-        if (state.selectedOption == 1) {
-            graphics->DrawText4("Sans48", "> Main Menu <",
-                textOffsetX, menuStartY - menuSpacing, 1.3f,
-                glm::vec3(1.0f, 1.0f, 0.3f));
-        }
-        else {
-            graphics->DrawText4("Sans48", "  Main Menu",
-                textOffsetX, menuStartY - menuSpacing, 1.2f,
-                glm::vec3(0.7f, 0.7f, 0.7f));
-        }
-
-        // Option 2: Exit
-        if (state.selectedOption == 2) {
-            graphics->DrawText4("Sans48", "> Exit Game <",
-                textOffsetX, menuStartY - menuSpacing * 2, 1.3f,
-                glm::vec3(1.0f, 1.0f, 0.3f));
-        }
-        else {
-            graphics->DrawText4("Sans48", "  Exit Game",
-                textOffsetX, menuStartY - menuSpacing * 2, 1.2f,
-                glm::vec3(0.7f, 0.7f, 0.7f));
-        }
+        float titleR = ConfigReader::GetFloat("pause_menu_title_color_r", 1.0f);
+        float titleG = ConfigReader::GetFloat("pause_menu_title_color_g", 1.0f);
+        float titleB = ConfigReader::GetFloat("pause_menu_title_color_b", 0.3f);
+        glm::vec3 titleColor(titleR, titleG, titleB);
 
         // ====================================================================
-        // CONTROLS HINT
+        // MENU OPTIONS CONFIGURATION
         // ====================================================================
-        graphics->DrawText4("Sans48", "W/S or Arrow Keys to Navigate",
-            centerX, centerY - 250, 0.75f,
-            glm::vec3(1.0f, 1.0f, 0.3f));
+        float menuStartYOffset = ConfigReader::GetFloat("pause_menu_start_y_offset", 80.0f);
+        float menuSpacing = ConfigReader::GetFloat("pause_menu_spacing", 70.0f);
+        float textOffsetX = ConfigReader::GetFloat("pause_menu_text_offset_x", -100.0f);
+        float normalScale = ConfigReader::GetFloat("pause_menu_normal_scale", 1.2f);
+        float selectedScale = ConfigReader::GetFloat("pause_menu_selected_scale", 1.3f);
 
-        graphics->DrawText4("Sans48", "Enter/Space to Select | 1-3 for Quick Select",
-            centerX-100, centerY - 300, 0.75f,
-            glm::vec3(1.0f, 1.0f, 0.3f));
+        // Colors
+        float selectedR = ConfigReader::GetFloat("pause_menu_selected_color_r", 1.0f);
+        float selectedG = ConfigReader::GetFloat("pause_menu_selected_color_g", 1.0f);
+        float selectedB = ConfigReader::GetFloat("pause_menu_selected_color_b", 0.3f);
+        glm::vec3 selectedColor(selectedR, selectedG, selectedB);
+
+        float normalR = ConfigReader::GetFloat("pause_menu_normal_color_r", 0.7f);
+        float normalG = ConfigReader::GetFloat("pause_menu_normal_color_g", 0.7f);
+        float normalB = ConfigReader::GetFloat("pause_menu_normal_color_b", 0.7f);
+        glm::vec3 normalColor(normalR, normalG, normalB);
+
+        // ====================================================================
+        // DRAW TITLE
+        // ====================================================================
+        graphics->DrawText4("Sans48", titleText,
+            centerX + titleOffsetX,
+            centerY + titleOffsetY,
+            titleScale,
+            titleColor);
+
+        // ====================================================================
+        // DRAW MENU OPTIONS
+        // ====================================================================
+        float menuStartY = centerY + menuStartYOffset;
+        float textBaseX = centerX + textOffsetX;
+
+        // Menu option texts
+        const char* options[] = { "Resume", "Main Menu", "Exit Game" };
+
+        for (int i = 0; i < 3; ++i) {
+            bool isSelected = (state.selectedOption == i);
+
+            // Add selection markers
+            std::string text = isSelected ?
+                ("> " + std::string(options[i]) + " <") :
+                ("  " + std::string(options[i]));
+
+            float scale = isSelected ? selectedScale : normalScale;
+            glm::vec3 color = isSelected ? selectedColor : normalColor;
+
+            graphics->DrawText4("Sans48", text,
+                textBaseX,
+                menuStartY - i * menuSpacing,
+                scale,
+                color);
+        }
+
+        // ====================================================================
+        // DRAW CONTROL HINTS
+        // ====================================================================
+        std::string hint1Text = ConfigReader::GetString("pause_menu_hint1_text",
+            "W/S or Arrow Keys to Navigate");
+        float hint1OffsetX = ConfigReader::GetFloat("pause_menu_hint1_offset_x", -280.0f);
+        float hint1OffsetY = ConfigReader::GetFloat("pause_menu_hint1_offset_y", -150.0f);
+
+        std::string hint2Text = ConfigReader::GetString("pause_menu_hint2_text",
+            "Enter/Space to Select | 1-3 for Quick Select");
+        float hint2OffsetX = ConfigReader::GetFloat("pause_menu_hint2_offset_x", -380.0f);
+        float hint2OffsetY = ConfigReader::GetFloat("pause_menu_hint2_offset_y", -200.0f);
+
+        float hintScale = ConfigReader::GetFloat("pause_menu_hint_scale", 0.75f);
+
+        graphics->DrawText4("Sans48", hint1Text,
+            centerX + hint1OffsetX,
+            centerY + hint1OffsetY,
+            hintScale,
+            titleColor);  // Use same color as title
+
+        graphics->DrawText4("Sans48", hint2Text,
+            centerX + hint2OffsetX,
+            centerY + hint2OffsetY,
+            hintScale,
+            titleColor);
+
+        // ====================================================================
+        // DEBUG INFO (comment out in production)
+        // ====================================================================
+#ifdef _DEBUG
+// Uncomment to debug positioning:
+// LOG_INFO("PAUSE", "FB: %dx%d, Center: (%.1f, %.1f)", 
+//          fbWidth, fbHeight, centerX, centerY);
+#endif
     }
 
 } // namespace PauseMenuSimple
