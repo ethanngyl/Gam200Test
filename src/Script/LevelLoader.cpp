@@ -312,6 +312,8 @@ namespace Framework {
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
         lua_register(L, "GetCameraPosition", Lua_GetCameraPosition);
+		lua_register(L, "GetPlayerAttackAP", Lua_GetPlayerAttackAP);
+		lua_register(L, "GetPlayerHP", Lua_GetPlayerHP);
 
         // Enemy AI Configuration
         lua_register(L, "FindPlayer", Lua_FindPlayer);

@@ -209,12 +209,13 @@ namespace Framework {
             // Deal damage to target
             if (entityManager->HasComponent<Health>(ai.targetEntity)) {
                 auto& targetHp = entityManager->GetComponent<Health>(ai.targetEntity);
-                targetHp.currentHealth -= 1;
+				targetHp.TakeDamage(1); // Flat 1 damage for now
                 LOG_INFO("Combat", "Target hit! HP: %d", targetHp.currentHealth);
 
                 if (targetHp.currentHealth <= 0) {                                              // NEW
                     targetHp.currentHealth = 0;                                                 // NEW
                     targetHp.isDead = true;                                                     // NEW
+                    next = mainMenu;
                     LOG_ERROR("Combat", "TARGET DEFEATED!");
                 }
             }

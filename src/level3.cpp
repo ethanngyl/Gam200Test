@@ -137,6 +137,7 @@ void level3_Initialize()
     //const int       gridRows = 20;
     const Vector2D  kStart = Vector2D(-0.6f, -0.4f);
     const Vector2D  kSpacing = Vector2D(0.1f, 0.1f);
+	const Vector2D  kTileSize = Vector2D(0.1f, 0.1f);
 
     // Spawn grid immediately
    // spawner->SpawnGrid("wireframequad", gridCols, gridRows, kStart, kSpacing);
@@ -146,7 +147,8 @@ void level3_Initialize()
         spawner,
         em,
         kStart,
-        kSpacing
+        kSpacing,
+        kTileSize
     );
 
     if (!loaded) {

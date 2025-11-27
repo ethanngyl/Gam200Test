@@ -24,7 +24,8 @@ namespace Framework {
         EntitySpawner* spawner,
         EntityManager* em,
         const Vector2D& startPos,
-        const Vector2D& spacing)
+        const Vector2D& spacing,
+        const Vector2D& tileSize)
     {
         std::ifstream file(filepath);
         if (!file.is_open()) {
@@ -113,6 +114,7 @@ namespace Framework {
         grid.startPos = startPos;
         grid.spacing = spacing;
         grid.em = em;
+		grid.tileSize = tileSize;
         grid.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
         LOG_INFO("LevelLoader", "Configured Grid %dx%d", cols, rows);
 
@@ -163,7 +165,7 @@ namespace Framework {
 
                 //  A. Spawn the Base Tile Entity
                 const TileDef& baseDef = baseTileFor(def);
-                Entity tileEntity = spawner->SpawnSprite(baseDef.texture, pos, Vector2D(spacing.x * 1.0f, spacing.y * 1.0f));
+                Entity tileEntity = spawner->SpawnSprite(baseDef.texture, pos, tileSize);
 
                 // Add GridTiles Component
                 em->AddComponent<GridTiles>(tileEntity);
