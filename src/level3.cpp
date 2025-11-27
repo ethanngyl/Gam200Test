@@ -281,9 +281,9 @@ void level3_Draw()
     auto* graphics = engine->GetGraphicsSystem();
     if (!graphics) return;
 
-    extern Framework::CoreEngine* engine;
-    if (engine && engine->GetPauseSystem()) {
-        engine->GetPauseSystem()->Draw();
+    //extern Framework::CoreEngine * engine;
+    if (GlobalPause::IsPaused) {
+        PauseMenuSimple::DrawPauseMenu(engine, g_pauseMenuState);
     }
 
 }
