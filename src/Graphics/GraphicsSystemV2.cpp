@@ -131,9 +131,9 @@ namespace Framework {
         editorCameraZoom = editorCamera.GetZoom();
 
         // Load fonts (keys must match what DrawText uses)
-        text_.loadFont("Sans48", "assets/Orbitron-VariableFont_wght.ttf", 48);
-        text_.loadFont("Serif32", "assets/Roboto-VariableFont_wdth,wght.ttf", 32);
-
+        text_.loadFont("Sans48", "assets/Font/Orbitron-VariableFont_wght.ttf", 48);
+        text_.loadFont("Serif32", "assets/Font/Roboto-VariableFont_wdth,wght.ttf", 32);
+        text_.loadFont("Serif32", "assets/Font/EBGaramond_Italic_VariableFont_wght.ttf", 48);
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
@@ -600,7 +600,7 @@ namespace Framework {
         std::cout << "GraphicsSystemV2: Setting up background...\n";
 
         // Load background texture
-        backgroundTexture = resourceManager.LoadTexture("assets/background.png");
+        backgroundTexture = resourceManager.LoadTexture("assets/Menu/Wood_Background.png");
 
         if (!backgroundTexture.IsValid()) {
             std::cerr << "WARNING: Failed to load background texture\n";
