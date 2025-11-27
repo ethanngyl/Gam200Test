@@ -110,48 +110,48 @@ namespace PauseMenuSimple
         // TITLE
         // ====================================================================
         graphics->DrawText4("Sans48", "PAUSED",
-            centerX - 120, centerY + 200, 2.5f,
-            glm::vec3(1.0f, 1.0f, 1.0f));
+            centerX, centerY+400, 2.5f,
+            glm::vec3(1.0f, 1.0f, 0.3f));
 
         // ====================================================================
         // MENU OPTIONS (Now only 3 options)
         // ====================================================================
-        float menuStartY = centerY + 80;
+        float menuStartY = centerY + 160;
         float menuSpacing = 70.0f;
-        float textOffsetX = centerX - 150;
+        float textOffsetX = centerX+80;
 
         // Option 0: Resume
         if (state.selectedOption == 0) {
-            graphics->DrawText4("Sans48", "> 1. Resume <",
+            graphics->DrawText4("Sans48", "> Resume <",
                 textOffsetX, menuStartY, 1.3f,
                 glm::vec3(1.0f, 1.0f, 0.3f));
         }
         else {
-            graphics->DrawText4("Sans48", "  1. Resume",
+            graphics->DrawText4("Sans48", "  Resume",
                 textOffsetX, menuStartY, 1.2f,
                 glm::vec3(0.7f, 0.7f, 0.7f));
         }
 
         // Option 1: Main Menu
         if (state.selectedOption == 1) {
-            graphics->DrawText4("Sans48", "> 2. Main Menu <",
+            graphics->DrawText4("Sans48", "> Main Menu <",
                 textOffsetX, menuStartY - menuSpacing, 1.3f,
                 glm::vec3(1.0f, 1.0f, 0.3f));
         }
         else {
-            graphics->DrawText4("Sans48", "  2. Main Menu",
+            graphics->DrawText4("Sans48", "  Main Menu",
                 textOffsetX, menuStartY - menuSpacing, 1.2f,
                 glm::vec3(0.7f, 0.7f, 0.7f));
         }
 
         // Option 2: Exit
         if (state.selectedOption == 2) {
-            graphics->DrawText4("Sans48", "> 3. Exit Game <",
+            graphics->DrawText4("Sans48", "> Exit Game <",
                 textOffsetX, menuStartY - menuSpacing * 2, 1.3f,
                 glm::vec3(1.0f, 1.0f, 0.3f));
         }
         else {
-            graphics->DrawText4("Sans48", "  3. Exit Game",
+            graphics->DrawText4("Sans48", "  Exit Game",
                 textOffsetX, menuStartY - menuSpacing * 2, 1.2f,
                 glm::vec3(0.7f, 0.7f, 0.7f));
         }
@@ -159,13 +159,13 @@ namespace PauseMenuSimple
         // ====================================================================
         // CONTROLS HINT
         // ====================================================================
-        graphics->DrawText4("Sans48", "Press P to Resume | W/S or Arrow Keys to Navigate",
-            centerX - 420, centerY - 250, 0.75f,
-            glm::vec3(0.5f, 0.5f, 0.5f));
+        graphics->DrawText4("Sans48", "W/S or Arrow Keys to Navigate",
+            centerX, centerY - 250, 0.75f,
+            glm::vec3(1.0f, 1.0f, 0.3f));
 
         graphics->DrawText4("Sans48", "Enter/Space to Select | 1-3 for Quick Select",
-            centerX - 360, centerY - 300, 0.75f,
-            glm::vec3(0.5f, 0.5f, 0.5f));
+            centerX-100, centerY - 300, 0.75f,
+            glm::vec3(1.0f, 1.0f, 0.3f));
     }
 
 } // namespace PauseMenuSimple
