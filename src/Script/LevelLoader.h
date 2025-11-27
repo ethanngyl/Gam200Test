@@ -77,6 +77,7 @@ namespace Framework {
         bool LoadLevel(const std::string& scriptPath);
         void UnloadCurrentLevel();
         void ReloadCurrentLevel();  // Hot reload
+        void ResetLuaState();       // Complete Lua state reset
 
         // Lifecycle calls (to be called from GSM or main loop)
         void UpdateCurrentLevel(float dt);
