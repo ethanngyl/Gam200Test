@@ -120,12 +120,16 @@ void GSM_Update()
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up MainMenu Lua script...");
 
-            // Clear all entities and components
             extern Framework::CoreEngine* engine;
+
+            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
+            Framework::LevelLoader::GetInstance().ResetLuaState();
+
+            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
             if (engine) {
                 if (auto* em = engine->GetEntityManager()) {
                     size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Clearing %zu MainMenu entities...", count);
+                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
                     em->ClearAllEntities();
                     LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
@@ -135,9 +139,6 @@ void GSM_Update()
                     gfx->ClearFollowTarget();
                 }
             }
-
-            // Complete Lua state reset for fresh reload
-            Framework::LevelLoader::GetInstance().ResetLuaState();
             };
 
         // ============================================================================
@@ -214,12 +215,16 @@ void GSM_Update()
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up LevelSelect Lua script...");
 
-            // Clear all entities and components
             extern Framework::CoreEngine* engine;
+
+            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
+            Framework::LevelLoader::GetInstance().ResetLuaState();
+
+            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
             if (engine) {
                 if (auto* em = engine->GetEntityManager()) {
                     size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Clearing %zu LevelSelect entities...", count);
+                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
                     em->ClearAllEntities();
                     LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
@@ -229,9 +234,6 @@ void GSM_Update()
                     gfx->ClearFollowTarget();
                 }
             }
-
-            // Complete Lua state reset for fresh reload
-            Framework::LevelLoader::GetInstance().ResetLuaState();
             };
 
         // ============================================================================
@@ -433,8 +435,12 @@ void GSM_Update()
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up Level3...");
 
-            // C++ cleanup (entities, systems, camera)
             extern Framework::CoreEngine* engine;
+
+            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
+            Framework::LevelLoader::GetInstance().ResetLuaState();
+
+            // STEP 2: C++ cleanup and final entity clear
             if (engine) {
                 // Reset player controller
                 if (auto* pcs = engine->GetPlayerController()) {
@@ -447,17 +453,14 @@ void GSM_Update()
                     gfx->ClearFollowTarget();
                 }
 
-                // Clear all entities and components
+                // Clear all entities AFTER Lua cleanup (final cleanup)
                 if (auto* em = engine->GetEntityManager()) {
                     size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Clearing %zu Level3 entities...", count);
+                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
                     em->ClearAllEntities();
                     LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
             }
-
-            // Complete Lua state reset for fresh reload
-            Framework::LevelLoader::GetInstance().ResetLuaState();
             };
 
         // ============================================================================
