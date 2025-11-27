@@ -105,6 +105,21 @@ namespace Framework {
         }
     }
 
+    void LevelLoader::ResetLuaState() {
+        LOG_INFO("LevelLoader", "Resetting Lua state for complete reload...");
+
+        // Unload current level if loaded
+        if (levelLoaded) {
+            UnloadCurrentLevel();
+        }
+
+        // Destroy and recreate Lua state
+        DestroyLuaState();
+        CreateLuaState();
+
+        LOG_INFO("LevelLoader", "Lua state reset complete - fresh VM ready");
+    }
+
     // ========================================================================
     // LEVEL MANAGEMENT
     // ========================================================================
