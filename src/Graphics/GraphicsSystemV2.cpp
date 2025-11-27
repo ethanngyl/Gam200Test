@@ -212,34 +212,34 @@ namespace Framework {
 
         //Panning with arrow keys
 		//Basically move the camera position based on arrow key input
-        if (GetAsyncKeyState(Framework::KEY_LEFT)) {
+        if (inputManager->IsKeyDown(Framework::KEY_LEFT)) {
             editorCamera.Translate({ -panSpeed, 0.0f, 0.0f });
         }
-        if (GetAsyncKeyState(Framework::KEY_RIGHT)) {
+        if (inputManager->IsKeyDown(Framework::KEY_RIGHT)) {
             editorCamera.Translate({ panSpeed, 0.0f, 0.0f });
         }
-        if (GetAsyncKeyState(Framework::KEY_UP)) {
+        if (inputManager->IsKeyDown(Framework::KEY_UP)) {
             editorCamera.Translate({ 0.0f, panSpeed, 0.0f });
         }
-        if (GetAsyncKeyState(Framework::KEY_DOWN)) {
+        if (inputManager->IsKeyDown(Framework::KEY_DOWN)) {
             editorCamera.Translate({ 0.0f, -panSpeed, 0.0f });
         }
 
         //Zooming 
 		// key 1 to zoom in, key 2 to zoom out
-        if (GetAsyncKeyState(Framework::KEY_1)) {
+        if (inputManager->IsKeyDown(Framework::KEY_1)) {
             float zoom = editorCamera.GetZoom();
             editorCamera.SetZoom(zoom * (1.0f + zoomSpeed));
         }
 
-        if (GetAsyncKeyState(Framework::KEY_2)) {
+        if (inputManager->IsKeyDown(Framework::KEY_2)) {
             float zoom = editorCamera.GetZoom();
             editorCamera.SetZoom(zoom * (1.0f - zoomSpeed));
         }
 
         //Reset camera position 
 		// key 0 to reset camera, and call function ResetEditorCamera
-        if (GetAsyncKeyState(Framework::KEY_0)) {
+        if (inputManager->IsKeyDown(Framework::KEY_0)) {
             ResetEditorCamera();
         }
     }

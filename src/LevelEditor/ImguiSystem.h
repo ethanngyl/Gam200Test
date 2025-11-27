@@ -109,8 +109,8 @@ namespace Framework {
         //undo function - jiahao
         void PerformUndo();
         void RecordUndoStep(Entity entity);
-
-
+        //jiahao
+        Framework::Vector2D EditorScreenWorld();
 
         bool IsAudioFile(const std::filesystem::path& path) const;
         bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
@@ -226,6 +226,11 @@ namespace Framework {
         void DeleteViewportFramebuffer();
         void ShowGameViewport();
 
+        // jiahao
+        ImVec2 m_viewportPos = { 0.0f, 0.0f };   // Position of the game image on screen
+        ImVec2 m_viewportSize = { 0.0f, 0.0f };  // Size of the game image
+        bool m_isViewportHovered = false;        // Is mouse hovering the viewport?
+        bool m_isViewportFocused = false;        // Is viewport focused?
 
         //undo step - jiahao
         std::vector<UndoStep> undoStack;
