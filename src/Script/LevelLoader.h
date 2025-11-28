@@ -185,6 +185,19 @@ namespace Framework {
 		static int Lua_GetPlayerAttackAP(lua_State* L);
 		static int Lua_GetPlayerHP(lua_State* L);
 
+        // Player Grid Movement API
+        static int Lua_GetPlayerGridPosition(lua_State* L);
+        static int Lua_IsValidGridPosition(lua_State* L);
+        static int Lua_IsWalkableTile(lua_State* L);
+        static int Lua_MovePlayerToTile(lua_State* L);
+        static int Lua_ShowTileBorder(lua_State* L);
+        static int Lua_PulseTile(lua_State* L);
+        static int Lua_ConsumePlayerAP(lua_State* L);
+        static int Lua_SetPlayerFlipX(lua_State* L);
+        static int Lua_HasChestAtTile(lua_State* L);
+        static int Lua_CollectChest(lua_State* L);
+        static int Lua_HasGoalAtTile(lua_State* L);
+
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };
