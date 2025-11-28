@@ -140,6 +140,10 @@ namespace Framework {
         static int Lua_DisableImGui(lua_State* L);
         static int Lua_EnableImGui(lua_State* L);
 
+        // Pause control
+        static int Lua_TogglePause(lua_State* L);
+        static int Lua_IsPaused(lua_State* L);
+
         // Audio API
         static int Lua_PlaySound(lua_State* L);
         static int Lua_StopSound(lua_State* L);

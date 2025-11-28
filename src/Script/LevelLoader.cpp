@@ -301,6 +301,10 @@ namespace Framework {
         lua_register(L, "DisableImGui", Lua_DisableImGui);
         lua_register(L, "EnableImGui", Lua_EnableImGui);
 
+        // Pause control
+        lua_register(L, "TogglePause", Lua_TogglePause);
+        lua_register(L, "IsPaused", Lua_IsPaused);
+
         // Audio
         lua_register(L, "PlaySound", Lua_PlaySound);
         lua_register(L, "StopSound", Lua_StopSound);
