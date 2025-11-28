@@ -114,7 +114,15 @@ namespace Framework {
         grid.startPos = startPos;
         grid.spacing = spacing;
         grid.em = em;
-		grid.tileSize = tileSize;
+        grid.tileSize = tileSize;
+        // ========================================================================
+        // Compute the world-space minimum corner of the grid.
+        // Offset by half a tile so the grid aligns correctly around its starting position.
+        // Author: Sim Kah Yan
+        // ========================================================================
+        grid.worldbound_min = Vector2D{ startPos.x - tileSize.x * 0.5f, startPos.y - tileSize.y * 0.5f };
+        grid.worldbound_max = Vector2D{ startPos.x - tileSize.x * 0.5f + cols * tileSize.x, startPos.y - tileSize.y * 0.5f + rows * tileSize.y };
+
         grid.tiles.assign(static_cast<size_t>(rows) * cols, Entity{ INVALID_ENTITY });
         LOG_INFO("LevelLoader", "Configured Grid %dx%d", cols, rows);
 
@@ -178,7 +186,8 @@ namespace Framework {
                 if (def.layer != -1) {
                     // Explicit layer specified in tile definition
                     mr.layer = def.layer;
-                } else {
+                }
+                else {
                     // Default behavior: solid tiles (walls) render slightly above ground tiles
                     mr.layer = def.solid ? RenderLayers::Props : RenderLayers::Ground;
                 }
@@ -207,14 +216,14 @@ namespace Framework {
 
                     if (def.entityType == "Player") {
                         specialEntity = spawner->SpawnPlayer(pos);
-                        if(!em->HasComponent<Inventory>(specialEntity)) {
+                        if (!em->HasComponent<Inventory>(specialEntity)) {
                             em->AddComponent<Inventory>(specialEntity);
-						}
+                        }
                         LOG_INFO("LevelLoader", "Spawned Player at (%d, %d)", c, r);
                     }
                     else if (def.entityType == "Enemy") {
                         // COMMENTED OUT FOR DEBUGGING - DISABLE ENEMY SPAWNING
-                        
+
                         specialEntity = spawner->SpawnEnemy(pos);
                         // Add EnemyAI and AP manually
                         if (!em->HasComponent<EnemyAI>(specialEntity)) {
@@ -231,12 +240,12 @@ namespace Framework {
                         }
 
                         LOG_INFO("LevelLoader", "Spawned Enemy at (%d, %d)", c, r);
-                        
+
                         LOG_INFO("LevelLoader", "Skipped Enemy spawn at (%d, %d) - DEBUG MODE", c, r);
                     }
-                // ============================================================
-                // CHEST - Blocks enemies, collectable by player
-                // ============================================================
+                    // ============================================================
+                    // CHEST - Blocks enemies, collectable by player
+                    // ============================================================
                     else if (def.entityType == "Chest") {
                         // Spawn 
                         // entity

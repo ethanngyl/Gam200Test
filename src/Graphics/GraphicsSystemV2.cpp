@@ -41,6 +41,7 @@ Safety:
 #include "MeshFactory.h"
 #include "Graphics/RenderLayers.h"
 #include <iostream>
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Debugger/Trace.h"
@@ -162,15 +163,32 @@ namespace Framework {
         // Smoothly interpolate camera position toward target (simple exponential smoothing)
         glm::vec3 currentPos = mainCamera.GetPosition();
         float smoothSpeed = 5.0f;  // Tune responsiveness
-        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * 0.016f);
+        float dt = 0.016f;          // or pass your actual deltaTime into this function
+        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * dt);
+
+
+        newPos.x = std::clamp(
+            newPos.x,
+            GetGrid().worldbound_min.x + mainCamera.GetOrthoHalfExtents().x,
+            GetGrid().worldbound_max.x - mainCamera.GetOrthoHalfExtents().x
+        );
+
+        newPos.y = std::clamp(
+            newPos.y,
+            GetGrid().worldbound_min.y + mainCamera.GetOrthoHalfExtents().y,
+            GetGrid().worldbound_max.y - mainCamera.GetOrthoHalfExtents().y
+        );
+
+
 
         mainCamera.SetPosition(newPos);
     }
 
+
     void GraphicsSystemV2::EditorCamDefaultControl(float dt/*EntityManager* em, Entity player*/)
     {
         constexpr float cameraSpeed = 5.f;
-        
+
         glm::vec3 delta(0.0f);
         if (inputManager->IsKeyDown(KeyCode::KEY_W))
             delta.y += cameraSpeed * dt;
@@ -188,10 +206,10 @@ namespace Framework {
     // /definition of ResetEditorCamera - Jiahao
     // // author: jiahao Zhou
     // Currently the editor camera share same class as main camera which is "Camera"
-	// It is just in editor mode, the camera has different control method
-	// so it still using mainCamera variable to represent editor camera
+    // It is just in editor mode, the camera has different control method
+    // so it still using mainCamera variable to represent editor camera
     // ============================================================================
-    
+
     void GraphicsSystemV2::ResetEditorCamera() {
         editorCamera.SetPosition(editorCameraStartPos);
         editorCamera.SetZoom(editorCameraZoom);
@@ -204,14 +222,14 @@ namespace Framework {
     // It is just in editor mode, the camera has different control method
     // so it still using mainCamera variable to represent editor camera
     // ============================================================================
-    
+
     void GraphicsSystemV2::HandleEditorCamera(float dt) {
-		// Define pan and zoom speeds
+        // Define pan and zoom speeds
         const float panSpeed = 2.0f * dt;
         const float zoomSpeed = 1.5f * dt;
 
         //Panning with arrow keys
-		//Basically move the camera position based on arrow key input
+        //Basically move the camera position based on arrow key input
         if (inputManager->IsKeyDown(Framework::KEY_LEFT)) {
             editorCamera.Translate({ -panSpeed, 0.0f, 0.0f });
         }
@@ -226,7 +244,7 @@ namespace Framework {
         }
 
         //Zooming 
-		// key 1 to zoom in, key 2 to zoom out
+        // key 1 to zoom in, key 2 to zoom out
         if (inputManager->IsKeyDown(Framework::KEY_1)) {
             float zoom = editorCamera.GetZoom();
             editorCamera.SetZoom(zoom * (1.0f + zoomSpeed));
@@ -238,7 +256,7 @@ namespace Framework {
         }
 
         //Reset camera position 
-		// key 0 to reset camera, and call function ResetEditorCamera
+        // key 0 to reset camera, and call function ResetEditorCamera
         if (inputManager->IsKeyDown(Framework::KEY_0)) {
             ResetEditorCamera();
         }
@@ -502,7 +520,7 @@ namespace Framework {
         }
 
         circleMesh = resourceManager.CreateMesh("circle", circleVerts, {}, GL_TRIANGLE_FAN, true);
-        
+
         // Register wireframe quad
         std::vector<float> wireframeQuadVerts = {
             // Bottom left
@@ -521,7 +539,7 @@ namespace Framework {
             "wireframequad",
             wireframeQuadVerts,
             {},
-            GL_LINE_STRIP, 
+            GL_LINE_STRIP,
             true
         );
 
@@ -650,7 +668,7 @@ namespace Framework {
     }
 
     // === RENDERING PHASES ===
-    
+
     // GatherRenderCommands: Build RenderQueue from ECS (background + entities).
     void GraphicsSystemV2::GatherRenderCommands() {
         if (!entityManager) return;
@@ -809,7 +827,7 @@ namespace Framework {
             auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
             cmd.texture = anim.spriteSheet;
-                
+
             // Get the material for this command
             Material* mat = resourceManager.GetMaterial(cmd.material);
 
@@ -1189,7 +1207,7 @@ namespace Framework {
     void GraphicsSystemV2::RenderImGui() {
         if (!window) return;
 
-    //    // Just swap - DON'T clear!
+        //    // Just swap - DON'T clear!
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

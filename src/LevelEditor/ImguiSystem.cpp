@@ -4,7 +4,7 @@ File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
 Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-11-07
-Contribution: 42%(Ethan), 53%(Jiahao), 5%(kahyan)
+Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
@@ -605,6 +605,13 @@ namespace Framework {
                 }
             }
 
+            // ============================================================================ 
+            // detail: Handles prefab interaction in the Assets window:
+            //         - Detects .prefab/.json files
+            //         - Double-click spawns a prefab instance
+            //         - Drag-and-drop exposes a "Prefab" payload for drop zones
+            // author: Sim Kah Yan 
+            // ============================================================================
             if (path.extension() == ".prefab" || path.extension() == ".json") {
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Double-click to spawn prefab\nDrag to drop zone");
@@ -1346,8 +1353,22 @@ namespace Framework {
                 }
                 */
 
+                // ============================================================================
+                // detail: Inspector actions for prefab-aware entities
+                //         - Show originating prefab (if any) using PrefabInstanceTracker
+                //         - Allow saving the current entity as a prefab asset
+                //         - Support duplicating an entity via temp prefab save+load
+                //         - Ensure prefab tracking is cleaned up on delete
+                // author: Sim Kah Yan
+                // ============================================================================
+
                 // ==================================================================
                 // PREFAB TRACKER INFO
+                // ------------------------------------------------------------------
+                // Query the central PrefabInstanceTracker to see if this entity
+                // was originally spawned FROM a prefab file. If so, display a
+                // small label in the inspector so designers know which prefab
+                // the instance is linked to.
                 // ==================================================================
                 std::string prefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
                 if (!prefabSource.empty()) {
@@ -1358,10 +1379,16 @@ namespace Framework {
 
                 // ==================================================================
                 // ENTITY ACTIONS
+                // author: Sim Kah Yan
                 // ==================================================================
                 ImGui::Separator();
 
+                // ------------------------------------------------------------------
                 // Delete button
+                // - Mark the entity to be deleted after the UI pass.
+                // - Actual destruction is done later (see below) to avoid
+                //   modifying ECS state while iterating the entity list.
+                // ------------------------------------------------------------------
                 if (ImGui::Button("Delete##DelBtn")) {
                     entityToDelete = entity;
                     shouldDelete = true;
@@ -1369,7 +1396,17 @@ namespace Framework {
 
                 ImGui::SameLine();
 
+                // ------------------------------------------------------------------
                 // Save as prefab button
+                // author: Sim Kah Yan
+                // ------------------------------------------------------------------
+                // - Serializes the current entity and its components to a .prefab
+                //   file under "assets/prefabs/".
+                // - Filename is auto-generated using the entity ID:
+                //       entity_<id>.prefab
+                // - Uses PrefabSerializer::SavePrefab, which writes out JSON
+                //   based on the components currently attached to this entity.
+                // ------------------------------------------------------------------
                 if (ImGui::Button("Save Prefab##SavePrefabBtn")) {
                     std::string prefabPath = "assets/prefabs/entity_" + std::to_string(entity.GetID()) + ".prefab";
                     std::filesystem::create_directories("assets/prefabs");
@@ -1382,7 +1419,22 @@ namespace Framework {
 
                 ImGui::SameLine();
 
+                // ------------------------------------------------------------------
                 // Duplicate button
+                // author: Sim Kah Yan
+                // ------------------------------------------------------------------
+                // Duplication strategy:
+                //  1. Save the current entity to a temporary prefab file
+                //     (e.g. "_temp_duplicate.prefab").
+                //  2. Load that prefab again to create a new entity, using the
+                //     same code path as normal prefab spawning.
+                //  3. Optionally offset the new entity's position slightly so it
+                //     doesn't overlap exactly on top of the original.
+                //
+                // Because duplication uses the same Save/Load flow as prefabs,
+                // any new components added to prefab serialization automatically
+                // participate in duplication as well.
+                // ------------------------------------------------------------------
                 if (ImGui::Button("Duplicate##DuplicateBtn")) {
                     // Save to temp prefab and reload
                     std::string tempPath = "assets/prefabs/_temp_duplicate.prefab";
@@ -1406,7 +1458,17 @@ namespace Framework {
 
         ImGui::End();
 
+        // ----------------------------------------------------------------------
         // Handle deletion after UI rendering
+        // author: Sim Kah Yan
+        // ----------------------------------------------------------------------
+        // Once the frame's UI is done, we safely destroy the entity if it was
+        // marked for deletion:
+        //  - Remove from ECS
+        //  - Remove from spatial partitioning
+        //  - Unregister from PrefabInstanceTracker so the tracker does not keep
+        //    a dangling entry for a destroyed entity.
+        // ----------------------------------------------------------------------
         if (shouldDelete && entityToDelete.IsValid()) {
             entityManager->DestroyEntity(entityToDelete);
             Framework::SpatialPartitioningRemove(entityToDelete);
@@ -1419,6 +1481,15 @@ namespace Framework {
         if (showGameViewport) ShowGameViewport();
     }
 
+    // ============================================================================
+    // detail: ImGui-based Prefab Editor window.
+    //         - Save any existing entity as a .prefab file
+    //         - Browse and load prefabs from assets/prefabs
+    //         - Track prefab instances via PrefabInstanceTracker
+    //         - Provide a "prefab-wide inspector" that edits ALL instances
+    //           of a selected prefab and then writes changes back to disk.
+    // Author: Sim Kah Yan
+    // ============================================================================
     void ImGuiSystem::ShowPrefabWindow()
     {
         if (!entityManager) return;
@@ -1433,6 +1504,12 @@ namespace Framework {
 
         // ========================================================================
         // SECTION 1: Entity Selection for Saving
+        // Author: Sim Kah Yan
+        // ------------------------------------------------------------------------
+        // This section lets the user:
+        //   - Pick any existing entity in the scene
+        //   - Type a prefab file name
+        //   - Save that entity's components as a new .prefab file
         // ========================================================================
         ImGui::Text("Save Entity as Prefab:");
         ImGui::Spacing();
@@ -1472,11 +1549,16 @@ namespace Framework {
             ImGui::EndCombo();
         }
 
-        // Prefab name input
+        // Text input for the prefab file name to save to.
         static char prefabNameBuffer[256] = "my_entity.prefab";
         ImGui::InputText("Prefab Name##PrefabName", prefabNameBuffer, sizeof(prefabNameBuffer));
 
-        // Save button
+        // "Save as Prefab" button.
+        //
+        // - Ensures a valid entity is selected.
+        // - Writes a .prefab file to assets/prefabs/<prefabNameBuffer>.
+        // - Uses PrefabSerializer::SavePrefab, which serializes all supported
+        //   components on the selected entity to JSON.
         if (ImGui::Button("Save as Prefab##SaveBtn", ImVec2(-1, 0))) {
             if (selectedEntity.IsValid()) {
                 std::string path = "assets/prefabs/" + std::string(prefabNameBuffer);
@@ -1504,6 +1586,12 @@ namespace Framework {
 
         // ========================================================================
         // SECTION 2: Load Prefab
+        // Author: Sim Kah Yan
+        // ------------------------------------------------------------------------
+        // This section:
+        //   - Scans assets/prefabs for .prefab / .json files
+        //   - Lets the user select a prefab from a list
+        //   - Spawns a new entity instance of that prefab at a chosen position
         // ========================================================================
         ImGui::Text("Load Prefab:");
         ImGui::Spacing();
@@ -1531,11 +1619,13 @@ namespace Framework {
             needsRefresh = false;
         }
 
-        // Prefab list
+        // Index of the currently selected prefab in the list.
         static int selectedPrefabIdx = -1;
 
+        // (Reserved for single-instance editing if needed later.)
         static Framework::Entity selectedInstanceForEdit{};
 
+        // List box that shows all discovered prefabs.
         ImGui::Text("Available Prefabs:");
         if (ImGui::BeginListBox("##PrefabList", ImVec2(-1, 150))) {
             for (int i = 0; i < static_cast<int>(prefabFiles.size()); ++i) {
@@ -1552,13 +1642,18 @@ namespace Framework {
             ImGui::EndListBox();
         }
 
-        // Spawn position
+        // Spawn position for the next loaded prefab instance.
         static float spawnPos[2] = { 0.0f, 0.0f };
         ImGui::DragFloat2("Spawn Position##SpawnPos", spawnPos, 0.01f, -10.0f, 10.0f);
 
         ImGui::Separator();
 
-        // Load button
+        // "Load Prefab" button.
+        //
+        // - Requires a prefab to be selected in the list.
+        // - Calls PrefabSerializer::LoadPrefab to create a new entity.
+        // - If the new entity has a Transform, we write the spawn position
+        //   into its Transform component.
         if (ImGui::Button("Load Prefab##LoadBtn", ImVec2(-1, 0))) {
             if (selectedPrefabIdx >= 0 && selectedPrefabIdx < static_cast<int>(prefabFiles.size())) {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, selectedPrefabPath);
@@ -1588,6 +1683,18 @@ namespace Framework {
 
         // ========================================================================
         // SECTION 3: Prefab-wide Inspector (applies to ALL instances)
+        // Author: Sim Kah Yan
+        // ------------------------------------------------------------------------
+        // This is the core "live prefab" workflow:
+        //   - Get all instances of the selected prefab via PrefabInstanceTracker
+        //   - Use the FIRST instance as a "template" in the editor
+        //   - User edits the template's components (Transform, Sprite, etc.)
+        //   - On "Apply To All Instances & Save Prefab":
+        //       * Copy edited values from template to every instance
+        //       * Save the template to disk as the updated prefab file
+        //
+        // This keeps all instances visually consistent and keeps the prefab file
+        // in sync with what is shown in the editor.
         // ========================================================================
         ImGui::Text("Prefab Instances:");
         ImGui::Spacing();
@@ -1611,7 +1718,7 @@ namespace Framework {
                 }
             }
 
-            // Use the FIRST instance as the "template" for editing
+            // The first instance acts as our "template" entity for editing.
             Framework::Entity templateEntity = instances.empty() ? Framework::Entity{} : instances[0];
 
             ImGui::Separator();
@@ -1719,7 +1826,14 @@ namespace Framework {
 
                 // ------------------------------------------------
                 // APPLY TO ALL INSTANCES + SAVE PREFAB
+                // Author: Sim Kah Yan
                 // ------------------------------------------------
+                // When pressed:
+                //   1) Copies edited component values from templateEntity to every
+                //      instance of this prefab (except position, which remains
+                //      per-instance for Transform).
+                //   2) Calls PrefabSerializer::SavePrefab on the template entity
+                //      to update the on-disk prefab definition.
                 ImGui::Separator();
                 if (ImGui::Button("Apply To All Instances & Save Prefab##ApplyAll2", ImVec2(-1, 0))) {
 
@@ -1808,7 +1922,8 @@ namespace Framework {
             }
         }
 
-        // Clear tracking button (can stay as before)
+        // Utility button to wipe all prefab instance tracking state.
+        // Does NOT delete entities, only clears the registry mapping.
         if (ImGui::Button("Clear All Tracking##ClearTracking", ImVec2(-1, 0))) {
             Framework::PrefabInstanceTracker::Get().Clear();
             std::cout << "[Prefab] Cleared all instance tracking\n";
@@ -1940,6 +2055,26 @@ namespace Framework {
             ImGui::EndDragDropTarget();
         }
 
+        // =====================================================================
+        // PREFAB DROP ZONE
+        // Author: Sim Kah Yan
+        // ---------------------------------------------------------------------
+        // This UI block creates a dedicated "Prefab Drop Zone" in the editor:
+        //
+        //  - Visual:
+        //      * Shows a titled region with a large button.
+        //      * The button has a custom color so it stands out as a drop target.
+        //
+        //  - Behavior:
+        //      * Accepts ImGui drag-drop payloads of type "Prefab" (see Assets
+        //        window where the payload is created with ImGui::SetDragDropPayload).
+        //      * The payload carries the full prefab path as a C-string.
+        //      * On drop:
+        //          1. Calls PrefabSerializer::LoadPrefab to spawn a new entity.
+        //          2. If the entity has a Transform, its position is set based on
+        //             the spawner's spawnX / spawnY values.
+        //          3. Logs the action to the console for debugging.
+        // =====================================================================
         ImGui::Separator();
         ImGui::Text("📦 Prefab Drop Zone");
         ImGui::TextWrapped("Drag prefabs here to spawn");
@@ -2397,6 +2532,21 @@ namespace Framework {
                 continue;
             }
 
+            // =================================================================
+            // PREFAB FILE DROP HANDLING
+            // Author: Sim Kah Yan
+            // -----------------------------------------------------------------
+            // When a file is dropped onto the window and its extension is
+            // recognized as a prefab type (.prefab or .json):
+            //
+            //  - We call PrefabSerializer::LoadPrefab with the full path.
+            //  - If loading succeeds, a new entity is spawned from the prefab
+            //    definition, and we log the entity ID for debugging.
+            //  - If loading fails, we print an error message to the console.
+            //
+            // This allows users to drag prefab files directly from the OS
+            // (Explorer/Finder) into the editor to quickly spawn instances.
+            // =================================================================
             if (path.extension() == ".prefab" || path.extension() == ".json") {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, path.string());
 
