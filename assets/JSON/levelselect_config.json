@@ -1,6 +1,6 @@
 {
   "menu": {
-    "name": "LevelSelect",
+    "name": "Level Select",
     "music": {
       "name": "mmbgm",
       "volume": 1.0,
@@ -14,6 +14,76 @@
       },
       "zoom": 1.0
     },
+    "background": {
+      "texture": "assets/Menu/WoodBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 4.0,
+        "y": 4.0
+      },
+      "layer": 1
+    },
+    "cornerSprites": [
+      {
+        "id": "topLeft",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": -1.8,
+          "y": 0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 0,
+        "layer": 5
+      },
+      {
+        "id": "topRight",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": 1.8,
+          "y": 0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 270,
+        "layer": 5
+      },
+      {
+        "id": "bottomRight",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": 1.8,
+          "y": -0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 180,
+        "layer": 5
+      },
+      {
+        "id": "bottomLeft",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": -1.8,
+          "y": -0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 90,
+        "layer": 5
+      }
+    ],
     "buttons": [
       {
         "id": "level2",
