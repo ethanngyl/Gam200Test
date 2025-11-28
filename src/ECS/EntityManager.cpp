@@ -15,7 +15,7 @@
  */
 
 #include "ECSEntityManager.h"
-
+#include <iostream>
 namespace Framework
 {
     /**
