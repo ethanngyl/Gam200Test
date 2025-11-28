@@ -36,6 +36,8 @@ Responsibilities:
 #include "TimeConstants.h"
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
+#include "WindowEventHandler.h"
+
 
 
 // ===============================================================================
@@ -185,6 +187,18 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             // ===============================================================================
             eng::debug::PerfViewer::begin_frame();
             glfwPollEvents();
+
+            // ===============================================================================
+            // WINDOW EVENT HANDLING (TECH 1701 & 1702)
+            // ===============================================================================
+            // Must be called BEFORE level update to handle:
+            // - CTRL-ALT-DEL (auto-pause on focus loss)
+            // - Window minimize/restore (auto-pause/resume)
+            // - ALT-TAB (auto-pause)
+            // - ALT-ENTER (fullscreen toggle)
+            if (engine->GetWindowSystem() && engine->GetWindowSystem()->GetWindow()) {
+                Framework::WindowEventHandler::Update(engine->GetWindowSystem()->GetWindow());
+            }
 
             // ===============================================================================
             // LEVEL UPDATE (Handles pause toggle and level-specific input)
