@@ -1087,6 +1087,13 @@ namespace Framework {
         Entity entityToDelete = { 0 };
         bool shouldDelete = false;
 
+        // Component removal tracking
+        struct ComponentRemoval {
+            Entity entity;
+            std::string componentType;
+        };
+        std::vector<ComponentRemoval> componentsToRemove;
+
         for (size_t i = 0; i < pageEntities.size(); ++i) {
             Entity entity = pageEntities[i];
 
@@ -1113,6 +1120,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<Transform>(entity)) {
                     if (ImGui::TreeNode("Transform##TransformNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveTransform")) {
+                            componentsToRemove.push_back({ entity, "Transform" });
+                        }
+
                         auto& transform = entityManager->GetComponent<Transform>(entity);
 
                         ImGui::DragFloat2("Position", &transform.position.x, 0.01f, -100.0f, 100.0f);
@@ -1128,6 +1140,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<Sprite>(entity)) {
                     if (ImGui::TreeNode("Sprite##SpriteNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveSprite")) {
+                            componentsToRemove.push_back({ entity, "Sprite" });
+                        }
+
                         auto& sprite = entityManager->GetComponent<Sprite>(entity);
 
                         // Display texture path
@@ -1163,6 +1180,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<MeshRenderer>(entity)) {
                     if (ImGui::TreeNode("MeshRenderer##MeshRendererNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveMeshRenderer")) {
+                            componentsToRemove.push_back({ entity, "MeshRenderer" });
+                        }
+
                         auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
 
                         // Sprite name
@@ -1220,6 +1242,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<Movement>(entity)) {
                     if (ImGui::TreeNode("Movement##MovementNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveMovement")) {
+                            componentsToRemove.push_back({ entity, "Movement" });
+                        }
+
                         auto& movement = entityManager->GetComponent<Movement>(entity);
 
                         ImGui::DragFloat("Speed", &movement.moveSpeed, 0.01f, 0.0f, 100.0f);
@@ -1234,6 +1261,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<BoxCollider>(entity)) {
                     if (ImGui::TreeNode("BoxCollider##BoxColliderNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveBoxCollider")) {
+                            componentsToRemove.push_back({ entity, "BoxCollider" });
+                        }
+
                         auto& boxCollider = entityManager->GetComponent<BoxCollider>(entity);
 
                         ImGui::DragFloat2("Size", &boxCollider.size.x, 0.01f, 0.0f, 100.0f);
@@ -1249,6 +1281,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<CircleCollider>(entity)) {
                     if (ImGui::TreeNode("CircleCollider##CircleColliderNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveCircleCollider")) {
+                            componentsToRemove.push_back({ entity, "CircleCollider" });
+                        }
+
                         auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
 
                         ImGui::DragFloat("Radius", &circleCollider.radius, 0.01f, 0.0f, 100.0f);
@@ -1283,6 +1320,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<AudioSource>(entity)) {
                     if (ImGui::TreeNode("AudioSource##AudioSourceNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveAudioSource")) {
+                            componentsToRemove.push_back({ entity, "AudioSource" });
+                        }
+
                         auto& audio = entityManager->GetComponent<AudioSource>(entity);
 
                         // Display audio name
@@ -1308,6 +1350,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<ScriptComponent>(entity)) {
                     if (ImGui::TreeNode("Script##ScriptNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveScript")) {
+                            componentsToRemove.push_back({ entity, "ScriptComponent" });
+                        }
+
                         auto& script = entityManager->GetComponent<ScriptComponent>(entity);
 
                         // Display script path
@@ -1353,6 +1400,144 @@ namespace Framework {
                     }
                 }
                 */
+
+                // ==================================================================
+                // ADD COMPONENT
+                // ==================================================================
+                ImGui::Separator();
+                if (ImGui::Button("Add Component##AddComponentBtn")) {
+                    ImGui::OpenPopup("AddComponentPopup");
+                }
+
+                if (ImGui::BeginPopup("AddComponentPopup")) {
+                    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.3f, 1.0f), "Add Component");
+                    ImGui::Separator();
+
+                    // Transform
+                    if (!entityManager->HasComponent<Transform>(entity)) {
+                        if (ImGui::MenuItem("Transform")) {
+                            entityManager->AddComponent<Transform>(entity, Vector2D(0.0f, 0.0f));
+                        }
+                    }
+
+                    // Movement
+                    if (!entityManager->HasComponent<Movement>(entity)) {
+                        if (ImGui::MenuItem("Movement")) {
+                            entityManager->AddComponent<Movement>(entity);
+                        }
+                    }
+
+                    // Sprite
+                    if (!entityManager->HasComponent<Sprite>(entity)) {
+                        if (ImGui::MenuItem("Sprite")) {
+                            auto& sprite = entityManager->AddComponent<Sprite>(entity);
+                            sprite.texturePath = "";
+                            sprite.layer = 0;
+                        }
+                    }
+
+                    // MeshRenderer
+                    if (!entityManager->HasComponent<MeshRenderer>(entity)) {
+                        if (ImGui::MenuItem("MeshRenderer")) {
+                            auto& meshRenderer = entityManager->AddComponent<MeshRenderer>(entity);
+                            meshRenderer.spriteName = "";
+                            meshRenderer.layer = 0;
+                        }
+                    }
+
+                    // BoxCollider
+                    if (!entityManager->HasComponent<BoxCollider>(entity)) {
+                        if (ImGui::MenuItem("BoxCollider")) {
+                            auto& boxCollider = entityManager->AddComponent<BoxCollider>(entity);
+                            boxCollider.size = Vector2D(1.0f, 1.0f);
+                            boxCollider.offset = Vector2D(0.0f, 0.0f);
+                        }
+                    }
+
+                    // CircleCollider
+                    if (!entityManager->HasComponent<CircleCollider>(entity)) {
+                        if (ImGui::MenuItem("CircleCollider")) {
+                            entityManager->AddComponent<CircleCollider>(entity, 0.5f, Vector2D(0.0f, 0.0f));
+                        }
+                    }
+
+                    // AudioSource
+                    if (!entityManager->HasComponent<AudioSource>(entity)) {
+                        if (ImGui::MenuItem("AudioSource")) {
+                            auto& audio = entityManager->AddComponent<AudioSource>(entity);
+                            audio.soundName = "";
+                            audio.volume = 1.0f;
+                        }
+                    }
+
+                    // ScriptComponent
+                    if (!entityManager->HasComponent<ScriptComponent>(entity)) {
+                        if (ImGui::MenuItem("ScriptComponent")) {
+                            auto& script = entityManager->AddComponent<ScriptComponent>(entity);
+                            script.scriptPath = "";
+                        }
+                    }
+
+                    // Health
+                    if (!entityManager->HasComponent<Health>(entity)) {
+                        if (ImGui::MenuItem("Health")) {
+                            entityManager->AddComponent<Health>(entity, 50);
+                        }
+                    }
+
+                    // SpriteAnimation
+                    if (!entityManager->HasComponent<SpriteAnimation>(entity)) {
+                        if (ImGui::MenuItem("SpriteAnimation")) {
+                            auto& anim = entityManager->AddComponent<SpriteAnimation>(entity);
+                            anim.animName = "";
+                            anim.frameCount = 1;
+                        }
+                    }
+
+                    // AP
+                    if (!entityManager->HasComponent<AP>(entity)) {
+                        if (ImGui::MenuItem("AP")) {
+                            entityManager->AddComponent<AP>(entity, 3);
+                        }
+                    }
+
+                    // AttackRangeComponent
+                    if (!entityManager->HasComponent<AttackRangeComponent>(entity)) {
+                        if (ImGui::MenuItem("AttackRangeComponent")) {
+                            entityManager->AddComponent<AttackRangeComponent>(entity, 1, 3);
+                        }
+                    }
+
+                    // Chest
+                    if (!entityManager->HasComponent<Chest>(entity)) {
+                        if (ImGui::MenuItem("Chest")) {
+                            entityManager->AddComponent<Chest>(entity, 0);
+                        }
+                    }
+
+                    // Goal
+                    if (!entityManager->HasComponent<Goal>(entity)) {
+                        if (ImGui::MenuItem("Goal")) {
+                            entityManager->AddComponent<Goal>(entity, 0);
+                        }
+                    }
+
+                    // Inventory
+                    if (!entityManager->HasComponent<Inventory>(entity)) {
+                        if (ImGui::MenuItem("Inventory")) {
+                            entityManager->AddComponent<Inventory>(entity);
+                        }
+                    }
+
+                    // AttackAP
+                    if (!entityManager->HasComponent<AttackAP>(entity)) {
+                        if (ImGui::MenuItem("AttackAP")) {
+                            entityManager->AddComponent<AttackAP>(entity, 1);
+                        }
+                    }
+
+                    ImGui::EndPopup();
+                }
 
                 // ============================================================================
                 // detail: Inspector actions for prefab-aware entities
@@ -1458,6 +1643,61 @@ namespace Framework {
         }
 
         ImGui::End();
+
+        // ----------------------------------------------------------------------
+        // Handle component removal after UI rendering
+        // ----------------------------------------------------------------------
+        // Process all component removals that were requested during UI rendering
+        for (const auto& removal : componentsToRemove) {
+            if (removal.componentType == "Transform") {
+                entityManager->RemoveComponent<Transform>(removal.entity);
+            }
+            else if (removal.componentType == "Movement") {
+                entityManager->RemoveComponent<Movement>(removal.entity);
+            }
+            else if (removal.componentType == "Sprite") {
+                entityManager->RemoveComponent<Sprite>(removal.entity);
+            }
+            else if (removal.componentType == "MeshRenderer") {
+                entityManager->RemoveComponent<MeshRenderer>(removal.entity);
+            }
+            else if (removal.componentType == "BoxCollider") {
+                entityManager->RemoveComponent<BoxCollider>(removal.entity);
+            }
+            else if (removal.componentType == "CircleCollider") {
+                entityManager->RemoveComponent<CircleCollider>(removal.entity);
+            }
+            else if (removal.componentType == "AudioSource") {
+                entityManager->RemoveComponent<AudioSource>(removal.entity);
+            }
+            else if (removal.componentType == "ScriptComponent") {
+                entityManager->RemoveComponent<ScriptComponent>(removal.entity);
+            }
+            else if (removal.componentType == "Health") {
+                entityManager->RemoveComponent<Health>(removal.entity);
+            }
+            else if (removal.componentType == "SpriteAnimation") {
+                entityManager->RemoveComponent<SpriteAnimation>(removal.entity);
+            }
+            else if (removal.componentType == "AP") {
+                entityManager->RemoveComponent<AP>(removal.entity);
+            }
+            else if (removal.componentType == "AttackRangeComponent") {
+                entityManager->RemoveComponent<AttackRangeComponent>(removal.entity);
+            }
+            else if (removal.componentType == "Chest") {
+                entityManager->RemoveComponent<Chest>(removal.entity);
+            }
+            else if (removal.componentType == "Goal") {
+                entityManager->RemoveComponent<Goal>(removal.entity);
+            }
+            else if (removal.componentType == "Inventory") {
+                entityManager->RemoveComponent<Inventory>(removal.entity);
+            }
+            else if (removal.componentType == "AttackAP") {
+                entityManager->RemoveComponent<AttackAP>(removal.entity);
+            }
+        }
 
         // ----------------------------------------------------------------------
         // Handle deletion after UI rendering
