@@ -218,10 +218,10 @@ namespace Framework
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
-        // Load master volume from config and apply it
-        float masterVolume = ConfigReader::GetFloat("master_volume", 1.0f);
+        // Load master volume from audio config JSON and apply it
+        float masterVolume = AudioLoader::GetSettings().masterVolume;
         audioSystem->SetMasterVolume(masterVolume);
-        LOG_INFO("AUDIO", "Master volume loaded from config: %.2f", masterVolume);
+        LOG_INFO("AUDIO", "Master volume loaded from audio_config.json: %.2f", masterVolume);
 
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);
