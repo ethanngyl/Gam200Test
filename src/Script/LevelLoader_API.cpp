@@ -17,6 +17,7 @@
 #include "Component.h"    // Movement, CircleCollider, AP components
 #include "Pathfinding.h"  // EnemyAI component
 #include "Turn.h"         // Turn system
+#include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -478,6 +479,22 @@ namespace Framework {
         }
 
         return 0;
+    }
+
+    // ========================================================================
+    // PAUSE CONTROL API
+    // ========================================================================
+
+    int LevelLoader::Lua_TogglePause(lua_State* L) {
+        GlobalPause::Toggle();
+        LOG_INFO("LevelLoader", "Pause toggled - Now %s", GlobalPause::IsPaused() ? "PAUSED" : "UNPAUSED");
+        return 0;
+    }
+
+    int LevelLoader::Lua_IsPaused(lua_State* L) {
+        bool paused = GlobalPause::IsPaused();
+        lua_pushboolean(L, paused);
+        return 1;
     }
 
     // ========================================================================
