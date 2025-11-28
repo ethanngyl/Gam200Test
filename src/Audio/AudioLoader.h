@@ -59,14 +59,14 @@ namespace Framework {
          * @param filepath Path to audio config JSON (defaults to standard path)
          * @return true if successfully saved
          */
-        static bool SetMasterVolume(float volume, const std::string& filepath = "assets/JSON/audio_config.json");
+        static bool SetMasterVolume(float volume, const std::string& filepath = "assets/JSON/AudioConfig.json");
 
         /**
          * @brief Save current audio settings to JSON file
          * @param filepath Path to audio config JSON
          * @return true if successfully saved
          */
-        static bool SaveAudioConfig(const std::string& filepath = "assets/JSON/audio_config.json");
+        static bool SaveAudioConfig(const std::string& filepath = "assets/JSON/AudioConfig.json");
 
     private:
         /**

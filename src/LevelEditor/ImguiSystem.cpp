@@ -43,6 +43,7 @@ Safety:
 #include "ImGuiSystem.h"
 #include "EntitySpawner.h"
 #include "AudioSystem.h"
+#include "AudioLoader.h"
 #include "Pathfinding.h"
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
