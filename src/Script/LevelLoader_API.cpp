@@ -78,6 +78,15 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_SetMasterVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMasterVolume(volume);
+        return 0;
+    }
+
     // ========================================================================
     // UI BUTTON API
     // ========================================================================
@@ -338,6 +347,27 @@ namespace Framework {
 
         return 0;
     }
+
+    int LevelLoader::Lua_DrawText(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->graphicsSystem) return 0;
+
+        // Parse parameters: DrawText(font, text, x, y, scale, r, g, b)
+        const char* font = luaL_checkstring(L, 1);
+        const char* text = luaL_checkstring(L, 2);
+        float x = luaL_checknumber(L, 3);
+        float y = luaL_checknumber(L, 4);
+        float scale = luaL_checknumber(L, 5);
+        float r = luaL_checknumber(L, 6);
+        float g = luaL_checknumber(L, 7);
+        float b = luaL_checknumber(L, 8);
+
+        glm::vec3 color(r, g, b);
+        loader->graphicsSystem->DrawText4(font, text, x, y, scale, color);
+
+        return 0;
+    }
+
     // ========================================================================
     // INPUT API (FIXED for InputSystem)
     // ========================================================================
