@@ -227,7 +227,7 @@ function OnInit()
             yPos,
             indicatorSize,
             indicatorSize,
-            0  -- Ground layer
+            4 
         )
 
         if entityID > 0 then
@@ -250,7 +250,7 @@ function OnInit()
             yPos,
             indicatorSize,
             indicatorSize,
-            0  -- Same layer, rendered on top due to creation order
+            4  -- Same layer, rendered on top due to creation order
         )
 
         if entityID > 0 then
@@ -287,7 +287,7 @@ function OnInit()
             "assets/UI/AP_Empty.png",   -- TODO: swap to your ATTACK AP empty sprite
             xPos, yPos,
             indicatorSize, indicatorSize,
-            0
+            4
         )
 
         if entityID > 0 then
@@ -308,7 +308,7 @@ function OnInit()
             "assets/UI/AP_Crystal.png", -- TODO: swap to your ATTACK AP filled sprite
             xPos, yPos,
             indicatorSize, indicatorSize,
-            0
+            4
         )
 
         if entityID > 0 then
@@ -444,7 +444,7 @@ function OnInit()
             "assets/TileMap/Chest_Black.png",
             xPos, yPos,
             indicatorSize, indicatorSize,
-            0
+            4
         )
 
         if entityID > 0 then
@@ -597,7 +597,7 @@ function OnUpdate(dt)
                         yPos,
                         indicatorSize,
                         indicatorSize,
-                        0  -- Ground layer
+                        4  -- Ground layer
                     )
 
                     if entityID > 0 then
@@ -743,7 +743,7 @@ function OnUpdate(dt)
                         "assets/UI/AP_Crystal.png", -- TODO: attack filled sprite
                         xPos, yPos,
                         indicatorSize, indicatorSize,
-                        0
+                        4
                     )
 
                     if entityID > 0 then
@@ -802,7 +802,7 @@ function OnUpdate(dt)
                         "assets/TileMap/Chest_1.png",
                         xPos, yPos,
                         indicatorSize, indicatorSize,
-                        0
+                        4
                     )
 
                     if entityID > 0 then
