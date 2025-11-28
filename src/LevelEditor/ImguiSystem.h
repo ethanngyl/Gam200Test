@@ -106,6 +106,31 @@ namespace Framework {
         }
         void RequestToggle() { pendingToggle = true; }
 
+        // ========================================================================
+        // VIEWPORT INFORMATION ACCESS
+        // ========================================================================
+
+        /**
+         * @brief Get the screen position of the viewport (top-left corner)
+         */
+        ImVec2 GetViewportPos() const { return m_viewportPos; }
+
+        /**
+         * @brief Get the size of the viewport in pixels
+         */
+        ImVec2 GetViewportSize() const { return m_viewportSize; }
+
+        /**
+         * @brief Check if mouse is currently hovering the viewport
+         */
+        bool IsViewportHovered() const { return m_isViewportHovered; }
+
+        /**
+         * @brief Check if viewport is currently focused
+         */
+        bool IsViewportFocused() const { return m_isViewportFocused; }
+
+
         //undo function - jiahao
         void PerformUndo();
         void RecordUndoStep(Entity entity);
