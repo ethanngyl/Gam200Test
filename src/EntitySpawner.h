@@ -237,6 +237,19 @@ namespace Framework {
                 }
             }
 
+            // This ensures Drag-and-Drop items are clickable immediately.
+            if (!entityManager->HasComponent<BoxCollider>(entity)) {
+                entityManager->AddComponent<BoxCollider>(entity);
+                auto& box = entityManager->GetComponent<BoxCollider>(entity);
+
+                // Set Local Size to 1.0 (Matches standard sprite size 1:1)
+                box.size = Vector2D(1.0f, 1.0f);
+                box.offset = Vector2D(0.0f, 0.0f);
+
+                // Trigger = True allows you to place decorations without blocking the player
+                box.isTrigger = true;
+            }
+
             return entity;
         }
 
@@ -408,7 +421,7 @@ namespace Framework {
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
-            collider.size = size;
+            collider.size = size*5;
 
             std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << "\n";
             return enemy;
@@ -790,6 +803,7 @@ namespace Framework {
     private:
         /// Pointer to entity manager for ECS operations (non-owning)
         EntityManager* entityManager = nullptr;
+        
     };
 
 } // namespace Framework

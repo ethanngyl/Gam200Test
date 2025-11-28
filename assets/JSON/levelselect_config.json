@@ -1,6 +1,6 @@
 {
   "menu": {
-    "name": "LevelSelect",
+    "name": "Level Select",
     "music": {
       "name": "mmbgm",
       "volume": 1.0,
@@ -14,6 +14,76 @@
       },
       "zoom": 1.0
     },
+    "background": {
+      "texture": "assets/Menu/WoodBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 4.0,
+        "y": 4.0
+      },
+      "layer": 1
+    },
+    "cornerSprites": [
+      {
+        "id": "topLeft",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": -1.8,
+          "y": 0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 0,
+        "layer": 5
+      },
+      {
+        "id": "topRight",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": 1.8,
+          "y": 0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 270,
+        "layer": 5
+      },
+      {
+        "id": "bottomRight",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": 1.8,
+          "y": -0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 180,
+        "layer": 5
+      },
+      {
+        "id": "bottomLeft",
+        "texture": "assets/Menu/menucorner.png",
+        "offset": {
+          "x": -1.8,
+          "y": -0.85
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "rotation": 90,
+        "layer": 5
+      }
+    ],
     "buttons": [
       {
         "id": "level2",
@@ -24,15 +94,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.4
+          "y": 0.2
         },
         "layer": 10,
         "text": {
           "content": "Level Editor",
           "font": "Sans48",
           "offset": {
-            "x": -120.0,
-            "y": -24.0
+            "x": -150.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {
@@ -52,15 +122,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.4
+          "y": 0.2
         },
         "layer": 10,
         "text": {
-          "content": "Demo",
+          "content": "DEMO",
           "font": "Sans48",
           "offset": {
-            "x": -50.0,
-            "y": -24.0
+            "x": -80.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {
@@ -80,15 +150,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.4
+          "y": 0.2
         },
         "layer": 10,
         "text": {
-          "content": "Back",
+          "content": "BACK",
           "font": "Sans48",
           "offset": {
-            "x": -60.0,
-            "y": -24.0
+            "x": -80.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {

@@ -4,7 +4,7 @@ File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
 Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-11-07
-Contribution: 42%(Ethan), 53%(Jiahao), 5%(kahyan)
+Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
@@ -30,7 +30,7 @@ Controls for:
   drop targets; click “<” to go up one folder
 - OS Drag-&-Drop onto window:
   • .txt → load level (clears scene if requested
-  • .png, .jpg, .jpeg → spawn sprite 
+  • .png, .jpg, .jpeg → spawn sprite
 
 Notes:
 
@@ -43,6 +43,7 @@ Safety:
 #include "ImGuiSystem.h"
 #include "EntitySpawner.h"
 #include "AudioSystem.h"
+#include "AudioLoader.h"
 #include "Pathfinding.h"
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
@@ -64,7 +65,7 @@ namespace Framework {
         , entityCount(0)
         , showAssets(true)
         , graphicsSystem(nullptr)
-        , showAudioErrorPopup(false)        
+        , showAudioErrorPopup(false)
         , audioErrorMessage("")
         , showPrefabWindow(true)
         , selectedEntity{}
@@ -74,6 +75,12 @@ namespace Framework {
 
     void ImGuiSystem::Shutdown()
     {
+        // Prevent double shutdown
+        if (!imguiInitialized) {
+            std::cout << "[ImGui] Already shutdown or never initialized - skipping\n";
+            return;
+        }
+
         std::cout << "[ImGui] Shutting down...\n";
 
         // Stop all audio if audio system exists
@@ -86,6 +93,8 @@ namespace Framework {
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
         DeleteViewportFramebuffer();
+
+        imguiInitialized = false;  // Mark as shutdown
         std::cout << "[ImGui] Shutdown complete\n";
     }
 
@@ -98,6 +107,7 @@ namespace Framework {
     {
         if (!window) {
             std::cout << "[ImGui] Error: Window not set!\n";
+            imguiInitialized = false;
             return;
         }
 
@@ -107,8 +117,9 @@ namespace Framework {
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; //Enable Docking
-        io.IniFilename = "./assets/imgui.ini";  
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;  // Enable Docking!
+        // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;  // Disabled - causes frame count issues
+        io.IniFilename = "./assets/imgui.ini";
 
         ImGui::StyleColorsDark();
 
@@ -122,43 +133,47 @@ namespace Framework {
         renderToViewport = true;
         std::cout << "[ImGuiSystem] Viewport ready - FBO: " << viewportFBO
             << ", Texture: " << viewportTexture << "\n";
+
+        imguiInitialized = true;  // Mark as successfully initialized
+        std::cout << "[ImGui] Initialization complete\n";
     }
 
+	
     // ============================================================================
-	// This is the function that able to open level from a txt file
+    // This is the function that able to open level from a txt file
     // author: jiahao.zhou@digipen
     // ============================================================================
     bool ImGuiSystem::OpenLevelFromTxt(const std::string& file, bool clearAll) {
 
-		// this is to declare a input file stream called readFile and open the file
+        // this is to declare a input file stream called readFile and open the file
         std::ifstream readFile(file);
 
-		// check if the file is open, display error message if not
+        // check if the file is open, display error message if not
         if (!readFile.is_open()) {
             std::cerr << "[ImGuiError] Could not open file for reading: " << file << "\n";
             return false;
         }
-		// check if entity manager is valid
+        // check if entity manager is valid
         if (!entityManager) {
             std::cerr << "[ImGuiError] ImGuiSystem missing managers for loading.\n";
             return false;
         }
-		// clear all existing entities if clearAll is true
+        // clear all existing entities if clearAll is true
         if (clearAll) {
             entityManager->ClearAllEntities();
             entityManager->ResetEntityIDCounter();
         }
-		// declare a variable to hold the entity being created
+        // declare a variable to hold the entity being created
         Framework::Entity Entity;
-		// a boolean to check if an entity is created
+        // a boolean to check if an entity is created
         bool hasEntity = false;
-		// read the file line by line
+        // read the file line by line
         std::string line;
-        
+
         auto lineNumber = 0;
-		// loop through each line in the file
+        // loop through each line in the file
         while (std::getline(readFile, line)) {
-            
+
             ++lineNumber;
 
             if (line.empty() || line[0] == '#') {
@@ -171,7 +186,7 @@ namespace Framework {
                 std::cerr << "[ImGuiError] missing entity at line " << lineNumber << "\n";
                 continue;
             }
-			// check if the word is "entity", if so create a new entity
+            // check if the word is "entity", if so create a new entity
             if (word == "entity") {
                 Entity = entityManager->CreateEntity();
                 hasEntity = true;
@@ -181,7 +196,7 @@ namespace Framework {
             if (!hasEntity) {
                 continue;
             }
-			// if else condition to check which component to add to the entity
+            // if else condition to check which component to add to the entity
             if (word == "Transform") {
                 float px, py, sx, sy;
                 if (iss >> px >> py >> sx >> sy) {
@@ -256,7 +271,7 @@ namespace Framework {
             if (word == "SpriteAnimation") {
                 int rows = 0;
                 int columns = 0;
-				int frameCount = 0;
+                int frameCount = 0;
                 float frameTime = 0.0f;
                 int loopInt = 1;
                 float uvShrinkPx = 0.0f;
@@ -265,14 +280,14 @@ namespace Framework {
                     entityManager->AddComponent<Framework::SpriteAnimation>(Entity);
                     auto& spriteAnimation = entityManager->GetComponent<Framework::SpriteAnimation>(Entity);
                     spriteAnimation.rows = rows;
-					spriteAnimation.columns = columns;
-					spriteAnimation.frameCount = frameCount;
-					spriteAnimation.frameTime = frameTime;
-					spriteAnimation.loop = (loopInt != 0);
-					spriteAnimation.uvShrinkPx = uvShrinkPx;
+                    spriteAnimation.columns = columns;
+                    spriteAnimation.frameCount = frameCount;
+                    spriteAnimation.frameTime = frameTime;
+                    spriteAnimation.loop = (loopInt != 0);
+                    spriteAnimation.uvShrinkPx = uvShrinkPx;
 
-					spriteAnimation.playing = true;
-					spriteAnimation.currentFrame = 0;
+                    spriteAnimation.playing = true;
+                    spriteAnimation.currentFrame = 0;
 
                     if (graphicsSystem && entityManager->HasComponent<Framework::Sprite>(Entity)) {
                         auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
@@ -282,10 +297,10 @@ namespace Framework {
 
                             if (auto* texture = rm.GetTexture(spriteAnimation.spriteSheet)) {
                                 int colsForSize = (columns > 0) ? columns : 1;
-								int rowsForSize = (rows > 0) ? rows : 1;
+                                int rowsForSize = (rows > 0) ? rows : 1;
 
                                 spriteAnimation.frameWidth = texture->GetWidth() / colsForSize;
-								spriteAnimation.frameHeight = texture->GetHeight() / rowsForSize;
+                                spriteAnimation.frameHeight = texture->GetHeight() / rowsForSize;
                             }
                         }
                     }
@@ -321,7 +336,7 @@ namespace Framework {
                     script.scriptPath = path;
                 }
             }
-            
+
         }
         RebuildSpatialPartition();
         return true;
@@ -333,24 +348,24 @@ namespace Framework {
     // ============================================================================
     bool ImGuiSystem::SaveLevelToTxt(const std::string& file) {
 
-		//this is to declare a output file stream called writeFile and open the file
+        //this is to declare a output file stream called writeFile and open the file
         std::ofstream writeFile(file);
 
-		//check if the file is open, display error message if not
+        //check if the file is open, display error message if not
         if (!writeFile.is_open()) {
             std::cerr << "[ImGuiError] Could not open file for writing: " << file << "\n";
             return false;
         }
 
-		//write title line
+        //write title line
         writeFile << "# Saved from ImGui system\n";
 
         //get all entities from ECS manager
         auto entities = entityManager->GetAllEntities();
 
-		//Create a loop to go through all entities
+        //Create a loop to go through all entities
         for (const auto& entity : entities) {
-			//check if the entity has any of the components we need to write in the file
+            //check if the entity has any of the components we need to write in the file
             const bool hasAny = entityManager->HasComponent<Transform>(entity)
                 || entityManager->HasComponent<Sprite>(entity)
                 || entityManager->HasComponent<CircleCollider>(entity)
@@ -365,32 +380,32 @@ namespace Framework {
             //write entity whenever there is a new entity
             writeFile << "entity\n";
 
-			//if else condition to check which component the entity has and write the corresponding data to the file
+            //if else condition to check which component the entity has and write the corresponding data to the file
 
-			//this if else condition is to check if entity has transform component
+            //this if else condition is to check if entity has transform component
             if (entityManager->HasComponent<Transform>(entity)) {
-				//get reference to the transform component
+                //get reference to the transform component
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 //write position (x,y) and the scale(x,y)
                 writeFile << "Transform " << transform.position.x << " " << transform.position.y << " "
-                          << transform.scale.x << " " << transform.scale.y << "\n";
+                    << transform.scale.x << " " << transform.scale.y << "\n";
             }
 
-			//this if else condition is to check if entity has sprite component
+            //this if else condition is to check if entity has sprite component
             if (entityManager->HasComponent<MeshRenderer>(entity)) {
-				// get reference to the meshRenderer component
+                // get reference to the meshRenderer component
                 // in renderring system, there is also meshrenderer component to generate image
                 // some entity may not have 
-				auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
-				//write the sprite name
+                auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
+                //write the sprite name
                 if (!meshRenderer.spriteName.empty()) {
-					writeFile << "Sprite " << meshRenderer.spriteName << "\n";
+                    writeFile << "Sprite " << meshRenderer.spriteName << "\n";
                 }
             }
 
-			// this if else condition is to check if entity has sprite component
+            // this if else condition is to check if entity has sprite component
             if (entityManager->HasComponent<Sprite>(entity)) {
-				// get reference to the sprite component
+                // get reference to the sprite component
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
                     writeFile << "Sprite " << sprite.texturePath << "\n";
@@ -398,31 +413,31 @@ namespace Framework {
 
             }
 
-			// this if else condition is to check if entity has movement component
+            // this if else condition is to check if entity has movement component
             if (entityManager->HasComponent<Movement>(entity)) {
-				// get reference to the movement component
+                // get reference to the movement component
                 auto& movement = entityManager->GetComponent<Movement>(entity);
-				//write the movement speed and direction (x,y)
+                //write the movement speed and direction (x,y)
                 writeFile << "Movement " << movement.moveSpeed << " " << movement.direction.x << " " << movement.direction.y << "\n";
 
             }
 
-			// this if else condition is to check if entity has boxcollider component
+            // this if else condition is to check if entity has boxcollider component
             if (entityManager->HasComponent<BoxCollider>(entity)) {
-				// get reference to the boxcollider component
+                // get reference to the boxcollider component
                 auto& boxCollider = entityManager->GetComponent<BoxCollider>(entity);
-				//box collider trigger is bool, we need to convert it to int(0/1) for writing
+                //box collider trigger is bool, we need to convert it to int(0/1) for writing
                 const int trigger = boxCollider.isTrigger ? 1 : 0;
-				//write the size (x,y), offset(x,y) and trigger(0/1)
+                //write the size (x,y), offset(x,y) and trigger(0/1)
                 writeFile << "BoxCollider " << boxCollider.size.x << " " << boxCollider.size.y << " " << boxCollider.offset.x << " " << boxCollider.offset.y << " " << trigger << "\n";
 
             }
 
-			// this if else condition is to check if entity has circlecollider component
+            // this if else condition is to check if entity has circlecollider component
             if (entityManager->HasComponent<CircleCollider>(entity)) {
-				// get reference to the circlecollider component
+                // get reference to the circlecollider component
                 auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
-				//write the radius and offset(x,y)
+                //write the radius and offset(x,y)
                 writeFile << "CircleCollider " << circleCollider.radius << " " << circleCollider.offset.x << " " << circleCollider.offset.y << "\n";
             }
 
@@ -430,11 +445,11 @@ namespace Framework {
                 auto& spriteAnimation = entityManager->GetComponent<SpriteAnimation>(entity);
                 const int loopInt = spriteAnimation.loop ? 1 : 0;
                 writeFile << "SpriteAnimation " << spriteAnimation.rows << " " << spriteAnimation.columns << " "
-                          << spriteAnimation.frameCount << " " << spriteAnimation.frameTime << " "
-                          << loopInt << " " << spriteAnimation.uvShrinkPx << "\n";
-			}
+                    << spriteAnimation.frameCount << " " << spriteAnimation.frameTime << " "
+                    << loopInt << " " << spriteAnimation.uvShrinkPx << "\n";
+            }
 
-			// save audio source component
+            // save audio source component
             if (entityManager->HasComponent<AudioSource>(entity)) {
                 auto& audio = entityManager->GetComponent<AudioSource>(entity);
                 writeFile << "AudioSource " << audio.soundName << " "
@@ -453,68 +468,68 @@ namespace Framework {
             // add this blank line to separate this entity from the next entity
             writeFile << "\n";
         }
-		//Close the file after writing
+        //Close the file after writing
         writeFile.close();
         //if the save function works, return true
         return true;
     }
 
     // ============================================================================
-	// This is the function to turn on drag and drop for files in GLFW window
+    // This is the function to turn on drag and drop for files in GLFW window
     // author: jiahao zhou 
     // ============================================================================
     void ImGuiSystem::EnableFileDragAndDrop() {
-		//attack the current imguisystem instance to the window user pointer
-		// so the drop callback can find the instance
-		glfwSetWindowUserPointer(window, this);
+        //attack the current imguisystem instance to the window user pointer
+        // so the drop callback can find the instance
+        glfwSetWindowUserPointer(window, this);
 
-		//give instructions to GLFW to use the FileDropCallBack function
-		glfwSetDropCallback(window, FileDropCallBack);
+        //give instructions to GLFW to use the FileDropCallBack function
+        glfwSetDropCallback(window, FileDropCallBack);
     }
 
 
     // ============================================================================
-	// This is the function of GLFW file drop callback
+    // This is the function of GLFW file drop callback
     // author: jiahao zhou 
     // ============================================================================
     void ImGuiSystem::FileDropCallBack(GLFWwindow* window, int count, const char** paths) {
-		//get the imguisystem instance from the window user pointer
+        //get the imguisystem instance from the window user pointer
         Framework::ImGuiSystem* self = static_cast<Framework::ImGuiSystem*>(glfwGetWindowUserPointer(window));
-		// if the instance is valid, call the OnFileDrop member function
+        // if the instance is valid, call the OnFileDrop member function
         if (self) {
             self->OnFileDrop(count, paths);
         }
     }
 
     // ============================================================================
-	// This is the function to check if the file is a level file
+    // This is the function to check if the file is a level file
     // author: jiahao.zhou@digipen
     // ============================================================================
     bool ImGuiSystem::IsLevelFile(const std::filesystem::path& path) const {
-		// return true only if the file has .txt extension
-		return path.has_extension() && path.extension() == ".txt";
+        // return true only if the file has .txt extension
+        return path.has_extension() && path.extension() == ".txt";
     }
 
     // ============================================================================
-	// This is the function to check if the file is a texture file(jpg/png/jpeg)
+    // This is the function to check if the file is a texture file(jpg/png/jpeg)
     // author: jiahao.zhou@digipen
     // ============================================================================
     bool ImGuiSystem::IsTextureFile(const std::filesystem::path& path) const {
-		//first check if the file has extension, if not return false
+        //first check if the file has extension, if not return false
         if (!path.has_extension()) {
             return false;
         }
         //get the file extension string 
-		auto ext = path.extension().string();
-		//convert it to lower case for easier comparison
-		std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-		//return true if the extension is png/jpg/jpeg
-		return ext == ".png" || ext == ".jpg" || ext == ".jpeg";
+        auto ext = path.extension().string();
+        //convert it to lower case for easier comparison
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        //return true if the extension is png/jpg/jpeg
+        return ext == ".png" || ext == ".jpg" || ext == ".jpeg";
     }
 
 
     // ============================================================================
-	// This is the function that show the asset window
+    // This is the function that show the asset window
     // author: jiahao.zhou@digipen
     // ============================================================================
     void ImGuiSystem::ShowAssetsWindow() {
@@ -592,6 +607,13 @@ namespace Framework {
                 }
             }
 
+            // ============================================================================ 
+            // detail: Handles prefab interaction in the Assets window:
+            //         - Detects .prefab/.json files
+            //         - Double-click spawns a prefab instance
+            //         - Drag-and-drop exposes a "Prefab" payload for drop zones
+            // author: Sim Kah Yan 
+            // ============================================================================
             if (path.extension() == ".prefab" || path.extension() == ".json") {
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Double-click to spawn prefab\nDrag to drop zone");
@@ -621,41 +643,64 @@ namespace Framework {
         ImGui::End();  // Only one End() call at the very end
     }
 
-    Framework::Vector2D EditorScreenWorld(float screenX, float screenY) {
+    // jiahao
+    Framework::Vector2D ImGuiSystem::EditorScreenWorld() {
         if (!Framework::CORE) {
-			return Framework::Vector2D{0.0f, 0.0f};
+            return Framework::Vector2D{ 0.0f, 0.0f };
         }
 
-		auto graphics = Framework::CORE->GetGraphicsSystem();
-		auto windowSystem = Framework::CORE->GetWindowSystem();
+        auto graphics = Framework::CORE->GetGraphicsSystem();
+        auto windowSystem = Framework::CORE->GetWindowSystem();
 
         if (!graphics || !windowSystem) {
             return Framework::Vector2D(0.0f, 0.0f);
         }
 
-		GLFWwindow* window = windowSystem->GetWindow();
+        GLFWwindow* window = windowSystem->GetWindow();
         if (!window) {
             return Framework::Vector2D(0.0f, 0.0f);
         }
 
-		int fbWidth, fbHeight;
-        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+        // 1. Get Global Mouse Position
+        ImVec2 mousePos = ImGui::GetMousePos();
+        float mouseX = mousePos.x;
+        float mouseY = mousePos.y;
 
-        int windowWidth, windowHeight;
-        glfwGetWindowSize(window, &windowWidth, &windowHeight);
+        // 2. Determine Screen Dimensions for NDC Calculation
+        float screenX = 0.0f;
+        float screenY = 0.0f;
+        float screenW = 0.0f;
+        float screenH = 0.0f;
 
-        if (fbWidth == 0 || fbHeight == 0 || windowWidth == 0 || windowHeight == 0) {
-            return Framework::Vector2D(0.0f, 0.0f);
+        // Check if we are rendering to the ImGui Viewport
+        if (IsRenderingToViewport()) {
+            // --- VIEWPORT MODE ---
+            screenX = m_viewportPos.x;
+            screenY = m_viewportPos.y;
+            screenW = m_viewportSize.x;
+            screenH = m_viewportSize.y;
+        }
+        else {
+            // --- FULLSCREEN MODE (Fallback) ---
+            int w, h;
+            glfwGetWindowSize(window, &w, &h);
+            screenW = (float)w;
+            screenH = (float)h;
         }
 
-        float fbX = screenX * static_cast<float>(fbWidth) / static_cast<float>(windowWidth);
-        float fbY = screenY * static_cast<float>(fbHeight) / static_cast<float>(windowHeight);
+        // 3. Convert to Normalized Device Coordinates (NDC) [-1 to 1]
+        float localX = mouseX - screenX;
+        float localY = mouseY - screenY;
 
-        float ndcX = (2.0f * fbX / static_cast<float>(fbWidth)) - 1.0f;
-        float ndcY = 1.0f - (2.0f * fbY / static_cast<float>(fbHeight));
+        float ndcX = (2.0f * localX / screenW) - 1.0f;
 
-        glm::mat4 invViewProj = glm::inverse(graphics->GetEditorCamera().GetViewProjectionMatrix());
+        // FLIP Y: ImGui (0=Top) vs OpenGL (0=Bottom)
+        float ndcY = 1.0f - (2.0f * localY / screenH);
 
+        // 4. Unproject using the Active Camera
+        Camera& camera = CORE->IsPlaying() ? graphics->GetCamera() : graphics->GetEditorCamera();
+
+        glm::mat4 invViewProj = glm::inverse(camera.GetViewProjectionMatrix());
         glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
 
         return Vector2D(worldPos.x, worldPos.y);
@@ -673,8 +718,11 @@ namespace Framework {
 
         frameTime = ImGui::GetIO().DeltaTime;
 
-        ImGui::DockSpaceOverViewport(ImGui::GetMainViewport(),
-            ImGuiDockNodeFlags_PassthruCentralNode);
+
+        // ========================================================================
+        // SETUP DOCKSPACE - Handle docking layout and menu bar
+        // ========================================================================
+        SetupDockSpace();
     }
 
     void ImGuiSystem::Update(float dt)
@@ -706,6 +754,11 @@ namespace Framework {
         ImGui_ImplGlfw_NewFrame();
 
         frameTime = ImGui::GetIO().DeltaTime;
+
+        // ========================================================================
+        // SETUP DOCKSPACE - Handle docking layout and menu bar
+        // ========================================================================
+        SetupDockSpace();
 
         //object picking
         UpdatePicking();
@@ -746,181 +799,6 @@ namespace Framework {
                     isDraggingEntity = false;
                 }
             }
-
-        }
-
-        // Draw Menu bar
-        if (ImGui::BeginMainMenuBar()) {
-            //File bar - jiahao
-            if (ImGui::BeginMenu("File")) {
-                // if the game is playing, function buttons under File should not be available
-                if (CORE->IsPlaying()) {
-                    ImGui::BeginDisabled();
-                }
-                // open default level
-                if (ImGui::MenuItem("Open")) {
-                    // open default level if no current level path
-                    bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
-                    if (!isOpen) {
-                        std::cerr << "[ImGuiError] Failed to open level.txt\n";
-                    }
-                    else {
-                        currentLevelPath = "assets/level1.txt";
-                    }
-                }
-                // open level from specified path input by user
-                if (ImGui::MenuItem("Open...")) {
-                    // set default path if current level path is empty
-                    if (currentLevelPath.empty()) {
-                        currentLevelPath = "assets/level1.txt";
-                    }
-                    // set the open path to current level path
-                    openPath = currentLevelPath;
-                    //ImGui::OpenPopup("Open Level...");
-                    // set a flag here to show open modal in next frame
-                    wantOpenModal = true;
-                }
-
-                // save level to current level path
-                if (ImGui::MenuItem("Save")) {
-                    // use default path if current level path is empty
-                    const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
-                    // try to save level to the path
-                    bool isSave = SaveLevelToTxt(path);
-                    if (!isSave) {
-                        std::cerr << "[ImGuiError] Failed to save level.txt\n";
-                    }
-                }
-
-                // save level to specified path input by user
-                if (ImGui::MenuItem("Save as ...")) {
-                    // set default path if current level path is empty
-                    if (currentLevelPath.empty()) {
-                        currentLevelPath = "assets/level1.txt";
-                    }
-                    // set the open path to current level path
-                    openPath = currentLevelPath;
-                    //ImGui::OpenPopup("Save Level As...");
-                    // set a flag here to show save as modal in next frame
-                    wantSaveAsModal = true;
-                }
-
-                // exit option
-                if (ImGui::MenuItem("Exit")) {
-                    Message quitMsg(Status::Quit);
-                    CORE->BroadcastMessage(&quitMsg);
-                }
-
-                // disable function buttons under File when playing
-                if (CORE->IsPlaying()) {
-                    ImGui::EndDisabled();
-                }
-                ImGui::EndMenu();
-            }
-
-            //windows bar
-            if (ImGui::BeginMenu("Windows")) {
-                ImGui::MenuItem("Entity Inspector", nullptr, &showEntityInspector);
-                ImGui::MenuItem("Spawner", nullptr, &showSpawner);
-                ImGui::MenuItem("Debug Info", nullptr, &showDebug);
-                ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
-                //Asset window - jiahao
-                ImGui::MenuItem("Assets", nullptr, &showAssets);
-                //prefab window - kahyan
-                ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
-                ImGui::MenuItem("Game Viewport", nullptr, &showGameViewport);  // ADD
-                ImGui::Separator();
-                ImGui::MenuItem("Render to Viewport", nullptr, &renderToViewport);
-                ImGui::EndMenu();
-            }
-
-            // ============================================================================
-            // This is the if else condition to control play and stop button in the editor menu
-            // author: jiahao.zhou@digipen
-            // ============================================================================
-            if (ImGui::BeginMenu("Editor")) {
-
-                // if the game is not playing, show play button
-                if (!CORE->IsPlaying()) {
-                    if (ImGui::MenuItem("Play")) {
-                        //if there is no current level path, save to default level path
-                        if (!SaveLevelToTxt(defaultLevelPath)) {
-                            std::cerr << "[ImGuiError] Could not create default setting"
-                                << defaultLevelPath << "\n";
-                        }
-                        else {
-                            // change engine state into playing
-                            CORE->SetPlaying(true);
-                            // set camera to follow player entity
-                            if (auto* gfx = CORE->GetGraphicsSystem())
-                            {
-                                if (entityManager)
-                                {
-                                    //find player entity by checking circle collider radius
-                                    Framework::Entity player{};
-                                    for (auto e : entityManager->GetAllEntities())
-                                    {
-                                        if (entityManager->HasComponent<Framework::CircleCollider>(e))
-                                        {
-                                            // get reference to circle collider component
-                                            auto& c = entityManager->GetComponent<Framework::CircleCollider>(e);
-                                            if (c.radius > 0.12f && c.radius < 0.18f)
-                                            {
-                                                // mark this entity as player
-                                                player = e;
-                                                break;
-                                            }
-                                        }
-                                    }
-
-                                    // set follow target if player entity is valid
-                                    if (player.IsValid())
-                                    {
-                                        // inform graphics system to follow player
-                                        gfx->SetFollowTarget(player);
-                                    }
-                                }
-                            }
-                        }
-
-                    }
-                }
-
-                //if the game is playing, show stop button
-                else {
-                    if (ImGui::MenuItem("Stop")) {
-                        CORE->SetPlaying(false);
-
-                        //Reset Camera
-                        if (auto gfx = CORE->GetGraphicsSystem()) {
-                            gfx->ClearFollowTarget();
-                            gfx->ResetEditorCamera();
-                        }
-
-                        //Reload default level
-                        if (!OpenLevelFromTxt(defaultLevelPath, true)) {
-                            if (!currentLevelPath.empty()) {
-                                OpenLevelFromTxt(currentLevelPath, true);
-                            }
-                            else {
-                                std::cerr << "[ImGuiError] Could not create default setting " << defaultLevelPath << "\n";
-                                OpenLevelFromTxt("assets/level1.txt", true);
-                            }
-                        }
-
-                        //clear all entities and reload default level
-                        entityManager->ClearAllEntities();
-                        // reload default level
-                        OpenLevelFromTxt(defaultLevelPath, true);
-                    }
-                }
-
-                //close the editor menu
-                ImGui::EndMenu();
-            }
-
-            ImGui::EndMainMenuBar();
-
 
         }
 
@@ -1088,6 +966,78 @@ namespace Framework {
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
         // show asset window - jiahao
         if (showAssets) ShowAssetsWindow();
+
+        if (showAudioNamePopup) {
+            ImGui::OpenPopup("Import Audio Asset");
+        }
+
+        if (ImGui::BeginPopupModal("Import Audio Asset", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("File detected: %s", pendingAudioPath.filename().string().c_str());
+            ImGui::Spacing();
+
+            ImGui::Text("Enter a unique Key Name for this audio:");
+            // Input field for the key (e.g., "bgm_boss", "sfx_jump")
+            if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+            ImGui::InputText("##AudioKey", newAudioKeyBuffer, sizeof(newAudioKeyBuffer));
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // --- IMPORT BUTTON ---
+            if (ImGui::Button("Import & Load", ImVec2(120, 0))) {
+                if (audioSystem && strlen(newAudioKeyBuffer) > 0) {
+                    std::string keyName = newAudioKeyBuffer;
+					std::string ext = pendingAudioPath.extension().string();
+					std::string fileName = keyName + ext;
+
+                    // 1. Copy file to assets folder
+                    std::filesystem::path destPath = std::filesystem::path("assets") / fileName;
+                    bool copySuccess = true;
+
+                    if (!std::filesystem::exists(destPath)) {
+                        try {
+                            std::filesystem::copy_file(pendingAudioPath, destPath);
+                            std::cout << "[Import] Copied file to: " << destPath << "\n";
+                        }
+                        catch (const std::exception& e) {
+                            std::cerr << "[Import] Copy failed: " << e.what() << "\n";
+                            copySuccess = false;
+                        }
+                    }
+
+                    // 2. Update JSON and Reload if copy succeeded (or file existed)
+                    if (copySuccess) {
+                        // Use the user-entered KEY (newAudioKeyBuffer) instead of just the filename
+                        std::cout << "DEBUG: Calling AddAudioToJSON with Key='" << keyName << "' and File='" << fileName << "'\n";
+                        bool added = AddAudioToJSON(keyName, fileName);
+
+                        if (added) {
+                            // 3. Reload Audio System
+                            audioSystem->ReloadAudioLibrary();
+                            std::cout << "[Import] Audio library reloaded with key: " << keyName << "\n";
+
+                            // Optional: Play it to confirm
+                            audioSystem->PlaySound(keyName.c_str(), false);
+                        }
+                    }
+
+                    showAudioNamePopup = false;
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            ImGui::SameLine();
+
+            // --- CANCEL BUTTON ---
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                showAudioNamePopup = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
         if (showGameViewport) ShowGameViewport();
@@ -1103,6 +1053,16 @@ namespace Framework {
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Handle multi-viewport (required when ViewportsEnable is set)
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
     }
 
     void ImGuiSystem::SendEngineMessage(Message* msg)
@@ -1152,6 +1112,26 @@ namespace Framework {
         std::vector<Entity> allEntities = entityManager->GetAllEntities();
         const int totalEntities = static_cast<int>(allEntities.size());
 
+        // ========================================================================
+        // GLOBAL SETTINGS
+        // ========================================================================
+        if (ImGui::CollapsingHeader("Global Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+            // Master Volume Slider
+            static float masterVolume = AudioLoader::GetSettings().masterVolume;
+
+            ImGui::Text("Audio Settings");
+            if (ImGui::SliderFloat("Master Volume", &masterVolume, 0.0f, 1.0f, "%.2f")) {
+                // Update audio system
+                if (audioSystem) {
+                    audioSystem->SetMasterVolume(masterVolume);
+                }
+                // Save to audio config JSON file
+                AudioLoader::SetMasterVolume(masterVolume);
+            }
+
+            ImGui::Separator();
+        }
+
         ImGui::Text("Total Entities: %d", totalEntities);
         ImGui::Separator();
 
@@ -1200,6 +1180,13 @@ namespace Framework {
         Entity entityToDelete = { 0 };
         bool shouldDelete = false;
 
+        // Component removal tracking
+        struct ComponentRemoval {
+            Entity entity;
+            std::string componentType;
+        };
+        std::vector<ComponentRemoval> componentsToRemove;
+
         for (size_t i = 0; i < pageEntities.size(); ++i) {
             Entity entity = pageEntities[i];
 
@@ -1217,7 +1204,7 @@ namespace Framework {
                 }
             }
 
-            snprintf(label, sizeof(label), "Entity %u%s", entity.GetID(), entityInfo.c_str());
+            snprintf(label, sizeof(label), "Entity %u%s###Entity_%u", entity.GetID(), entityInfo.c_str(), entity.GetID());
 
             if (ImGui::CollapsingHeader(label)) {
 
@@ -1226,6 +1213,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<Transform>(entity)) {
                     if (ImGui::TreeNode("Transform##TransformNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveTransform")) {
+                            componentsToRemove.push_back({ entity, "Transform" });
+                        }
+
                         auto& transform = entityManager->GetComponent<Transform>(entity);
 
                         ImGui::DragFloat2("Position", &transform.position.x, 0.01f, -100.0f, 100.0f);
@@ -1241,6 +1233,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<Sprite>(entity)) {
                     if (ImGui::TreeNode("Sprite##SpriteNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveSprite")) {
+                            componentsToRemove.push_back({ entity, "Sprite" });
+                        }
+
                         auto& sprite = entityManager->GetComponent<Sprite>(entity);
 
                         // Display texture path
@@ -1276,6 +1273,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<MeshRenderer>(entity)) {
                     if (ImGui::TreeNode("MeshRenderer##MeshRendererNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveMeshRenderer")) {
+                            componentsToRemove.push_back({ entity, "MeshRenderer" });
+                        }
+
                         auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
 
                         // Sprite name
@@ -1333,6 +1335,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<Movement>(entity)) {
                     if (ImGui::TreeNode("Movement##MovementNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveMovement")) {
+                            componentsToRemove.push_back({ entity, "Movement" });
+                        }
+
                         auto& movement = entityManager->GetComponent<Movement>(entity);
 
                         ImGui::DragFloat("Speed", &movement.moveSpeed, 0.01f, 0.0f, 100.0f);
@@ -1347,6 +1354,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<BoxCollider>(entity)) {
                     if (ImGui::TreeNode("BoxCollider##BoxColliderNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveBoxCollider")) {
+                            componentsToRemove.push_back({ entity, "BoxCollider" });
+                        }
+
                         auto& boxCollider = entityManager->GetComponent<BoxCollider>(entity);
 
                         ImGui::DragFloat2("Size", &boxCollider.size.x, 0.01f, 0.0f, 100.0f);
@@ -1362,6 +1374,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<CircleCollider>(entity)) {
                     if (ImGui::TreeNode("CircleCollider##CircleColliderNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveCircleCollider")) {
+                            componentsToRemove.push_back({ entity, "CircleCollider" });
+                        }
+
                         auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
 
                         ImGui::DragFloat("Radius", &circleCollider.radius, 0.01f, 0.0f, 100.0f);
@@ -1396,6 +1413,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<AudioSource>(entity)) {
                     if (ImGui::TreeNode("AudioSource##AudioSourceNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveAudioSource")) {
+                            componentsToRemove.push_back({ entity, "AudioSource" });
+                        }
+
                         auto& audio = entityManager->GetComponent<AudioSource>(entity);
 
                         // Display audio name
@@ -1421,6 +1443,11 @@ namespace Framework {
                 // ==================================================================
                 if (entityManager->HasComponent<ScriptComponent>(entity)) {
                     if (ImGui::TreeNode("Script##ScriptNode")) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("Remove##RemoveScript")) {
+                            componentsToRemove.push_back({ entity, "ScriptComponent" });
+                        }
+
                         auto& script = entityManager->GetComponent<ScriptComponent>(entity);
 
                         // Display script path
@@ -1468,7 +1495,159 @@ namespace Framework {
                 */
 
                 // ==================================================================
+                // ADD COMPONENT
+                // ==================================================================
+                ImGui::Separator();
+                if (ImGui::Button("Add Component##AddComponentBtn")) {
+                    ImGui::OpenPopup("AddComponentPopup");
+                }
+
+                if (ImGui::BeginPopup("AddComponentPopup")) {
+                    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.3f, 1.0f), "Add Component");
+                    ImGui::Separator();
+
+                    // Transform
+                    if (!entityManager->HasComponent<Transform>(entity)) {
+                        if (ImGui::MenuItem("Transform")) {
+                            entityManager->AddComponent<Transform>(entity, Vector2D(0.0f, 0.0f));
+                        }
+                    }
+
+                    // Movement
+                    if (!entityManager->HasComponent<Movement>(entity)) {
+                        if (ImGui::MenuItem("Movement")) {
+                            entityManager->AddComponent<Movement>(entity);
+                        }
+                    }
+
+                    // Sprite
+                    if (!entityManager->HasComponent<Sprite>(entity)) {
+                        if (ImGui::MenuItem("Sprite")) {
+                            auto& sprite = entityManager->AddComponent<Sprite>(entity);
+                            sprite.texturePath = "";
+                            sprite.layer = 0;
+                        }
+                    }
+
+                    // MeshRenderer
+                    if (!entityManager->HasComponent<MeshRenderer>(entity)) {
+                        if (ImGui::MenuItem("MeshRenderer")) {
+                            auto& meshRenderer = entityManager->AddComponent<MeshRenderer>(entity);
+                            meshRenderer.spriteName = "";
+                            meshRenderer.layer = 0;
+                        }
+                    }
+
+                    // BoxCollider
+                    if (!entityManager->HasComponent<BoxCollider>(entity)) {
+                        if (ImGui::MenuItem("BoxCollider")) {
+                            auto& boxCollider = entityManager->AddComponent<BoxCollider>(entity);
+                            boxCollider.size = Vector2D(1.0f, 1.0f);
+                            boxCollider.offset = Vector2D(0.0f, 0.0f);
+                        }
+                    }
+
+                    // CircleCollider
+                    if (!entityManager->HasComponent<CircleCollider>(entity)) {
+                        if (ImGui::MenuItem("CircleCollider")) {
+                            entityManager->AddComponent<CircleCollider>(entity, 0.5f, Vector2D(0.0f, 0.0f));
+                        }
+                    }
+
+                    // AudioSource
+                    if (!entityManager->HasComponent<AudioSource>(entity)) {
+                        if (ImGui::MenuItem("AudioSource")) {
+                            auto& audio = entityManager->AddComponent<AudioSource>(entity);
+                            audio.soundName = "";
+                            audio.volume = 1.0f;
+                        }
+                    }
+
+                    // ScriptComponent
+                    if (!entityManager->HasComponent<ScriptComponent>(entity)) {
+                        if (ImGui::MenuItem("ScriptComponent")) {
+                            auto& script = entityManager->AddComponent<ScriptComponent>(entity);
+                            script.scriptPath = "";
+                        }
+                    }
+
+                    // Health
+                    if (!entityManager->HasComponent<Health>(entity)) {
+                        if (ImGui::MenuItem("Health")) {
+                            entityManager->AddComponent<Health>(entity, 50);
+                        }
+                    }
+
+                    // SpriteAnimation
+                    if (!entityManager->HasComponent<SpriteAnimation>(entity)) {
+                        if (ImGui::MenuItem("SpriteAnimation")) {
+                            auto& anim = entityManager->AddComponent<SpriteAnimation>(entity);
+                            anim.animName = "";
+                            anim.frameCount = 1;
+                        }
+                    }
+
+                    // AP
+                    if (!entityManager->HasComponent<AP>(entity)) {
+                        if (ImGui::MenuItem("AP")) {
+                            entityManager->AddComponent<AP>(entity, 3);
+                        }
+                    }
+
+                    // AttackRangeComponent
+                    if (!entityManager->HasComponent<AttackRangeComponent>(entity)) {
+                        if (ImGui::MenuItem("AttackRangeComponent")) {
+                            entityManager->AddComponent<AttackRangeComponent>(entity, 1, 3);
+                        }
+                    }
+
+                    // Chest
+                    if (!entityManager->HasComponent<Chest>(entity)) {
+                        if (ImGui::MenuItem("Chest")) {
+                            entityManager->AddComponent<Chest>(entity, 0);
+                        }
+                    }
+
+                    // Goal
+                    if (!entityManager->HasComponent<Goal>(entity)) {
+                        if (ImGui::MenuItem("Goal")) {
+                            entityManager->AddComponent<Goal>(entity, 0);
+                        }
+                    }
+
+                    // Inventory
+                    if (!entityManager->HasComponent<Inventory>(entity)) {
+                        if (ImGui::MenuItem("Inventory")) {
+                            entityManager->AddComponent<Inventory>(entity);
+                        }
+                    }
+
+                    // AttackAP
+                    if (!entityManager->HasComponent<AttackAP>(entity)) {
+                        if (ImGui::MenuItem("AttackAP")) {
+                            entityManager->AddComponent<AttackAP>(entity, 1);
+                        }
+                    }
+
+                    ImGui::EndPopup();
+                }
+
+                // ============================================================================
+                // detail: Inspector actions for prefab-aware entities
+                //         - Show originating prefab (if any) using PrefabInstanceTracker
+                //         - Allow saving the current entity as a prefab asset
+                //         - Support duplicating an entity via temp prefab save+load
+                //         - Ensure prefab tracking is cleaned up on delete
+                // author: Sim Kah Yan
+                // ============================================================================
+
+                // ==================================================================
                 // PREFAB TRACKER INFO
+                // ------------------------------------------------------------------
+                // Query the central PrefabInstanceTracker to see if this entity
+                // was originally spawned FROM a prefab file. If so, display a
+                // small label in the inspector so designers know which prefab
+                // the instance is linked to.
                 // ==================================================================
                 std::string prefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
                 if (!prefabSource.empty()) {
@@ -1479,10 +1658,16 @@ namespace Framework {
 
                 // ==================================================================
                 // ENTITY ACTIONS
+                // author: Sim Kah Yan
                 // ==================================================================
                 ImGui::Separator();
 
+                // ------------------------------------------------------------------
                 // Delete button
+                // - Mark the entity to be deleted after the UI pass.
+                // - Actual destruction is done later (see below) to avoid
+                //   modifying ECS state while iterating the entity list.
+                // ------------------------------------------------------------------
                 if (ImGui::Button("Delete##DelBtn")) {
                     entityToDelete = entity;
                     shouldDelete = true;
@@ -1490,7 +1675,17 @@ namespace Framework {
 
                 ImGui::SameLine();
 
+                // ------------------------------------------------------------------
                 // Save as prefab button
+                // author: Sim Kah Yan
+                // ------------------------------------------------------------------
+                // - Serializes the current entity and its components to a .prefab
+                //   file under "assets/prefabs/".
+                // - Filename is auto-generated using the entity ID:
+                //       entity_<id>.prefab
+                // - Uses PrefabSerializer::SavePrefab, which writes out JSON
+                //   based on the components currently attached to this entity.
+                // ------------------------------------------------------------------
                 if (ImGui::Button("Save Prefab##SavePrefabBtn")) {
                     std::string prefabPath = "assets/prefabs/entity_" + std::to_string(entity.GetID()) + ".prefab";
                     std::filesystem::create_directories("assets/prefabs");
@@ -1503,7 +1698,22 @@ namespace Framework {
 
                 ImGui::SameLine();
 
+                // ------------------------------------------------------------------
                 // Duplicate button
+                // author: Sim Kah Yan
+                // ------------------------------------------------------------------
+                // Duplication strategy:
+                //  1. Save the current entity to a temporary prefab file
+                //     (e.g. "_temp_duplicate.prefab").
+                //  2. Load that prefab again to create a new entity, using the
+                //     same code path as normal prefab spawning.
+                //  3. Optionally offset the new entity's position slightly so it
+                //     doesn't overlap exactly on top of the original.
+                //
+                // Because duplication uses the same Save/Load flow as prefabs,
+                // any new components added to prefab serialization automatically
+                // participate in duplication as well.
+                // ------------------------------------------------------------------
                 if (ImGui::Button("Duplicate##DuplicateBtn")) {
                     // Save to temp prefab and reload
                     std::string tempPath = "assets/prefabs/_temp_duplicate.prefab";
@@ -1527,7 +1737,72 @@ namespace Framework {
 
         ImGui::End();
 
+        // ----------------------------------------------------------------------
+        // Handle component removal after UI rendering
+        // ----------------------------------------------------------------------
+        // Process all component removals that were requested during UI rendering
+        for (const auto& removal : componentsToRemove) {
+            if (removal.componentType == "Transform") {
+                entityManager->RemoveComponent<Transform>(removal.entity);
+            }
+            else if (removal.componentType == "Movement") {
+                entityManager->RemoveComponent<Movement>(removal.entity);
+            }
+            else if (removal.componentType == "Sprite") {
+                entityManager->RemoveComponent<Sprite>(removal.entity);
+            }
+            else if (removal.componentType == "MeshRenderer") {
+                entityManager->RemoveComponent<MeshRenderer>(removal.entity);
+            }
+            else if (removal.componentType == "BoxCollider") {
+                entityManager->RemoveComponent<BoxCollider>(removal.entity);
+            }
+            else if (removal.componentType == "CircleCollider") {
+                entityManager->RemoveComponent<CircleCollider>(removal.entity);
+            }
+            else if (removal.componentType == "AudioSource") {
+                entityManager->RemoveComponent<AudioSource>(removal.entity);
+            }
+            else if (removal.componentType == "ScriptComponent") {
+                entityManager->RemoveComponent<ScriptComponent>(removal.entity);
+            }
+            else if (removal.componentType == "Health") {
+                entityManager->RemoveComponent<Health>(removal.entity);
+            }
+            else if (removal.componentType == "SpriteAnimation") {
+                entityManager->RemoveComponent<SpriteAnimation>(removal.entity);
+            }
+            else if (removal.componentType == "AP") {
+                entityManager->RemoveComponent<AP>(removal.entity);
+            }
+            else if (removal.componentType == "AttackRangeComponent") {
+                entityManager->RemoveComponent<AttackRangeComponent>(removal.entity);
+            }
+            else if (removal.componentType == "Chest") {
+                entityManager->RemoveComponent<Chest>(removal.entity);
+            }
+            else if (removal.componentType == "Goal") {
+                entityManager->RemoveComponent<Goal>(removal.entity);
+            }
+            else if (removal.componentType == "Inventory") {
+                entityManager->RemoveComponent<Inventory>(removal.entity);
+            }
+            else if (removal.componentType == "AttackAP") {
+                entityManager->RemoveComponent<AttackAP>(removal.entity);
+            }
+        }
+
+        // ----------------------------------------------------------------------
         // Handle deletion after UI rendering
+        // author: Sim Kah Yan
+        // ----------------------------------------------------------------------
+        // Once the frame's UI is done, we safely destroy the entity if it was
+        // marked for deletion:
+        //  - Remove from ECS
+        //  - Remove from spatial partitioning
+        //  - Unregister from PrefabInstanceTracker so the tracker does not keep
+        //    a dangling entry for a destroyed entity.
+        // ----------------------------------------------------------------------
         if (shouldDelete && entityToDelete.IsValid()) {
             entityManager->DestroyEntity(entityToDelete);
             Framework::SpatialPartitioningRemove(entityToDelete);
@@ -1540,6 +1815,15 @@ namespace Framework {
         if (showGameViewport) ShowGameViewport();
     }
 
+    // ============================================================================
+    // detail: ImGui-based Prefab Editor window.
+    //         - Save any existing entity as a .prefab file
+    //         - Browse and load prefabs from assets/prefabs
+    //         - Track prefab instances via PrefabInstanceTracker
+    //         - Provide a "prefab-wide inspector" that edits ALL instances
+    //           of a selected prefab and then writes changes back to disk.
+    // Author: Sim Kah Yan
+    // ============================================================================
     void ImGuiSystem::ShowPrefabWindow()
     {
         if (!entityManager) return;
@@ -1554,6 +1838,12 @@ namespace Framework {
 
         // ========================================================================
         // SECTION 1: Entity Selection for Saving
+        // Author: Sim Kah Yan
+        // ------------------------------------------------------------------------
+        // This section lets the user:
+        //   - Pick any existing entity in the scene
+        //   - Type a prefab file name
+        //   - Save that entity's components as a new .prefab file
         // ========================================================================
         ImGui::Text("Save Entity as Prefab:");
         ImGui::Spacing();
@@ -1593,11 +1883,16 @@ namespace Framework {
             ImGui::EndCombo();
         }
 
-        // Prefab name input
+        // Text input for the prefab file name to save to.
         static char prefabNameBuffer[256] = "my_entity.prefab";
         ImGui::InputText("Prefab Name##PrefabName", prefabNameBuffer, sizeof(prefabNameBuffer));
 
-        // Save button
+        // "Save as Prefab" button.
+        //
+        // - Ensures a valid entity is selected.
+        // - Writes a .prefab file to assets/prefabs/<prefabNameBuffer>.
+        // - Uses PrefabSerializer::SavePrefab, which serializes all supported
+        //   components on the selected entity to JSON.
         if (ImGui::Button("Save as Prefab##SaveBtn", ImVec2(-1, 0))) {
             if (selectedEntity.IsValid()) {
                 std::string path = "assets/prefabs/" + std::string(prefabNameBuffer);
@@ -1625,6 +1920,12 @@ namespace Framework {
 
         // ========================================================================
         // SECTION 2: Load Prefab
+        // Author: Sim Kah Yan
+        // ------------------------------------------------------------------------
+        // This section:
+        //   - Scans assets/prefabs for .prefab / .json files
+        //   - Lets the user select a prefab from a list
+        //   - Spawns a new entity instance of that prefab at a chosen position
         // ========================================================================
         ImGui::Text("Load Prefab:");
         ImGui::Spacing();
@@ -1652,11 +1953,13 @@ namespace Framework {
             needsRefresh = false;
         }
 
-        // Prefab list
+        // Index of the currently selected prefab in the list.
         static int selectedPrefabIdx = -1;
 
+        // (Reserved for single-instance editing if needed later.)
         static Framework::Entity selectedInstanceForEdit{};
 
+        // List box that shows all discovered prefabs.
         ImGui::Text("Available Prefabs:");
         if (ImGui::BeginListBox("##PrefabList", ImVec2(-1, 150))) {
             for (int i = 0; i < static_cast<int>(prefabFiles.size()); ++i) {
@@ -1673,13 +1976,18 @@ namespace Framework {
             ImGui::EndListBox();
         }
 
-        // Spawn position
+        // Spawn position for the next loaded prefab instance.
         static float spawnPos[2] = { 0.0f, 0.0f };
         ImGui::DragFloat2("Spawn Position##SpawnPos", spawnPos, 0.01f, -10.0f, 10.0f);
 
         ImGui::Separator();
 
-        // Load button
+        // "Load Prefab" button.
+        //
+        // - Requires a prefab to be selected in the list.
+        // - Calls PrefabSerializer::LoadPrefab to create a new entity.
+        // - If the new entity has a Transform, we write the spawn position
+        //   into its Transform component.
         if (ImGui::Button("Load Prefab##LoadBtn", ImVec2(-1, 0))) {
             if (selectedPrefabIdx >= 0 && selectedPrefabIdx < static_cast<int>(prefabFiles.size())) {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, selectedPrefabPath);
@@ -1709,6 +2017,18 @@ namespace Framework {
 
         // ========================================================================
         // SECTION 3: Prefab-wide Inspector (applies to ALL instances)
+        // Author: Sim Kah Yan
+        // ------------------------------------------------------------------------
+        // This is the core "live prefab" workflow:
+        //   - Get all instances of the selected prefab via PrefabInstanceTracker
+        //   - Use the FIRST instance as a "template" in the editor
+        //   - User edits the template's components (Transform, Sprite, etc.)
+        //   - On "Apply To All Instances & Save Prefab":
+        //       * Copy edited values from template to every instance
+        //       * Save the template to disk as the updated prefab file
+        //
+        // This keeps all instances visually consistent and keeps the prefab file
+        // in sync with what is shown in the editor.
         // ========================================================================
         ImGui::Text("Prefab Instances:");
         ImGui::Spacing();
@@ -1732,7 +2052,7 @@ namespace Framework {
                 }
             }
 
-            // Use the FIRST instance as the "template" for editing
+            // The first instance acts as our "template" entity for editing.
             Framework::Entity templateEntity = instances.empty() ? Framework::Entity{} : instances[0];
 
             ImGui::Separator();
@@ -1840,7 +2160,14 @@ namespace Framework {
 
                 // ------------------------------------------------
                 // APPLY TO ALL INSTANCES + SAVE PREFAB
+                // Author: Sim Kah Yan
                 // ------------------------------------------------
+                // When pressed:
+                //   1) Copies edited component values from templateEntity to every
+                //      instance of this prefab (except position, which remains
+                //      per-instance for Transform).
+                //   2) Calls PrefabSerializer::SavePrefab on the template entity
+                //      to update the on-disk prefab definition.
                 ImGui::Separator();
                 if (ImGui::Button("Apply To All Instances & Save Prefab##ApplyAll2", ImVec2(-1, 0))) {
 
@@ -1929,7 +2256,8 @@ namespace Framework {
             }
         }
 
-        // Clear tracking button (can stay as before)
+        // Utility button to wipe all prefab instance tracking state.
+        // Does NOT delete entities, only clears the registry mapping.
         if (ImGui::Button("Clear All Tracking##ClearTracking", ImVec2(-1, 0))) {
             Framework::PrefabInstanceTracker::Get().Clear();
             std::cout << "[Prefab] Cleared all instance tracking\n";
@@ -1970,7 +2298,7 @@ namespace Framework {
         if (ImGui::Button("Spawn Enemy##Btn2", ImVec2(-1, 0))) {
             Framework::Entity enemy = entitySpawner->SpawnEnemy(Vector2D(spawnX, spawnY));
             //temporary put spatialPartitioningInsert function here 
-			//to show that how does the spatial partitioning works with entity spawner
+            //to show that how does the spatial partitioning works with entity spawner
             Framework::SpatialPartitioningInsert(enemy);
         }
 
@@ -2061,6 +2389,26 @@ namespace Framework {
             ImGui::EndDragDropTarget();
         }
 
+        // =====================================================================
+        // PREFAB DROP ZONE
+        // Author: Sim Kah Yan
+        // ---------------------------------------------------------------------
+        // This UI block creates a dedicated "Prefab Drop Zone" in the editor:
+        //
+        //  - Visual:
+        //      * Shows a titled region with a large button.
+        //      * The button has a custom color so it stands out as a drop target.
+        //
+        //  - Behavior:
+        //      * Accepts ImGui drag-drop payloads of type "Prefab" (see Assets
+        //        window where the payload is created with ImGui::SetDragDropPayload).
+        //      * The payload carries the full prefab path as a C-string.
+        //      * On drop:
+        //          1. Calls PrefabSerializer::LoadPrefab to spawn a new entity.
+        //          2. If the entity has a Transform, its position is set based on
+        //             the spawner's spawnX / spawnY values.
+        //          3. Logs the action to the console for debugging.
+        // =====================================================================
         ImGui::Separator();
         ImGui::Text("📦 Prefab Drop Zone");
         ImGui::TextWrapped("Drag prefabs here to spawn");
@@ -2135,105 +2483,65 @@ namespace Framework {
 
     //game object picking in editor - jiahao
     void ImGuiSystem::UpdatePicking() {
-        if (!CORE) {
-            return;
-        }
-
-        if (CORE->IsPlaying()) {
-            return;
-        }
-
-        if (!entityManager) {
-            return;
-        }
+        if (!CORE) return;
+        if (CORE->IsPlaying()) return;
+        if (!entityManager) return;
 
         ImGuiIO& io = ImGui::GetIO();
 
-        if (io.WantCaptureMouse) {
+        // --- NEW LOGIC: Only block picking if not hovering the viewport ---
+        // We REMOVED "if (io.WantCaptureMouse) return;" because it breaks the viewport
+        if (IsRenderingToViewport() && !m_isViewportHovered) {
             return;
         }
 
         InputSystem* input = Framework::CORE->GetInputSystem();
-
         UISystem* ui = CORE->GetUISystem();
 
-        if (!input || !ui) {
-            return;
-        }
+        if (!input || !ui) return;
 
-        if (!input->IsKeyPressed(MOUSE_LEFT)) {
-            return;
-        }
+        if (!input->IsKeyPressed(MOUSE_LEFT)) return;
 
-        float mouseX = 0.0f;
-        float mouseY = 0.0f;
-
-        input->GetMousePosition(mouseX, mouseY);
-
-        Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
+        // --- NEW: Use the updated coordinate helper ---
+        Vector2D mouseWorld = EditorScreenWorld();
 
         Entity picked = INVALID_ENTITY;
 
         for (Entity e : entityManager->GetAllEntities()) {
-            if (!entityManager->HasComponent<Transform>(e)) {
-                continue;
-            }
+            if (!entityManager->HasComponent<Transform>(e)) continue;
 
             auto& transform = entityManager->GetComponent<Transform>(e);
 
-            if (entityManager->HasComponent<GridTiles>(e)) {
-                continue;
-            }
+            if (entityManager->HasComponent<GridTiles>(e)) continue;
 
             Collider collider;
             bool hasCollider = false;
 
             if (entityManager->HasComponent<CircleCollider>(e)) {
                 auto& cc = entityManager->GetComponent<CircleCollider>(e);
-
-				float scaleX = transform.scale.x;
-				float scaleY = transform.scale.y;
-
-				float scaleFactor = scaleX > scaleY ? scaleX : scaleY;
-
-                if (scaleFactor < 0.01f) {
-                    scaleFactor = 0.01f;
-                }
-
-				float worldRadius = cc.radius * scaleFactor;
-
-                collider = Collider::create_circle(
-                    worldRadius,
-                    transform.position + cc.offset
-                );
-
-                hasCollider = true;
-            }
-
-            else if (entityManager->HasComponent<BoxCollider>(e)) {
-                auto& bc = entityManager->GetComponent<BoxCollider>(e);
-
                 float scaleX = transform.scale.x;
                 float scaleY = transform.scale.y;
+                float scaleFactor = scaleX > scaleY ? scaleX : scaleY;
+                if (scaleFactor < 0.01f) scaleFactor = 0.01f;
 
-				if (scaleX < 0.01f) scaleX = 0.01f;
+                float worldRadius = cc.radius * scaleFactor;
+                collider = Collider::create_circle(worldRadius, transform.position + cc.offset);
+                hasCollider = true;
+            }
+            else if (entityManager->HasComponent<BoxCollider>(e)) {
+                auto& bc = entityManager->GetComponent<BoxCollider>(e);
+                float scaleX = transform.scale.x;
+                float scaleY = transform.scale.y;
+                if (scaleX < 0.01f) scaleX = 0.01f;
                 if (scaleY < 0.01f) scaleY = 0.01f;
 
                 float worldWidth = bc.size.x * scaleX;
-				float worldHeight = bc.size.y * scaleY;
-
-                collider = Collider::create_rect(
-                    worldWidth,
-                    worldHeight,
-                    transform.position
-                );
-
+                float worldHeight = bc.size.y * scaleY;
+                collider = Collider::create_rect(worldWidth, worldHeight, transform.position);
                 hasCollider = true;
             }
 
-            if (!hasCollider) {
-                continue;
-            }
+            if (!hasCollider) continue;
 
             if (point_in_collider(mouseWorld, collider)) {
                 picked = e;
@@ -2244,90 +2552,81 @@ namespace Framework {
         selectedEntity = picked;
 
         if (selectedEntity.GetID() != INVALID_ENTITY) {
-            std::cout << "[ImGui Picking] Selected entity ID: "
-                << selectedEntity.GetID() << "\n";
+            std::cout << "[ImGui Picking] Selected entity ID: " << selectedEntity.GetID() << "\n";
         }
-        else
-        {
+        else {
             std::cout << "[ImGui Picking] Clicked empty space\n";
         }
     }
 
     //
     void ImGuiSystem::UpdateEntityDragging() {
-        if (!CORE) {
-            return;
-        }
-
-        if (CORE->IsPlaying()) {
-            return;
-        }
-
-        if (!entityManager) {
-            return;
-        }
+        if (!CORE) return;
+        if (CORE->IsPlaying()) return;
+        if (!entityManager) return;
 
         ImGuiIO& io = ImGui::GetIO();
 
-        if (io.WantCaptureMouse) {
-            return;
+        // --- NEW LOGIC: Allow dragging if we are hovering OR already dragging ---
+        if (!isDraggingEntity && !isScalingEntity && !isRotatingEntity) {
+            // If we aren't doing anything yet, we must be hovering the viewport to start
+            if (IsRenderingToViewport() && !m_isViewportHovered) {
+                return;
+            }
         }
 
         InputSystem* input = Framework::CORE->GetInputSystem();
         UISystem* ui = CORE->GetUISystem();
 
-        if (!input || !ui) {
-            return;
-        }
+        if (!input || !ui) return;
 
-		float mouseX = 0.0f;
-		float mouseY = 0.0f;
-        input->GetMousePosition(mouseX, mouseY);
-		Vector2D mouseWorld = ui->ScreenToWorld(mouseX, mouseY);
+        // --- NEW: Calculate mouse world position once for the whole function ---
+        Vector2D mouseWorld = EditorScreenWorld();
 
         if (input->IsKeyPressed(MOUSE_LEFT) || input->IsKeyPressed(MOUSE_RIGHT)) {
             if (!selectedEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
-				isDraggingEntity = false;
-				isScalingEntity = false;
-				isRotatingEntity = false;
-				draggingEntity = Framework::Entity{ INVALID_ENTITY};
+                isDraggingEntity = false;
+                isScalingEntity = false;
+                isRotatingEntity = false;
+                draggingEntity = Framework::Entity{ INVALID_ENTITY };
                 return;
             }
             RecordUndoStep(selectedEntity);
 
-			auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
+            auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
 
             if (input->IsKeyPressed(MOUSE_LEFT) && input->IsKeyDown(KEY_SHIFT)) {
-				isScalingEntity = true;
-				isDraggingEntity = false;
-				isRotatingEntity = false;
+                isScalingEntity = true;
+                isDraggingEntity = false;
+                isRotatingEntity = false;
+                draggingEntity = selectedEntity;
 
-				draggingEntity = selectedEntity;
-				scaleStartMouse = mouseWorld;
-				scaleStartScale = transform.scale;
+                // Use new mouseWorld
+                scaleStartMouse = mouseWorld;
+                scaleStartScale = transform.scale;
             }
             else if (input->IsKeyPressed(MOUSE_RIGHT)) {
-				isRotatingEntity = true;
-				isDraggingEntity = false;
-				isScalingEntity = false;
-
-				draggingEntity = selectedEntity;
+                isRotatingEntity = true;
+                isDraggingEntity = false;
+                isScalingEntity = false;
+                draggingEntity = selectedEntity;
 
                 Vector2D toMouse = transform.position;
                 rotateStartAngle = std::atan2(toMouse.y, toMouse.x);
-				rotateStartRotation = transform.rotation;
+                rotateStartRotation = transform.rotation;
             }
-
             else if (input->IsKeyPressed(MOUSE_LEFT)) {
-				isDraggingEntity = true;
-				isScalingEntity = false;
-				isRotatingEntity = false;
+                isDraggingEntity = true;
+                isScalingEntity = false;
+                isRotatingEntity = false;
+                draggingEntity = selectedEntity;
 
-				draggingEntity = selectedEntity;
-				dragOffset = transform.position - mouseWorld;
+                // Use new mouseWorld
+                dragOffset = transform.position - mouseWorld;
             }
         }
+
         if (isDraggingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             if (!draggingEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(draggingEntity))
@@ -2335,79 +2634,45 @@ namespace Framework {
                 isDraggingEntity = false;
                 return;
             }
-            float moveX = 0.0f;
-			float moveY = 0.0f;
-			input->GetMousePosition(moveX, moveY);
-            Vector2D moveWorld = ui->ScreenToWorld(moveX, moveY);
 
-			auto& transform =
-                entityManager->GetComponent<Framework::Transform>(draggingEntity);
+            auto& transform = entityManager->GetComponent<Framework::Transform>(draggingEntity);
 
-			transform.position = moveWorld + dragOffset;
+            // Update position using the mouseWorld we calculated earlier
+            transform.position = mouseWorld + dragOffset;
         }
 
         if (isScalingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             if (!draggingEntity.IsValid() ||
-                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) 
+                !entityManager->HasComponent<Framework::Transform>(draggingEntity))
             {
                 isScalingEntity = false;
                 return;
             }
 
-            float scaleX = 0.0f;
-            float scaleY = 0.0f;
+            auto& transform = entityManager->GetComponent<Framework::Transform>(draggingEntity);
 
-            input->GetMousePosition(scaleX, scaleY);
-            Vector2D scaleMouseWorld = ui->ScreenToWorld(scaleX, scaleY);
-
-            auto& transform =
-                entityManager->GetComponent<Framework::Transform>(draggingEntity);
-
-            Vector2D delta = scaleMouseWorld - scaleStartMouse;
+            // Use mouseWorld for delta calculation
+            Vector2D delta = mouseWorld - scaleStartMouse;
 
             float factor = 1.0f + delta.x * 0.5f;
-            if (factor < 0.1f) {
-                factor = 0.1f;
-            }
-            if (factor > 5.0f) {
-                factor = 5.0f;
-            }
+            if (factor < 0.1f) factor = 0.1f;
+            if (factor > 5.0f) factor = 5.0f;
 
             transform.scale.x = scaleStartScale.x * factor;
             transform.scale.y = scaleStartScale.y * factor;
         }
+
         if (isRotatingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Right))
         {
-            /*if (!draggingEntity.IsValid() ||
-                !entityManager->HasComponent<Framework::Transform>(draggingEntity)) {
-
-                isRotatingEntity = false;
-                return;
-            }
-
-            float rotX = 0.0f;
-            float rotY = 0.0f;
-            input->GetMousePosition(rotX, rotY);
-            Vector2D rotMouseWorld = ui->ScreenToWorld(rotX, rotY);
-
-            auto& transform =
-                entityManager->GetComponent<Framework::Transform>(draggingEntity);
-
-            Vector2D toMouse = rotMouseWorld - transform.position;
-            float currentAngle = std::atan2(toMouse.y, toMouse.x);
-
-            float deltaAngle = currentAngle - rotateStartAngle;
-            transform.rotation = rotateStartRotation + deltaAngle;*/
             if (!selectedEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
-				isRotatingEntity = false;
+                isRotatingEntity = false;
             }
             else {
                 auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
-
-				const float rotationSpeed = 0.2f;
-
-				transform.rotation += rotationSpeed;
+                // Simple constant rotation
+                const float rotationSpeed = 0.2f;
+                transform.rotation += rotationSpeed;
             }
         }
 
@@ -2420,9 +2685,7 @@ namespace Framework {
         }
 
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-            
-                isRotatingEntity = false;
-            
+            isRotatingEntity = false;
         }
     }
     //undo - jiahao
@@ -2520,20 +2783,28 @@ namespace Framework {
 
             // Handle texture files
             if (IsTextureFile(path)) {
-                if (!entitySpawner) {
-                    std::cerr << "[FileDrop] ❌ EntitySpawner not available\n";
-                    continue;
+                // ONLY spawn if we are dropping into the Game Viewport
+                if (m_isViewportHovered) {
+                    if (!entitySpawner) {
+                        std::cerr << "[FileDrop] ❌ EntitySpawner not available\n";
+                        continue;
+                    }
+
+                    // [Add your texture copy logic here if needed, as discussed before]
+
+                    std::string label = path.filename().string();
+                    std::string filePath = std::string("assets/") + label;
+
+                    Framework::Entity entity = entitySpawner->SpawnSprite(
+                        filePath,
+                        Vector2D(0.0f, 0.0f),
+                        Vector2D(1.0f, 1.0f)
+                    );
+                    std::cout << "[FileDrop] Spawned sprite as entity " << entity.GetID() << "\n";
                 }
-
-                std::string label = path.filename().string();
-                std::string filePath = std::string("assets/") + label;
-
-                Framework::Entity entity = entitySpawner->SpawnSprite(
-                    filePath,
-                    Vector2D(0.0f, 0.0f),
-                    Vector2D(1.0f, 1.0f)
-                );
-                std::cout << "[FileDrop]  Spawned sprite as entity " << entity.id << "\n";
+                else {
+                    std::cout << "[FileDrop] Ignored texture drop (not in Viewport)\n";
+                }
                 continue;
             }
 
@@ -2542,51 +2813,22 @@ namespace Framework {
             // ====================================================================
             std::string errorMsg;
             if (IsAudioFileSupported(path, errorMsg)) {
-                if (!audioSystem) {
-                    std::cerr << "[FileDrop] ❌ AudioSystem not available\n";
-                    continue;
+                // Instead of processing immediately, we setup the popup
+                if (m_isViewportHovered || true) { // Allow dropping audio anywhere or restrict to viewport
+
+                    // 1. Store the source path
+                    pendingAudioPath = path;
+
+                    // 2. Pre-fill the buffer with the filename (as a default key)
+                    std::string defaultName = path.stem().string();
+                    strncpy(newAudioKeyBuffer, defaultName.c_str(), sizeof(newAudioKeyBuffer));
+                    newAudioKeyBuffer[sizeof(newAudioKeyBuffer) - 1] = '\0';
+
+                    // 3. Flag the popup to open next frame
+                    showAudioNamePopup = true;
+
+                    std::cout << "[FileDrop] Audio detected. Opening import dialog...\n";
                 }
-
-                std::string audioName = path.stem().string();
-                std::string fileName = path.filename().string();
-
-                std::cout << "[FileDrop]  Valid audio file: " << audioName << ".wav\n";
-
-                // Copy file to assets folder
-                std::filesystem::path destPath = std::filesystem::path("assets") / fileName;
-
-                if (!std::filesystem::exists(destPath)) {
-                    try {
-                        std::filesystem::copy_file(path, destPath);
-                        std::cout << "[FileDrop] Copied to: " << destPath << "\n";
-                    }
-                    catch (const std::exception& e) {
-                        std::cerr << "[FileDrop] ❌ Failed to copy: " << e.what() << "\n";
-                        continue;
-                    }
-                }
-                else {
-                    std::cout << "[FileDrop] File already in assets\n";
-                }
-
-                // Add to audio.json
-                bool added = AddAudioToJSON(audioName, fileName);
-
-                if (added) {
-                    std::cout << "[FileDrop]  Added to audio.json\n";
-
-                    // Reload audio system
-                    audioSystem->ReloadAudioLibrary();
-                    std::cout << "[FileDrop]  Audio library reloaded\n";
-
-                    // Play new audio
-                    audioSystem->PlaySound(audioName.c_str(), false);
-                    std::cout << "[FileDrop]  Playing: " << audioName << "\n";
-                }
-                else {
-                    std::cerr << "[FileDrop] ❌ Failed to add to audio.json\n";
-                }
-
                 continue;
             }
 
@@ -2603,6 +2845,21 @@ namespace Framework {
                 continue;
             }
 
+            // =================================================================
+            // PREFAB FILE DROP HANDLING
+            // Author: Sim Kah Yan
+            // -----------------------------------------------------------------
+            // When a file is dropped onto the window and its extension is
+            // recognized as a prefab type (.prefab or .json):
+            //
+            //  - We call PrefabSerializer::LoadPrefab with the full path.
+            //  - If loading succeeds, a new entity is spawned from the prefab
+            //    definition, and we log the entity ID for debugging.
+            //  - If loading fails, we print an error message to the console.
+            //
+            // This allows users to drag prefab files directly from the OS
+            // (Explorer/Finder) into the editor to quickly spawn instances.
+            // =================================================================
             if (path.extension() == ".prefab" || path.extension() == ".json") {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, path.string());
 
@@ -2668,7 +2925,7 @@ namespace Framework {
     }
 
     bool ImGuiSystem::AddAudioToJSON(const std::string& audioName, const std::string& fileName) {
-        const std::string jsonPath = "assets/JSON/audio.json";
+        const std::string jsonPath = "assets/JSON/AudioConfig.json";
 
         std::cout << "[JSON] Opening: " << jsonPath << "\n";
 
@@ -2687,7 +2944,7 @@ namespace Framework {
         std::string jsonContent = buffer.str();
 
         // Check if audio already exists
-        if (jsonContent.find("\"" + audioName + "\"") != std::string::npos) {
+        /*if (jsonContent.find("\"" + audioName + "\"") != std::string::npos) {
             std::cout << "[JSON] Audio '" << audioName << "' already exists in JSON\n";
             return true;
         }
@@ -2727,7 +2984,70 @@ namespace Framework {
         if (!writeFile.is_open()) {
             std::cerr << "[JSON] ❌ Could not open audio.json for writing\n";
             return false;
+        }*/
+        // ---------------------------------------------------------
+    // STEP 1: Find the "sounds" array
+    // ---------------------------------------------------------
+    size_t soundsPos = jsonContent.find("\"sounds\"");
+    if (soundsPos == std::string::npos) {
+        std::cerr << "[JSON] ❌ Could not find 'sounds' array\n";
+        return false;
+    }
+
+    // Find the start of the array '['
+    size_t arrayStart = jsonContent.find("[", soundsPos);
+    if (arrayStart == std::string::npos) return false;
+
+    // ---------------------------------------------------------
+    // STEP 2: Find the END of the "sounds" array ']'
+    // ---------------------------------------------------------
+    // We can't just look for the first ']', because nested objects use them too.
+    // We scan forward counting brackets.
+    size_t arrayEnd = std::string::npos;
+    int bracketCount = 0;
+    
+    for (size_t i = arrayStart; i < jsonContent.length(); ++i) {
+        if (jsonContent[i] == '[') bracketCount++;
+        else if (jsonContent[i] == ']') {
+            bracketCount--;
+            if (bracketCount == 0) {
+                arrayEnd = i; // Found the closing bracket of "sounds"
+                break;
+            }
         }
+    }
+
+    if (arrayEnd == std::string::npos) {
+        std::cerr << "[JSON] ❌ Malformed JSON (missing closing bracket)\n";
+        return false;
+    }
+
+    // ---------------------------------------------------------
+    // STEP 3: Construct the new JSON Object
+    // ---------------------------------------------------------
+    // Note: We add a comma at the start because we assume the list isn't empty.
+    std::string newEntry = R"(,
+    {
+      "name": ")" + audioName + R"(",
+      "filepath": "assets/)" + fileName + R"(",
+      "volume": 1,
+      "preload": true
+    })";
+
+    // ---------------------------------------------------------
+    // STEP 4: Insert it BEFORE the closing bracket ']'
+    // ---------------------------------------------------------
+    jsonContent.insert(arrayEnd, newEntry);
+
+    // ---------------------------------------------------------
+    // STEP 5: Save File
+    // ---------------------------------------------------------
+    std::ofstream writeFile(jsonPath);
+    if (!writeFile.is_open()) {
+        std::cerr << "[JSON] ❌ Could not open file for writing\n";
+        return false;
+    }
+
 
         writeFile << jsonContent;
         writeFile.close();
@@ -2834,14 +3154,200 @@ namespace Framework {
         }
     }
 
+    // ============================================================================
+    // SetupDockSpace - Creates fullscreen dockspace with menu bar
+    // ============================================================================
+    // ============================================================================
+    // SetupDockSpace - Creates dockspace with menu bar (with version checking)
+    // ============================================================================
+    // ============================================================================
+    // SetupDockSpace - Simple menu bar (NO DOCKING - for older ImGui)
+    // ============================================================================
+    // ============================================================================
+    // SetupDockSpace - Full Docking Support (ImGui 1.89+ docking branch)
+    // ============================================================================
+    // ============================================================================
+    // SetupDockSpace - Simple Docking (No DockBuilder API)
+    // Uses basic DockSpace without automatic layout
+    // ============================================================================
+    void ImGuiSystem::SetupDockSpace()
+    {
+        // Create fullscreen dockspace window
+        static bool opt_fullscreen = true;
+        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+
+        if (opt_fullscreen)
+        {
+            const ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->WorkPos);
+            ImGui::SetNextWindowSize(viewport->WorkSize);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+            window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+        }
+
+        if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+            window_flags |= ImGuiWindowFlags_NoBackground;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("DockSpace Window", nullptr, window_flags);
+        ImGui::PopStyleVar();
+
+        if (opt_fullscreen)
+            ImGui::PopStyleVar(2);
+
+        // Create DockSpace - THIS WORKS even without DockBuilder
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+        {
+            ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+            // NOTE: No DockBuilder - user will arrange windows manually
+            // First time windows will be floating
+            // User can drag them to dock
+        }
+
+        // ========================================================================
+        // MENU BAR
+        // ========================================================================
+        if (ImGui::BeginMenuBar()) {
+            //File bar
+            if (ImGui::BeginMenu("File")) {
+                if (CORE->IsPlaying()) {
+                    ImGui::BeginDisabled();
+                }
+                if (ImGui::MenuItem("Open")) {
+                    bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
+                    if (!isOpen) {
+                        std::cerr << "[ImGuiError] Failed to open level.txt\n";
+                    }
+                    else {
+                        currentLevelPath = "assets/level1.txt";
+                    }
+                }
+                if (ImGui::MenuItem("Open...")) {
+                    if (currentLevelPath.empty()) {
+                        currentLevelPath = "assets/level1.txt";
+                    }
+                    openPath = currentLevelPath;
+                }
+                if (ImGui::MenuItem("Save")) {
+                    const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
+                    bool isSave = SaveLevelToTxt(path);
+                    if (!isSave) {
+                        std::cerr << "[ImGuiError] Failed to save level.txt\n";
+                    }
+                }
+                if (ImGui::MenuItem("Save as ...")) {
+                    if (currentLevelPath.empty()) {
+                        currentLevelPath = "assets/level1.txt";
+                    }
+                    openPath = currentLevelPath;
+                }
+                if (ImGui::MenuItem("Exit")) {
+                    Message quitMsg(Status::Quit);
+                    CORE->BroadcastMessage(&quitMsg);
+                }
+                if (CORE->IsPlaying()) {
+                    ImGui::EndDisabled();
+                }
+                ImGui::EndMenu();
+            }
+
+            //windows bar
+            if (ImGui::BeginMenu("Windows")) {
+                ImGui::MenuItem("Entity Inspector", nullptr, &showEntityInspector);
+                ImGui::MenuItem("Spawner", nullptr, &showSpawner);
+                ImGui::MenuItem("Debug Info", nullptr, &showDebug);
+                ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
+                ImGui::MenuItem("Assets", nullptr, &showAssets);
+                ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
+                ImGui::MenuItem("Game Viewport", nullptr, &showGameViewport);
+                ImGui::Separator();
+                ImGui::MenuItem("Render to Viewport", nullptr, &renderToViewport);
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::BeginMenu("Editor")) {
+                if (!CORE->IsPlaying()) {
+                    if (ImGui::MenuItem("Play")) {
+                        if (!SaveLevelToTxt(defaultLevelPath)) {
+                            std::cerr << "[ImGuiError] Could not create default setting" << defaultLevelPath << "\n";
+                        }
+                        else {
+                            CORE->SetPlaying(true);
+                            if (auto* gfx = CORE->GetGraphicsSystem())
+                            {
+                                if (entityManager)
+                                {
+                                    Framework::Entity player{};
+                                    for (auto e : entityManager->GetAllEntities())
+                                    {
+                                        if (entityManager->HasComponent<Framework::CircleCollider>(e))
+                                        {
+                                            auto& c = entityManager->GetComponent<Framework::CircleCollider>(e);
+                                            if (c.radius > 0.12f && c.radius < 0.18f)
+                                            {
+                                                player = e;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (player.IsValid())
+                                    {
+                                        gfx->SetFollowTarget(player);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    if (ImGui::MenuItem("Stop")) {
+                        CORE->SetPlaying(false);
+                        if (auto gfx = CORE->GetGraphicsSystem()) {
+                            gfx->ClearFollowTarget();
+                            gfx->ResetEditorCamera();
+                        }
+                        if (!OpenLevelFromTxt(defaultLevelPath, true)) {
+                            if (!currentLevelPath.empty()) {
+                                OpenLevelFromTxt(currentLevelPath, true);
+                            }
+                            else {
+                                std::cerr << "[ImGuiError] Could not create default setting " << defaultLevelPath << "\n";
+                                OpenLevelFromTxt("assets/level1.txt", true);
+                            }
+                        }
+                        entityManager->ClearAllEntities();
+                        OpenLevelFromTxt(defaultLevelPath, true);
+                    }
+                }
+                ImGui::EndMenu();
+            }
+
+            ImGui::EndMenuBar();
+        }
+
+        ImGui::End();  // End DockSpace Window
+    }
+
+
     void ImGuiSystem::ShowGameViewport()
     {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
-        // Set minimum window size
-        ImGui::SetNextWindowSizeConstraints(ImVec2(400, 300), ImVec2(FLT_MAX, FLT_MAX));
-
+        // No size constraints - let docking system control size
         if (ImGui::Begin("Game##GameViewport", &showGameViewport)) {
+
+            // --- NEW: Track Focus/Hover State ---
+            m_isViewportFocused = ImGui::IsWindowFocused();
+            m_isViewportHovered = ImGui::IsWindowHovered();
 
             ImVec2 size = ImGui::GetContentRegionAvail();
 
@@ -2861,6 +3367,10 @@ namespace Framework {
                     ImVec2(0, 1),
                     ImVec2(1, 0)
                 );
+
+                // --- NEW: Capture Position/Size AFTER drawing the image ---
+                m_viewportPos = ImGui::GetItemRectMin();  // Screen coordinates of top-left
+                m_viewportSize = ImGui::GetItemRectSize(); // Size in pixels
             }
             else {
                 ImGui::Text("Viewport too small: %.0fx%.0f", size.x, size.y);

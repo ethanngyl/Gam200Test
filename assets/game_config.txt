@@ -23,6 +23,9 @@ window_height = 1080
 window_title = StructSquad Game Engine
 fullscreen = false
 
+# NOTE: Audio settings (master volume, music volume, sfx volume) are now
+# configured in assets/JSON/AudioConfig.json
+
 # ============================================================================
 # DEBUG SYSTEM SETTINGS
 # ============================================================================

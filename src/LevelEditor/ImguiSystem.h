@@ -4,7 +4,7 @@ File:        ImGuiSystem.h
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
 Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-11-07
-Contribution: 42%(Ethan), 53%(Jiahao), 5%(kahyan)
+Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
@@ -14,6 +14,10 @@ drag–drop, asset browser) to ECS and subsystems.
        and play/stop handoff to subsystems.
 
 Safety: Headers only declare interfaces; no heavy logic here. Guard pointers.
+
+Modified: 2025-11-26
+- Added SetupDockSpace() for docking system support
+- Enables Game viewport to auto-fit window size
 
 */
 
@@ -31,14 +35,14 @@ namespace Framework {
     class EntityManager;
 
     /*
-	* @brief declare a structure to store the undo step information
+    * @brief declare a structure to store the undo step information
     */
 
     struct UndoStep {
         //the entity that user select and need to undo
-        Entity entity;          
-		//the previous position of the entity before user move it
-        Vector2D oldPosition;   
+        Entity entity;
+        //the previous position of the entity before user move it
+        Vector2D oldPosition;
     };
 
     /**
@@ -102,11 +106,36 @@ namespace Framework {
         }
         void RequestToggle() { pendingToggle = true; }
 
-		//undo function - jiahao
-		void PerformUndo();
+        // ========================================================================
+        // VIEWPORT INFORMATION ACCESS
+        // ========================================================================
+
+        /**
+         * @brief Get the screen position of the viewport (top-left corner)
+         */
+        ImVec2 GetViewportPos() const { return m_viewportPos; }
+
+        /**
+         * @brief Get the size of the viewport in pixels
+         */
+        ImVec2 GetViewportSize() const { return m_viewportSize; }
+
+        /**
+         * @brief Check if mouse is currently hovering the viewport
+         */
+        bool IsViewportHovered() const { return m_isViewportHovered; }
+
+        /**
+         * @brief Check if viewport is currently focused
+         */
+        bool IsViewportFocused() const { return m_isViewportFocused; }
+
+
+        //undo function - jiahao
+        void PerformUndo();
         void RecordUndoStep(Entity entity);
-
-
+        //jiahao
+        Framework::Vector2D EditorScreenWorld();
 
         bool IsAudioFile(const std::filesystem::path& path) const;
         bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
@@ -134,6 +163,11 @@ namespace Framework {
         void ShowDebugWindow();
         void ShowDemoWindow();
 
+        // ========================================================================
+        // ADDED: DockSpace setup function
+        // ========================================================================
+        void SetupDockSpace();
+
         //Asset windows - jiahao
         bool showAssets = false;
         std::string selectedAssetPath = "";
@@ -150,8 +184,8 @@ namespace Framework {
 
         //dragging state for object dragging - jiahao
         bool isDraggingEntity = false;
-		bool isScalingEntity = false;
-		bool isRotatingEntity = false;
+        bool isScalingEntity = false;
+        bool isRotatingEntity = false;
 
         Framework::Entity draggingEntity{};
         Vector2D dragOffset;
@@ -160,7 +194,7 @@ namespace Framework {
 
         Vector2D scaleStartScale;
 
-		float rotateStartAngle = 0.0f;
+        float rotateStartAngle = 0.0f;
         float rotateStartRotation = 0.0f;
 
         void UpdateEntityDragging();
@@ -195,6 +229,8 @@ namespace Framework {
 
         bool enabled;
 
+        bool imguiInitialized = false;  // Track if ImGui was successfully initialized
+
         float frameTime;
         int entityCount;
 
@@ -215,9 +251,19 @@ namespace Framework {
         void DeleteViewportFramebuffer();
         void ShowGameViewport();
 
+        // jiahao
+        ImVec2 m_viewportPos = { 0.0f, 0.0f };   // Position of the game image on screen
+        ImVec2 m_viewportSize = { 0.0f, 0.0f };  // Size of the game image
+        bool m_isViewportHovered = false;        // Is mouse hovering the viewport?
+        bool m_isViewportFocused = false;        // Is viewport focused?
 
         //undo step - jiahao
-		std::vector<UndoStep> undoStack;
+        std::vector<UndoStep> undoStack;
+
+		//audio pop up window variables - jiahao
+		bool showAudioNamePopup = false;
+		char newAudioKeyBuffer[256] = "";
+		std::filesystem::path pendingAudioPath;
     };
 
 } // namespace Framework

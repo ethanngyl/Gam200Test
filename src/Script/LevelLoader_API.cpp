@@ -17,6 +17,7 @@
 #include "Component.h"    // Movement, CircleCollider, AP components
 #include "Pathfinding.h"  // EnemyAI component
 #include "Turn.h"         // Turn system
+#include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -74,6 +75,15 @@ namespace Framework {
 
         float dt = luaL_optnumber(L, 1, 0.0f);
         loader->audioSystem->Update(dt);
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetMasterVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMasterVolume(volume);
         return 0;
     }
 
@@ -337,6 +347,27 @@ namespace Framework {
 
         return 0;
     }
+
+    int LevelLoader::Lua_DrawText(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->graphicsSystem) return 0;
+
+        // Parse parameters: DrawText(font, text, x, y, scale, r, g, b)
+        const char* font = luaL_checkstring(L, 1);
+        const char* text = luaL_checkstring(L, 2);
+        float x = luaL_checknumber(L, 3);
+        float y = luaL_checknumber(L, 4);
+        float scale = luaL_checknumber(L, 5);
+        float r = luaL_checknumber(L, 6);
+        float g = luaL_checknumber(L, 7);
+        float b = luaL_checknumber(L, 8);
+
+        glm::vec3 color(r, g, b);
+        loader->graphicsSystem->DrawText4(font, text, x, y, scale, color);
+
+        return 0;
+    }
+
     // ========================================================================
     // INPUT API (FIXED for InputSystem)
     // ========================================================================
@@ -366,6 +397,7 @@ namespace Framework {
         else if (strcmp(keyName, "E") == 0) keyCode = KEY_E;
         else if (strcmp(keyName, "Q") == 0) keyCode = KEY_Q;
         else if (strcmp(keyName, "R") == 0) keyCode = KEY_R;
+        else if (strcmp(keyName, "P") == 0) keyCode = KEY_P;
 
         // Special keys
         else if (strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
@@ -478,6 +510,22 @@ namespace Framework {
         }
 
         return 0;
+    }
+
+    // ========================================================================
+    // PAUSE CONTROL API
+    // ========================================================================
+
+    int LevelLoader::Lua_TogglePause(lua_State* L) {
+        GlobalPause::Toggle();
+        LOG_INFO("LevelLoader", "Pause toggled - Now %s", GlobalPause::IsPaused() ? "PAUSED" : "UNPAUSED");
+        return 0;
+    }
+
+    int LevelLoader::Lua_IsPaused(lua_State* L) {
+        bool paused = GlobalPause::IsPaused();
+        lua_pushboolean(L, paused);
+        return 1;
     }
 
     // ========================================================================

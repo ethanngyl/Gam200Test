@@ -159,6 +159,19 @@ namespace Framework
         // - Independent of window position on screen
     }
 
+    void InputSystem::ResetAllKeyStates()
+    {
+        std::cout << "InputSystem: Resetting all key states\n";
+
+        // Clear all current key states
+        CurrentKeys.clear();
+
+        // Clear all previous key states
+        PreviousKeys.clear();
+
+        std::cout << "InputSystem: All key states reset (CurrentKeys and PreviousKeys cleared)\n";
+    }
+
     void InputSystem::SendEngineMessage(Message* message)
     {
         if (message->MessageId == Status::Quit)
@@ -196,6 +209,13 @@ namespace Framework
 
     bool InputSystem::GetAsyncKeyState(KeyCode key)
     {
+        //this line is to let input system ignore any input when the
+        // window is not focused
+        //jiahao
+        if (window && !glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+            return false;
+        }
+
 #ifdef _WIN32
         return (::GetAsyncKeyState(key) & 0x8000) != 0;
 #else

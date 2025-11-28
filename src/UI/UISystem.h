@@ -192,7 +192,7 @@ namespace Framework {
          * @brief Convert screen coordinates to world coordinates
          * Handles window resizing and high-DPI displays
          */
-        Vector2D ScreenToWorld(float screenX, float screenY);
+        Vector2D ScreenToWorld(float screenX, float screenY, bool useViewportCoords = false);
 
         // ====================================================================
         // UTILITY

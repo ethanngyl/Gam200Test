@@ -34,16 +34,11 @@ namespace Framework
     {
         (void)msg;
 
-        // LOGIC: This proves the decoupling works! The event fired in ProjectileSystem 
+        // LOGIC: This proves the decoupling works! The event fired in ProjectileSystem
         // is safely handled here.
-        std::cout << "\n";
-        std::cout << "-------------------------------------------------\n";
-        std::cout << "    ENEMY HIT! (HANDLED BY DamageIndicatorSystem)\n";
-        std::cout << "    Enemy ID: " << msg.enemyEntity.GetID() << "\n";
-        std::cout << "    Damage: -" << msg.damage << " HP\n";
-        std::cout << "    Remaining: " << msg.health << " HP\n";
-        std::cout << "--------------------------------------------------\n";
-        std::cout << "\n";
+        // PERFORMANCE FIX: Simplified multi-line output (was causing 5-10ms frame spikes)
+        // std::cout << "Enemy " << msg.enemyEntity.GetID() << " hit: -" << msg.damage
+        //           << " HP (" << msg.health << " remaining)\n";
     }
 
     void DamageIndicatorSystem::HandleMessage(const EnemyDeathMessage& msg)
@@ -51,14 +46,8 @@ namespace Framework
         (void)msg;
 
         // LOGIC: Handles the death event after the entity's health hit zero.
-        std::cout << "\n";
-        std::cout << "-----------------------------------\n";
-        std::cout << "         ENEMY ELIMINATED!         \n";
-        std::cout << "                                   \n";
-        std::cout << "      Enemy ID: " << msg.enemyEntity.GetID() << "            \n";
-        std::cout << "      Killed by: " << msg.playerEntity.GetID() << "         \n";
-        std::cout << "                                   \n";
-        std::cout << "-----------------------------------\n";
-        std::cout << "\n";
+        // PERFORMANCE FIX: Simplified multi-line output
+        // std::cout << "Enemy " << msg.enemyEntity.GetID() << " eliminated by Player "
+        //           << msg.playerEntity.GetID() << "\n";
     }
 }
