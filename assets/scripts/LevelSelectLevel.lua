@@ -1,5 +1,5 @@
 ﻿-- ============================================================================
--- LevelSelectLevel.lua (JSON Configuration Version)
+-- LevelSelectLevel.lua (JSON Configuration Version with Background)
 -- Complete Level Select Level Script with JSON-driven configuration
 -- ============================================================================
 -- This version loads all UI configuration from a JSON file, making it
@@ -8,6 +8,7 @@
 -- Author:  GE YONGQI
 -- Email:   yongqi.ge@digipen.edu
 -- Date:    2025-11-13
+-- Updated: 2025-11-28 - Added background and decoration sprites
 -- ============================================================================
 
 -- ============================================================================
@@ -18,6 +19,9 @@ local buttonIDs = {}
 local initialized = false
 local config = nil
 local editorToggleCooldown = 0  -- Cooldown for F1 editor toggle
+local backgroundSpriteID = 0    -- Store background sprite entity ID
+local logoSpriteID = 0          -- Store logo sprite entity ID
+local cornerSpriteIDs = {}      -- Store corner sprite entity IDs
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -47,6 +51,89 @@ function OnInit()
     
     -- Set engine to editor mode (non-playing)
     SetEnginePlayState(true)
+
+    -- ========================================================================
+    -- CREATE BACKGROUND SPRITE
+    -- ========================================================================
+    -- Load background configuration (use default if not in JSON)
+    local background = config.menu.background or {
+        texture = "assets/Menu/WoodBackground.png",
+        position = { x = 0.0, y = 0.0 },
+        scale = { x = 2.0, y = 2.0 },
+        layer = -10  -- Behind everything
+    }
+
+    Log("Creating background sprite: " .. background.texture)
+    backgroundSpriteID = SpawnSprite(
+        background.texture,
+        background.position.x,
+        background.position.y,
+        background.scale.x,
+        background.scale.y,
+        background.layer
+    )
+
+    if backgroundSpriteID > 0 then
+        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
+    else
+        Log("✗ WARNING: Failed to create background sprite")
+    end
+    -- ========================================================================
+
+    -- ========================================================================
+    -- CREATE LOGO SPRITE (optional)
+    -- ========================================================================
+    if config.menu.logo then
+        local logo = config.menu.logo
+        Log("Creating logo sprite: " .. logo.texture)
+
+        logoSpriteID = SpawnSprite(
+            logo.texture,
+            logo.position.x,
+            logo.position.y,
+            logo.scale.x,
+            logo.scale.y,
+            logo.layer
+        )
+
+        if logoSpriteID > 0 then
+            Log("✓ Logo sprite created (ID: " .. logoSpriteID .. ")")
+        else
+            Log("✗ WARNING: Failed to create logo sprite")
+        end
+    else
+        Log("No logo configuration found in JSON")
+    end
+    -- ========================================================================
+
+    -- ========================================================================
+    -- CREATE CORNER SPRITES (optional decorations)
+    -- ========================================================================
+    if config.menu.cornerSprites then
+        Log("Creating corner decorations...")
+
+        for i, corner in ipairs(config.menu.cornerSprites) do
+            local spriteID = SpawnSprite(
+                corner.texture,
+                corner.offset.x,
+                corner.offset.y,
+                corner.scale.x,
+                corner.scale.y,
+                corner.layer,
+                corner.rotation  -- Rotation in degrees
+            )
+
+            if spriteID > 0 then
+                cornerSpriteIDs[corner.id] = spriteID
+                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+            else
+                Log("  ✗ FAILED to create corner sprite: " .. corner.id)
+            end
+        end
+
+        Log("Corner decorations complete!")
+    end
+    -- ========================================================================
     
     -- Start menu background music from JSON config
     local music = config.menu.music
@@ -80,14 +167,16 @@ function CreateButtonsFromConfig()
     for i, button in ipairs(config.menu.buttons) do
         Log("Creating button: " .. button.id)
         
-        -- Create button using config data
+        -- Create button using config data (layer is optional, defaults to 10)
+        local layer = button.layer or 10
         local buttonID = CreateButton(
             button.texture,
             button.position.x,
             button.position.y,
             button.scale.x,
             button.scale.y,
-            button.callback  -- Callback function name from JSON
+            button.callback,  -- Callback function name from JSON
+            layer             -- Layer for rendering order
         )
         
         if buttonID > 0 then
@@ -226,11 +315,34 @@ function OnDestroy()
     
     -- Clear UI buttons
     ClearAllButtons()
+
+    -- Destroy background sprite
+    if backgroundSpriteID > 0 then
+        DestroyEntity(backgroundSpriteID)
+        Log("Background sprite destroyed")
+    end
+
+    -- Destroy logo sprite
+    if logoSpriteID > 0 then
+        DestroyEntity(logoSpriteID)
+        Log("Logo sprite destroyed")
+    end
+
+    -- Destroy corner sprites
+    for cornerID, spriteID in pairs(cornerSpriteIDs) do
+        if spriteID > 0 then
+            DestroyEntity(spriteID)
+            Log("Corner sprite '" .. cornerID .. "' destroyed")
+        end
+    end
     
     -- Reset state
     buttonIDs = {}
     config = nil
     initialized = false
+    backgroundSpriteID = 0
+    logoSpriteID = 0
+    cornerSpriteIDs = {}
     
     Log("LevelSelect cleanup complete")
 end
