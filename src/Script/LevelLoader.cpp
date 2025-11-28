@@ -17,6 +17,7 @@
 #include "GraphicsSystemV2.h"
 #include "ImguiSystem.h"
 #include "GameStateList.h"
+#include "Pause/GlobalPauseManager.h"
 
 namespace Framework {
 
@@ -216,6 +217,11 @@ namespace Framework {
 
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
+
+        // Check global pause state - skip update if paused
+        if (GlobalPause::IsPaused()) {
+            return;
+        }
 
         if (HasLuaFunction("OnUpdate")) {
             lua_getglobal(L, "OnUpdate");
