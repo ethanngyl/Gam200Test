@@ -66,7 +66,7 @@ function OnInit()
     Log("========================================")
     Log("LEVEL 3: Tactical Grid Level")
     Log("========================================")
-
+    PauseMenu.Init()
     -- Set camera to default position
     SetCameraPosition(0.0, 0.0, 0.0)
     SetCameraZoom(2.0)  -- Zoomed in closer to player (0.5-0.7 recommended for gameplay)
@@ -345,6 +345,7 @@ function OnUpdate(dt)
     -- Turn system ticks in C++
 
     -- Toggle ImGui editor with F1
+    PauseMenu.Update(dt)
     if IsKeyDown("F1") then
         if editorToggleCooldown <= 0 then
             local newState = ToggleEditor()
@@ -630,6 +631,7 @@ function OnDraw()
     -- All rendering handled by C++ graphics system
     -- ImGui is disabled for debugging
     -- PauseSystem drawing is disabled
+    PauseMenu.Draw()
 end
 
 -- ============================================================================
