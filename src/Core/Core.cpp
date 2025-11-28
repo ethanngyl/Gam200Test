@@ -1,6 +1,6 @@
 ﻿/*
 ===============================================================================
- File:          Core.cpp
+ File:          Core.cpp (FIXED - ALT+TAB Text Rendering Issue)
  Author:        GE YONGQI
  Email:         yongqi.ge@digipen.edu
  Date:          2025-10-31
@@ -17,6 +17,11 @@
   Thread-safety:
      - Not thread-safe (single-threaded engine model)
      - All systems created and destroyed on the same thread
+
+  BUGFIX (2025-11-28):
+     - Fixed ALT+TAB text disappearing issue in UpdateSingleFrame()
+     - Removed early return when paused to ensure LevelLoader::DrawCurrentLevel()
+       is always called, which is needed for main menu text rendering
 ===============================================================================
 */
 
@@ -204,7 +209,7 @@ namespace Framework
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
 
-       
+
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -246,7 +251,7 @@ namespace Framework
 
         // Set window dependencies
         graphicsSystem->SetWindow(windowSystem->GetWindow());
-        inputSystem->SetWindow(windowSystem->GetWindow());  
+        inputSystem->SetWindow(windowSystem->GetWindow());
 
         imguiSystem->SetWindow(windowSystem->GetWindow());
         imguiSystem->SetEntitySpawner(spawner);
@@ -402,6 +407,7 @@ namespace Framework
             GameActive = false;
             return;
         }
+
         // ====================================================================
         // CHECK PAUSE STATE
         // ====================================================================
@@ -431,80 +437,87 @@ namespace Framework
         }
 
         // ====================================================================
-        // SKIP GAME LOGIC WHEN PAUSED
+        // CONDITIONALLY UPDATE GAME LOGIC (Only when NOT paused)
         // ====================================================================
-        if (isPaused) {
-            // Game is paused - don't update game logic
-            // Graphics already rendered frozen frame above
-            return;
-        }
-
-        // ====================================================================
-        // NORMAL GAME UPDATES (Only when NOT paused)
+        // BUGFIX: Removed early return when paused - we need to continue
+        // to the rendering code below to ensure DrawCurrentLevel() is called
         // ====================================================================
 
-        // Movement & Physics
-        if (movementSystem) {
-            movementSystem->Update(dt);
-        }
+        if (!isPaused) {
+            // ================================================================
+            // NORMAL GAME UPDATES (Only when NOT paused)
+            // ================================================================
 
-        if (projectileSystem) {
-            projectileSystem->Update(dt);
-        }
+            // Movement & Physics
+            if (movementSystem) {
+                movementSystem->Update(dt);
+            }
 
-        if (collisionSystem) {
-            collisionSystem->Update(dt);
-        }
+            if (projectileSystem) {
+                projectileSystem->Update(dt);
+            }
 
-        // Game Logic
-        if (scriptSystem) {
-            scriptSystem->Update(dt);
-        }
+            if (collisionSystem) {
+                collisionSystem->Update(dt);
+            }
 
-        if (playerController) {
-            playerController->Update(dt);
-        }
+            // Game Logic
+            if (scriptSystem) {
+                scriptSystem->Update(dt);
+            }
 
-        if (pathfindingSystem) {
-            pathfindingSystem->Update(dt);
-        }
+            if (playerController) {
+                playerController->Update(dt);
+            }
 
-        // Animation - IMPORTANT: Only update when not paused
-        if (animationSystem) {
-            animationSystem->Update(dt);
-        }
+            if (pathfindingSystem) {
+                pathfindingSystem->Update(dt);
+            }
 
-        // Events & Indicators
-        if (eventSystem) {
-            eventSystem->Update(dt);
-        }
+            // Animation - IMPORTANT: Only update when not paused
+            if (animationSystem) {
+                animationSystem->Update(dt);
+            }
 
+            // Events & Indicators
+            if (eventSystem) {
+                eventSystem->Update(dt);
+            }
 
-        if (rangeIndicatorSystem) {
-            rangeIndicatorSystem->Update(dt);
+            if (rangeIndicatorSystem) {
+                rangeIndicatorSystem->Update(dt);
+            }
+
+            // Update all logic systems
+            for (unsigned i = 0; i < Systems.size(); ++i) {
+                if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
+                    dynamic_cast<ImGuiSystem*>(Systems[i]) ||
+                    dynamic_cast<InputSystem*>(Systems[i])) {
+                    continue;
+                }
+                Systems[i]->Update(dt);
+            }
+
+            // PERFORMANCE FIX: Removed duplicate scriptSystem->Update(dt) call
+            // ScriptSystem is already updated in the loop above (was running Level3.lua twice per frame!)
+            // if (scriptSystem) scriptSystem->Update(dt);
         }
 
         // Audio - continue updating (for pause menu sounds)
-        // Volume is controlled by level1.cpp when pausing
+        // Volume is controlled by WindowEventHandler when pausing
         if (audioSystem) {
             audioSystem->Update(dt);
         }
-    
-        // Update all logic systems
-        for (unsigned i = 0; i < Systems.size(); ++i) {
-            if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
-                dynamic_cast<ImGuiSystem*>(Systems[i]) ||
-                dynamic_cast<InputSystem*>(Systems[i])) {
-                continue;
-            }
-            Systems[i]->Update(dt);
-        }
 
-        // PERFORMANCE FIX: Removed duplicate scriptSystem->Update(dt) call
-        // ScriptSystem is already updated in the loop above (was running Level3.lua twice per frame!)
-        // if (scriptSystem) scriptSystem->Update(dt);
+        // ====================================================================
+        // RENDER GAME (CRITICAL: Always render, even when paused)
+        // ====================================================================
+        // This section MUST execute even when paused to ensure:
+        // 1. Main menu text is rendered (via LevelLoader::DrawCurrentLevel())
+        // 2. Pause menu is visible
+        // 3. Screen doesn't ghost
+        // ====================================================================
 
-        // === RENDER GAME ===
         bool useViewport = imguiSystem &&
             imguiSystem->IsEnabled() &&
             imguiSystem->IsRenderingToViewport() &&
@@ -528,7 +541,8 @@ namespace Framework
                 imguiSystem->GetViewportHeight()
             );
 
-            // Draw level text INTO the viewport (after game rendering)
+            // CRITICAL: Draw level text INTO the viewport (after game rendering)
+            // This calls MainMenuLevel.lua's OnDraw() which renders button text
             LevelLoader::GetInstance().DrawCurrentLevel();
 
             graphicsSystem->ClearRenderTarget();
@@ -550,9 +564,10 @@ namespace Framework
             glfwGetWindowSize(windowSystem->GetWindow(), &winWidth, &winHeight);
             graphicsSystem->GetTextRenderer().setScreenSize(winWidth, winHeight);
 
-            // Draw level text to main window
+            // CRITICAL: Draw level text to main window
+            // This calls MainMenuLevel.lua's OnDraw() which renders button text
+            // MUST be called even when paused for main menu text to appear
             LevelLoader::GetInstance().DrawCurrentLevel();
-
         }
 
         // === IMGUI ===
