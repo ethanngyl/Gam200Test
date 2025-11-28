@@ -196,6 +196,13 @@ namespace Framework
 
     bool InputSystem::GetAsyncKeyState(KeyCode key)
     {
+        //this line is to let input system ignore any input when the
+        // window is not focused
+        //jiahao
+        if (window && !glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+            return false;
+        }
+
 #ifdef _WIN32
         return (::GetAsyncKeyState(key) & 0x8000) != 0;
 #else

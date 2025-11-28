@@ -8,29 +8,51 @@
  ------------------------------------------------------------------------------
   FIXED: Added screen size restoration to prevent text disappearing bug
 
+  Modified: 2025-11-22
+  - Added pause functionality using GlobalPauseManager
+
+  Modified: 2025-11-27
+  - Disabled pause in editor mode (pause only works when playing)
+
   Changes:
   1. level2_Draw() - Reset TextRenderer screen size before drawing
   2. level2_Free() - Restore TextRenderer screen size when leaving Level2
+  3. Added pause menu support
+  4. Pause is now disabled when engine->IsPlaying() == false (editor mode)
 ===============================================================================
 */
 
 #include "Precompiled.h"   
-
 #include "EntitySpawner.h"      
 #include "PlayerManager.h"
 #include "ImguiSystem.h"
 #include "Pathfinding.h"
 #include "Pause/Pause.h"
+#include "GlobalPauseManager.h"
+#include "Audio/AudioSystem.h"
+
 #include "TimeConstants.h"
 
 
 extern Framework::CoreEngine* engine;
 using Framework::Vector2D;
 
+// ========================================================================
+// PAUSE STATE (File scope)
+// ========================================================================
+namespace {
+    bool g_wasPPressed = false;
+    PauseMenuSimple::PauseMenuState g_pauseMenuState;
+}
+
 
 void level2_Load()
 {
     ConfigReader::LoadConfig("assets/valueloader.txt");
+
+    // Reset pause state
+    g_wasPPressed = false;
+    g_pauseMenuState = PauseMenuSimple::PauseMenuState();
 }
 
 void level2_Initialize()
@@ -94,15 +116,114 @@ void level2_Update()
 {
     if (!engine) return;
 
-    // 1. Handle input switching levels
-    if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
-    {
-        next = mainMenu;
+    auto* input = engine->GetInputSystem();
+    if (!input) return;
+
+    // ========================================================================
+    // P Key Toggle Pause (DISABLED IN EDITOR MODE)
+    // ========================================================================
+    // Only allow pause when in playing mode (not editor mode)
+    if (engine->IsPlaying()) {
+        // Playing mode - pause is enabled
+        bool isPPressed = input->IsKeyDown(Framework::KEY_P);
+
+        if (isPPressed && !g_wasPPressed) {
+            GlobalPause::Toggle();  // Toggle global pause state
+
+            if (GlobalPause::IsPaused()) {
+                LOG_INFO("LEVEL2", "Game PAUSED");
+
+                // Disable ImGui to prevent interference with pause menu text
+                if (engine->GetImGuiSystem()) {
+                    engine->GetImGuiSystem()->Disable();
+                }
+
+                if (engine->GetAudioSystem()) {
+                    engine->GetAudioSystem()->SetMasterVolume(0.0f);
+                }
+            }
+            else {
+                LOG_INFO("LEVEL2", "Game RESUMED (P key)");
+
+                // Re-enable ImGui when resuming via P key
+                if (engine->GetImGuiSystem()) {
+                    engine->GetImGuiSystem()->Enable();
+                }
+
+                if (engine->GetAudioSystem()) {
+                    engine->GetAudioSystem()->SetMasterVolume(1.0f);
+                }
+            }
+        }
+        g_wasPPressed = isPPressed;
+    }
+    else {
+        // Editor mode - pause is disabled
+        // Always reset pause state in editor mode
+        g_wasPPressed = false;
+
+        // Force unpause if somehow paused in editor mode
+        if (GlobalPause::IsPaused()) {
+            GlobalPause::SetPaused(false);
+            LOG_INFO("LEVEL2", "Force unpause in editor mode");
+        }
     }
 
-    if (engine && engine->GetInputSystem() &&
-        engine->GetInputSystem()->IsKeyPressed(Framework::KEY_3))
+    // ========================================================================
+    // If Paused, Handle Pause Menu Input (only in playing mode)
+    // ========================================================================
+    if (engine->IsPlaying() && GlobalPause::IsPaused()) {
+        PauseMenuSimple::PauseMenuCallbacks callbacks;
+
+        callbacks.onResume = []() {
+            GlobalPause::SetPaused(false);
+
+            // FIX: Re-enable ImGui when resuming from pause menu
+            // This is critical because the menu bypass P key detection
+            if (engine && engine->GetImGuiSystem()) {
+                engine->GetImGuiSystem()->Enable();
+            }
+
+            if (engine && engine->GetAudioSystem()) {
+                engine->GetAudioSystem()->SetMasterVolume(1.0f);
+            }
+            LOG_INFO("LEVEL2", "Resume selected");
+            };
+
+        callbacks.onMainMenu = []() {
+            GlobalPause::SetPaused(false);
+
+            // Also re-enable ImGui before leaving level
+            if (engine && engine->GetImGuiSystem()) {
+                engine->GetImGuiSystem()->Enable();
+            }
+
+            next = mainMenu;
+            LOG_INFO("LEVEL2", "Returning to main menu");
+            };
+
+        callbacks.onExit = []() {
+            next = GS_QUIT;
+            LOG_INFO("LEVEL2", "Exiting game");
+            };
+
+        PauseMenuSimple::UpdatePauseMenu(engine, g_pauseMenuState, callbacks);
+
+        return;  // Skip level-specific logic when paused
+    }
+
+    // ========================================================================
+    // Normal Game Logic (Only when NOT paused)
+    // ========================================================================
+    if (input->IsKeyPressed(Framework::KEY_5))
+        // 1. Handle input switching levels
+        if (engine && engine->GetInputSystem() &&
+            engine->GetInputSystem()->IsKeyPressed(Framework::KEY_5))
+        {
+            next = mainMenu;
+        }
+
+    if (input->IsKeyPressed(Framework::KEY_3))
     {
         next = LEVEL_3;
     }
@@ -142,9 +263,6 @@ void level2_Draw()
     // Font
     std::string fontLarge = ConfigReader::GetString("lv2_ui_font_large", "Sans48");
 
-    // Text content
-    std::string textScaling = ConfigReader::GetString("lv2_text_info", "This level is for Level editor testing");
-
     // Location
     float textX = ConfigReader::GetFloat("lv2_ui_text_info_x", 500.0f);
     float texty = ConfigReader::GetFloat("lv2_ui_text_info_y", 350.0f);
@@ -158,10 +276,12 @@ void level2_Draw()
     // ========================================================================
     // Render UI text (using values from the configuration file)
     // ========================================================================
-    graphics->DrawText4(fontLarge, textScaling, textX, texty, textScale, glm::vec3(colorR, colorG, colorB));
 
-    if (engine->GetPauseSystem()) {
-        engine->GetPauseSystem()->Draw();
+    // ========================================================================
+    // Pause Menu Overlay (Only if paused AND in playing mode)
+    // ========================================================================
+    if (engine->IsPlaying() && GlobalPause::IsPaused()) {
+        PauseMenuSimple::DrawPauseMenu(engine, g_pauseMenuState);
     }
 }
 
@@ -169,6 +289,9 @@ void level2_Free()
 {
     LOG_INFO("LEVEL2", "=== Level2 Free ===");
 
+    // Reset pause state
+    g_wasPPressed = false;
+    GlobalPause::SetPaused(false);  // Ensure pause is cleared when leaving level
 
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Disable();
@@ -211,3 +334,4 @@ void level2_Unload()
 {
     LOG_INFO("LEVEL2", "=== Level2 Unload ===");
 }
+
