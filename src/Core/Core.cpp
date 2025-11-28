@@ -104,7 +104,7 @@ namespace Framework
             // Load audio configuration from JSON
             if (audioSystem) {
                 LOG_INFO("CORE", "Loading audio configuration...");
-                bool audioLoaded = AudioLoader::LoadAudioConfig("assets/JSON/audio_config.json", audioSystem);
+                bool audioLoaded = AudioLoader::LoadAudioConfig("assets/JSON/AudioConfig.json", audioSystem);
                 if (audioLoaded) {
                     LOG_INFO("CORE", "✓ Audio configuration loaded successfully");
                 }
