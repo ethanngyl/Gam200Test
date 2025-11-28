@@ -966,6 +966,78 @@ namespace Framework {
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
         // show asset window - jiahao
         if (showAssets) ShowAssetsWindow();
+
+        if (showAudioNamePopup) {
+            ImGui::OpenPopup("Import Audio Asset");
+        }
+
+        if (ImGui::BeginPopupModal("Import Audio Asset", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("File detected: %s", pendingAudioPath.filename().string().c_str());
+            ImGui::Spacing();
+
+            ImGui::Text("Enter a unique Key Name for this audio:");
+            // Input field for the key (e.g., "bgm_boss", "sfx_jump")
+            if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+            ImGui::InputText("##AudioKey", newAudioKeyBuffer, sizeof(newAudioKeyBuffer));
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // --- IMPORT BUTTON ---
+            if (ImGui::Button("Import & Load", ImVec2(120, 0))) {
+                if (audioSystem && strlen(newAudioKeyBuffer) > 0) {
+                    std::string keyName = newAudioKeyBuffer;
+					std::string ext = pendingAudioPath.extension().string();
+					std::string fileName = keyName + ext;
+
+                    // 1. Copy file to assets folder
+                    std::filesystem::path destPath = std::filesystem::path("assets") / fileName;
+                    bool copySuccess = true;
+
+                    if (!std::filesystem::exists(destPath)) {
+                        try {
+                            std::filesystem::copy_file(pendingAudioPath, destPath);
+                            std::cout << "[Import] Copied file to: " << destPath << "\n";
+                        }
+                        catch (const std::exception& e) {
+                            std::cerr << "[Import] Copy failed: " << e.what() << "\n";
+                            copySuccess = false;
+                        }
+                    }
+
+                    // 2. Update JSON and Reload if copy succeeded (or file existed)
+                    if (copySuccess) {
+                        // Use the user-entered KEY (newAudioKeyBuffer) instead of just the filename
+                        std::cout << "DEBUG: Calling AddAudioToJSON with Key='" << keyName << "' and File='" << fileName << "'\n";
+                        bool added = AddAudioToJSON(keyName, fileName);
+
+                        if (added) {
+                            // 3. Reload Audio System
+                            audioSystem->ReloadAudioLibrary();
+                            std::cout << "[Import] Audio library reloaded with key: " << keyName << "\n";
+
+                            // Optional: Play it to confirm
+                            audioSystem->PlaySound(keyName.c_str(), false);
+                        }
+                    }
+
+                    showAudioNamePopup = false;
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            ImGui::SameLine();
+
+            // --- CANCEL BUTTON ---
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                showAudioNamePopup = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
         if (showGameViewport) ShowGameViewport();
@@ -2741,51 +2813,22 @@ namespace Framework {
             // ====================================================================
             std::string errorMsg;
             if (IsAudioFileSupported(path, errorMsg)) {
-                if (!audioSystem) {
-                    std::cerr << "[FileDrop] ❌ AudioSystem not available\n";
-                    continue;
+                // Instead of processing immediately, we setup the popup
+                if (m_isViewportHovered || true) { // Allow dropping audio anywhere or restrict to viewport
+
+                    // 1. Store the source path
+                    pendingAudioPath = path;
+
+                    // 2. Pre-fill the buffer with the filename (as a default key)
+                    std::string defaultName = path.stem().string();
+                    strncpy(newAudioKeyBuffer, defaultName.c_str(), sizeof(newAudioKeyBuffer));
+                    newAudioKeyBuffer[sizeof(newAudioKeyBuffer) - 1] = '\0';
+
+                    // 3. Flag the popup to open next frame
+                    showAudioNamePopup = true;
+
+                    std::cout << "[FileDrop] Audio detected. Opening import dialog...\n";
                 }
-
-                std::string audioName = path.stem().string();
-                std::string fileName = path.filename().string();
-
-                std::cout << "[FileDrop]  Valid audio file: " << audioName << ".wav\n";
-
-                // Copy file to assets folder
-                std::filesystem::path destPath = std::filesystem::path("assets") / fileName;
-
-                if (!std::filesystem::exists(destPath)) {
-                    try {
-                        std::filesystem::copy_file(path, destPath);
-                        std::cout << "[FileDrop] Copied to: " << destPath << "\n";
-                    }
-                    catch (const std::exception& e) {
-                        std::cerr << "[FileDrop] ❌ Failed to copy: " << e.what() << "\n";
-                        continue;
-                    }
-                }
-                else {
-                    std::cout << "[FileDrop] File already in assets\n";
-                }
-
-                // Add to audio.json
-                bool added = AddAudioToJSON(audioName, fileName);
-
-                if (added) {
-                    std::cout << "[FileDrop]  Added to audio.json\n";
-
-                    // Reload audio system
-                    audioSystem->ReloadAudioLibrary();
-                    std::cout << "[FileDrop]  Audio library reloaded\n";
-
-                    // Play new audio
-                    audioSystem->PlaySound(audioName.c_str(), false);
-                    std::cout << "[FileDrop]  Playing: " << audioName << "\n";
-                }
-                else {
-                    std::cerr << "[FileDrop] ❌ Failed to add to audio.json\n";
-                }
-
                 continue;
             }
 
@@ -2882,7 +2925,7 @@ namespace Framework {
     }
 
     bool ImGuiSystem::AddAudioToJSON(const std::string& audioName, const std::string& fileName) {
-        const std::string jsonPath = "assets/JSON/audio.json";
+        const std::string jsonPath = "assets/JSON/AudioConfig.json";
 
         std::cout << "[JSON] Opening: " << jsonPath << "\n";
 
@@ -2901,7 +2944,7 @@ namespace Framework {
         std::string jsonContent = buffer.str();
 
         // Check if audio already exists
-        if (jsonContent.find("\"" + audioName + "\"") != std::string::npos) {
+        /*if (jsonContent.find("\"" + audioName + "\"") != std::string::npos) {
             std::cout << "[JSON] Audio '" << audioName << "' already exists in JSON\n";
             return true;
         }
@@ -2941,7 +2984,70 @@ namespace Framework {
         if (!writeFile.is_open()) {
             std::cerr << "[JSON] ❌ Could not open audio.json for writing\n";
             return false;
+        }*/
+        // ---------------------------------------------------------
+    // STEP 1: Find the "sounds" array
+    // ---------------------------------------------------------
+    size_t soundsPos = jsonContent.find("\"sounds\"");
+    if (soundsPos == std::string::npos) {
+        std::cerr << "[JSON] ❌ Could not find 'sounds' array\n";
+        return false;
+    }
+
+    // Find the start of the array '['
+    size_t arrayStart = jsonContent.find("[", soundsPos);
+    if (arrayStart == std::string::npos) return false;
+
+    // ---------------------------------------------------------
+    // STEP 2: Find the END of the "sounds" array ']'
+    // ---------------------------------------------------------
+    // We can't just look for the first ']', because nested objects use them too.
+    // We scan forward counting brackets.
+    size_t arrayEnd = std::string::npos;
+    int bracketCount = 0;
+    
+    for (size_t i = arrayStart; i < jsonContent.length(); ++i) {
+        if (jsonContent[i] == '[') bracketCount++;
+        else if (jsonContent[i] == ']') {
+            bracketCount--;
+            if (bracketCount == 0) {
+                arrayEnd = i; // Found the closing bracket of "sounds"
+                break;
+            }
         }
+    }
+
+    if (arrayEnd == std::string::npos) {
+        std::cerr << "[JSON] ❌ Malformed JSON (missing closing bracket)\n";
+        return false;
+    }
+
+    // ---------------------------------------------------------
+    // STEP 3: Construct the new JSON Object
+    // ---------------------------------------------------------
+    // Note: We add a comma at the start because we assume the list isn't empty.
+    std::string newEntry = R"(,
+    {
+      "name": ")" + audioName + R"(",
+      "filepath": "assets/)" + fileName + R"(",
+      "volume": 1,
+      "preload": true
+    })";
+
+    // ---------------------------------------------------------
+    // STEP 4: Insert it BEFORE the closing bracket ']'
+    // ---------------------------------------------------------
+    jsonContent.insert(arrayEnd, newEntry);
+
+    // ---------------------------------------------------------
+    // STEP 5: Save File
+    // ---------------------------------------------------------
+    std::ofstream writeFile(jsonPath);
+    if (!writeFile.is_open()) {
+        std::cerr << "[JSON] ❌ Could not open file for writing\n";
+        return false;
+    }
+
 
         writeFile << jsonContent;
         writeFile.close();

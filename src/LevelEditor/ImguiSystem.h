@@ -259,6 +259,11 @@ namespace Framework {
 
         //undo step - jiahao
         std::vector<UndoStep> undoStack;
+
+		//audio pop up window variables - jiahao
+		bool showAudioNamePopup = false;
+		char newAudioKeyBuffer[256] = "";
+		std::filesystem::path pendingAudioPath;
     };
 
 } // namespace Framework
