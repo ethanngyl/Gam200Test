@@ -167,17 +167,21 @@ namespace Framework {
         glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * dt);
 
 
-        newPos.x = std::clamp(
-            newPos.x,
-            GetGrid().worldbound_min.x + mainCamera.GetOrthoHalfExtents().x,
-            GetGrid().worldbound_max.x - mainCamera.GetOrthoHalfExtents().x
-        );
+        glm::vec2 orthoHalfExtents = mainCamera.GetOrthoHalfExtents();
+        auto& grid = GetGrid();
 
-        newPos.y = std::clamp(
-            newPos.y,
-            GetGrid().worldbound_min.y + mainCamera.GetOrthoHalfExtents().y,
-            GetGrid().worldbound_max.y - mainCamera.GetOrthoHalfExtents().y
-        );
+        float minX = grid.worldbound_min.x + orthoHalfExtents.x;
+        float maxX = grid.worldbound_max.x - orthoHalfExtents.x;
+        float minY = grid.worldbound_min.y + orthoHalfExtents.y;
+        float maxY = grid.worldbound_max.y - orthoHalfExtents.y;
+
+        if (minX <= maxX) {
+            newPos.x = std::clamp(newPos.x, minX, maxX);
+        }
+
+        if (minY <= maxY) {
+            newPos.y = std::clamp(newPos.y, minY, maxY);
+        }
 
 
 
