@@ -111,32 +111,24 @@ namespace Framework {
             lastHeight = currentHeight;
         }
 
-        // ========================================================================
-        // 🔧 FIX: 获取鼠标坐标，考虑 ImGui Viewport 偏移
-        // ========================================================================
 
         float mouseScreenX, mouseScreenY;
         bool useViewportCoords = false;
 
-        // 检查是否有 ImGui 系统和 Viewport
         auto imguiSystem = engine->GetImGuiSystem();
         if (imguiSystem && imguiSystem->IsRenderingToViewport()) {
-            // ✅ Viewport 模式 - 使用 ImGui 坐标转换
 
-            ImVec2 mousePos = ImGui::GetMousePos();  // 全局鼠标位置
-            ImVec2 viewportOffset = imguiSystem->GetViewportPos();  // Viewport 左上角
-            ImVec2 viewportSize = imguiSystem->GetViewportSize();   // Viewport 大小
+            ImVec2 mousePos = ImGui::GetMousePos();  
+            ImVec2 viewportOffset = imguiSystem->GetViewportPos();  
+            ImVec2 viewportSize = imguiSystem->GetViewportSize();   
 
-            // 转换为 Viewport 相对坐标
             float localX = mousePos.x - viewportOffset.x;
             float localY = mousePos.y - viewportOffset.y;
 
-            // 检查鼠标是否在 Viewport 内
             bool mouseInViewport = (localX >= 0 && localX <= viewportSize.x &&
                 localY >= 0 && localY <= viewportSize.y);
 
             if (!mouseInViewport) {
-                // 鼠标不在 Viewport 内，清除所有按钮状态
                 for (auto& button : buttons) {
                     if (button) {
                         button->isHovered = false;
@@ -144,10 +136,9 @@ namespace Framework {
                         UpdateButtonVisuals(button.get());
                     }
                 }
-                return;  // 不处理按钮更新
+                return; 
             }
 
-            // 使用 Viewport 相对坐标
             mouseScreenX = localX;
             mouseScreenY = localY;
             useViewportCoords = true;
@@ -157,17 +148,14 @@ namespace Framework {
             //           mousePos.x, mousePos.y, localX, localY);
         }
         else {
-            // ✅ 全屏模式 - 使用原来的方式
             input->GetMousePosition(mouseScreenX, mouseScreenY);
 
             // Debug logging (uncomment if needed)
             // LOG_DEBUG("UI", "Fullscreen mode: Mouse (%.1f, %.1f)", mouseScreenX, mouseScreenY);
         }
 
-        // 转换为世界坐标（需要传递是否使用 Viewport 坐标）
         Vector2D mouseWorld = ScreenToWorld(mouseScreenX, mouseScreenY, useViewportCoords);
 
-        // 更新所有按钮
         for (auto& button : buttons) {
             if (!button) continue;
             UpdateButton(button.get(), mouseWorld);
@@ -440,12 +428,10 @@ namespace Framework {
         int windowWidth, windowHeight;
 
         if (useViewportCoords) {
-            // ✅ Viewport 模式：使用 Viewport 的大小作为"窗口"大小
             auto imguiSystem = engine->GetImGuiSystem();
             if (imguiSystem && imguiSystem->IsRenderingToViewport()) {
                 ImVec2 viewportSize = imguiSystem->GetViewportSize();
 
-                // Viewport 尺寸就是我们的"窗口"尺寸
                 fbWidth = static_cast<int>(viewportSize.x);
                 fbHeight = static_cast<int>(viewportSize.y);
                 windowWidth = fbWidth;
@@ -456,13 +442,11 @@ namespace Framework {
                 //           screenX, screenY, fbWidth, fbHeight);
             }
             else {
-                // 不应该发生，fallback 到全屏模式
                 glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
                 glfwGetWindowSize(window, &windowWidth, &windowHeight);
             }
         }
         else {
-            // ✅ 全屏模式：使用原来的窗口大小
             // Framebuffer size = actual pixels OpenGL renders to
             glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 
