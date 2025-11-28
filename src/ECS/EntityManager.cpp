@@ -38,17 +38,20 @@ namespace Framework
         {
             id = freeEntityIDs.back();
             freeEntityIDs.pop_back();
-            std::cout << "[EntityManager] Created entity ID " << id << " (recycled from free list, " << freeEntityIDs.size() << " free IDs remaining)\n";
+            // Debug logging removed for performance (was causing 20-30ms lag per frame)
+            // std::cout << "[EntityManager] Created entity ID " << id << " (recycled from free list, " << freeEntityIDs.size() << " free IDs remaining)\n";
         }
         else
         {
             id = nextEntityID++;
-            std::cout << "[EntityManager] Created entity ID " << id << " (new, next ID will be " << nextEntityID << ")\n";
+            // Debug logging removed for performance
+            // std::cout << "[EntityManager] Created entity ID " << id << " (new, next ID will be " << nextEntityID << ")\n";
         }
 
         Entity entity(id);
         allEntities.push_back(entity);
-        std::cout << "[EntityManager]   Total entities now: " << allEntities.size() << "\n";
+        // Debug logging removed for performance
+        // std::cout << "[EntityManager]   Total entities now: " << allEntities.size() << "\n";
         return entity;
     }
 
@@ -96,27 +99,17 @@ namespace Framework
      */
     void EntityManager::ClearAllEntities()
     {
-        size_t entityCount = allEntities.size();
-        size_t componentTypeCount = components.size();
-        size_t freeIDCount = freeEntityIDs.size();
-
-        std::cout << "[EntityManager] ===== CLEARING ALL ENTITIES =====\n";
-        std::cout << "[EntityManager] Before clear:\n";
-        std::cout << "[EntityManager]   - Entities: " << entityCount << "\n";
-        std::cout << "[EntityManager]   - Component types: " << componentTypeCount << "\n";
-        std::cout << "[EntityManager]   - Free IDs: " << freeIDCount << "\n";
-        std::cout << "[EntityManager]   - Next entity ID: " << nextEntityID << "\n";
+        // Debug logging removed for performance (was causing severe lag)
+        // size_t entityCount = allEntities.size();
+        // size_t componentTypeCount = components.size();
+        // size_t freeIDCount = freeEntityIDs.size();
 
         components.clear();
         allEntities.clear();
         freeEntityIDs.clear();
         nextEntityID = 1;
 
-        std::cout << "[EntityManager] After clear:\n";
-        std::cout << "[EntityManager]   - Entities: " << allEntities.size() << "\n";
-        std::cout << "[EntityManager]   - Component types: " << components.size() << "\n";
-        std::cout << "[EntityManager]   - Free IDs: " << freeEntityIDs.size() << "\n";
-        std::cout << "[EntityManager]   - Next entity ID: " << nextEntityID << "\n";
-        std::cout << "[EntityManager] ===== CLEAR COMPLETE =====\n";
+        // Debug: Uncomment for troubleshooting entity cleanup issues
+        // std::cout << "[EntityManager] Cleared " << entityCount << " entities\n";
 	}
 }
