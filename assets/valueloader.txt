@@ -180,43 +180,36 @@ menu_play_text_offset_y = -24.0
 menu_exit_text_offset_x = -50.0
 menu_exit_text_offset_y = -24.0
 
-# ============================================================
-# Pause Menu Layout Configuration
-# ============================================================
+# ============================================================================
+# PAUSE OVERLAY CONFIGURATION
+# ============================================================================
+# Pause text content
+pause_text = PAUSED
+pause_hint_manual = Press P to Resume
+pause_hint_focus = Return to window to resume
 
-# Center position (ratio of framebuffer size)
-pause_menu_center_x_ratio 0.5
-pause_menu_center_y_ratio 0.5
+# Font
+pause_font = Sans48
 
-# Title
-pause_menu_title_text "PAUSED"
-pause_menu_title_offset_x -120.0
-pause_menu_title_offset_y 200.0
-pause_menu_title_scale 2.5
-pause_menu_title_color_r 1.0
-pause_menu_title_color_g 1.0
-pause_menu_title_color_b 0.3
+# Pause text position (as percentage of window: 0.0 to 1.0)
+# 0.5 = center, 0.0 = left/top edge, 1.0 = right/bottom edge
+pause_text_x_percent = 0.9
+pause_text_y_percent = 0.5
 
-# Menu options
-pause_menu_start_y_offset 80.0
-pause_menu_spacing 70.0
-pause_menu_text_offset_x -100.0
-pause_menu_normal_scale 1.2
-pause_menu_selected_scale 1.3
+# Hint text offset from pause text (as percentage of window)
+pause_hint_offset_x_percent = 0.1
+pause_hint_offset_y_percent = 0.1
 
-# Colors
-pause_menu_selected_color_r 1.0
-pause_menu_selected_color_g 1.0
-pause_menu_selected_color_b 0.3
-pause_menu_normal_color_r 0.7
-pause_menu_normal_color_g 0.7
-pause_menu_normal_color_b 0.7
+# Text scale
+pause_text_scale = 2.0
+pause_hint_scale = 1.0
 
-# Control hints
-pause_menu_hint1_text "W/S or Arrow Keys to Navigate"
-pause_menu_hint1_offset_x -280.0
-pause_menu_hint1_offset_y -150.0
-pause_menu_hint2_text "Enter/Space to Select | 1-3 for Quick Select"
-pause_menu_hint2_offset_x -380.0
-pause_menu_hint2_offset_y -200.0
-pause_menu_hint_scale 0.75
+# Pause text color (RGB values, 0.0 - 1.0)
+pause_text_color_r = 1.0
+pause_text_color_g = 1.0
+pause_text_color_b = 1.0
+
+# Hint text color (RGB values, 0.0 - 1.0)
+pause_hint_color_r = 0.8
+pause_hint_color_g = 0.8
+pause_hint_color_b = 0.8

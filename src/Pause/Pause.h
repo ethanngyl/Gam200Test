@@ -1,10 +1,14 @@
 /*
 ===============================================================================
- File:          Pause.h (With Game State Check)
+ File:          Pause.h
  Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-20
  Contribution:
+ ------------------------------------------------------------------------------
+  Pause System for ALT-TAB and CTRL-ALT-DEL handling (Requirements 1701/1702)
+
+  NEW: Added game state checking to disable pause in menus
 ===============================================================================
 */
 
@@ -14,52 +18,66 @@
 namespace Framework
 {
     class CoreEngine;
-}
+    class AudioSystem;
+    class WindowSystem;
 
-namespace PauseMenuSimple
-{
-    // ========================================================================
-    // PAUSE MENU CALLBACKS
-    // ========================================================================
-
-    typedef void (*PauseMenuCallback)();
-
-    struct PauseMenuCallbacks
+    enum class PauseReason
     {
-        PauseMenuCallback onResume = nullptr;
-        PauseMenuCallback onMainMenu = nullptr;
-        PauseMenuCallback onExit = nullptr;
-        // Removed: onSettings
+        None,
+        WindowFocus,
+        Manual,
+        TaskManager
     };
 
-    // ========================================================================
-    // PAUSE MENU STATE
-    // ========================================================================
-
-    struct PauseMenuState
+    class PauseSystem : public EngineSystem
     {
-        int selectedOption = 0;  // 0=Resume, 1=MainMenu, 2=Exit
-        bool wasUpPressed = false;
-        bool wasDownPressed = false;
-        bool wasEnterPressed = false;
+    public:
+        PauseSystem();
+        ~PauseSystem() override;
+
+        void Initialize() override;
+        void Update(float dt) override;
+        void Draw();
+        void SendEngineMessage(Message* message) override;
+
+        bool IsPaused() const { return isPaused; }
+        PauseReason GetPauseReason() const { return pauseReason; }
+
+        void Pause(PauseReason reason);
+        void Resume();
+
+        void SetCoreEngine(CoreEngine* engine) { coreEngine = engine; }
+
+        static void WindowFocusCallback(GLFWwindow* window, int focused);
+        static void WindowIconifyCallback(GLFWwindow* window, int iconified);
+
+    private:
+        bool isPaused;
+        PauseReason pauseReason;
+        bool windowHasFocus;
+        bool windowIsMinimized;
+
+        float savedMasterVolume;
+        bool audioWasPlaying;
+
+        double focusLostTime;
+        double focusGainedTime;
+
+        CoreEngine* coreEngine;
+
+        // Key debouncing state
+        bool wasKeyPressed;
+
+        // *** NEW: Helper to check if pause is allowed ***
+        bool IsPauseAllowedInCurrentState();
+
+        void PauseAllSystems();
+        void ResumeAllSystems();
+        void PauseAudio();
+        void ResumeAudio();
+        void LogPauseState(bool pausing, PauseReason reason);
+
+        static PauseSystem* s_instance;
     };
 
-    // ========================================================================
-    // PAUSE MENU RENDERING
-    // ========================================================================
-
-    /**
-     * @brief Update pause menu input (call in Update)
-     * @return true if an option was selected
-     */
-    bool UpdatePauseMenu(Framework::CoreEngine* engine,
-        PauseMenuState& state,
-        const PauseMenuCallbacks& callbacks);
-
-    /**
-     * @brief Draw the pause menu using DrawText4 (call in Draw)
-     */
-    void DrawPauseMenu(Framework::CoreEngine* engine,
-        const PauseMenuState& state);
-
-} // namespace PauseMenuSimple
+} // namespace Framework
