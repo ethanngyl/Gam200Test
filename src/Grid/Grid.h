@@ -2,7 +2,7 @@
 ===============================================================================
  File:           Grid.h
  Author:         Josh Ong
- Email:          josh.o@digipen.edu	
+ Email:          josh.o@digipen.edu
  Date:           2025-10-22
  Contribution:	 100%
  ------------------------------------------------------------------------------
@@ -36,6 +36,19 @@ namespace Framework {
 		Vector2D startPos{ 0.0f, 0.0f };
 		Vector2D spacing{ 1.0f, 1.0f };
 		Vector2D tileSize{ 1.0f, 1.0f };
+		// ========================================================================
+		// World-space minimum corner of the grid (bottom-left).
+		// Used for spatial queries, bounds checking, and camera/grid interactions.
+		// Author: Sim Kah Yan
+		// ========================================================================
+		Vector2D worldbound_min{};
+		// ========================================================================
+		// World-space maximum corner of the grid (top-right).
+		// Defines the outer extent of the grid area in world coordinates.
+		// Author: Sim Kah Yan
+		// ========================================================================
+		Vector2D worldbound_max{};
+
 		std::vector<Entity> tiles;
 		EntityManager* em = nullptr;
 
@@ -56,5 +69,5 @@ namespace Framework {
 	};
 
 	Grid& GetGrid();
-	
+
 }
