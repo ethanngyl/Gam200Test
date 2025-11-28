@@ -397,18 +397,14 @@ namespace Framework {
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.1f, 0.1f)) {
             (void)moveSpeed; // silence unused variable warning
 
-            Entity enemy = SpawnSprite("assets/testing.png", position, Vector2D(0.1f, 0.1f));
+            Entity enemy = SpawnSprite("assets/player.png", position, Vector2D(0.1f, 0.1f));
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
             mr.material = GraphicsSystemV2::Material2;
             mr.layer = RenderLayers::Enemies;  // Enemies render below player
-            //entityManager->AddComponent<Movement>(enemy);
-            //auto& movement = entityManager->GetComponent<Movement>(enemy);
-            //movement.moveSpeed = moveSpeed;
-            //movement.direction = Vector2D(0.0f, -1.0f);
 
-            // *** NEW: Add Health component (50 HP by default) ***
-            entityManager->AddComponent<Health>(enemy, 2);
+            // *** NEW: Add Health component ***
+            entityManager->AddComponent<Health>(enemy, 5);
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);

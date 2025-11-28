@@ -26,12 +26,33 @@ local kSpacingY = 0.1 -- Tile spacing Y
 local apIndicatorsEmpty = {}   -- Background layer: always visible (5 empty crystals)
 local apIndicatorsFilled = {}  -- Foreground layer: destroyed/recreated based on AP
 local maxAP = 5
-local indicatorSize = 0.08
+local indicatorSize = 0.06
 local indicatorSpacing = 0.1
 -- Adjusted for zoom 0.6: offsets scaled to match viewport size
-local screenOffsetX = -0.82  -- Bottom left corner (adjusted for zoom)
+local screenOffsetX = -0.72  -- Bottom left corner (adjusted for zoom)
 local screenOffsetY = -0.42  -- Bottom left corner (adjusted for zoom)
 local lastKnownAP = 0  -- Track AP changes
+
+-- HP HEART UI ----------------------------------------------------
+local hpHearts   = {}
+local maxHeartHP   = 5
+local lastHP      = -1
+local hpOffsetX   = -0.80   -- bottom-left, above crystals
+local hpOffsetY   = -0.22
+local hpScale     = 0.10    -- a bit larger than crystals
+
+-- BOOTS UI -------------------------------------------------------
+local bootIconIDs  = {}      
+local bootOffsetY  = -0.42 
+local boot1OffsetX = -0.80
+local bootSpacingX = 0.10
+local bootScale    = 0.10
+
+-- SWORD + ATTACK AP UI ------------------------------------------
+local swordIconID    = 0
+local swordOffsetX   = -0.80
+local swordOffsetY   = -0.32
+local swordScale     = 0.10
 
 -- Chest UI indicators
 local chestIndicatorsEmpty = {}
@@ -45,9 +66,18 @@ local totalChestsRequired = 0
 local atkIndicatorsEmpty = {}     -- NEW
 local atkIndicatorsFilled = {}    -- NEW
 local maxAttackAP = 3             -- NEW (will be overridden by component) 
-local atkOffsetX = -0.82          -- NEW (same X as AP; tweak as needed)
-local atkOffsetY = -0.30          -- NEW (slightly above AP row)
+local atkOffsetX = -0.72          -- NEW (same X as AP; tweak as needed)
+local atkOffsetY = -0.32          -- NEW (slightly above AP row)
 local lastKnownAttackAP = 0       -- NEW
+
+-- TURN UI (top-right gauge) -------------------------------------
+local turnEnemyID   = 0
+local turnPlayerID  = 0
+local lastTurnPhase    = -1          -- 0 = player, 1 = enemy
+local turnUIOffsetX    = 0.65
+local turnUIOffsetY    = 0.38
+local turnUIScaleX     = 0.28
+local turnUIScaleY     = 0.28
 
 -- Debug frame counter
 local debugFrameCounter = 0
@@ -242,7 +272,7 @@ function OnInit()
         local yPos = camY + atkOffsetY
 
         local entityID = SpawnSprite(
-            "assets/AP Empty.png",   -- TODO: swap to your ATTACK AP empty sprite
+            "assets/UI/AP_Empty.png",   -- TODO: swap to your ATTACK AP empty sprite
             xPos, yPos,
             indicatorSize, indicatorSize,
             0
@@ -263,7 +293,7 @@ function OnInit()
         local yPos = camY + atkOffsetY
 
         local entityID = SpawnSprite(
-            "assets/AP Crystal.png", -- TODO: swap to your ATTACK AP filled sprite
+            "assets/UI/AP_Crystal.png", -- TODO: swap to your ATTACK AP filled sprite
             xPos, yPos,
             indicatorSize, indicatorSize,
             0
@@ -281,6 +311,97 @@ function OnInit()
     Log("Empty crystals: " .. #apIndicatorsEmpty .. "/" .. maxAP)
     Log("Filled crystals: " .. #apIndicatorsFilled .. "/" .. maxAP)
     Log("========================================")
+
+    ----------------------------------------------------------------
+    -- NEW: HP HEART UI
+    ----------------------------------------------------------------
+    local curHP, maxHP = GetPlayerHP()
+    if maxHP ~= nil and maxHP > 0 then
+        maxHeartHP = maxHP
+    end
+    if curHP == nil then curHP = maxHeartHP end
+    lastHP = curHP
+
+    for hpVal = 0, maxHeartHP do
+        local tex = "assets/UI/Health_" .. tostring(hpVal) .. ".png"
+        local x   = camX + hpOffsetX
+        local y   = camY + hpOffsetY
+
+        local id = SpawnSprite(tex, x, y, hpScale, hpScale, 4)
+        hpHearts[hpVal] = id
+
+        -- initially hide all, we'll show the one that matches current HP
+        SetSpriteVisibility(id, false)
+    end
+
+    if hpHearts[curHP] then
+        SetSpriteVisibility(hpHearts[curHP], true)
+    end
+
+    ----------------------------------------------------------------
+    -- NEW: BOOTS UI (two boots above crystals)
+    ----------------------------------------------------------------
+    local bootTexture = "assets/UI/MovP_Icon.png"  -- change to your actual asset
+      for i = 1, 1 do
+        local x = camX + boot1OffsetX + (i - 1) * bootSpacingX
+        local y = camY + bootOffsetY
+        bootIconIDs[i] = SpawnSprite(
+            bootTexture,
+            x, y,
+            bootScale, bootScale,
+            4
+        )
+    end
+
+    ----------------------------------------------------------------
+    -- NEW: SWORD ICON + ATTACK AP UI
+    ----------------------------------------------------------------
+    local swordX = camX + swordOffsetX
+    local swordY = camY + swordOffsetY
+
+    swordIconID = SpawnSprite(
+        "assets/UI/Atk_Icon.png",  -- change to your sword asset
+        swordX, swordY,
+        swordScale, swordScale,
+        4
+    )
+
+    
+
+    ----------------------------------------------------------------
+    -- NEW: TURN UI (top-right)
+    ----------------------------------------------------------------
+    local phase = GetCurrentTurn() or 0   -- 0 = Player, 1 = Enemy
+    lastTurnPhase = phase
+
+    local turnX = camX + turnUIOffsetX
+    local turnY = camY + turnUIOffsetY
+
+    -- Enemy base sprite (always visible)
+    turnEnemyID = SpawnSprite(
+        "assets/UI/Enemy_Turn_Icon.png",
+        turnX, turnY,
+        turnUIScaleX, turnUIScaleY,
+        4
+    )
+
+    -- Player overlay sprite (shown only during player phase)
+    turnPlayerID = SpawnSprite(
+        "assets/UI/Player_Turn_Icon.png",
+        turnX, turnY,
+        turnUIScaleX, turnUIScaleY,
+        4
+    )
+
+    if phase == 0 then
+        -- player turn
+        SetSpriteVisibility(turnEnemyID,  false)
+        SetSpriteVisibility(turnPlayerID, true)
+    else
+        -- enemy turn
+        SetSpriteVisibility(turnEnemyID,  true)
+        SetSpriteVisibility(turnPlayerID, false)
+    end
 
     initialized = true
     Log("========================================")
@@ -307,7 +428,7 @@ function OnInit()
         local yPos = camY + chestUIOffsetY
 
         local entityID = SpawnSprite(
-            "assets/UI/AP_Empty.png",
+            "assets/TileMap/Chest_Black.png",
             xPos, yPos,
             indicatorSize, indicatorSize,
             0
@@ -454,6 +575,81 @@ function OnUpdate(dt)
     -- Engine is set to playing mode in C++ during update loop
     -- Graphics system handles camera follow automatically
 
+     ----------------------------------------------------------------
+    -- NEW: HP / BOOTS / SWORD / ATTACK AP / TURN UI UPDATES
+    ----------------------------------------------------------------
+   
+
+    -- HP heart: follow camera + swap texture based on HP
+    do
+        local curHP, maxHP = GetPlayerHP()
+        local camX, camY, camZ = GetCameraPosition()
+
+        -- follow camera
+        local x = camX + hpOffsetX
+        local y = camY + hpOffsetY
+        for hpVal, id in pairs(hpHearts) do
+            if id and id > 0 then
+                SetSpritePosition(id, x, y)
+            end
+        end
+
+        -- toggle visibility when HP changes
+        if curHP ~= nil and curHP ~= lastHP then
+            -- hide all
+            for _, id in pairs(hpHearts) do
+                if id and id > 0 then
+                    SetSpriteVisibility(id, false)
+                end
+            end
+            -- show current
+            if hpHearts[curHP] then
+                SetSpriteVisibility(hpHearts[curHP], true)
+            end
+            lastHP = curHP
+        end
+    end
+
+    -- Boots: follow camera
+    for i, id in ipairs(bootIconIDs) do
+        local camX, camY, camZ = GetCameraPosition()
+        if id and id > 0 then
+            local x = camX + boot1OffsetX + (i - 1) * bootSpacingX
+            local y = camY + bootOffsetY
+            SetSpritePosition(id, x, y)
+        end
+    end
+
+    -- Sword icon: follow camera
+    if swordIconID ~= 0 then
+        local camX, camY, camZ = GetCameraPosition()
+        SetSpritePosition(swordIconID, camX + swordOffsetX, camY + swordOffsetY)
+    end
+
+    -- Turn UI: follow camera + switch texture based on phase (0=Player, 1=Enemy)
+    if turnEnemyID ~= 0 and turnPlayerID ~= 0 then
+        local camX, camY, camZ = GetCameraPosition()
+        local phase = GetCurrentTurn() or 0
+
+        local tx = camX + turnUIOffsetX
+        local ty = camY + turnUIOffsetY
+        SetSpritePosition(turnEnemyID,  tx, ty)
+        SetSpritePosition(turnPlayerID, tx, ty)
+
+        if phase ~= lastTurnPhase then
+            if phase == 0 then
+                -- Player turn: show player overlay
+                SetSpriteVisibility(turnEnemyID,  false)
+                SetSpriteVisibility(turnPlayerID, true)
+            else
+                -- Enemy turn: hide player overlay
+                SetSpriteVisibility(turnEnemyID,  true)
+                SetSpriteVisibility(turnPlayerID, false)
+            end
+            lastTurnPhase = phase
+        end
+    end
+
     -- ========================================================================
     -- NEW: UPDATE ATTACK AP INDICATORS
     -- ========================================================================
@@ -501,7 +697,7 @@ function OnUpdate(dt)
                     local yPos = camY + atkOffsetY
 
                     local entityID = SpawnSprite(
-                        "assets/AP Crystal.png", -- TODO: attack filled sprite
+                        "assets/UI/AP_Crystal.png", -- TODO: attack filled sprite
                         xPos, yPos,
                         indicatorSize, indicatorSize,
                         0
@@ -558,7 +754,7 @@ function OnUpdate(dt)
                     local yPos = camY + chestUIOffsetY
 
                     local entityID = SpawnSprite(
-                        "assets/UI/AP_Crystal.png",
+                        "assets/TileMap/Chest_1.png",
                         xPos, yPos,
                         indicatorSize, indicatorSize,
                         0
@@ -649,12 +845,40 @@ function OnDestroy()
         end
     end
 
+     -- NEW: Destroy HP heart
+    if hpHeart ~= 0 then
+        DestroyEntity(hpHeart)
+        hpHeart = {}
+    end
+
+    -- NEW: Destroy boots
+    for i, id in ipairs(bootIconIDs) do
+        if id and id > 0 then
+            DestroyEntity(id)
+        end
+    end
+    
+
+    -- NEW: Destroy sword icon
+    if swordIconID ~= 0 then
+        DestroyEntity(swordIconID)
+        swordIconID = 0
+    end
+
+    -- NEW: Destroy turn UI
+    if turnIndicatorID ~= 0 then
+        DestroyEntity(turnIndicatorID)
+        turnIndicatorID = 0
+    end
+
     apIndicatorsEmpty = {}
     apIndicatorsFilled = {}
     chestIndicatorsEmpty = {}
     chestIndicatorsFilled = {}
     atkIndicatorsEmpty = {}
     atkIndicatorsFilled = {}
+    bootIconIDs = {}
+    hpHeart = {}
     Log("AP indicators cleaned up (both layers)")
 
     -- Note: Entity cleanup, camera reset, and player controller reset
