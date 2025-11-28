@@ -119,7 +119,26 @@ void GSM_Update()
         // ============================================================================
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up MainMenu Lua script...");
-            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
+
+            extern Framework::CoreEngine* engine;
+
+            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
+            Framework::LevelLoader::GetInstance().ResetLuaState();
+
+            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
+            if (engine) {
+                if (auto* em = engine->GetEntityManager()) {
+                    size_t count = em->GetAllEntities().size();
+                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
+                    em->ClearAllEntities();
+                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
+                }
+
+                // Clear camera follow
+                if (auto* gfx = engine->GetGraphicsSystem()) {
+                    gfx->ClearFollowTarget();
+                }
+            }
             };
 
         // ============================================================================
@@ -195,7 +214,26 @@ void GSM_Update()
         // ============================================================================
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up LevelSelect Lua script...");
-            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
+
+            extern Framework::CoreEngine* engine;
+
+            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
+            Framework::LevelLoader::GetInstance().ResetLuaState();
+
+            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
+            if (engine) {
+                if (auto* em = engine->GetEntityManager()) {
+                    size_t count = em->GetAllEntities().size();
+                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
+                    em->ClearAllEntities();
+                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
+                }
+
+                // Clear camera follow
+                if (auto* gfx = engine->GetGraphicsSystem()) {
+                    gfx->ClearFollowTarget();
+                }
+            }
             };
 
         // ============================================================================
@@ -397,8 +435,12 @@ void GSM_Update()
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up Level3...");
 
-            // C++ cleanup (entities, systems, camera)
             extern Framework::CoreEngine* engine;
+
+            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
+            Framework::LevelLoader::GetInstance().ResetLuaState();
+
+            // STEP 2: C++ cleanup and final entity clear
             if (engine) {
                 // Reset player controller
                 if (auto* pcs = engine->GetPlayerController()) {
@@ -411,17 +453,14 @@ void GSM_Update()
                     gfx->ClearFollowTarget();
                 }
 
-                // Destroy all entities
+                // Clear all entities AFTER Lua cleanup (final cleanup)
                 if (auto* em = engine->GetEntityManager()) {
-                    auto ents = em->GetAllEntities();
-                    for (auto e : ents) {
-                        em->DestroyEntity(e);
-                    }
+                    size_t count = em->GetAllEntities().size();
+                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
+                    em->ClearAllEntities();
+                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
             }
-
-            // Unload Lua level
-            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
             };
 
         // ============================================================================

@@ -274,8 +274,9 @@ void CollisionSystem::CheckECSCollisions()
             // Use your existing check_collision function
             if (check_collision(ecsCircle, ecsRect))
             {
-                std::cout << "Collision: Rect entity " << rectEnt.GetID()
-                    << " hit Circle entity " << circEnt.GetID() << "\n";
+                // PERFORMANCE FIX: Removed console output (was causing 2-5ms lag per collision)
+                // std::cout << "Collision: Rect entity " << rectEnt.GetID()
+                //     << " hit Circle entity " << circEnt.GetID() << "\n";
 
                 if (entityManager->HasComponent<Movement>(rectEnt)) {
                     auto& mv = entityManager->GetComponent<Movement>(rectEnt);

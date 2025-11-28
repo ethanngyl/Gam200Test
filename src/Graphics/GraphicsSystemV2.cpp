@@ -41,11 +41,12 @@ Safety:
 #include "MeshFactory.h"
 #include "Graphics/RenderLayers.h"
 #include <iostream>
+#include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "Debugger/Trace.h"
 #include "Input/Input.h"
-
+#include "imgui.h"
 namespace Framework {
 
     // Check if a string looks like a file path (used to decide whether to load texture by name)
@@ -162,15 +163,41 @@ namespace Framework {
         // Smoothly interpolate camera position toward target (simple exponential smoothing)
         glm::vec3 currentPos = mainCamera.GetPosition();
         float smoothSpeed = 5.0f;  // Tune responsiveness
-        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * 0.016f);
+        float dt = 0.016f;          // or pass your actual deltaTime into this function
+        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * dt);
+
+
+        glm::vec2 orthoHalfExtents = mainCamera.GetOrthoHalfExtents();
+        auto& grid = GetGrid();
+
+        float minX = grid.worldbound_min.x + orthoHalfExtents.x;
+        float maxX = grid.worldbound_max.x - orthoHalfExtents.x;
+        float minY = grid.worldbound_min.y + orthoHalfExtents.y;
+        float maxY = grid.worldbound_max.y - orthoHalfExtents.y;
+
+        if (minX <= maxX) {
+            newPos.x = std::clamp(newPos.x, minX, maxX);
+        }
+
+        if (minY <= maxY) {
+            newPos.y = std::clamp(newPos.y, minY, maxY);
+        }
+
+
 
         mainCamera.SetPosition(newPos);
     }
 
+
     void GraphicsSystemV2::EditorCamDefaultControl(float dt/*EntityManager* em, Entity player*/)
     {
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput) {
+            return;
+        }
+
+
         constexpr float cameraSpeed = 5.f;
-        
+
         glm::vec3 delta(0.0f);
         if (inputManager->IsKeyDown(KeyCode::KEY_W))
             delta.y += cameraSpeed * dt;
@@ -188,10 +215,10 @@ namespace Framework {
     // /definition of ResetEditorCamera - Jiahao
     // // author: jiahao Zhou
     // Currently the editor camera share same class as main camera which is "Camera"
-	// It is just in editor mode, the camera has different control method
-	// so it still using mainCamera variable to represent editor camera
+    // It is just in editor mode, the camera has different control method
+    // so it still using mainCamera variable to represent editor camera
     // ============================================================================
-    
+
     void GraphicsSystemV2::ResetEditorCamera() {
         editorCamera.SetPosition(editorCameraStartPos);
         editorCamera.SetZoom(editorCameraZoom);
@@ -204,42 +231,46 @@ namespace Framework {
     // It is just in editor mode, the camera has different control method
     // so it still using mainCamera variable to represent editor camera
     // ============================================================================
-    
+
     void GraphicsSystemV2::HandleEditorCamera(float dt) {
-		// Define pan and zoom speeds
-        const float panSpeed = 2.0f * dt;
-        const float zoomSpeed = 1.5f * dt;
+
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput) {
+            return;
+        }
+        // Define pan and zoom speeds
+        const float panSpeed = 0.5f * dt;
+        const float zoomSpeed = 0.1f * dt;
 
         //Panning with arrow keys
-		//Basically move the camera position based on arrow key input
-        if (GetAsyncKeyState(Framework::KEY_LEFT)) {
+        //Basically move the camera position based on arrow key input
+        if (inputManager->IsKeyDown(Framework::KEY_LEFT)) {
             editorCamera.Translate({ -panSpeed, 0.0f, 0.0f });
         }
-        if (GetAsyncKeyState(Framework::KEY_RIGHT)) {
+        if (inputManager->IsKeyDown(Framework::KEY_RIGHT)) {
             editorCamera.Translate({ panSpeed, 0.0f, 0.0f });
         }
-        if (GetAsyncKeyState(Framework::KEY_UP)) {
+        if (inputManager->IsKeyDown(Framework::KEY_UP)) {
             editorCamera.Translate({ 0.0f, panSpeed, 0.0f });
         }
-        if (GetAsyncKeyState(Framework::KEY_DOWN)) {
+        if (inputManager->IsKeyDown(Framework::KEY_DOWN)) {
             editorCamera.Translate({ 0.0f, -panSpeed, 0.0f });
         }
 
         //Zooming 
-		// key 1 to zoom in, key 2 to zoom out
-        if (GetAsyncKeyState(Framework::KEY_1)) {
+        // key 1 to zoom in, key 2 to zoom out
+        if (inputManager->IsKeyDown(Framework::KEY_1)) {
             float zoom = editorCamera.GetZoom();
             editorCamera.SetZoom(zoom * (1.0f + zoomSpeed));
         }
 
-        if (GetAsyncKeyState(Framework::KEY_2)) {
+        if (inputManager->IsKeyDown(Framework::KEY_2)) {
             float zoom = editorCamera.GetZoom();
             editorCamera.SetZoom(zoom * (1.0f - zoomSpeed));
         }
 
         //Reset camera position 
-		// key 0 to reset camera, and call function ResetEditorCamera
-        if (GetAsyncKeyState(Framework::KEY_0)) {
+        // key 0 to reset camera, and call function ResetEditorCamera
+        if (inputManager->IsKeyDown(Framework::KEY_0)) {
             ResetEditorCamera();
         }
     }
@@ -299,7 +330,7 @@ namespace Framework {
             }
         }
         else {
-            EditorCamDefaultControl(dt);
+            HandleEditorCamera(dt);
         }
 
         // ========================================================================
@@ -502,7 +533,7 @@ namespace Framework {
         }
 
         circleMesh = resourceManager.CreateMesh("circle", circleVerts, {}, GL_TRIANGLE_FAN, true);
-        
+
         // Register wireframe quad
         std::vector<float> wireframeQuadVerts = {
             // Bottom left
@@ -521,7 +552,7 @@ namespace Framework {
             "wireframequad",
             wireframeQuadVerts,
             {},
-            GL_LINE_STRIP, 
+            GL_LINE_STRIP,
             true
         );
 
@@ -650,7 +681,7 @@ namespace Framework {
     }
 
     // === RENDERING PHASES ===
-    
+
     // GatherRenderCommands: Build RenderQueue from ECS (background + entities).
     void GraphicsSystemV2::GatherRenderCommands() {
         if (!entityManager) return;
@@ -809,7 +840,7 @@ namespace Framework {
             auto& anim = entityManager->GetComponent<SpriteAnimation>(e);
 
             cmd.texture = anim.spriteSheet;
-                
+
             // Get the material for this command
             Material* mat = resourceManager.GetMaterial(cmd.material);
 
@@ -1189,7 +1220,7 @@ namespace Framework {
     void GraphicsSystemV2::RenderImGui() {
         if (!window) return;
 
-    //    // Just swap - DON'T clear!
+        //    // Just swap - DON'T clear!
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

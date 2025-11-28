@@ -259,7 +259,8 @@ namespace Framework {
                     anim.currentFrame = anim.loop ? anim_current_frame : anim.frameCount - anim_frame_mod;
                 }
 
-                LOG_INFO("ANIM", "Entity %u Animation '%s' advanced to frame %d", (unsigned)e.id, anim.animName.c_str(), anim.currentFrame);
+                // PERFORMANCE FIX: Removed per-frame logging (was causing 1-3ms lag per frame)
+                // LOG_INFO("ANIM", "Entity %u Animation '%s' advanced to frame %d", (unsigned)e.id, anim.animName.c_str(), anim.currentFrame);
             }
         }
     }

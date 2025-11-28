@@ -77,6 +77,7 @@ namespace Framework {
         bool LoadLevel(const std::string& scriptPath);
         void UnloadCurrentLevel();
         void ReloadCurrentLevel();  // Hot reload
+        void ResetLuaState();       // Complete Lua state reset
 
         // Lifecycle calls (to be called from GSM or main loop)
         void UpdateCurrentLevel(float dt);
@@ -130,6 +131,7 @@ namespace Framework {
         // Camera control
         static int Lua_SetCameraPosition(lua_State* L);
         static int Lua_SetCameraZoom(lua_State* L);
+        static int Lua_GetFramebufferSize(lua_State* L);
 
         // Engine control
         static int Lua_SetEnginePlayState(lua_State* L);
@@ -139,16 +141,22 @@ namespace Framework {
         static int Lua_DisableImGui(lua_State* L);
         static int Lua_EnableImGui(lua_State* L);
 
+        // Pause control
+        static int Lua_TogglePause(lua_State* L);
+        static int Lua_IsPaused(lua_State* L);
+
         // Audio API
         static int Lua_PlaySound(lua_State* L);
         static int Lua_StopSound(lua_State* L);
         static int Lua_StopAllSounds(lua_State* L);
         static int Lua_UpdateAudio(lua_State* L);
+        static int Lua_SetMasterVolume(lua_State* L);
 
         // UI Button API
         static int Lua_CreateButton(lua_State* L);
         static int Lua_ClearAllButtons(lua_State* L);
         static int Lua_DrawButtonText(lua_State* L);
+        static int Lua_DrawText(lua_State* L);
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
@@ -177,6 +185,19 @@ namespace Framework {
         static int Lua_LoadPlayerAnimation(lua_State* L);
 		static int Lua_GetPlayerAttackAP(lua_State* L);
 		static int Lua_GetPlayerHP(lua_State* L);
+
+        // Player Grid Movement API
+        static int Lua_GetPlayerGridPosition(lua_State* L);
+        static int Lua_IsValidGridPosition(lua_State* L);
+        static int Lua_IsWalkableTile(lua_State* L);
+        static int Lua_MovePlayerToTile(lua_State* L);
+        static int Lua_ShowTileBorder(lua_State* L);
+        static int Lua_PulseTile(lua_State* L);
+        static int Lua_ConsumePlayerAP(lua_State* L);
+        static int Lua_SetPlayerFlipX(lua_State* L);
+        static int Lua_HasChestAtTile(lua_State* L);
+        static int Lua_CollectChest(lua_State* L);
+        static int Lua_HasGoalAtTile(lua_State* L);
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

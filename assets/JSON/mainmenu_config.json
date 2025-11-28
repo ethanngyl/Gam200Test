@@ -106,15 +106,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.5
+          "y": 0.2
         },
         "layer": 2,
         "text": {
-          "content": "Play",
+          "content": "PLAY",
           "font": "Sans48",
           "offset": {
-            "x": -60.0,
-            "y": -24.0
+            "x": -70.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {
@@ -135,15 +135,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.5
+          "y": 0.2
         },
         "layer": 2,
         "text": {
-          "content": "Exit",
+          "content": "EXIT",
           "font": "Sans48",
           "offset": {
-            "x": -50.0,
-            "y": -24.0
+            "x": -70.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {

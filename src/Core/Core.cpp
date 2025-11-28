@@ -1,6 +1,6 @@
 ﻿/*
 ===============================================================================
- File:          Core.cpp
+ File:          Core.cpp (FIXED - ALT+TAB Text Rendering Issue)
  Author:        GE YONGQI
  Email:         yongqi.ge@digipen.edu
  Date:          2025-10-31
@@ -17,6 +17,11 @@
   Thread-safety:
      - Not thread-safe (single-threaded engine model)
      - All systems created and destroyed on the same thread
+
+  BUGFIX (2025-11-28):
+     - Fixed ALT+TAB text disappearing issue in UpdateSingleFrame()
+     - Removed early return when paused to ensure LevelLoader::DrawCurrentLevel()
+       is always called, which is needed for main menu text rendering
 ===============================================================================
 */
 
@@ -38,7 +43,7 @@
 #include "AudioLoader.h"
 #include "Pause/Pause.h"
 #include "RangeIndicatorSystem.h"
-
+#include "GlobalPauseManager.h"
 
 namespace Framework
 {
@@ -64,7 +69,6 @@ namespace Framework
         , rangeIndicatorSystem(nullptr)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
-		, pauseSystem(nullptr)
     {
         CORE = this;
     }
@@ -102,20 +106,17 @@ namespace Framework
             //Initializes the subscribers to receive events
             SetupEventListeners();
 
-            //Use a container to store(future)
-            //if (audioSystem) {
-              //  LOG_INFO("CORE", "Loading test audio...");
-                //bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
-                //bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
-                //bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
-                //bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
-                //if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
-                  //  LOG_INFO("CORE", "All audio loaded successfully");
-                //}
-                //else {
-                  //  LOG_WARN("CORE", "Failed to load audio");
-                //}
-            //}
+            // Load audio configuration from JSON
+            if (audioSystem) {
+                LOG_INFO("CORE", "Loading audio configuration...");
+                bool audioLoaded = AudioLoader::LoadAudioConfig("assets/JSON/AudioConfig.json", audioSystem);
+                if (audioLoaded) {
+                    LOG_INFO("CORE", "✓ Audio configuration loaded successfully");
+                }
+                else {
+                    LOG_WARN("CORE", "✗ Failed to load audio configuration");
+                }
+            }
 
 
             LOG_INFO("CORE", "================================================");
@@ -151,7 +152,6 @@ namespace Framework
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
-		pauseSystem = new PauseSystem();
         rangeIndicatorSystem = new RangeIndicatorSystem();
 
         // Check for allocation failures
@@ -159,7 +159,7 @@ namespace Framework
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !pauseSystem || !rangeIndicatorSystem) {
+            !scriptSystem || !rangeIndicatorSystem) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -181,7 +181,6 @@ namespace Framework
             delete damageIndicator;
             delete pathfindingSystem;
             delete scriptSystem;
-            delete pauseSystem;
             delete rangeIndicatorSystem;
 
             throw std::runtime_error("System allocation failure");
@@ -210,7 +209,7 @@ namespace Framework
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
 
-       
+
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -224,6 +223,11 @@ namespace Framework
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
+        // Load master volume from audio config JSON and apply it
+        float masterVolume = AudioLoader::GetSettings().masterVolume;
+        audioSystem->SetMasterVolume(masterVolume);
+        LOG_INFO("AUDIO", "Master volume loaded from audio_config.json: %.2f", masterVolume);
+
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);
 
@@ -232,7 +236,6 @@ namespace Framework
         rangeIndicatorSystem->SetGraphicsSystem(graphicsSystem);
 
         // Pause Event System
-        pauseSystem->SetCoreEngine(this);
         LOG_INFO("CORE", "PauseSystem wired to CoreEngine");
 
         LOG_INFO("CORE", "Dependencies wired");
@@ -248,7 +251,7 @@ namespace Framework
 
         // Set window dependencies
         graphicsSystem->SetWindow(windowSystem->GetWindow());
-        inputSystem->SetWindow(windowSystem->GetWindow());  
+        inputSystem->SetWindow(windowSystem->GetWindow());
 
         imguiSystem->SetWindow(windowSystem->GetWindow());
         imguiSystem->SetEntitySpawner(spawner);
@@ -279,7 +282,6 @@ namespace Framework
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
-        AddSystem(pauseSystem);
         AddSystem(rangeIndicatorSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
@@ -367,7 +369,6 @@ namespace Framework
         animationSystem = nullptr;
         uiSystem = nullptr;
         eventSystem = nullptr;
-        pauseSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {
@@ -407,19 +408,116 @@ namespace Framework
             return;
         }
 
-        // Update all logic systems
-        for (unsigned i = 0; i < Systems.size(); ++i) {
-            if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
-                dynamic_cast<ImGuiSystem*>(Systems[i]) ||
-                dynamic_cast<InputSystem*>(Systems[i])) {
-                continue;
-            }
-            Systems[i]->Update(dt);
+        // ====================================================================
+        // CHECK PAUSE STATE
+        // ====================================================================
+        bool isPaused = GlobalPause::IsPaused();
+
+        // ====================================================================
+        // ALWAYS UPDATE (Even when paused)
+        // ====================================================================
+
+        // Input - needed for pause menu interaction
+        if (inputSystem) {
+            inputSystem->Update(dt);
         }
 
-        if (scriptSystem) scriptSystem->Update(dt);
+        // Graphics - CRITICAL: Always update to prevent ghosting
+        // Even when paused, this will:
+        // 1. Clear screen buffer (prevents ghosting)
+        // 2. Render current frozen game state
+        // 3. Swap buffers
+        if (graphicsSystem) {
+            graphicsSystem->Update(dt);
+        }
 
-        // === RENDER GAME ===
+        // UI System - needed for pause menu
+        if (uiSystem) {
+            uiSystem->Update(dt);
+        }
+
+        // ====================================================================
+        // CONDITIONALLY UPDATE GAME LOGIC (Only when NOT paused)
+        // ====================================================================
+        // BUGFIX: Removed early return when paused - we need to continue
+        // to the rendering code below to ensure DrawCurrentLevel() is called
+        // ====================================================================
+
+        if (!isPaused) {
+            // ================================================================
+            // NORMAL GAME UPDATES (Only when NOT paused)
+            // ================================================================
+
+            // Movement & Physics
+            if (movementSystem) {
+                movementSystem->Update(dt);
+            }
+
+            if (projectileSystem) {
+                projectileSystem->Update(dt);
+            }
+
+            if (collisionSystem) {
+                collisionSystem->Update(dt);
+            }
+
+            // Game Logic
+            if (scriptSystem) {
+                scriptSystem->Update(dt);
+            }
+
+            if (playerController) {
+                playerController->Update(dt);
+            }
+
+            if (pathfindingSystem) {
+                pathfindingSystem->Update(dt);
+            }
+
+            // Animation - IMPORTANT: Only update when not paused
+            if (animationSystem) {
+                animationSystem->Update(dt);
+            }
+
+            // Events & Indicators
+            if (eventSystem) {
+                eventSystem->Update(dt);
+            }
+
+            if (rangeIndicatorSystem) {
+                rangeIndicatorSystem->Update(dt);
+            }
+
+            // Update all logic systems
+            for (unsigned i = 0; i < Systems.size(); ++i) {
+                if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
+                    dynamic_cast<ImGuiSystem*>(Systems[i]) ||
+                    dynamic_cast<InputSystem*>(Systems[i])) {
+                    continue;
+                }
+                Systems[i]->Update(dt);
+            }
+
+            // PERFORMANCE FIX: Removed duplicate scriptSystem->Update(dt) call
+            // ScriptSystem is already updated in the loop above (was running Level3.lua twice per frame!)
+            // if (scriptSystem) scriptSystem->Update(dt);
+        }
+
+        // Audio - continue updating (for pause menu sounds)
+        // Volume is controlled by WindowEventHandler when pausing
+        if (audioSystem) {
+            audioSystem->Update(dt);
+        }
+
+        // ====================================================================
+        // RENDER GAME (CRITICAL: Always render, even when paused)
+        // ====================================================================
+        // This section MUST execute even when paused to ensure:
+        // 1. Main menu text is rendered (via LevelLoader::DrawCurrentLevel())
+        // 2. Pause menu is visible
+        // 3. Screen doesn't ghost
+        // ====================================================================
+
         bool useViewport = imguiSystem &&
             imguiSystem->IsEnabled() &&
             imguiSystem->IsRenderingToViewport() &&
@@ -443,7 +541,8 @@ namespace Framework
                 imguiSystem->GetViewportHeight()
             );
 
-            // Draw level text INTO the viewport (after game rendering)
+            // CRITICAL: Draw level text INTO the viewport (after game rendering)
+            // This calls MainMenuLevel.lua's OnDraw() which renders button text
             LevelLoader::GetInstance().DrawCurrentLevel();
 
             graphicsSystem->ClearRenderTarget();
@@ -465,9 +564,10 @@ namespace Framework
             glfwGetWindowSize(windowSystem->GetWindow(), &winWidth, &winHeight);
             graphicsSystem->GetTextRenderer().setScreenSize(winWidth, winHeight);
 
-            // Draw level text to main window
+            // CRITICAL: Draw level text to main window
+            // This calls MainMenuLevel.lua's OnDraw() which renders button text
+            // MUST be called even when paused for main menu text to appear
             LevelLoader::GetInstance().DrawCurrentLevel();
-
         }
 
         // === IMGUI ===
