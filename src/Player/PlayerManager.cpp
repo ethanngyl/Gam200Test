@@ -592,28 +592,29 @@ namespace Framework {
         if (inputSystem->IsKeyPressed(KEY_UP)) {
             stepY = 1;  // Move up (increase Y)
             animationName = "Idle_back";
-            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
-            std::cout << "[Arrow] Moving UP\n";
+            // PERFORMANCE FIX: Removed movement logging
+            // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
+            // std::cout << "[Arrow] Moving UP\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
             stepY = -1; // Move down (decrease Y)
             animationName = "Idle_front";
-            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
-            std::cout << "[Arrow] Moving DOWN\n";
+            // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
+            // std::cout << "[Arrow] Moving DOWN\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
             stepX = -1; // Move left (decrease X)
             animationName = "Idle_sideview";
             flipAnimation = true;  // Flip sprite to face left
-            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
-            std::cout << "[Arrow] Moving LEFT\n";
+            // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
+            // std::cout << "[Arrow] Moving LEFT\n";
         }
         else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
             stepX = 1;  // Move right (increase X)
             animationName = "Idle_sideview";
             flipAnimation = false;  // Normal orientation for right
-            LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
-            std::cout << "[Arrow] Moving RIGHT\n";
+            // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
+            // std::cout << "[Arrow] Moving RIGHT\n";
         }
         else {
             return; // No movement input
@@ -637,8 +638,9 @@ namespace Framework {
 
         // Check if next tile is valid and walkable
         if (!Framework::InBounds(next)) {
-            std::cout << "[WASD] Out of bounds! Current(" << cur.x << "," << cur.y
-                << ") -> Next(" << next.x << "," << next.y << ")\n";
+            // PERFORMANCE FIX: Removed bounds check logging
+            // std::cout << "[WASD] Out of bounds! Current(" << cur.x << "," << cur.y
+            //     << ") -> Next(" << next.x << "," << next.y << ")\n";
             return;
         }
 
@@ -648,7 +650,8 @@ namespace Framework {
         }
 
         if (!Framework::IsWalkable(next)) {
-            std::cout << "[WASD] Tile blocked! (" << next.x << "," << next.y << ")\n";
+            // PERFORMANCE FIX: Removed tile blocked logging
+            // std::cout << "[WASD] Tile blocked! (" << next.x << "," << next.y << ")\n";
             return;
         }
 
@@ -665,21 +668,21 @@ namespace Framework {
         xform.position = Framework::TileToWorld(next);
         Framework::SetOccupant(next, playerEntity);
 
-        std::cout << "[WASD] Moved from (" << cur.x << "," << cur.y
-            << ") to (" << next.x << "," << next.y << ")\n";
+        // PERFORMANCE FIX: Removed movement logging
+        // std::cout << "[WASD] Moved from (" << cur.x << "," << cur.y
+        //     << ") to (" << next.x << "," << next.y << ")\n";
 
         //EndPlayerTurn();
 
         // --- AND REPLACE IT WITH THIS ---
-        int apBefore = stats.actionPoints;
         stats.actionPoints--; // Spend one AP
-        int apAfter = stats.actionPoints;
-        LOG_INFO("PlayerManager", "***** AP CONSUMED: %d -> %d (delta: -1) *****", apBefore, apAfter);
-        LOG_INFO("PlayerManager", "Player moved. AP Remaining: %d", stats.actionPoints);
+        // PERFORMANCE FIX: Removed AP logging (can be seen in UI)
+        // LOG_INFO("PlayerManager", "***** AP CONSUMED: %d -> %d (delta: -1) *****", apBefore, apAfter);
+        // LOG_INFO("PlayerManager", "Player moved. AP Remaining: %d", stats.actionPoints);
 
         // FIX: Set cooldown to prevent double AP consumption (200ms = 0.2 seconds)
         arrowMoveCooldown = 0.2f;
-        LOG_INFO("PlayerManager", "Arrow move cooldown activated (0.2s)");
+        // LOG_INFO("PlayerManager", "Arrow move cooldown activated (0.2s)");
     }
 
     void PlayerControllerSystem::ResetGridState() {

@@ -495,7 +495,9 @@ namespace Framework
             Systems[i]->Update(dt);
         }
 
-        if (scriptSystem) scriptSystem->Update(dt);
+        // PERFORMANCE FIX: Removed duplicate scriptSystem->Update(dt) call
+        // ScriptSystem is already updated in the loop above (was running Level3.lua twice per frame!)
+        // if (scriptSystem) scriptSystem->Update(dt);
 
         // === RENDER GAME ===
         bool useViewport = imguiSystem &&
