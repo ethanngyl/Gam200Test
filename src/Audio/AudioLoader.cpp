@@ -2,7 +2,7 @@
 #include "AudioLoader.h"
 #include "Audio/AudioSystem.h"
 #include <fstream>
-
+#include <algorithm>
 namespace Framework {
 
     // Static member initialization
@@ -150,7 +150,7 @@ namespace Framework {
 
     bool AudioLoader::SetMasterVolume(float volume, const std::string& filepath) {
         // Clamp volume to valid range
-        settings.masterVolume = std::max(0.0f, std::min(1.0f, volume));
+        settings.masterVolume = (std::max)(0.0f, (std::min)(1.0f, volume));
 
         // Save to JSON file
         return SaveAudioConfig(filepath);
