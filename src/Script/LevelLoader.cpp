@@ -295,6 +295,7 @@ namespace Framework {
         // Camera
         lua_register(L, "SetCameraPosition", Lua_SetCameraPosition);
         lua_register(L, "SetCameraZoom", Lua_SetCameraZoom);
+        lua_register(L, "GetFramebufferSize", Lua_GetFramebufferSize);
 
         // Engine control
         lua_register(L, "SetEnginePlayState", Lua_SetEnginePlayState);
@@ -316,11 +317,13 @@ namespace Framework {
         lua_register(L, "StopSound", Lua_StopSound);
         lua_register(L, "StopAllSounds", Lua_StopAllSounds);
         lua_register(L, "UpdateAudio", Lua_UpdateAudio);
+        lua_register(L, "SetMasterVolume", Lua_SetMasterVolume);
 
         // UI Buttons
         lua_register(L, "CreateButton", Lua_CreateButton);
         lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
         lua_register(L, "DrawButtonText", Lua_DrawButtonText);
+        lua_register(L, "DrawText", Lua_DrawText);
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
@@ -387,6 +390,29 @@ namespace Framework {
         float zoom = luaL_checknumber(L, 1);
         loader->graphicsSystem->SetCameraZoom(zoom);
         return 0;
+    }
+
+    int LevelLoader::Lua_GetFramebufferSize(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* windowSystem = loader->coreEngine->GetWindowSystem();
+        if (!windowSystem) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int width, height;
+        glfwGetFramebufferSize(windowSystem->GetWindow(), &width, &height);
+
+        lua_pushinteger(L, width);
+        lua_pushinteger(L, height);
+        return 2;
     }
 
     // --- Engine Control ---

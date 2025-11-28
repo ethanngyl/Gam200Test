@@ -131,6 +131,7 @@ namespace Framework {
         // Camera control
         static int Lua_SetCameraPosition(lua_State* L);
         static int Lua_SetCameraZoom(lua_State* L);
+        static int Lua_GetFramebufferSize(lua_State* L);
 
         // Engine control
         static int Lua_SetEnginePlayState(lua_State* L);
@@ -149,11 +150,13 @@ namespace Framework {
         static int Lua_StopSound(lua_State* L);
         static int Lua_StopAllSounds(lua_State* L);
         static int Lua_UpdateAudio(lua_State* L);
+        static int Lua_SetMasterVolume(lua_State* L);
 
         // UI Button API
         static int Lua_CreateButton(lua_State* L);
         static int Lua_ClearAllButtons(lua_State* L);
         static int Lua_DrawButtonText(lua_State* L);
+        static int Lua_DrawText(lua_State* L);
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
