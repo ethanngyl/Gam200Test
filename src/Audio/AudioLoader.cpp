@@ -148,4 +148,54 @@ namespace Framework {
         return failCount == 0;
     }
 
+    bool AudioLoader::SetMasterVolume(float volume, const std::string& filepath) {
+        // Clamp volume to valid range
+        settings.masterVolume = std::max(0.0f, std::min(1.0f, volume));
+
+        // Save to JSON file
+        return SaveAudioConfig(filepath);
+    }
+
+    bool AudioLoader::SaveAudioConfig(const std::string& filepath) {
+        try {
+            // Read existing JSON file
+            std::ifstream inFile(filepath);
+            if (!inFile.is_open()) {
+                LOG_ERROR("AudioLoader", "Failed to open audio config file for reading: %s", filepath.c_str());
+                return false;
+            }
+
+            nlohmann::json jsonData;
+            inFile >> jsonData;
+            inFile.close();
+
+            // Update settings section
+            if (!jsonData.contains("settings")) {
+                jsonData["settings"] = nlohmann::json::object();
+            }
+
+            jsonData["settings"]["masterVolume"] = settings.masterVolume;
+            jsonData["settings"]["musicVolume"] = settings.musicVolume;
+            jsonData["settings"]["sfxVolume"] = settings.sfxVolume;
+
+            // Write back to file with pretty formatting
+            std::ofstream outFile(filepath);
+            if (!outFile.is_open()) {
+                LOG_ERROR("AudioLoader", "Failed to open audio config file for writing: %s", filepath.c_str());
+                return false;
+            }
+
+            outFile << jsonData.dump(2);  // 2-space indentation
+            outFile.close();
+
+            LOG_INFO("AudioLoader", "Audio config saved to: %s (Master Volume: %.2f)",
+                filepath.c_str(), settings.masterVolume);
+            return true;
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR("AudioLoader", "Error saving audio config: %s", e.what());
+            return false;
+        }
+    }
+
 } // namespace Framework

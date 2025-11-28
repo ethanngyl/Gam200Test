@@ -1044,7 +1044,7 @@ namespace Framework {
         // ========================================================================
         if (ImGui::CollapsingHeader("Global Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
             // Master Volume Slider
-            static float masterVolume = ConfigReader::GetFloat("master_volume", 1.0f);
+            static float masterVolume = AudioLoader::GetSettings().masterVolume;
 
             ImGui::Text("Audio Settings");
             if (ImGui::SliderFloat("Master Volume", &masterVolume, 0.0f, 1.0f, "%.2f")) {
@@ -1052,8 +1052,8 @@ namespace Framework {
                 if (audioSystem) {
                     audioSystem->SetMasterVolume(masterVolume);
                 }
-                // Save to config file
-                ConfigReader::SetFloat("master_volume", masterVolume);
+                // Save to audio config JSON file
+                AudioLoader::SetMasterVolume(masterVolume);
             }
 
             ImGui::Separator();
