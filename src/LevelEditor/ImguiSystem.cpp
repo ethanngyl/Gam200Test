@@ -137,6 +137,7 @@ namespace Framework {
         std::cout << "[ImGui] Initialization complete\n";
     }
 
+	
     // ============================================================================
     // This is the function that able to open level from a txt file
     // author: jiahao.zhou@digipen
@@ -2449,20 +2450,28 @@ namespace Framework {
 
             // Handle texture files
             if (IsTextureFile(path)) {
-                if (!entitySpawner) {
-                    std::cerr << "[FileDrop] ❌ EntitySpawner not available\n";
-                    continue;
+                // ONLY spawn if we are dropping into the Game Viewport
+                if (m_isViewportHovered) {
+                    if (!entitySpawner) {
+                        std::cerr << "[FileDrop] ❌ EntitySpawner not available\n";
+                        continue;
+                    }
+
+                    // [Add your texture copy logic here if needed, as discussed before]
+
+                    std::string label = path.filename().string();
+                    std::string filePath = std::string("assets/") + label;
+
+                    Framework::Entity entity = entitySpawner->SpawnSprite(
+                        filePath,
+                        Vector2D(0.0f, 0.0f),
+                        Vector2D(1.0f, 1.0f)
+                    );
+                    std::cout << "[FileDrop] Spawned sprite as entity " << entity.GetID() << "\n";
                 }
-
-                std::string label = path.filename().string();
-                std::string filePath = std::string("assets/") + label;
-
-                Framework::Entity entity = entitySpawner->SpawnSprite(
-                    filePath,
-                    Vector2D(0.0f, 0.0f),
-                    Vector2D(1.0f, 1.0f)
-                );
-                std::cout << "[FileDrop]  Spawned sprite as entity " << entity.id << "\n";
+                else {
+                    std::cout << "[FileDrop] Ignored texture drop (not in Viewport)\n";
+                }
                 continue;
             }
 
