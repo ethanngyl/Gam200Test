@@ -1,7 +1,7 @@
 ﻿/*
 ===============================================================================
  File:          Pause.cpp (Fixed Version - Config-Driven Layout)
- Author:        Padilla Carl Jameson Z + Claude Assistant
+ Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-27
  Contribution:  Original: Carl | Fix: Claude

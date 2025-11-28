@@ -169,6 +169,9 @@ namespace Framework
          */
         void SetWindow(GLFWwindow* win);
 
+        void ResetAllKeyStates();
+
+
     private:
         std::map<KeyCode, bool> CurrentKeys;     // Keys down this frame
         std::map<KeyCode, bool> PreviousKeys;    // Keys down last frame

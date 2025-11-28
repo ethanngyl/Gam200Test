@@ -159,6 +159,19 @@ namespace Framework
         // - Independent of window position on screen
     }
 
+    void InputSystem::ResetAllKeyStates()
+    {
+        std::cout << "InputSystem: Resetting all key states\n";
+
+        // Clear all current key states
+        CurrentKeys.clear();
+
+        // Clear all previous key states
+        PreviousKeys.clear();
+
+        std::cout << "InputSystem: All key states reset (CurrentKeys and PreviousKeys cleared)\n";
+    }
+
     void InputSystem::SendEngineMessage(Message* message)
     {
         if (message->MessageId == Status::Quit)

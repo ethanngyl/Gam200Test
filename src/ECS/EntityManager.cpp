@@ -14,6 +14,7 @@
 ===============================================================================
  */
 
+#include "Precompiled.h"
 #include "ECSEntityManager.h"
 #include <iostream>
 namespace Framework
