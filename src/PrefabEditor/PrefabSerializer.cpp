@@ -44,7 +44,10 @@ Notes:
 using namespace Framework;
 
 // tiny helper to print float nicely
+// We serialize floats with a fixed number of decimal places so the prefab
+// files are more consistent and readable (and avoid weird scientific notation).
 static std::string f2(float v) {
+
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(6) << v;
     return oss.str();
@@ -54,22 +57,32 @@ namespace PrefabSerializer
 {
     bool SavePrefab(Framework::EntityManager& em, Framework::Entity e, const std::string& outPath)
     {
+        // If the entity is invalid, there is nothing to save.
         if (!e.IsValid()) return false;
 
+        // Open output file for writing the JSON content.
         std::ofstream out(outPath);
         if (!out.is_open()) return false;
 
+        // ---------------------------------------------------------------------
+        // Write JSON header and "entity" id
+        // ---------------------------------------------------------------------
         out << "{\n";
         out << "  \"entity\": " << e.GetID() << ",\n";
         out << "  \"components\": {\n";
 
+        // Helper to insert commas between component blocks.
         bool first = true;
         auto writeComma = [&](void) {
             if (!first) out << ",\n";
             first = false;
             };
 
+        // ---------------------------------------------------------------------
         // Transform
+        // ---------------------------------------------------------------------
+        //
+        // We record position, rotation and scale in a compact JSON object.
         if (em.HasComponent<Transform>(e)) {
             auto& t = em.GetComponent<Transform>(e);
             writeComma();
@@ -80,7 +93,11 @@ namespace PrefabSerializer
                 << "}";
         }
 
-        // Sprite (simple path/label)
+        // ---------------------------------------------------------------------
+        // Sprite
+        // ---------------------------------------------------------------------
+        //
+        // Simple visual component: just store the texture path and draw layer.
         if (em.HasComponent<Sprite>(e)) {
             auto& s = em.GetComponent<Sprite>(e);
             writeComma();
@@ -90,7 +107,12 @@ namespace PrefabSerializer
                 << "}";
         }
 
-        // MeshRenderer (record spriteName + layer + tint if you have it)
+        // ---------------------------------------------------------------------
+        // MeshRenderer
+        // ---------------------------------------------------------------------
+        //
+        // Mesh-based rendering: store spriteName, layer, order in layer,
+        // and tint color (RGBA).
         if (em.HasComponent<MeshRenderer>(e)) {
             auto& mr = em.GetComponent<MeshRenderer>(e);
             writeComma();
@@ -102,7 +124,12 @@ namespace PrefabSerializer
                 << "}";
         }
 
+        // ---------------------------------------------------------------------
         // Movement
+        // ---------------------------------------------------------------------
+        //
+        // Store move speed and direction vector so behavior can be restored.
+
         if (em.HasComponent<Movement>(e)) {
             auto& m = em.GetComponent<Movement>(e);
             writeComma();
@@ -112,7 +139,11 @@ namespace PrefabSerializer
                 << "}";
         }
 
+        // ---------------------------------------------------------------------
         // BoxCollider
+        // ---------------------------------------------------------------------
+        //
+        // 2D box collision: size, offset from the transform and trigger flag.
         if (em.HasComponent<BoxCollider>(e)) {
             auto& c = em.GetComponent<BoxCollider>(e);
             writeComma();
@@ -123,7 +154,11 @@ namespace PrefabSerializer
                 << "}";
         }
 
+        // ---------------------------------------------------------------------
         // CircleCollider
+        // ---------------------------------------------------------------------
+        //
+        // Circle collision: radius and offset from the transform.
         if (em.HasComponent<CircleCollider>(e)) {
             auto& c = em.GetComponent<CircleCollider>(e);
             writeComma();
@@ -133,7 +168,12 @@ namespace PrefabSerializer
                 << "}";
         }
 
-        // (Optional) SpriteAnimation if you use it
+        // ---------------------------------------------------------------------
+        // SpriteAnimation
+        // ---------------------------------------------------------------------
+        //
+        // If sprite animation is used, persist basic animation setup:
+        // sheet ID, frame dimensions/count, current frame and flags.
         if (em.HasComponent<SpriteAnimation>(e)) {
             auto& a = em.GetComponent<SpriteAnimation>(e);
             writeComma();
@@ -148,6 +188,7 @@ namespace PrefabSerializer
                 << "}";
         }
 
+        // Close the "components" object and the root JSON object.
         out << "\n  }\n";
         out << "}\n";
         out.close();
@@ -157,6 +198,9 @@ namespace PrefabSerializer
     // Reads a prefab and spawns a new entity with its components
     Framework::Entity LoadPrefab(Framework::EntityManager& em, const std::string& path)
     {
+        // ---------------------------------------------------------------------
+        // STEP 1: Open and parse the JSON file
+        // ---------------------------------------------------------------------
         std::ifstream file(path);
         if (!file.is_open())
         {
@@ -168,11 +212,13 @@ namespace PrefabSerializer
         file >> data;
         file.close();
 
-        // Create a new entity
+        // ---------------------------------------------------------------------
+        // STEP 2: Create a fresh entity in the ECS
+        // ---------------------------------------------------------------------
         Entity e = em.CreateEntity();
 
         // ---------------------------------------------------------------------
-        // Recreate components that exist in the file
+        // STEP 3: Recreate components from the "components" block
         // ---------------------------------------------------------------------
         const auto& comps = data["components"];
 
@@ -251,8 +297,11 @@ namespace PrefabSerializer
             c.offset.y = cdata["offset"][1];
         }
 
+        // ---------------------------------------------------------------------
+        // STEP 4: Register this entity as a prefab instance so tools
+        //         (like the prefab editor) can track and update it.
+        // ---------------------------------------------------------------------
         Framework::PrefabInstanceTracker::Get().RegisterInstance(e, path);
-        //Framework::PrefabInstanceRegistry::Get().RegisterInstance(e, path);
 
         return e;
     }
