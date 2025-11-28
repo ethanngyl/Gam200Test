@@ -101,20 +101,17 @@ namespace Framework
             //Initializes the subscribers to receive events
             SetupEventListeners();
 
-            //Use a container to store(future)
-            //if (audioSystem) {
-              //  LOG_INFO("CORE", "Loading test audio...");
-                //bool imguitestaudio = audioSystem->LoadSound("assets/leaves.wav", "leaves");
-                //bool mainmenubgm = audioSystem->LoadSound("assets/Moron3MenuMusic.wav", "mmbgm");
-                //bool bgm2 = audioSystem->LoadSound("assets/Moron3BGM.wav", "bgm");
-                //bool shooting = audioSystem->LoadSound("assets/shooting.wav", "shooting");
-                //if (imguitestaudio && mainmenubgm && bgm2 && shooting) {
-                  //  LOG_INFO("CORE", "All audio loaded successfully");
-                //}
-                //else {
-                  //  LOG_WARN("CORE", "Failed to load audio");
-                //}
-            //}
+            // Load audio configuration from JSON
+            if (audioSystem) {
+                LOG_INFO("CORE", "Loading audio configuration...");
+                bool audioLoaded = AudioLoader::LoadAudioConfig("assets/JSON/audio_config.json", audioSystem);
+                if (audioLoaded) {
+                    LOG_INFO("CORE", "✓ Audio configuration loaded successfully");
+                }
+                else {
+                    LOG_WARN("CORE", "✗ Failed to load audio configuration");
+                }
+            }
 
 
             LOG_INFO("CORE", "================================================");
