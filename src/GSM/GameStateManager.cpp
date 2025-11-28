@@ -15,6 +15,14 @@
 #include "LevelLoader.h"
 #include "TimeConstants.h"
 
+// ============================================================================
+// ADDED: Pause system includes
+// ============================================================================
+#include "GlobalPauseManager.h"
+#include "Pause.h"
+#include "AudioSystem.h"  // For audio control in pause system
+
+
 // Level 3 Lua-specific includes
 #include "PlayerManager.h"
 #include "Turn.h"
@@ -34,6 +42,13 @@ FP fpUpdate = nullptr;
 FP fpDraw = nullptr;
 FP fpFree = nullptr;
 FP fpUnload = nullptr;
+
+// ============================================================================
+// LEVEL 3 PAUSE MENU STATE (Shared between UPDATE and DRAW)
+// ============================================================================
+namespace {
+    PauseMenuSimple::PauseMenuState g_level3PauseState;
+}
 
 // ============================================================================
 // GSM FUNCTIONS
@@ -264,9 +279,10 @@ void GSM_Update()
         fpUnload = level2_Unload;
         break;
 
+
     case LEVEL_3:
     {
-        LOG_INFO("GSM", "Level 3 state (Lua-scripted)");
+        LOG_INFO("GSM", "Level 3 state (Lua-scripted with pause support)");
 
         // ============================================================================
         // LOAD
@@ -328,7 +344,7 @@ void GSM_Update()
                         else {
                             auto& ap = em->GetComponent<Framework::AP>(player);
                             LOG_INFO("GSM", "Player already has AP: %d/%d AP",
-                                     ap.actionPoints, ap.maxActionPoints);
+                                ap.actionPoints, ap.maxActionPoints);
                         }
 
                         // Configure player controller
@@ -365,6 +381,77 @@ void GSM_Update()
         fpUpdate = []() {
             extern Framework::CoreEngine* engine;
             static Framework::Entity cachedPlayer{ Framework::INVALID_ENTITY };
+
+            // ========================================================================
+            // PAUSE SYSTEM (Added for Level 3)
+            // ========================================================================
+            static bool wasPPressed = false;
+            // CRITICAL: Shared state for UPDATE and DRAW
+            // Use global g_level3PauseState
+
+            if (engine && engine->GetInputSystem()) {
+                auto* input = engine->GetInputSystem();
+
+                // P key to toggle pause
+                bool isPPressed = input->IsKeyDown(Framework::KEY_P);
+                if (isPPressed && !wasPPressed) {
+                    GlobalPause::Toggle();
+
+                    // Audio control
+                    if (auto* audio = engine->GetAudioSystem()) {
+                        if (GlobalPause::IsPaused()) {
+                            audio->SetMasterVolume(0.0f);  // Mute when paused
+                            LOG_INFO("LEVEL3", "Game PAUSED (audio muted)");
+                        }
+                        else {
+                            audio->SetMasterVolume(1.0f);  // Restore volume when resumed
+                            LOG_INFO("LEVEL3", "Game RESUMED (audio restored)");
+                        }
+                    }
+                }
+                wasPPressed = isPPressed;
+
+                // ====================================================================
+                // If paused, show pause menu and skip game logic
+                // ====================================================================
+                if (GlobalPause::IsPaused()) {
+                    // Setup pause menu callbacks
+                    PauseMenuSimple::PauseMenuCallbacks callbacks;
+
+                    callbacks.onResume = []() {
+                        GlobalPause::SetPaused(false);
+                        extern Framework::CoreEngine* engine;
+                        if (auto* audio = engine->GetAudioSystem()) {
+                            audio->SetMasterVolume(1.0f);
+                        }
+                        LOG_INFO("LEVEL3", "Pause menu: RESUME selected");
+                        };
+
+                    callbacks.onMainMenu = []() {
+                        GlobalPause::SetPaused(false);
+                        extern Framework::CoreEngine* engine;
+                        if (auto* audio = engine->GetAudioSystem()) {
+                            audio->SetMasterVolume(1.0f);
+                        }
+                        next = mainMenu;
+                        LOG_INFO("LEVEL3", "Pause menu: MAIN MENU selected");
+                        };
+
+                    callbacks.onExit = []() {
+                        next = GS_QUIT;
+                        LOG_INFO("LEVEL3", "Pause menu: EXIT selected");
+                        };
+
+                    // Update pause menu (modifies g_level3PauseState)
+                    PauseMenuSimple::UpdatePauseMenu(engine, g_level3PauseState, callbacks);
+
+                    return;  // Skip game logic when paused
+                }
+            }
+
+            // ========================================================================
+            // NORMAL GAME LOGIC (Only executes when NOT paused)
+            // ========================================================================
 
             // F9 Hot Reload Support
             if (engine && engine->GetInputSystem()) {
@@ -424,6 +511,14 @@ void GSM_Update()
         // DRAW
         // ============================================================================
         fpDraw = []() {
+            // If paused, draw pause menu
+            if (GlobalPause::IsPaused()) {
+                extern Framework::CoreEngine* engine;
+                // CRITICAL: Access the SAME state used in UPDATE
+                // Use global g_level3PauseState
+                PauseMenuSimple::DrawPauseMenu(engine, g_level3PauseState);
+            }
+
             // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
             // This prevents double-rendering (once to viewport, once to main window)
             // No-op for Lua-based levels
@@ -435,7 +530,16 @@ void GSM_Update()
         fpFree = []() {
             LOG_INFO("GSM", "Cleaning up Level3...");
 
+            // ========================================================================
+            // PAUSE SYSTEM CLEANUP (Added for Level 3)
+            // ========================================================================
+            GlobalPause::SetPaused(false);
+
             extern Framework::CoreEngine* engine;
+            if (auto* audio = engine->GetAudioSystem()) {
+                audio->SetMasterVolume(1.0f);  // Restore audio volume
+            }
+            LOG_INFO("GSM", "Pause state reset, audio restored");
 
             // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
             Framework::LevelLoader::GetInstance().ResetLuaState();
@@ -448,33 +552,31 @@ void GSM_Update()
                     pcs->SetGridMovementEnabled(false);
                 }
 
-                // Clear camera follow
+                // Camera cleanup
                 if (auto* gfx = engine->GetGraphicsSystem()) {
                     gfx->ClearFollowTarget();
                 }
 
-                // Clear all entities AFTER Lua cleanup (final cleanup)
+                // Entity cleanup
                 if (auto* em = engine->GetEntityManager()) {
-                    size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
                     em->ClearAllEntities();
-                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
                 }
             }
+
+            LOG_INFO("GSM", "Level3 cleanup complete");
             };
 
         // ============================================================================
         // UNLOAD
         // ============================================================================
         fpUnload = []() {
-            LOG_INFO("GSM", "Level3 Lua script unloaded");
+            LOG_INFO("GSM", "Unloading Level3 resources...");
+            // Resource cleanup handled by ResourceManager
             };
     }
-        break;
+    break;
 
-    case GS_RESTART:
-        LOG_INFO("GSM", "  -> Restart state");
-        break;
+    break;
 
     case GS_QUIT:
         LOG_INFO("GSM", "  -> Quit state");
