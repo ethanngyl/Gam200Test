@@ -231,10 +231,8 @@ namespace Framework {
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
 
-        // Check global pause state - skip update if paused
-        if (GlobalPause::IsPaused()) {
-            return;
-        }
+        // NOTE: Don't skip OnUpdate when paused - PauseMenu needs to run to handle unpause!
+        // The Lua level can check IsPaused() internally if needed.
 
         if (HasLuaFunction("OnUpdate")) {
             lua_getglobal(L, "OnUpdate");
