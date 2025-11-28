@@ -89,6 +89,19 @@ namespace Framework {
         }
 
         luaL_openlibs(L);  // Load standard libraries
+
+        // Add assets/scripts to Lua's module search path
+        lua_getglobal(L, "package");
+        lua_getfield(L, -1, "path");
+        std::string currentPath = lua_tostring(L, -1);
+        std::string newPath = currentPath + ";assets/scripts/?.lua";
+        lua_pop(L, 1);  // Pop old path
+        lua_pushstring(L, newPath.c_str());
+        lua_setfield(L, -2, "path");
+        lua_pop(L, 1);  // Pop package table
+
+        LOG_INFO("LevelLoader", "Added assets/scripts/ to Lua module path");
+
         RegisterLevelAPI();
 
         // Store pointer to this LevelLoader instance
