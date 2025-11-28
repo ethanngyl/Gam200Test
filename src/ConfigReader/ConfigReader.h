@@ -124,6 +124,29 @@ public:
      */
     static bool IsConfigLoaded();
 
+    /**
+     * @brief Set a float value in config and save to file
+     * @param key The configuration key
+     * @param value The value to set
+     * @return true if successfully saved
+     */
+    static bool SetFloat(const std::string& key, float value);
+
+    /**
+     * @brief Set a string value in config and save to file
+     * @param key The configuration key
+     * @param value The value to set
+     * @return true if successfully saved
+     */
+    static bool SetString(const std::string& key, const std::string& value);
+
+    /**
+     * @brief Save current config data to file
+     * @param filename Path to save the config file (defaults to loaded config path)
+     * @return true if successfully saved
+     */
+    static bool SaveConfig(const std::string& filename = "");
+
 private:
     // ========================================================================
     // PRIVATE MEMBERS

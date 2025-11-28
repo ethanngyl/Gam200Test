@@ -1039,6 +1039,26 @@ namespace Framework {
         std::vector<Entity> allEntities = entityManager->GetAllEntities();
         const int totalEntities = static_cast<int>(allEntities.size());
 
+        // ========================================================================
+        // GLOBAL SETTINGS
+        // ========================================================================
+        if (ImGui::CollapsingHeader("Global Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+            // Master Volume Slider
+            static float masterVolume = ConfigReader::GetFloat("master_volume", 1.0f);
+
+            ImGui::Text("Audio Settings");
+            if (ImGui::SliderFloat("Master Volume", &masterVolume, 0.0f, 1.0f, "%.2f")) {
+                // Update audio system
+                if (audioSystem) {
+                    audioSystem->SetMasterVolume(masterVolume);
+                }
+                // Save to config file
+                ConfigReader::SetFloat("master_volume", masterVolume);
+            }
+
+            ImGui::Separator();
+        }
+
         ImGui::Text("Total Entities: %d", totalEntities);
         ImGui::Separator();
 
