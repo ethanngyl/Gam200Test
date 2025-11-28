@@ -46,7 +46,7 @@ Safety:
 #include <glm/gtc/type_ptr.hpp>
 #include "Debugger/Trace.h"
 #include "Input/Input.h"
-
+#include "imgui.h"
 namespace Framework {
 
     // Check if a string looks like a file path (used to decide whether to load texture by name)
@@ -191,6 +191,11 @@ namespace Framework {
 
     void GraphicsSystemV2::EditorCamDefaultControl(float dt/*EntityManager* em, Entity player*/)
     {
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput) {
+            return;
+        }
+
+
         constexpr float cameraSpeed = 5.f;
 
         glm::vec3 delta(0.0f);
@@ -228,9 +233,13 @@ namespace Framework {
     // ============================================================================
 
     void GraphicsSystemV2::HandleEditorCamera(float dt) {
+
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().WantTextInput) {
+            return;
+        }
         // Define pan and zoom speeds
-        const float panSpeed = 2.0f * dt;
-        const float zoomSpeed = 1.5f * dt;
+        const float panSpeed = 0.5f * dt;
+        const float zoomSpeed = 0.1f * dt;
 
         //Panning with arrow keys
         //Basically move the camera position based on arrow key input
@@ -321,7 +330,7 @@ namespace Framework {
             }
         }
         else {
-            EditorCamDefaultControl(dt);
+            HandleEditorCamera(dt);
         }
 
         // ========================================================================
