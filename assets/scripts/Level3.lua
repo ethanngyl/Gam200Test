@@ -350,8 +350,17 @@ function OnUpdate(dt)
     -- Camera follow is set in C++ (SetFollowTarget on player entity)
     -- Turn system ticks in C++
 
-    -- Toggle ImGui editor with F1
+    -- Handle pause menu input (ALWAYS runs, even when paused)
     PauseMenu.Update(dt)
+
+    -- Skip all game logic if paused
+    if IsPaused() then
+        return
+    end
+
+    -- === GAME LOGIC BELOW (only runs when NOT paused) ===
+
+    -- Toggle ImGui editor with F1
     if IsKeyDown("F1") then
         if editorToggleCooldown <= 0 then
             local newState = ToggleEditor()
@@ -366,16 +375,6 @@ function OnUpdate(dt)
 
     if editorToggleCooldown > 0 then
         editorToggleCooldown = editorToggleCooldown - dt
-    end
-
-    -- Toggle pause with P key
-    if IsKeyPressed("P") then
-        TogglePause()
-        if IsPaused() then
-            Log("GAME PAUSED")
-        else
-            Log("GAME RESUMED")
-        end
     end
 
     -- Check for return to main menu (KEY_5)
