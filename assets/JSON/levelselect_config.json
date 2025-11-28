@@ -24,15 +24,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.4
+          "y": 0.2
         },
         "layer": 10,
         "text": {
           "content": "Level Editor",
           "font": "Sans48",
           "offset": {
-            "x": -120.0,
-            "y": -24.0
+            "x": -150.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {
@@ -52,15 +52,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.4
+          "y": 0.2
         },
         "layer": 10,
         "text": {
-          "content": "Demo",
+          "content": "DEMO",
           "font": "Sans48",
           "offset": {
-            "x": -50.0,
-            "y": -24.0
+            "x": -80.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {
@@ -80,15 +80,15 @@
         },
         "scale": {
           "x": 1.0,
-          "y": 0.4
+          "y": 0.2
         },
         "layer": 10,
         "text": {
-          "content": "Back",
+          "content": "BACK",
           "font": "Sans48",
           "offset": {
-            "x": -60.0,
-            "y": -24.0
+            "x": -80.0,
+            "y": -16.0
           },
           "scale": 1.0,
           "color": {
