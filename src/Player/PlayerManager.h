@@ -76,6 +76,8 @@ namespace Framework {
         void HandleShootDown(const Vector2D& playerPos);
         void HandleShootAtMouse(const Vector2D& playerPos);
         void HandleAttackAction();
+		void ClearAttackPreview();
+		void ShowAttackPreview(int minRange, int maxRange);
 		Entity FindFirstEnemyInRange(int minRange, int maxRange);
 
         // ========================================================================
@@ -103,9 +105,13 @@ namespace Framework {
         float shootCooldownTime;
         float projectileSpeed;
         bool gridMovementEnabled = false;
+		bool attackPreviewActive = false;
+		bool spaceReleased = true;
+		std::vector<Entity> attackPreviewTiles;
 
         // Arrow key movement cooldown to prevent double AP consumption
         float arrowMoveCooldown = 0.0f;
+		float spaceAttackCooldown = 0.0f;
 
         uint64_t lastTurnIndex = 0;
     };

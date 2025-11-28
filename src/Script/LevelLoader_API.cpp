@@ -977,33 +977,61 @@ namespace Framework {
     {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0); // current
+            lua_pushinteger(L, 0); // max
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
             lua_pushinteger(L, 0);
             lua_pushinteger(L, 0);
             return 2;
         }
 
-        auto* em = loader->coreEngine->GetEntityManager();
-
-        Entity player(INVALID_ENTITY);
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Health>(e) &&
-                em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
+        // Find the player: has Health, NOT EnemyAI
+        Framework::Entity player(Framework::INVALID_ENTITY);
+        for (Framework::Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Framework::Health>(e) &&
+                !em->HasComponent<Framework::EnemyAI>(e)) {
                 player = e;
                 break;
             }
         }
 
-        if (player.IsValid()) {
-            auto& hp = em->GetComponent<Health>(player);
-            lua_pushinteger(L, hp.currentHealth);
-            lua_pushinteger(L, hp.maxHealth);
+        if (!player.IsValid() || !em->HasComponent<Framework::Health>(player)) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
             return 2;
         }
 
-        lua_pushinteger(L, 0);
-        lua_pushinteger(L, 0);
+        auto& hp = em->GetComponent<Framework::Health>(player);
+
+        // IMPORTANT: use currentHealth for first return, maxHealth for second
+        lua_pushinteger(L, hp.currentHealth);
+        lua_pushinteger(L, hp.maxHealth);
         return 2;
+    }
+
+    int LevelLoader::Lua_SetSpriteVisibility(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        int visibleInt = lua_toboolean(L, 2);  // 0/1 → bool
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity e(static_cast<uint32_t>(entityID));
+        if (!e.IsValid() || !em->HasComponent<MeshRenderer>(e))
+            return 0;
+
+        auto& mr = em->GetComponent<MeshRenderer>(e);
+        mr.visible = (visibleInt != 0);
+
+        return 0;
     }
 
 } // namespace Framework

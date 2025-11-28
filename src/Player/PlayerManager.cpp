@@ -338,6 +338,13 @@ namespace Framework {
             }
         }
 
+        if(spaceAttackCooldown > 0.0f) {
+            spaceAttackCooldown -= dt;
+            if(spaceAttackCooldown < 0.0f) {
+                spaceAttackCooldown = 0.0f;
+            }
+		}
+
 
         // ====================================================================
         // SHOOTING INPUT - Use InputSystem
@@ -531,6 +538,11 @@ namespace Framework {
 
         if (!entityManager->HasComponent<Transform>(playerEntity)) {
             LOG_ERROR("PlayerManager", "Arrow keys BLOCKED: Player missing Transform component");
+            return;
+        }
+
+        if (attackPreviewActive) {
+            LOG_INFO("PlayerAttack", "Attack preview active -> movement disabled");
             return;
         }
 
@@ -875,11 +887,93 @@ namespace Framework {
         return {};
     }
 
-    // NEW
+    void PlayerControllerSystem::ShowAttackPreview(int minRange, int maxRange)
+    {
+        if (!entityManager || !spawner) return;
+        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
+
+        const Grid& grid = GetGrid();
+        auto& pt = entityManager->GetComponent<Transform>(playerEntity);
+
+        auto optTile = WorldToTile(pt.position);
+        if (!optTile) return;
+
+        GridCoord p = *optTile;
+
+        if (minRange < 1) minRange = 1;
+        if (maxRange < minRange) maxRange = minRange;
+
+        attackPreviewTiles.clear();
+
+        for (int r = minRange; r <= maxRange; ++r) {
+            GridCoord candidates[4] = {
+                { p.x + r, p.y     },
+                { p.x - r, p.y     },
+                { p.x,     p.y + r },
+                { p.x,     p.y - r }
+            };
+
+            for (GridCoord c : candidates) {
+                if (!InBounds(c)) continue;
+
+                Entity tileEnt = grid.TileAt(c.x, c.y);
+                if (!tileEnt.IsValid()) continue;
+
+                if (!entityManager->HasComponent<GridTiles>(tileEnt))
+                    continue;
+
+                auto& tile = entityManager->GetComponent<GridTiles>(tileEnt);
+                if (tile.blocked) {
+                    continue; //no preview on walls
+                }
+
+                Vector2D worldPos = TileToWorld(c);
+                const Vector2D tileSize = grid.spacing;  // or {0.1f,0.1f} etc
+
+                Entity e = spawner->SpawnSprite(
+                    "assets/TileMap/Attack_Indicator.png",  // red tinted tile
+                    worldPos,
+                    tileSize
+                );
+
+                if (entityManager->HasComponent<MeshRenderer>(e)) {
+                    auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+                    mr.layer = 1;  // draws above ground/enemies
+                    //mr.tint = glm::vec4(1.0f, 0.0f, 0.0f, 0.35f); // semi-transparent red
+                }
+
+                attackPreviewTiles.push_back(e);
+            }
+        }
+
+        attackPreviewActive = true;
+    }
+
     void PlayerControllerSystem::HandleAttackAction() {
         if (!inputSystem || !entityManager) return;
         if (!IsPlayerTurn()) return;
-        if (!inputSystem->IsKeyPressed(KEY_SPACE)) return; // edge trigger
+
+        if (spaceAttackCooldown > 0.0f) {
+            LOG_INFO("PlayerAttack", "SPACE attack blocked by cooldown (%.3fs remaining)", spaceAttackCooldown);
+            return;
+        }
+
+        bool pressed = inputSystem->IsKeyPressed(KEY_SPACE);
+
+        if (pressed && !spaceReleased) {
+            return; // still holding key, ignore
+        }
+
+        if (!pressed) {
+            spaceReleased = true;
+            return;
+        }
+
+        // NEW press detected:
+        spaceReleased = false;
+
+        // block if cooldown:
+        if (spaceAttackCooldown > 0.0f) return;
         
 
         std::string animationName = "";
@@ -924,14 +1018,33 @@ namespace Framework {
         //    return;
         //}
 
+    // ------------------------------------------------------------
+    // FIRST SPACE: SHOW PREVIEW (IF NONE ACTIVE)
+    // ------------------------------------------------------------
+        if (!attackPreviewActive) {
+            if (aap.points <= 0) {
+                LOG_WARN("PlayerAttack", "No attack AP left (cannot preview)");
+                return;
+            }
+
+            ShowAttackPreview(minR, maxR);
+            LOG_INFO("PlayerAttack", "Attack preview shown");
+			spaceAttackCooldown = 0.2f; // small cooldown to prevent rapid toggling
+            return;
+        }
+
+    // ------------------------------------------------------------
+    // SECOND SPACE: PERFORM ATTACK + CLEAR PREVIEW
+    // ------------------------------------------------------------
         Entity target = FindFirstEnemyInRange(minR, maxR);
         if (target.GetID() == INVALID_ENTITY) {
             LOG_INFO("PlayerAttack", "No enemy in range [%d..%d]", minR, maxR);
+			ClearAttackPreview();
             return;
         }
         // Deal damage (flat 1 for now)
         auto& hp = entityManager->GetComponent<Health>(target);
-        hp.TakeDamage(1);
+		hp.TakeDamage(1);
         aap.points--; // consume attack AP
 
         LOG_INFO("PlayerAttack", "Hit enemy %u for 1. Enemy HP now %d/%d. AttackAP=%d/%d",
@@ -944,38 +1057,47 @@ namespace Framework {
             LOG_INFO("PlayerAttack", "Enemy %u defeated!", target.GetID());
 
             // 1) Find the TILE the enemy is on (using WorldToTile → optional)
-            const Framework::Grid& grid = Framework::GetGrid();
+            const Grid& grid = GetGrid();
 
-            auto optTile = Framework::WorldToTile(
-                entityManager->GetComponent<Framework::Transform>(target).position
+            auto optTile = WorldToTile(
+                entityManager->GetComponent<Transform>(target).position
             );
             if (optTile) {
-                Framework::GridCoord ec = *optTile; // dereference std::optional
+                GridCoord ec = *optTile; // dereference std::optional
 
-                Framework::Entity tileEntity = grid.TileAt(ec.x, ec.y);
+                Entity tileEntity = grid.TileAt(ec.x, ec.y);
                 if (tileEntity.IsValid() &&
-                    entityManager->HasComponent<Framework::GridTiles>(tileEntity))
+                    entityManager->HasComponent<GridTiles>(tileEntity))
                 {
-                    auto& tile = entityManager->GetComponent<Framework::GridTiles>(tileEntity);
+                    auto& tile = entityManager->GetComponent<GridTiles>(tileEntity);
 
                     // 2) Clear the occupant ONLY if it matches the dead enemy
                     if (tile.occupant == target) {
-                        tile.occupant = Framework::Entity{ Framework::INVALID_ENTITY };
+                        tile.occupant = Entity{ INVALID_ENTITY };
                         tile.blocked = false; // IMPORTANT: make this tile walkable again
                     }
                 }
             }
 
-            //// 3) Hide sprite (optional; you’re going to destroy anyway)
-            //if (entityManager->HasComponent<Framework::Renderable>(target)) {
-            //    entityManager->GetComponent<Framework::Renderable>(target).visible = false;
-            //}
-
-            // 4) FINALLY, delete the enemy entity from ECS
+            // 3) FINALLY, delete the enemy entity from ECS
             entityManager->DestroyEntity(target);
-
+			spaceAttackCooldown = 0.2f; // small cooldown to prevent rapid attacks
             return; // done with this attack
         }
+		ClearAttackPreview();
+		spaceAttackCooldown = 0.2f; // small cooldown to prevent rapid attacks
+    }
+
+    void PlayerControllerSystem::ClearAttackPreview()
+    {
+        if (!entityManager) return;
+        for (Entity e : attackPreviewTiles) {
+            if (e.IsValid()) {
+                entityManager->DestroyEntity(e);
+            }
+        }
+        attackPreviewTiles.clear();
+        attackPreviewActive = false;
     }
 
 } // namespace Framework

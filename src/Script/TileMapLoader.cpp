@@ -224,10 +224,10 @@ namespace Framework {
                             em->AddComponent<AP>(specialEntity, 3); // 3 AP
                         }
 
-                        if (em->HasComponent<Renderable>(specialEntity)) {             // NEW
-                            auto& rend = em->GetComponent<Renderable>(specialEntity);   // NEW
-                            rend.visible = true;                                        // NEW
-                            rend.layer = RenderLayers::Enemies;                       // NEW
+                        if (em->HasComponent<Renderable>(specialEntity)) {             
+                            auto& rend = em->GetComponent<Renderable>(specialEntity);   
+                            rend.visible = true;                                        
+                            rend.layer = RenderLayers::Enemies;                       
                         }
 
                         LOG_INFO("LevelLoader", "Spawned Enemy at (%d, %d)", c, r);
