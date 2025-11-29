@@ -74,14 +74,18 @@ function HandleMovement(dt)
     -- Check if it's player's turn
     local turn = GetCurrentTurn()
     if turn ~= "Player" then
+        Log("DEBUG: Not player's turn, turn = " .. tostring(turn))
         return
     end
 
     -- Check player AP
-    local ap = GetPlayerAP()
+    local ap, maxAP = GetPlayerAP()
     if ap <= 0 then
+        Log("DEBUG: Player out of AP: " .. tostring(ap))
         return
     end
+
+    Log("DEBUG: Player turn check passed! AP = " .. tostring(ap) .. "/" .. tostring(maxAP))
 
     -- Detect arrow key input
     local stepX, stepY = 0, 0
@@ -91,17 +95,21 @@ function HandleMovement(dt)
     if IsKeyDown("Up") then
         stepY = 1
         animName = ANIMATIONS.UP
+        Log("DEBUG: Up key pressed")
     elseif IsKeyDown("Down") then
         stepY = -1
         animName = ANIMATIONS.DOWN
+        Log("DEBUG: Down key pressed")
     elseif IsKeyDown("Left") then
         stepX = -1
         animName = ANIMATIONS.LEFT
         flip = true
+        Log("DEBUG: Left key pressed")
     elseif IsKeyDown("Right") then
         stepX = 1
         animName = ANIMATIONS.RIGHT
         flip = false
+        Log("DEBUG: Right key pressed")
     else
         return  -- No input
     end
