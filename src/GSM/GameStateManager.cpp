@@ -255,13 +255,27 @@ void GSM_Update()
         break;
 
     case LEVEL_2:
-        LOG_INFO("GSM", "  -> Level 2 state (NOT IMPLEMENTED)");
-        fpLoad = level2_Load;
-        fpInitialize = level2_Initialize;
-        fpUpdate = level2_Update;
-        fpDraw = level2_Draw;
-        fpFree = level2_Free;
-        fpUnload = level2_Unload;
+        // Use LevelLoader to load Level2.lua
+        fpLoad = []() {
+            Framework::LevelLoader::GetInstance().LoadLevel(
+                "assets/scripts/Level2.lua",
+                false  // isEditorMode = false
+            );
+            };
+        fpInitialize = []() {}; // LevelLoader handles init via OnInit()
+        fpUpdate = []() {
+            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
+                Framework::Time::FIXED_DT
+            );
+            };
+        fpDraw = []() {
+            Framework::LevelLoader::GetInstance().DrawCurrentLevel();
+            };
+        fpFree = []() {
+            Framework::LevelLoader::GetInstance().UnloadCurrentLevel();
+            };
+        fpUnload = []() {}; // Cleanup handled by LevelLoader
+        LOG_INFO("GSM", "State changed to: LEVEL_2 (Lua)");
         break;
 
     case LEVEL_3:

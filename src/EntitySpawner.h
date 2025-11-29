@@ -410,7 +410,7 @@ namespace Framework {
         Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.1f, 0.1f)) {
             (void)moveSpeed; // silence unused variable warning
 
-            Entity enemy = SpawnSprite("assets/player.png", position, Vector2D(0.1f, 0.1f));
+            Entity enemy = SpawnSprite("assets/enemy.png", position, Vector2D(0.1f, 0.1f));
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
             mr.material = GraphicsSystemV2::Material2;
