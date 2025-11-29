@@ -115,7 +115,7 @@ function OnInit()
     if not audioConfig then
         Log("ERROR: Failed to load audio configuration!")
     else
-        Log("✓ Audio configuration loaded successfully")
+        Log(" Audio configuration loaded successfully")
         
         -- Start background music for in-game
         -- Using "igbgm" (In Game BGM) from AudioConfig.json
@@ -132,7 +132,7 @@ function OnInit()
         if bgmSound then
             Log("Starting background music: " .. bgmSound.name)
             PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
-            Log("✓ Background music started: " .. bgmSound.filepath)
+            Log(" Background music started: " .. bgmSound.filepath)
         else
             Log("WARNING: Background music 'igbgm' not found in AudioConfig.json")
         end
@@ -174,7 +174,7 @@ function OnInit()
         return
     end
 
-    Log("✓ Tilemap loaded successfully")
+    Log(" Tilemap loaded successfully")
     Log("  Player and map tiles spawned from JSON")
 
     -- Note: Player entity is automatically spawned by the TileMapLoader
@@ -183,11 +183,11 @@ function OnInit()
 
     -- Load animation configuration BEFORE loading player animation
     LoadAnimationConfig("assets/JSON/animations.json")
-    Log("✓ Animation config loaded from assets/JSON/animations.json")
+    Log(" Animation config loaded from assets/JSON/animations.json")
 
     -- Load player animation (after player is spawned by TileMapLoader)
     LoadPlayerAnimation("Idle_front")
-    Log("✓ Player animation 'Idle_front' loaded")
+    Log(" Player animation 'Idle_front' loaded")
 
     
 
@@ -207,7 +207,7 @@ function OnInit()
         return
     end
     
-    Log("✓ Found Player (Entity ID: " .. playerID .. ")")
+    Log(" Found Player (Entity ID: " .. playerID .. ")")
     
     -- Find all enemy entities
     local enemies = GetAllEnemies()
@@ -234,7 +234,7 @@ function OnInit()
             local success = SetEnemyTarget(enemyID, playerID)
             
             if success then
-                Log("  ✓ Enemy " .. enemyID .. " configured to chase Player " .. playerID)
+                Log("   Enemy " .. enemyID .. " configured to chase Player " .. playerID)
             else
                 Log("  ✗ FAILED to configure Enemy " .. enemyID)
             end
@@ -252,7 +252,7 @@ function OnInit()
     local playerScriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
 
     if playerScriptSuccess then
-        Log("  ✓ PlayerScript.lua attached successfully")
+        Log("   PlayerScript.lua attached successfully")
         Log("  Player movement now handled by Lua script")
     else
         Log("  ✗ FAILED to attach PlayerScript.lua")
@@ -268,7 +268,7 @@ function OnInit()
             local enemyScriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
 
             if enemyScriptSuccess then
-                Log("  ✓ Enemy " .. enemyID .. " - EnemyScript.lua attached")
+                Log("   Enemy " .. enemyID .. " - EnemyScript.lua attached")
             else
                 Log("  ✗ Enemy " .. enemyID .. " - FAILED to attach script")
             end
@@ -310,7 +310,7 @@ function OnInit()
 
         if entityID > 0 then
             apIndicatorsEmpty[i] = entityID
-            Log("  ✓ Empty crystal " .. i .. " (ID: " .. entityID .. ")")
+            Log("   Empty crystal " .. i .. " (ID: " .. entityID .. ")")
         else
             Log("  ✗ FAILED to create empty crystal " .. i)
         end
@@ -333,7 +333,7 @@ function OnInit()
 
         if entityID > 0 then
             apIndicatorsFilled[i] = entityID
-            Log("  ✓ Filled crystal " .. i .. " (ID: " .. entityID .. ")")
+            Log("   Filled crystal " .. i .. " (ID: " .. entityID .. ")")
         else
             Log("  ✗ FAILED to create filled crystal " .. i)
         end
@@ -370,7 +370,7 @@ function OnInit()
 
         if entityID > 0 then
             atkIndicatorsEmpty[i] = entityID
-            Log("  ✓ Empty Attack AP " .. i .. " (ID: " .. entityID .. ")")
+            Log("   Empty Attack AP " .. i .. " (ID: " .. entityID .. ")")
         else
             atkIndicatorsEmpty[i] = 0
             Log("  ✗ FAILED to create empty Attack AP " .. i)
@@ -391,7 +391,7 @@ function OnInit()
 
         if entityID > 0 then
             atkIndicatorsFilled[i] = entityID
-            Log("  ✓ Filled Attack AP " .. i .. " (ID: " .. entityID .. ")")
+            Log("   Filled Attack AP " .. i .. " (ID: " .. entityID .. ")")
         else
             atkIndicatorsFilled[i] = 0
             Log("  ✗ FAILED to create filled Attack AP " .. i)
@@ -527,7 +527,7 @@ function OnInit()
 
         if entityID > 0 then
             chestIndicatorsEmpty[i] = entityID
-            Log("  ✓ Empty chest indicator " .. i)
+            Log("   Empty chest indicator " .. i)
         else
             chestIndicatorsEmpty[i] = 0
         end
@@ -562,7 +562,7 @@ function OnUpdate(dt)
 
     -- === GAME LOGIC BELOW (only runs when NOT paused) ===
 
-    -- ✅ MODIFIED: F1 toggles editor mode (same as MainMenuLevel)
+    --  MODIFIED: F1 toggles editor mode (same as MainMenuLevel)
     if IsKeyDown("F1") then
         if editorToggleCooldown <= 0 then
             ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
@@ -581,12 +581,6 @@ function OnUpdate(dt)
 
     if editorToggleCooldown > 0 then
         editorToggleCooldown = editorToggleCooldown - dt
-    end
-
-    -- Check for return to main menu (KEY_5)
-    if IsKeyDown("5") then
-        Log("KEY_5 pressed - returning to main menu")
-        SetNextGameState("mainMenu")
     end
 
     -- ========================================================================
@@ -892,7 +886,7 @@ function OnUpdate(dt)
 
                     if entityID > 0 then
                         chestIndicatorsFilled[i] = entityID
-                        Log("  ✓ Created filled chest indicator " .. i)
+                        Log("   Created filled chest indicator " .. i)
                     else
                         chestIndicatorsFilled[i] = 0
                     end
@@ -919,7 +913,7 @@ function OnDraw()
     -- PauseSystem drawing is disabled
     PauseMenu.Draw()
     
-    -- ✅ NEW: Display editor mode indicator (same as MainMenuLevel)
+    --  NEW: Display editor mode indicator (same as MainMenuLevel)
     if IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
@@ -936,7 +930,7 @@ function OnDestroy()
 
     -- Stop all sounds
     StopAllSounds()
-    Log("✓ All audio stopped")
+    Log(" All audio stopped")
 
     -- Destroy AP indicator entities (both layers)
     for i = 1, #apIndicatorsEmpty do

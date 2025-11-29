@@ -252,7 +252,7 @@ namespace Framework
         unsigned LastTime;
         bool GameActive;
         bool isPlaying = false;
-        bool isEditorMode = false;  // ✅ NEW: Editor mode state (F1 toggle)
+        bool isEditorMode = false;  //  NEW: Editor mode state (F1 toggle)
 
 
         // Private helper methods

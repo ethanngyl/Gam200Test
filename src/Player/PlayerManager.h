@@ -1,11 +1,11 @@
 /******************************************************************************
 ===============================================================================
  File:           PlayerManager.h
- Author:         <MAIN AUTHOR NAME>
+ Author:         ETHAN NG YONG LE
  Co-authors:     PADILLA CARL JAMESON Z.
- Email:          <main.author@digipen.edu>
+ Email:          n.ethanyongle@digipen.edu, c.padilla@digipen.edu
  Date:           2025/11/07
- Contribution:   PADILLA CARL JAMESON Z.: 10%
+ Contribution:   ETHAN NG YONG LE: 90 % PADILLA CARL JAMESON Z.: 10%
  ------------------------------------------------------------------------------
   Description:
   Declares the player control interface for a grid-based, turn-driven game.

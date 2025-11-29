@@ -8,13 +8,13 @@ Contribution: 100%
 -------------------------------------------------------------------------------
 Brief:
 Central registry for tracking all active prefab instances in the engine.
-Whenever a prefab is loaded, this tracker records the entity → prefab
+Whenever a prefab is loaded, this tracker records the entity  prefab
 relationship so that editor tools and runtime systems can locate, update, or
 synchronize all instances that originate from the same prefab asset.
 
 Details:
 - RegisterInstance(): Records that an entity was created from a specific prefab
-  file path. Stored in both directions (entity → prefab, and prefab → list of
+  file path. Stored in both directions (entity  prefab, and prefab  list of
   entities).
 - UnregisterInstance(): Removes an entity from the registry when destroyed,
   keeping lists clean and avoiding stale references.

@@ -9,9 +9,6 @@
 
 
 #include "Precompiled.h"
-#include "level1.h"
-#include "level2.h"
-#include "level3.h"
 #include "LevelLoader.h"
 #include "TimeConstants.h"
 
@@ -242,16 +239,6 @@ void GSM_Update()
         fpUnload = []() {
             LOG_INFO("GSM", "LevelSelect Lua script unloaded");
             };
-        break;
-
-    case LEVEL_1:
-        LOG_INFO("GSM", "  -> Level 1 state (NOT IMPLEMENTED)");
-        fpLoad = level1_Load;
-        fpInitialize = level1_Initialize;
-        fpUpdate = level1_Update;
-        fpDraw = level1_Draw;
-        fpFree = level1_Free;
-        fpUnload = level1_Unload;
         break;
 
     case LEVEL_2:

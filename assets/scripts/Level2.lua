@@ -1,12 +1,12 @@
 ﻿-- ============================================================================
--- Level2.lua - ImGui Editor Showcase (FIXED v2)
+-- Level2.lua - ImGui Editor Showcase (FIXED v3 - Optimized)
 -- ============================================================================
 -- Purpose:
 -- - Showcase ImGui editor functionality
 -- - Demonstrate editor mode with F1 toggle
 -- - Simple level for testing ImGui features
 -- 
--- FIX: Properly initialize editor mode on startup
+-- FIX v3: Exit editor mode before switching levels (with helper function)
 -- ============================================================================
 
 -- ============================================================================
@@ -15,6 +15,28 @@
 
 local initialized = false
 local editorToggleCooldown = 0
+
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+--  Helper function: Safe level transition
+-- Ensures editor mode is exited before switching levels
+local function SafeSwitchLevel(targetLevel, levelName)
+    Log(string.format("Switching to %s...", levelName))
+    
+    -- Exit editor mode if active
+    if IsEditorMode() then
+        Log("⚠ Currently in editor mode - exiting before level switch")
+        ToggleEditorMode()          -- Exit editor mode
+        SetEnginePlayState(true)    -- Restore game state
+        Log(" Editor mode exited")
+    end
+    
+    -- Switch to target level
+    SetNextGameState(targetLevel)
+    Log(string.format(" Switching to %s", levelName))
+end
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -30,30 +52,28 @@ function OnInit()
     SetCameraZoom(1.0)
     Log("Camera initialized: pos(0,0,0), zoom=1.0")
     
-    -- ✅ FIX 1: Enable ImGui first
+    --  Enable ImGui first
     EnableImGui()
-    Log("✓ ImGui enabled")
+    Log(" ImGui enabled")
     
-    -- ✅ FIX 2: Set editor mode BEFORE SetEnginePlayState
-    -- This ensures the engine knows we're in editor mode
+    --  Enter editor mode
     if not IsEditorMode() then
-        ToggleEditorMode()  -- Use toggle to ensure proper state
-        Log("✓ Editor mode toggled ON")
+        ToggleEditorMode()
+        Log(" Editor mode toggled ON")
     end
     
-    -- ✅ FIX 3: Set engine to non-playing state (editor camera)
-    SetEnginePlayState(false)  -- false = Editor mode (not playing)
-    Log("✓ Engine play state: false (editor camera)")
+    --  Set engine to non-playing state (editor camera)
+    SetEnginePlayState(false)
+    Log(" Engine play state: false (editor camera)")
     
-    -- Load animations (for editor animation testing)
+    -- Load animations
     LoadAnimationConfig("assets/animations.json")
     Log("Loaded animations.json for editor")
     
     initialized = true
     Log("Level 2 initialization complete")
-    Log("Editor mode should be active now")
-    Log("Press F1 to toggle editor mode")
-    Log("Press 5 to return to main menu")
+    Log("Editor mode active - Press F1 to toggle")
+    Log("Press 5 for Main Menu | Press 3 for Level 3")
 end
 
 -- ============================================================================
@@ -64,17 +84,17 @@ function OnUpdate(dt)
     -- Update audio system
     UpdateAudio(dt)
     
-    -- ✅ F1 toggles editor mode (same as other levels)
+    -- F1: Toggle editor mode
     if IsKeyDown("F1") then
         if editorToggleCooldown <= 0 then
             ToggleEditorMode()
             
             if IsEditorMode() then
                 SetEnginePlayState(false)
-                Log("EDITOR MODE ON - ImGui enabled")
+                Log("EDITOR MODE ON")
             else
                 SetEnginePlayState(true)
-                Log("EDITOR MODE OFF - ImGui disabled")
+                Log("EDITOR MODE OFF")
             end
             
             editorToggleCooldown = 0.3
@@ -85,16 +105,18 @@ function OnUpdate(dt)
         editorToggleCooldown = editorToggleCooldown - dt
     end
     
-    -- Return to main menu with KEY_5
+    -- ========================================================================
+    --  KEY_5: Return to main menu (safe transition)
+    -- ========================================================================
     if IsKeyDown("5") then
-        Log("KEY_5 pressed - returning to main menu")
-        SetNextGameState("mainMenu")
+        SafeSwitchLevel("mainMenu", "Main Menu")
     end
     
-    -- Go to Level 3 with KEY_3
+    -- ========================================================================
+    --  KEY_3: Go to Level 3 (safe transition)
+    -- ========================================================================
     if IsKeyDown("3") then
-        Log("KEY_3 pressed - going to Level 3")
-        SetNextGameState("LEVEL_3")
+        SafeSwitchLevel("LEVEL_3", "Level 3")
     end
 end
 
@@ -103,7 +125,7 @@ end
 -- ============================================================================
 
 function OnDraw()
-    -- ✅ Display editor mode indicator (same as other levels)
+    -- Display editor mode indicator
     if IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
@@ -124,7 +146,7 @@ function OnDestroy()
     Log("Level 2 cleanup...")
     Log("========================================")
     
-    -- Reset editor mode state
+    -- Reset state
     editorToggleCooldown = 0
     
     -- Exit editor mode if active
@@ -137,8 +159,6 @@ function OnDestroy()
     DisableImGui()
     Log("ImGui disabled")
     
-    -- Reset state
     initialized = false
-    
     Log("Level 2 cleanup complete")
 end

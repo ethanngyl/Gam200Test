@@ -25,9 +25,9 @@ Details:
 Notes:
 - Vertex attributes are expected to be interleaved.
 - Attribute locations follow this convention:
-    0 → Position (x,y,z)
-    1 → Color (r,g,b)
-    2 → TexCoords (u,v) [optional]
+    0  Position (x,y,z)
+    1  Color (r,g,b)
+    2  TexCoords (u,v) [optional]
 - Requires a valid OpenGL context before construction or drawing.
 
 Safety:
