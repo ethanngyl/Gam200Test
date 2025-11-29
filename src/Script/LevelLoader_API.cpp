@@ -193,8 +193,9 @@ namespace Framework {
         callsThisFrame++;
         frameCounter++;
 
-        LOG_INFO("LevelLoader", "DrawButtonText #%d this frame: '%s' (buttonID=%lld)",
-            callsThisFrame, text, buttonID);
+        // Performance: Disabled per-call logging
+        // LOG_INFO("LevelLoader", "DrawButtonText #%d this frame: '%s' (buttonID=%lld)",
+        //          callsThisFrame, text, buttonID);
 
         UIButton* button = reinterpret_cast<UIButton*>(static_cast<intptr_t>(buttonID));
         if (!button) {

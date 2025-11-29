@@ -553,8 +553,20 @@ namespace Framework {
             }
         }
 
-        // Loop through directory entries
-        for (auto const& e : std::filesystem::directory_iterator(currentpath)) {
+        // Cache directory contents (only scan when path changes)
+        static std::filesystem::path cachedPath;
+        static std::vector<std::filesystem::directory_entry> cachedEntries;
+
+        if (cachedPath != currentpath) {
+            cachedPath = currentpath;
+            cachedEntries.clear();
+            for (auto const& e : std::filesystem::directory_iterator(currentpath)) {
+                cachedEntries.push_back(e);
+            }
+        }
+
+        // Loop through cached directory entries
+        for (auto const& e : cachedEntries) {
             auto const path = e.path();
             std::string const label = path.filename().string();
             std::string const ImGuilabel = e.is_directory() ? "->" + label : label;
