@@ -1516,7 +1516,10 @@ namespace Framework {
      */
     int LevelLoader::Lua_RefillPlayerAP(lua_State* L) {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) return 0;
+        if (!em) {
+            LOG_WARN("LevelLoader", "RefillPlayerAP: No EntityManager");
+            return 0;
+        }
 
         // Find player (has CircleCollider but NOT EnemyAI)
         Entity player = Framework::INVALID_ENTITY;
@@ -1527,18 +1530,29 @@ namespace Framework {
             }
         }
 
-        if (player.GetID() != Framework::INVALID_ENTITY) {
-            // Refill movement AP
-            if (em->HasComponent<AP>(player)) {
-                auto& ap = em->GetComponent<AP>(player);
-                ap.actionPoints = ap.maxActionPoints;
-            }
+        if (player.GetID() == Framework::INVALID_ENTITY) {
+            LOG_WARN("LevelLoader", "RefillPlayerAP: Player entity not found");
+            return 0;
+        }
 
-            // Refill attack AP
-            if (em->HasComponent<AttackAP>(player)) {
-                auto& aap = em->GetComponent<AttackAP>(player);
-                aap.points = aap.maxPoints;
-            }
+        LOG_INFO("LevelLoader", "RefillPlayerAP: Found player entity %u", player.GetID());
+
+        // Refill movement AP
+        if (em->HasComponent<AP>(player)) {
+            auto& ap = em->GetComponent<AP>(player);
+            LOG_INFO("LevelLoader", "RefillPlayerAP: Before refill - AP=%d, MaxAP=%d",
+                     ap.actionPoints, ap.maxActionPoints);
+            ap.actionPoints = ap.maxActionPoints;
+            LOG_INFO("LevelLoader", "RefillPlayerAP: After refill - AP=%d", ap.actionPoints);
+        } else {
+            LOG_WARN("LevelLoader", "RefillPlayerAP: Player has no AP component");
+        }
+
+        // Refill attack AP
+        if (em->HasComponent<AttackAP>(player)) {
+            auto& aap = em->GetComponent<AttackAP>(player);
+            aap.points = aap.maxPoints;
+            LOG_INFO("LevelLoader", "RefillPlayerAP: Attack AP refilled to %d", aap.points);
         }
 
         return 0;
