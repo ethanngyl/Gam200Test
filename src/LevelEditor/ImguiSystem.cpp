@@ -2366,11 +2366,11 @@ namespace Framework {
 
         //FIX: All buttons have unique ##IDs
         if (ImGui::Button("Spawn Player##Btn1", ImVec2(-1, 0))) {
-            entitySpawner->SpawnPlayer(Vector2D(spawnX, spawnY));
+            entitySpawner->SpawnPlayer(Vector2D(spawnX-0.1, spawnY));
         }
 
         if (ImGui::Button("Spawn Enemy##Btn2", ImVec2(-1, 0))) {
-            Framework::Entity enemy = entitySpawner->SpawnEnemy(Vector2D(spawnX, spawnY));
+            Framework::Entity enemy = entitySpawner->SpawnEnemy(Vector2D(spawnX+0.1, spawnY));
             //temporary put spatialPartitioningInsert function here 
             //to show that how does the spatial partitioning works with entity spawner
             Framework::SpatialPartitioningInsert(enemy);
