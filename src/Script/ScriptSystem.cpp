@@ -24,6 +24,7 @@
 
 #include "Precompiled.h"
 #include "ScriptSystem.h"
+#include "LevelLoader.h"
 #include "ECSEntityManager.h"
 #include "ECSEntity.h"
 #include "Component.h"
@@ -394,6 +395,44 @@ namespace Framework {
         // Utility
         lua_register(L, "Log", Lua_Log);
         lua_register(L, "GetDeltaTime", Lua_GetDeltaTime);
+
+        // Game API - Input
+        lua_register(L, "IsKeyDown", LevelLoader::Lua_IsKeyDown);
+
+        // Game API - Turn System
+        lua_register(L, "GetCurrentTurn", LevelLoader::Lua_GetCurrentTurn);
+        lua_register(L, "GetTurnIndex", LevelLoader::Lua_GetTurnIndex);
+
+        // Game API - Player
+        lua_register(L, "GetPlayerAP", LevelLoader::Lua_GetPlayerAP);
+        lua_register(L, "GetPlayerAttackAP", LevelLoader::Lua_GetPlayerAttackAP);
+        lua_register(L, "GetPlayerGridPosition", LevelLoader::Lua_GetPlayerGridPosition);
+        lua_register(L, "ConsumePlayerAP", LevelLoader::Lua_ConsumePlayerAP);
+        lua_register(L, "RefillPlayerAP", LevelLoader::Lua_RefillPlayerAP);
+        lua_register(L, "SetPlayerFlipX", LevelLoader::Lua_SetPlayerFlipX);
+        lua_register(L, "LoadPlayerAnimation", LevelLoader::Lua_LoadPlayerAnimation);
+
+        // Game API - Grid/Tiles
+        lua_register(L, "IsValidGridPosition", LevelLoader::Lua_IsValidGridPosition);
+        lua_register(L, "IsWalkableTile", LevelLoader::Lua_IsWalkableTile);
+        lua_register(L, "MovePlayerToTile", LevelLoader::Lua_MovePlayerToTile);
+        lua_register(L, "ShowTileBorder", LevelLoader::Lua_ShowTileBorder);
+        lua_register(L, "PulseTile", LevelLoader::Lua_PulseTile);
+        lua_register(L, "HasChestAtTile", LevelLoader::Lua_HasChestAtTile);
+        lua_register(L, "CollectChest", LevelLoader::Lua_CollectChest);
+        lua_register(L, "HasGoalAtTile", LevelLoader::Lua_HasGoalAtTile);
+
+        // Game API - Enemy/Entity
+        lua_register(L, "FindPlayer", LevelLoader::Lua_FindPlayer);
+        lua_register(L, "GetEnemyAP", LevelLoader::Lua_GetEnemyAP);
+        lua_register(L, "GetEntityGridPosition", LevelLoader::Lua_GetEntityGridPosition);
+        lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
+        lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
+        lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
+        lua_register(L, "FindPathToTarget", LevelLoader::Lua_FindPathToTarget);
+
+        // Game API - Audio
+        lua_register(L, "PlaySound", LevelLoader::Lua_PlaySound);
     }
 
     /**
