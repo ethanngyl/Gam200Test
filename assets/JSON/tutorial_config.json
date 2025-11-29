@@ -102,7 +102,7 @@
       },
       {
         "id": "label_goalLabel",
-        "texture": "assets/Menu/Chest_1.png",
+        "texture": "assets/Menu/Chest_2.png",
         "position": {
           "x": 1,
           "y": 0.5
@@ -145,7 +145,7 @@
           "font": "Sans48",
           "offset": {
             "x": -100,
-            "y": 60
+            "y": 70
           },
           "scale": 0.8,
           "color": {
@@ -173,7 +173,7 @@
           "font": "Sans48",
           "offset": {
             "x": 0.0,
-            "y": 0.0
+            "y": 70
           },
           "scale": 1.2,
           "color": {
@@ -201,7 +201,7 @@
           "font": "Sans48",
           "offset": {
             "x": 0.0,
-            "y": 0.0
+            "y": 70
           },
           "scale": 0.9,
           "color": {
@@ -229,7 +229,7 @@
           "font": "Sans48",
           "offset": {
             "x": 0.0,
-            "y": 0.0
+            "y": 110
           },
           "scale": 0.9,
           "color": {
@@ -257,7 +257,7 @@
           "font": "Sans48",
           "offset": {
             "x": 0.0,
-            "y": 0.0
+            "y": 150
           },
           "scale": 0.9,
           "color": {
@@ -285,7 +285,7 @@
           "font": "Sans48",
           "offset": {
             "x": 0.0,
-            "y": 0.0
+            "y": 100
           },
           "scale": 0.9,
           "color": {
@@ -313,7 +313,7 @@
           "font": "Sans48",
           "offset": {
             "x": 0.0,
-            "y": 0.0
+            "y": 140
           },
           "scale": 0.9,
           "color": {
@@ -341,7 +341,7 @@
           "font": "Sans48",
           "offset": {
             "x": 0.0,
-            "y": 0.0
+            "y": 180
           },
           "scale": 0.9,
           "color": {
