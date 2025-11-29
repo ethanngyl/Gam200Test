@@ -33,7 +33,7 @@
         "entityType": "Chest"
       },
       "M": {
-        "texture": "assets/TileMap/River_Bank_1.png",
+        "texture": "assets/TileMap/Chest_2.png",
         "solid": 0,
         "entityType": "Goal"
       }
