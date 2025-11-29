@@ -402,6 +402,8 @@ namespace Framework {
         // Game API - Turn System
         lua_register(L, "GetCurrentTurn", LevelLoader::Lua_GetCurrentTurn);
         lua_register(L, "GetTurnIndex", LevelLoader::Lua_GetTurnIndex);
+        lua_register(L, "EndPlayerTurn", LevelLoader::Lua_EndPlayerTurn);
+        lua_register(L, "EndEnemyTurn", LevelLoader::Lua_EndEnemyTurn);
 
         // Game API - Player
         lua_register(L, "GetPlayerAP", LevelLoader::Lua_GetPlayerAP);

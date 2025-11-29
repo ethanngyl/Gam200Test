@@ -383,6 +383,8 @@ namespace Framework {
         lua_register(L, "ConsumePlayerAP", Lua_ConsumePlayerAP);
         lua_register(L, "RefillPlayerAP", Lua_RefillPlayerAP);
         lua_register(L, "GetTurnIndex", Lua_GetTurnIndex);
+        lua_register(L, "EndPlayerTurn", Lua_EndPlayerTurn);
+        lua_register(L, "EndEnemyTurn", Lua_EndEnemyTurn);
         lua_register(L, "SetPlayerFlipX", Lua_SetPlayerFlipX);
         lua_register(L, "HasChestAtTile", Lua_HasChestAtTile);
         lua_register(L, "CollectChest", Lua_CollectChest);

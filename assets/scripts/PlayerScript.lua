@@ -90,11 +90,10 @@ function HandleMovement(dt)
     -- Check player AP
     local ap, maxAP = GetPlayerAP()
     if ap <= 0 then
-        Log("DEBUG: Player out of AP: " .. tostring(ap))
+        Log("Player out of AP, ending turn...")
+        EndPlayerTurn()
         return
     end
-
-    Log("DEBUG: Player turn check passed! AP = " .. tostring(ap) .. "/" .. tostring(maxAP))
 
     -- Detect arrow key input
     local stepX, stepY = 0, 0
@@ -139,7 +138,13 @@ function HandleMovement(dt)
         return
     end
 
-    if not IsWalkableTile(nextX, nextY) then
+    -- Check for special tiles (chests, goals) before walkability check
+    local hasChest = HasChestAtTile(nextX, nextY)
+    local hasGoal = HasGoalAtTile(nextX, nextY)
+    local isSpecialTile = hasChest or hasGoal
+
+    -- Check walkability (allow special tiles even if not normally walkable)
+    if not isSpecialTile and not IsWalkableTile(nextX, nextY) then
         return
     end
 

@@ -197,6 +197,8 @@ namespace Framework {
         static int Lua_ConsumePlayerAP(lua_State* L);
         static int Lua_RefillPlayerAP(lua_State* L);
         static int Lua_GetTurnIndex(lua_State* L);
+        static int Lua_EndPlayerTurn(lua_State* L);
+        static int Lua_EndEnemyTurn(lua_State* L);
         static int Lua_SetPlayerFlipX(lua_State* L);
         static int Lua_HasChestAtTile(lua_State* L);
         static int Lua_CollectChest(lua_State* L);
