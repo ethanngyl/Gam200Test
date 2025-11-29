@@ -300,7 +300,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         local entityID = SpawnSprite(
-            "assets/UI/AP_Empty.png",
+            "assets/UI/MovP_Black.png",
             xPos,
             yPos,
             indicatorSize,
@@ -323,7 +323,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         local entityID = SpawnSprite(
-            "assets/UI/AP_Crystal.png",
+            "assets/UI/MovP.png",
             xPos,
             yPos,
             indicatorSize,
@@ -671,7 +671,7 @@ function OnUpdate(dt)
                     local yPos = camY + screenOffsetY
 
                     local entityID = SpawnSprite(
-                        "assets/UI/AP_Crystal.png",
+                        "assets/UI/MovP.png",
                         xPos,
                         yPos,
                         indicatorSize,
