@@ -215,7 +215,7 @@ namespace Framework {
                 if (targetHp.currentHealth <= 0) {                                              // NEW
                     targetHp.currentHealth = 0;                                                 // NEW
                     targetHp.isDead = true;                                                     // NEW
-                    next = mainMenu;
+                    next = LEVEL_END;
                     LOG_ERROR("Combat", "TARGET DEFEATED!");
                 }
             }

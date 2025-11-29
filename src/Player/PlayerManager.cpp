@@ -815,7 +815,7 @@ namespace Framework {
 
                     // Trigger level completion (you can customize this)
                     // Option 1: Return to main menu
-                    next = mainMenu;
+                    next = LEVEL_END;
 
                     // Option 2: Load next level
                     // next = LEVEL_4;

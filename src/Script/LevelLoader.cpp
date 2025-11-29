@@ -454,6 +454,9 @@ namespace Framework {
         else if (strcmp(stateName, "LEVEL_3") == 0) {
             next = LEVEL_3;
         }
+        else if (strcmp(stateName, "LEVEL_END") == 0) {
+            next = LEVEL_END;
+        }
         else if (strcmp(stateName, "mainMenu") == 0) {
             next = mainMenu;
         }

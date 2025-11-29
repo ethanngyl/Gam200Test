@@ -31,6 +31,7 @@ enum GS_STATES
     LEVEL_1,
     LEVEL_2,
     LEVEL_3,
+    LEVEL_END,
     TUTORIAL,
     GS_QUIT,
     GS_RESTART,
