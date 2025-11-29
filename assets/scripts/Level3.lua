@@ -583,12 +583,6 @@ function OnUpdate(dt)
         editorToggleCooldown = editorToggleCooldown - dt
     end
 
-    -- Check for return to main menu (KEY_5)
-    if IsKeyDown("5") then
-        Log("KEY_5 pressed - returning to main menu")
-        SetNextGameState("mainMenu")
-    end
-
     -- ========================================================================
     -- PERFORMANCE: Cache camera position ONCE per frame
     -- ========================================================================
