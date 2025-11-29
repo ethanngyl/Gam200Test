@@ -74,7 +74,7 @@ function OnInit()
     )
 
     if backgroundSpriteID > 0 then
-        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
+        Log(" Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("✗ WARNING: Failed to create background sprite")
     end
@@ -96,7 +96,7 @@ function OnInit()
         )
 
         if logoSpriteID > 0 then
-            Log("✓ Logo sprite created (ID: " .. logoSpriteID .. ")")
+            Log(" Logo sprite created (ID: " .. logoSpriteID .. ")")
         else
             Log("✗ WARNING: Failed to create logo sprite")
         end
@@ -123,7 +123,7 @@ function OnInit()
 
             if spriteID > 0 then
                 cornerSpriteIDs[corner.id] = spriteID
-                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+                Log("   Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
             else
                 Log("  ✗ FAILED to create corner sprite: " .. corner.id)
             end
@@ -179,7 +179,7 @@ function CreateButtonsFromConfig()
                 id = buttonID,
                 config = button
             }
-            Log("  ✓ Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
+            Log("   Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
         else
             Log("  ✗ Failed to create button: " .. button.id)
         end
@@ -193,7 +193,7 @@ end
 -- ============================================================================
 
 function OnPlayButtonClicked()
-    -- ✅ NEW: Check if in editor mode
+    --  NEW: Check if in editor mode
     if IsEditorMode() then
         Log("Button disabled in editor mode")
         return
@@ -205,7 +205,7 @@ function OnPlayButtonClicked()
 end
 
 function OnExitButtonClicked()
-    -- ✅ NEW: Check if in editor mode
+    --  NEW: Check if in editor mode
     if IsEditorMode() then
         Log("Button disabled in editor mode")
         return
@@ -223,7 +223,7 @@ end
 function OnUpdate(dt)
     UpdateAudio(dt)
     
-    -- ✅ MODIFIED: F1 toggles editor mode
+    --  MODIFIED: F1 toggles editor mode
     if IsKeyDown("F1") then
         if editorToggleCooldown <= 0 then
             ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
@@ -256,7 +256,7 @@ function OnDraw()
         return
     end
     
-    -- ✅ NEW: Check if in editor mode
+    --  NEW: Check if in editor mode
     local editorMode = IsEditorMode()
     
     -- Draw text on each button using config data
@@ -264,7 +264,7 @@ function OnDraw()
         local button = buttonData.config
         local text = button.text
         
-        -- ✅ NEW: Gray out buttons in editor mode
+        --  NEW: Gray out buttons in editor mode
         local colorR = editorMode and 0.5 or text.color.r
         local colorG = editorMode and 0.5 or text.color.g
         local colorB = editorMode and 0.5 or text.color.b
@@ -282,7 +282,7 @@ function OnDraw()
         )
     end
     
-    -- ✅ NEW: Display editor mode indicator
+    --  NEW: Display editor mode indicator
     if editorMode then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end

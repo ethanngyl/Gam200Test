@@ -45,7 +45,7 @@ function OnInit()
     )
 
     if backgroundSpriteID > 0 then
-        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
+        Log(" Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("✗ WARNING: Failed to create background sprite")
     end
@@ -67,7 +67,7 @@ function OnInit()
 
             if spriteID > 0 then
                 overlaySprites[overlay.id] = spriteID
-                Log("  ✓ Overlay sprite '" .. overlay.id .. "' created (ID: " .. spriteID .. ")")
+                Log("   Overlay sprite '" .. overlay.id .. "' created (ID: " .. spriteID .. ")")
             else
                 Log("  ✗ FAILED to create overlay sprite: " .. overlay.id)
             end
@@ -93,7 +93,7 @@ function OnInit()
 
             if spriteID > 0 then
                 cornerSpriteIDs[corner.id] = spriteID
-                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+                Log("   Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
             else
                 Log("  ✗ FAILED to create corner sprite: " .. corner.id)
             end
@@ -141,7 +141,7 @@ function CreateButtonsFromConfig()
                 id = buttonID,
                 config = button
             }
-            Log("  ✓ Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
+            Log("   Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
         else
             Log("  ✗ Failed to create button: " .. button.id)
         end

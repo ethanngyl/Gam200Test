@@ -20,7 +20,7 @@ local editorToggleCooldown = 0
 -- HELPER FUNCTIONS
 -- ============================================================================
 
--- ✅ Helper function: Safe level transition
+--  Helper function: Safe level transition
 -- Ensures editor mode is exited before switching levels
 local function SafeSwitchLevel(targetLevel, levelName)
     Log(string.format("Switching to %s...", levelName))
@@ -30,12 +30,12 @@ local function SafeSwitchLevel(targetLevel, levelName)
         Log("⚠ Currently in editor mode - exiting before level switch")
         ToggleEditorMode()          -- Exit editor mode
         SetEnginePlayState(true)    -- Restore game state
-        Log("✓ Editor mode exited")
+        Log(" Editor mode exited")
     end
     
     -- Switch to target level
     SetNextGameState(targetLevel)
-    Log(string.format("✓ Switching to %s", levelName))
+    Log(string.format(" Switching to %s", levelName))
 end
 
 -- ============================================================================
@@ -52,19 +52,19 @@ function OnInit()
     SetCameraZoom(1.0)
     Log("Camera initialized: pos(0,0,0), zoom=1.0")
     
-    -- ✅ Enable ImGui first
+    --  Enable ImGui first
     EnableImGui()
-    Log("✓ ImGui enabled")
+    Log(" ImGui enabled")
     
-    -- ✅ Enter editor mode
+    --  Enter editor mode
     if not IsEditorMode() then
         ToggleEditorMode()
-        Log("✓ Editor mode toggled ON")
+        Log(" Editor mode toggled ON")
     end
     
-    -- ✅ Set engine to non-playing state (editor camera)
+    --  Set engine to non-playing state (editor camera)
     SetEnginePlayState(false)
-    Log("✓ Engine play state: false (editor camera)")
+    Log(" Engine play state: false (editor camera)")
     
     -- Load animations
     LoadAnimationConfig("assets/animations.json")
@@ -106,14 +106,14 @@ function OnUpdate(dt)
     end
     
     -- ========================================================================
-    -- ✅ KEY_5: Return to main menu (safe transition)
+    --  KEY_5: Return to main menu (safe transition)
     -- ========================================================================
     if IsKeyDown("5") then
         SafeSwitchLevel("mainMenu", "Main Menu")
     end
     
     -- ========================================================================
-    -- ✅ KEY_3: Go to Level 3 (safe transition)
+    --  KEY_3: Go to Level 3 (safe transition)
     -- ========================================================================
     if IsKeyDown("3") then
         SafeSwitchLevel("LEVEL_3", "Level 3")
