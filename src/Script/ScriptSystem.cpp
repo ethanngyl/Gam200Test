@@ -1,9 +1,26 @@
-/**
- * ScriptSystem.cpp
- *
- * Implementation of Lua scripting system
- * Provides C++ <-> Lua bridge for component management
- */
+/*
+===============================================================================
+ File:          ScriptSystem.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Script System Implementation
+
+ Overview:
+    The ScriptSystem class serves as the bridge between the C++ engine core and
+    the Lua scripting layer. It manages the lifecycle of script components,
+    handles the execution of Lua logic (OnInit, OnUpdate, OnDestroy), and
+    exposes a C-API for scripts to manipulate ECS entities and components.
+
+  Design notes:
+     - Each ScriptComponent maintains its own independent lua_State
+     - Implements a C++ <-> Lua bridge for Entity Component System management
+     - Exposes engine functionality via static callback functions
+     - Supports hot-reloading of scripts at runtime
+===============================================================================
+*/
 
 #include "Precompiled.h"
 #include "ScriptSystem.h"
@@ -21,10 +38,18 @@ namespace Framework {
     // CONSTRUCTOR / DESTRUCTOR
     // =========================================================================
 
+    /**
+     * @brief Default constructor for ScriptSystem
+     * - Logs creation message
+     */
     ScriptSystem::ScriptSystem() {
         LOG_INFO("ScriptSystem", "Created");
     }
 
+    /**
+     * @brief Destructor for ScriptSystem
+     * - Calls Shutdown() to ensure all Lua states are cleaned up
+     */
     ScriptSystem::~ScriptSystem() {
         Shutdown();
     }
@@ -33,10 +58,23 @@ namespace Framework {
     // ISYSTEM INTERFACE
     // =========================================================================
 
+    /**
+     * @brief Initializes the script system
+     */
     void ScriptSystem::Initialize() {
         LOG_INFO("ScriptSystem", "Initialized");
     }
 
+    /**
+     * @brief Updates the script system and all active script components
+     * @param dt - Delta time since last frame
+     *
+     * Implementation details:
+     * - Validates the entity manager exists
+     * - Iterates through all entities to find those with ScriptComponents
+     * - Detects first-time execution to run the 'OnInit' Lua function
+     * - Calls 'OnUpdate' for initialized scripts, passing delta time
+     */
     void ScriptSystem::Update(float dt) {
         if (!entityManager) return;
 
@@ -59,6 +97,13 @@ namespace Framework {
         }
     }
 
+    /**
+     * @brief Shuts down the script system
+     *
+     * Implementation details:
+     * - Iterates through all entities with ScriptComponents
+     * - Calls UnloadScript for each to ensure 'OnDestroy' is called and memory freed
+     */
     void ScriptSystem::Shutdown() {
         if (!entityManager) return;
 
@@ -81,6 +126,19 @@ namespace Framework {
     // SCRIPT MANAGEMENT
     // =========================================================================
 
+    /**
+     * @brief Loads and attaches a Lua script to an entity
+     * @param entity - The target entity
+     * @param scriptPath - File path to the .lua script
+     *
+     * Implementation details:
+     * - Adds a ScriptComponent to the entity if one doesn't exist
+     * - If one exists, closes the old Lua state before creating a new one
+     * - Creates a new lua_State via CreateLuaState()
+     * - Sets the global 'self' variable in Lua to the Entity ID
+     * - Loads the file using luaL_dofile and checks for syntax errors
+     * - Caches the existence of lifecycle functions (OnInit, OnUpdate, OnDestroy) to avoid expensive lookups later
+     */
     void ScriptSystem::LoadScript(Entity entity, const std::string& scriptPath) {
         if (!entityManager) {
             LOG_ERROR("ScriptSystem", "EntityManager is null!");
@@ -128,6 +186,15 @@ namespace Framework {
             scriptPath.c_str(), entity.GetID());
     }
 
+    /**
+     * @brief Reloads the script currently attached to an entity
+     * @param entity - The target entity
+     *
+     * Implementation details:
+     * - Retrieves the current script path
+     * - Unloads the current script (triggering OnDestroy)
+     * - Loads the script again from the file (triggering OnInit on next update)
+     */
     void ScriptSystem::ReloadScript(Entity entity) {
         if (!entityManager || !entityManager->HasComponent<ScriptComponent>(entity)) {
             return;
@@ -142,6 +209,15 @@ namespace Framework {
         LOG_INFO("ScriptSystem", "Reloaded script for entity %u", entity.GetID());
     }
 
+    /**
+     * @brief Unloads a script from an entity and cleans up resources
+     * @param entity - The target entity
+     *
+     * Implementation details:
+     * - Triggers the Lua 'OnDestroy' function if it exists
+     * - Closes the lua_State to free memory
+     * - Removes the ScriptComponent from the entity manager
+     */
     void ScriptSystem::UnloadScript(Entity entity) {
         if (!entityManager || !entityManager->HasComponent<ScriptComponent>(entity)) {
             return;
@@ -166,6 +242,9 @@ namespace Framework {
         LOG_INFO("ScriptSystem", "Unloaded script for entity %u", entity.GetID());
     }
 
+    /**
+     * @brief Triggers a reload for every entity with a script component
+     */
     void ScriptSystem::ReloadAllScripts() {
         if (!entityManager) return;
 
@@ -183,6 +262,16 @@ namespace Framework {
     // SCRIPT EXECUTION
     // =========================================================================
 
+    /**
+     * @brief calls the 'OnInit' function in the Lua script
+     * @param entity - The entity context
+     * @param script - Reference to the component data
+     *
+     * Implementation details:
+     * - Uses lua_pcall to execute 'OnInit' safely
+     * - Logs errors to console if execution fails
+     * - Marks the script as initialized upon success
+     */
     void ScriptSystem::InitializeScript(Entity entity, ScriptComponent& script) {
         if (!script.hasOnInit || !script.L) return;
 
@@ -199,6 +288,17 @@ namespace Framework {
         LOG_INFO("ScriptSystem", "Initialized script for entity %u", entity.GetID());
     }
 
+    /**
+     * @brief calls the 'OnUpdate' function in the Lua script
+     * @param entity - The entity context
+     * @param script - Reference to the component data
+     * @param dt - Delta time to pass to Lua
+     *
+     * Implementation details:
+     * - Pushes 'OnUpdate' function to stack
+     * - Pushes delta time as a number argument
+     * - Calls function with 1 argument and 0 returns
+     */
     void ScriptSystem::UpdateScript(Entity entity, ScriptComponent& script, float dt) {
         if (!script.L) return;
 
@@ -213,6 +313,11 @@ namespace Framework {
         }
     }
 
+    /**
+     * @brief calls the 'OnDestroy' function in the Lua script
+     * @param entity - The entity context
+     * @param script - Reference to the component data
+     */
     void ScriptSystem::DestroyScript(Entity entity, ScriptComponent& script) {
         if (!script.L) return;
 
@@ -229,6 +334,16 @@ namespace Framework {
     // LUA STATE MANAGEMENT
     // =========================================================================
 
+    /**
+     * @brief Creates and configures a new Lua state
+     * @return pointer to the new lua_State
+     *
+     * Implementation details:
+     * - Initializes standard Lua libraries
+     * - Registers engine-specific C API functions
+     * - Stores a pointer to the ScriptSystem instance in a global Lua variable
+     * ('__script_system_ptr') so static callback functions can access member data
+     */
     lua_State* ScriptSystem::CreateLuaState() {
         lua_State* L = luaL_newstate();
         luaL_openlibs(L);  // Load standard Lua libraries
@@ -242,6 +357,10 @@ namespace Framework {
         return L;
     }
 
+    /**
+     * @brief Registers C++ functions to the Lua environment
+     * @param L - The Lua state
+     */
     void ScriptSystem::RegisterEngineFunctions(lua_State* L) {
         // Component Management
         lua_register(L, "AddTransform", Lua_AddTransform);
@@ -272,6 +391,9 @@ namespace Framework {
         lua_register(L, "GetDeltaTime", Lua_GetDeltaTime);
     }
 
+    /**
+     * @brief Helper to check if a specific global function exists in Lua
+     */
     bool ScriptSystem::HasFunction(lua_State* L, const char* funcName) {
         lua_getglobal(L, funcName);
         bool exists = lua_isfunction(L, -1);
@@ -279,6 +401,15 @@ namespace Framework {
         return exists;
     }
 
+    /**
+     * @brief Retrieves the ScriptSystem instance from the Lua state
+     * @param L - The Lua state
+     * @return Pointer to ScriptSystem
+     *
+     * Implementation details:
+     * - Retrieves the lightuserdata stored at '__script_system_ptr'
+     * - Casts it back to ScriptSystem*
+     */
     ScriptSystem* ScriptSystem::GetScriptSystem(lua_State* L) {
         lua_getglobal(L, "__script_system_ptr");
         ScriptSystem* system = static_cast<ScriptSystem*>(lua_touserdata(L, -1));
@@ -290,6 +421,15 @@ namespace Framework {
     // LUA C API FUNCTIONS - Component Management
     // =========================================================================
 
+    /**
+     * @brief Lua API: Adds a Transform component to an entity
+     * @params entityID (optional), x (optional), y (optional)
+     *
+     * Implementation details:
+     * - If entityID is not provided, defaults to 'self'
+     * - Checks if component already exists
+     * - Adds component and initializes position/scale/rotation
+     */
     int ScriptSystem::Lua_AddTransform(lua_State* L) {
         ScriptSystem* system = GetScriptSystem(L);
         if (!system || !system->entityManager) return 0;
@@ -463,6 +603,10 @@ namespace Framework {
     // LUA C API FUNCTIONS - Component Queries
     // =========================================================================
 
+    /**
+     * @brief Lua API: Checks if an entity has a specific component
+     * @params entityID, componentName (string)
+     */
     int ScriptSystem::Lua_HasComponent(lua_State* L) {
         ScriptSystem* system = GetScriptSystem(L);
         if (!system || !system->entityManager) return 0;
@@ -491,6 +635,10 @@ namespace Framework {
     // LUA C API FUNCTIONS - Component Access
     // =========================================================================
 
+    /**
+     * @brief Lua API: Gets transform position
+     * @return x, y
+     */
     int ScriptSystem::Lua_GetPosition(lua_State* L) {
         ScriptSystem* system = GetScriptSystem(L);
         if (!system || !system->entityManager) return 0;
@@ -653,6 +801,10 @@ namespace Framework {
     // LUA C API FUNCTIONS - Entity Management
     // =========================================================================
 
+    /**
+     * @brief Lua API: Creates a new empty entity
+     * @return The new Entity ID (integer)
+     */
     int ScriptSystem::Lua_CreateEntity(lua_State* L) {
         ScriptSystem* system = GetScriptSystem(L);
         if (!system || !system->entityManager) return 0;

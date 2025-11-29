@@ -119,7 +119,7 @@ namespace Framework
                    // ============================================================================
 
                    // ---------------------- Direction-based flipping ----------------------
-                   // When pressing D → face right; A → face left
+                   // When pressing D  face right; A  face left
                     // -----------------------------------------------------------
                     // SAFETY CHECK: Only animated entities should use animation
                     // -----------------------------------------------------------
@@ -148,7 +148,7 @@ namespace Framework
                         else if (inputDir.x > 0) { anim.direction = AnimDirection::Side; anim.flipX = false; }
                         else if (inputDir.x < 0) { anim.direction = AnimDirection::Side; anim.flipX = true; }
                     }
-                    // DO NOT change direction when idle → preserves last direction
+                    // DO NOT change direction when idle  preserves last direction
 
                     if (moving)
                     {

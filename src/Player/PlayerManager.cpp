@@ -3,7 +3,7 @@
  File:           PlayerManager.cpp
  Author:         ETHAN NG YONG LE
  Co-authors:     PADILLA CARL JAMESON Z.
- Email:          <main.author@digipen.edu>
+ Email:          <n.ethanyongle@digipen.edu>
  Date:           2025/11/07
  Contribution:   ETHAN NG YONG LE: 65%, PADILLA CARL JAMESON Z.: 35%
  ------------------------------------------------------------------------------
@@ -16,7 +16,7 @@
   (four strips) that auto-hides on timeout.
 
   Design notes:
-  - Input → grid mapping → validated move → state/turn updates
+  - Input  grid mapping  validated move  state/turn updates
   - TilePulse: start/extend, tracked by a countdown; restores scale on expiry
   - BorderOutline: show with configurable thickness; hides on timeout
   - Frame-friendly: effects update via lightweight per-frame timers only
@@ -1029,7 +1029,7 @@ namespace Framework {
         //}
 
         if (!entityManager->HasComponent<AttackAP>(playerEntity)) {
-            // No attack AP component → fall back to existing shooting behavior
+            // No attack AP component  fall back to existing shooting behavior
             return;
         }
         auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);
@@ -1106,7 +1106,7 @@ namespace Framework {
         if (hp.isDead) {
             LOG_INFO("PlayerAttack", "Enemy %u defeated!", target.GetID());
 
-            // 1) Find the TILE the enemy is on (using WorldToTile → optional)
+            // 1) Find the TILE the enemy is on (using WorldToTile  optional)
             const Grid& grid = GetGrid();
 
             auto optTile = WorldToTile(

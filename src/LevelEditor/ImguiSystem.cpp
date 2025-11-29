@@ -23,14 +23,14 @@ Responsibilities:
   GraphicsSystemV2 (ImGui render + camera helpers).
 
 Controls for:
-- Menu → File: Open / Open… / Save / Save As… / Exit
-- Menu → Windows: toggle editor panels
-- Menu → Editor: Play (when stopped) / Stop (when playing)
+- Menu  File: Open / Open… / Save / Save As… / Exit
+- Menu  Windows: toggle editor panels
+- Menu  Editor: Play (when stopped) / Stop (when playing)
 - Assets Browser: double-click texture to spawn at origin; drag filename to future
   drop targets; click “<” to go up one folder
 - OS Drag-&-Drop onto window:
-  • .txt → load level (clears scene if requested
-  • .png, .jpg, .jpeg → spawn sprite
+  • .txt  load level (clears scene if requested
+  • .png, .jpg, .jpeg  spawn sprite
 
 Notes:
 
@@ -646,7 +646,7 @@ namespace Framework {
                 if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)) {
                     std::string prefabPath = path.string();
                     ImGui::SetDragDropPayload("Prefab", prefabPath.c_str(), prefabPath.size() + 1);
-                    ImGui::Text("📦 %s", label.c_str());
+                    ImGui::Text("Prefab: %s", label.c_str());
                     ImGui::EndDragDropSource();
                 }
             }
@@ -1977,15 +1977,15 @@ namespace Framework {
                 bool saved = PrefabSerializer::SavePrefab(*entityManager, selectedEntity, path);
 
                 if (saved) {
-                    std::cout << "[Prefab] ✅ Saved entity " << selectedEntity.GetID()
+                    std::cout << "[Prefab] Saved entity " << selectedEntity.GetID()
                         << " to: " << path << "\n";
                 }
                 else {
-                    std::cerr << "[Prefab] ❌ Failed to save prefab to: " << path << "\n";
+                    std::cerr << "[Prefab]  Failed to save prefab to: " << path << "\n";
                 }
             }
             else {
-                std::cout << "[Prefab] ⚠️ No entity selected!\n";
+                std::cout << "[Prefab] No entity selected!\n";
             }
         }
 
@@ -2074,11 +2074,11 @@ namespace Framework {
                         transform.position.y = spawnPos[1];
                     }
 
-                    std::cout << "[Prefab] ✅ Loaded prefab '" << prefabFiles[selectedPrefabIdx]
+                    std::cout << "[Prefab]  Loaded prefab '" << prefabFiles[selectedPrefabIdx]
                         << "' as entity " << newEntity.GetID() << "\n";
                 }
                 else {
-                    std::cerr << "[Prefab] ❌ Failed to load prefab: " << selectedPrefabPath << "\n";
+                    std::cerr << "[Prefab]  Failed to load prefab: " << selectedPrefabPath << "\n";
                 }
             }
             else {
@@ -2384,44 +2384,7 @@ namespace Framework {
             }
         }
 
-        if (ImGui::Button("Spawn Enemy##Btn2", ImVec2(-1, 0))) {
-            Framework::Entity enemy = entitySpawner->SpawnEnemy(Vector2D(spawnX+0.1, spawnY));
-            //temporary put spatialPartitioningInsert function here 
-            //to show that how does the spatial partitioning works with entity spawner
-            Framework::SpatialPartitioningInsert(enemy);
-        }
-
         ImGui::Separator();
-
-        static int waveCount = 5;
-        ImGui::SliderInt("Wave Size##Wave", &waveCount, 1, 20);
-        if (ImGui::Button("Spawn Enemy Wave##Btn5", ImVec2(-1, 0))) {
-            entitySpawner->SpawnEnemyWave(waveCount, 0.8f);
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::Button("Trigger Leaves SFX##Btn8", ImVec2(-1, 0))) {
-            if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
-                audioSystem->PlaySound("leaves", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
-            }
-        }
-
-        if (ImGui::Button("Trigger Shooting SFX##Btn9", ImVec2(-1, 0))) {
-            if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
-                audioSystem->PlaySound("shooting", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
-            }
-        }
 
         if (ImGui::Button("Trigger Menu BGM##Btn9", ImVec2(-1, 0))) {
             if (audioSystem) {
@@ -2437,7 +2400,7 @@ namespace Framework {
         if (ImGui::Button("Trigger In-Game BGM##Btn10", ImVec2(-1, 0))) {
             if (audioSystem) {
                 std::cout << "[DEBUG] AudioSystem exists\n";
-                audioSystem->PlaySound("bgm", false);
+                audioSystem->PlaySound("igbgm", false);
                 std::cout << "[DEBUG] PlaySound called\n";
             }
             else {
@@ -2523,7 +2486,7 @@ namespace Framework {
                         transform.position.y = spawnY;
                     }
 
-                    std::cout << "[Spawner] ✅ Spawned prefab as entity " << newEntity.GetID() << "\n";
+                    std::cout << "[Spawner]  Spawned prefab as entity " << newEntity.GetID() << "\n";
                 }
             }
             ImGui::EndDragDropTarget();
@@ -2865,7 +2828,7 @@ namespace Framework {
                     std::cout << "[FileDrop]  Loaded level\n";
                 }
                 else {
-                    std::cerr << "[FileDrop] ❌ Failed to load level\n";
+                    std::cerr << "[FileDrop]  Failed to load level\n";
                 }
                 continue;
             }
@@ -2875,7 +2838,7 @@ namespace Framework {
                 // ONLY spawn if we are dropping into the Game Viewport
                 if (m_isViewportHovered) {
                     if (!entitySpawner) {
-                        std::cerr << "[FileDrop] ❌ EntitySpawner not available\n";
+                        std::cerr << "[FileDrop]  EntitySpawner not available\n";
                         continue;
                     }
 
@@ -2928,7 +2891,7 @@ namespace Framework {
             if (ext == ".ogg" || ext == ".mp3" || ext == ".txt" ||
                 ext == ".flac" || ext == ".aiff" || ext == ".aac" || ext == ".m4a") {
 
-                std::cout << "[FileDrop] ❌ Unsupported format: " << ext << "\n";
+                std::cout << "[FileDrop]  Unsupported format: " << ext << "\n";
                 audioErrorMessage = errorMsg;
                 showAudioErrorPopup = true;
                 continue;
@@ -2953,11 +2916,11 @@ namespace Framework {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, path.string());
 
                 if (newEntity.IsValid()) {
-                    std::cout << "[FileDrop] ✅ Loaded prefab: " << path.filename()
+                    std::cout << "[FileDrop]  Loaded prefab: " << path.filename()
                         << " as entity " << newEntity.GetID() << "\n";
                 }
                 else {
-                    std::cerr << "[FileDrop] ❌ Failed to load prefab: " << path << "\n";
+                    std::cerr << "[FileDrop]  Failed to load prefab: " << path << "\n";
                 }
                 continue;
             }
@@ -3026,7 +2989,7 @@ namespace Framework {
             }
 
 
-            std::cerr << "[FileDrop] ❌ Unsupported file type\n";
+            std::cerr << "[FileDrop]  Unsupported file type\n";
         }
 
 
@@ -3086,7 +3049,7 @@ namespace Framework {
         std::ifstream readFile(jsonPath);
 
         if (!readFile.is_open()) {
-            std::cerr << "[JSON] ❌ Could not open audio.json for reading\n";
+            std::cerr << "[JSON]  Could not open audio.json for reading\n";
             return false;
         }
 
@@ -3105,7 +3068,7 @@ namespace Framework {
         // Find where to insert
         size_t lastBrace = jsonContent.rfind('}');
         if (lastBrace == std::string::npos) {
-            std::cerr << "[JSON] ❌ Malformed JSON - no closing brace\n";
+            std::cerr << "[JSON]  Malformed JSON - no closing brace\n";
             return false;
         }
 
@@ -3121,7 +3084,7 @@ namespace Framework {
                 newEntry = "\n    \"" + audioName + "\": \"" + fileName + "\"";
             }
             else {
-                std::cerr << "[JSON] ❌ Malformed JSON - no opening brace\n";
+                std::cerr << "[JSON]  Malformed JSON - no opening brace\n";
                 return false;
             }
         }
@@ -3135,7 +3098,7 @@ namespace Framework {
         std::ofstream writeFile(jsonPath);
 
         if (!writeFile.is_open()) {
-            std::cerr << "[JSON] ❌ Could not open audio.json for writing\n";
+            std::cerr << "[JSON]  Could not open audio.json for writing\n";
             return false;
         }*/
         // ---------------------------------------------------------
@@ -3143,7 +3106,7 @@ namespace Framework {
     // ---------------------------------------------------------
     size_t soundsPos = jsonContent.find("\"sounds\"");
     if (soundsPos == std::string::npos) {
-        std::cerr << "[JSON] ❌ Could not find 'sounds' array\n";
+        std::cerr << "[JSON]  Could not find 'sounds' array\n";
         return false;
     }
 
@@ -3171,7 +3134,7 @@ namespace Framework {
     }
 
     if (arrayEnd == std::string::npos) {
-        std::cerr << "[JSON] ❌ Malformed JSON (missing closing bracket)\n";
+        std::cerr << "[JSON]  Malformed JSON (missing closing bracket)\n";
         return false;
     }
 
@@ -3197,7 +3160,7 @@ namespace Framework {
     // ---------------------------------------------------------
     std::ofstream writeFile(jsonPath);
     if (!writeFile.is_open()) {
-        std::cerr << "[JSON] ❌ Could not open file for writing\n";
+        std::cerr << "[JSON]  Could not open file for writing\n";
         return false;
     }
 
@@ -3429,12 +3392,12 @@ namespace Framework {
 
             if (ImGui::BeginMenu("Editor")) {
                 if (CORE->IsEditorMode()) {
-                    // ✅ In editor mode: Show "PLAY" to exit editor
+                    //  In editor mode: Show "PLAY" to exit editor
                     if (ImGui::MenuItem("PLAY")) {
                         // Exit editor mode
                         CORE->SetEditorMode(false);
 
-                        // ✅ CRITICAL: Use RequestToggle() instead of Disable()
+                        //  CRITICAL: Use RequestToggle() instead of Disable()
                         // This schedules the disable for AFTER this frame completes
                         this->RequestToggle();
 

@@ -832,7 +832,7 @@ namespace Framework {
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (!entityManager->HasComponent<SpriteAnimation>(e))
             {
-                // Entity has no animation → safe to submit as-is
+                // Entity has no animation  safe to submit as-is
                 renderQueue.Submit(cmd);
                 continue;
             }

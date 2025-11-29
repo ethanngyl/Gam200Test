@@ -42,7 +42,6 @@
 #include "Pathfinding/Pathfinding.h"
 #include "AudioLoader.h"
 #include "Pause/Pause.h"
-#include "RangeIndicatorSystem.h"
 #include "GlobalPauseManager.h"
 
 namespace Framework
@@ -66,7 +65,6 @@ namespace Framework
         , eventSystem(nullptr)
         , LastTime(0)
         , GameActive(true)
-        , rangeIndicatorSystem(nullptr)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
     {
@@ -111,7 +109,7 @@ namespace Framework
                 LOG_INFO("CORE", "Loading audio configuration...");
                 bool audioLoaded = AudioLoader::LoadAudioConfig("assets/JSON/AudioConfig.json", audioSystem);
                 if (audioLoaded) {
-                    LOG_INFO("CORE", "✓ Audio configuration loaded successfully");
+                    LOG_INFO("CORE", " Audio configuration loaded successfully");
                 }
                 else {
                     LOG_WARN("CORE", "✗ Failed to load audio configuration");
@@ -152,14 +150,13 @@ namespace Framework
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
-        rangeIndicatorSystem = new RangeIndicatorSystem();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !rangeIndicatorSystem) {
+            !scriptSystem) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -181,7 +178,6 @@ namespace Framework
             delete damageIndicator;
             delete pathfindingSystem;
             delete scriptSystem;
-            delete rangeIndicatorSystem;
 
             throw std::runtime_error("System allocation failure");
         }
@@ -232,10 +228,6 @@ namespace Framework
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);
 
-        // Wire Range Indicator
-        rangeIndicatorSystem->SetEntityManager(entityManager);
-        rangeIndicatorSystem->SetGraphicsSystem(graphicsSystem);
-
         // Pause Event System
         LOG_INFO("CORE", "PauseSystem wired to CoreEngine");
 
@@ -283,7 +275,6 @@ namespace Framework
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
-        AddSystem(rangeIndicatorSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -438,7 +429,7 @@ namespace Framework
         // ====================================================================
         bool isPaused = GlobalPause::IsPaused();
         bool isPlaying = IsPlaying();
-        bool isEditorMode = IsEditorMode();  // ✅ F1 editor mode check
+        bool isEditorMode = IsEditorMode();  //  F1 editor mode check
 
         // ====================================================================
         // ALWAYS UPDATE
@@ -467,10 +458,10 @@ namespace Framework
         // - isPaused = false (not paused with P key)
         // - isEditorMode = false (F1 not pressed)
         //
-        // ✅ EditorMode has HIGHEST priority - when F1 is pressed, game freezes
+        //  EditorMode has HIGHEST priority - when F1 is pressed, game freezes
         // ====================================================================
 
-        if (isPlaying && !isPaused && !isEditorMode) {  // ✅ Check all three!
+        if (isPlaying && !isPaused && !isEditorMode) {  //  Check all three!
             // ================================================================
             // GAME IS RUNNING
             // ================================================================
@@ -511,10 +502,6 @@ namespace Framework
             // Events & Indicators
             if (eventSystem) {
                 eventSystem->Update(dt);
-            }
-
-            if (rangeIndicatorSystem) {
-                rangeIndicatorSystem->Update(dt);
             }
 
             // Update all logic systems
