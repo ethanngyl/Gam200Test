@@ -904,14 +904,7 @@ namespace Framework {
 
     // Get player's Attack AP (AttackAP component)
     int LevelLoader::Lua_GetPlayerAttackAP(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) {
-            lua_pushinteger(L, 0);
-            lua_pushinteger(L, 0);
-            return 2;
-        }
-
-        auto* em = loader->coreEngine->GetEntityManager();
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) {
             lua_pushinteger(L, 0);
             lua_pushinteger(L, 0);
