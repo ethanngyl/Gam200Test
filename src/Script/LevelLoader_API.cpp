@@ -1448,8 +1448,8 @@ namespace Framework {
 
         if (tileEntity.IsValid() && em->HasComponent<Chest>(tileEntity)) {
             auto& chest = em->GetComponent<Chest>(tileEntity);
-            if (!chest.isCollected) {
-                chest.isCollected = true;
+            if (!chest.collected) {
+                chest.collected = true;
                 // TODO: Update visual representation
             }
         }
@@ -1517,7 +1517,7 @@ namespace Framework {
         }
 
         auto& ap = em->GetComponent<AP>(entity);
-        lua_pushnumber(L, ap.current);
+        lua_pushnumber(L, ap.actionPoints);
         return 1;
     }
 
@@ -1631,9 +1631,9 @@ namespace Framework {
         }
 
         auto& ap = em->GetComponent<AP>(entity);
-        ap.current -= amount;
-        if (ap.current < 0) {
-            ap.current = 0;
+        ap.actionPoints -= amount;
+        if (ap.actionPoints < 0) {
+            ap.actionPoints = 0;
         }
 
         return 0;
