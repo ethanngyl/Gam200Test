@@ -23,6 +23,8 @@ local editorToggleCooldown = 0  -- Cooldown for F1 editor toggle
 local backgroundSpriteID = 0    -- Store background sprite entity ID
 local logoSpriteID = 0          -- Store logo sprite entity ID
 local cornerSpriteIDs = {}      -- Store corner sprite entity IDs
+local pendingState = nil     -- Store pending game state transition
+local pendingTimer = 0.0    -- Timer for delayed transition
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -205,10 +207,14 @@ function OnLevel2ButtonClicked()
         Log("Button disabled in editor mode")
         return
     end
+
+    PlaySound("button", false, 1)
+    pendingState = "LEVEL_2"
+    pendingTimer = 0.15  -- Half-second delay before transition
     
     Log("LEVEL EDITOR button clicked!")
     Log("Transitioning to Level Editor...")
-    SetNextGameState("LEVEL_2")
+    --SetNextGameState("LEVEL_2")
 end
 
 function OnLevel3ButtonClicked()
@@ -218,9 +224,13 @@ function OnLevel3ButtonClicked()
         return
     end
     
+    PlaySound("button", false, 1)
+    pendingState = "LEVEL_3"
+    pendingTimer = 0.15  -- Half-second delay before transition
+
     Log("DEMO button clicked!")
     Log("Transitioning to Demo...")
-    SetNextGameState("LEVEL_3")
+    --SetNextGameState("LEVEL_3")
 end
 
 function OnBackButtonClicked()
@@ -229,10 +239,14 @@ function OnBackButtonClicked()
         Log("Button disabled in editor mode")
         return
     end
+
+    PlaySound("button", false, 1)
+    pendingState = "mainMenu"
+    pendingTimer = 0.15  -- Half-second delay before transition
     
     Log("BACK button clicked!")
     Log("Returning to Main Menu...")
-    SetNextGameState("mainMenu")
+   -- SetNextGameState("mainMenu")
 end
 
 -- ============================================================================
@@ -264,6 +278,14 @@ function OnUpdate(dt)
 
     if editorToggleCooldown > 0 then
         editorToggleCooldown = editorToggleCooldown - dt
+    end
+
+    if pendingState ~= nil then
+        pendingTimer = pendingTimer - dt
+        if pendingTimer <= 0 then
+            SetNextGameState(pendingState)
+            pendingState = nil
+        end
     end
 
     -- Optional: Handle debug input
@@ -363,6 +385,8 @@ function OnDestroy()
     backgroundSpriteID = 0
     logoSpriteID = 0
     cornerSpriteIDs = {}
+    pendingState = nil
+    pendingTimer = 0.0
     
     Log("LevelSelect cleanup complete")
 end

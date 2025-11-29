@@ -22,6 +22,9 @@ local editorToggleCooldown = 0
 local backgroundSpriteID = 0  -- Store background sprite entity ID
 local logoSpriteID = 0        -- Store logo sprite entity ID
 local cornerSpriteIDs = {}    -- Store corner sprite entity IDs  
+local pendingState = nil  -- For deferred state changes
+local pendingTimer = 0.0
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -182,6 +185,10 @@ function OnBackButtonClicked()
         Log("Button disabled in editor mode")
         return
     end
+
+    PlaySound("button", false, 1)
+    pendingState = "mainMenu"
+    pendingTimer = 0.15  -- Delay to allow sound to play
     
     Log("BACK button clicked!")
     Log("Returning to Main Menu...")
@@ -190,7 +197,7 @@ function OnBackButtonClicked()
     -- PlaySound("button_click", false, 1.0)
     
     -- Return to main menu
-    SetNextGameState("mainMenu")
+    --SetNextGameState("mainMenu")
 end
 
 -- ============================================================================
@@ -219,6 +226,14 @@ function OnUpdate(dt)
     
     if editorToggleCooldown > 0 then
         editorToggleCooldown = editorToggleCooldown - dt
+    end
+
+    if pendingState ~= nil then
+        pendingTimer = pendingTimer - dt
+        if pendingTimer <= 0 then
+            SetNextGameState(pendingState)
+            pendingState = nil
+        end
     end
 end
 
@@ -303,6 +318,8 @@ function OnDestroy()
     backgroundSpriteID = 0
     logoSpriteID = 0
     cornerSpriteIDs = {}
+    pendingState = nil
+    pendingTimer = 0.0
 
     Log("MainMenu cleanup complete")
 end
