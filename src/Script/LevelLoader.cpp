@@ -366,6 +366,9 @@ namespace Framework {
         lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
 
+        // Script Component Management
+        lua_register(L, "AddScriptComponentToEntity", Lua_AddScriptComponentToEntity);
+        lua_register(L, "RemoveScriptComponentFromEntity", Lua_RemoveScriptComponentFromEntity);
 
         lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
         lua_register(L, "IsEditorMode", lua_IsEditorMode);

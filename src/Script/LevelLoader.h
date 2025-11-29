@@ -199,6 +199,10 @@ namespace Framework {
         static int Lua_CollectChest(lua_State* L);
         static int Lua_HasGoalAtTile(lua_State* L);
 
+        // Script Component Management API
+        static int Lua_AddScriptComponentToEntity(lua_State* L);
+        static int Lua_RemoveScriptComponentFromEntity(lua_State* L);
+
         static int lua_ToggleEditorMode(lua_State* L);
         static int lua_IsEditorMode(lua_State* L);
 

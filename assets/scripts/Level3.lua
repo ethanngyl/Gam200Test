@@ -199,7 +199,44 @@ function OnInit()
             end
         end
     end
-    
+
+    Log("========================================")
+    Log("Attaching Lua Component Scripts...")
+    Log("========================================")
+
+    -- ========================================================================
+    -- ATTACH PLAYER SCRIPT COMPONENT
+    -- ========================================================================
+    Log("Attaching PlayerScript.lua to player entity " .. playerID .. "...")
+    local playerScriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
+
+    if playerScriptSuccess then
+        Log("  ✓ PlayerScript.lua attached successfully")
+        Log("  Player movement now handled by Lua script")
+    else
+        Log("  ✗ FAILED to attach PlayerScript.lua")
+        Log("  Player will use C++ PlayerController instead")
+    end
+
+    -- ========================================================================
+    -- ATTACH ENEMY SCRIPT COMPONENTS
+    -- ========================================================================
+    if enemyCount > 0 then
+        Log("Attaching EnemyScript.lua to " .. enemyCount .. " enemies...")
+        for i, enemyID in ipairs(enemies) do
+            local enemyScriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+
+            if enemyScriptSuccess then
+                Log("  ✓ Enemy " .. enemyID .. " - EnemyScript.lua attached")
+            else
+                Log("  ✗ Enemy " .. enemyID .. " - FAILED to attach script")
+            end
+        end
+        Log("  All enemies now use Lua pathfinding AI")
+    else
+        Log("  No enemies to attach scripts to")
+    end
+
     Log("========================================")
 
     -- ========================================================================

@@ -1105,4 +1105,96 @@ namespace Framework {
         return 1;
     }
 
+    // ========================================================================
+    // SCRIPT COMPONENT MANAGEMENT
+    // ========================================================================
+
+    /**
+     * @brief Add a ScriptComponent to an entity with specified script path
+     * @param entityID (number) The entity ID to add component to
+     * @param scriptPath (string) Path to the Lua script file
+     * @return true if successful
+     *
+     * Usage: AddScriptComponentToEntity(entityID, "assets/scripts/PlayerScript.lua")
+     */
+    int LevelLoader::Lua_AddScriptComponentToEntity(lua_State* L) {
+        // Get parameters
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        const char* scriptPath = luaL_checkstring(L, 2);
+
+        // Get entity manager
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "AddScriptComponentToEntity: EntityManager not available");
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Create entity and validate
+        Entity entity(static_cast<uint32_t>(entityID));
+        if (!entity.IsValid()) {
+            LOG_ERROR("LevelLoader", "AddScriptComponentToEntity: Invalid entity ID %d", entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Check if entity already has ScriptComponent
+        if (em->HasComponent<ScriptComponent>(entity)) {
+            LOG_WARN("LevelLoader", "Entity %d already has ScriptComponent, removing old one", entityID);
+            em->RemoveComponent<ScriptComponent>(entity);
+        }
+
+        // Add ScriptComponent
+        auto& script = em->AddComponent<ScriptComponent>(entity);
+        script.scriptPath = scriptPath;
+
+        LOG_INFO("LevelLoader", "Added ScriptComponent to entity %d: %s", entityID, scriptPath);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    /**
+     * @brief Remove ScriptComponent from an entity
+     * @param entityID (number) The entity ID to remove component from
+     * @return true if successful
+     *
+     * Usage: RemoveScriptComponentFromEntity(entityID)
+     */
+    int LevelLoader::Lua_RemoveScriptComponentFromEntity(lua_State* L) {
+        // Get parameter
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+
+        // Get entity manager
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "RemoveScriptComponentFromEntity: EntityManager not available");
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Create entity and validate
+        Entity entity(static_cast<uint32_t>(entityID));
+        if (!entity.IsValid()) {
+            LOG_ERROR("LevelLoader", "RemoveScriptComponentFromEntity: Invalid entity ID %d", entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Check if entity has ScriptComponent
+        if (!em->HasComponent<ScriptComponent>(entity)) {
+            LOG_WARN("LevelLoader", "Entity %d does not have ScriptComponent", entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Remove ScriptComponent
+        em->RemoveComponent<ScriptComponent>(entity);
+
+        LOG_INFO("LevelLoader", "Removed ScriptComponent from entity %d", entityID);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
 } // namespace Framework
