@@ -84,6 +84,11 @@ namespace Framework {
             if (entityManager->HasComponent<ScriptComponent>(entity)) {
                 auto& script = entityManager->GetComponent<ScriptComponent>(entity);
 
+                // Auto-load script if it has a path but no Lua state
+                if (!script.L && !script.scriptPath.empty()) {
+                    LoadScript(entity, script.scriptPath);
+                }
+
                 // Initialize script on first update
                 if (!script.initialized && script.L) {
                     InitializeScript(entity, script);
