@@ -378,32 +378,17 @@ void GSM_Update()
 
             // C++ system updates (player controller, pathfinding)
             if (engine) {
-                auto* pcs = engine->GetPlayerController();
-                auto* em = engine->GetEntityManager();
-                // Pathfinding commented out for debugging
+                // DISABLED: C++ PlayerController - using Lua PlayerScript.lua instead
+                // auto* pcs = engine->GetPlayerController();
+                // if (pcs) {
+                //     pcs->Update(Framework::Time::FIXED_DT_F);
+                // }
+
+                // Pathfinding also disabled - using Lua EnemyScript.lua instead
                 // auto* pfs = engine->GetPathfindingSystem();
-
-                // Update player controller ONLY if player doesn't have ScriptComponent
-                // (If player has ScriptComponent, Lua script handles control)
-                if (pcs && em) {
-                    // Find player entity
-                    Framework::Entity player{ Framework::INVALID_ENTITY };
-                    for (Framework::Entity e : em->GetAllEntities()) {
-                        if (em->HasComponent<Framework::CircleCollider>(e) &&
-                            !em->HasComponent<Framework::EnemyAI>(e)) {
-                            player = e;
-                            break;
-                        }
-                    }
-
-                    // Only run C++ controller if player has NO ScriptComponent
-                    bool hasLuaScript = (player.GetID() != Framework::INVALID_ENTITY &&
-                                        em->HasComponent<Framework::ScriptComponent>(player));
-
-                    if (!hasLuaScript) {
-                        pcs->Update(Framework::Time::FIXED_DT_F);
-                    }
-                }
+                // if (pfs) {
+                //     pfs->Update(Framework::Time::FIXED_DT_F);
+                // }
 
                 // Camera follow (MUST be set every frame like original level3_Update)
                 if (auto* gfx = engine->GetGraphicsSystem()) {
