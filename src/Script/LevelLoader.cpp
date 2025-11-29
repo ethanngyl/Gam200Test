@@ -366,6 +366,12 @@ namespace Framework {
         lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
 
+
+        lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
+        lua_register(L, "IsEditorMode", lua_IsEditorMode);
+
+
+
         LOG_INFO("LevelLoader", "API registered");
     }
 

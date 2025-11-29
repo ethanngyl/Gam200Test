@@ -199,6 +199,9 @@ namespace Framework {
         static int Lua_CollectChest(lua_State* L);
         static int Lua_HasGoalAtTile(lua_State* L);
 
+        static int lua_ToggleEditorMode(lua_State* L);
+        static int lua_IsEditorMode(lua_State* L);
+
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

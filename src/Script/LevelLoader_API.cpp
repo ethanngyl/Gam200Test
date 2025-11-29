@@ -1082,4 +1082,27 @@ namespace Framework {
         return 0;
     }
 
+    // Toggle editor mode
+    int LevelLoader::lua_ToggleEditorMode(lua_State* L) {
+        if (CORE) {
+            CORE->ToggleEditorMode();
+            if (CORE->GetImGuiSystem()) {
+                if (CORE->IsEditorMode()) {
+                    CORE->GetImGuiSystem()->Enable();
+                }
+                else {
+                    CORE->GetImGuiSystem()->Disable();
+                }
+            }
+        }
+        return 0;
+    }
+
+    // Check if in editor mode
+    int LevelLoader::lua_IsEditorMode(lua_State* L) {
+        bool isEditor = CORE ? CORE->IsEditorMode() : false;
+        lua_pushboolean(L, isEditor);
+        return 1;
+    }
+
 } // namespace Framework
