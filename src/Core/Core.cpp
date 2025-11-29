@@ -543,12 +543,12 @@ namespace Framework
         // ====================================================================
         // AUDIO - Mute in editor mode
         // ====================================================================
+
         if (audioSystem) {
-            if (isEditorMode) {
+            if (isEditorMode || isPaused) {
                 audioSystem->SetMasterVolume(0.0f);
             }
             else {
-                // Restore audio when not in editor mode
                 audioSystem->SetMasterVolume(1.0f);
             }
             audioSystem->Update(dt);

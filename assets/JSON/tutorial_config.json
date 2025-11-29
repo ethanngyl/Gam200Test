@@ -1,0 +1,357 @@
+{
+  "menu": {
+    "name": "Tutorial",
+    "music": {
+      "name": "mmbgm",
+      "volume": 1.0,
+      "loop": true
+    },
+    "camera": {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "zoom": 1.0
+    },
+    "background": {
+      "texture": "assets/Menu/WoodBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 4.0,
+        "y": 4.0
+      },
+      "layer": 1
+    },
+    "overlaySprites": [
+      {
+        "id": "scrollOverlay",
+        "texture": "assets/Menu/Scroll Overlay.png",
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "scale": {
+          "x": 4.7,
+          "y": 2.5
+        },
+        "layer": 2
+      }
+    ],
+
+    "textElements": [],
+    "buttons": [
+      {
+        "id": "next",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 1,
+          "y": -0.66
+        },
+        "scale": {
+          "x": 0.8,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "Next",
+          "font": "Sans48",
+          "offset": {
+            "x": -115.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnNextButtonClicked"
+      },
+      {
+        "id": "label_chestLabel",
+        "texture": "assets/Menu/Chest_1.png",
+        "position": {
+          "x": 0.64,
+          "y": 0.5
+        },
+        "scale": {
+          "x": 0.25,
+          "y": 0.25
+        },
+        "layer": 10,
+        "text": {
+          "content": "Chest",
+          "font": "Sans48",
+          "offset": {
+            "x": -70,
+            "y": 50
+          },
+          "scale": 0.5,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "label_goalLabel",
+        "texture": "assets/Menu/Chest_1.png",
+        "position": {
+          "x": 1,
+          "y": 0.5
+        },
+        "scale": {
+          "x": 0.25,
+          "y": 0.25
+        },
+        "layer": 10,
+        "text": {
+          "content": "Main Objective",
+          "font": "Sans48",
+          "offset": {
+            "x": -150,
+            "y": 50
+          },
+          "scale": 0.5,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "label_enemyLabel",
+        "texture": "assets/Menu/enemy.png",
+        "position": {
+          "x": 0.8,
+          "y": -0.08
+        },
+        "scale": {
+          "x": 0.2,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "Enemy",
+          "font": "Sans48",
+          "offset": {
+            "x": -100,
+            "y": 60
+          },
+          "scale": 0.8,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_title",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.27,
+          "y": 0.4
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "Objectie:",
+          "font": "Sans48",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "scale": 1.2,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_objective1",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": 0.2
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "Collect the items in all 3 chests",
+          "font": "Sans48",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_objective2",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": 0.0
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "and reach the main objective to",
+          "font": "Sans48",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_objective3",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": -0.2
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "win the game",
+          "font": "Sans48",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_enemyWarning1",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": -0.4
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "There will be enemies who will be",
+          "font": "Sans48",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_enemyWarning2",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": -0.6
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "patrolling that will stand in your",
+          "font": "Sans48",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_enemyWarning3",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": -0.8
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "way",
+          "font": "Sans48",
+          "offset": {
+            "x": 0.0,
+            "y": 0.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      }
+    ]
+  }
+}
