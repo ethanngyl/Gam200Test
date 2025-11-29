@@ -50,6 +50,11 @@ function OnInit()
 
     -- Set engine to editor mode (non-playing)
     SetEnginePlayState(true)
+    
+    -- ✅ CRITICAL: Force editor camera to sync with mainCamera for this level
+    -- Toggle to ensure editorCamera is reset to this level's camera position
+    SetEnginePlayState(false)  -- Sync editorCamera ← mainCamera
+    SetEnginePlayState(true)   -- Back to playing mode
 
     -- ========================================================================
     -- CREATE BACKGROUND SPRITE
@@ -172,6 +177,12 @@ end
 -- ============================================================================
 
 function OnBackButtonClicked()
+    -- ✅ NEW: Check if in editor mode
+    if IsEditorMode() then
+        Log("Button disabled in editor mode")
+        return
+    end
+    
     Log("BACK button clicked!")
     Log("Returning to Main Menu...")
     
@@ -189,23 +200,20 @@ end
 function OnUpdate(dt)
     UpdateAudio(dt)
     
-    -- DEBUG: Check if F1 is being detected
+    -- ✅ MODIFIED: F1 toggles editor mode
     if IsKeyDown("F1") then
-        Log("F1 KEY DETECTED!")  -- Add this line
-        
         if editorToggleCooldown <= 0 then
-            Log("Attempting to toggle editor...")  -- Add this
-            local newState = ToggleEditor()
-            Log("ToggleEditor returned: " .. tostring(newState))  -- Add this
+            ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
             
-            if newState then
-                Log("EDITOR ON")
+            if IsEditorMode() then
+                Log("EDITOR MODE ON - Buttons disabled, Camera unlocked")
+                SetEnginePlayState(false)  -- Switch to editorCamera (C++ syncs cameras)
             else
-                Log("EDITOR OFF")
+                Log("EDITOR MODE OFF - Buttons enabled, Camera locked")
+                SetEnginePlayState(true)   -- Switch to mainCamera (C++ syncs cameras)
             end
+            
             editorToggleCooldown = 0.3
-        else
-            Log("Cooldown active: " .. editorToggleCooldown)  -- Add this
         end
     end
     
@@ -223,10 +231,18 @@ function OnDraw()
         return
     end
     
+    -- ✅ NEW: Check if in editor mode
+    local editorMode = IsEditorMode()
+    
     -- Draw text on each button using config data
     for buttonKey, buttonData in pairs(buttonIDs) do
         local button = buttonData.config
         local text = button.text
+        
+        -- ✅ NEW: Gray out buttons in editor mode
+        local colorR = editorMode and 0.5 or text.color.r
+        local colorG = editorMode and 0.5 or text.color.g
+        local colorB = editorMode and 0.5 or text.color.b
         
         DrawButtonText(
             buttonData.id,
@@ -235,10 +251,15 @@ function OnDraw()
             text.offset.x,
             text.offset.y,
             text.scale,
-            text.color.r,
-            text.color.g,
-            text.color.b
+            colorR,
+            colorG,
+            colorB
         )
+    end
+    
+    -- ✅ NEW: Display editor mode indicator
+    if editorMode then
+        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
 end
 
