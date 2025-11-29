@@ -81,7 +81,7 @@ local lastKnownAttackAP = 0       -- NEW
 -- TURN UI (top-right gauge) -------------------------------------
 local turnEnemyID   = 0
 local turnPlayerID  = 0
-local lastTurnPhase    = -1          -- 0 = player, 1 = enemy
+local lastTurnPhase    = ""          -- "Player" or "Enemy"
 local turnUIOffsetX    = 0.65
 local turnUIOffsetY    = 0.38
 local turnUIScaleX     = 0.28
@@ -461,7 +461,7 @@ function OnInit()
     ----------------------------------------------------------------
     -- NEW: TURN UI (top-right)
     ----------------------------------------------------------------
-    local phase = GetCurrentTurn() or 0   -- 0 = Player, 1 = Enemy
+    local phase = GetCurrentTurn() or "Player"   -- "Player" or "Enemy"
     lastTurnPhase = phase
 
     local turnX = camX + turnUIOffsetX
@@ -483,7 +483,7 @@ function OnInit()
         4
     )
 
-    if phase == 0 then
+    if phase == "Player" then
         -- player turn
         SetSpriteVisibility(turnEnemyID,  false)
         SetSpriteVisibility(turnPlayerID, true)
@@ -746,10 +746,10 @@ function OnUpdate(dt)
         SetSpritePosition(swordIconID, camX + swordOffsetX, camY + swordOffsetY)
     end
 
-    -- Turn UI: follow camera + switch texture based on phase (0=Player, 1=Enemy)
+    -- Turn UI: follow camera + switch texture based on phase ("Player" or "Enemy")
     if turnEnemyID ~= 0 and turnPlayerID ~= 0 then
         local camX, camY, camZ = GetCameraPosition()
-        local phase = GetCurrentTurn() or 0
+        local phase = GetCurrentTurn() or "Player"
 
         local tx = camX + turnUIOffsetX
         local ty = camY + turnUIOffsetY
@@ -757,7 +757,7 @@ function OnUpdate(dt)
         SetSpritePosition(turnPlayerID, tx, ty)
 
         if phase ~= lastTurnPhase then
-            if phase == 0 then
+            if phase == "Player" then
                 -- Player turn: show player overlay
                 SetSpriteVisibility(turnEnemyID,  false)
                 SetSpriteVisibility(turnPlayerID, true)
