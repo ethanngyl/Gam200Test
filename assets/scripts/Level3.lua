@@ -108,9 +108,14 @@ function OnInit()
     SetCameraZoom(2.0)  -- Zoomed in closer to player (0.5-0.7 recommended for gameplay)
     Log("Camera initialized: pos(0,0,0), zoom=0.6 (closer view)")
 
-    -- Disable ImGui by default (can be toggled with F1)
-    DisableImGui()
-    Log("ImGui disabled by default - press F1 to toggle editor")
+
+    if IS_EDITOR_LOAD then
+        Log("Level loaded from Editor - Keeping ImGui ENABLED")
+    else
+        -- Disable ImGui by default (can be toggled with F1)
+        DisableImGui()
+        Log("Level loaded normally - ImGui disabled (Press F1 to toggle)")
+    end
 
     -- Set engine to playing state (required for physics/movement)
     SetEnginePlayState(false)  -- Start paused for initialization
