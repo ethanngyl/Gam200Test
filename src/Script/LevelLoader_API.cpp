@@ -194,7 +194,7 @@ namespace Framework {
         frameCounter++;
 
         LOG_INFO("LevelLoader", "DrawButtonText #%d this frame: '%s' (buttonID=%lld)",
-                 callsThisFrame, text, buttonID);
+            callsThisFrame, text, buttonID);
 
         UIButton* button = reinterpret_cast<UIButton*>(static_cast<intptr_t>(buttonID));
         if (!button) {
@@ -246,8 +246,14 @@ namespace Framework {
         float worldX = transform.position.x;
         float worldY = transform.position.y;
 
+        // ✅ FIX: Use the active camera (editorCamera or mainCamera) based on play state
+        // This fixes the issue where text moves with editorCamera but buttons don't
+        Camera& activeCamera = loader->coreEngine->IsPlaying()
+            ? loader->graphicsSystem->GetCamera()           // Playing: use mainCamera
+            : loader->graphicsSystem->GetEditorCamera();    // Editor: use editorCamera
+
         // Convert button center from world space to screen space
-        glm::mat4 viewProj = loader->graphicsSystem->GetCamera().GetViewProjectionMatrix();
+        glm::mat4 viewProj = activeCamera.GetViewProjectionMatrix();
         glm::vec4 clipSpace = viewProj * glm::vec4(worldX, worldY, 0.0f, 1.0f);
 
         float ndcX = clipSpace.x;
@@ -301,16 +307,16 @@ namespace Framework {
         if (debugCount++ % 60 == 0) {  // Print once per second
             LOG_INFO("LevelLoader", "========== DrawButtonText: '%s' ==========", text);
             LOG_INFO("LevelLoader", "  Editor: %s | FBO: %u",
-                     editorEnabled ? "ENABLED" : "DISABLED",
-                     editorEnabled ? imgui->GetViewportFBO() : 0);
+                editorEnabled ? "ENABLED" : "DISABLED",
+                editorEnabled ? imgui->GetViewportFBO() : 0);
             LOG_INFO("LevelLoader", "  Viewport: %dx%d", fbWidth, fbHeight);
             LOG_INFO("LevelLoader", "  World pos: (%.2f, %.2f)", worldX, worldY);
             LOG_INFO("LevelLoader", "  Screen: (%.2f, %.2f)", screenX, screenY);
             LOG_INFO("LevelLoader", "  Final: (%.2f, %.2f) [SNAPPED TO BUTTON]", centeredX, centeredY);
             LOG_INFO("LevelLoader", "  Scale: base=%.2f viewport=%.2f final=%.2f",
-                     scale, viewportScale, finalScale);
+                scale, viewportScale, finalScale);
             LOG_INFO("LevelLoader", "  Offsets: raw=(%.2f, %.2f) scaled=(%.2f, %.2f)",
-                     offsetX, offsetY, scaledOffsetX, scaledOffsetY);
+                offsetX, offsetY, scaledOffsetX, scaledOffsetY);
             LOG_INFO("LevelLoader", "========================================");
         }
         // ========================================
@@ -558,13 +564,14 @@ namespace Framework {
 
         Vector2D startPos(startX, startY);
         Vector2D spacing(spacingX, spacingY);
-		Vector2D tileSize(spacingX, spacingY); // Assuming tile size equals spacing
+        Vector2D tileSize(spacingX, spacingY); // Assuming tile size equals spacing
 
-        bool success = TileMapLevelLoader::LoadLevel(jsonPath, spawner, em, startPos, spacing,tileSize);
+        bool success = TileMapLevelLoader::LoadLevel(jsonPath, spawner, em, startPos, spacing, tileSize);
 
         if (success) {
             LOG_INFO("LevelLoader", "TileMap loaded successfully from: %s", jsonPath);
-        } else {
+        }
+        else {
             LOG_ERROR("LevelLoader", "Failed to load TileMap from: %s", jsonPath);
         }
 
@@ -623,7 +630,7 @@ namespace Framework {
         }
 
         LOG_INFO("LevelLoader", "Spawned sprite '%s' at (%.2f, %.2f) size (%.2f, %.2f), layer=%d, rotation=%.1f°, ID=%u",
-                 texture, x, y, width, height, layer, rotation, entity.GetID());
+            texture, x, y, width, height, layer, rotation, entity.GetID());
 
         // Return entity ID as integer
         lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
@@ -658,7 +665,7 @@ namespace Framework {
         static int logThrottle = 0;
         if (logThrottle++ % 60 == 0) {  // Log once per second
             LOG_INFO("LevelLoader", "SetSpriteColor: Entity %lld -> tint(%.2f, %.2f, %.2f, %.2f)",
-                     entityID, r, g, b, a);
+                entityID, r, g, b, a);
         }
 
         return 0;
@@ -735,7 +742,8 @@ namespace Framework {
         if (entity.IsValid()) {
             em->DestroyEntity(entity);
             LOG_INFO("LevelLoader", "Destroyed entity ID=%lld", entityID);
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "DestroyEntity: Invalid entity (ID=%lld)", entityID);
         }
 
@@ -1253,7 +1261,7 @@ namespace Framework {
         int x = static_cast<int>(luaL_checknumber(L, 1));
         int y = static_cast<int>(luaL_checknumber(L, 2));
 
-        Framework::GridCoord coord{x, y};
+        Framework::GridCoord coord{ x, y };
         bool valid = Framework::InBounds(coord);
 
         lua_pushboolean(L, valid);
@@ -1269,7 +1277,7 @@ namespace Framework {
         int x = static_cast<int>(luaL_checknumber(L, 1));
         int y = static_cast<int>(luaL_checknumber(L, 2));
 
-        Framework::GridCoord coord{x, y};
+        Framework::GridCoord coord{ x, y };
         bool walkable = Framework::IsWalkable(coord);
 
         lua_pushboolean(L, walkable);
@@ -1305,11 +1313,11 @@ namespace Framework {
 
         if (currentTileOpt.has_value()) {
             // Clear old occupancy
-            Framework::SetOccupant(*currentTileOpt, Framework::Entity{Framework::INVALID_ENTITY});
+            Framework::SetOccupant(*currentTileOpt, Framework::Entity{ Framework::INVALID_ENTITY });
         }
 
         // Move to new position
-        Framework::GridCoord newCoord{x, y};
+        Framework::GridCoord newCoord{ x, y };
         transform.position = Framework::TileToWorld(newCoord);
         Framework::SetOccupant(newCoord, player);
 
@@ -1592,11 +1600,11 @@ namespace Framework {
         // Get current position to clear occupancy
         auto currentTileOpt = Framework::WorldToTile(transform.position);
         if (currentTileOpt.has_value()) {
-            Framework::SetOccupant(*currentTileOpt, Framework::Entity{Framework::INVALID_ENTITY});
+            Framework::SetOccupant(*currentTileOpt, Framework::Entity{ Framework::INVALID_ENTITY });
         }
 
         // Move to new position
-        Framework::GridCoord newCoord{x, y};
+        Framework::GridCoord newCoord{ x, y };
         transform.position = Framework::TileToWorld(newCoord);
         Framework::SetOccupant(newCoord, entity);
 
@@ -1701,8 +1709,8 @@ namespace Framework {
         int goalX = static_cast<int>(luaL_checknumber(L, 3));
         int goalY = static_cast<int>(luaL_checknumber(L, 4));
 
-        Framework::GridCoord start{startX, startY};
-        Framework::GridCoord goal{goalX, goalY};
+        Framework::GridCoord start{ startX, startY };
+        Framework::GridCoord goal{ goalX, goalY };
 
         // Get grid instance
         const auto& grid = Framework::GetGrid();
