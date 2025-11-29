@@ -118,7 +118,7 @@ function OnInit()
     end
 
     -- Set engine to playing state (required for physics/movement)
-    SetEnginePlayState(false)  -- Start paused for initialization
+    SetEnginePlayState(true)  -- Game level should be in playing state
 
     -- Load the tilemap from JSON
     -- Parameters: LoadTileMap(jsonPath, startX, startY, spacingX, spacingY)
@@ -523,15 +523,19 @@ function OnUpdate(dt)
 
     -- === GAME LOGIC BELOW (only runs when NOT paused) ===
 
-    -- Toggle ImGui editor with F1
+    -- ✅ MODIFIED: F1 toggles editor mode (same as MainMenuLevel)
     if IsKeyDown("F1") then
         if editorToggleCooldown <= 0 then
-            local newState = ToggleEditor()
-            if newState then
-                Log("EDITOR ON")
+            ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
+            
+            if IsEditorMode() then
+                SetEnginePlayState(false)
+                Log("EDITOR MODE ON - Camera unlocked")
             else
-                Log("EDITOR OFF")
+                SetEnginePlayState(true)
+                Log("EDITOR MODE OFF - Camera locked")
             end
+            
             editorToggleCooldown = 0.3
         end
     end
@@ -875,6 +879,11 @@ function OnDraw()
     -- ImGui is disabled for debugging
     -- PauseSystem drawing is disabled
     PauseMenu.Draw()
+    
+    -- ✅ NEW: Display editor mode indicator (same as MainMenuLevel)
+    if IsEditorMode() then
+        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
+    end
 end
 
 -- ============================================================================
