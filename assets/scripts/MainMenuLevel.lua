@@ -23,6 +23,8 @@ local editorToggleCooldown = 0
 local backgroundSpriteID = 0  -- Store background sprite entity ID
 local logoSpriteID = 0        -- Store logo sprite entity ID
 local cornerSpriteIDs = {}    -- Store corner sprite entity IDs  
+local pendingState = nil
+local pendingTimer = 0.0
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -199,9 +201,13 @@ function OnPlayButtonClicked()
         return
     end
     
+    PlaySound("button", false, 1)
+    pendingState = "TUTORIAL"
+    pendingTimer = 0.15  -- Delay before transitioning
+
     Log("PLAY button clicked!")
     Log("Transitioning to TUTORIAL...")
-    SetNextGameState("TUTORIAL")
+    --SetNextGameState("TUTORIAL")
 end
 
 function OnExitButtonClicked()
@@ -210,10 +216,14 @@ function OnExitButtonClicked()
         Log("Button disabled in editor mode")
         return
     end
+
+    PlaySound("button", false, 1)
+    pendingState = "GS_QUIT"
+    pendingTimer = 0.15  -- Delay before transitioning
     
     Log("EXIT button clicked!")
     Log("Quitting game...")
-    SetNextGameState("GS_QUIT")
+   -- SetNextGameState("GS_QUIT")
 end
 
 -- ============================================================================
@@ -239,6 +249,14 @@ function OnUpdate(dt)
             end
             
             editorToggleCooldown = 0.3
+        end
+    end
+
+    if pendingState ~= nil then
+        pendingTimer = pendingTimer - dt
+        if pendingTimer <= 0 then
+            SetNextGameState(pendingState)
+            pendingState = nil
         end
     end
     
@@ -325,6 +343,8 @@ function OnDestroy()
     buttonIDs = {}
     config = nil
     initialized = false
+    pendingState = nil
+    pendingTimer = 0.0
     backgroundSpriteID = 0
     logoSpriteID = 0
     cornerSpriteIDs = {}

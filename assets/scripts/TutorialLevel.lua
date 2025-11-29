@@ -11,6 +11,8 @@ local backgroundSpriteID = 0
 local scrollOverlayID = 0
 local overlaySprites = {}
 local cornerSpriteIDs = {}
+local pendingState = nil
+local pendingTimer = 0.0
 
 function OnInit()
     Log("Tutorial Level Script Initialized (All Buttons Version)")
@@ -155,10 +157,14 @@ function OnNextButtonClicked()
         Log("Button disabled in editor mode")
         return
     end
+
+    PlaySound("button", false, 1)
+    pendingState = "Level_select"
+    pendingTimer = 0.15
     
     Log("NEXT button clicked!")
     Log("Transitioning to Level Select...")
-    SetNextGameState("Level_select")
+    --SetNextGameState("Level_select")
 end
 
 function OnUpdate(dt)
@@ -184,6 +190,14 @@ function OnUpdate(dt)
     
     if editorToggleCooldown > 0 then
         editorToggleCooldown = editorToggleCooldown - dt
+    end
+
+    if pendingState ~= nil then
+        pendingTimer = pendingTimer - dt
+        if pendingTimer <= 0 then
+            SetNextGameState(pendingState)
+            pendingState = nil
+        end
     end
     
     if IsKeyDown("Escape") then
@@ -261,6 +275,8 @@ function OnDestroy()
     backgroundSpriteID = 0
     overlaySprites = {}
     cornerSpriteIDs = {}
+    pendingState = nil
+    pendingTimer = 0.0
 
     Log("Tutorial cleanup complete")
 end
