@@ -427,11 +427,13 @@ namespace Framework {
         // Game API - Enemy/Entity
         lua_register(L, "FindPlayer", LevelLoader::Lua_FindPlayer);
         lua_register(L, "GetEnemyAP", LevelLoader::Lua_GetEnemyAP);
+        lua_register(L, "RefillEnemyAP", LevelLoader::Lua_RefillEnemyAP);
         lua_register(L, "GetEntityGridPosition", LevelLoader::Lua_GetEntityGridPosition);
         lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", LevelLoader::Lua_FindPathToTarget);
+        lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
 
         // Game API - Audio
         lua_register(L, "PlaySound", LevelLoader::Lua_PlaySound);

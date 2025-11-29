@@ -206,6 +206,7 @@ namespace Framework {
 
         // Enemy/Entity API
         static int Lua_GetEnemyAP(lua_State* L);
+        static int Lua_RefillEnemyAP(lua_State* L);
         static int Lua_GetEntityGridPosition(lua_State* L);
         static int Lua_MoveEntityToTile(lua_State* L);
         static int Lua_ConsumeEnemyAP(lua_State* L);

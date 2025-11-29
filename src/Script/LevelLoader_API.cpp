@@ -1627,6 +1627,7 @@ namespace Framework {
 
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) {
+            LOG_WARN("LevelLoader", "HasChestAtTile: No EntityManager");
             lua_pushboolean(L, false);
             return 1;
         }
@@ -1637,6 +1638,10 @@ namespace Framework {
         bool hasChest = false;
         if (tileEntity.IsValid() && em->HasComponent<Chest>(tileEntity)) {
             hasChest = true;
+            LOG_INFO("LevelLoader", "HasChestAtTile(%d, %d): Found chest at entity %u", x, y, tileEntity.GetID());
+        } else {
+            LOG_INFO("LevelLoader", "HasChestAtTile(%d, %d): No chest (entity valid=%d)",
+                     x, y, tileEntity.IsValid());
         }
 
         lua_pushboolean(L, hasChest);
@@ -1707,13 +1712,7 @@ namespace Framework {
      * Usage: local ap = GetEnemyAP(enemyID)
      */
     int LevelLoader::Lua_GetEnemyAP(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) {
-            lua_pushnumber(L, 0);
-            return 1;
-        }
-
-        auto* em = loader->coreEngine->GetEntityManager();
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) {
             lua_pushnumber(L, 0);
             return 1;
@@ -1730,6 +1729,27 @@ namespace Framework {
         auto& ap = em->GetComponent<AP>(entity);
         lua_pushnumber(L, ap.actionPoints);
         return 1;
+    }
+
+    /**
+     * @brief Refill enemy AP to maximum
+     * Lua usage: RefillEnemyAP(entityID)
+     * @param entityID The enemy entity ID
+     */
+    int LevelLoader::Lua_RefillEnemyAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (entity.IsValid() && em->HasComponent<AP>(entity)) {
+            auto& ap = em->GetComponent<AP>(entity);
+            ap.actionPoints = ap.maxActionPoints;
+            LOG_INFO("LevelLoader", "RefillEnemyAP: Enemy %u AP refilled to %d", entity.GetID(), ap.actionPoints);
+        }
+
+        return 0;
     }
 
     /**
