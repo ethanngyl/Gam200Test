@@ -300,7 +300,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         local entityID = SpawnSprite(
-            "assets/UI/AP_Empty.png",
+            "assets/UI/MovP_Black.png",
             xPos,
             yPos,
             indicatorSize,
@@ -323,7 +323,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         local entityID = SpawnSprite(
-            "assets/UI/AP_Crystal.png",
+            "assets/UI/MovP.png",
             xPos,
             yPos,
             indicatorSize,
@@ -583,12 +583,6 @@ function OnUpdate(dt)
         editorToggleCooldown = editorToggleCooldown - dt
     end
 
-    -- Check for return to main menu (KEY_5)
-    if IsKeyDown("5") then
-        Log("KEY_5 pressed - returning to main menu")
-        SetNextGameState("mainMenu")
-    end
-
     -- ========================================================================
     -- PERFORMANCE: Cache camera position ONCE per frame
     -- ========================================================================
@@ -677,7 +671,7 @@ function OnUpdate(dt)
                     local yPos = camY + screenOffsetY
 
                     local entityID = SpawnSprite(
-                        "assets/UI/AP_Crystal.png",
+                        "assets/UI/MovP.png",
                         xPos,
                         yPos,
                         indicatorSize,
