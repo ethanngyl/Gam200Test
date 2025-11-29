@@ -3275,59 +3275,24 @@ namespace Framework {
             }
 
             if (ImGui::BeginMenu("Editor")) {
-                if (!CORE->IsPlaying()) {
-                    if (ImGui::MenuItem("Play")) {
-                        if (!SaveLevelToTxt(defaultLevelPath)) {
-                            std::cerr << "[ImGuiError] Could not create default setting" << defaultLevelPath << "\n";
-                        }
-                        else {
-                            CORE->SetPlaying(true);
-                            if (auto* gfx = CORE->GetGraphicsSystem())
-                            {
-                                if (entityManager)
-                                {
-                                    Framework::Entity player{};
-                                    for (auto e : entityManager->GetAllEntities())
-                                    {
-                                        if (entityManager->HasComponent<Framework::CircleCollider>(e))
-                                        {
-                                            auto& c = entityManager->GetComponent<Framework::CircleCollider>(e);
-                                            if (c.radius > 0.12f && c.radius < 0.18f)
-                                            {
-                                                player = e;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    if (player.IsValid())
-                                    {
-                                        gfx->SetFollowTarget(player);
-                                    }
-                                }
-                            }
-                        }
+                if (CORE->IsEditorMode()) {
+                    // ✅ In editor mode: Show "PLAY" to exit editor
+                    if (ImGui::MenuItem("PLAY")) {
+                        // Exit editor mode
+                        CORE->SetEditorMode(false);
+
+                        // ✅ CRITICAL: Use RequestToggle() instead of Disable()
+                        // This schedules the disable for AFTER this frame completes
+                        this->RequestToggle();
+
+                        LOG_INFO("IMGUI", "PLAY clicked - Exiting editor mode");
                     }
                 }
                 else {
-                    if (ImGui::MenuItem("Stop")) {
-                        CORE->SetPlaying(false);
-                        if (auto gfx = CORE->GetGraphicsSystem()) {
-                            gfx->ClearFollowTarget();
-                            gfx->ResetEditorCamera();
-                        }
-                        if (!OpenLevelFromTxt(defaultLevelPath, true)) {
-                            if (!currentLevelPath.empty()) {
-                                OpenLevelFromTxt(currentLevelPath, true);
-                            }
-                            else {
-                                std::cerr << "[ImGuiError] Could not create default setting " << defaultLevelPath << "\n";
-                                OpenLevelFromTxt("assets/level1.txt", true);
-                            }
-                        }
-                        entityManager->ClearAllEntities();
-                        OpenLevelFromTxt(defaultLevelPath, true);
-                    }
+                    // Not in editor mode: Show hint
+                    ImGui::TextDisabled("Press F1 to enter editor mode");
                 }
+
                 ImGui::EndMenu();
             }
 
