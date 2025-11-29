@@ -18,6 +18,7 @@
 #include "Pathfinding.h"  // EnemyAI component
 #include "Turn.h"         // Turn system
 #include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
+#include "Grid/GridECS.h" // Grid system functions
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -1214,15 +1215,12 @@ namespace Framework {
             return 2;
         }
 
-        // Find player
+        // Find player (has CircleCollider but NOT EnemyAI)
         Entity player = Framework::INVALID_ENTITY;
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Framework::GridCell>(e)) {
-                auto& cell = em->GetComponent<Framework::GridCell>(e);
-                if (cell.type == Framework::GridCellType::Player) {
-                    player = e;
-                    break;
-                }
+            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
             }
         }
 
@@ -1289,15 +1287,12 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        // Find player
+        // Find player (has CircleCollider but NOT EnemyAI)
         Entity player = Framework::INVALID_ENTITY;
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Framework::GridCell>(e)) {
-                auto& cell = em->GetComponent<Framework::GridCell>(e);
-                if (cell.type == Framework::GridCellType::Player) {
-                    player = e;
-                    break;
-                }
+            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
             }
         }
 
@@ -1365,15 +1360,12 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        // Find player
+        // Find player (has CircleCollider but NOT EnemyAI)
         Entity player = Framework::INVALID_ENTITY;
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Framework::GridCell>(e)) {
-                auto& cell = em->GetComponent<Framework::GridCell>(e);
-                if (cell.type == Framework::GridCellType::Player) {
-                    player = e;
-                    break;
-                }
+            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
             }
         }
 
@@ -1396,15 +1388,12 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        // Find player
+        // Find player (has CircleCollider but NOT EnemyAI)
         Entity player = Framework::INVALID_ENTITY;
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Framework::GridCell>(e)) {
-                auto& cell = em->GetComponent<Framework::GridCell>(e);
-                if (cell.type == Framework::GridCellType::Player) {
-                    player = e;
-                    break;
-                }
+            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
             }
         }
 
