@@ -51,7 +51,7 @@ function OnInit()
     DisableImGui()
 
     -- Set engine to editor mode (non-playing)
-    SetEnginePlayState(false)
+    SetEnginePlayState(true)
 
     -- ========================================================================
     -- CREATE BACKGROUND SPRITE
@@ -229,8 +229,12 @@ function OnUpdate(dt)
             ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
             
             if IsEditorMode() then
+                SetEnginePlayState(false)
+
                 Log("EDITOR MODE ON - Buttons disabled")
             else
+                SetEnginePlayState(true)
+
                 Log("EDITOR MODE OFF - Buttons enabled")
             end
             

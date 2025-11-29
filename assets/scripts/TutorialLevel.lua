@@ -30,7 +30,7 @@ function OnInit()
     SetCameraZoom(cam.zoom)
 
     DisableImGui()
-    SetEnginePlayState(false)
+    SetEnginePlayState(true)
 
     -- Create background
     local background = config.menu.background
@@ -169,8 +169,12 @@ function OnUpdate(dt)
             ToggleEditorMode()
             
             if IsEditorMode() then
+                SetEnginePlayState(false)
+
                 Log("EDITOR MODE ON - Buttons disabled")
             else
+                SetEnginePlayState(true)
+
                 Log("EDITOR MODE OFF - Buttons enabled")
             end
             
