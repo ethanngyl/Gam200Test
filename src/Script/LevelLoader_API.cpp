@@ -1510,6 +1510,52 @@ namespace Framework {
     }
 
     /**
+     * @brief Refill player AP to maximum
+     * Lua usage: RefillPlayerAP()
+     * Refills both movement AP and attack AP
+     */
+    int LevelLoader::Lua_RefillPlayerAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        // Find player (has CircleCollider but NOT EnemyAI)
+        Entity player = Framework::INVALID_ENTITY;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
+                player = e;
+                break;
+            }
+        }
+
+        if (player.GetID() != Framework::INVALID_ENTITY) {
+            // Refill movement AP
+            if (em->HasComponent<AP>(player)) {
+                auto& ap = em->GetComponent<AP>(player);
+                ap.actionPoints = ap.maxActionPoints;
+            }
+
+            // Refill attack AP
+            if (em->HasComponent<AttackAP>(player)) {
+                auto& aap = em->GetComponent<AttackAP>(player);
+                aap.points = aap.maxPoints;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Get current turn index
+     * Lua usage: local turnIndex = GetTurnIndex()
+     * @return Turn index (increments each time turn phase changes)
+     */
+    int LevelLoader::Lua_GetTurnIndex(lua_State* L) {
+        auto& turn = Turn();
+        lua_pushinteger(L, turn.turnIndex);
+        return 1;
+    }
+
+    /**
      * @brief Set player sprite flip X
      * @param flip true to flip, false for normal
      */
