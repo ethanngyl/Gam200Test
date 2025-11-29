@@ -16,7 +16,7 @@
       "sprite": "assets/Warrior/BackView/WarriorBackView.png",
       "group": "Idle",
       "direction": "Back",
-      "rows": 3,
+      "rows": 2,
       "columns": 2,
       "frameCount": 6,
       "frameTime": 0.55,
