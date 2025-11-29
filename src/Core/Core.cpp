@@ -545,10 +545,9 @@ namespace Framework
         // ====================================================================
         if (audioSystem) {
             if (isEditorMode) {
-                // ✅ Mute game audio in editor mode
                 audioSystem->SetMasterVolume(0.0f);
             }
-            else if (!isPaused && isPlaying) {
+            else {
                 // Restore audio when not in editor mode
                 audioSystem->SetMasterVolume(1.0f);
             }
