@@ -1197,4 +1197,549 @@ namespace Framework {
         return 1;
     }
 
+    // ========================================================================
+    // PLAYER GRID MOVEMENT API IMPLEMENTATIONS
+    // ========================================================================
+
+    /**
+     * @brief Get player's current grid position
+     * @return x, y (two numbers) or nil if failed
+     * Usage: local x, y = GetPlayerGridPosition()
+     */
+    int LevelLoader::Lua_GetPlayerGridPosition(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        // Find player
+        Entity player = Framework::INVALID_ENTITY;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Framework::GridCell>(e)) {
+                auto& cell = em->GetComponent<Framework::GridCell>(e);
+                if (cell.type == Framework::GridCellType::Player) {
+                    player = e;
+                    break;
+                }
+            }
+        }
+
+        if (player.GetID() == Framework::INVALID_ENTITY || !em->HasComponent<Transform>(player)) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        auto& transform = em->GetComponent<Transform>(player);
+        auto tileOpt = Framework::WorldToTile(transform.position);
+
+        if (!tileOpt.has_value()) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        lua_pushnumber(L, tileOpt->x);
+        lua_pushnumber(L, tileOpt->y);
+        return 2;
+    }
+
+    /**
+     * @brief Check if grid position is valid (in bounds)
+     * @param x, y Grid coordinates
+     * @return true if valid
+     */
+    int LevelLoader::Lua_IsValidGridPosition(lua_State* L) {
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{x, y};
+        bool valid = Framework::InBounds(coord);
+
+        lua_pushboolean(L, valid);
+        return 1;
+    }
+
+    /**
+     * @brief Check if tile is walkable
+     * @param x, y Grid coordinates
+     * @return true if walkable
+     */
+    int LevelLoader::Lua_IsWalkableTile(lua_State* L) {
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{x, y};
+        bool walkable = Framework::IsWalkable(coord);
+
+        lua_pushboolean(L, walkable);
+        return 1;
+    }
+
+    /**
+     * @brief Move player to grid tile
+     * @param x, y Grid coordinates
+     */
+    int LevelLoader::Lua_MovePlayerToTile(lua_State* L) {
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        // Find player
+        Entity player = Framework::INVALID_ENTITY;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Framework::GridCell>(e)) {
+                auto& cell = em->GetComponent<Framework::GridCell>(e);
+                if (cell.type == Framework::GridCellType::Player) {
+                    player = e;
+                    break;
+                }
+            }
+        }
+
+        if (player.GetID() == Framework::INVALID_ENTITY || !em->HasComponent<Transform>(player)) {
+            return 0;
+        }
+
+        auto& transform = em->GetComponent<Transform>(player);
+        auto currentTileOpt = Framework::WorldToTile(transform.position);
+
+        if (currentTileOpt.has_value()) {
+            // Clear old occupancy
+            Framework::SetOccupant(*currentTileOpt, Framework::Entity{Framework::INVALID_ENTITY});
+        }
+
+        // Move to new position
+        Framework::GridCoord newCoord{x, y};
+        transform.position = Framework::TileToWorld(newCoord);
+        Framework::SetOccupant(newCoord, player);
+
+        return 0;
+    }
+
+    /**
+     * @brief Show border outline around tile
+     * @param x, y Grid coordinates
+     * @param thickness Border thickness
+     * @param duration Duration in milliseconds
+     */
+    int LevelLoader::Lua_ShowTileBorder(lua_State* L) {
+        // int x = static_cast<int>(luaL_checknumber(L, 1));
+        // int y = static_cast<int>(luaL_checknumber(L, 2));
+        // float thickness = static_cast<float>(luaL_checknumber(L, 3));
+        // int duration = static_cast<int>(luaL_checknumber(L, 4));
+
+        // TODO: Implement visual border outline
+        // For now, this is a placeholder
+        return 0;
+    }
+
+    /**
+     * @brief Pulse tile animation
+     * @param x, y Grid coordinates
+     * @param scale Pulse scale multiplier
+     * @param duration Duration in milliseconds
+     */
+    int LevelLoader::Lua_PulseTile(lua_State* L) {
+        // int x = static_cast<int>(luaL_checknumber(L, 1));
+        // int y = static_cast<int>(luaL_checknumber(L, 2));
+        // float scale = static_cast<float>(luaL_checknumber(L, 3));
+        // int duration = static_cast<int>(luaL_checknumber(L, 4));
+
+        // TODO: Implement tile pulse animation
+        // For now, this is a placeholder
+        return 0;
+    }
+
+    /**
+     * @brief Consume player AP
+     * @param amount Amount of AP to consume
+     */
+    int LevelLoader::Lua_ConsumePlayerAP(lua_State* L) {
+        int amount = static_cast<int>(luaL_checknumber(L, 1));
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        // Find player
+        Entity player = Framework::INVALID_ENTITY;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Framework::GridCell>(e)) {
+                auto& cell = em->GetComponent<Framework::GridCell>(e);
+                if (cell.type == Framework::GridCellType::Player) {
+                    player = e;
+                    break;
+                }
+            }
+        }
+
+        if (player.GetID() != Framework::INVALID_ENTITY && em->HasComponent<AP>(player)) {
+            auto& ap = em->GetComponent<AP>(player);
+            ap.actionPoints -= amount;
+            if (ap.actionPoints < 0) ap.actionPoints = 0;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Set player sprite flip X
+     * @param flip true to flip, false for normal
+     */
+    int LevelLoader::Lua_SetPlayerFlipX(lua_State* L) {
+        bool flip = lua_toboolean(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        // Find player
+        Entity player = Framework::INVALID_ENTITY;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Framework::GridCell>(e)) {
+                auto& cell = em->GetComponent<Framework::GridCell>(e);
+                if (cell.type == Framework::GridCellType::Player) {
+                    player = e;
+                    break;
+                }
+            }
+        }
+
+        if (player.GetID() != Framework::INVALID_ENTITY && em->HasComponent<SpriteAnimation>(player)) {
+            auto& anim = em->GetComponent<SpriteAnimation>(player);
+            anim.flipX = flip;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Check if chest exists at tile
+     * @param x, y Grid coordinates
+     * @return true if chest exists
+     */
+    int LevelLoader::Lua_HasChestAtTile(lua_State* L) {
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const Framework::Grid& grid = Framework::GetGrid();
+        Entity tileEntity = grid.TileAt(x, y);
+
+        bool hasChest = false;
+        if (tileEntity.IsValid() && em->HasComponent<Chest>(tileEntity)) {
+            hasChest = true;
+        }
+
+        lua_pushboolean(L, hasChest);
+        return 1;
+    }
+
+    /**
+     * @brief Collect chest at tile
+     * @param x, y Grid coordinates
+     */
+    int LevelLoader::Lua_CollectChest(lua_State* L) {
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        const Framework::Grid& grid = Framework::GetGrid();
+        Entity tileEntity = grid.TileAt(x, y);
+
+        if (tileEntity.IsValid() && em->HasComponent<Chest>(tileEntity)) {
+            auto& chest = em->GetComponent<Chest>(tileEntity);
+            if (!chest.isCollected) {
+                chest.isCollected = true;
+                // TODO: Update visual representation
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Check if goal exists at tile
+     * @param x, y Grid coordinates
+     * @return true if goal exists
+     */
+    int LevelLoader::Lua_HasGoalAtTile(lua_State* L) {
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const Framework::Grid& grid = Framework::GetGrid();
+        Entity tileEntity = grid.TileAt(x, y);
+
+        bool hasGoal = false;
+        if (tileEntity.IsValid() && em->HasComponent<Goal>(tileEntity)) {
+            hasGoal = true;
+        }
+
+        lua_pushboolean(L, hasGoal);
+        return 1;
+    }
+
+    // ========================================================================
+    // ENEMY/ENTITY API IMPLEMENTATIONS
+    // ========================================================================
+
+    /**
+     * @brief Get entity's current AP (Action Points)
+     * @param entityID The entity ID
+     * @return AP value, or 0 if entity doesn't have AP component
+     *
+     * Usage: local ap = GetEnemyAP(enemyID)
+     */
+    int LevelLoader::Lua_GetEnemyAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushnumber(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushnumber(L, 0);
+            return 1;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<AP>(entity)) {
+            lua_pushnumber(L, 0);
+            return 1;
+        }
+
+        auto& ap = em->GetComponent<AP>(entity);
+        lua_pushnumber(L, ap.current);
+        return 1;
+    }
+
+    /**
+     * @brief Get entity's grid position
+     * @param entityID The entity ID
+     * @return x, y grid coordinates (or nil if invalid)
+     *
+     * Usage: local x, y = GetEntityGridPosition(entityID)
+     */
+    int LevelLoader::Lua_GetEntityGridPosition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<Transform>(entity)) {
+            return 0;
+        }
+
+        auto& transform = em->GetComponent<Transform>(entity);
+        auto tileOpt = Framework::WorldToTile(transform.position);
+
+        if (!tileOpt.has_value()) {
+            return 0;
+        }
+
+        lua_pushnumber(L, tileOpt->x);
+        lua_pushnumber(L, tileOpt->y);
+        return 2;
+    }
+
+    /**
+     * @brief Move entity to specified tile
+     * @param entityID The entity ID
+     * @param x Grid X coordinate
+     * @param y Grid Y coordinate
+     *
+     * Usage: MoveEntityToTile(enemyID, x, y)
+     */
+    int LevelLoader::Lua_MoveEntityToTile(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int x = static_cast<int>(luaL_checknumber(L, 2));
+        int y = static_cast<int>(luaL_checknumber(L, 3));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<Transform>(entity)) {
+            return 0;
+        }
+
+        auto& transform = em->GetComponent<Transform>(entity);
+
+        // Get current position to clear occupancy
+        auto currentTileOpt = Framework::WorldToTile(transform.position);
+        if (currentTileOpt.has_value()) {
+            Framework::SetOccupant(*currentTileOpt, Framework::Entity{Framework::INVALID_ENTITY});
+        }
+
+        // Move to new position
+        Framework::GridCoord newCoord{x, y};
+        transform.position = Framework::TileToWorld(newCoord);
+        Framework::SetOccupant(newCoord, entity);
+
+        return 0;
+    }
+
+    /**
+     * @brief Consume entity's AP
+     * @param entityID The entity ID
+     * @param amount Amount of AP to consume
+     *
+     * Usage: ConsumeEnemyAP(enemyID, 1)
+     */
+    int LevelLoader::Lua_ConsumeEnemyAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<AP>(entity)) {
+            return 0;
+        }
+
+        auto& ap = em->GetComponent<AP>(entity);
+        ap.current -= amount;
+        if (ap.current < 0) {
+            ap.current = 0;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Deal damage to entity
+     * @param entityID The entity ID
+     * @param amount Damage amount
+     *
+     * Usage: DamageEntity(targetID, 1)
+     */
+    int LevelLoader::Lua_DamageEntity(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<Health>(entity)) {
+            return 0;
+        }
+
+        auto& health = em->GetComponent<Health>(entity);
+        health.currentHealth -= amount;
+        if (health.currentHealth <= 0) {
+            health.currentHealth = 0;
+            health.isDead = true;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Find A* path from start to goal
+     * @param startX Start grid X
+     * @param startY Start grid Y
+     * @param goalX Goal grid X
+     * @param goalY Goal grid Y
+     * @return Table of path coordinates (array of {x=, y=} tables)
+     *
+     * Usage: local path = FindPathToTarget(startX, startY, goalX, goalY)
+     *        for i, node in ipairs(path) do
+     *            print(node.x, node.y)
+     *        end
+     */
+    int LevelLoader::Lua_FindPathToTarget(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_newtable(L);  // Return empty table
+            return 1;
+        }
+
+        int startX = static_cast<int>(luaL_checknumber(L, 1));
+        int startY = static_cast<int>(luaL_checknumber(L, 2));
+        int goalX = static_cast<int>(luaL_checknumber(L, 3));
+        int goalY = static_cast<int>(luaL_checknumber(L, 4));
+
+        Framework::GridCoord start{startX, startY};
+        Framework::GridCoord goal{goalX, goalY};
+
+        // Get grid instance
+        const auto& grid = Framework::GetGrid();
+
+        // Call PathfindingSystem::FindPath
+        // NOTE: This requires making FindPath public or accessible
+        std::vector<Framework::GridCoord> path = Framework::PathfindingSystem::FindPath(start, goal, grid);
+
+        // Convert path to Lua table
+        lua_newtable(L);
+        for (size_t i = 0; i < path.size(); ++i) {
+            lua_pushnumber(L, i + 1);  // Lua arrays are 1-indexed
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, path[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, path[i].y);
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
 } // namespace Framework
