@@ -1117,13 +1117,14 @@ namespace Framework {
         currentBoundShader = material->shader;
 
         // DEBUG: Log UV rect being passed to shader (ALWAYS LOG FOR DEBUGGING)
-        static int uvRectLogCounter = 0;
-        bool shouldLogUVRect = (++uvRectLogCounter % 60 == 0);
-        if (shouldLogUVRect) {
-            LOG_INFO("UV_SHADER", "BindMaterial: material='%s' handle=%u uUVRect=(%.3f,%.3f,%.3f,%.3f)",
-                material->name.c_str(), materialHandle.GetID(),
-                material->u0, material->v0, material->u1, material->v1);
-        }
+        // Debug logging disabled
+        // static int uvRectLogCounter = 0;
+        // bool shouldLogUVRect = (++uvRectLogCounter % 60 == 0);
+        // if (shouldLogUVRect) {
+        //     LOG_INFO("UV_SHADER", "BindMaterial: material='%s' handle=%u uUVRect=(%.3f,%.3f,%.3f,%.3f)",
+        //         material->name.c_str(), materialHandle.GetID(),
+        //         material->u0, material->v0, material->u1, material->v1);
+        // }
 
         glUniform4f(glGetUniformLocation(shader->GetID(), "uUVRect"),
             material->u0, material->v0, material->u1, material->v1);
