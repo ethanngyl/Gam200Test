@@ -506,10 +506,14 @@ namespace Framework
 
             // Update all logic systems
             for (unsigned i = 0; i < Systems.size(); ++i) {
+                // Skip rendering/input/animation systems (updated separately)
+                // Skip PlayerController and PathfindingSystem (using Lua scripts instead)
                 if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
                     dynamic_cast<ImGuiSystem*>(Systems[i]) ||
                     dynamic_cast<InputSystem*>(Systems[i]) ||
-                    dynamic_cast<AnimationSystem*>(Systems[i])) {
+                    dynamic_cast<AnimationSystem*>(Systems[i]) ||
+                    dynamic_cast<PlayerControllerSystem*>(Systems[i]) ||
+                    dynamic_cast<PathfindingSystem*>(Systems[i])) {
                     continue;
                 }
                 Systems[i]->Update(dt);
