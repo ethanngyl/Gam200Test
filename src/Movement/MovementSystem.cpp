@@ -88,6 +88,11 @@ namespace Framework
                 if (entityManager->HasComponent<Transform>(entity) &&
                     entityManager->HasComponent<Movement>(entity))
                 {
+                    // Skip entities controlled by Lua scripts
+                    if (entityManager->HasComponent<ScriptComponent>(entity)) {
+                        continue;
+                    }
+
                     auto& transform = entityManager->GetComponent<Transform>(entity);
                     auto& movement = entityManager->GetComponent<Movement>(entity);
 
