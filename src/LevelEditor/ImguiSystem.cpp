@@ -1450,8 +1450,70 @@ namespace Framework {
 
                         auto& script = entityManager->GetComponent<ScriptComponent>(entity);
 
-                        // Display script path
-                        ImGui::Text("Path: %s", script.scriptPath.c_str());
+                        // Editable script path
+                        char pathBuffer[512];
+                        strncpy(pathBuffer, script.scriptPath.c_str(), sizeof(pathBuffer) - 1);
+                        pathBuffer[sizeof(pathBuffer) - 1] = '\0';
+
+                        if (ImGui::InputText("Script Path", pathBuffer, sizeof(pathBuffer))) {
+                            script.scriptPath = pathBuffer;
+                        }
+
+                        // File browser button
+                        ImGui::SameLine();
+                        if (ImGui::Button("Browse##BrowseScript")) {
+                            ImGui::OpenPopup("SelectScriptPopup");
+                        }
+
+                        // Script file browser popup
+                        if (ImGui::BeginPopup("SelectScriptPopup")) {
+                            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.3f, 1.0f), "Select Lua Script");
+                            ImGui::Separator();
+
+                            // List available .lua files from assets/scripts/
+                            static std::vector<std::string> scriptFiles;
+                            static bool scriptsLoaded = false;
+
+                            if (!scriptsLoaded) {
+                                scriptsLoaded = true;
+                                scriptFiles.clear();
+
+                                // Scan assets/scripts/ directory for .lua files
+                                std::string scriptsDir = "assets/scripts/";
+                                if (std::filesystem::exists(scriptsDir)) {
+                                    for (const auto& entry : std::filesystem::directory_iterator(scriptsDir)) {
+                                        if (entry.is_regular_file() && entry.path().extension() == ".lua") {
+                                            scriptFiles.push_back(entry.path().string());
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Display script files
+                            for (const auto& scriptPath : scriptFiles) {
+                                std::string scriptName = std::filesystem::path(scriptPath).filename().string();
+                                if (ImGui::Selectable(scriptName.c_str())) {
+                                    script.scriptPath = scriptPath;
+                                    ImGui::CloseCurrentPopup();
+                                }
+
+                                // Show tooltip with full path
+                                if (ImGui::IsItemHovered()) {
+                                    ImGui::SetTooltip("%s", scriptPath.c_str());
+                                }
+                            }
+
+                            ImGui::Separator();
+                            if (ImGui::Button("Refresh List")) {
+                                scriptsLoaded = false;
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::Button("Cancel")) {
+                                ImGui::CloseCurrentPopup();
+                            }
+
+                            ImGui::EndPopup();
+                        }
 
                         // Extract and show script name
                         std::string scriptName = std::filesystem::path(script.scriptPath).stem().string();
