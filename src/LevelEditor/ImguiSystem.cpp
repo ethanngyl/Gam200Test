@@ -2365,8 +2365,23 @@ namespace Framework {
         ImGui::Separator();
 
         //FIX: All buttons have unique ##IDs
-        if (ImGui::Button("Spawn Player##Btn1", ImVec2(-1, 0))) {
-            entitySpawner->SpawnPlayer(Vector2D(spawnX-0.1, spawnY));
+        if (ImGui::Button("Spawn Blank Entity##Btn1", ImVec2(-1, 0))) {
+            if (entityManager) {
+                // 1. Create a raw entity
+                Framework::Entity blankEntity = entityManager->CreateEntity();
+
+                // 2. Add a Transform component so it uses the slider coordinates
+                // Note: We assume AddComponent adds it. We then retrieve it to set data.
+                if (!entityManager->HasComponent<Framework::Transform>(blankEntity)) {
+                    entityManager->AddComponent<Framework::Transform>(blankEntity);
+                }
+
+                auto& transform = entityManager->GetComponent<Framework::Transform>(blankEntity);
+                transform.position = Vector2D(spawnX, spawnY);
+                transform.scale = Vector2D(1.0f, 1.0f); // Default scale so it's visible if you add a sprite later
+
+                std::cout << "[Spawner] Spawned Blank Entity ID: " << blankEntity.GetID() << "\n";
+            }
         }
 
         if (ImGui::Button("Spawn Enemy##Btn2", ImVec2(-1, 0))) {
