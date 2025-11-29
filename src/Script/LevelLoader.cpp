@@ -451,6 +451,9 @@ namespace Framework {
         if (strcmp(stateName, "Level_select") == 0) {
             next = Level_select;
         }
+        if (strcmp(stateName, "TUTORIAL") == 0) {
+            next = TUTORIAL;
+        }
         else if (strcmp(stateName, "LEVEL_1") == 0) {
             next = LEVEL_1;
         }

@@ -200,8 +200,8 @@ function OnPlayButtonClicked()
     end
     
     Log("PLAY button clicked!")
-    Log("Transitioning to Level Select...")
-    SetNextGameState("Level_select")
+    Log("Transitioning to TUTORIAL...")
+    SetNextGameState("TUTORIAL")
 end
 
 function OnExitButtonClicked()
