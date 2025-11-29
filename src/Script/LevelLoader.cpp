@@ -171,10 +171,10 @@ namespace Framework {
         bool hasDestroy = HasLuaFunction("OnDestroy");
 
         LOG_INFO("LevelLoader", "  Functions found:");
-        LOG_INFO("LevelLoader", "    OnInit: %s", hasInit ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnUpdate: %s", hasUpdate ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnDraw: %s", hasDraw ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnDestroy: %s", hasDestroy ? "✓" : "✗");
+        LOG_INFO("LevelLoader", "    OnInit: %s", hasInit ? "Y" : "X");
+        LOG_INFO("LevelLoader", "    OnUpdate: %s", hasUpdate ? "Y" : "X");
+        LOG_INFO("LevelLoader", "    OnDraw: %s", hasDraw ? "Y" : "X");
+        LOG_INFO("LevelLoader", "    OnDestroy: %s", hasDestroy ? "Y" : "X");
 
         if (!hasInit) {
             LOG_WARN("LevelLoader", "Level missing OnInit() function!");
@@ -481,9 +481,6 @@ namespace Framework {
         if (strcmp(stateName, "TUTORIAL") == 0) {
             next = TUTORIAL;
         }
-        else if (strcmp(stateName, "LEVEL_1") == 0) {
-            next = LEVEL_1;
-        }
         else if (strcmp(stateName, "LEVEL_2") == 0) {
             next = LEVEL_2;
         }
@@ -549,7 +546,7 @@ namespace Framework {
         }
 
         animSys->LoadAnimationConfig(configPath);
-        LOG_INFO("LUA_ANIM", "✅ Animation config loaded from '%s'", configPath);
+        LOG_INFO("LUA_ANIM", " Animation config loaded from '%s'", configPath);
 
         return 0;
     }
@@ -594,7 +591,7 @@ namespace Framework {
         // Add SpriteAnimation component if not present
         if (!em->HasComponent<SpriteAnimation>(player)) {
             em->AddComponent<SpriteAnimation>(player);
-            LOG_INFO("LOAD_ANIM", "✅ Added SpriteAnimation component");
+            LOG_INFO("LOAD_ANIM", " Added SpriteAnimation component");
         } else {
             LOG_INFO("LOAD_ANIM", "Player already has SpriteAnimation");
         }
@@ -609,7 +606,7 @@ namespace Framework {
 
         if (animSys && gfx) {
             animSys->LoadAnimation(player, anim, gfx, animName);
-            LOG_INFO("LOAD_ANIM", "✅ Animation loaded:");
+            LOG_INFO("LOAD_ANIM", " Animation loaded:");
             LOG_INFO("LOAD_ANIM", "  - Name: '%s'", anim.animName.c_str());
             LOG_INFO("LOAD_ANIM", "  - Grid: %dx%d", anim.rows, anim.columns);
             LOG_INFO("LOAD_ANIM", "  - Frames: %d", anim.frameCount);

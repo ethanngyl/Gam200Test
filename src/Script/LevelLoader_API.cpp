@@ -1,7 +1,24 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           LevelLoader_API.cpp (Compatible with InputSystem)
- Modifications:  Uses Framework::KeyCode enum from Input.h
+ File:          LevelLoader_API.cpp (Compatible with InputSystem)
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2025-10-31
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+  Level Loader Lua API Implementation
+
+ Overview:
+    The LevelLoader_API file serves as the bridge between the C++ engine core
+    and the Lua scripting layer. It defines a suite of static functions
+    registered to Lua, allowing scripts to control Audio, UI, Input, Entities,
+    and Grid-based gameplay logic.
+
+  Design notes:
+     - Uses standard Lua C API (lua_State*) for all function bindings
+     - Validates engine system pointers (Audio, UI, Graphics) before execution
+     - Handles coordinate space conversions (World to Screen, World to Grid)
+     - Integrates deeply with ECS to manipulate components (AP, Transform, Health)
 ===============================================================================
 */
 
@@ -35,6 +52,16 @@ namespace Framework {
     // AUDIO API
     // ========================================================================
 
+    /**
+     * @brief Plays a sound via the AudioSystem from Lua
+     * @params soundName (string), loop (boolean)
+     * @return boolean (true if successful)
+     *
+     * Implementation details:
+     * - Retrieves the AudioSystem from the LevelLoader instance
+     * - Validates arguments using luaL_checkstring and lua_toboolean
+     * - Delegates the actual playback to audioSystem->PlaySound
+     */
     int LevelLoader::Lua_PlaySound(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->audioSystem) {
@@ -52,6 +79,14 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Stops a specific sound (Currently not supported)
+     * @params soundName (string)
+     *
+     * Implementation details:
+     * - This function logs a warning because the underlying AudioSystem
+     * currently only supports stopping ALL sounds, not individual ones.
+     */
     int LevelLoader::Lua_StopSound(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->audioSystem) return 0;
@@ -62,6 +97,12 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Stops all currently playing sounds
+     *
+     * Implementation details:
+     * - Calls audioSystem->StopAllSounds() to halt the master channel group
+     */
     int LevelLoader::Lua_StopAllSounds(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->audioSystem) return 0;
@@ -70,6 +111,10 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Updates the AudioSystem (usually called once per frame)
+     * @params dt (number) - Delta time
+     */
     int LevelLoader::Lua_UpdateAudio(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->audioSystem) return 0;
@@ -79,6 +124,10 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Sets the master volume for the game
+     * @params volume (number) - 0.0 to 1.0
+     */
     int LevelLoader::Lua_SetMasterVolume(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->audioSystem) return 0;
@@ -92,6 +141,18 @@ namespace Framework {
     // UI BUTTON API
     // ========================================================================
 
+    /**
+     * @brief Creates a clickable UI button with a callback function
+     * @params texture, posX, posY, scaleX, scaleY, callbackName, layer(optional)
+     * @return integer (Pointer address of the button, or 0 on failure)
+     *
+     * Implementation details:
+     * - Parses position and scale parameters from Lua
+     * - Wraps the Lua callback function string in a C++ lambda
+     * - The lambda captures the Lua State pointer to execute the global Lua function when clicked
+     * - Calls UISystem::CreateButton, passing the layer explicitly
+     * - Returns the button memory address as an ID for future reference
+     */
     int LevelLoader::Lua_CreateButton(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->uiSystem) {
@@ -162,6 +223,18 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Renders text centered on a specific button
+     * @params buttonID, font, text, offX, offY, scale, r, g, b
+     *
+     * Implementation details:
+     * - Validates that the button entity still exists in the ECS to prevent crashes
+     * - Determines render target size (Window size vs ImGui Viewport)
+     * - Performs World-to-Screen coordinate conversion using the active camera's ViewProjection matrix
+     * - Calculates responsive scaling logic (Reference resolution: 1920x1080)
+     * - Centers the text on the projected screen coordinates
+     * - Temporarily binds the correct Framebuffer Object (FBO) if rendering inside the Editor
+     */
     int LevelLoader::Lua_DrawButtonText(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->graphicsSystem || !loader->coreEngine) return 0;
@@ -192,10 +265,6 @@ namespace Framework {
         }
         callsThisFrame++;
         frameCounter++;
-
-        // Performance: Disabled per-call logging
-        // LOG_INFO("LevelLoader", "DrawButtonText #%d this frame: '%s' (buttonID=%lld)",
-        //          callsThisFrame, text, buttonID);
 
         UIButton* button = reinterpret_cast<UIButton*>(static_cast<intptr_t>(buttonID));
         if (!button) {
@@ -247,7 +316,7 @@ namespace Framework {
         float worldX = transform.position.x;
         float worldY = transform.position.y;
 
-        // ✅ FIX: Use the active camera (editorCamera or mainCamera) based on play state
+        //  FIX: Use the active camera (editorCamera or mainCamera) based on play state
         // This fixes the issue where text moves with editorCamera but buttons don't
         Camera& activeCamera = loader->coreEngine->IsPlaying()
             ? loader->graphicsSystem->GetCamera()           // Playing: use mainCamera
@@ -380,6 +449,16 @@ namespace Framework {
     // INPUT API (FIXED for InputSystem)
     // ========================================================================
 
+    /**
+     * @brief Checks if a specific key is currently held down
+     * @params keyName (string) - "W", "Space", "Enter", etc.
+     * @return boolean
+     *
+     * Implementation details:
+     * - Maps Lua string arguments to C++ KeyCode enums
+     * - Queries the core InputSystem for key state
+     * - Supports alphabets, arrows, numbers, function keys, and special keys
+     */
     int LevelLoader::Lua_IsKeyDown(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -457,6 +536,14 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Toggles the ImGui editor overlay
+     * @return boolean (Will the editor be enabled after this call?)
+     *
+     * Implementation details:
+     * - Pauses the game automatically when editor is opened
+     * - Calls ImguiSystem::RequestToggle()
+     */
     int LevelLoader::Lua_ToggleEditor(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -482,8 +569,6 @@ namespace Framework {
         }
         return 1;
     }
-
-
 
     int LevelLoader::Lua_IsEditorEnabled(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
@@ -525,6 +610,7 @@ namespace Framework {
     // ========================================================================
 
     int LevelLoader::Lua_TogglePause(lua_State* L) {
+        (void)L;
         GlobalPause::Toggle();
         LOG_INFO("LevelLoader", "Pause toggled - Now %s", GlobalPause::IsPaused() ? "PAUSED" : "UNPAUSED");
         return 0;
@@ -540,6 +626,15 @@ namespace Framework {
     // TILEMAP LOADING API
     // ========================================================================
 
+    /**
+     * @brief Loads a tilemap level from JSON data
+     * @params jsonPath, startX, startY, spacingX, spacingY
+     * @return boolean
+     *
+     * Implementation details:
+     * - Uses TileMapLevelLoader::LoadLevel to instantiate entities
+     * - Configures grid spacing and start position for the level
+     */
     int LevelLoader::Lua_LoadTileMap(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -584,6 +679,15 @@ namespace Framework {
     // AP INDICATOR / ENTITY MANAGEMENT API
     // ========================================================================
 
+    /**
+     * @brief Spawns a new sprite entity
+     * @params texture, x, y, width, height, layer, rotation
+     * @return integer (Entity ID)
+     *
+     * Implementation details:
+     * - Calls Spawner::SpawnSprite
+     * - Manually updates MeshRenderer layer and Transform rotation after spawn
+     */
     int LevelLoader::Lua_SpawnSprite(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -751,6 +855,14 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Gets current and max Action Points (AP) for the player
+     * @return currentAP (int), maxAP (int)
+     *
+     * Implementation details:
+     * - Scans for an entity with CircleCollider but NO EnemyAI component
+     * - Returns 0,0 if player or AP component is missing
+     */
     int LevelLoader::Lua_GetPlayerAP(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -853,10 +965,10 @@ namespace Framework {
     }
 
     /**
- * @brief Finds the player entity
- * Lua usage: local playerID = FindPlayer()
- * @return Player entity ID or 0 if not found
- */
+     * @brief Finds the player entity
+     * Lua usage: local playerID = FindPlayer()
+     * @return Player entity ID or 0 if not found
+     */
     int LevelLoader::Lua_FindPlayer(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -974,10 +1086,10 @@ namespace Framework {
     }
 
     /**
- * @brief Gets player's chest collection progress
- * Lua usage: local collected, required = GetChestProgress()
- * @return collected count, required count
- */
+     * @brief Gets player's chest collection progress
+     * Lua usage: local collected, required = GetChestProgress()
+     * @return collected count, required count
+     */
     int LevelLoader::Lua_GetChestProgress(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -1077,7 +1189,7 @@ namespace Framework {
         if (!loader || !loader->coreEngine) return 0;
 
         lua_Integer entityID = luaL_checkinteger(L, 1);
-        int visibleInt = lua_toboolean(L, 2);  // 0/1 → bool
+        int visibleInt = lua_toboolean(L, 2);  // 0/1  bool
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) return 0;
@@ -1094,6 +1206,7 @@ namespace Framework {
 
     // Toggle editor mode
     int LevelLoader::lua_ToggleEditorMode(lua_State* L) {
+        (void)L;
         if (CORE) {
             CORE->ToggleEditorMode();
             if (CORE->GetImGuiSystem()) {
@@ -1215,6 +1328,8 @@ namespace Framework {
      * @brief Get player's current grid position
      * @return x, y (two numbers) or nil if failed
      * Usage: local x, y = GetPlayerGridPosition()
+     * * Implementation details:
+     * - Uses Framework::WorldToTile to convert Transform position
      */
     int LevelLoader::Lua_GetPlayerGridPosition(lua_State* L) {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
@@ -1288,6 +1403,11 @@ namespace Framework {
     /**
      * @brief Move player to grid tile
      * @param x, y Grid coordinates
+     *
+     * Implementation details:
+     * - Clears occupancy at old tile
+     * - Sets new transform position via Framework::TileToWorld
+     * - Updates occupancy at new tile
      */
     int LevelLoader::Lua_MovePlayerToTile(lua_State* L) {
         int x = static_cast<int>(luaL_checknumber(L, 1));
@@ -1332,6 +1452,7 @@ namespace Framework {
      * @param duration Duration in milliseconds
      */
     int LevelLoader::Lua_ShowTileBorder(lua_State* L) {
+        (void)L;
         // int x = static_cast<int>(luaL_checknumber(L, 1));
         // int y = static_cast<int>(luaL_checknumber(L, 2));
         // float thickness = static_cast<float>(luaL_checknumber(L, 3));
@@ -1349,6 +1470,7 @@ namespace Framework {
      * @param duration Duration in milliseconds
      */
     int LevelLoader::Lua_PulseTile(lua_State* L) {
+        (void)L;
         // int x = static_cast<int>(luaL_checknumber(L, 1));
         // int y = static_cast<int>(luaL_checknumber(L, 2));
         // float scale = static_cast<float>(luaL_checknumber(L, 3));
@@ -1694,9 +1816,12 @@ namespace Framework {
      * @return Table of path coordinates (array of {x=, y=} tables)
      *
      * Usage: local path = FindPathToTarget(startX, startY, goalX, goalY)
-     *        for i, node in ipairs(path) do
-     *            print(node.x, node.y)
-     *        end
+     * for i, node in ipairs(path) do
+     * print(node.x, node.y)
+     * end
+     * * Implementation details:
+     * - Wrapper for Framework::PathfindingSystem::FindPath
+     * - Converts std::vector of grid coords to a Lua table
      */
     int LevelLoader::Lua_FindPathToTarget(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);

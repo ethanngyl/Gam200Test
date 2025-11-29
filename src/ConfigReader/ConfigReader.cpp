@@ -311,9 +311,6 @@ int ConfigReader::ParseStateName(const std::string& stateName, int defaultState)
     if (lowerName == "mainmenu" || lowerName == "main_menu") {
         return mainMenu;
     }
-    else if (lowerName == "level1" || lowerName == "level_1") {
-        return LEVEL_1;
-    }
     else if (lowerName == "level2" || lowerName == "level_2") {
         return LEVEL_2;
     }

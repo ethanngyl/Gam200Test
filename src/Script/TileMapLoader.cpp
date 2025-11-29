@@ -1,3 +1,29 @@
+/*
+===============================================================================
+ File:          TileMapLoader.cpp
+ Author:        JOSH ONG
+ Co-authors:    SIM KAH YAN
+ Email:         josh.o@digipen.edu, kahyan.sim@digipen.edu
+ Date:          2025-10-31
+ Contribution:  JOSH ONG 95% SIM KAH YAN 5%
+ ------------------------------------------------------------------------------
+  Tile Map Loader Implementation
+
+ Overview:
+    The TileMapLevelLoader is responsible for parsing custom JSON-formatted
+    level files and generating the runtime game world. It bridges the gap
+    between data (text files) and the ECS (Entities/Components).
+
+  Design notes:
+     - Uses a custom state-machine parser for JSON (std::ifstream) to avoid
+       heavy dependencies for simple level data.
+     - Performs a two-pass load:
+       1. Parse definitions and map layout strings
+       2. Instantiate entities and configure the Grid system
+     - Handles Z-layering automatically based on "solid" properties.
+===============================================================================
+*/
+
 #include "Precompiled.h"
 #include "LevelLoader.h"
 #include <fstream>
@@ -11,7 +37,15 @@
 
 namespace Framework {
 
-    // Simple helper to strip quotes and whitespace
+    /**
+     * @brief Helper utility to sanitize string inputs from file
+     * @param s Raw string from file
+     * @return std::string Cleaned string
+     *
+     * Implementation details:
+     * - Removes double quotes, commas, tabs, and spaces
+     * - Used to parse JSON keys and values manually
+     */
     std::string TileMapLevelLoader::CleanString(std::string s) {
         // Remove trailing commas, quotes, and whitespace
         s.erase(std::remove_if(s.begin(), s.end(), [](char c) {
@@ -20,6 +54,29 @@ namespace Framework {
         return s;
     }
 
+    /**
+     * @brief Main loading function to parse file and spawn world entities
+     * @param filepath Path to the JSON level file
+     * @param spawner Factory for creating entities
+     * @param em Entity Manager for component assignment
+     * @param startPos World coordinates for the top-left of the grid
+     * @param spacing Width/Height of each cell
+     * @param tileSize Visual size of the tiles
+     * @return true if level loaded successfully
+     *
+     * Implementation details:
+     * - Phase 1: File Parsing
+     * - reads line-by-line using a state machine (inTileDefinitions vs inTiles)
+     * - Maps characters (e.g., 'W', 'G') to TileDef structs
+     * - Phase 2: Grid Configuration
+     * - Calculates world bounds based on row/col count and tile size
+     * - Initializes the global Grid singleton
+     * - Phase 3: Entity Spawning
+     * - Iterates through the parsed string map
+     * - Spawns base tiles (ground/walls) via EntitySpawner
+     * - Spawns special occupants (Players, Chests, Goals)
+     * - Sets render layers: Solid tiles render above ground to prevent Z-fighting
+     */
     bool TileMapLevelLoader::LoadLevel(const std::string& filepath,
         EntitySpawner* spawner,
         EntityManager* em,
@@ -233,10 +290,10 @@ namespace Framework {
                             em->AddComponent<AP>(specialEntity, 3); // 3 AP
                         }
 
-                        if (em->HasComponent<Renderable>(specialEntity)) {             
-                            auto& rend = em->GetComponent<Renderable>(specialEntity);   
-                            rend.visible = true;                                        
-                            rend.layer = RenderLayers::Enemies;                       
+                        if (em->HasComponent<Renderable>(specialEntity)) {
+                            auto& rend = em->GetComponent<Renderable>(specialEntity);
+                            rend.visible = true;
+                            rend.layer = RenderLayers::Enemies;
                         }
 
                         LOG_INFO("LevelLoader", "Spawned Enemy at (%d, %d)", c, r);
