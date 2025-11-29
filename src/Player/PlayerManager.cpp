@@ -517,7 +517,8 @@ namespace Framework {
         }
 
         callCounter++;
-        LOG_INFO("PlayerManager", ">>> HandleArrowKeyMovement called (call #%d this frame)", callCounter);
+        // Performance: Disabled per-call logging
+        // LOG_INFO("PlayerManager", ">>> HandleArrowKeyMovement called (call #%d this frame)", callCounter);
 
         // FIX: Check cooldown to prevent double AP consumption from same key press
         if (arrowMoveCooldown > 0.0f) {
