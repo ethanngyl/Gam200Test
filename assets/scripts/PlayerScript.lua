@@ -24,6 +24,7 @@
 local entity = nil
 local cooldown = 0.0
 local gridMovementEnabled = true
+local lastTurnIndex = -1  -- Track turn changes for AP regeneration
 
 -- Animation configuration
 local ANIMATIONS = {
@@ -50,6 +51,14 @@ end
     @param dt Delta time in seconds
 --]]
 function OnUpdate(dt)
+    -- Check for new turn and refill AP
+    local currentTurnIndex = GetTurnIndex()
+    if currentTurnIndex > lastTurnIndex then
+        RefillPlayerAP()
+        lastTurnIndex = currentTurnIndex
+        Log("New turn started! AP refilled. Turn index: " .. tostring(currentTurnIndex))
+    end
+
     -- Update cooldown timer
     if cooldown > 0.0 then
         cooldown = cooldown - dt
