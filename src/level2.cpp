@@ -14,11 +14,17 @@
   Modified: 2025-11-27
   - Disabled pause in editor mode (pause only works when playing)
 
+  Modified: 2025-11-29
+  - Added F1 editor mode toggle support
+  - F1 enters/exits editor mode (toggles ImGui and freezes game)
+  - PLAY button in ImGui also exits editor mode
+
   Changes:
   1. level2_Draw() - Reset TextRenderer screen size before drawing
   2. level2_Free() - Restore TextRenderer screen size when leaving Level2
   3. Added pause menu support
   4. Pause is now disabled when engine->IsPlaying() == false (editor mode)
+  5. F1 key toggles editor mode with cooldown
 ===============================================================================
 */
 
@@ -43,6 +49,11 @@ using Framework::Vector2D;
 namespace {
     bool g_wasPPressed = false;
     PauseMenuSimple::PauseMenuState g_pauseMenuState;
+
+    // ✅ NEW: F1 Editor Mode State
+    bool g_wasF1Pressed = false;
+    float g_editorToggleCooldown = 0.0f;
+    const float EDITOR_TOGGLE_COOLDOWN = 0.3f;  // 300ms cooldown
 }
 
 
@@ -53,6 +64,10 @@ void level2_Load()
     // Reset pause state
     g_wasPPressed = false;
     g_pauseMenuState = PauseMenuSimple::PauseMenuState();
+
+    // ✅ NEW: Reset editor mode state
+    g_wasF1Pressed = false;
+    g_editorToggleCooldown = 0.0f;
 }
 
 void level2_Initialize()
@@ -118,6 +133,40 @@ void level2_Update()
 
     auto* input = engine->GetInputSystem();
     if (!input) return;
+
+    // ========================================================================
+    // F1 Key Toggle Editor Mode (NEW)
+    // ========================================================================
+    // Update cooldown timer
+    if (g_editorToggleCooldown > 0.0f) {
+        g_editorToggleCooldown -= Framework::Time::FIXED_DT;
+    }
+
+    bool isF1Pressed = input->IsKeyDown(Framework::KEY_F1);
+
+    if (isF1Pressed && !g_wasF1Pressed && g_editorToggleCooldown <= 0.0f) {
+        // Toggle editor mode
+        engine->ToggleEditorMode();
+
+        auto* imguiSystem = engine->GetImGuiSystem();
+        if (imguiSystem) {
+            if (engine->IsEditorMode()) {
+                // Entering editor mode
+                imguiSystem->Enable();
+                LOG_INFO("LEVEL2", "F1 pressed - EDITOR MODE ON (game frozen)");
+            }
+            else {
+                // Exiting editor mode
+                imguiSystem->Disable();
+                LOG_INFO("LEVEL2", "F1 pressed - EDITOR MODE OFF (game resumed)");
+            }
+        }
+
+        // Set cooldown to prevent rapid toggling
+        g_editorToggleCooldown = EDITOR_TOGGLE_COOLDOWN;
+    }
+
+    g_wasF1Pressed = isF1Pressed;
 
     // ========================================================================
     // P Key Toggle Pause (DISABLED IN EDITOR MODE)
@@ -278,6 +327,11 @@ void level2_Draw()
     // ========================================================================
 
     // ========================================================================
+    // ✅ NEW: Display "EDITOR MODE" indicator when in editor mode
+    // ========================================================================
+
+
+    // ========================================================================
     // Pause Menu Overlay (Only if paused AND in playing mode)
     // ========================================================================
     if (engine->IsPlaying() && GlobalPause::IsPaused()) {
@@ -292,6 +346,16 @@ void level2_Free()
     // Reset pause state
     g_wasPPressed = false;
     GlobalPause::SetPaused(false);  // Ensure pause is cleared when leaving level
+
+    // ✅ NEW: Reset editor mode state
+    g_wasF1Pressed = false;
+    g_editorToggleCooldown = 0.0f;
+
+    // ✅ NEW: Exit editor mode when leaving level
+    if (engine && engine->IsEditorMode()) {
+        engine->SetEditorMode(false);
+        LOG_INFO("LEVEL2", "Exited editor mode");
+    }
 
     if (engine && engine->GetImGuiSystem()) {
         engine->GetImGuiSystem()->Disable();
@@ -334,4 +398,3 @@ void level2_Unload()
 {
     LOG_INFO("LEVEL2", "=== Level2 Unload ===");
 }
-
