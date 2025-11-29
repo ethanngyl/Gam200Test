@@ -9,6 +9,7 @@
 -- - Player-controlled character with grid movement
 -- - Disabled ImGui/UI for debugging AMD GPU flickering issue
 -- - Minimal entities: player + map tiles only
+-- - Audio support from AudioConfig.json
 -- ============================================================================
 
 -- ============================================================================
@@ -27,6 +28,7 @@ local kStartX = -0.6  -- Grid start position X
 local kStartY = -0.4  -- Grid start position Y
 local kSpacingX = 0.1 -- Tile spacing X
 local kSpacingY = 0.1 -- Tile spacing Y
+local audioConfig = nil  -- Store audio configuration from JSON
 
 -- AP Indicator sprites (camera-relative UI) - Two-layer system
 local apIndicatorsEmpty = {}   -- Background layer: always visible (5 empty crystals)
@@ -68,7 +70,7 @@ local chestUIOffsetY = -0.42  -- Adjusted for zoom 0.6
 local lastKnownChests = 0
 local totalChestsRequired = 0
 
--- NEW: Attack AP Indicator sprites (separate bar near sword icon)
+-- Attack AP Indicator sprites (separate bar near sword icon)
 local atkIndicatorsEmpty = {}     -- NEW
 local atkIndicatorsFilled = {}    -- NEW
 local maxAttackAP = 3             -- NEW (will be overridden by component) 
@@ -103,6 +105,39 @@ function OnInit()
     Log("LEVEL 3: Tactical Grid Level")
     Log("========================================")
     PauseMenu.Init()
+    
+    -- ========================================================================
+    -- LOAD AUDIO CONFIGURATION
+    -- ========================================================================
+    Log("Loading audio configuration from AudioConfig.json...")
+    audioConfig = LoadJSON("assets/JSON/AudioConfig.json")
+    
+    if not audioConfig then
+        Log("ERROR: Failed to load audio configuration!")
+    else
+        Log("✓ Audio configuration loaded successfully")
+        
+        -- Start background music for in-game
+        -- Using "igbgm" (In Game BGM) from AudioConfig.json
+        local bgmSound = nil
+        if audioConfig.sounds then
+            for i, sound in ipairs(audioConfig.sounds) do
+                if sound.name == "igbgm" then
+                    bgmSound = sound
+                    break
+                end
+            end
+        end
+        
+        if bgmSound then
+            Log("Starting background music: " .. bgmSound.name)
+            PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
+            Log("✓ Background music started: " .. bgmSound.filepath)
+        else
+            Log("WARNING: Background music 'igbgm' not found in AudioConfig.json")
+        end
+    end
+    
     -- Set camera to default position
     SetCameraPosition(0.0, 0.0, 0.0)
     SetCameraZoom(2.0)  -- Zoomed in closer to player (0.5-0.7 recommended for gameplay)
@@ -136,7 +171,6 @@ function OnInit()
 
     Log("✓ Tilemap loaded successfully")
     Log("  Player and map tiles spawned from JSON")
-    Log("  All enemies disabled for debugging")
 
     -- Note: Player entity is automatically spawned by the TileMapLoader
     -- PlayerController is configured in C++ (SetPlayerEntity, SetGridMovementEnabled)
@@ -149,6 +183,8 @@ function OnInit()
     -- Load player animation (after player is spawned by TileMapLoader)
     LoadPlayerAnimation("Idle_front")
     Log("✓ Player animation 'Idle_front' loaded")
+
+    
 
     -- ========================================================================
     -- CONFIGURE ENEMIES 
@@ -507,6 +543,9 @@ function OnUpdate(dt)
     -- Note: Player controller and pathfinding updates happen in C++ systems
     -- Camera follow is set in C++ (SetFollowTarget on player entity)
     -- Turn system ticks in C++
+
+    -- Update audio system
+    UpdateAudio(dt)
 
     -- Handle pause menu input (ALWAYS runs, even when paused)
     PauseMenu.Update(dt)
@@ -881,6 +920,10 @@ function OnDestroy()
     Log("Level 3 cleanup...")
     Log("========================================")
 
+    -- Stop all sounds
+    StopAllSounds()
+    Log("✓ All audio stopped")
+
     -- Destroy AP indicator entities (both layers)
     for i = 1, #apIndicatorsEmpty do
         local entityID = apIndicatorsEmpty[i]
@@ -968,7 +1011,11 @@ function OnDestroy()
     -- happen in C++ level3_Free() function
     -- This is called by GameStateManager when transitioning levels
 
+    -- Reset state
+    buttonIDs = {}
+    config = nil
     initialized = false
+    audioConfig = nil
 
     Log("Level 3 cleanup complete")
 end

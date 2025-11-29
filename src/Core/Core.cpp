@@ -220,6 +220,7 @@ namespace Framework
 
         // Wire AudioSystem
         playerController->SetAudioSystem(audioSystem);  // Fix: PlayerController needs AudioSystem!
+        pathfindingSystem->SetAudioSystem(audioSystem);  // Enemy walking sounds
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
