@@ -604,6 +604,14 @@ namespace Framework {
         if (inputSystem->IsKeyPressed(KEY_UP)) {
             stepY = 1;  // Move up (increase Y)
             animationName = "Idle_back";
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("walk1", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
             // PERFORMANCE FIX: Removed movement logging
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
             // std::cout << "[Arrow] Moving UP\n";
@@ -611,6 +619,14 @@ namespace Framework {
         else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
             stepY = -1; // Move down (decrease Y)
             animationName = "Idle_front";
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("walk1", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
             // std::cout << "[Arrow] Moving DOWN\n";
         }
@@ -620,6 +636,14 @@ namespace Framework {
             flipAnimation = true;  // Flip sprite to face left
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
             // std::cout << "[Arrow] Moving LEFT\n";
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("walk1", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
         }
         else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
             stepX = 1;  // Move right (increase X)
@@ -627,6 +651,14 @@ namespace Framework {
             flipAnimation = false;  // Normal orientation for right
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
             // std::cout << "[Arrow] Moving RIGHT\n";
+            if (audioSystem) {
+                std::cout << "[DEBUG] AudioSystem exists\n";
+                audioSystem->PlaySound("walk1", false);
+                std::cout << "[DEBUG] PlaySound called\n";
+            }
+            else {
+                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
+            }
         }
         else {
             return; // No movement input
@@ -1045,16 +1077,30 @@ namespace Framework {
 			ClearAttackPreview();
             return;
         }
+
+        // ========================================================================
+        // PLAY ATTACK SOUND EFFECT
+        // ========================================================================
+        if (audioSystem) {
+            audioSystem->PlaySound("dmgb", false);  // Play damage sound
+            LOG_INFO("PlayerAttack", "Playing attack sound 'dmgb'");
+        }
+
         // Deal damage (flat 1 for now)
         auto& hp = entityManager->GetComponent<Health>(target);
 		hp.TakeDamage(1);
         aap.points--; // consume attack AP
 
+        // ========================================================================
+        // PLAY TAKE DAMAGE SOUND EFFECT (Enemy gets hit)
+        // ========================================================================
+        if (audioSystem && !hp.isDead) {
+            audioSystem->PlaySound("takedmg", false);  // Play take damage sound
+            LOG_INFO("PlayerAttack", "Playing take damage sound 'takedmg'");
+        }
+
         LOG_INFO("PlayerAttack", "Hit enemy %u for 1. Enemy HP now %d/%d. AttackAP=%d/%d",
             target.GetID(), hp.currentHealth, hp.maxHealth, aap.points, aap.maxPoints);
-
-        // Optional SFX
-        //if (audioSystem) audioSystem->PlaySound("hit", false);
 
         if (hp.isDead) {
             LOG_INFO("PlayerAttack", "Enemy %u defeated!", target.GetID());

@@ -16,6 +16,7 @@
   2. Recalculate path if target moved or path is exhausted
   3. Move enemies along their current path based on movement timer
   4. Handle tile occupancy to prevent overlap
+  5. Play audio feedback for enemy movement
 
   The A* implementation uses a priority queue for efficient node selection
   and Manhattan distance as the heuristic. Paths are cached and only
@@ -32,6 +33,7 @@
 #include "ECSEntityManager.h"
 #include "MathABS.h"
 #include "Turn.h"
+#include "Audio/AudioSystem.h"
 #include <queue>
 #include <algorithm>
 
@@ -60,6 +62,7 @@ namespace Framework {
      * - Moves enemies along their path based on timer
      * - Updates tile occupancy to prevent overlaps
      * - Stops movement when enemy is adjacent to target
+     * - Plays walking sound effects when enemies move
      */
     void PathfindingSystem::Update(float dt) {
         if (!entityManager) return;
@@ -199,6 +202,13 @@ namespace Framework {
         // Check if adjacent to target (can attack)
         int distance = Heuristic(enemyTile, targetTile);
         if (distance == 1) {
+            // ========================================================================
+            // PLAY ENEMY ATTACK SOUND EFFECT
+            // ========================================================================
+            if (audioSystem) {
+                audioSystem->PlaySound("dmgb", false);  // Play damage sound
+            }
+
             // ATTACK!
             stats.actionPoints--;
             ai.moveTimer = ai.moveDelay;
@@ -210,6 +220,14 @@ namespace Framework {
             if (entityManager->HasComponent<Health>(ai.targetEntity)) {
                 auto& targetHp = entityManager->GetComponent<Health>(ai.targetEntity);
 				targetHp.TakeDamage(1); // Flat 1 damage for now
+
+                // ========================================================================
+                // PLAY TAKE DAMAGE SOUND EFFECT (Player gets hit)
+                // ========================================================================
+                if (audioSystem && !targetHp.isDead) {
+                    audioSystem->PlaySound("takedmg", false);  // Play take damage sound
+                }
+
                 LOG_INFO("Combat", "Target hit! HP: %d", targetHp.currentHealth);
 
                 if (targetHp.currentHealth <= 0) {                                              // NEW
@@ -279,6 +297,13 @@ namespace Framework {
             // Move enemy
             transform.position = TileToWorld(nextTile);
             SetOccupant(nextTile, currentEnemy);
+
+            // ========================================================================
+            // PLAY WALKING SOUND EFFECT
+            // ========================================================================
+            if (audioSystem) {
+                audioSystem->PlaySound("walk1", false);
+            }
 
             // Update state
             ai.moveTimer = ai.moveDelay;

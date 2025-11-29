@@ -20,6 +20,7 @@
   - Grid-based movement with tile occupancy management
   - EnemyAI component stores per-enemy pathfinding state
   - Spawning enemies at strategic positions (furthest from player)
+  - Audio feedback for enemy movement
 
   The system operates on entities with both EnemyAI and Transform components,
   using a timer-based movement system for smooth, turn-based navigation.
@@ -38,6 +39,7 @@ namespace Framework {
 
     class EntityManager;
     class EntitySpawner;
+    class AudioSystem;  // Forward declaration
 
     /**
     * @brief A* pathfinding node for grid-based pathfinding
@@ -80,7 +82,7 @@ namespace Framework {
     */
     class PathfindingSystem : public EngineSystem {
     public:
-        PathfindingSystem() : entityManager(nullptr) {}
+        PathfindingSystem() : entityManager(nullptr), audioSystem(nullptr) {}
         ~PathfindingSystem() = default;
 
         void Initialize() override;
@@ -88,6 +90,7 @@ namespace Framework {
         void SendEngineMessage(Message* msg) override;
 
         void SetEntityManager(EntityManager* em) { entityManager = em; }
+        void SetAudioSystem(AudioSystem* audio) { audioSystem = audio; }
 
         /**
         * @brief Spawn an enemy at the furthest walkable tile from player
@@ -99,6 +102,7 @@ namespace Framework {
 
     private:
         EntityManager* entityManager;
+        AudioSystem* audioSystem;  // Audio system for enemy walking sounds
 
         /**
         * @brief Calculate A* path from start to goal
