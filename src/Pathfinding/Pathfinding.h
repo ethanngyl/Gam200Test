@@ -100,9 +100,7 @@ namespace Framework {
             EntityManager* entityManager,
             EntitySpawner* entitySpawner);
 
-    private:
-        EntityManager* entityManager;
-        AudioSystem* audioSystem;  // Audio system for enemy walking sounds
+
 
         /**
         * @brief Calculate A* path from start to goal
@@ -112,9 +110,10 @@ namespace Framework {
             const GridCoord& goal,
             const Grid& grid);
 
+
     private:
         EntityManager* entityManager;
-
+        AudioSystem* audioSystem;  // Audio system for enemy walking sounds
         /**
         * @brief Calculate Manhattan distance heuristic
         */
