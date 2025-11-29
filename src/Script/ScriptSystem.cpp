@@ -282,7 +282,8 @@ namespace Framework {
         if (!script.hasOnInit || !script.L) return;
 
         lua_getglobal(script.L, "OnInit");
-        if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+        lua_pushinteger(script.L, entity.GetID());  // Push entity ID as argument
+        if (lua_pcall(script.L, 1, 0, 0) != LUA_OK) {  // Changed from 0 to 1 argument
             const char* error = lua_tostring(script.L, -1);
             LOG_ERROR("ScriptSystem", "OnInit error for entity %u: %s",
                 entity.GetID(), error);
