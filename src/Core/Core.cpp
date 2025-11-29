@@ -492,13 +492,15 @@ namespace Framework
                 scriptSystem->Update(dt);
             }
 
-            if (playerController) {
-                playerController->Update(dt);
-            }
+            // DISABLED: C++ PlayerController - using Lua PlayerScript.lua instead
+            // if (playerController) {
+            //     playerController->Update(dt);
+            // }
 
-            if (pathfindingSystem) {
-                pathfindingSystem->Update(dt);
-            }
+            // DISABLED: C++ PathfindingSystem - using Lua EnemyScript.lua instead
+            // if (pathfindingSystem) {
+            //     pathfindingSystem->Update(dt);
+            // }
 
             // Animation
             if (animationSystem) {
