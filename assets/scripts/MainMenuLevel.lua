@@ -1,5 +1,5 @@
 ﻿-- ============================================================================
--- MainMenuLevel.lua (JSON Configuration Version)
+-- MainMenuLevel.lua (JSON Configuration Version with Editor Mode)
 -- Complete Main Menu Level Script with JSON-driven configuration
 -- ============================================================================
 -- This version loads all UI configuration from a JSON file, making it
@@ -8,6 +8,7 @@
 -- Author:  GE YONGQI
 -- Email:   yongqi.ge@digipen.edu
 -- Date:    2025-11-13
+-- Modified: 2025-11-28 - Added F1 Editor Mode support
 -- ============================================================================
 
 
@@ -22,6 +23,7 @@ local editorToggleCooldown = 0
 local backgroundSpriteID = 0  -- Store background sprite entity ID
 local logoSpriteID = 0        -- Store logo sprite entity ID
 local cornerSpriteIDs = {}    -- Store corner sprite entity IDs  
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -49,17 +51,16 @@ function OnInit()
     DisableImGui()
 
     -- Set engine to editor mode (non-playing)
-    SetEnginePlayState(true)
+    SetEnginePlayState(false)
 
     -- ========================================================================
     -- CREATE BACKGROUND SPRITE
     -- ========================================================================
-    -- Load background configuration (use default if not in JSON)
     local background = config.menu.background or {
         texture = "assets/Menu/WoodBackground.png",
         position = { x = 0.0, y = 0.0 },
         scale = { x = 2.0, y = 2.0 },
-        layer = -10  -- Behind everything
+        layer = -10
     }
 
     Log("Creating background sprite: " .. background.texture)
@@ -77,7 +78,6 @@ function OnInit()
     else
         Log("✗ WARNING: Failed to create background sprite")
     end
-    -- ========================================================================
 
     -- ========================================================================
     -- CREATE LOGO SPRITE
@@ -103,7 +103,6 @@ function OnInit()
     else
         Log("No logo configuration found in JSON")
     end
-    -- ========================================================================
 
     -- ========================================================================
     -- CREATE CORNER SPRITES
@@ -119,7 +118,7 @@ function OnInit()
                 corner.scale.x,
                 corner.scale.y,
                 corner.layer,
-                corner.rotation  -- Rotation in degrees
+                corner.rotation
             )
 
             if spriteID > 0 then
@@ -132,7 +131,6 @@ function OnInit()
 
         Log("Corner decorations complete!")
     end
-    -- ========================================================================
 
     -- Start menu background music from JSON config
     local music = config.menu.music
@@ -147,7 +145,7 @@ function OnInit()
     
     initialized = true
     Log("MainMenu initialization complete")
-    Log("Press F1 to toggle editor")
+    Log("Press F1 to toggle editor mode")
 end
 
 -- ============================================================================
@@ -162,11 +160,9 @@ function CreateButtonsFromConfig()
     
     Log("Creating " .. #config.menu.buttons .. " buttons from config...")
     
-    -- Iterate through buttons array in JSON
     for i, button in ipairs(config.menu.buttons) do
         Log("Creating button: " .. button.id)
 
-        -- Create button using config data (layer is optional, defaults to 10)
         local layer = button.layer or 10
         local buttonID = CreateButton(
             button.texture,
@@ -174,12 +170,11 @@ function CreateButtonsFromConfig()
             button.position.y,
             button.scale.x,
             button.scale.y,
-            button.callback,  -- Callback function name from JSON
-            layer             -- Layer for rendering order
+            button.callback,
+            layer
         )
         
         if buttonID > 0 then
-            -- Store button ID with its config
             buttonIDs[button.id] = {
                 id = buttonID,
                 config = button
@@ -198,24 +193,26 @@ end
 -- ============================================================================
 
 function OnPlayButtonClicked()
+    -- ✅ NEW: Check if in editor mode
+    if IsEditorMode() then
+        Log("Button disabled in editor mode")
+        return
+    end
+    
     Log("PLAY button clicked!")
     Log("Transitioning to Level Select...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Transition to Level Select state
     SetNextGameState("Level_select")
 end
 
 function OnExitButtonClicked()
+    -- ✅ NEW: Check if in editor mode
+    if IsEditorMode() then
+        Log("Button disabled in editor mode")
+        return
+    end
+    
     Log("EXIT button clicked!")
     Log("Quitting game...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Quit the game
     SetNextGameState("GS_QUIT")
 end
 
@@ -226,23 +223,18 @@ end
 function OnUpdate(dt)
     UpdateAudio(dt)
     
-    -- DEBUG: Check if F1 is being detected
+    -- ✅ MODIFIED: F1 toggles editor mode
     if IsKeyDown("F1") then
-        Log("F1 KEY DETECTED!")  -- Add this line
-        
         if editorToggleCooldown <= 0 then
-            Log("Attempting to toggle editor...")  -- Add this
-            local newState = ToggleEditor()
-            Log("ToggleEditor returned: " .. tostring(newState))  -- Add this
+            ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
             
-            if newState then
-                Log("EDITOR ON")
+            if IsEditorMode() then
+                Log("EDITOR MODE ON - Buttons disabled")
             else
-                Log("EDITOR OFF")
+                Log("EDITOR MODE OFF - Buttons enabled")
             end
+            
             editorToggleCooldown = 0.3
-        else
-            Log("Cooldown active: " .. editorToggleCooldown)  -- Add this
         end
     end
     
@@ -260,10 +252,18 @@ function OnDraw()
         return
     end
     
+    -- ✅ NEW: Check if in editor mode
+    local editorMode = IsEditorMode()
+    
     -- Draw text on each button using config data
     for buttonKey, buttonData in pairs(buttonIDs) do
         local button = buttonData.config
         local text = button.text
+        
+        -- ✅ NEW: Gray out buttons in editor mode
+        local colorR = editorMode and 0.5 or text.color.r
+        local colorG = editorMode and 0.5 or text.color.g
+        local colorB = editorMode and 0.5 or text.color.b
         
         DrawButtonText(
             buttonData.id,
@@ -272,10 +272,15 @@ function OnDraw()
             text.offset.x,
             text.offset.y,
             text.scale,
-            text.color.r,
-            text.color.g,
-            text.color.b
+            colorR,
+            colorG,
+            colorB
         )
+    end
+    
+    -- ✅ NEW: Display editor mode indicator
+    if editorMode then
+        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
 end
 

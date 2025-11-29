@@ -1,5 +1,5 @@
 ﻿-- ============================================================================
--- LevelSelectLevel.lua (JSON Configuration Version with Background)
+-- LevelSelectLevel.lua (MODIFIED - Editor Mode with Freeze)
 -- Complete Level Select Level Script with JSON-driven configuration
 -- ============================================================================
 -- This version loads all UI configuration from a JSON file, making it
@@ -9,6 +9,7 @@
 -- Email:   yongqi.ge@digipen.edu
 -- Date:    2025-11-13
 -- Updated: 2025-11-28 - Added background and decoration sprites
+-- Modified: 2025-11-29 - Added F1 Editor Mode support (freeze + gray buttons)
 -- ============================================================================
 
 -- ============================================================================
@@ -50,7 +51,7 @@ function OnInit()
     DisableImGui()
     
     -- Set engine to editor mode (non-playing)
-    SetEnginePlayState(true)
+    SetEnginePlayState(false)
 
     -- ========================================================================
     -- CREATE BACKGROUND SPRITE
@@ -148,7 +149,7 @@ function OnInit()
     
     initialized = true
     Log("LevelSelect initialization complete")
-    Log("Press F1 to toggle editor")
+    Log("Press F1 to toggle editor mode")
 end
 
 -- ============================================================================
@@ -195,59 +196,64 @@ function CreateButtonsFromConfig()
 end
 
 -- ============================================================================
--- BUTTON CALLBACKS
+-- BUTTON CALLBACKS - ✅ MODIFIED: Check EditorMode
 -- ============================================================================
 
 function OnLevel2ButtonClicked()
+    -- ✅ NEW: Check if in editor mode
+    if IsEditorMode() then
+        Log("Button disabled in editor mode")
+        return
+    end
+    
     Log("LEVEL EDITOR button clicked!")
     Log("Transitioning to Level Editor...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Transition to Level 2
     SetNextGameState("LEVEL_2")
 end
 
 function OnLevel3ButtonClicked()
+    -- ✅ NEW: Check if in editor mode
+    if IsEditorMode() then
+        Log("Button disabled in editor mode")
+        return
+    end
+    
     Log("DEMO button clicked!")
     Log("Transitioning to Demo...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Transition to Level 3
     SetNextGameState("LEVEL_3")
 end
 
 function OnBackButtonClicked()
+    -- ✅ NEW: Check if in editor mode
+    if IsEditorMode() then
+        Log("Button disabled in editor mode")
+        return
+    end
+    
     Log("BACK button clicked!")
     Log("Returning to Main Menu...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Return to main menu
     SetNextGameState("mainMenu")
 end
 
 -- ============================================================================
--- LEVEL LIFECYCLE: OnUpdate
+-- LEVEL LIFECYCLE: OnUpdate - ✅ MODIFIED: F1 toggles EditorMode
 -- ============================================================================
 
 function OnUpdate(dt)
     -- Update audio system
     UpdateAudio(dt)
 
-    -- Toggle ImGui editor with F1
+    -- ✅ MODIFIED: F1 toggles editor mode (freezes game)
     if IsKeyDown("F1") then
         if editorToggleCooldown <= 0 then
-            local newState = ToggleEditor()
-            if newState then
-                Log("EDITOR ON")
+            ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
+            
+            if IsEditorMode() then
+                Log("EDITOR MODE ON - Buttons disabled")
             else
-                Log("EDITOR OFF")
+                Log("EDITOR MODE OFF - Buttons enabled")
             end
+            
             editorToggleCooldown = 0.3
         end
     end
@@ -255,9 +261,6 @@ function OnUpdate(dt)
     if editorToggleCooldown > 0 then
         editorToggleCooldown = editorToggleCooldown - dt
     end
-
-    -- Optional: Add animated background effects here
-    -- Example: Rotating background elements, particle systems, etc.
 
     -- Optional: Handle debug input
     if IsKeyDown("Escape") then
@@ -276,7 +279,7 @@ function OnUpdate(dt)
 end
 
 -- ============================================================================
--- LEVEL LIFECYCLE: OnDraw
+-- LEVEL LIFECYCLE: OnDraw - ✅ MODIFIED: Gray buttons in editor mode
 -- ============================================================================
 
 function OnDraw()
@@ -284,10 +287,18 @@ function OnDraw()
         return
     end
     
+    -- ✅ NEW: Check if in editor mode
+    local editorMode = IsEditorMode()
+    
     -- Draw text on each button using config data
     for buttonKey, buttonData in pairs(buttonIDs) do
         local button = buttonData.config
         local text = button.text
+        
+        -- ✅ NEW: Gray out buttons in editor mode
+        local colorR = editorMode and 0.5 or text.color.r
+        local colorG = editorMode and 0.5 or text.color.g
+        local colorB = editorMode and 0.5 or text.color.b
         
         DrawButtonText(
             buttonData.id,
@@ -296,10 +307,15 @@ function OnDraw()
             text.offset.x,
             text.offset.y,
             text.scale,
-            text.color.r,
-            text.color.g,
-            text.color.b
+            colorR,
+            colorG,
+            colorB
         )
+    end
+    
+    -- ✅ NEW: Display editor mode indicator
+    if editorMode then
+        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
 end
 

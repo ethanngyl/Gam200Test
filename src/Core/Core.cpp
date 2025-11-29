@@ -401,6 +401,30 @@ namespace Framework
     // Single frame update (GSM friendly)
     // ========================================================================
 
+// ========================================================================
+    // Single frame update (GSM friendly) - MODIFIED FOR EDITOR MODE
+    // ========================================================================
+
+// ========================================================================
+    // Single frame update (GSM friendly) - FIXED VERSION
+    // ========================================================================
+    //
+    // MODIFICATIONS:
+    // 1. Added IsPlaying() check for editor mode support
+    // 2. Animations only update in play mode  
+    // 3. Removed duplicate graphicsSystem->Update() calls in render section
+    // 4. Audio and rendering always update
+    //
+// ========================================================================
+    // Single frame update - VERSION WITH EDITOR MODE FREEZE
+    // ========================================================================
+    //
+    // This version:
+    // - Checks isEditorMode in game logic condition
+    // - Game freezes when F1 is pressed (EditorMode = true)
+    // - Buttons are disabled and grayed out in editor mode
+    // - Displays "EDITOR MODE" message
+    //
     void CoreEngine::UpdateSingleFrame(float dt)
     {
         if (ShouldWindowClose()) {
@@ -409,24 +433,22 @@ namespace Framework
         }
 
         // ====================================================================
-        // CHECK PAUSE STATE
+        // CHECK GAME STATE
         // ====================================================================
         bool isPaused = GlobalPause::IsPaused();
+        bool isPlaying = IsPlaying();
+        bool isEditorMode = IsEditorMode();  // ✅ F1 editor mode check
 
         // ====================================================================
-        // ALWAYS UPDATE (Even when paused)
+        // ALWAYS UPDATE
         // ====================================================================
 
-        // Input - needed for pause menu interaction
+        // Input - needed for ImGui and pause menu
         if (inputSystem) {
             inputSystem->Update(dt);
         }
 
-        // Graphics - CRITICAL: Always update to prevent ghosting
-        // Even when paused, this will:
-        // 1. Clear screen buffer (prevents ghosting)
-        // 2. Render current frozen game state
-        // 3. Swap buffers
+        // Graphics - always update to render current state
         if (graphicsSystem) {
             graphicsSystem->Update(dt);
         }
@@ -437,15 +459,19 @@ namespace Framework
         }
 
         // ====================================================================
-        // CONDITIONALLY UPDATE GAME LOGIC (Only when NOT paused)
+        // CONDITIONALLY UPDATE GAME LOGIC
         // ====================================================================
-        // BUGFIX: Removed early return when paused - we need to continue
-        // to the rendering code below to ensure DrawCurrentLevel() is called
+        // Game logic updates when ALL of these are true:
+        // - isPlaying = true (PLAY button clicked)
+        // - isPaused = false (not paused with P key)
+        // - isEditorMode = false (F1 not pressed)
+        //
+        // ✅ EditorMode has HIGHEST priority - when F1 is pressed, game freezes
         // ====================================================================
 
-        if (!isPaused) {
+        if (isPlaying && !isPaused && !isEditorMode) {  // ✅ Check all three!
             // ================================================================
-            // NORMAL GAME UPDATES (Only when NOT paused)
+            // GAME IS RUNNING
             // ================================================================
 
             // Movement & Physics
@@ -474,7 +500,7 @@ namespace Framework
                 pathfindingSystem->Update(dt);
             }
 
-            // Animation - IMPORTANT: Only update when not paused
+            // Animation
             if (animationSystem) {
                 animationSystem->Update(dt);
             }
@@ -492,30 +518,45 @@ namespace Framework
             for (unsigned i = 0; i < Systems.size(); ++i) {
                 if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
                     dynamic_cast<ImGuiSystem*>(Systems[i]) ||
-                    dynamic_cast<InputSystem*>(Systems[i])) {
+                    dynamic_cast<InputSystem*>(Systems[i]) ||
+                    dynamic_cast<AnimationSystem*>(Systems[i])) {
                     continue;
                 }
                 Systems[i]->Update(dt);
             }
-
-            // PERFORMANCE FIX: Removed duplicate scriptSystem->Update(dt) call
-            // ScriptSystem is already updated in the loop above (was running Level3.lua twice per frame!)
-            // if (scriptSystem) scriptSystem->Update(dt);
+        }
+        else {
+            // ================================================================
+            // GAME IS FROZEN
+            // ================================================================
+            if (isEditorMode) {
+                LOG_DEBUG("CORE", "Editor mode active - game frozen");
+            }
+            else if (!isPlaying) {
+                LOG_DEBUG("CORE", "Not playing");
+            }
+            else if (isPaused) {
+                LOG_DEBUG("CORE", "Game paused");
+            }
         }
 
-        // Audio - continue updating (for pause menu sounds)
-        // Volume is controlled by WindowEventHandler when pausing
+        // ====================================================================
+        // AUDIO - Mute in editor mode
+        // ====================================================================
         if (audioSystem) {
+            if (isEditorMode) {
+                // ✅ Mute game audio in editor mode
+                audioSystem->SetMasterVolume(0.0f);
+            }
+            else if (!isPaused && isPlaying) {
+                // Restore audio when not in editor mode
+                audioSystem->SetMasterVolume(1.0f);
+            }
             audioSystem->Update(dt);
         }
 
         // ====================================================================
-        // RENDER GAME (CRITICAL: Always render, even when paused)
-        // ====================================================================
-        // This section MUST execute even when paused to ensure:
-        // 1. Main menu text is rendered (via LevelLoader::DrawCurrentLevel())
-        // 2. Pause menu is visible
-        // 3. Screen doesn't ghost
+        // RENDER GAME (Always render)
         // ====================================================================
 
         bool useViewport = imguiSystem &&
@@ -535,19 +576,15 @@ namespace Framework
             graphicsSystem->Update(dt);
             glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
 
-            // Update text renderer for viewport dimensions
             graphicsSystem->GetTextRenderer().setScreenSize(
                 imguiSystem->GetViewportWidth(),
                 imguiSystem->GetViewportHeight()
             );
 
-            // CRITICAL: Draw level text INTO the viewport (after game rendering)
-            // This calls MainMenuLevel.lua's OnDraw() which renders button text
             LevelLoader::GetInstance().DrawCurrentLevel();
 
             graphicsSystem->ClearRenderTarget();
 
-            // Clear screen for ImGui
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             int w, h;
             glfwGetFramebufferSize(windowSystem->GetWindow(), &w, &h);
@@ -556,17 +593,12 @@ namespace Framework
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         else {
-            // Normal rendering - draw game scene + text to main window
             graphicsSystem->Update(dt);
 
-            // Update text renderer for window dimensions
             int winWidth, winHeight;
             glfwGetWindowSize(windowSystem->GetWindow(), &winWidth, &winHeight);
             graphicsSystem->GetTextRenderer().setScreenSize(winWidth, winHeight);
 
-            // CRITICAL: Draw level text to main window
-            // This calls MainMenuLevel.lua's OnDraw() which renders button text
-            // MUST be called even when paused for main menu text to appear
             LevelLoader::GetInstance().DrawCurrentLevel();
         }
 

@@ -1,9 +1,10 @@
-/*
+﻿/*
 ===============================================================================
- File:          Core.h
+ File:          Core.h (MODIFIED - Added Editor Mode Support)
  Author:        GE YONGQI
  Email:         yongqi.ge@digipen.edu
  Date:          2025-10-31
+ Modified:      2025-11-28 - Added EditorMode support
  Contribution:  100%
  ------------------------------------------------------------------------------
   Core engine manager (header)
@@ -18,6 +19,9 @@
      - Replaces scattered initialization in main.cpp with CoreEngine::InitializeAllSystems()
      - Handles cleanup and resource release via CoreEngine::Cleanup()
      - Supports both standalone and GSM-driven game loops
+
+  New (2025-11-28):
+     - Added EditorMode state (F1 toggle for freezing game + showing ImGui)
 ===============================================================================
 */
 
@@ -138,6 +142,33 @@ namespace Framework
         void SetActive(bool active) { GameActive = active; }
 
         // ====================================================================
+        // Editor Mode (F1 toggle) - NEW
+        // ====================================================================
+
+        /**
+         * @brief Check if editor mode is active (F1 toggled)
+         * @return true if in editor mode (game frozen, ImGui shown)
+         */
+        bool IsEditorMode() const { return isEditorMode; }
+
+        /**
+         * @brief Set editor mode state
+         * @param active true to enable editor mode, false to disable
+         */
+        void SetEditorMode(bool active) {
+            isEditorMode = active;
+            //LOG_INFO("CORE", "Editor mode: %s", active ? "ON" : "OFF");
+        }
+
+        /**
+         * @brief Toggle editor mode on/off
+         */
+        void ToggleEditorMode() {
+            isEditorMode = !isEditorMode;
+            //LOG_INFO("CORE", "Editor mode toggled: %s", isEditorMode ? "ON" : "OFF");
+        }
+
+        // ====================================================================
         // System accessor (for external access)
         // ====================================================================
 
@@ -191,7 +222,7 @@ namespace Framework
         bool IsPlaying() const { return isPlaying; }
         void SetPlaying(bool value) { isPlaying = value; }
         ScriptSystem* GetScriptSystem() { return scriptSystem; }
-         //void GameLoop();
+        //void GameLoop();
 
     private:
         // System Collection
@@ -221,6 +252,7 @@ namespace Framework
         unsigned LastTime;
         bool GameActive;
         bool isPlaying = false;
+        bool isEditorMode = false;  // ✅ NEW: Editor mode state (F1 toggle)
 
 
         // Private helper methods
