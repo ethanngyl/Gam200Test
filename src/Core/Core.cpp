@@ -543,19 +543,10 @@ namespace Framework
             }
         }
 
-        // ====================================================================
-        // AUDIO - Mute in editor mode
-        // ====================================================================
-
         if (audioSystem) {
-            if (isEditorMode || isPaused) {
-                audioSystem->SetMasterVolume(0.0f);
-            }
-            else {
-                audioSystem->SetMasterVolume(1.0f);
-            }
             audioSystem->Update(dt);
         }
+
 
         // ====================================================================
         // RENDER GAME (Always render)
