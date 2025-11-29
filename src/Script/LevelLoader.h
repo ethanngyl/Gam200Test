@@ -120,6 +120,7 @@ namespace Framework {
         AudioSystem* audioSystem = nullptr;
         GraphicsSystemV2* graphicsSystem = nullptr;
 
+    public:
         // ====================================================================
         // LUA C API FUNCTIONS
         // ====================================================================
