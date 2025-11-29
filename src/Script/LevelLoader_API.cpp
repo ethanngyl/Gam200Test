@@ -1076,12 +1076,12 @@ namespace Framework {
 
     /**
      * @brief Gets the current turn phase
-     * Lua usage: local turn = GetCurrentTurn() -- 0 = Player, 1 = Enemy
-     * @return 0 for Player turn, 1 for Enemy turn
+     * Lua usage: local turn = GetCurrentTurn() -- returns "Player" or "Enemy"
+     * @return "Player" for Player turn, "Enemy" for Enemy turn
      */
     int LevelLoader::Lua_GetCurrentTurn(lua_State* L) {
         auto& turn = Turn();
-        lua_pushinteger(L, turn.phase == TurnPhase::Player ? 0 : 1);
+        lua_pushstring(L, turn.phase == TurnPhase::Player ? "Player" : "Enemy");
         return 1;
     }
 
