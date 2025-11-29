@@ -27,6 +27,8 @@ local moveTimer = 0.0
 local moveDelay = 0.7  -- Seconds between moves
 local targetEntity = nil
 local hasReachedTarget = false
+local lastTurnIndex = -1  -- Track turn changes for AP regeneration
+local hasRefilledThisTurn = false  -- Track if we already refilled this turn
 
 --[[
     Called once when entity is created
@@ -56,6 +58,15 @@ function OnUpdate(dt)
         return
     end
 
+    -- Check for new turn and refill AP
+    local currentTurnIndex = GetTurnIndex()
+    if currentTurnIndex > lastTurnIndex then
+        RefillEnemyAP(entity)
+        lastTurnIndex = currentTurnIndex
+        hasRefilledThisTurn = true
+        Log("Enemy " .. entity .. " AP refilled. Turn index: " .. tostring(currentTurnIndex))
+    end
+
     -- Update movement timer
     moveTimer = moveTimer - dt
     if moveTimer > 0.0 then
@@ -65,6 +76,8 @@ function OnUpdate(dt)
     -- Get enemy AP (assuming enemy has AP component)
     local ap = GetEnemyAP(entity)
     if not ap or ap <= 0 then
+        -- Check if ALL enemies are out of AP, if so end turn
+        CheckAndEndEnemyTurn()
         return  -- Out of AP
     end
 
@@ -149,6 +162,34 @@ function AttackTarget(attacker, target)
 
     -- Play attack sound
     PlaySound("damage_basic")
+end
+
+--[[
+    Check if all enemies are out of AP and end turn if so
+--]]
+function CheckAndEndEnemyTurn()
+    -- Get all enemies
+    local enemies = GetAllEnemies()
+    if not enemies or #enemies == 0 then
+        -- No enemies, end turn
+        EndEnemyTurn()
+        Log("No enemies left, ending enemy turn")
+        return
+    end
+
+    -- Check if ANY enemy still has AP
+    for i = 1, #enemies do
+        local enemyID = enemies[i]
+        local enemyAP = GetEnemyAP(enemyID)
+        if enemyAP and enemyAP > 0 then
+            -- At least one enemy has AP, don't end turn yet
+            return
+        end
+    end
+
+    -- All enemies are out of AP, end turn
+    EndEnemyTurn()
+    Log("All enemies out of AP, ending enemy turn")
 end
 
 --[[

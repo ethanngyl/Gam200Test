@@ -392,6 +392,7 @@ namespace Framework {
 
         // Enemy/Entity API
         lua_register(L, "GetEnemyAP", Lua_GetEnemyAP);
+        lua_register(L, "RefillEnemyAP", Lua_RefillEnemyAP);
         lua_register(L, "GetEntityGridPosition", Lua_GetEntityGridPosition);
         lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
