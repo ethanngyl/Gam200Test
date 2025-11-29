@@ -113,10 +113,10 @@
           "content": "Return to Main Menu",
           "font": "Sans48",
           "offset": {
-            "x": -80.0,
-            "y": -16.0
+            "x": -200.0,
+            "y": -13.0
           },
-          "scale": 1.0,
+          "scale": 0.75,
           "color": {
             "r": 1.0,
             "g": 1.0,

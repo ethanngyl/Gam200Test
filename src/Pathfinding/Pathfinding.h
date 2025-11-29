@@ -112,6 +112,9 @@ namespace Framework {
             const GridCoord& goal,
             const Grid& grid);
 
+    private:
+        EntityManager* entityManager;
+
         /**
         * @brief Calculate Manhattan distance heuristic
         */

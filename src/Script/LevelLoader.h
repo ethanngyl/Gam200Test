@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           LevelLoader.h
  Author:         GE YONGQI
@@ -74,7 +74,7 @@ namespace Framework {
         void Shutdown();
 
         // Level management
-        bool LoadLevel(const std::string& scriptPath);
+        bool LoadLevel(const std::string& scriptPath, bool isEditorMode = false);
         void UnloadCurrentLevel();
         void ReloadCurrentLevel();  // Hot reload
         void ResetLuaState();       // Complete Lua state reset
@@ -198,6 +198,14 @@ namespace Framework {
         static int Lua_HasChestAtTile(lua_State* L);
         static int Lua_CollectChest(lua_State* L);
         static int Lua_HasGoalAtTile(lua_State* L);
+
+        // Enemy/Entity API
+        static int Lua_GetEnemyAP(lua_State* L);
+        static int Lua_GetEntityGridPosition(lua_State* L);
+        static int Lua_MoveEntityToTile(lua_State* L);
+        static int Lua_ConsumeEnemyAP(lua_State* L);
+        static int Lua_DamageEntity(lua_State* L);
+        static int Lua_FindPathToTarget(lua_State* L);
 
         // Script Component Management API
         static int Lua_AddScriptComponentToEntity(lua_State* L);
