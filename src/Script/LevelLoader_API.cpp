@@ -460,14 +460,8 @@ namespace Framework {
      * - Supports alphabets, arrows, numbers, function keys, and special keys
      */
     int LevelLoader::Lua_IsKeyDown(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-
         const char* keyName = luaL_checkstring(L, 1);
-        auto* input = loader->coreEngine->GetInputSystem();
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
         if (!input) {
             lua_pushboolean(L, false);
             return 1;
@@ -864,15 +858,9 @@ namespace Framework {
      * - Returns 0,0 if player or AP component is missing
      */
     int LevelLoader::Lua_GetPlayerAP(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) {
-            lua_pushinteger(L, 0);
-            lua_pushinteger(L, 0);
-            return 2;
-        }
-
-        auto* em = loader->coreEngine->GetEntityManager();
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) {
+            LOG_WARN("LevelLoader", "GetPlayerAP: No EntityManager");
             lua_pushinteger(L, 0);
             lua_pushinteger(L, 0);
             return 2;
@@ -889,14 +877,24 @@ namespace Framework {
             }
         }
 
-        if (player.GetID() == INVALID_ENTITY || !em->HasComponent<AP>(player)) {
-            LOG_WARN("LevelLoader", "GetPlayerAP: Player not found or has no AP component");
+        if (player.GetID() == INVALID_ENTITY) {
+            LOG_WARN("LevelLoader", "GetPlayerAP: Player entity not found");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        if (!em->HasComponent<AP>(player)) {
+            LOG_WARN("LevelLoader", "GetPlayerAP: Player %u has no AP component", player.GetID());
             lua_pushinteger(L, 0);
             lua_pushinteger(L, 0);
             return 2;
         }
 
         auto& ap = em->GetComponent<AP>(player);
+
+        LOG_INFO("LevelLoader", "GetPlayerAP: Player %u has %d/%d AP",
+                 player.GetID(), ap.actionPoints, ap.maxActionPoints);
 
         // Return currentAP, maxAP
         lua_pushinteger(L, ap.actionPoints);
