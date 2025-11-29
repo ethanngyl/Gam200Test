@@ -1568,6 +1568,28 @@ namespace Framework {
     }
 
     /**
+     * @brief End the player turn and switch to enemy turn
+     * Lua usage: EndPlayerTurn()
+     */
+    int LevelLoader::Lua_EndPlayerTurn(lua_State* L) {
+        (void)L;  // Unused parameter
+        Framework::EndPlayerTurn();
+        LOG_INFO("LevelLoader", "Player turn ended via Lua");
+        return 0;
+    }
+
+    /**
+     * @brief End the enemy turn and switch to player turn
+     * Lua usage: EndEnemyTurn()
+     */
+    int LevelLoader::Lua_EndEnemyTurn(lua_State* L) {
+        (void)L;  // Unused parameter
+        Framework::EndEnemyTurn();
+        LOG_INFO("LevelLoader", "Enemy turn ended via Lua");
+        return 0;
+    }
+
+    /**
      * @brief Set player sprite flip X
      * @param flip true to flip, false for normal
      */
