@@ -553,8 +553,20 @@ namespace Framework {
             }
         }
 
-        // Loop through directory entries
-        for (auto const& e : std::filesystem::directory_iterator(currentpath)) {
+        // Cache directory contents (only scan when path changes)
+        static std::filesystem::path cachedPath;
+        static std::vector<std::filesystem::directory_entry> cachedEntries;
+
+        if (cachedPath != currentpath) {
+            cachedPath = currentpath;
+            cachedEntries.clear();
+            for (auto const& e : std::filesystem::directory_iterator(currentpath)) {
+                cachedEntries.push_back(e);
+            }
+        }
+
+        // Loop through cached directory entries
+        for (auto const& e : cachedEntries) {
             auto const path = e.path();
             std::string const label = path.filename().string();
             std::string const ImGuilabel = e.is_directory() ? "->" + label : label;
@@ -2934,6 +2946,70 @@ namespace Framework {
                 }
                 continue;
             }
+            
+			//LUA SCRIPT DROP HANDLING
+            if (path.extension() == ".lua") {
+                std::string filename = path.filename().string();
+                std::string fullPath = path.string();
+
+                // Convert to lowercase for case-insensitive check
+                std::string lowerName = filename;
+                std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
+                // 1. Check if it is a LEVEL script (Contains "level" or "menu")
+                bool isLevel = (lowerName.find("level") != std::string::npos) ||
+                    (lowerName.find("menu") != std::string::npos);
+
+                if (isLevel) {
+                    // --- LOAD NEW LEVEL ---
+                    std::cout << "[FileDrop] Detected LEVEL Script: " << filename << "\n";
+
+                    // Clean sweep: Remove current entities
+                    if (entityManager) {
+                        entityManager->ClearAllEntities();
+                        // Optional: Reset ID counter if your engine needs it
+                        // entityManager->ResetEntityIDCounter(); 
+                    }
+
+                    // Load the level via LevelLoader
+                    Framework::LevelLoader::GetInstance().LoadLevel(fullPath, true);
+                }
+                else {
+                    // --- SPAWN ENTITY SCRIPT ---
+                    // Only allow spawning if we drop it onto the game world (Viewport)
+                    if (m_isViewportHovered && entityManager) {
+                        std::cout << "[FileDrop] Detected ENTITY Script: " << filename << "\n";
+
+                        // 1. Create a blank entity
+                        Entity e = entityManager->CreateEntity();
+
+                        // 2. Add standard components
+                        entityManager->AddComponent<Transform>(e, Vector2D(0, 0));
+
+                        // 3. Add a placeholder sprite so you can see it
+                        auto& sprite = entityManager->AddComponent<Sprite>(e);
+                        sprite.texturePath = "assets/testing.png"; // Or any valid default image
+
+                        // 4. Add Collider so you can select/move it in Editor
+                        entityManager->AddComponent<BoxCollider>(e);
+                        auto& box = entityManager->GetComponent<BoxCollider>(e);
+                        box.size = Vector2D(1.0f, 1.0f);
+                        box.isTrigger = true;
+
+                        // 5. Attach the Script Component
+                        entityManager->AddComponent<ScriptComponent>(e);
+                        auto& script = entityManager->GetComponent<ScriptComponent>(e);
+                        script.scriptPath = fullPath;
+
+                        std::cout << "[FileDrop] Spawned Entity " << e.GetID() << " with script: " << filename << "\n";
+                    }
+                    else {
+                        std::cout << "[FileDrop] Entity script ignored (Not dropped in Viewport)\n";
+                    }
+                }
+                continue; // Stop processing this file
+            }
+
 
             std::cerr << "[FileDrop] ❌ Unsupported file type\n";
         }

@@ -295,6 +295,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // ===============================================================================
     LOG_INFO("CORE", "GSM loop ended. Cleaning up...");
 
+    Framework::LevelLoader::GetInstance().Shutdown();
+
     engine->Cleanup();
     delete engine;
     engine = nullptr;

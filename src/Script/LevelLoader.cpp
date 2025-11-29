@@ -138,7 +138,7 @@ namespace Framework {
     // LEVEL MANAGEMENT
     // ========================================================================
 
-    bool LevelLoader::LoadLevel(const std::string& scriptPath) {
+    bool LevelLoader::LoadLevel(const std::string& scriptPath, bool isEditorMode) {
         LOG_INFO("LevelLoader", "================================================");
         LOG_INFO("LevelLoader", "Loading level: %s", scriptPath.c_str());
         LOG_INFO("LevelLoader", "================================================");
@@ -152,6 +152,9 @@ namespace Framework {
             LOG_ERROR("LevelLoader", "Lua state not initialized!");
             return false;
         }
+
+        lua_pushboolean(L, isEditorMode);
+		lua_setglobal(L, "IS_EDITOR_LOAD");
 
         // Load the Lua script
         if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) {
@@ -369,6 +372,27 @@ namespace Framework {
         // Script Component Management
         lua_register(L, "AddScriptComponentToEntity", Lua_AddScriptComponentToEntity);
         lua_register(L, "RemoveScriptComponentFromEntity", Lua_RemoveScriptComponentFromEntity);
+
+        // Player Grid Movement API
+        lua_register(L, "GetPlayerGridPosition", Lua_GetPlayerGridPosition);
+        lua_register(L, "IsValidGridPosition", Lua_IsValidGridPosition);
+        lua_register(L, "IsWalkableTile", Lua_IsWalkableTile);
+        lua_register(L, "MovePlayerToTile", Lua_MovePlayerToTile);
+        lua_register(L, "ShowTileBorder", Lua_ShowTileBorder);
+        lua_register(L, "PulseTile", Lua_PulseTile);
+        lua_register(L, "ConsumePlayerAP", Lua_ConsumePlayerAP);
+        lua_register(L, "SetPlayerFlipX", Lua_SetPlayerFlipX);
+        lua_register(L, "HasChestAtTile", Lua_HasChestAtTile);
+        lua_register(L, "CollectChest", Lua_CollectChest);
+        lua_register(L, "HasGoalAtTile", Lua_HasGoalAtTile);
+
+        // Enemy/Entity API
+        lua_register(L, "GetEnemyAP", Lua_GetEnemyAP);
+        lua_register(L, "GetEntityGridPosition", Lua_GetEntityGridPosition);
+        lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
+        lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
+        lua_register(L, "DamageEntity", Lua_DamageEntity);
+        lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
         lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
         lua_register(L, "IsEditorMode", lua_IsEditorMode);
