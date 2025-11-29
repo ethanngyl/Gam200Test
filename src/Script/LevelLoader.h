@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           LevelLoader.h
  Author:         GE YONGQI
@@ -74,7 +74,7 @@ namespace Framework {
         void Shutdown();
 
         // Level management
-        bool LoadLevel(const std::string& scriptPath);
+        bool LoadLevel(const std::string& scriptPath, bool isEditorMode = false);
         void UnloadCurrentLevel();
         void ReloadCurrentLevel();  // Hot reload
         void ResetLuaState();       // Complete Lua state reset

@@ -138,7 +138,7 @@ namespace Framework {
     // LEVEL MANAGEMENT
     // ========================================================================
 
-    bool LevelLoader::LoadLevel(const std::string& scriptPath) {
+    bool LevelLoader::LoadLevel(const std::string& scriptPath, bool isEditorMode) {
         LOG_INFO("LevelLoader", "================================================");
         LOG_INFO("LevelLoader", "Loading level: %s", scriptPath.c_str());
         LOG_INFO("LevelLoader", "================================================");
@@ -152,6 +152,9 @@ namespace Framework {
             LOG_ERROR("LevelLoader", "Lua state not initialized!");
             return false;
         }
+
+        lua_pushboolean(L, isEditorMode);
+		lua_setglobal(L, "IS_EDITOR_LOAD");
 
         // Load the Lua script
         if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) {
