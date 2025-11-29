@@ -97,9 +97,6 @@ namespace Framework {
             EntityManager* entityManager,
             EntitySpawner* entitySpawner);
 
-    private:
-        EntityManager* entityManager;
-
         /**
         * @brief Calculate A* path from start to goal
         */
@@ -107,6 +104,9 @@ namespace Framework {
             const GridCoord& start,
             const GridCoord& goal,
             const Grid& grid);
+
+    private:
+        EntityManager* entityManager;
 
         /**
         * @brief Calculate Manhattan distance heuristic
