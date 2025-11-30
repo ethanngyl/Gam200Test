@@ -31,6 +31,8 @@
 #include "Graphics/RenderLayers.h"
 #include "MathABS.h"
 #include "AnimationSystem.h"
+#include "GlobalPauseManager.h"
+
 
 #include "Grid\GridECS.h"
 #include "Grid\Grid.h"
@@ -221,6 +223,9 @@ namespace Framework {
 
     void PlayerControllerSystem::Update(float dt)
     {
+        if (GlobalPause::IsPaused()) {
+            return;  // Game is paused - skip ALL player controller logic
+        }
 
         if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
         // Check if we have all required systems
