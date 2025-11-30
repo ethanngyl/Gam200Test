@@ -1229,6 +1229,15 @@ namespace Framework {
 
             snprintf(label, sizeof(label), "Entity %u%s###Entity_%u", entity.GetID(), entityInfo.c_str(), entity.GetID());
 
+            //Check if this entity is the one selected via Picking
+            bool isSelected = (selectedEntity.GetID() == entity.GetID());
+
+            //If selected, push a blue color for the header
+            if (isSelected) {
+                ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.26f, 0.59f, 0.98f, 1.00f)); // Blue highlight
+                ImGui::SetNextItemOpen(true, ImGuiCond_Once); // Auto-open the tab when clicked
+            }
+
             if (ImGui::CollapsingHeader(label)) {
 
                 // ==================================================================
@@ -1815,6 +1824,11 @@ namespace Framework {
                         }
                     }
                 }
+            }
+
+            //Restore the original color
+            if (isSelected) {
+                ImGui::PopStyleColor();
             }
 
             ImGui::PopID();
