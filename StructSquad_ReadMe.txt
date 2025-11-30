@@ -16,14 +16,14 @@ GERARD LOU ................... Design Lead + Story Champion
 
 
 GAME CONCEPT:
-The core gameplay cycle is based around three main actions — Movement, Combat, and Interaction.
+The core gameplay cycle is based around three main actions ?Movement, Combat, and Interaction.
 
 Movement: Players move one grid space per action. Each move should be made strategically toward objectives or enemies.
 Combat: When a player encounters an enemy, combat occurs in a turn-based manner. Attack order is determined by Speed or passive abilities.
 Interaction: Players can interact with objects or items placed around the map.
 
 WIN CONDITION:
-Defeat all enemies, collect every item found in the map’s chests, and return them to the main objective.
+Defeat all enemies, collect every item found in the map chests, and return them to the main objective.
 
 LOSE CONDITION:
 The player loses when their Health is reduced to 0.
@@ -31,14 +31,14 @@ The player loses when their Health is reduced to 0.
 IN-ENGINE DEMO:
 The complete demo version of the game is still in progress.
 Currently, Level 3 showcases the grid system and pathfinding AI that allows an enemy to track the player.
-Players can move using the arrow keys. Each time the player moves, the enemy recalculates the shortest path using the A* algorithm and moves toward the player on its turn.
+Players can move using the WASD. Each time the player moves, the enemy recalculates the shortest path using the A* algorithm and moves toward the player on its turn.
 
 CURRENT LEVELS:
 
 MAIN MENU:
 The game starts at the main menu.
-Selecting “Play” loads Level 1.
-Selecting “Exit” closes the application.
+Selecting Play loads Level 1.
+Selecting Quit Game closes the application.
 
 LEVEL SELECTOR:
 Displays buttons for Levels 1 to 3.
@@ -60,6 +60,7 @@ This level functions as a sandbox and level editor for testing ImGui features.
 Further information can be found in the LevelEditor document.
 Pressing Key 3 loads Level 3.
 Level 3 can only be accessed through Level 2.
+Press ESC to pause the game. Use the WS keys, up and down arrow keys, or 1-3 keys to select, and use the space bar or Enter key to confirm the selection.
 
 LEVEL 3:
 This level demonstrates the core grid system, entity occupancy, and enemy pathfinding loop.
