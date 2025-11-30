@@ -1,18 +1,10 @@
 ﻿/**
 ===============================================================================
- File:          WindowEventHandler.cpp (FINAL - Input Reset Enabled)
+ File:          WindowEventHandler.cpp (FIXED - Audio Restoration Working)
  Author:        Padilla Carl Jameson Z
- Date:          2025-11-28
- Contribution:  100%
+ Date:          2025-11-30
 
- Description:
- Manages window-related events and automatic game state control. Detects when
- the game window loses focus (minimize, CTRL-ALT-DEL, ALT-TAB, clicking away)
- and automatically pauses the game while muting audio and resetting input states.
- Resumes gameplay when focus is restored. Supports fullscreen toggling via
- ALT+ENTER and preserves user-initiated pause states separately from automatic
- pauses. Implements TECH 1701 (focus/minimize handling) and TECH 1702 
- (fullscreen/ALT-TAB support).
+ FIXED: s_wasManuallyPaused is now only checked when NOT already auto-paused
 ===============================================================================
 */
 
@@ -35,12 +27,11 @@ namespace Framework {
     bool WindowEventHandler::s_wasFullscreen = false;
     bool WindowEventHandler::s_wasManuallyPaused = false;
     bool WindowEventHandler::s_wasAltEnterPressed = false;
+    bool WindowEventHandler::s_isAutoPaused = false;
 
     // ============================================================================
     // PUBLIC API
     // ============================================================================
-
-    /** @brief Initializes the window event handler system. */
 
     void WindowEventHandler::Initialize() {
         if (s_initialized) return;
@@ -52,7 +43,6 @@ namespace Framework {
         s_initialized = true;
     }
 
-    /** @brief Updates window event checks each frame. */
     void WindowEventHandler::Update(GLFWwindow* window) {
         if (!s_initialized) {
             Initialize();
@@ -68,16 +58,13 @@ namespace Framework {
         CheckFullscreenToggle(window);
     }
 
-    /** @brief Checks if game was automatically paused (not by user). */
     bool WindowEventHandler::WasAutoPaused() {
-        return !s_wasManuallyPaused && GlobalPause::IsPaused();
+        return s_isAutoPaused;
     }
 
     // ============================================================================
     // MINIMIZE/RESTORE HANDLING (TECH 1701)
     // ============================================================================
-
-    /** @brief Detects window minimize/restore and handles pause state. */
 
     void WindowEventHandler::CheckMinimize(GLFWwindow* window) {
         bool isMinimized = (glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE);
@@ -87,13 +74,19 @@ namespace Framework {
             LOG_INFO("WindowEvents", "TECH 1701: Window minimized");
             LOG_INFO("WindowEvents", "========================================");
 
-            s_wasManuallyPaused = GlobalPause::IsPaused();
+            // FIXED: Only check if manually paused when NOT already auto-paused
+            if (!s_isAutoPaused) {
+                s_wasManuallyPaused = GlobalPause::IsPaused();
 
-            if (!s_wasManuallyPaused) {
-                AutoPause("Window minimized");
+                if (!s_wasManuallyPaused) {
+                    AutoPause("Window minimized");
+                }
+                else {
+                    LOG_INFO("WindowEvents", "Game was already manually paused - preserving state");
+                }
             }
             else {
-                LOG_INFO("WindowEvents", "Game was already manually paused - preserving state");
+                LOG_INFO("WindowEvents", "Already auto-paused, skipping");
             }
         }
         else if (!isMinimized && s_wasMinimized) {
@@ -116,8 +109,6 @@ namespace Framework {
     // FOCUS HANDLING (TECH 1701 - CTRL-ALT-DEL, etc.)
     // ============================================================================
 
-    /** @brief Detects focus loss/gain and handles pause state. */
-
     void WindowEventHandler::CheckFocus(GLFWwindow* window) {
         bool hasFocus = (glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE);
 
@@ -127,13 +118,19 @@ namespace Framework {
             LOG_INFO("WindowEvents", "  (Could be: CTRL-ALT-DEL, ALT-TAB, clicked outside, etc.)");
             LOG_INFO("WindowEvents", "========================================");
 
-            s_wasManuallyPaused = GlobalPause::IsPaused();
+            // FIXED: Only check if manually paused when NOT already auto-paused
+            if (!s_isAutoPaused) {
+                s_wasManuallyPaused = GlobalPause::IsPaused();
 
-            if (!s_wasManuallyPaused) {
-                AutoPause("Focus lost");
+                if (!s_wasManuallyPaused) {
+                    AutoPause("Focus lost");
+                }
+                else {
+                    LOG_INFO("WindowEvents", "Game was already manually paused - preserving state");
+                }
             }
             else {
-                LOG_INFO("WindowEvents", "Game was already manually paused - preserving state");
+                LOG_INFO("WindowEvents", "Already auto-paused, skipping");
             }
         }
         else if (hasFocus && !s_hadFocus) {
@@ -155,8 +152,6 @@ namespace Framework {
     // ============================================================================
     // FULLSCREEN TOGGLE (TECH 1702)
     // ============================================================================
-
-    /** @brief Handles ALT+ENTER fullscreen toggle and ALT+TAB detection. */
 
     void WindowEventHandler::CheckFullscreenToggle(GLFWwindow* window) {
         bool isAltPressed = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
@@ -194,13 +189,17 @@ namespace Framework {
     // HELPER FUNCTIONS
     // ============================================================================
 
-    /** @brief Pauses game, mutes audio, and resets input states. */
-
     void WindowEventHandler::AutoPause(const char* reason) {
+        if (s_isAutoPaused) {
+            LOG_INFO("WindowEvents", "Already auto-paused, skipping duplicate pause");
+            return;
+        }
+
         extern CoreEngine* CORE;
 
         LOG_INFO("WindowEvents", " Auto-pausing game: %s", reason);
 
+        s_isAutoPaused = true;
         GlobalPause::SetPaused(true);
 
         // Mute audio
@@ -209,24 +208,26 @@ namespace Framework {
             LOG_INFO("WindowEvents", "   Audio muted");
         }
 
-        // ========================================================================
-        // ENABLED: Reset input states (prevents stuck keys)
-        // ========================================================================
+        // Reset input states
         if (CORE && CORE->GetInputSystem()) {
-            CORE->GetInputSystem()->ResetAllKeyStates();  //  NOW ENABLED!
+            CORE->GetInputSystem()->ResetAllKeyStates();
             LOG_INFO("WindowEvents", "   Input states reset");
         }
 
         LOG_INFO("WindowEvents", "   Game paused successfully");
     }
 
-    /** @brief Resumes game, restores audio, and resets input states. */
-
     void WindowEventHandler::AutoResume() {
+        if (!s_isAutoPaused) {
+            LOG_INFO("WindowEvents", "Not auto-paused, skipping resume");
+            return;
+        }
+
         extern CoreEngine* CORE;
 
         LOG_INFO("WindowEvents", " Auto-resuming game");
 
+        s_isAutoPaused = false;
         GlobalPause::SetPaused(false);
 
         // Restore audio
@@ -235,18 +236,14 @@ namespace Framework {
             LOG_INFO("WindowEvents", "   Audio restored");
         }
 
-        // ========================================================================
-        // ENABLED: Reset input states (prevents lingering presses)
-        // ========================================================================
+        // Reset input states
         if (CORE && CORE->GetInputSystem()) {
-            CORE->GetInputSystem()->ResetAllKeyStates();  //  NOW ENABLED!
+            CORE->GetInputSystem()->ResetAllKeyStates();
             LOG_INFO("WindowEvents", "   Input states reset");
         }
 
         LOG_INFO("WindowEvents", "   Game resumed successfully");
     }
-
-    /** @brief Toggles between windowed and fullscreen modes. */
 
     void WindowEventHandler::ToggleFullscreen(GLFWwindow* window) {
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();
