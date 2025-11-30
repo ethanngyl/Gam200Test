@@ -484,15 +484,15 @@ namespace Framework
                 scriptSystem->Update(dt);
             }
 
-            // DISABLED: C++ PlayerController - using Lua PlayerScript.lua instead
-            // if (playerController) {
-            //     playerController->Update(dt);
-            // }
+            // C++ PlayerController
+            if (playerController) {
+                playerController->Update(dt);
+            }
 
-            // DISABLED: C++ PathfindingSystem - using Lua EnemyScript.lua instead
-            // if (pathfindingSystem) {
-            //     pathfindingSystem->Update(dt);
-            // }
+            // C++ PathfindingSystem
+            if (pathfindingSystem) {
+                pathfindingSystem->Update(dt);
+            }
 
             // Animation
             if (animationSystem) {
@@ -507,13 +507,10 @@ namespace Framework
             // Update all logic systems
             for (unsigned i = 0; i < Systems.size(); ++i) {
                 // Skip rendering/input/animation systems (updated separately)
-                // Skip PlayerController and PathfindingSystem (using Lua scripts instead)
                 if (dynamic_cast<GraphicsSystemV2*>(Systems[i]) ||
                     dynamic_cast<ImGuiSystem*>(Systems[i]) ||
                     dynamic_cast<InputSystem*>(Systems[i]) ||
-                    dynamic_cast<AnimationSystem*>(Systems[i]) ||
-                    dynamic_cast<PlayerControllerSystem*>(Systems[i]) ||
-                    dynamic_cast<PathfindingSystem*>(Systems[i])) {
+                    dynamic_cast<AnimationSystem*>(Systems[i])) {
                     continue;
                 }
                 Systems[i]->Update(dt);

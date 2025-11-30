@@ -379,17 +379,15 @@ void GSM_Update()
 
             // C++ system updates (player controller, pathfinding)
             if (engine) {
-                // DISABLED: C++ PlayerController - using Lua PlayerScript.lua instead
-                // auto* pcs = engine->GetPlayerController();
-                // if (pcs) {
-                //     pcs->Update(Framework::Time::FIXED_DT_F);
-                // }
+                auto* pcs = engine->GetPlayerController();
+                if (pcs) {
+                    pcs->Update(Framework::Time::FIXED_DT_F);
+                }
 
-                // Pathfinding also disabled - using Lua EnemyScript.lua instead
-                // auto* pfs = engine->GetPathfindingSystem();
-                // if (pfs) {
-                //     pfs->Update(Framework::Time::FIXED_DT_F);
-                // }
+                auto* pfs = engine->GetPathfindingSystem();
+                if (pfs) {
+                    pfs->Update(Framework::Time::FIXED_DT_F);
+                }
 
                 // Camera follow (MUST be set every frame like original level3_Update)
                 if (auto* gfx = engine->GetGraphicsSystem()) {
