@@ -1,10 +1,31 @@
-/**
+/*
 ===============================================================================
- File:           LevelLoader_JSON.cpp
- Author:         GE YONGQI
- Date:           2025-11-13
+ File:          LevelLoader_JSON.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-11-13
+ Contribution:  100%
  ------------------------------------------------------------------------------
   JSON Configuration Loading Implementation
+
+  Purpose:
+  Implements JSON file parsing and conversion to Lua tables for the
+  LevelLoader system. Enables data-driven UI configuration without
+  hardcoding values in Lua scripts.
+
+  Implementation:
+  - LoadJSONToLua(): Main entry point for loading JSON files
+  - JSONToLuaTable(): Recursively converts JSON objects to Lua tables
+  - PushJSONValue(): Handles individual value type conversions
+
+  Supported JSON Types:
+  - null - Lua nil
+  - boolean - Lua boolean
+  - integer - Lua integer
+  - float - Lua number
+  - string - Lua string
+  - object - Lua table (key-value pairs)
+  - array - Lua table (1-indexed arrays)
 ===============================================================================
 */
 

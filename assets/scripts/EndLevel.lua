@@ -5,8 +5,8 @@
 -- This version loads all UI configuration from a JSON file, making it
 -- easy for designers to modify the UI without touching Lua code.
 --
--- Author:  GE YONGQI
--- Email:   yongqi.ge@digipen.edu
+-- Author:  Josh Ong
+--Email:   Josh.o@digipen.edu
 -- Date:    2025-11-13
 -- ============================================================================
 
