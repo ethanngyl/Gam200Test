@@ -1,43 +1,56 @@
 {
-    "sounds": [
-        {
-            "name": "walk1",
-            "filepath": "assets/Audio/Walk_Sfx_Random/walk_1.wav",
-            "volume": 1,
-            "preload": true
-        },
-        {
-            "name": "mmbgm",
-            "filepath": "assets/Audio/Menu_Bgm/Main_Menu_Bgm.wav",
-            "volume": 0.8,
-            "preload": true,
-            "loop": true
-        },
-        {
-            "name": "igbgm",
-            "filepath": "assets/Audio/Menu_Bgm/In_Game_Bgm.wav",
-            "volume": 0.8,
-            "preload": true,
-            "loop": true
-        },
-      {
-        "name": "dmgb",
-        "filepath": "assets/Audio/Dmg_Sfx_Tiers/Damage_Basic.wav",
-        "volume": 1,
-        "preload": true
-      },
-      {
-        "name": "takedmg",
-        "filepath": "assets/Audio/Take_Dmg_Sfx/Take_Dmg.wav",
-        "volume": 1,
-        "preload": true
-      },
-      { "name": "button",
-        "filepath": "assets/Audio/Button_Clicks/Button_click_2.wav",
-        "volume": 1,
-        "preload": true
-      }
-    ],
+  "sounds": [
+    {
+      "name": "walk1",
+      "filepath": "assets/Audio/Walk_Sfx_Random/walk_1.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "mmbgm",
+      "filepath": "assets/Audio/Menu_Bgm/Main_Menu_Bgm.wav",
+      "volume": 0.8,
+      "preload": true,
+      "loop": true
+    },
+    {
+      "name": "igbgm",
+      "filepath": "assets/Audio/Menu_Bgm/In_Game_Bgm.wav",
+      "volume": 0.8,
+      "preload": true,
+      "loop": true
+    },
+    {
+      "name": "dmgb",
+      "filepath": "assets/Audio/Dmg_Sfx_Tiers/Damage_Basic.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "takedmg",
+      "filepath": "assets/Audio/Take_Dmg_Sfx/Take_Dmg.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "button",
+      "filepath": "assets/Audio/Button_Clicks/Button_1.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "button2",
+      "filepath": "assets/Audio/Button_Clicks/Button_click_2.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "death",
+      "filepath": "assets/Audio/Death_Sfx/Death.wav",
+      "volume": 1,
+      "preload": true
+    }
+  ],
     "settings": {
         "masterVolume": 1,
         "musicVolume": 0.8,
