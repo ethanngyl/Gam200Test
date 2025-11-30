@@ -23,6 +23,10 @@
 
 namespace PauseMenuSimple
 {
+    /**
+    * @brief Handles pause menu input and navigation.
+    * @return true if a menu action was executed, false otherwise
+    */
     bool UpdatePauseMenu(Framework::CoreEngine* engine,
         PauseMenuState& state,
         const PauseMenuCallbacks& callbacks)
@@ -94,6 +98,9 @@ namespace PauseMenuSimple
         return false;
     }
 
+    /**
+     * @brief Renders the pause menu with config-driven layout.
+     */
     void DrawPauseMenu(Framework::CoreEngine* engine,
         const PauseMenuState& state)
     {

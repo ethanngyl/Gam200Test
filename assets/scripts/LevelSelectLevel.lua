@@ -1,15 +1,16 @@
 ﻿-- ============================================================================
--- LevelSelectLevel.lua (MODIFIED - Editor Mode with Freeze)
--- Complete Level Select Level Script with JSON-driven configuration
--- ============================================================================
--- This version loads all UI configuration from a JSON file, making it
--- easy for designers to modify the UI without touching Lua code.
+-- LevelSelectLevel.lua 
+-- Author:        Padilla carl jameson
+-- Email:         c.Padilla@digipen.edu
+-- Date:          2025-11-13
+-- Contribution:  100%
 --
--- Author:  GE YONGQI
--- Email:   yongqi.ge@digipen.edu
--- Date:    2025-11-13
--- Updated: 2025-11-28 - Added background and decoration sprites
--- Modified: 2025-11-29 - Added F1 Editor Mode support (freeze + gray buttons)
+-- Description:
+-- Level selection menu with JSON-driven UI configuration. Loads button layouts,
+-- sprites, and settings from external JSON file for easy designer modification.
+-- Supports F1 editor mode that freezes gameplay and grays out buttons. Handles
+-- background sprites, logo, corner decorations, and smooth transitions between
+-- levels with button click audio feedback.
 -- ============================================================================
 
 -- ============================================================================

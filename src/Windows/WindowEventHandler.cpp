@@ -1,10 +1,18 @@
 ﻿/**
 ===============================================================================
  File:          WindowEventHandler.cpp (FINAL - Input Reset Enabled)
- Author:        GE YONGQI
+ Author:        Padilla Carl Jameson Z
  Date:          2025-11-28
+ Contribution:  100%
 
- This version has InputSystem::ResetAllKeyStates() enabled
+ Description:
+ Manages window-related events and automatic game state control. Detects when
+ the game window loses focus (minimize, CTRL-ALT-DEL, ALT-TAB, clicking away)
+ and automatically pauses the game while muting audio and resetting input states.
+ Resumes gameplay when focus is restored. Supports fullscreen toggling via
+ ALT+ENTER and preserves user-initiated pause states separately from automatic
+ pauses. Implements TECH 1701 (focus/minimize handling) and TECH 1702 
+ (fullscreen/ALT-TAB support).
 ===============================================================================
 */
 
@@ -32,6 +40,8 @@ namespace Framework {
     // PUBLIC API
     // ============================================================================
 
+    /** @brief Initializes the window event handler system. */
+
     void WindowEventHandler::Initialize() {
         if (s_initialized) return;
 
@@ -42,6 +52,7 @@ namespace Framework {
         s_initialized = true;
     }
 
+    /** @brief Updates window event checks each frame. */
     void WindowEventHandler::Update(GLFWwindow* window) {
         if (!s_initialized) {
             Initialize();
@@ -57,6 +68,7 @@ namespace Framework {
         CheckFullscreenToggle(window);
     }
 
+    /** @brief Checks if game was automatically paused (not by user). */
     bool WindowEventHandler::WasAutoPaused() {
         return !s_wasManuallyPaused && GlobalPause::IsPaused();
     }
@@ -64,6 +76,8 @@ namespace Framework {
     // ============================================================================
     // MINIMIZE/RESTORE HANDLING (TECH 1701)
     // ============================================================================
+
+    /** @brief Detects window minimize/restore and handles pause state. */
 
     void WindowEventHandler::CheckMinimize(GLFWwindow* window) {
         bool isMinimized = (glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE);
@@ -101,6 +115,8 @@ namespace Framework {
     // ============================================================================
     // FOCUS HANDLING (TECH 1701 - CTRL-ALT-DEL, etc.)
     // ============================================================================
+
+    /** @brief Detects focus loss/gain and handles pause state. */
 
     void WindowEventHandler::CheckFocus(GLFWwindow* window) {
         bool hasFocus = (glfwGetWindowAttrib(window, GLFW_FOCUSED) == GLFW_TRUE);
@@ -140,6 +156,8 @@ namespace Framework {
     // FULLSCREEN TOGGLE (TECH 1702)
     // ============================================================================
 
+    /** @brief Handles ALT+ENTER fullscreen toggle and ALT+TAB detection. */
+
     void WindowEventHandler::CheckFullscreenToggle(GLFWwindow* window) {
         bool isAltPressed = glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
@@ -176,6 +194,8 @@ namespace Framework {
     // HELPER FUNCTIONS
     // ============================================================================
 
+    /** @brief Pauses game, mutes audio, and resets input states. */
+
     void WindowEventHandler::AutoPause(const char* reason) {
         extern CoreEngine* CORE;
 
@@ -200,6 +220,8 @@ namespace Framework {
         LOG_INFO("WindowEvents", "   Game paused successfully");
     }
 
+    /** @brief Resumes game, restores audio, and resets input states. */
+
     void WindowEventHandler::AutoResume() {
         extern CoreEngine* CORE;
 
@@ -223,6 +245,8 @@ namespace Framework {
 
         LOG_INFO("WindowEvents", "   Game resumed successfully");
     }
+
+    /** @brief Toggles between windowed and fullscreen modes. */
 
     void WindowEventHandler::ToggleFullscreen(GLFWwindow* window) {
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();

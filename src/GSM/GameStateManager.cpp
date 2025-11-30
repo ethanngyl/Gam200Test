@@ -1,9 +1,18 @@
+
 /*
 ============================================================================
  File:          GameStateManager.cpp (With F9 Hot Reload + Fixed DT)
- Features:      1. Lua-scripted menu states
-                2. F9 hot reload support
-                3. Proper Fixed DT integration
+ Author:        Padilla carl Jameson Z
+ Date:          11/30/2025
+ Contribution:  100%
+
+ Description:
+ Manages game state transitions and lifecycle for all game levels and menus.
+ Supports Lua-scripted states with hot reload capability via F9 key. Each
+ state defines load, initialize, update, draw, free, and unload function
+ pointers. Integrates with LevelLoader for Lua script management and handles
+ proper cleanup order (Lua first, then C++ systems). Uses fixed delta time
+ for consistent gameplay updates across all states.
 ============================================================================
 */
 
@@ -36,6 +45,7 @@ FP fpUnload = nullptr;
 // GSM FUNCTIONS
 // ============================================================================
 
+/** @brief Initializes the game state manager with a starting state. */
 void GSM_Initialize(int startingState)
 {
     current = previous = next = startingState;
@@ -45,6 +55,7 @@ void GSM_Initialize(int startingState)
     LOG_INFO("GSM", "Press F9 to hot reload Lua scripts");
 }
 
+/** @brief Updates function pointers based on current game state. */
 void GSM_Update()
 {
     LOG_INFO("GSM", "Updating function pointers for state: %d", current);
