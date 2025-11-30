@@ -100,7 +100,7 @@ namespace Framework {
         lua_State* L = nullptr;
         void CreateLuaState();
         void DestroyLuaState();
-
+        static int Lua_ClearAllEntities(lua_State* L);
         // API registration
         void RegisterLevelAPI();
 

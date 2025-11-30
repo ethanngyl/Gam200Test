@@ -158,7 +158,8 @@ function OnDestroy()
     -- Disable ImGui
     DisableImGui()
     Log("ImGui disabled")
-    
+    ClearAllEntities()
+
     initialized = false
     Log("Level 2 cleanup complete")
 end

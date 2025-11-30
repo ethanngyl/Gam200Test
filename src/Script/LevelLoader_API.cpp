@@ -849,6 +849,29 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_ClearAllEntities(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "ClearAllEntities failed - no engine instance");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "ClearAllEntities failed - no EntityManager");
+            return 0;
+        }
+
+        // Get count before clearing for logging
+        size_t entityCount = em->GetAllEntities().size();
+
+        // Clear all entities using existing ECS function
+        em->ClearAllEntities();
+
+        LOG_INFO("LevelLoader", "✓ Cleared all entities (%zu destroyed)", entityCount);
+        return 0;
+    }
+
     /**
      * @brief Gets current and max Action Points (AP) for the player
      * @return currentAP (int), maxAP (int)
