@@ -1,0 +1,9 @@
+{
+  "entity": 2000,
+  "components": {
+    "Transform": {"position":[2.000000,0.000000],"rotation":0.000000,"scale":[0.800000,0.800000]},
+    "MeshRenderer": {"spriteName":"assets/player.png","layer":0,"orderInLayer":0,"tint":[1.000000,0.200000,0.200000,1.000000]},
+    "CircleCollider": {"radius":0.400000,"offset":[0.000000,0.000000]},
+    "AudioSource": {"soundName":"dmgb","volume":1.000000,"pitch":1.000000,"loop":false,"playOnStart":false}
+  }
+}

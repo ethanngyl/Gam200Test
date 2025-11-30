@@ -8,7 +8,7 @@ Contribution: 100%
 -------------------------------------------------------------------------------
 Brief:
 Implements PrefabSerializer, the system responsible for saving and loading
-entities (prefabs) from JSON files. Each prefab stores its components’
+entities (prefabs) from JSON files. Each prefab stores its componentsï¿½
 properties (Transform, Sprite, MeshRenderer, Collider, etc.) so they can be
 recreated at runtime or reused across scenes.
 
@@ -25,7 +25,7 @@ Details:
 Notes:
 - Uses nlohmann::json for serialization and deserialization.
 - Ensures floating-point values are written with fixed precision for clean output.
-- Provides simple, human-readable JSON formatting compatible with the engine’s
+- Provides simple, human-readable JSON formatting compatible with the engineï¿½s
   editor tools.
 ===============================================================================
 */
@@ -188,6 +188,24 @@ namespace PrefabSerializer
                 << "}";
         }
 
+        // ---------------------------------------------------------------------
+        // AudioSource
+        // ---------------------------------------------------------------------
+        //
+        // Per-entity audio configuration: sound name, volume, pitch, loop flag,
+        // and playOnStart flag for automatic playback.
+        if (em.HasComponent<AudioSource>(e)) {
+            auto& audio = em.GetComponent<AudioSource>(e);
+            writeComma();
+            out << "    \"AudioSource\": {"
+                << "\"soundName\":\"" << audio.soundName << "\","
+                << "\"volume\":" << f2(audio.volume) << ","
+                << "\"pitch\":" << f2(audio.pitch) << ","
+                << "\"loop\":" << (audio.loop ? "true" : "false") << ","
+                << "\"playOnStart\":" << (audio.playOnStart ? "true" : "false")
+                << "}";
+        }
+
         // Close the "components" object and the root JSON object.
         out << "\n  }\n";
         out << "}\n";
@@ -295,6 +313,21 @@ namespace PrefabSerializer
             c.radius = cdata["radius"];
             c.offset.x = cdata["offset"][0];
             c.offset.y = cdata["offset"][1];
+        }
+
+        // AudioSource
+        if (comps.contains("AudioSource"))
+        {
+            const auto& audioData = comps["AudioSource"];
+            em.AddComponent<AudioSource>(e);
+            auto& audio = em.GetComponent<AudioSource>(e);
+            audio.soundName = audioData.value("soundName", "");
+            audio.volume = audioData.value("volume", 1.0f);
+            audio.pitch = audioData.value("pitch", 1.0f);
+            audio.loop = audioData.value("loop", false);
+            audio.playOnStart = audioData.value("playOnStart", false);
+            audio.isPlaying = false;  // Always start as not playing
+            audio.fmodChannel = nullptr;  // Always initialize to nullptr
         }
 
         // ---------------------------------------------------------------------
