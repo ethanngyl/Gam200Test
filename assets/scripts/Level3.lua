@@ -37,7 +37,7 @@ local maxAP = 5
 local indicatorSize = 0.06
 local indicatorSpacing = 0.1
 -- Adjusted for zoom 0.6: offsets scaled to match viewport size
-local screenOffsetX = -0.72  -- Bottom left corner (adjusted for zoom)
+local screenOffsetX = -0.64  -- Bottom left corner (adjusted for zoom)
 local screenOffsetY = -0.42  -- Bottom left corner (adjusted for zoom)
 local lastKnownAP = 0  -- Track AP changes
 
@@ -45,20 +45,20 @@ local lastKnownAP = 0  -- Track AP changes
 local hpHearts   = {}
 local maxHeartHP   = 5
 local lastHP      = -1
-local hpOffsetX   = -0.80   -- bottom-left, above crystals
+local hpOffsetX   = -0.72   -- bottom-left, above crystals
 local hpOffsetY   = -0.22
 local hpScale     = 0.10    -- a bit larger than crystals
 
 -- BOOTS UI -------------------------------------------------------
 local bootIconIDs  = {}      
 local bootOffsetY  = -0.42 
-local boot1OffsetX = -0.80
+local boot1OffsetX = -0.72
 local bootSpacingX = 0.10
 local bootScale    = 0.10
 
 -- SWORD + ATTACK AP UI ------------------------------------------
 local swordIconID    = 0
-local swordOffsetX   = -0.80
+local swordOffsetX   = -0.72
 local swordOffsetY   = -0.32
 local swordScale     = 0.10
 
@@ -74,7 +74,7 @@ local totalChestsRequired = 0
 local atkIndicatorsEmpty = {}     -- NEW
 local atkIndicatorsFilled = {}    -- NEW
 local maxAttackAP = 3             -- NEW (will be overridden by component) 
-local atkOffsetX = -0.72          -- NEW (same X as AP; tweak as needed)
+local atkOffsetX = -0.64          -- NEW (same X as AP; tweak as needed)
 local atkOffsetY = -0.32          -- NEW (slightly above AP row)
 local lastKnownAttackAP = 0       -- NEW
 

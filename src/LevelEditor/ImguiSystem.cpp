@@ -597,6 +597,9 @@ namespace Framework {
                                 Vector2D(0.0f, 0.0f),
                                 Vector2D(1.0f, 1.0f)
                             );
+
+                            RecordCreationStep(entity);//Record the creation for Undo
+
                             std::cout << "[Drop] Spawned sprite from: " << filePath
                                 << " as entity" << entity.id << "\n";
                         }
@@ -652,6 +655,50 @@ namespace Framework {
                     ImGui::SetDragDropPayload("Prefab", prefabPath.c_str(), prefabPath.size() + 1);
                     ImGui::Text("Prefab: %s", label.c_str());
                     ImGui::EndDragDropSource();
+                }
+            }
+
+            // =================================================================
+            // LUA SCRIPT DOUBLE-CLICK LOADING
+            // =================================================================
+            if (path.extension() == ".lua") {
+                if (ImGui::IsItemHovered()) {
+                    
+
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        std::string filename = path.filename().string();
+                        std::string fullPath = path.string();
+
+                        // Check if it is a LEVEL script (contains "level" or "menu")
+                        std::string lowerName = filename;
+                        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
+                        bool isLevel = (lowerName.find("level") != std::string::npos) ||
+                            (lowerName.find("menu") != std::string::npos);
+
+                        if (isLevel) {
+                            std::cout << "[Assets] Double-click detected: Loading " << filename << "\n";
+
+                            // 1. Clear Game Viewport
+                            if (entityManager) {
+                                entityManager->ClearAllEntities();
+                                entityManager->ResetEntityIDCounter();
+                            }
+
+                            // 2. Load the new Level
+                            // Pass 'true' to tell the script we are in Editor Mode (keep UI enabled)
+                            Framework::LevelLoader::GetInstance().LoadLevel(fullPath, true);
+
+                            // 3. FORCE Editor UI to stay ON (Safety override)
+                            this->enabled = true;
+
+                            // 4. Reset Camera (Optional)
+                            if (graphicsSystem) graphicsSystem->SetCameraPosition(glm::vec3(0, 0, 0));
+                        }
+                        else {
+                            std::cout << "[Assets] Ignored double-click on non-level script: " << filename << "\n";
+                        }
+                    }
                 }
             }
         }
@@ -761,6 +808,19 @@ namespace Framework {
         if (!enabled) {
             return;
         }
+
+        // This ensures the game renders into the Viewport Window, not over your Editor!
+        if (graphicsSystem) {
+            if (IsRenderingToViewport()) {
+                // Draw ONLY to the Game Viewport image
+                graphicsSystem->SetRenderTarget(viewportFBO, viewportWidth, viewportHeight);
+            }
+            else {
+                // Draw to main screen
+                graphicsSystem->ClearRenderTarget();
+            }
+        }
+
         // Start ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -811,6 +871,8 @@ namespace Framework {
                 {
                     std::cout << "[ImGui] Delete key pressed on entity "
                         << selectedEntity.id << "\n";
+
+                    RecordDeletionStep(selectedEntity);
 
                     SpatialPartitioningRemove(selectedEntity);
 
@@ -1766,6 +1828,9 @@ namespace Framework {
                 //   modifying ECS state while iterating the entity list.
                 // ------------------------------------------------------------------
                 if (ImGui::Button("Delete##DelBtn")) {
+                    //Record the deletion here immediately
+                    RecordDeletionStep(entity);
+
                     entityToDelete = entity;
                     shouldDelete = true;
                 }
@@ -2400,6 +2465,8 @@ namespace Framework {
                 // 1. Create a raw entity
                 Framework::Entity blankEntity = entityManager->CreateEntity();
 
+                RecordCreationStep(blankEntity); //record the creation for undo
+
                 // 2. Add a Transform component so it uses the slider coordinates
                 // Note: We assume AddComponent adds it. We then retrieve it to set data.
                 if (!entityManager->HasComponent<Framework::Transform>(blankEntity)) {
@@ -2509,6 +2576,8 @@ namespace Framework {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, prefabPath);
 
                 if (newEntity.IsValid()) {
+                    RecordCreationStep(newEntity); //record the creation for undo
+
                     // Set spawn position from spawner's X/Y values
                     if (entityManager->HasComponent<Transform>(newEntity)) {
                         auto& transform = entityManager->GetComponent<Transform>(newEntity);
@@ -2856,15 +2925,24 @@ namespace Framework {
 
         // Create a new undo step with this info
         UndoStep step;
+        step.type = UndoType::Transform; // Mark as a Transform change
         step.entity = entity;
+
+        //Save ALL transform data
         step.oldPosition = transform.position;
+        step.oldScale = transform.scale;
+        step.oldRotation = transform.rotation;
 
         // Add this step to the end of our history list
         undoStack.push_back(step);
 
         // Check if have exceeded our memory limit 
         if (undoStack.size() > 20) {
-            // Remove the oldest step (the one at the front/beginning)
+            // Remove the oldest step (from the front) when we exceed the limit
+            // If the oldest step was a temp file for deletion, we should delete that file to save space
+            if (undoStack.front().type == UndoType::Deletion) {
+                std::filesystem::remove(undoStack.front().tempFilePath);
+            }
             undoStack.erase(undoStack.begin());
         }
 
@@ -2873,38 +2951,104 @@ namespace Framework {
     }
 
     // ============================================================================
-    // This function reverts the last recorded action by restoring the saved state.
-    // It pops the last state from the stack and applies it back to the entity.
+    // This function records a "Creation" action in the undo history.
+    // It allows the user to undo spawning an object by deleting it later.
     // author: jiahao.zhou@digipen
     // ============================================================================
+    void ImGuiSystem::RecordCreationStep(Entity entity) {
+        UndoStep step;
+        step.type = UndoType::Creation;
+        step.entity = entity;
+        undoStack.push_back(step);
+        std::cout << "[Undo] Recorded Creation step for Entity " << entity.GetID() << "\n";
+    }
+
+    // ============================================================================
+    // This function records a "Deletion" action in the undo history.
+    // It saves the entity's data to a temporary file before it gets destroyed,
+    // so we can reload/restore it if the user presses Undo.
+    // author: jiahao.zhou@digipen
+    // ============================================================================
+    void ImGuiSystem::RecordDeletionStep(Entity entity) {
+        // Save the entity to a temp file so we can restore it later
+        std::string tempPath = "assets/prefabs/_undo_temp_" + std::to_string(entity.GetID()) + ".prefab";
+        
+        // Ensure directory exists
+        std::filesystem::create_directories("assets/prefabs");
+
+        // Use your existing PrefabSerializer
+        if (PrefabSerializer::SavePrefab(*entityManager, entity, tempPath)) {
+            UndoStep step;
+            step.type = UndoType::Deletion;
+            step.tempFilePath = tempPath; 
+            // Note: We don't store step.entity here because the ID might change or be invalid after delete
+            
+            undoStack.push_back(step);
+            std::cout << "[Undo] Recorded Deletion step. Backup at: " << tempPath << "\n";
+        }
+    }
+
+    // ============================================================================
+    // This function reverts the last recorded action from the undo stack.
+    // It handles three types of undo operations:
+    // 1. Transform: Restores position, scale, and rotation of an entity.
+    // 2. Creation: Destroys an entity that was just created.
+    // 3. Deletion: Restores a deleted entity by loading from a backup prefab.
+    // author: jiahao.zhou@digipen
+    // ============================================================================
+
     void ImGuiSystem::PerformUndo() {
-        // 1. Check if we have anything to undo
         if (undoStack.empty()) {
             std::cout << "[Editor] Nothing to undo.\n";
             return;
         }
 
-        // 2. Get the last action we recorded (the one at the back of the vector)
         UndoStep lastStep = undoStack.back();
-
-        // 3. Verify the entity still exists (it might have been deleted since we saved it!)
-        if (entityManager && entityManager->HasComponent<Transform>(lastStep.entity)) {
-
-            // Get access to the entity's transform component
-            auto& transform = entityManager->GetComponent<Transform>(lastStep.entity);
-
-            // 4. Restore the position to what it was in the saved step
-            transform.position = lastStep.oldPosition;
-
-            std::cout << "[Editor] Undid movement for Entity " << lastStep.entity.GetID() << "\n";
-        }
-        else {
-            std::cout << "[Editor] Cannot undo: Entity no longer exists.\n";
-        }
-
-        // 5. Remove this step from the history since we just used it
         undoStack.pop_back();
+
+        // --------------------------------------------------------------------
+        // CASE 1: UNDO TRANSFORM (Pos, Scale, Rot)
+        // --------------------------------------------------------------------
+        if (lastStep.type == UndoType::Transform) {
+            if (entityManager->HasComponent<Transform>(lastStep.entity)) {
+                auto& transform = entityManager->GetComponent<Transform>(lastStep.entity);
+
+                // Restore ALL values
+                transform.position = lastStep.oldPosition;
+                transform.scale = lastStep.oldScale;
+                transform.rotation = lastStep.oldRotation;
+
+                std::cout << "[Undo] Restored Transform for Entity " << lastStep.entity.GetID() << "\n";
+            }
+        }
+        // --------------------------------------------------------------------
+        // CASE 2: UNDO CREATION (Delete the created object)
+        // --------------------------------------------------------------------
+        else if (lastStep.type == UndoType::Creation) {
+            if (lastStep.entity.IsValid()) {
+                std::cout << "[Undo] Destroying created entity " << lastStep.entity.GetID() << "\n";
+                entityManager->DestroyEntity(lastStep.entity);
+                SpatialPartitioningRemove(lastStep.entity);
+            }
+        }
+        // --------------------------------------------------------------------
+        // CASE 3: UNDO DELETION (Restore the deleted object)
+        // --------------------------------------------------------------------
+        else if (lastStep.type == UndoType::Deletion) {
+            // Load from the backup file we made
+            Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, lastStep.tempFilePath);
+
+            if (newEntity.IsValid()) {
+                std::cout << "[Undo] Restored deleted entity from " << lastStep.tempFilePath << "\n";
+                // Optional: Delete the temp file now that we've used it? 
+                // Or keep it in case we Redo (if you implement Redo later).
+            }
+            else {
+                std::cerr << "[Undo] Failed to restore entity from " << lastStep.tempFilePath << "\n";
+            }
+        }
     }
+
 
     bool ImGuiSystem::IsAudioFile(const std::filesystem::path& path) const {
         if (!path.has_extension()) {
@@ -3061,6 +3205,8 @@ namespace Framework {
 
                     // Load the level via LevelLoader
                     Framework::LevelLoader::GetInstance().LoadLevel(fullPath, true);
+                    // This overrides the Lua script's "DisableImGui()" call
+                    this->enabled = true;
                 }
                 else {
                     // --- SPAWN ENTITY SCRIPT ---
