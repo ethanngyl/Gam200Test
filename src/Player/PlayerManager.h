@@ -87,7 +87,7 @@ namespace Framework {
         void UpdateBorderOutlineAnimation();
         void HandleArrowKeyMovement();
         void StartTilePulse(Framework::Entity tileEntity, float pulseScale, DWORD pulseDurationMs);
-        void ShowBorderOutline(const GridCoord& tile, float thicknessFraction, DWORD durationMs);
+        //void ShowBorderOutline(const GridCoord& tile, float thicknessFraction, DWORD durationMs);
 
         // ========================================================================
         // MEMBER VARIABLES

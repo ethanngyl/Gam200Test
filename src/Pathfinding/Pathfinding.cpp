@@ -237,9 +237,9 @@ namespace Framework {
 
                 LOG_INFO("Combat", "Target hit! HP: %d", targetHp.currentHealth);
 
-                if (targetHp.currentHealth <= 0) {                                              // NEW
-                    targetHp.currentHealth = 0;                                                 // NEW
-                    targetHp.isDead = true;                                                     // NEW
+                if (targetHp.currentHealth <= 0) {                                              
+                    targetHp.currentHealth = 0;                                                 
+                    targetHp.isDead = true;     
                     next = LEVEL_END;
                     LOG_ERROR("Combat", "TARGET DEFEATED!");
                 }

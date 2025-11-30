@@ -186,7 +186,7 @@ function OnBackButtonClicked()
         return
     end
 
-    PlaySound("button", false, 1)
+    PlaySound("button2", false, 1)
     pendingState = "mainMenu"
     pendingTimer = 0.15  -- Delay to allow sound to play
     
