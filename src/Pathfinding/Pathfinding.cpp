@@ -149,7 +149,7 @@ namespace Framework {
         auto& ai = entityManager->GetComponent<EnemyAI>(currentEnemy);
         auto& transform = entityManager->GetComponent<Transform>(currentEnemy);
         auto& stats = entityManager->GetComponent<AP>(currentEnemy);
-		auto& hp = entityManager->GetComponent<Health>(currentEnemy);
+		//auto& hp = entityManager->GetComponent<Health>(currentEnemy);
 
         // Check if this enemy has AP left
         if (stats.actionPoints <= 0) {

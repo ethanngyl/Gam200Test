@@ -112,7 +112,7 @@ namespace Framework
                     LOG_INFO("CORE", " Audio configuration loaded successfully");
                 }
                 else {
-                    LOG_WARN("CORE", "✗ Failed to load audio configuration");
+                    LOG_WARN("CORE", "Failed to load audio configuration");
                 }
             }
 
@@ -428,7 +428,7 @@ namespace Framework
         // CHECK GAME STATE
         // ====================================================================
         bool isPaused = GlobalPause::IsPaused();
-        bool isPlaying = IsPlaying();
+        bool isPlaying1 = IsPlaying();
         bool isEditorMode = IsEditorMode();  //  F1 editor mode check
 
         // ====================================================================
@@ -461,7 +461,7 @@ namespace Framework
         //  EditorMode has HIGHEST priority - when F1 is pressed, game freezes
         // ====================================================================
 
-        if (isPlaying && !isPaused && !isEditorMode) {  //  Check all three!
+        if (isPlaying1 && !isPaused && !isEditorMode) {  //  Check all three!
             // ================================================================
             // GAME IS RUNNING
             // ================================================================
@@ -523,7 +523,7 @@ namespace Framework
             if (isEditorMode) {
                 LOG_DEBUG("CORE", "Editor mode active - game frozen");
             }
-            else if (!isPlaying) {
+            else if (!isPlaying1) {
                 LOG_DEBUG("CORE", "Not playing");
             }
             else if (isPaused) {

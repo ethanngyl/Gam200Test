@@ -125,6 +125,7 @@ namespace Framework {
     }
 
     void ScriptSystem::SendEngineMessage(Message* message) {
+        (void)message;
         // Handle messages if needed
     }
 
