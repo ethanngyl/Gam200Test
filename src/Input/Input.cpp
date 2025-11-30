@@ -111,7 +111,7 @@ namespace Framework
 
 
         // Check for quit conditions
-        if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE))
+        if (IsKeyPressed(KEY_Q))
         {
             std::cout << "InputSystem: Quit key pressed!\n";
             Message quitMsg(Status::Quit);
