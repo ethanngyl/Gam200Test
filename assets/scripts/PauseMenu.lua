@@ -55,7 +55,7 @@ end
 
 function PauseMenu.Update(dt)
     -- Toggle pause with P or Escape key
-    local isPPressed = IsKeyDown("P")
+    local isPPressed = IsKeyDown("Escape")
     local isEscapePressed = IsKeyDown("Escape")
 
     if (isPPressed and not state.wasPPressed) or (isEscapePressed and not state.wasEscapePressed) then
@@ -163,7 +163,7 @@ function PauseMenu.Draw()
     local menuSpacing = 70
     local textBaseX = centerX - 100
 
-    local options = {"Resume Game", "Main Menu", "Exit Game"}
+    local options = {"Resume Game", "Main Menu", "Quit Game"}
 
     for i = 0, 2 do
         local isSelected = (state.selectedOption == i)
