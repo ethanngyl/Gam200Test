@@ -524,6 +524,8 @@ namespace Framework {
         std::cout << "[AudioSystem] Total sounds available: " << sounds.size() << "\n";
         std::cout << "[AudioSystem] ============================================\n";
     }*/
+    // This function converts the mouse cursor's screen position (pixels) into 
+    // Game World coordinates, accounting for the camera and editor viewport.
     void AudioSystem::ReloadAudioLibrary() {
     std::cout << "[AudioSystem] Reloading from AudioConfig.json...\n";
 
@@ -545,7 +547,7 @@ namespace Framework {
     buffer << file.rdbuf();
     std::string json = buffer.str();
 
-    // --- NEW PARSING LOGIC ---
+    // --- PARSING LOGIC ---
 
     // 1. Locate the "sounds" array
     size_t soundsPos = json.find("\"sounds\"");
