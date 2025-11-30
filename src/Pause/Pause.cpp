@@ -174,7 +174,7 @@ namespace PauseMenuSimple
         float textBaseX = centerX + textOffsetX;
 
         // Menu option texts
-        const char* options[] = { "Resume Game", "Main Menu", "Exit Game" };
+        const char* options[] = { "Resume Game", "Main Menu", "Quit Game" };
 
         for (int i = 0; i < 3; ++i) {
             bool isSelected = (state.selectedOption == i);

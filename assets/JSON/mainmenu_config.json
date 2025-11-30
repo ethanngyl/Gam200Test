@@ -139,10 +139,10 @@
         },
         "layer": 2,
         "text": {
-          "content": "EXIT",
+          "content": "Quit Game",
           "font": "Sans48",
           "offset": {
-            "x": -70.0,
+            "x": -120.0,
             "y": -16.0
           },
           "scale": 1.0,
