@@ -31,6 +31,8 @@
 #include "Graphics/RenderLayers.h"
 #include "MathABS.h"
 #include "AnimationSystem.h"
+#include "GlobalPauseManager.h"
+
 
 #include "Grid\GridECS.h"
 #include "Grid\Grid.h"
@@ -221,6 +223,9 @@ namespace Framework {
 
     void PlayerControllerSystem::Update(float dt)
     {
+        if (GlobalPause::IsPaused()) {
+            return;  // Game is paused - skip ALL player controller logic
+        }
 
         if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
         // Check if we have all required systems
@@ -602,7 +607,7 @@ namespace Framework {
         std::string animationName = "";
         bool flipAnimation = false;
 
-        if (inputSystem->IsKeyPressed(KEY_UP)) {
+        if (inputSystem->IsKeyPressed(KEY_W)) {
             stepY = 1;  // Move up (increase Y)
             animationName = "Idle_back";
             if (audioSystem) {
@@ -617,7 +622,7 @@ namespace Framework {
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
             // std::cout << "[Arrow] Moving UP\n";
         }
-        else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
+        else if (inputSystem->IsKeyPressed(KEY_S)) {
             stepY = -1; // Move down (decrease Y)
             animationName = "Idle_front";
             if (audioSystem) {
@@ -631,7 +636,7 @@ namespace Framework {
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
             // std::cout << "[Arrow] Moving DOWN\n";
         }
-        else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
+        else if (inputSystem->IsKeyPressed(KEY_A)) {
             stepX = -1; // Move left (decrease X)
             animationName = "Idle_sideview";
             flipAnimation = true;  // Flip sprite to face left
@@ -646,7 +651,7 @@ namespace Framework {
                 std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
         }
-        else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
+        else if (inputSystem->IsKeyPressed(KEY_D)) {
             stepX = 1;  // Move right (increase X)
             animationName = "Idle_sideview";
             flipAnimation = false;  // Normal orientation for right

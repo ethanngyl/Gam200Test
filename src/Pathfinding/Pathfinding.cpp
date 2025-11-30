@@ -36,6 +36,8 @@
 #include "Audio/AudioSystem.h"
 #include <queue>
 #include <algorithm>
+#include "GlobalPauseManager.h"
+
 
 namespace Framework {
     // ============================================================================
@@ -65,6 +67,11 @@ namespace Framework {
      * - Plays walking sound effects when enemies move
      */
     void PathfindingSystem::Update(float dt) {
+
+        if (GlobalPause::IsPaused()) {
+            return;
+        }
+
         if (!entityManager) return;
 
         // Only update during enemy turn
