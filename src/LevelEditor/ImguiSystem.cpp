@@ -810,7 +810,7 @@ namespace Framework {
         }
 
         // This ensures the game renders into the Viewport Window, not over your Editor!
-        if (graphicsSystem) {
+        /*if (graphicsSystem) {
             if (IsRenderingToViewport()) {
                 // Draw ONLY to the Game Viewport image
                 graphicsSystem->SetRenderTarget(viewportFBO, viewportWidth, viewportHeight);
@@ -819,7 +819,7 @@ namespace Framework {
                 // Draw to main screen
                 graphicsSystem->ClearRenderTarget();
             }
-        }
+        }*/
 
         // Start ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
