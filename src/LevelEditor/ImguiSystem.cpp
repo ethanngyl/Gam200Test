@@ -1464,7 +1464,7 @@ namespace Framework {
                         ImGui::DragFloat("Volume", &audio.volume, 0.01f, 0.0f, 1.0f);
                         ImGui::DragFloat("Pitch", &audio.pitch, 0.01f, 0.1f, 3.0f);
                         ImGui::Checkbox("Loop", &audio.loop);
-                        ImGui::Checkbox("Play on Start", &audio.playOnStart);
+                        ImGui::Checkbox("Play", &audio.playOnStart);
 
                         ImGui::TreePop();
                     }
@@ -2374,7 +2374,7 @@ namespace Framework {
         //ImGui::SetNextWindowPos(ImVec2(370, 30), ImGuiCond_FirstUseEver);
 
         // FIX: Add ##UniqueID
-        if (!ImGui::Begin("Entity Spawner##Spawner1", &showSpawner)) {
+        if (!ImGui::Begin("Entity Spawner/Feature Testing##Spawner1", &showSpawner)) {
             ImGui::End();
             return;
         }
@@ -2487,7 +2487,7 @@ namespace Framework {
         //          3. Logs the action to the console for debugging.
         // =====================================================================
         ImGui::Separator();
-        ImGui::Text("📦 Prefab Drop Zone");
+        ImGui::Text("Prefab Drop Zone");
         ImGui::TextWrapped("Drag prefabs here to spawn");
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.4f, 0.8f, 0.4f));
@@ -2992,7 +2992,7 @@ namespace Framework {
             auto ext = path.extension().string();
             std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-            if (ext == ".ogg" || ext == ".mp3" || ext == ".txt" ||
+            if (ext == ".ogg" || ext == ".mp3" || ext == ".txt" || ext == ".mp4" ||
                 ext == ".flac" || ext == ".aiff" || ext == ".aac" || ext == ".m4a") {
 
                 std::cout << "[FileDrop]  Unsupported format: " << ext << "\n";
