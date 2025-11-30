@@ -1,6 +1,43 @@
 ﻿-- ============================================================================
--- TutorialLevel.lua (All Buttons Version)
--- Tutorial Level with ALL text as transparent buttons
+-- TutorialLevel.lua
+-- Author:        GE YONGQI
+-- Email:         yongqi.ge@digipen.edu
+-- Date:          2025-11-13
+-- Contribution:  100%
+-- ----------------------------------------------------------------------------
+--  JSON-Driven Tutorial Level with All-Button Text System
+--
+--  Purpose:
+--  Tutorial level that demonstrates game mechanics using JSON configuration.
+--  ALL text elements are implemented as transparent buttons for consistent
+--  rendering and interaction handling.
+--
+--  Features:
+--  - Loads UI configuration from tutorial_config.json
+--  - Multi-layered sprite system (background, scroll overlay, corners)
+--  - All text rendered as button components
+--  - F1 editor mode toggle with visual feedback
+--  - ESC key shortcut to skip tutorial
+--  - Smooth state transitions with delayed execution
+--
+--  Level Lifecycle:
+--  - OnInit()     : Load JSON, setup camera, spawn sprites, create buttons
+--  - OnUpdate(dt) : Handle F1/ESC input, update audio, process transitions
+--  - OnDraw()     : Render all button text with editor mode adjustments
+--  - OnDestroy()  : Cleanup entities, overlays, buttons, and audio
+--
+--  Editor Mode (F1):
+--  - Grays out all text buttons (RGB reduced to 0.5)
+--  - Displays "EDITOR MODE" indicator
+--  - Disables button callbacks including NEXT button
+--  - Enables ImGui overlay for debugging
+--
+--  Design Note:
+--  Using buttons for all text (instead of DrawText) enables:
+--  - Uniform rendering pipeline
+--  - Consistent layer management
+--  - Easy JSON-driven configuration
+--  - Simplified state management
 -- ============================================================================
 
 local buttonIDs = {}

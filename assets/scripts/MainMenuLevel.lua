@@ -1,14 +1,35 @@
 ﻿-- ============================================================================
--- MainMenuLevel.lua (JSON Configuration Version with Editor Mode)
--- Complete Main Menu Level Script with JSON-driven configuration
--- ============================================================================
--- This version loads all UI configuration from a JSON file, making it
--- easy for designers to modify the UI without touching Lua code.
+-- MainMenuLevel.lua
+-- Author:        GE YONGQI
+-- Email:         yongqi.ge@digipen.edu
+-- Date:          2025-11-13
+-- Contribution:  100%
+-- ----------------------------------------------------------------------------
+--  JSON-Driven Main Menu with Editor Mode Support
 --
--- Author:  GE YONGQI
--- Email:   yongqi.ge@digipen.edu
--- Date:    2025-11-13
--- Modified: 2025-11-28 - Added F1 Editor Mode support
+--  Purpose:
+--  Complete main menu level script using JSON configuration for all UI
+--  elements. Enables designer-friendly modifications without code changes.
+--
+--  Features:
+--  - Loads UI configuration from mainmenu_config.json
+--  - Creates layered sprite system (background, logo, corner decorations)
+--  - F1 editor mode toggle with visual feedback
+--  - Button interaction disabled in editor mode
+--  - Audio integration with background music
+--  - Smooth state transitions with delayed execution
+--
+--  Level Lifecycle:
+--  - OnInit()     : Load JSON, setup camera, spawn sprites, create buttons
+--  - OnUpdate(dt) : Handle F1 toggle, update audio, process transitions
+--  - OnDraw()     : Render button text with editor mode color adjustment
+--  - OnDestroy()  : Cleanup all entities, buttons, and audio
+--
+--  Editor Mode (F1):
+--  - Grays out all buttons (RGB reduced to 0.5)
+--  - Displays "EDITOR MODE" indicator
+--  - Disables button callbacks
+--  - Enables ImGui overlay for debugging
 -- ============================================================================
 
 

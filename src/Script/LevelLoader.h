@@ -1,12 +1,12 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           LevelLoader.h
- Author:         GE YONGQI
- Email:          yongqi.ge@digipen.edu
- Date:           2025-11-13
- Contribution:   100%
+ File:          LevelLoader.h
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-11-13
+ Contribution:  100%
  ------------------------------------------------------------------------------
-  Lua-based Level Loading System
+  Lua-based Level Loading System with Editor Mode Support
 
   Purpose:
   Provides a unified system for loading entire game levels/states from Lua
@@ -15,6 +15,7 @@
   - Designer-friendly level creation (no C++ compilation needed)
   - Centralized level management
   - Easy A/B testing of different level layouts
+  - F1 editor mode toggle functionality
 
   Design:
   Each level is represented by a single Lua script with lifecycle functions:
@@ -22,6 +23,12 @@
   - OnUpdate(dt) - Per-frame logic
   - OnDraw()     - Custom rendering (UI text, etc.)
   - OnDestroy()  - Cleanup
+
+  Editor Mode Features:
+  - F1 key toggles between game mode and editor mode
+  - In editor mode, buttons are visually grayed out and disabled
+  - ImGui overlay is enabled in editor mode for debugging
+  - Game state can be paused/unpaused independently
 
   Usage:
   Instead of:
@@ -173,7 +180,7 @@ namespace Framework {
         static int Lua_SetSpriteColor(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);
-		static int Lua_SetSpriteVisibility(lua_State* L);
+        static int Lua_SetSpriteVisibility(lua_State* L);
         static int Lua_DestroyEntity(lua_State* L);
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
@@ -181,11 +188,11 @@ namespace Framework {
         static int Lua_GetAllEnemies(lua_State* L);
         static int Lua_SetEnemyTarget(lua_State* L);
         static int Lua_GetCurrentTurn(lua_State* L);
-		static int Lua_GetChestProgress(lua_State* L);
+        static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
-		static int Lua_GetPlayerAttackAP(lua_State* L);
-		static int Lua_GetPlayerHP(lua_State* L);
+        static int Lua_GetPlayerAttackAP(lua_State* L);
+        static int Lua_GetPlayerHP(lua_State* L);
 
         // Player Grid Movement API
         static int Lua_GetPlayerGridPosition(lua_State* L);
