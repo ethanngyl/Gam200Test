@@ -33,7 +33,7 @@
         "entityType": "Chest"
       },
       "M": {
-        "texture": "assets/TileMap/Chest_2.png",
+        "texture": "assets/TileMap/Portal.png",
         "solid": 0,
         "entityType": "Goal"
       }

@@ -102,7 +102,7 @@
       },
       {
         "id": "label_goalLabel",
-        "texture": "assets/Menu/Chest_2.png",
+        "texture": "assets/Menu/Portal.png",
         "position": {
           "x": 1,
           "y": 0.5
