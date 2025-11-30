@@ -429,7 +429,7 @@ namespace Framework
         // ====================================================================
         bool isPaused = GlobalPause::IsPaused();
         bool isPlaying1 = IsPlaying();
-        bool isEditorMode = IsEditorMode();  //  F1 editor mode check
+        bool isEditorMode1 = IsEditorMode();  //  F1 editor mode check
 
         // ====================================================================
         // ALWAYS UPDATE
@@ -461,7 +461,7 @@ namespace Framework
         //  EditorMode has HIGHEST priority - when F1 is pressed, game freezes
         // ====================================================================
 
-        if (isPlaying1 && !isPaused && !isEditorMode) {  //  Check all three!
+        if (isPlaying1 && !isPaused && !isEditorMode1) {  //  Check all three!
             // ================================================================
             // GAME IS RUNNING
             // ================================================================
@@ -520,7 +520,7 @@ namespace Framework
             // ================================================================
             // GAME IS FROZEN
             // ================================================================
-            if (isEditorMode) {
+            if (isEditorMode1) {
                 LOG_DEBUG("CORE", "Editor mode active - game frozen");
             }
             else if (!isPlaying1) {
