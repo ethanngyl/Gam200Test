@@ -163,7 +163,7 @@ function PauseMenu.Draw()
     local menuSpacing = 70
     local textBaseX = centerX - 100
 
-    local options = {"Resume", "Main Menu", "Exit Game"}
+    local options = {"Resume Game", "Main Menu", "Exit Game"}
 
     for i = 0, 2 do
         local isSelected = (state.selectedOption == i)
