@@ -2548,9 +2548,6 @@ namespace Framework {
         ImGui::BulletText("Key 5: Go to Main Menu");
         ImGui::BulletText("key 0: Reset Camera");
         ImGui::BulletText("click above menu Editor->Play to activate play mode");
-        ImGui::BulletText("WASD: Move");
-        ImGui::BulletText("SPACE: Shoot Up");
-        ImGui::BulletText("SHIFT: Shoot Down");
         ImGui::BulletText("Q/ESC: Quit");
 
 
