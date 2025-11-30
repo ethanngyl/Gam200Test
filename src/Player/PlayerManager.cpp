@@ -140,57 +140,6 @@ namespace Framework {
         }
     }
 
-    /**
-    * @brief Shows a rectangular border around a target tile using four thin sprites.
-    * @param tile               Target grid coordinate
-    * @param thicknessFraction  Fraction of tile size to use for strip thickness
-    * @param durationMs         Duration before auto-hide
-    */
-    //void PlayerControllerSystem::ShowBorderOutline(const Framework::GridCoord& tgt, float thicknessFraction, DWORD durationMs) {
-    //    // DEBUGGING: Disable outline entities
-    //    (void)tgt; (void)thicknessFraction; (void)durationMs;
-    //    return;
-
-    //    const Framework::Grid& g = Framework::GetGrid();
-    //    const float tileW = g.spacing.x;
-    //    const float tileH = g.spacing.y;
-    //    const Framework::Vector2D center = Framework::TileToWorld(tgt);
-
-    //    // Lazy-create strips once
-    //    if (!s_outlineInit) {
-    //        auto makeStrip = [&](Framework::Entity& out) {
-    //            out = entityManager->CreateEntity();
-    //            entityManager->AddComponent<Transform>(out, center);
-    //            entityManager->AddComponent<Sprite>(out);
-    //            entityManager->GetComponent<Sprite>(out).texturePath = "quad";
-    //            };
-    //        makeStrip(s_outlineTop);
-    //        makeStrip(s_outlineBot);
-    //        makeStrip(s_outlineLeft);
-    //        makeStrip(s_outlineRight);
-    //        s_outlineInit = true;
-    //    }
-
-    //    const float thick = thicknessFraction * (tileW < tileH ? tileW : tileH);
-
-    //    auto place = [&](Framework::Entity e, float cx, float cy, float sx, float sy) {
-    //        if (entityManager->HasComponent<Transform>(e)) {
-    //            auto& tf = entityManager->GetComponent<Transform>(e);
-    //            tf.position.x = cx; tf.position.y = cy;
-    //            tf.scale.x = sx;    tf.scale.y = sy;
-    //        }
-    //        };
-
-    //    // Top/bottom (horizontal strips)
-    //    place(s_outlineTop, center.x, center.y + tileH * 0.5f, tileW, thick);
-    //    place(s_outlineBot, center.x, center.y - tileH * 0.5f, tileW, thick);
-    //    // Left/right (vertical strips)
-    //    place(s_outlineLeft, center.x - tileW * 0.5f, center.y, thick, tileH);
-    //    place(s_outlineRight, center.x + tileW * 0.5f, center.y, thick, tileH);
-
-    //    s_outlineHideAtMs = GetTickCount64() + durationMs;
-    //}
-
     // ============================================================================
     // CONSTRUCTOR / DESTRUCTOR
     // ============================================================================
