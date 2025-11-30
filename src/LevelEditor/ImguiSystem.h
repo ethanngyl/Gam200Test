@@ -38,11 +38,24 @@ namespace Framework {
     * @brief declare a structure to store the undo step information
     */
 
+    //Define types of actions we can undo
+    enum class UndoType {
+        Transform,  // Moving, Scaling, Rotating
+        Creation,   // Spawning a new entity
+        Deletion    // Deleting an entity
+    };
+
     struct UndoStep {
-        //the entity that user select and need to undo
-        Entity entity;
-        //the previous position of the entity before user move it
+        UndoType type;          // What kind of action was this?
+        Entity entity;          // Which entity was affected?
+
+        // Data for Transform Undo
         Vector2D oldPosition;
+        Vector2D oldScale;
+        float oldRotation;
+
+        // Data for Deletion Undo (To restore it, we save it as a temp file)
+        std::string tempFilePath;
     };
 
     /**
@@ -134,12 +147,17 @@ namespace Framework {
         //undo function - jiahao
         void PerformUndo();
         void RecordUndoStep(Entity entity);
+        void RecordCreationStep(Entity entity);         // For Spawning
+        void RecordDeletionStep(Entity entity);         // For Deleting
+
         //jiahao
         Framework::Vector2D EditorScreenWorld();
 
         bool IsAudioFile(const std::filesystem::path& path) const;
         bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
         bool AddAudioToJSON(const std::string& jsonPath, const std::string& audioPath);
+
+
 
     private:
         GLFWwindow* window;
