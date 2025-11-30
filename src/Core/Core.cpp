@@ -479,10 +479,10 @@ namespace Framework
                 collisionSystem->Update(dt);
             }
 
-            // Game Logic
-            if (scriptSystem) {
-                scriptSystem->Update(dt);
-            }
+            // Game Logic (ScriptSystem disabled - using C++ only)
+            // if (scriptSystem) {
+            //     scriptSystem->Update(dt);
+            // }
 
             // C++ PlayerController
             if (playerController) {
