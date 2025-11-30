@@ -23,7 +23,7 @@
 
 #include "Precompiled.h"
 #include "AudioLoader.h"
-#include "AudioSystem.h"
+#include "Audio/AudioSystem.h"
 #include <fstream>
 #include <algorithm>
 
