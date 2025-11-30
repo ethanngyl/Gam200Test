@@ -6,6 +6,10 @@ Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digi
 Date:        2025-11-07
 Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
+Modified: 2025-11-30
+
+
+-------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
 drag–drop, asset browser) to ECS and subsystems.
@@ -655,19 +659,24 @@ namespace Framework {
         ImGui::End();  // Only one End() call at the very end
     }
 
-    // jiahao
+    // ============================================================================
+    // This function converts the mouse cursor's screen position (pixels) into 
+    // Game World coordinates, accounting for the camera and editor viewport.
+    // author: jiahao.zhou@digipen
+    // ============================================================================
     Framework::Vector2D ImGuiSystem::EditorScreenWorld() {
+        // Safety Check: Ensure the Core engine exists before accessing it
         if (!Framework::CORE) {
             return Framework::Vector2D{ 0.0f, 0.0f };
         }
-
+        // Get references to the Graphics and Window systems
         auto graphics = Framework::CORE->GetGraphicsSystem();
         auto windowSystem = Framework::CORE->GetWindowSystem();
-
+        // Safety Check: If either system is missing, we can't calculate coordinates
         if (!graphics || !windowSystem) {
             return Framework::Vector2D(0.0f, 0.0f);
         }
-
+        // Get the actual OS window handle (GLFW window)
         GLFWwindow* window = windowSystem->GetWindow();
         if (!window) {
             return Framework::Vector2D(0.0f, 0.0f);
@@ -711,10 +720,12 @@ namespace Framework {
 
         // 4. Unproject using the Active Camera
         Camera& camera = CORE->IsPlaying() ? graphics->GetCamera() : graphics->GetEditorCamera();
-
+        // Get the inverse of the View-Projection matrix.
+        // This allows us to reverse the rendering process (Screen -> World).
         glm::mat4 invViewProj = glm::inverse(camera.GetViewProjectionMatrix());
+        // Multiply the NDC coordinate by the inverse matrix to get the World Position.
         glm::vec4 worldPos = invViewProj * glm::vec4(ndcX, ndcY, 0.0f, 1.0f);
-
+        // Return the final X, Y coordinates in the game world.
         return Vector2D(worldPos.x, worldPos.y);
     }
 
@@ -2533,121 +2544,175 @@ namespace Framework {
         ImGui::End();
     }
 
-    //game object picking in editor - jiahao
+    // ============================================================================
+    //
+    // This is the function that allows picking/selecting game objects in editor mode
+    // by using the mouse to click on them. It uses the entity colliders to test
+    // whether the mouse is inside an object.
+    //
+    // author: jiahao.zhou@digipen
+    //
+    // ============================================================================
+
     void ImGuiSystem::UpdatePicking() {
+        // If the core engine does not exist, stop and do nothing
         if (!CORE) return;
+        // If the game is currently playing (not in editor mode), do not handle picking
         if (CORE->IsPlaying()) return;
+        // If there is no entity manager, we cannot access entities, so stop
         if (!entityManager) return;
 
+        // Get ImGui's input/output state (mouse, keyboard, etc.)
         ImGuiIO& io = ImGui::GetIO();
 
-        // --- NEW LOGIC: Only block picking if not hovering the viewport ---
-        // We REMOVED "if (io.WantCaptureMouse) return;" because it breaks the viewport
+        // If we are rendering to the ImGui viewport but the mouse is not hovering that viewport,
+        // we should not do picking (prevents clicking outside viewport from selecting things)
         if (IsRenderingToViewport() && !m_isViewportHovered) {
             return;
         }
 
+        // Get pointer to the input system so we can read mouse/keyboard
         InputSystem* input = Framework::CORE->GetInputSystem();
+        // Get pointer to the UI system (not directly used here, but kept for future editor features)
         UISystem* ui = CORE->GetUISystem();
 
+        // If input system or UI system is missing, we cannot safely continue
         if (!input || !ui) return;
-
+        // Only run picking logic when the left mouse button is pressed this frame
         if (!input->IsKeyPressed(MOUSE_LEFT)) return;
 
-        // --- NEW: Use the updated coordinate helper ---
+        // Convert the current mouse position from screen/editor space into world coordinates
+        // so we can test it against world-space colliders
         Vector2D mouseWorld = EditorScreenWorld();
 
+        // Start with an invalid entity, meaning nothing is picked yet
         Entity picked = INVALID_ENTITY;
 
+        // Loop through every entity managed by the ECS
         for (Entity e : entityManager->GetAllEntities()) {
+            // If this entity has no Transform component, we cannot place it in the world, so skip it
             if (!entityManager->HasComponent<Transform>(e)) continue;
-
+            // Get a reference to the entity's Transform
             auto& transform = entityManager->GetComponent<Transform>(e);
-
+            // If this entity is a grid tile (part of the background tilemap), skip it
+            // This prevents selecting the entire tile grid when clicking
             if (entityManager->HasComponent<GridTiles>(e)) continue;
-
+            // Temporary collider object that we will build for this entity
             Collider collider;
+            // Flag to remember if this entity actually has a collider we can test
             bool hasCollider = false;
 
+            // If the entity has a CircleCollider component, build a circle collider for picking
             if (entityManager->HasComponent<CircleCollider>(e)) {
+                // Get the circle collider data
                 auto& cc = entityManager->GetComponent<CircleCollider>(e);
+                // Read the entity's scale in X and Y
                 float scaleX = transform.scale.x;
                 float scaleY = transform.scale.y;
+                // Take the larger scale as the circle's scale factor (so circle grows with the biggest axis)
                 float scaleFactor = scaleX > scaleY ? scaleX : scaleY;
+                // Prevent the scale factor from being too small, so the collider never becomes zero-sized
                 if (scaleFactor < 0.01f) scaleFactor = 0.01f;
-
+                // Compute the collider radius in world space (original radius * scale factor)
                 float worldRadius = cc.radius * scaleFactor;
+                // Create a circle collider in world space, centered at entity position + collider offset
                 collider = Collider::create_circle(worldRadius, transform.position + cc.offset);
+                // Mark that this entity has a collider we can test
                 hasCollider = true;
             }
+            // Otherwise, if the entity has a BoxCollider component, build a box collider for picking
             else if (entityManager->HasComponent<BoxCollider>(e)) {
+                // Get the box collider data
                 auto& bc = entityManager->GetComponent<BoxCollider>(e);
+                // Read the entity's scale in X and Y
                 float scaleX = transform.scale.x;
                 float scaleY = transform.scale.y;
+                // Make sure the scales are not too small, to avoid zero-sized boxes
                 if (scaleX < 0.01f) scaleX = 0.01f;
                 if (scaleY < 0.01f) scaleY = 0.01f;
 
+                // Compute the box width and height in world space (original size * scale)
                 float worldWidth = bc.size.x * scaleX;
                 float worldHeight = bc.size.y * scaleY;
+                // Create a rectangle collider in world space, centered at the entity's position
                 collider = Collider::create_rect(worldWidth, worldHeight, transform.position);
+                // Mark that this entity has a collider we can test
                 hasCollider = true;
             }
-
+            // If this entity had no supported collider, skip it and move on to next entity
             if (!hasCollider) continue;
-
+            // Check if the mouse world position lies inside this entity's collider
             if (point_in_collider(mouseWorld, collider)) {
+                // If yes, we consider this entity "picked"
                 picked = e;
                 break;
             }
         }
-
+        // After checking all entities, store the picked entity as the current selected entity
         selectedEntity = picked;
-
+        // If we picked a valid entity, print its ID for debugging
         if (selectedEntity.GetID() != INVALID_ENTITY) {
             std::cout << "[ImGui Picking] Selected entity ID: " << selectedEntity.GetID() << "\n";
         }
+        // Otherwise, the mouse click did not hit any collider, so we clicked on empty space
         else {
             std::cout << "[ImGui Picking] Clicked empty space\n";
         }
     }
 
-    //
+    // ============================================================================
+    // This is the function that handles entity manipulation (Move, Scale, Rotate) via mouse input
+    // author: jiahao.zhou@digipen
+    // ============================================================================
     void ImGuiSystem::UpdateEntityDragging() {
+        // Safety check: Ensure the Core engine exists
         if (!CORE) return;
+        // If the game is currently playing, disable editor dragging to prevent conflicts
         if (CORE->IsPlaying()) return;
+        // Safety check: Ensure the entity manager exists
         if (!entityManager) return;
 
+        // Get the ImGui I/O interface to check mouse states
         ImGuiIO& io = ImGui::GetIO();
 
-        // --- NEW LOGIC: Allow dragging if we are hovering OR already dragging ---
+        // Allow dragging if we are hovering OR already dragging 
         if (!isDraggingEntity && !isScalingEntity && !isRotatingEntity) {
-            // If we aren't doing anything yet, we must be hovering the viewport to start
+            // If we are rendering to the viewport window AND the mouse is NOT hovering over it,
+            // return early so we don't accidentally click things outside the game view
             if (IsRenderingToViewport() && !m_isViewportHovered) {
                 return;
             }
         }
 
+        // Get references to the Input and UI systems
         InputSystem* input = Framework::CORE->GetInputSystem();
         UISystem* ui = CORE->GetUISystem();
 
+        // Safety check: If systems are missing, stop here
         if (!input || !ui) return;
 
-        // --- NEW: Calculate mouse world position once for the whole function ---
+        // Convert the mouse's screen coordinates into game world coordinates
         Vector2D mouseWorld = EditorScreenWorld();
 
+        // Check if the user just clicked the Left or Right mouse button this frame
         if (input->IsKeyPressed(MOUSE_LEFT) || input->IsKeyPressed(MOUSE_RIGHT)) {
+            // If no entity is selected, or the selected entity doesn't have a Transform component (can't move it)
             if (!selectedEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
+                // Reset all operation flags
                 isDraggingEntity = false;
                 isScalingEntity = false;
                 isRotatingEntity = false;
+                // Clear the dragging target
                 draggingEntity = Framework::Entity{ INVALID_ENTITY };
                 return;
             }
+            // Save the entity's current state to the Undo stack before modify it
             RecordUndoStep(selectedEntity);
 
+            // Get the transform component of the selected entity to read its data
             auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
-
+            // CHECK FOR SCALING: Left Click + Shift Key
             if (input->IsKeyPressed(MOUSE_LEFT) && input->IsKeyDown(KEY_SHIFT)) {
                 isScalingEntity = true;
                 isDraggingEntity = false;
@@ -2658,16 +2723,19 @@ namespace Framework {
                 scaleStartMouse = mouseWorld;
                 scaleStartScale = transform.scale;
             }
+            // CHECK FOR ROTATING: Right Click
             else if (input->IsKeyPressed(MOUSE_RIGHT)) {
                 isRotatingEntity = true;
                 isDraggingEntity = false;
                 isScalingEntity = false;
                 draggingEntity = selectedEntity;
 
+                // Calculate the initial angle between the object and the mouse
                 Vector2D toMouse = transform.position;
                 rotateStartAngle = std::atan2(toMouse.y, toMouse.x);
                 rotateStartRotation = transform.rotation;
             }
+            // CHECK FOR DRAGGING: Left Click (only)
             else if (input->IsKeyPressed(MOUSE_LEFT)) {
                 isDraggingEntity = true;
                 isScalingEntity = false;
@@ -2679,21 +2747,25 @@ namespace Framework {
             }
         }
 
+        // While dragging flag is true and Left Mouse is held down
         if (isDraggingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            // Verify the entity is still valid
             if (!draggingEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(draggingEntity))
             {
                 isDraggingEntity = false;
                 return;
             }
-
+            // Get the transform component
             auto& transform = entityManager->GetComponent<Framework::Transform>(draggingEntity);
 
-            // Update position using the mouseWorld we calculated earlier
+            // Update the entity position: Mouse World Position + The initial offset
             transform.position = mouseWorld + dragOffset;
         }
 
+        // While scaling flag is true and Left Mouse is held down
         if (isScalingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            // Verify the entity is still valid
             if (!draggingEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(draggingEntity))
             {
@@ -2701,53 +2773,69 @@ namespace Framework {
                 return;
             }
 
+            // Get the transform component
             auto& transform = entityManager->GetComponent<Framework::Transform>(draggingEntity);
 
-            // Use mouseWorld for delta calculation
+            // Calculate distance vector between current mouse pos and start mouse pos
             Vector2D delta = mouseWorld - scaleStartMouse;
 
+            // Calculate a scaling factor based on horizontal mouse movement
             float factor = 1.0f + delta.x * 0.5f;
+
+            // Clamp the factor so the object doesn't disappear (too small) or explode (too big)
             if (factor < 0.1f) factor = 0.1f;
             if (factor > 5.0f) factor = 5.0f;
 
+            // Apply the factor to the original scale
             transform.scale.x = scaleStartScale.x * factor;
             transform.scale.y = scaleStartScale.y * factor;
         }
 
+        // --- EXECUTE ROTATION LOGIC ---
+        // While rotating flag is true and Right Mouse is held down
         if (isRotatingEntity && ImGui::IsMouseDown(ImGuiMouseButton_Right))
         {
+            // Verify the entity is still valid
             if (!selectedEntity.IsValid() ||
                 !entityManager->HasComponent<Framework::Transform>(selectedEntity)) {
                 isRotatingEntity = false;
             }
             else {
+                // Get the transform component
                 auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
-                // Simple constant rotation
+                // Apply a constant rotation speed to the entity
                 const float rotationSpeed = 0.2f;
                 transform.rotation += rotationSpeed;
             }
         }
 
+        // --- RESET ON RELEASE (LEFT MOUSE) ---
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            // If we were dragging or scaling, stop now
             if (isDraggingEntity || isScalingEntity) {
                 isDraggingEntity = false;
                 isScalingEntity = false;
+                // Update the spatial partition (grid) because the object moved/resized
                 RebuildSpatialPartition();
             }
         }
-
+        // --- RESET ON RELEASE (RIGHT MOUSE) ---
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
             isRotatingEntity = false;
         }
     }
-    //undo - jiahao
+    // ============================================================================
+    // This function saves the current state of an entity before it gets modified.
+    // It pushes the state onto a history stack so we can revert changes later.
+    // author: jiahao.zhou@digipen
+    // ============================================================================
     void ImGuiSystem::RecordUndoStep(Entity entity) {
         // First, check if the entity is valid and has a Transform to save
         if (!entityManager || !entity.IsValid() || !entityManager->HasComponent<Transform>(entity)) {
             return; // Safety check failed, do nothing
         }
 
-        // Get the CURRENT position of the entity (before the user moves it)
+        // Get the current position of the entity (before the user moves it)
         auto& transform = entityManager->GetComponent<Transform>(entity);
 
         // Create a new undo step with this info
@@ -2758,7 +2846,7 @@ namespace Framework {
         // Add this step to the end of our history list
         undoStack.push_back(step);
 
-        // Check if we have exceeded our memory limit (e.g., 20 steps)
+        // Check if have exceeded our memory limit 
         if (undoStack.size() > 20) {
             // Remove the oldest step (the one at the front/beginning)
             undoStack.erase(undoStack.begin());
@@ -2767,7 +2855,12 @@ namespace Framework {
         // Log for debugging purposes
         std::cout << "[Editor] Recorded undo step for Entity " << entity.GetID() << "\n";
     }
-    //undo - jiahao
+
+    // ============================================================================
+    // This function reverts the last recorded action by restoring the saved state.
+    // It pops the last state from the stack and applies it back to the entity.
+    // author: jiahao.zhou@digipen
+    // ============================================================================
     void ImGuiSystem::PerformUndo() {
         // 1. Check if we have anything to undo
         if (undoStack.empty()) {
