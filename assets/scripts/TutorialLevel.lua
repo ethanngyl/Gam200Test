@@ -237,10 +237,6 @@ function OnUpdate(dt)
         end
     end
     
-    if IsKeyDown("Escape") then
-        Log("ESC pressed - skipping tutorial")
-        OnNextButtonClicked()
-    end
 end
 
 function OnDraw()
