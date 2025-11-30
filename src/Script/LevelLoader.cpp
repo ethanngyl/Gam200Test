@@ -1,11 +1,45 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           LevelLoader.cpp
- Author:         GE YONGQI
- Email:          yongqi.ge@digipen.edu
- Date:           2025-11-13
+ File:          LevelLoader.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-11-13
+ Contribution:  100%
  ------------------------------------------------------------------------------
-  Implementation of Lua-based level loading system
+  Lua-based Level Loading System Implementation
+
+  Purpose:
+  Core implementation of the LevelLoader system that manages Lua-scripted
+  game levels and provides C++ API bindings for Lua scripts.
+
+  Key Features:
+  - Singleton pattern for global access
+  - Lua state lifecycle management (create, reset, destroy)
+  - Level lifecycle (Load, Update, Draw, Unload)
+  - Hot-reload capability for rapid iteration
+  - Editor mode toggle (F1 key) with visual feedback
+  - Extensive C API for Lua (60+ functions)
+
+  API Categories:
+  - Logging: Log messages to console
+  - Camera: Position, zoom, framebuffer queries
+  - Engine: Play state, game state transitions
+  - ImGui: Enable/disable overlay
+  - Pause: Toggle pause, query pause state
+  - Audio: Play/stop sounds, volume control
+  - UI: Button creation, text rendering
+  - Input: Keyboard queries
+  - JSON: Configuration file loading
+  - Entities: Sprite spawning, manipulation, destruction
+  - TileMap: Grid-based level loading
+  - Player/Enemy: Grid movement, AP management, combat
+  - Scripts: Component management
+
+  Editor Mode:
+  - Lua_ToggleEditor(): Toggle editor mode on/off
+  - Lua_IsEditorEnabled(): Query current editor mode state
+  - Lua_SetEditorMode(): Directly set editor mode
+  - When enabled, buttons are grayed out and ImGui is shown
 ===============================================================================
 */
 
@@ -154,7 +188,7 @@ namespace Framework {
         }
 
         lua_pushboolean(L, isEditorMode);
-		lua_setglobal(L, "IS_EDITOR_LOAD");
+        lua_setglobal(L, "IS_EDITOR_LOAD");
 
         // Load the Lua script
         if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) {
@@ -351,14 +385,14 @@ namespace Framework {
         lua_register(L, "SetSpriteColor", Lua_SetSpriteColor);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
-		lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
+        lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
         lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
         lua_register(L, "GetCameraPosition", Lua_GetCameraPosition);
-		lua_register(L, "GetPlayerAttackAP", Lua_GetPlayerAttackAP);
-		lua_register(L, "GetPlayerHP", Lua_GetPlayerHP);
+        lua_register(L, "GetPlayerAttackAP", Lua_GetPlayerAttackAP);
+        lua_register(L, "GetPlayerHP", Lua_GetPlayerHP);
 
         // Enemy AI Configuration
         lua_register(L, "FindPlayer", Lua_FindPlayer);
@@ -599,7 +633,8 @@ namespace Framework {
         if (!em->HasComponent<SpriteAnimation>(player)) {
             em->AddComponent<SpriteAnimation>(player);
             LOG_INFO("LOAD_ANIM", " Added SpriteAnimation component");
-        } else {
+        }
+        else {
             LOG_INFO("LOAD_ANIM", "Player already has SpriteAnimation");
         }
 
@@ -619,7 +654,8 @@ namespace Framework {
             LOG_INFO("LOAD_ANIM", "  - Frames: %d", anim.frameCount);
             LOG_INFO("LOAD_ANIM", "  - SpriteSheet: %u", anim.spriteSheet.GetID());
             LOG_INFO("LOAD_ANIM", "  - Playing: %d", anim.playing);
-        } else {
+        }
+        else {
             LOG_ERROR("LOAD_ANIM", "AnimationSystem or GraphicsSystem not available");
         }
 
