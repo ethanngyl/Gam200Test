@@ -657,6 +657,50 @@ namespace Framework {
                     ImGui::EndDragDropSource();
                 }
             }
+
+            // =================================================================
+            // LUA SCRIPT DOUBLE-CLICK LOADING
+            // =================================================================
+            if (path.extension() == ".lua") {
+                if (ImGui::IsItemHovered()) {
+                    
+
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        std::string filename = path.filename().string();
+                        std::string fullPath = path.string();
+
+                        // Check if it is a LEVEL script (contains "level" or "menu")
+                        std::string lowerName = filename;
+                        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
+                        bool isLevel = (lowerName.find("level") != std::string::npos) ||
+                            (lowerName.find("menu") != std::string::npos);
+
+                        if (isLevel) {
+                            std::cout << "[Assets] Double-click detected: Loading " << filename << "\n";
+
+                            // 1. Clear Game Viewport
+                            if (entityManager) {
+                                entityManager->ClearAllEntities();
+                                entityManager->ResetEntityIDCounter();
+                            }
+
+                            // 2. Load the new Level
+                            // Pass 'true' to tell the script we are in Editor Mode (keep UI enabled)
+                            Framework::LevelLoader::GetInstance().LoadLevel(fullPath, true);
+
+                            // 3. FORCE Editor UI to stay ON (Safety override)
+                            this->enabled = true;
+
+                            // 4. Reset Camera (Optional)
+                            if (graphicsSystem) graphicsSystem->SetCameraPosition(glm::vec3(0, 0, 0));
+                        }
+                        else {
+                            std::cout << "[Assets] Ignored double-click on non-level script: " << filename << "\n";
+                        }
+                    }
+                }
+            }
         }
 
         ImGui::End();  // Only one End() call at the very end
@@ -764,6 +808,19 @@ namespace Framework {
         if (!enabled) {
             return;
         }
+
+        // This ensures the game renders into the Viewport Window, not over your Editor!
+        if (graphicsSystem) {
+            if (IsRenderingToViewport()) {
+                // Draw ONLY to the Game Viewport image
+                graphicsSystem->SetRenderTarget(viewportFBO, viewportWidth, viewportHeight);
+            }
+            else {
+                // Draw to main screen
+                graphicsSystem->ClearRenderTarget();
+            }
+        }
+
         // Start ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -3142,6 +3199,8 @@ namespace Framework {
 
                     // Load the level via LevelLoader
                     Framework::LevelLoader::GetInstance().LoadLevel(fullPath, true);
+                    // This overrides the Lua script's "DisableImGui()" call
+                    this->enabled = true;
                 }
                 else {
                     // --- SPAWN ENTITY SCRIPT ---
