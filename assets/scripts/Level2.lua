@@ -1,12 +1,15 @@
 ﻿-- ============================================================================
--- Level2.lua - ImGui Editor Showcase (FIXED v3 - Optimized)
--- ============================================================================
--- Purpose:
--- - Showcase ImGui editor functionality
--- - Demonstrate editor mode with F1 toggle
--- - Simple level for testing ImGui features
--- 
--- FIX v3: Exit editor mode before switching levels (with helper function)
+-- Level2.lua - ImGui Editor Showcase 
+-- Author:        Padilla Carl Jameson
+-- Date:          11/30/2025
+-- Contribution:  100%
+--
+-- Description:
+-- A test level that demonstrates the ImGui editor functionality. Starts in
+-- editor mode by default with camera controls enabled. Allows toggling between
+-- editor and play modes using F1. Implements safe level transitions that
+-- properly exit editor mode before switching scenes to prevent state conflicts.
+-- Supports quick navigation to main menu (key 5) and Level 3 (key 3).
 -- ============================================================================
 
 -- ============================================================================
@@ -42,6 +45,7 @@ end
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
 
+--- Initializes Level 2 with ImGui editor enabled.
 function OnInit()
     Log("========================================")
     Log("LEVEL 2: ImGui Editor Showcase")
@@ -80,6 +84,7 @@ end
 -- LEVEL LIFECYCLE: OnUpdate
 -- ============================================================================
 
+--- Handles input and updates level state each frame.
 function OnUpdate(dt)
     -- Update audio system
     UpdateAudio(dt)
@@ -124,6 +129,7 @@ end
 -- LEVEL LIFECYCLE: OnDraw
 -- ============================================================================
 
+--- Renders UI text and editor mode indicator.
 function OnDraw()
     -- Display editor mode indicator
     if IsEditorMode() then
@@ -141,6 +147,7 @@ end
 -- LEVEL LIFECYCLE: OnDestroy
 -- ============================================================================
 
+--- Cleans up resources and exits editor mode.
 function OnDestroy()
     Log("========================================")
     Log("Level 2 cleanup...")

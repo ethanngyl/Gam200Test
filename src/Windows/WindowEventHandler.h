@@ -1,8 +1,9 @@
 /**
 ===============================================================================
  File:          WindowEventHandler.h
- Author:        GE YONGQI
+ Author:        Padilla Carl Jameson Z
  Date:          2025-11-28
+ Contribution:  100%
  ------------------------------------------------------------------------------
   Unified Window Event Handling for TECH 1701 & 1702
 
