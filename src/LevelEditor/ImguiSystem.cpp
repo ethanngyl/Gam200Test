@@ -51,7 +51,7 @@ Safety:
 #include "Pathfinding.h"
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
-
+#include <string.h>
 namespace Framework {
 
     ImGuiSystem::ImGuiSystem()
@@ -276,17 +276,17 @@ namespace Framework {
                 int rows = 0;
                 int columns = 0;
                 int frameCount = 0;
-                float frameTime = 0.0f;
+                float frameTime1 = 0.0f;
                 int loopInt = 1;
                 float uvShrinkPx = 0.0f;
 
-                if (iss >> rows >> columns >> frameCount >> frameTime >> loopInt >> uvShrinkPx) {
+                if (iss >> rows >> columns >> frameCount >> frameTime1 >> loopInt >> uvShrinkPx) {
                     entityManager->AddComponent<Framework::SpriteAnimation>(Entity);
                     auto& spriteAnimation = entityManager->GetComponent<Framework::SpriteAnimation>(Entity);
                     spriteAnimation.rows = rows;
                     spriteAnimation.columns = columns;
                     spriteAnimation.frameCount = frameCount;
-                    spriteAnimation.frameTime = frameTime;
+                    spriteAnimation.frameTime = frameTime1;
                     spriteAnimation.loop = (loopInt != 0);
                     spriteAnimation.uvShrinkPx = uvShrinkPx;
 
@@ -677,8 +677,8 @@ namespace Framework {
             return Framework::Vector2D(0.0f, 0.0f);
         }
         // Get the actual OS window handle (GLFW window)
-        GLFWwindow* window = windowSystem->GetWindow();
-        if (!window) {
+        GLFWwindow* window1= windowSystem->GetWindow();
+        if (!window1) {
             return Framework::Vector2D(0.0f, 0.0f);
         }
 
@@ -704,7 +704,7 @@ namespace Framework {
         else {
             // --- FULLSCREEN MODE (Fallback) ---
             int w, h;
-            glfwGetWindowSize(window, &w, &h);
+            glfwGetWindowSize(window1, &w, &h);
             screenW = (float)w;
             screenH = (float)h;
         }
@@ -962,7 +962,7 @@ namespace Framework {
         if (ImGui::BeginPopupModal("Audio Format Error##AudioError", nullptr,
             ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
 
-            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "⚠️ ERROR");
+            ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "ERROR");
             ImGui::Separator();
             ImGui::Spacing();
             ImGui::TextWrapped("%s", audioErrorMessage.c_str());
@@ -1274,7 +1274,7 @@ namespace Framework {
 
                         // Display texture path
                         char pathBuffer[256];
-                        strncpy(pathBuffer, sprite.texturePath.c_str(), sizeof(pathBuffer) - 1);
+                        strncpy_s(pathBuffer, sizeof(pathBuffer), sprite.texturePath.c_str(), _TRUNCATE);
                         pathBuffer[sizeof(pathBuffer) - 1] = '\0';
 
                         if (ImGui::InputText("Texture Path", pathBuffer, sizeof(pathBuffer))) {
@@ -1314,7 +1314,8 @@ namespace Framework {
 
                         // Sprite name
                         char nameBuffer[256];
-                        strncpy(nameBuffer, meshRenderer.spriteName.c_str(), sizeof(nameBuffer) - 1);
+                        //strncpy(nameBuffer, meshRenderer.spriteName.c_str(), sizeof(nameBuffer) - 1);
+                        strncpy_s(nameBuffer, sizeof(nameBuffer), meshRenderer.spriteName.c_str(), _TRUNCATE);
                         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
 
                         if (ImGui::InputText("Sprite Name", nameBuffer, sizeof(nameBuffer))) {
@@ -1454,7 +1455,8 @@ namespace Framework {
 
                         // Display audio name
                         char audioBuffer[256];
-                        strncpy(audioBuffer, audio.soundName.c_str(), sizeof(audioBuffer) - 1);
+                        //strncpy(audioBuffer, audio.soundName.c_str(), sizeof(audioBuffer) - 1);
+                        strncpy_s(audioBuffer, sizeof(audioBuffer), audio.soundName.c_str(), _TRUNCATE);
                         audioBuffer[sizeof(audioBuffer) - 1] = '\0';
 
                         if (ImGui::InputText("Sound Name", audioBuffer, sizeof(audioBuffer))) {
@@ -1484,7 +1486,8 @@ namespace Framework {
 
                         // Editable script path
                         char pathBuffer[512];
-                        strncpy(pathBuffer, script.scriptPath.c_str(), sizeof(pathBuffer) - 1);
+                        //strncpy(pathBuffer, script.scriptPath.c_str(), sizeof(pathBuffer) - 1);
+                        strncpy_s(pathBuffer, sizeof(pathBuffer), script.scriptPath.c_str(), _TRUNCATE);
                         pathBuffer[sizeof(pathBuffer) - 1] = '\0';
 
                         if (ImGui::InputText("Script Path", pathBuffer, sizeof(pathBuffer))) {
@@ -2107,7 +2110,7 @@ namespace Framework {
                 }
             }
             else {
-                std::cout << "[Prefab] ⚠️ No prefab selected!\n";
+                std::cout << "[Prefab] No prefab selected!\n";
             }
         }
 
@@ -2179,7 +2182,8 @@ namespace Framework {
                         auto& s = entityManager->GetComponent<Sprite>(templateEntity);
 
                         char texBuf[256];
-                        std::strncpy(texBuf, s.texturePath.c_str(), sizeof(texBuf) - 1);
+                        //std::strncpy(texBuf, s.texturePath.c_str(), sizeof(texBuf) - 1);
+                        strncpy_s(texBuf, sizeof(texBuf), s.texturePath.c_str(), _TRUNCATE);
                         texBuf[sizeof(texBuf) - 1] = '\0';
 
                         if (ImGui::InputText("Texture Path##AllTex", texBuf, sizeof(texBuf))) {
@@ -2198,7 +2202,8 @@ namespace Framework {
                         auto& mr = entityManager->GetComponent<MeshRenderer>(templateEntity);
 
                         char nameBuf[256];
-                        std::strncpy(nameBuf, mr.spriteName.c_str(), sizeof(nameBuf) - 1);
+                        //std::strncpy(nameBuf, mr.spriteName.c_str(), sizeof(nameBuf) - 1);
+                        strncpy_s(nameBuf, sizeof(nameBuf), mr.spriteName.c_str(), _TRUNCATE);
                         nameBuf[sizeof(nameBuf) - 1] = '\0';
 
                         if (ImGui::InputText("Sprite Name##AllSpriteName", nameBuf, sizeof(nameBuf))) {
@@ -2574,7 +2579,7 @@ namespace Framework {
         if (!entityManager) return;
 
         // Get ImGui's input/output state (mouse, keyboard, etc.)
-        ImGuiIO& io = ImGui::GetIO();
+        //ImGuiIO& io = ImGui::GetIO();
 
         // If we are rendering to the ImGui viewport but the mouse is not hovering that viewport,
         // we should not do picking (prevents clicking outside viewport from selecting things)
@@ -2684,7 +2689,7 @@ namespace Framework {
         if (!entityManager) return;
 
         // Get the ImGui I/O interface to check mouse states
-        ImGuiIO& io = ImGui::GetIO();
+        //ImGuiIO& io = ImGui::GetIO();
 
         // Allow dragging if we are hovering OR already dragging 
         if (!isDraggingEntity && !isScalingEntity && !isRotatingEntity) {
@@ -2977,7 +2982,8 @@ namespace Framework {
 
                     // 2. Pre-fill the buffer with the filename (as a default key)
                     std::string defaultName = path.stem().string();
-                    strncpy(newAudioKeyBuffer, defaultName.c_str(), sizeof(newAudioKeyBuffer));
+                    //strncpy(newAudioKeyBuffer, defaultName.c_str(), sizeof(newAudioKeyBuffer));
+                    strncpy_s(newAudioKeyBuffer, sizeof(newAudioKeyBuffer), defaultName.c_str(), _TRUNCATE);
                     newAudioKeyBuffer[sizeof(newAudioKeyBuffer) - 1] = '\0';
 
                     // 3. Flag the popup to open next frame

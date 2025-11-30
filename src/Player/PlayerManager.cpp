@@ -1013,7 +1013,7 @@ namespace Framework {
         
 
         std::string animationName = "";
-		bool flipAnimation = false;
+		//bool flipAnimation = false;
 
         //// Switch animation based on movement direction
         //if (!animationName.empty() && CORE && CORE->GetAnimationSystem()) {

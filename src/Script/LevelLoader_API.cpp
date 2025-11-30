@@ -868,7 +868,7 @@ namespace Framework {
         // Clear all entities using existing ECS function
         em->ClearAllEntities();
 
-        LOG_INFO("LevelLoader", "✓ Cleared all entities (%zu destroyed)", entityCount);
+        LOG_INFO("LevelLoader", "Cleared all entities (%zu destroyed)", entityCount);
         return 0;
     }
 
@@ -1529,6 +1529,7 @@ namespace Framework {
      * Refills both movement AP and attack AP
      */
     int LevelLoader::Lua_RefillPlayerAP(lua_State* L) {
+        (void)L;
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) {
             LOG_WARN("LevelLoader", "RefillPlayerAP: No EntityManager");

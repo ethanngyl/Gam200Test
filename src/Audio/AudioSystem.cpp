@@ -539,7 +539,7 @@ namespace Framework {
     // 2. Read File
     std::ifstream file("assets/JSON/AudioConfig.json");
     if (!file.is_open()) {
-        std::cerr << "[AudioSystem] ❌ Failed to open config file!\n";
+        std::cerr << "[AudioSystem] Failed to open config file!\n";
         return;
     }
 
