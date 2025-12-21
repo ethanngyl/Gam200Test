@@ -1,69 +1,50 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- TutorialLevel.lua
 -- Author:        GE YONGQI
 -- Email:         yongqi.ge@digipen.edu
 -- Date:          2025-11-13
 -- Contribution:  100%
+--
+-- REFACTORED:    2025-12-21 (Using ButtonManager module)
 -- ----------------------------------------------------------------------------
---  JSON-Driven Tutorial Level with All-Button Text System
+--  JSON-Driven Tutorial Level with ButtonManager Integration
 --
 --  Purpose:
---  Tutorial level that demonstrates game mechanics using JSON configuration.
---  ALL text elements are implemented as transparent buttons for consistent
---  rendering and interaction handling.
---
---  Features:
---  - Loads UI configuration from tutorial_config.json
---  - Multi-layered sprite system (background, scroll overlay, corners)
---  - All text rendered as button components
---  - F1 editor mode toggle with visual feedback
---  - ESC key shortcut to skip tutorial
---  - Smooth state transitions with delayed execution
---
---  Level Lifecycle:
---  - OnInit()     : Load JSON, setup camera, spawn sprites, create buttons
---  - OnUpdate(dt) : Handle F1/ESC input, update audio, process transitions
---  - OnDraw()     : Render all button text with editor mode adjustments
---  - OnDestroy()  : Cleanup entities, overlays, buttons, and audio
---
---  Editor Mode (F1):
---  - Grays out all text buttons (RGB reduced to 0.5)
---  - Displays "EDITOR MODE" indicator
---  - Disables button callbacks including NEXT button
---  - Enables ImGui overlay for debugging
---
---  Design Note:
---  Using buttons for all text (instead of DrawText) enables:
---  - Uniform rendering pipeline
---  - Consistent layer management
---  - Easy JSON-driven configuration
---  - Simplified state management
+--  Tutorial level that demonstrates game mechanics using JSON configuration
+--  with centralized button management via ButtonManager module.
 -- ============================================================================
 
-local buttonIDs = {}
+-- Load ButtonManager module
+local ButtonManager = require("assets/scripts/ButtonManager")
+
+-- ============================================================================
+-- LEVEL STATE VARIABLES
+-- ============================================================================
+
 local initialized = false
 local config = nil
-local editorToggleCooldown = 0
 local backgroundSpriteID = 0
 local scrollOverlayID = 0
 local overlaySprites = {}
 local cornerSpriteIDs = {}
-local pendingState = nil
-local pendingTimer = 0.0
+
+-- ============================================================================
+-- LEVEL LIFECYCLE: OnInit
+-- ============================================================================
 
 function OnInit()
-    Log("Tutorial Level Script Initialized (All Buttons Version)")
+    Log("Tutorial Level Script Initialized (ButtonManager Version)")
     Log("Loading configuration from JSON file...")
-    
+
     config = LoadJSON("assets/JSON/tutorial_config.json")
-    
+
     if not config then
         Log("ERROR: Failed to load JSON configuration!")
         return
     end
-    
+
     Log("Successfully loaded configuration for: " .. config.menu.name)
-    
+
     local cam = config.menu.camera
     SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
     SetCameraZoom(cam.zoom)
@@ -84,7 +65,7 @@ function OnInit()
     )
 
     if backgroundSpriteID > 0 then
-        Log(" Background sprite created (ID: " .. backgroundSpriteID .. ")")
+        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("✗ WARNING: Failed to create background sprite")
     end
@@ -106,7 +87,7 @@ function OnInit()
 
             if spriteID > 0 then
                 overlaySprites[overlay.id] = spriteID
-                Log("   Overlay sprite '" .. overlay.id .. "' created (ID: " .. spriteID .. ")")
+                Log("  ✓ Overlay sprite '" .. overlay.id .. "' created (ID: " .. spriteID .. ")")
             else
                 Log("  ✗ FAILED to create overlay sprite: " .. overlay.id)
             end
@@ -132,7 +113,7 @@ function OnInit()
 
             if spriteID > 0 then
                 cornerSpriteIDs[corner.id] = spriteID
-                Log("   Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
             else
                 Log("  ✗ FAILED to create corner sprite: " .. corner.id)
             end
@@ -145,143 +126,64 @@ function OnInit()
     PlaySound(music.name, music.loop, music.volume)
     Log("Playing tutorial music: " .. music.name)
 
-    ClearAllButtons()
-    CreateButtonsFromConfig()
-    
+    -- ========================================================================
+    -- INITIALIZE BUTTON MANAGER
+    -- ========================================================================
+    ButtonManager.Initialize(config.menu.buttons)
+
     initialized = true
-    Log("Tutorial initialization complete - ALL TEXT AS BUTTONS")
+    Log("Tutorial initialization complete")
     Log("Press F1 to toggle editor mode")
 end
 
-function CreateButtonsFromConfig()
-    if not config or not config.menu or not config.menu.buttons then
-        Log("ERROR: Invalid configuration - no buttons found!")
-        return
-    end
-    
-    Log("Creating " .. #config.menu.buttons .. " buttons from config...")
-    
-    for i, button in ipairs(config.menu.buttons) do
-        Log("Creating button: " .. button.id)
-
-        local layer = button.layer or 10
-        local buttonID = CreateButton(
-            button.texture,
-            button.position.x,
-            button.position.y,
-            button.scale.x,
-            button.scale.y,
-            button.callback,
-            layer
-        )
-        
-        if buttonID > 0 then
-            buttonIDs[button.id] = {
-                id = buttonID,
-                config = button
-            }
-            Log("   Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
-        else
-            Log("  ✗ Failed to create button: " .. button.id)
-        end
-    end
-    
-    Log("Button creation complete!")
-end
+-- ============================================================================
+-- BUTTON CALLBACKS
+-- ============================================================================
 
 function OnNextButtonClicked()
-    if IsEditorMode() then
-        Log("Button disabled in editor mode")
+    if not ButtonManager.CanExecuteCallback() then
         return
     end
 
-    PlaySound("button", false, 1)
-    pendingState = "Level_select"
-    pendingTimer = 0.15
-    
     Log("NEXT button clicked!")
-    Log("Transitioning to Level Select...")
-    --SetNextGameState("Level_select")
+    ButtonManager.TransitionTo("Level_select")
 end
+
+-- ============================================================================
+-- LEVEL LIFECYCLE: OnUpdate
+-- ============================================================================
 
 function OnUpdate(dt)
     UpdateAudio(dt)
-    
-    if IsKeyDown("F1") then
-        if editorToggleCooldown <= 0 then
-            ToggleEditorMode()
-            
-            if IsEditorMode() then
-                SetEnginePlayState(false)
 
-                Log("EDITOR MODE ON - Buttons disabled")
-            else
-                SetEnginePlayState(true)
-
-                Log("EDITOR MODE OFF - Buttons enabled")
-            end
-            
-            editorToggleCooldown = 0.3
-        end
-    end
-    
-    if editorToggleCooldown > 0 then
-        editorToggleCooldown = editorToggleCooldown - dt
-    end
-
-    if pendingState ~= nil then
-        pendingTimer = pendingTimer - dt
-        if pendingTimer <= 0 then
-            SetNextGameState(pendingState)
-            pendingState = nil
-        end
-    end
-    
+    -- ButtonManager handles F1 toggle and state transitions
+    ButtonManager.Update(dt)
 end
+
+-- ============================================================================
+-- LEVEL LIFECYCLE: OnDraw
+-- ============================================================================
 
 function OnDraw()
     if not config then
         return
     end
-    
-    local editorMode = IsEditorMode()
-    
-    -- All text is now rendered as button text
-    
-    -- Draw ALL button text (including text-only buttons)
-    if buttonIDs then
-        for buttonKey, buttonData in pairs(buttonIDs) do
-            local button = buttonData.config
-            local text = button.text
-            
-            local colorR = editorMode and 0.5 or text.color.r
-            local colorG = editorMode and 0.5 or text.color.g
-            local colorB = editorMode and 0.5 or text.color.b
-            
-            DrawButtonText(
-                buttonData.id,
-                text.font,
-                text.content,
-                text.offset.x,
-                text.offset.y,
-                text.scale,
-                colorR,
-                colorG,
-                colorB
-            )
-        end
-    end
-    
-    if editorMode then
-        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
-    end
+
+    -- ButtonManager handles all button rendering and editor mode visuals
+    ButtonManager.DrawAll()
 end
+
+-- ============================================================================
+-- LEVEL LIFECYCLE: OnDestroy
+-- ============================================================================
 
 function OnDestroy()
     Log("Tutorial cleanup...")
 
     StopAllSounds()
-    ClearAllButtons()
+
+    -- ButtonManager handles button cleanup
+    ButtonManager.Cleanup()
 
     if backgroundSpriteID > 0 then
         DestroyEntity(backgroundSpriteID)
@@ -302,29 +204,30 @@ function OnDestroy()
         end
     end
 
-    buttonIDs = {}
     config = nil
     initialized = false
     backgroundSpriteID = 0
     overlaySprites = {}
     cornerSpriteIDs = {}
-    pendingState = nil
-    pendingTimer = 0.0
 
     Log("Tutorial cleanup complete")
 end
+
+-- ============================================================================
+-- DEBUG FUNCTIONS
+-- ============================================================================
 
 function PrintConfig()
     if not config then
         Log("No configuration loaded!")
         return
     end
-    
+
     Log("═══════════════════════════════════════")
-    Log("Tutorial Configuration (All Buttons):")
+    Log("Tutorial Configuration:")
     Log("  Menu Name: " .. config.menu.name)
     Log("  Music: " .. config.menu.music.name)
     Log("  Camera Zoom: " .. config.menu.camera.zoom)
-    Log("  Total Buttons: " .. #config.menu.buttons)
+    Log("  Total Buttons: " .. ButtonManager.GetButtonCount())
     Log("═══════════════════════════════════════")
 end
