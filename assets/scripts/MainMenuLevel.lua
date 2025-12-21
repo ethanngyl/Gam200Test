@@ -1,70 +1,65 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- MainMenuLevel.lua
 -- Author:        GE YONGQI
 -- Email:         yongqi.ge@digipen.edu
 -- Date:          2025-11-13
 -- Contribution:  100%
+--
+-- REFACTORED:    2025-12-21 (Using ButtonManager module)
 -- ----------------------------------------------------------------------------
---  JSON-Driven Main Menu with Editor Mode Support
+--  JSON-Driven Main Menu with ButtonManager Integration
 --
 --  Purpose:
 --  Complete main menu level script using JSON configuration for all UI
---  elements. Enables designer-friendly modifications without code changes.
+--  elements. Now uses centralized ButtonManager module to eliminate code
+--  duplication.
 --
 --  Features:
 --  - Loads UI configuration from mainmenu_config.json
 --  - Creates layered sprite system (background, logo, corner decorations)
---  - F1 editor mode toggle with visual feedback
---  - Button interaction disabled in editor mode
+--  - Uses ButtonManager for all button operations
+--  - F1 editor mode toggle with visual feedback (handled by ButtonManager)
 --  - Audio integration with background music
 --  - Smooth state transitions with delayed execution
 --
 --  Level Lifecycle:
---  - OnInit()     : Load JSON, setup camera, spawn sprites, create buttons
---  - OnUpdate(dt) : Handle F1 toggle, update audio, process transitions
---  - OnDraw()     : Render button text with editor mode color adjustment
---  - OnDestroy()  : Cleanup all entities, buttons, and audio
---
---  Editor Mode (F1):
---  - Grays out all buttons (RGB reduced to 0.5)
---  - Displays "EDITOR MODE" indicator
---  - Disables button callbacks
---  - Enables ImGui overlay for debugging
+--  - OnInit()     : Load JSON, setup camera, spawn sprites, init ButtonManager
+--  - OnUpdate(dt) : Update ButtonManager (handles F1, transitions, etc.)
+--  - OnDraw()     : ButtonManager.DrawAll() renders all buttons automatically
+--  - OnDestroy()  : Cleanup entities, ButtonManager handles button cleanup
 -- ============================================================================
 
+-- Load ButtonManager module
+local ButtonManager = require("assets/scripts/ButtonManager")
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
 -- ============================================================================
 
-local buttonIDs = {}
 local initialized = false
 local config = nil
-local editorToggleCooldown = 0
 local backgroundSpriteID = 0  -- Store background sprite entity ID
 local logoSpriteID = 0        -- Store logo sprite entity ID
-local cornerSpriteIDs = {}    -- Store corner sprite entity IDs  
-local pendingState = nil
-local pendingTimer = 0.0
+local cornerSpriteIDs = {}    -- Store corner sprite entity IDs
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit()
-    Log("MainMenu Level Script Initialized (JSON Version)")
+    Log("MainMenu Level Script Initialized (ButtonManager Version)")
     Log("Loading configuration from JSON file...")
-    
+
     -- Load configuration from JSON
     config = LoadJSON("assets/JSON/mainmenu_config.json")
-    
+
     if not config then
         Log("ERROR: Failed to load JSON configuration!")
         return
     end
-    
+
     Log("Successfully loaded configuration for: " .. config.menu.name)
-    
+
     -- Apply camera settings from JSON
     local cam = config.menu.camera
     SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
@@ -97,7 +92,7 @@ function OnInit()
     )
 
     if backgroundSpriteID > 0 then
-        Log(" Background sprite created (ID: " .. backgroundSpriteID .. ")")
+        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("✗ WARNING: Failed to create background sprite")
     end
@@ -119,7 +114,7 @@ function OnInit()
         )
 
         if logoSpriteID > 0 then
-            Log(" Logo sprite created (ID: " .. logoSpriteID .. ")")
+            Log("✓ Logo sprite created (ID: " .. logoSpriteID .. ")")
         else
             Log("✗ WARNING: Failed to create logo sprite")
         end
@@ -146,7 +141,7 @@ function OnInit()
 
             if spriteID > 0 then
                 cornerSpriteIDs[corner.id] = spriteID
-                Log("   Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
             else
                 Log("  ✗ FAILED to create corner sprite: " .. corner.id)
             end
@@ -160,55 +155,14 @@ function OnInit()
     PlaySound(music.name, music.loop, music.volume)
     Log("Playing menu music: " .. music.name)
 
-    -- Clear any existing UI from previous states
-    ClearAllButtons()
+    -- ========================================================================
+    -- INITIALIZE BUTTON MANAGER
+    -- ========================================================================
+    ButtonManager.Initialize(config.menu.buttons)
 
-    -- Create UI buttons from JSON config
-    CreateButtonsFromConfig()
-    
     initialized = true
     Log("MainMenu initialization complete")
     Log("Press F1 to toggle editor mode")
-end
-
--- ============================================================================
--- UI CREATION FROM JSON
--- ============================================================================
-
-function CreateButtonsFromConfig()
-    if not config or not config.menu or not config.menu.buttons then
-        Log("ERROR: Invalid configuration - no buttons found!")
-        return
-    end
-    
-    Log("Creating " .. #config.menu.buttons .. " buttons from config...")
-    
-    for i, button in ipairs(config.menu.buttons) do
-        Log("Creating button: " .. button.id)
-
-        local layer = button.layer or 10
-        local buttonID = CreateButton(
-            button.texture,
-            button.position.x,
-            button.position.y,
-            button.scale.x,
-            button.scale.y,
-            button.callback,
-            layer
-        )
-        
-        if buttonID > 0 then
-            buttonIDs[button.id] = {
-                id = buttonID,
-                config = button
-            }
-            Log("   Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
-        else
-            Log("  ✗ Failed to create button: " .. button.id)
-        end
-    end
-    
-    Log("Button creation complete!")
 end
 
 -- ============================================================================
@@ -216,35 +170,23 @@ end
 -- ============================================================================
 
 function OnPlayButtonClicked()
-    --  NEW: Check if in editor mode
-    if IsEditorMode() then
-        Log("Button disabled in editor mode")
+    -- Check if button can execute (handled by ButtonManager)
+    if not ButtonManager.CanExecuteCallback() then
         return
     end
-    
-    PlaySound("button", false, 1)
-    pendingState = "TUTORIAL"
-    pendingTimer = 0.15  -- Delay before transitioning
 
     Log("PLAY button clicked!")
-    Log("Transitioning to TUTORIAL...")
-    --SetNextGameState("TUTORIAL")
+    ButtonManager.TransitionTo("TUTORIAL")
 end
 
 function OnExitButtonClicked()
-    --  NEW: Check if in editor mode
-    if IsEditorMode() then
-        Log("Button disabled in editor mode")
+    -- Check if button can execute (handled by ButtonManager)
+    if not ButtonManager.CanExecuteCallback() then
         return
     end
 
-    PlaySound("button", false, 1)
-    pendingState = "GS_QUIT"
-    pendingTimer = 0.15  -- Delay before transitioning
-    
     Log("EXIT button clicked!")
-    Log("Quitting game...")
-   -- SetNextGameState("GS_QUIT")
+    ButtonManager.TransitionTo("GS_QUIT")
 end
 
 -- ============================================================================
@@ -253,37 +195,9 @@ end
 
 function OnUpdate(dt)
     UpdateAudio(dt)
-    
-    --  MODIFIED: F1 toggles editor mode
-    if IsKeyDown("F1") then
-        if editorToggleCooldown <= 0 then
-            ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
-            
-            if IsEditorMode() then
-                SetEnginePlayState(false)
 
-                Log("EDITOR MODE ON - Buttons disabled")
-            else
-                SetEnginePlayState(true)
-
-                Log("EDITOR MODE OFF - Buttons enabled")
-            end
-            
-            editorToggleCooldown = 0.3
-        end
-    end
-
-    if pendingState ~= nil then
-        pendingTimer = pendingTimer - dt
-        if pendingTimer <= 0 then
-            SetNextGameState(pendingState)
-            pendingState = nil
-        end
-    end
-    
-    if editorToggleCooldown > 0 then
-        editorToggleCooldown = editorToggleCooldown - dt
-    end
+    -- ButtonManager handles F1 toggle and state transitions
+    ButtonManager.Update(dt)
 end
 
 -- ============================================================================
@@ -291,40 +205,12 @@ end
 -- ============================================================================
 
 function OnDraw()
-    if not config or not buttonIDs then
+    if not config then
         return
     end
-    
-    --  NEW: Check if in editor mode
-    local editorMode = IsEditorMode()
-    
-    -- Draw text on each button using config data
-    for buttonKey, buttonData in pairs(buttonIDs) do
-        local button = buttonData.config
-        local text = button.text
-        
-        --  NEW: Gray out buttons in editor mode
-        local colorR = editorMode and 0.5 or text.color.r
-        local colorG = editorMode and 0.5 or text.color.g
-        local colorB = editorMode and 0.5 or text.color.b
-        
-        DrawButtonText(
-            buttonData.id,
-            text.font,
-            text.content,
-            text.offset.x,
-            text.offset.y,
-            text.scale,
-            colorR,
-            colorG,
-            colorB
-        )
-    end
-    
-    --  NEW: Display editor mode indicator
-    if editorMode then
-        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
-    end
+
+    -- ButtonManager handles all button rendering and editor mode visuals
+    ButtonManager.DrawAll()
 end
 
 -- ============================================================================
@@ -337,8 +223,8 @@ function OnDestroy()
     -- Stop all sounds
     StopAllSounds()
 
-    -- Clear UI buttons
-    ClearAllButtons()
+    -- ButtonManager handles button cleanup
+    ButtonManager.Cleanup()
 
     -- Destroy background sprite
     if backgroundSpriteID > 0 then
@@ -361,11 +247,8 @@ function OnDestroy()
     end
 
     -- Reset state
-    buttonIDs = {}
     config = nil
     initialized = false
-    pendingState = nil
-    pendingTimer = 0.0
     backgroundSpriteID = 0
     logoSpriteID = 0
     cornerSpriteIDs = {}
@@ -382,18 +265,13 @@ function PrintConfig()
         Log("No configuration loaded!")
         return
     end
-    
+
     Log("═══════════════════════════════════════")
     Log("MainMenu Configuration (from JSON):")
     Log("  Menu Name: " .. config.menu.name)
     Log("  Music: " .. config.menu.music.name)
     Log("  Camera Zoom: " .. config.menu.camera.zoom)
-    Log("  Button Count: " .. #config.menu.buttons)
-    
-    for i, button in ipairs(config.menu.buttons) do
-        Log("  Button " .. i .. ": " .. button.id .. " at (" .. 
-            button.position.x .. ", " .. button.position.y .. ")")
-    end
-    
+    Log("  Button Count: " .. ButtonManager.GetButtonCount())
+
     Log("═══════════════════════════════════════")
 end

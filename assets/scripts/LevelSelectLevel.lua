@@ -1,65 +1,62 @@
-﻿-- ============================================================================
--- LevelSelectLevel.lua 
+-- ============================================================================
+-- LevelSelectLevel.lua
 -- Author:        Padilla carl jameson
 -- Email:         c.Padilla@digipen.edu
 -- Date:          2025-11-13
 -- Contribution:  100%
 --
+-- REFACTORED:    2025-12-21 (Using ButtonManager module)
+-- ----------------------------------------------------------------------------
 -- Description:
--- Level selection menu with JSON-driven UI configuration. Loads button layouts,
--- sprites, and settings from external JSON file for easy designer modification.
--- Supports F1 editor mode that freezes gameplay and grays out buttons. Handles
--- background sprites, logo, corner decorations, and smooth transitions between
--- levels with button click audio feedback.
+-- Level selection menu with JSON-driven UI configuration. Now uses centralized
+-- ButtonManager module to eliminate code duplication and simplify maintenance.
 -- ============================================================================
+
+-- Load ButtonManager module
+local ButtonManager = require("assets/scripts/ButtonManager")
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
 -- ============================================================================
 
-local buttonIDs = {}
 local initialized = false
 local config = nil
-local editorToggleCooldown = 0  -- Cooldown for F1 editor toggle
 local backgroundSpriteID = 0    -- Store background sprite entity ID
 local logoSpriteID = 0          -- Store logo sprite entity ID
 local cornerSpriteIDs = {}      -- Store corner sprite entity IDs
-local pendingState = nil     -- Store pending game state transition
-local pendingTimer = 0.0    -- Timer for delayed transition
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit()
-    Log("LevelSelect Level Script Initialized (JSON Version)")
+    Log("LevelSelect Level Script Initialized (ButtonManager Version)")
     Log("Loading configuration from JSON file...")
-    
+
     -- Load configuration from JSON
     config = LoadJSON("assets/JSON/levelselect_config.json")
-    
+
     if not config then
         Log("ERROR: Failed to load JSON configuration!")
         return
     end
-    
+
     Log("Successfully loaded configuration for: " .. config.menu.name)
-    
+
     -- Apply camera settings from JSON
     local cam = config.menu.camera
     SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
     SetCameraZoom(cam.zoom)
-    
+
     -- Disable ImGui overlay
     DisableImGui()
-    
+
     -- Set engine to editor mode (non-playing)
     SetEnginePlayState(true)
 
     -- ========================================================================
     -- CREATE BACKGROUND SPRITE
     -- ========================================================================
-    -- Load background configuration (use default if not in JSON)
     local background = config.menu.background or {
         texture = "assets/Menu/WoodBackground.png",
         position = { x = 0.0, y = 0.0 },
@@ -78,11 +75,10 @@ function OnInit()
     )
 
     if backgroundSpriteID > 0 then
-        Log(" Background sprite created (ID: " .. backgroundSpriteID .. ")")
+        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("✗ WARNING: Failed to create background sprite")
     end
-    -- ========================================================================
 
     -- ========================================================================
     -- CREATE LOGO SPRITE (optional)
@@ -101,14 +97,13 @@ function OnInit()
         )
 
         if logoSpriteID > 0 then
-            Log(" Logo sprite created (ID: " .. logoSpriteID .. ")")
+            Log("✓ Logo sprite created (ID: " .. logoSpriteID .. ")")
         else
             Log("✗ WARNING: Failed to create logo sprite")
         end
     else
         Log("No logo configuration found in JSON")
     end
-    -- ========================================================================
 
     -- ========================================================================
     -- CREATE CORNER SPRITES (optional decorations)
@@ -129,7 +124,7 @@ function OnInit()
 
             if spriteID > 0 then
                 cornerSpriteIDs[corner.id] = spriteID
-                Log("   Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
             else
                 Log("  ✗ FAILED to create corner sprite: " .. corner.id)
             end
@@ -137,164 +132,70 @@ function OnInit()
 
         Log("Corner decorations complete!")
     end
-    -- ========================================================================
-    
+
     -- Start menu background music from JSON config
     local music = config.menu.music
     PlaySound(music.name, music.loop, music.volume)
     Log("Playing level select music: " .. music.name)
-    
-    -- Clear any existing UI from previous states
-    ClearAllButtons()
-    
-    -- Create UI buttons from JSON config
-    CreateButtonsFromConfig()
-    
+
+    -- ========================================================================
+    -- INITIALIZE BUTTON MANAGER
+    -- ========================================================================
+    ButtonManager.Initialize(config.menu.buttons)
+
     initialized = true
     Log("LevelSelect initialization complete")
     Log("Press F1 to toggle editor mode")
 end
 
 -- ============================================================================
--- UI CREATION FROM JSON
--- ============================================================================
-
-function CreateButtonsFromConfig()
-    if not config or not config.menu or not config.menu.buttons then
-        Log("ERROR: Invalid configuration - no buttons found!")
-        return
-    end
-    
-    Log("Creating " .. #config.menu.buttons .. " buttons from config...")
-    
-    -- Iterate through buttons array in JSON
-    for i, button in ipairs(config.menu.buttons) do
-        Log("Creating button: " .. button.id)
-        
-        -- Create button using config data (layer is optional, defaults to 10)
-        local layer = button.layer or 10
-        local buttonID = CreateButton(
-            button.texture,
-            button.position.x,
-            button.position.y,
-            button.scale.x,
-            button.scale.y,
-            button.callback,  -- Callback function name from JSON
-            layer             -- Layer for rendering order
-        )
-        
-        if buttonID > 0 then
-            -- Store button ID with its config
-            buttonIDs[button.id] = {
-                id = buttonID,
-                config = button
-            }
-            Log("   Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
-        else
-            Log("  ✗ Failed to create button: " .. button.id)
-        end
-    end
-    
-    Log("Button creation complete!")
-end
-
--- ============================================================================
--- BUTTON CALLBACKS -  MODIFIED: Check EditorMode
+-- BUTTON CALLBACKS
 -- ============================================================================
 
 function OnLevel2ButtonClicked()
-    --  NEW: Check if in editor mode
-    if IsEditorMode() then
-        Log("Button disabled in editor mode")
+    if not ButtonManager.CanExecuteCallback() then
         return
     end
 
-    PlaySound("button", false, 1)
-    pendingState = "LEVEL_2"
-    pendingTimer = 0.15  -- Half-second delay before transition
-    
     Log("LEVEL EDITOR button clicked!")
-    Log("Transitioning to Level Editor...")
-    --SetNextGameState("LEVEL_2")
+    ButtonManager.TransitionTo("LEVEL_2")
 end
 
 function OnLevel3ButtonClicked()
-    --  NEW: Check if in editor mode
-    if IsEditorMode() then
-        Log("Button disabled in editor mode")
+    if not ButtonManager.CanExecuteCallback() then
         return
     end
-    
-    PlaySound("button", false, 1)
-    pendingState = "LEVEL_3"
-    pendingTimer = 0.15  -- Half-second delay before transition
 
     Log("DEMO button clicked!")
-    Log("Transitioning to Demo...")
-    --SetNextGameState("LEVEL_3")
+    ButtonManager.TransitionTo("LEVEL_3")
 end
 
 function OnBackButtonClicked()
-    --  NEW: Check if in editor mode
-    if IsEditorMode() then
-        Log("Button disabled in editor mode")
+    if not ButtonManager.CanExecuteCallback() then
         return
     end
 
-    PlaySound("button", false, 1)
-    pendingState = "mainMenu"
-    pendingTimer = 0.15  -- Half-second delay before transition
-    
     Log("BACK button clicked!")
-    Log("Returning to Main Menu...")
-   -- SetNextGameState("mainMenu")
+    ButtonManager.TransitionTo("mainMenu")
 end
 
 -- ============================================================================
--- LEVEL LIFECYCLE: OnUpdate -  MODIFIED: F1 toggles EditorMode
+-- LEVEL LIFECYCLE: OnUpdate
 -- ============================================================================
 
 function OnUpdate(dt)
     -- Update audio system
     UpdateAudio(dt)
 
-    --  MODIFIED: F1 toggles editor mode (freezes game)
-    if IsKeyDown("F1") then
-        if editorToggleCooldown <= 0 then
-            ToggleEditorMode()  -- Toggle editor mode instead of just ImGui
-            
-            if IsEditorMode() then
-                SetEnginePlayState(false)
-
-                Log("EDITOR MODE ON - Buttons disabled")
-            else
-                SetEnginePlayState(true)
-
-                Log("EDITOR MODE OFF - Buttons enabled")
-            end
-            
-            editorToggleCooldown = 0.3
-        end
-    end
-
-    if editorToggleCooldown > 0 then
-        editorToggleCooldown = editorToggleCooldown - dt
-    end
-
-    if pendingState ~= nil then
-        pendingTimer = pendingTimer - dt
-        if pendingTimer <= 0 then
-            SetNextGameState(pendingState)
-            pendingState = nil
-        end
-    end
+    -- ButtonManager handles F1 toggle and state transitions
+    ButtonManager.Update(dt)
 
     -- Optional: Handle debug input
     if IsKeyDown("Escape") then
         Log("ESC pressed in level select")
         OnBackButtonClicked()
     end
-    
+
     -- Optional: Quick level selection with number keys
     if IsKeyDown("2") then
         Log("Quick select: Level Editor")
@@ -306,44 +207,16 @@ function OnUpdate(dt)
 end
 
 -- ============================================================================
--- LEVEL LIFECYCLE: OnDraw -  MODIFIED: Gray buttons in editor mode
+-- LEVEL LIFECYCLE: OnDraw
 -- ============================================================================
 
 function OnDraw()
-    if not config or not buttonIDs then
+    if not config then
         return
     end
-    
-    --  NEW: Check if in editor mode
-    local editorMode = IsEditorMode()
-    
-    -- Draw text on each button using config data
-    for buttonKey, buttonData in pairs(buttonIDs) do
-        local button = buttonData.config
-        local text = button.text
-        
-        --  NEW: Gray out buttons in editor mode
-        local colorR = editorMode and 0.5 or text.color.r
-        local colorG = editorMode and 0.5 or text.color.g
-        local colorB = editorMode and 0.5 or text.color.b
-        
-        DrawButtonText(
-            buttonData.id,
-            text.font,
-            text.content,
-            text.offset.x,
-            text.offset.y,
-            text.scale,
-            colorR,
-            colorG,
-            colorB
-        )
-    end
-    
-    --  NEW: Display editor mode indicator
-    if editorMode then
-        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
-    end
+
+    -- ButtonManager handles all button rendering and editor mode visuals
+    ButtonManager.DrawAll()
 end
 
 -- ============================================================================
@@ -352,12 +225,12 @@ end
 
 function OnDestroy()
     Log("LevelSelect cleanup...")
-    
+
     -- Stop all sounds
     StopAllSounds()
-    
-    -- Clear UI buttons
-    ClearAllButtons()
+
+    -- ButtonManager handles button cleanup
+    ButtonManager.Cleanup()
 
     -- Destroy background sprite
     if backgroundSpriteID > 0 then
@@ -378,17 +251,14 @@ function OnDestroy()
             Log("Corner sprite '" .. cornerID .. "' destroyed")
         end
     end
-    
+
     -- Reset state
-    buttonIDs = {}
     config = nil
     initialized = false
     backgroundSpriteID = 0
     logoSpriteID = 0
     cornerSpriteIDs = {}
-    pendingState = nil
-    pendingTimer = 0.0
-    
+
     Log("LevelSelect cleanup complete")
 end
 
@@ -401,18 +271,13 @@ function PrintConfig()
         Log("No configuration loaded!")
         return
     end
-    
+
     Log("═══════════════════════════════════════")
     Log("LevelSelect Configuration (from JSON):")
     Log("  Menu Name: " .. config.menu.name)
     Log("  Music: " .. config.menu.music.name)
     Log("  Camera Zoom: " .. config.menu.camera.zoom)
-    Log("  Button Count: " .. #config.menu.buttons)
-    
-    for i, button in ipairs(config.menu.buttons) do
-        Log("  Button " .. i .. ": " .. button.id .. " at (" .. 
-            button.position.x .. ", " .. button.position.y .. ")")
-    end
-    
+    Log("  Button Count: " .. ButtonManager.GetButtonCount())
+
     Log("═══════════════════════════════════════")
 end
