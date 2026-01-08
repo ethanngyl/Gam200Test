@@ -54,6 +54,9 @@ Safety:
 #include <string.h>
 namespace Framework {
 
+    static bool wantOpenModal = false;
+    static bool wantSaveAsModal = false;
+
     ImGuiSystem::ImGuiSystem()
         : window(nullptr)
         , entityManager(nullptr)
@@ -203,11 +206,18 @@ namespace Framework {
             // if else condition to check which component to add to the entity
             if (word == "Transform") {
                 float px, py, sx, sy;
-                if (iss >> px >> py >> sx >> sy) {
+                float rot = 0.0f;
+                if (iss >> px >> py >> sx >> sy ) {
+
+                    if (!(iss >> rot)) {
+                        iss.clear(); // Clear the error state if the 5th read failed
+                    }
+
                     entityManager->AddComponent<Framework::Transform>(Entity);
                     auto& transform = entityManager->GetComponent<Framework::Transform>(Entity);
                     transform.position = Vector2D(px, py);
                     transform.scale = Vector2D(sx, sy);
+                    transform.rotation = rot;
                 }
                 else {
                     std::cerr << "[ImGuiError] parsing Transform at line " << lineNumber << "\n";
@@ -392,7 +402,8 @@ namespace Framework {
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 //write position (x,y) and the scale(x,y)
                 writeFile << "Transform " << transform.position.x << " " << transform.position.y << " "
-                    << transform.scale.x << " " << transform.scale.y << "\n";
+                    << transform.scale.x << " " << transform.scale.y << " " 
+					<< transform.rotation <<"\n";
             }
 
             //this if else condition is to check if entity has sprite component
@@ -830,8 +841,6 @@ namespace Framework {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
         }
 
-        static bool wantOpenModal = false;
-        static bool wantSaveAsModal = false;
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -3608,6 +3617,8 @@ namespace Framework {
                         currentLevelPath = "assets/level1.txt";
                     }
                     openPath = currentLevelPath;
+
+					wantOpenModal = true; // Trigger open modal
                 }
                 if (ImGui::MenuItem("Save")) {
                     const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
@@ -3621,6 +3632,8 @@ namespace Framework {
                         currentLevelPath = "assets/level1.txt";
                     }
                     openPath = currentLevelPath;
+
+                    wantSaveAsModal = true;
                 }
                 if (ImGui::MenuItem("Exit")) {
                     Message quitMsg(Status::Quit);
