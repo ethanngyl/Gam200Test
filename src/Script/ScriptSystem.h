@@ -154,6 +154,9 @@ namespace Framework {
         // Internal Helpers
         // ====================================================================
 
+        bool isShutdown = false;
+
+
         // Executes "OnInit" Lua function
         void InitializeScript(Entity entity, ScriptComponent& script);
 
