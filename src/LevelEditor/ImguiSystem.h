@@ -19,6 +19,11 @@ Modified: 2025-11-26
 - Added SetupDockSpace() for docking system support
 - Enables Game viewport to auto-fit window size
 
+Modified: 2026-01-08
+- Added Script Browser functionality for ScriptComponent
+- Added GetLuaFilesInDirectory() for recursive .lua file search
+- Added ShowScriptBrowserPopup() for script selection UI
+
 */
 
 
@@ -190,6 +195,11 @@ namespace Framework {
         std::string selectedAssetPath = "";
         Framework::Entity selectedEntity{};
 
+        // Script Browser - jiahao (2026-01-08)
+        bool showScriptBrowser = false;
+        std::string selectedScriptPath = "";
+        Entity entityPendingScriptAssignment{};
+
         bool showAudioErrorPopup = false;
         std::string audioErrorMessage = "";
 
@@ -222,6 +232,19 @@ namespace Framework {
         void SetupDefaultDockLayout();
         void ShowPrefabWindow();
         void SpawnPrefabAtMouse(const std::string& prefabPath);
+
+        /**
+         * @brief Shows script browser popup for selecting Lua scripts
+         * Displays all .lua files in assets/scripts/ directory with search functionality
+         */
+        void ShowScriptBrowserPopup();
+
+        /**
+         * @brief Recursively gets all .lua files in a directory
+         * @param directory The directory to search (e.g., "assets/scripts/")
+         * @return Vector of relative paths to .lua files
+         */
+        std::vector<std::string> GetLuaFilesInDirectory(const std::string& directory);
 
         //file drop - jiahao
         static void FileDropCallBack(GLFWwindow* window, int count, const char** paths);
@@ -277,10 +300,10 @@ namespace Framework {
         //undo step - jiahao
         std::vector<UndoStep> undoStack;
 
-		//audio pop up window variables - jiahao
-		bool showAudioNamePopup = false;
-		char newAudioKeyBuffer[256] = "";
-		std::filesystem::path pendingAudioPath;
+        //audio pop up window variables - jiahao
+        bool showAudioNamePopup = false;
+        char newAudioKeyBuffer[256] = "";
+        std::filesystem::path pendingAudioPath;
     };
 
 } // namespace Framework
