@@ -143,7 +143,8 @@ namespace Framework {
             const std::string& texturePath,
             const Vector2D& position,
             const Vector2D& size,
-            ButtonCallback onClick
+            ButtonCallback onClick,
+            int layer
         );
 
         /**
@@ -155,7 +156,8 @@ namespace Framework {
             const Vector2D& size,
             ButtonCallback onClick,
             const glm::vec4& normalTint,
-            const glm::vec4& hoverTint
+            const glm::vec4& hoverTint,
+            int layer
         );
 
         // ====================================================================
@@ -190,7 +192,7 @@ namespace Framework {
          * @brief Convert screen coordinates to world coordinates
          * Handles window resizing and high-DPI displays
          */
-        Vector2D ScreenToWorld(float screenX, float screenY);
+        Vector2D ScreenToWorld(float screenX, float screenY, bool useViewportCoords = false);
 
         // ====================================================================
         // UTILITY

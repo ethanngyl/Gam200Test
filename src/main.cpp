@@ -36,6 +36,8 @@ Responsibilities:
 #include "TimeConstants.h"
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
+#include "WindowEventHandler.h"
+
 
 
 // ===============================================================================
@@ -60,9 +62,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
 #ifdef _DEBUG
     // Debug console setup
     AllocConsole();
-    freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-    freopen_s((FILE**)stderr, "CONOUT$", "w", stderr);
-    freopen_s((FILE**)stdin, "CONIN$", "r", stdin);
+    FILE* fp_stdout = nullptr;
+    FILE* fp_stderr = nullptr;
+    FILE* fp_stdin = nullptr;
+    freopen_s(&fp_stdout, "CONOUT$", "w", stdout);
+    freopen_s(&fp_stderr, "CONOUT$", "w", stderr);
+    freopen_s(&fp_stdin, "CONIN$", "r", stdin);
 
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG | _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
@@ -184,6 +189,18 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             glfwPollEvents();
 
             // ===============================================================================
+            // WINDOW EVENT HANDLING (TECH 1701 & 1702)
+            // ===============================================================================
+            // Must be called BEFORE level update to handle:
+            // - CTRL-ALT-DEL (auto-pause on focus loss)
+            // - Window minimize/restore (auto-pause/resume)
+            // - ALT-TAB (auto-pause)
+            // - ALT-ENTER (fullscreen toggle)
+            if (engine->GetWindowSystem() && engine->GetWindowSystem()->GetWindow()) {
+                Framework::WindowEventHandler::Update(engine->GetWindowSystem()->GetWindow());
+            }
+
+            // ===============================================================================
             // LEVEL UPDATE (Handles pause toggle and level-specific input)
             // ===============================================================================
             if (fpUpdate) {
@@ -277,6 +294,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
     // CLEANUP
     // ===============================================================================
     LOG_INFO("CORE", "GSM loop ended. Cleaning up...");
+
+    Framework::LevelLoader::GetInstance().Shutdown();
 
     engine->Cleanup();
     delete engine;

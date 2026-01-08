@@ -21,7 +21,10 @@ initial_state = mainmenu
 window_width = 1920
 window_height = 1080
 window_title = StructSquad Game Engine
-fullscreen = false
+fullscreen = true
+
+# NOTE: Audio settings (master volume, music volume, sfx volume) are now
+# configured in assets/JSON/AudioConfig.json
 
 # ============================================================================
 # DEBUG SYSTEM SETTINGS
@@ -115,8 +118,8 @@ camera_viewport_height = 10.0
 # ============================================================================
 
 # --- Button Visual Settings ---
-# Default button rendering layer
-ui_button_default_layer = 10
+# Default button rendering layer (RenderLayers::UI = 100, ensures UI renders on top)
+ui_button_default_layer = 100
 
 # Default button tint colors (RGBA, values 0.0-2.0)
 # Normal state

@@ -7,16 +7,17 @@ Date:        2025-11-07
 Contribution: 100%
 -------------------------------------------------------------------------------
 Brief:
-ECS components related to rendering. Includes Renderable (MeshRenderer),
-SpriteAnimation, and ParticleEmitter.
+ECS components related to rendering. Includes Renderable (MeshRenderer)
+and ParticleEmitter.
 
 - Renderable: core rendering data (mesh/material/texture/tint/layer)
-- SpriteAnimation: frame-based 2D animation metadata
 - ParticleEmitter: basic parameters for particle systems (future use)
+
+NOTE: SpriteAnimation has been moved to ECS/Component.h to support
+      enhanced animation features with directional animations.
 
 Used by:
 - GraphicsSystemV2 (drawing)
-- AnimationSystem (updating SpriteAnimation state)
 ===============================================================================
 */
 #pragma once
@@ -48,12 +49,12 @@ namespace Framework {
         bool visible = true;       // Is this renderable visible?
         bool castShadows = false;  // Cast shadows (future)
         bool receiveShadows = false; // Receive shadows (future)
-        
+
         // Per-instance overrides
         glm::vec4 tint = glm::vec4(1.0f);  // Color tint multiplier
 
         Renderable() = default;
-        
+
         // Constructor for quick setup
         Renderable(MeshHandle m, MaterialHandle mat, int lyr = 0)
             : mesh(m), material(mat), layer(lyr) {}

@@ -26,6 +26,7 @@
 
 #pragma once
 #include "Precompiled.h"
+#include "GlobalPauseManager.h"
 
 namespace Framework {
 
@@ -51,6 +52,10 @@ namespace Framework {
 	}
 
 	inline void EndPlayerTurn() {
+		if (GlobalPause::IsPaused()) {
+			std::cout << "[Turn] Turn switch BLOCKED - game is paused\n";
+			return;
+		}
 		auto& t = Turn();
 		if (t.phase != TurnPhase::Player) {
 			std::cout << "[Turn ERROR] Tried to end player turn during enemy phase!\n";
@@ -62,6 +67,10 @@ namespace Framework {
 	}
 
 	inline void EndEnemyTurn() {
+		if (GlobalPause::IsPaused()) {
+			std::cout << "[Turn] Turn switch BLOCKED - game is paused\n";
+			return;
+		}
 		auto& t = Turn();
 		if (t.phase != TurnPhase::Enemy) {
 			std::cout << "[Turn ERROR] Tried to end enemy turn during player phase!\n";

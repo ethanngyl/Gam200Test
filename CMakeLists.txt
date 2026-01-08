@@ -68,6 +68,8 @@ if (MSVC)
         /wd4305 # 'truncation from type1 to type2' (for constants/initializers)
         /wd4456 # Suppress 'hides previous local'
         /wd4459 # Suppress 'hides global'
+        /wd4005 # Supress Macro Redefinition by lua
+        /wd26819 # Supress Unannotated Fallthrough Caused by lexer.hpp
     )
 endif()
 
@@ -128,6 +130,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/PrefabEditor
     ${CMAKE_SOURCE_DIR}/src/LevelEditor
     ${CMAKE_SOURCE_DIR}/src/Pause
+    ${CMAKE_SOURCE_DIR}/src/Character
 
     ${CMAKE_CURRENT_SOURCE_DIR}
 )

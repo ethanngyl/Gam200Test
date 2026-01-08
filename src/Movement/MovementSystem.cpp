@@ -78,7 +78,6 @@ namespace Framework
         DBG_SCOPE_SYS("Movement System", eng::debug::Subsystem::Gameplay);
 
         if (!entityManager || !inputSystem) return;
-        //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
 
         if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
 
@@ -89,11 +88,16 @@ namespace Framework
                 if (entityManager->HasComponent<Transform>(entity) &&
                     entityManager->HasComponent<Movement>(entity))
                 {
+                    // Skip entities controlled by Lua scripts
+                    if (entityManager->HasComponent<ScriptComponent>(entity)) {
+                        continue;
+                    }
+
                     auto& transform = entityManager->GetComponent<Transform>(entity);
                     auto& movement = entityManager->GetComponent<Movement>(entity);
 
-                    // Get input direction from WASD
-                    Vector2D inputDir(input_dir_x, input_dir_y);
+                    // Get input direction from WASD (start from zero, not config values)
+                    Vector2D inputDir(0.0f, 0.0f);
 
                     if (inputSystem->IsKeyDown(KEY_W)) inputDir.y += y_mov_displacement;
                     if (inputSystem->IsKeyDown(KEY_S)) inputDir.y -= y_mov_displacement;
@@ -120,7 +124,7 @@ namespace Framework
                    // ============================================================================
 
                    // ---------------------- Direction-based flipping ----------------------
-                   // When pressing D → face right; A → face left
+                   // When pressing D  face right; A  face left
                     // -----------------------------------------------------------
                     // SAFETY CHECK: Only animated entities should use animation
                     // -----------------------------------------------------------
@@ -149,7 +153,7 @@ namespace Framework
                         else if (inputDir.x > 0) { anim.direction = AnimDirection::Side; anim.flipX = false; }
                         else if (inputDir.x < 0) { anim.direction = AnimDirection::Side; anim.flipX = true; }
                     }
-                    // DO NOT change direction when idle → preserves last direction
+                    // DO NOT change direction when idle  preserves last direction
 
                     if (moving)
                     {
@@ -214,9 +218,10 @@ namespace Framework
                     if (!movement.blocked) {
                         transform.position += movement.direction * movement.moveSpeed * dt;
                     }
-                    else {
-                        transform.position -= movement.direction * movement.moveSpeed * dt;
-                    }
+                    // If blocked, don't move at all (not backwards)
+                    // else {
+                    //     transform.position -= movement.direction * movement.moveSpeed * dt;
+                    // }
 
                     //// Optional: Keep on screen
                     if (transform.position.x > x_bound) transform.position.x = x_bound;

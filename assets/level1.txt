@@ -2,33 +2,48 @@
 
 entity
 Transform 0.0 -0.5  0.3 0.3
-player.png
+Sprite player.png
 Movement 0.20  0.0 0.0
 CircleCollider 0.15  0.0 0.0
+AudioSource walk1 0.8 1.0 0 1
 
 entity
 Transform -1.8 0.0  0.1 2.0
-Sprite quad
+Sprite assets/enemy.png
 BoxCollider 0.1 2.0  0.0 0.0  0
+AudioSource igbgm 0.6 1.0 1 1
 
 entity
 Transform 0.0 0.65  1.2 0.2
-Sprite quad
+Sprite assets/enemy.png
 BoxCollider 1.2 0.2  0.0 0.0  1
+AudioSource button 1.0 1.2 0 0
 
 entity
 Transform -0.8 0.8  0.4 0.4
-Sprite triangle
+Sprite assets/enemy.png
 Movement 0.05  0.0 -1.0
 TriangleCollider 0.0 0.04  -0.04 -0.04  0.04 -0.04
+<<<<<<< Updated upstream
+AudioSource dmgb 1.0 1.0 0 0
 
 entity
 Transform 0.9 0.6  0.2 0.2
 Sprite circle
+AudioSource takedmg 0.9 1.1 0 0
+=======
+BoxCollider 0.4 0.4 0.0 0.0 1  
+
+entity
+Transform 0.9 0.6  0.2 0.2
+Sprite assets/enemy.png
+BoxCollider 0.2 0.2 0.0 0.0 1  
 
 entity
 Transform -0.2 -0.2  0.5 0.5
+Sprite assets/enemy.png      
 CircleCollider 0.25  0.0 0.0
+AudioSource walk1 0.7 0.9 0 1
 
 entity
 Transform 0.0 -0.9  2.4 0.1
@@ -36,12 +51,14 @@ BoxCollider 2.4 0.1  0.0 0.0  0
 
 entity
 Transform 0.0 0.0  0.3 0.3
+BoxCollider 0.3 0.3 0.0 0.0 1  
 
 entity
 Transform 0.6 -0.1  0.25 0.25
-Sprite circle
+Sprite assets/player.png
 CircleCollider 0.12  0.0 0.0
 
 entity
 Transform -0.5 0.2  0.5 0.5
 TriangleCollider 0.0 0.05  -0.05 -0.05  0.05 -0.05
+BoxCollider 0.5 0.5 0.0 0.0 1  

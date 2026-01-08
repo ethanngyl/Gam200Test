@@ -25,6 +25,12 @@
 ===============================================================================
 */
 
+
+// ========================================================================
+// ADDED: ImGui headers for viewport coordinate conversion
+// ========================================================================
+#include "ImguiSystem.h"
+#include "imgui.h"
 #include "Precompiled.h"
 #include "ConfigReader.h"
 #include "EntitySpawner.h"
@@ -67,6 +73,7 @@ namespace Framework {
             config_.defaultHoverTint.b, config_.defaultHoverTint.a);
     }
 
+
     void UISystem::Update(float dt)
     {
         DBG_SCOPE_SYS("UI System", eng::debug::Subsystem::Gameplay);
@@ -104,19 +111,57 @@ namespace Framework {
             lastHeight = currentHeight;
         }
 
-        // Get mouse position in screen space
+
         float mouseScreenX, mouseScreenY;
-        input->GetMousePosition(mouseScreenX, mouseScreenY);
+        bool useViewportCoords = false;
 
-        // Convert to world space
-        Vector2D mouseWorld = ScreenToWorld(mouseScreenX, mouseScreenY);
+        auto imguiSystem = engine->GetImGuiSystem();
+        if (imguiSystem && imguiSystem->IsRenderingToViewport()) {
 
-        // Update all buttons
+            ImVec2 mousePos = ImGui::GetMousePos();  
+            ImVec2 viewportOffset = imguiSystem->GetViewportPos();  
+            ImVec2 viewportSize = imguiSystem->GetViewportSize();   
+
+            float localX = mousePos.x - viewportOffset.x;
+            float localY = mousePos.y - viewportOffset.y;
+
+            bool mouseInViewport = (localX >= 0 && localX <= viewportSize.x &&
+                localY >= 0 && localY <= viewportSize.y);
+
+            if (!mouseInViewport) {
+                for (auto& button : buttons) {
+                    if (button) {
+                        button->isHovered = false;
+                        button->isPressed = false;
+                        UpdateButtonVisuals(button.get());
+                    }
+                }
+                return; 
+            }
+
+            mouseScreenX = localX;
+            mouseScreenY = localY;
+            useViewportCoords = true;
+
+            // Debug logging (uncomment if needed)
+            // LOG_DEBUG("UI", "Viewport mode: Global (%.1f, %.1f) -> Local (%.1f, %.1f)",
+            //           mousePos.x, mousePos.y, localX, localY);
+        }
+        else {
+            input->GetMousePosition(mouseScreenX, mouseScreenY);
+
+            // Debug logging (uncomment if needed)
+            // LOG_DEBUG("UI", "Fullscreen mode: Mouse (%.1f, %.1f)", mouseScreenX, mouseScreenY);
+        }
+
+        Vector2D mouseWorld = ScreenToWorld(mouseScreenX, mouseScreenY, useViewportCoords);
+
         for (auto& button : buttons) {
             if (!button) continue;
             UpdateButton(button.get(), mouseWorld);
         }
     }
+
 
     void UISystem::SendEngineMessage(Message* message)
     {
@@ -203,12 +248,18 @@ namespace Framework {
     // BUTTON CREATION
     // ========================================================================
 
+// ========================================================================
+// BUTTON CREATION
+// ========================================================================
+
     UIButton* UISystem::CreateButton(
         const std::string& texturePath,
         const Vector2D& position,
         const Vector2D& size,
-        ButtonCallback onClick)
+        ButtonCallback onClick,
+        int layer) // <--- 1. Added parameter
     {
+        LOG_INFO("UI_DEBUG", "CreateButton C++ called. Layer value: %d", layer);
         if (!engine) {
             LOG_ERROR("UI", "Engine is null, cannot create button");
             return nullptr;
@@ -221,14 +272,17 @@ namespace Framework {
         button->size = size;
         button->onClick = onClick;
 
-        // Apply default configuration
+        // Apply default configuration (Sets default layer, tints, etc.)
         ApplyDefaultConfig(button.get());
 
-        // Spawn entity
+        // 2. Override the layer with the specific function argument
+        button->layer = layer;
+
+        // Spawn entity (Now uses the specific layer)
         SpawnButtonEntity(button.get());
 
-        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f)",
-            position.x, position.y, size.x, size.y);
+        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f) on layer %d",
+            position.x, position.y, size.x, size.y, layer);
 
         // Store button and return raw pointer
         UIButton* rawPtr = button.get();
@@ -243,8 +297,10 @@ namespace Framework {
         const Vector2D& size,
         ButtonCallback onClick,
         const glm::vec4& normalTint,
-        const glm::vec4& hoverTint)
+        const glm::vec4& hoverTint,
+        int layer) // <--- 1. Added parameter
     {
+        LOG_INFO("UI_DEBUG", "CreateButton C++ called. Layer value: %d", layer);
         if (!engine) {
             LOG_ERROR("UI", "Engine is null, cannot create button");
             return nullptr;
@@ -264,11 +320,14 @@ namespace Framework {
         button->normalTint = normalTint;
         button->hoverTint = hoverTint;
 
+        // 2. Override the layer
+        button->layer = layer;
+
         // Spawn entity
         SpawnButtonEntity(button.get());
 
-        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f) with custom tints",
-            position.x, position.y, size.x, size.y);
+        LOG_INFO("UI", "Button created at (%.2f, %.2f) size (%.2f, %.2f) with custom tints on layer %d",
+            position.x, position.y, size.x, size.y, layer);
 
         // Store button and return raw pointer
         UIButton* rawPtr = button.get();
@@ -337,7 +396,8 @@ namespace Framework {
     // COORDINATE CONVERSION
     // ========================================================================
 
-    Vector2D UISystem::ScreenToWorld(float screenX, float screenY)
+
+    Vector2D UISystem::ScreenToWorld(float screenX, float screenY, bool useViewportCoords)
     {
         if (!engine) return Vector2D(0, 0);
 
@@ -361,14 +421,38 @@ namespace Framework {
         // ========================================================================
         // STEP 2: Get window and framebuffer sizes
         // ========================================================================
+        // 🔧 FIX: Handle Viewport mode separately
+        // ========================================================================
 
-        // Framebuffer size = actual pixels OpenGL renders to
         int fbWidth, fbHeight;
-        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-
-        // Window size = what GLFW reports for cursor/window dimensions
         int windowWidth, windowHeight;
-        glfwGetWindowSize(window, &windowWidth, &windowHeight);
+
+        if (useViewportCoords) {
+            auto imguiSystem = engine->GetImGuiSystem();
+            if (imguiSystem && imguiSystem->IsRenderingToViewport()) {
+                ImVec2 viewportSize = imguiSystem->GetViewportSize();
+
+                fbWidth = static_cast<int>(viewportSize.x);
+                fbHeight = static_cast<int>(viewportSize.y);
+                windowWidth = fbWidth;
+                windowHeight = fbHeight;
+
+                // Debug logging (uncomment if needed)
+                // LOG_DEBUG("UI", "ScreenToWorld (Viewport mode): input (%.1f, %.1f), viewport (%d, %d)",
+                //           screenX, screenY, fbWidth, fbHeight);
+            }
+            else {
+                glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+                glfwGetWindowSize(window, &windowWidth, &windowHeight);
+            }
+        }
+        else {
+            // Framebuffer size = actual pixels OpenGL renders to
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+
+            // Window size = what GLFW reports for cursor/window dimensions
+            glfwGetWindowSize(window, &windowWidth, &windowHeight);
+        }
 
         // ⭐ Key insight: On high-DPI displays, framebuffer can be 2x window size
         // Example (Retina display):

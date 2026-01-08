@@ -1,108 +1,168 @@
-﻿-- ============================================================================
--- MainMenuLevel.lua (JSON Configuration Version)
--- Complete Main Menu Level Script with JSON-driven configuration
 -- ============================================================================
--- This version loads all UI configuration from a JSON file, making it
--- easy for designers to modify the UI without touching Lua code.
+-- MainMenuLevel.lua
+-- Author:        GE YONGQI
+-- Email:         yongqi.ge@digipen.edu
+-- Date:          2025-11-13
+-- Contribution:  100%
 --
--- Author:  GE YONGQI
--- Email:   yongqi.ge@digipen.edu
--- Date:    2025-11-13
+-- REFACTORED:    2025-12-21 (Using ButtonManager module)
+-- ----------------------------------------------------------------------------
+--  JSON-Driven Main Menu with ButtonManager Integration
+--
+--  Purpose:
+--  Complete main menu level script using JSON configuration for all UI
+--  elements. Now uses centralized ButtonManager module to eliminate code
+--  duplication.
+--
+--  Features:
+--  - Loads UI configuration from mainmenu_config.json
+--  - Creates layered sprite system (background, logo, corner decorations)
+--  - Uses ButtonManager for all button operations
+--  - F1 editor mode toggle with visual feedback (handled by ButtonManager)
+--  - Audio integration with background music
+--  - Smooth state transitions with delayed execution
+--
+--  Level Lifecycle:
+--  - OnInit()     : Load JSON, setup camera, spawn sprites, init ButtonManager
+--  - OnUpdate(dt) : Update ButtonManager (handles F1, transitions, etc.)
+--  - OnDraw()     : ButtonManager.DrawAll() renders all buttons automatically
+--  - OnDestroy()  : Cleanup entities, ButtonManager handles button cleanup
 -- ============================================================================
 
+-- Load ButtonManager module
+local ButtonManager = require("assets/scripts/ButtonManager")
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
 -- ============================================================================
 
-local buttonIDs = {}
 local initialized = false
 local config = nil
-local editorToggleCooldown = 0  
+local backgroundSpriteID = 0  -- Store background sprite entity ID
+local logoSpriteID = 0        -- Store logo sprite entity ID
+local cornerSpriteIDs = {}    -- Store corner sprite entity IDs
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit()
-    Log("MainMenu Level Script Initialized (JSON Version)")
+    Log("MainMenu Level Script Initialized (ButtonManager Version)")
     Log("Loading configuration from JSON file...")
-    
+
     -- Load configuration from JSON
-    config = LoadJSON("assets/scripts/JSON/mainmenu_config.json")
-    
+    config = LoadJSON("assets/JSON/mainmenu_config.json")
+
     if not config then
         Log("ERROR: Failed to load JSON configuration!")
         return
     end
-    
+
     Log("Successfully loaded configuration for: " .. config.menu.name)
-    
+
     -- Apply camera settings from JSON
     local cam = config.menu.camera
     SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
     SetCameraZoom(cam.zoom)
-    
+
     -- Disable ImGui overlay by default for menu
     DisableImGui()
-    
+
     -- Set engine to editor mode (non-playing)
     SetEnginePlayState(true)
-    
+
+    -- ========================================================================
+    -- CREATE BACKGROUND SPRITE
+    -- ========================================================================
+    local background = config.menu.background or {
+        texture = "assets/Menu/WoodBackground.png",
+        position = { x = 0.0, y = 0.0 },
+        scale = { x = 2.0, y = 2.0 },
+        layer = -10
+    }
+
+    Log("Creating background sprite: " .. background.texture)
+    backgroundSpriteID = SpawnSprite(
+        background.texture,
+        background.position.x,
+        background.position.y,
+        background.scale.x,
+        background.scale.y,
+        background.layer
+    )
+
+    if backgroundSpriteID > 0 then
+        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
+    else
+        Log("✗ WARNING: Failed to create background sprite")
+    end
+
+    -- ========================================================================
+    -- CREATE LOGO SPRITE
+    -- ========================================================================
+    if config.menu.logo then
+        local logo = config.menu.logo
+        Log("Creating logo sprite: " .. logo.texture)
+
+        logoSpriteID = SpawnSprite(
+            logo.texture,
+            logo.position.x,
+            logo.position.y,
+            logo.scale.x,
+            logo.scale.y,
+            logo.layer
+        )
+
+        if logoSpriteID > 0 then
+            Log("✓ Logo sprite created (ID: " .. logoSpriteID .. ")")
+        else
+            Log("✗ WARNING: Failed to create logo sprite")
+        end
+    else
+        Log("No logo configuration found in JSON")
+    end
+
+    -- ========================================================================
+    -- CREATE CORNER SPRITES
+    -- ========================================================================
+    if config.menu.cornerSprites then
+        Log("Creating corner decorations...")
+
+        for i, corner in ipairs(config.menu.cornerSprites) do
+            local spriteID = SpawnSprite(
+                corner.texture,
+                corner.offset.x,
+                corner.offset.y,
+                corner.scale.x,
+                corner.scale.y,
+                corner.layer,
+                corner.rotation
+            )
+
+            if spriteID > 0 then
+                cornerSpriteIDs[corner.id] = spriteID
+                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+            else
+                Log("  ✗ FAILED to create corner sprite: " .. corner.id)
+            end
+        end
+
+        Log("Corner decorations complete!")
+    end
+
     -- Start menu background music from JSON config
     local music = config.menu.music
     PlaySound(music.name, music.loop, music.volume)
     Log("Playing menu music: " .. music.name)
-    
-    -- Clear any existing UI from previous states
-    ClearAllButtons()
-    
-    -- Create UI buttons from JSON config
-    CreateButtonsFromConfig()
-    
+
+    -- ========================================================================
+    -- INITIALIZE BUTTON MANAGER
+    -- ========================================================================
+    ButtonManager.Initialize(config.menu.buttons)
+
     initialized = true
     Log("MainMenu initialization complete")
-    Log("Press F1 to toggle editor")
-end
-
--- ============================================================================
--- UI CREATION FROM JSON
--- ============================================================================
-
-function CreateButtonsFromConfig()
-    if not config or not config.menu or not config.menu.buttons then
-        Log("ERROR: Invalid configuration - no buttons found!")
-        return
-    end
-    
-    Log("Creating " .. #config.menu.buttons .. " buttons from config...")
-    
-    -- Iterate through buttons array in JSON
-    for i, button in ipairs(config.menu.buttons) do
-        Log("Creating button: " .. button.id)
-        
-        -- Create button using config data
-        local buttonID = CreateButton(
-            button.texture,
-            button.position.x,
-            button.position.y,
-            button.scale.x,
-            button.scale.y,
-            button.callback  -- Callback function name from JSON
-        )
-        
-        if buttonID > 0 then
-            -- Store button ID with its config
-            buttonIDs[button.id] = {
-                id = buttonID,
-                config = button
-            }
-            Log("  ✓ Button '" .. button.id .. "' created (ID: " .. buttonID .. ")")
-        else
-            Log("  ✗ Failed to create button: " .. button.id)
-        end
-    end
-    
-    Log("Button creation complete!")
+    Log("Press F1 to toggle editor mode")
 end
 
 -- ============================================================================
@@ -110,25 +170,23 @@ end
 -- ============================================================================
 
 function OnPlayButtonClicked()
+    -- Check if button can execute (handled by ButtonManager)
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
     Log("PLAY button clicked!")
-    Log("Transitioning to Level Select...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Transition to Level Select state
-    SetNextGameState("Level_select")
+    ButtonManager.TransitionTo("TUTORIAL")
 end
 
 function OnExitButtonClicked()
+    -- Check if button can execute (handled by ButtonManager)
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
     Log("EXIT button clicked!")
-    Log("Quitting game...")
-    
-    -- Play click sound effect (optional)
-    -- PlaySound("button_click", false, 1.0)
-    
-    -- Quit the game
-    SetNextGameState("GS_QUIT")
+    ButtonManager.TransitionTo("GS_QUIT")
 end
 
 -- ============================================================================
@@ -137,30 +195,9 @@ end
 
 function OnUpdate(dt)
     UpdateAudio(dt)
-    
-    -- DEBUG: Check if F1 is being detected
-    if IsKeyDown("F1") then
-        Log("F1 KEY DETECTED!")  -- Add this line
-        
-        if editorToggleCooldown <= 0 then
-            Log("Attempting to toggle editor...")  -- Add this
-            local newState = ToggleEditor()
-            Log("ToggleEditor returned: " .. tostring(newState))  -- Add this
-            
-            if newState then
-                Log("EDITOR ON")
-            else
-                Log("EDITOR OFF")
-            end
-            editorToggleCooldown = 0.3
-        else
-            Log("Cooldown active: " .. editorToggleCooldown)  -- Add this
-        end
-    end
-    
-    if editorToggleCooldown > 0 then
-        editorToggleCooldown = editorToggleCooldown - dt
-    end
+
+    -- ButtonManager handles F1 toggle and state transitions
+    ButtonManager.Update(dt)
 end
 
 -- ============================================================================
@@ -168,27 +205,12 @@ end
 -- ============================================================================
 
 function OnDraw()
-    if not config or not buttonIDs then
+    if not config then
         return
     end
-    
-    -- Draw text on each button using config data
-    for buttonKey, buttonData in pairs(buttonIDs) do
-        local button = buttonData.config
-        local text = button.text
-        
-        DrawButtonText(
-            buttonData.id,
-            text.font,
-            text.content,
-            text.offset.x,
-            text.offset.y,
-            text.scale,
-            text.color.r,
-            text.color.g,
-            text.color.b
-        )
-    end
+
+    -- ButtonManager handles all button rendering and editor mode visuals
+    ButtonManager.DrawAll()
 end
 
 -- ============================================================================
@@ -197,18 +219,40 @@ end
 
 function OnDestroy()
     Log("MainMenu cleanup...")
-    
+
     -- Stop all sounds
     StopAllSounds()
-    
-    -- Clear UI buttons
-    ClearAllButtons()
-    
+
+    -- ButtonManager handles button cleanup
+    ButtonManager.Cleanup()
+
+    -- Destroy background sprite
+    if backgroundSpriteID > 0 then
+        DestroyEntity(backgroundSpriteID)
+        Log("Background sprite destroyed")
+    end
+
+    -- Destroy logo sprite
+    if logoSpriteID > 0 then
+        DestroyEntity(logoSpriteID)
+        Log("Logo sprite destroyed")
+    end
+
+    -- Destroy corner sprites
+    for cornerID, spriteID in pairs(cornerSpriteIDs) do
+        if spriteID > 0 then
+            DestroyEntity(spriteID)
+            Log("Corner sprite '" .. cornerID .. "' destroyed")
+        end
+    end
+
     -- Reset state
-    buttonIDs = {}
     config = nil
     initialized = false
-    
+    backgroundSpriteID = 0
+    logoSpriteID = 0
+    cornerSpriteIDs = {}
+
     Log("MainMenu cleanup complete")
 end
 
@@ -221,18 +265,13 @@ function PrintConfig()
         Log("No configuration loaded!")
         return
     end
-    
+
     Log("═══════════════════════════════════════")
     Log("MainMenu Configuration (from JSON):")
     Log("  Menu Name: " .. config.menu.name)
     Log("  Music: " .. config.menu.music.name)
     Log("  Camera Zoom: " .. config.menu.camera.zoom)
-    Log("  Button Count: " .. #config.menu.buttons)
-    
-    for i, button in ipairs(config.menu.buttons) do
-        Log("  Button " .. i .. ": " .. button.id .. " at (" .. 
-            button.position.x .. ", " .. button.position.y .. ")")
-    end
-    
+    Log("  Button Count: " .. ButtonManager.GetButtonCount())
+
     Log("═══════════════════════════════════════")
 end

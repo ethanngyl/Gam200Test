@@ -1,11 +1,45 @@
-﻿/**
+﻿/*
 ===============================================================================
- File:           LevelLoader.cpp
- Author:         GE YONGQI
- Email:          yongqi.ge@digipen.edu
- Date:           2025-11-13
+ File:          LevelLoader.cpp
+ Author:        GE YONGQI
+ Email:         yongqi.ge@digipen.edu
+ Date:          2025-11-13
+ Contribution:  100%
  ------------------------------------------------------------------------------
-  Implementation of Lua-based level loading system
+  Lua-based Level Loading System Implementation
+
+  Purpose:
+  Core implementation of the LevelLoader system that manages Lua-scripted
+  game levels and provides C++ API bindings for Lua scripts.
+
+  Key Features:
+  - Singleton pattern for global access
+  - Lua state lifecycle management (create, reset, destroy)
+  - Level lifecycle (Load, Update, Draw, Unload)
+  - Hot-reload capability for rapid iteration
+  - Editor mode toggle (F1 key) with visual feedback
+  - Extensive C API for Lua (60+ functions)
+
+  API Categories:
+  - Logging: Log messages to console
+  - Camera: Position, zoom, framebuffer queries
+  - Engine: Play state, game state transitions
+  - ImGui: Enable/disable overlay
+  - Pause: Toggle pause, query pause state
+  - Audio: Play/stop sounds, volume control
+  - UI: Button creation, text rendering
+  - Input: Keyboard queries
+  - JSON: Configuration file loading
+  - Entities: Sprite spawning, manipulation, destruction
+  - TileMap: Grid-based level loading
+  - Player/Enemy: Grid movement, AP management, combat
+  - Scripts: Component management
+
+  Editor Mode:
+  - Lua_ToggleEditor(): Toggle editor mode on/off
+  - Lua_IsEditorEnabled(): Query current editor mode state
+  - Lua_SetEditorMode(): Directly set editor mode
+  - When enabled, buttons are grayed out and ImGui is shown
 ===============================================================================
 */
 
@@ -17,6 +51,7 @@
 #include "GraphicsSystemV2.h"
 #include "ImguiSystem.h"
 #include "GameStateList.h"
+#include "Pause/GlobalPauseManager.h"
 
 namespace Framework {
 
@@ -88,6 +123,19 @@ namespace Framework {
         }
 
         luaL_openlibs(L);  // Load standard libraries
+
+        // Add assets/scripts to Lua's module search path
+        lua_getglobal(L, "package");
+        lua_getfield(L, -1, "path");
+        std::string currentPath = lua_tostring(L, -1);
+        std::string newPath = currentPath + ";assets/scripts/?.lua";
+        lua_pop(L, 1);  // Pop old path
+        lua_pushstring(L, newPath.c_str());
+        lua_setfield(L, -2, "path");
+        lua_pop(L, 1);  // Pop package table
+
+        LOG_INFO("LevelLoader", "Added assets/scripts/ to Lua module path");
+
         RegisterLevelAPI();
 
         // Store pointer to this LevelLoader instance
@@ -105,11 +153,26 @@ namespace Framework {
         }
     }
 
+    void LevelLoader::ResetLuaState() {
+        LOG_INFO("LevelLoader", "Resetting Lua state for complete reload...");
+
+        // Unload current level if loaded
+        if (levelLoaded) {
+            UnloadCurrentLevel();
+        }
+
+        // Destroy and recreate Lua state
+        DestroyLuaState();
+        CreateLuaState();
+
+        LOG_INFO("LevelLoader", "Lua state reset complete - fresh VM ready");
+    }
+
     // ========================================================================
     // LEVEL MANAGEMENT
     // ========================================================================
 
-    bool LevelLoader::LoadLevel(const std::string& scriptPath) {
+    bool LevelLoader::LoadLevel(const std::string& scriptPath, bool isEditorMode) {
         LOG_INFO("LevelLoader", "================================================");
         LOG_INFO("LevelLoader", "Loading level: %s", scriptPath.c_str());
         LOG_INFO("LevelLoader", "================================================");
@@ -123,6 +186,9 @@ namespace Framework {
             LOG_ERROR("LevelLoader", "Lua state not initialized!");
             return false;
         }
+
+        lua_pushboolean(L, isEditorMode);
+        lua_setglobal(L, "IS_EDITOR_LOAD");
 
         // Load the Lua script
         if (luaL_dofile(L, scriptPath.c_str()) != LUA_OK) {
@@ -139,10 +205,10 @@ namespace Framework {
         bool hasDestroy = HasLuaFunction("OnDestroy");
 
         LOG_INFO("LevelLoader", "  Functions found:");
-        LOG_INFO("LevelLoader", "    OnInit: %s", hasInit ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnUpdate: %s", hasUpdate ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnDraw: %s", hasDraw ? "✓" : "✗");
-        LOG_INFO("LevelLoader", "    OnDestroy: %s", hasDestroy ? "✓" : "✗");
+        LOG_INFO("LevelLoader", "    OnInit: %s", hasInit ? "Y" : "X");
+        LOG_INFO("LevelLoader", "    OnUpdate: %s", hasUpdate ? "Y" : "X");
+        LOG_INFO("LevelLoader", "    OnDraw: %s", hasDraw ? "Y" : "X");
+        LOG_INFO("LevelLoader", "    OnDestroy: %s", hasDestroy ? "Y" : "X");
 
         if (!hasInit) {
             LOG_WARN("LevelLoader", "Level missing OnInit() function!");
@@ -201,6 +267,9 @@ namespace Framework {
 
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
+
+        // NOTE: Don't skip OnUpdate when paused - PauseMenu needs to run to handle unpause!
+        // The Lua level can check IsPaused() internally if needed.
 
         if (HasLuaFunction("OnUpdate")) {
             lua_getglobal(L, "OnUpdate");
@@ -274,6 +343,7 @@ namespace Framework {
         // Camera
         lua_register(L, "SetCameraPosition", Lua_SetCameraPosition);
         lua_register(L, "SetCameraZoom", Lua_SetCameraZoom);
+        lua_register(L, "GetFramebufferSize", Lua_GetFramebufferSize);
 
         // Engine control
         lua_register(L, "SetEnginePlayState", Lua_SetEnginePlayState);
@@ -286,21 +356,89 @@ namespace Framework {
         lua_register(L, "DisableImGui", Lua_DisableImGui);
         lua_register(L, "EnableImGui", Lua_EnableImGui);
 
+        // Pause control
+        lua_register(L, "TogglePause", Lua_TogglePause);
+        lua_register(L, "IsPaused", Lua_IsPaused);
+
         // Audio
         lua_register(L, "PlaySound", Lua_PlaySound);
         lua_register(L, "StopSound", Lua_StopSound);
         lua_register(L, "StopAllSounds", Lua_StopAllSounds);
         lua_register(L, "UpdateAudio", Lua_UpdateAudio);
+        lua_register(L, "SetMasterVolume", Lua_SetMasterVolume);
 
         // UI Buttons
         lua_register(L, "CreateButton", Lua_CreateButton);
         lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
         lua_register(L, "DrawButtonText", Lua_DrawButtonText);
+        lua_register(L, "DrawText", Lua_DrawText);
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
 
+        // JSON and Level Loading
         lua_register(L, "LoadJSON", Lua_LoadJSON);
+        lua_register(L, "LoadTileMap", Lua_LoadTileMap);
+
+        // AP Indicator / Entity Management
+        lua_register(L, "SpawnSprite", Lua_SpawnSprite);
+        lua_register(L, "SetSpriteColor", Lua_SetSpriteColor);
+        lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
+        lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
+        lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
+        lua_register(L, "DestroyEntity", Lua_DestroyEntity);
+        lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
+
+        lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
+        lua_register(L, "GetCameraPosition", Lua_GetCameraPosition);
+        lua_register(L, "GetPlayerAttackAP", Lua_GetPlayerAttackAP);
+        lua_register(L, "GetPlayerHP", Lua_GetPlayerHP);
+
+        // Enemy AI Configuration
+        lua_register(L, "FindPlayer", Lua_FindPlayer);
+        lua_register(L, "GetAllEnemies", Lua_GetAllEnemies);
+        lua_register(L, "SetEnemyTarget", Lua_SetEnemyTarget);
+        lua_register(L, "GetCurrentTurn", Lua_GetCurrentTurn);
+        lua_register(L, "GetChestProgress", Lua_GetChestProgress);
+
+        // Animation
+        lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
+        lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
+
+        // Script Component Management
+        lua_register(L, "AddScriptComponentToEntity", Lua_AddScriptComponentToEntity);
+        lua_register(L, "RemoveScriptComponentFromEntity", Lua_RemoveScriptComponentFromEntity);
+
+        // Player Grid Movement API
+        lua_register(L, "GetPlayerGridPosition", Lua_GetPlayerGridPosition);
+        lua_register(L, "IsValidGridPosition", Lua_IsValidGridPosition);
+        lua_register(L, "IsWalkableTile", Lua_IsWalkableTile);
+        lua_register(L, "MovePlayerToTile", Lua_MovePlayerToTile);
+        lua_register(L, "ShowTileBorder", Lua_ShowTileBorder);
+        lua_register(L, "PulseTile", Lua_PulseTile);
+        lua_register(L, "ConsumePlayerAP", Lua_ConsumePlayerAP);
+        lua_register(L, "RefillPlayerAP", Lua_RefillPlayerAP);
+        lua_register(L, "GetTurnIndex", Lua_GetTurnIndex);
+        lua_register(L, "EndPlayerTurn", Lua_EndPlayerTurn);
+        lua_register(L, "EndEnemyTurn", Lua_EndEnemyTurn);
+        lua_register(L, "SetPlayerFlipX", Lua_SetPlayerFlipX);
+        lua_register(L, "HasChestAtTile", Lua_HasChestAtTile);
+        lua_register(L, "CollectChest", Lua_CollectChest);
+        lua_register(L, "HasGoalAtTile", Lua_HasGoalAtTile);
+
+        // Enemy/Entity API
+        lua_register(L, "GetEnemyAP", Lua_GetEnemyAP);
+        lua_register(L, "RefillEnemyAP", Lua_RefillEnemyAP);
+        lua_register(L, "GetEntityGridPosition", Lua_GetEntityGridPosition);
+        lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
+        lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
+        lua_register(L, "DamageEntity", Lua_DamageEntity);
+        lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
+
+        lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
+        lua_register(L, "IsEditorMode", lua_IsEditorMode);
+
+
 
         LOG_INFO("LevelLoader", "API registered");
     }
@@ -340,6 +478,29 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_GetFramebufferSize(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* windowSystem = loader->coreEngine->GetWindowSystem();
+        if (!windowSystem) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int width, height;
+        glfwGetFramebufferSize(windowSystem->GetWindow(), &width, &height);
+
+        lua_pushinteger(L, width);
+        lua_pushinteger(L, height);
+        return 2;
+    }
+
     // --- Engine Control ---
 
     int LevelLoader::Lua_SetEnginePlayState(lua_State* L) {
@@ -358,14 +519,17 @@ namespace Framework {
         if (strcmp(stateName, "Level_select") == 0) {
             next = Level_select;
         }
-        else if (strcmp(stateName, "LEVEL_1") == 0) {
-            next = LEVEL_1;
+        if (strcmp(stateName, "TUTORIAL") == 0) {
+            next = TUTORIAL;
         }
         else if (strcmp(stateName, "LEVEL_2") == 0) {
             next = LEVEL_2;
         }
         else if (strcmp(stateName, "LEVEL_3") == 0) {
             next = LEVEL_3;
+        }
+        else if (strcmp(stateName, "LEVEL_END") == 0) {
+            next = LEVEL_END;
         }
         else if (strcmp(stateName, "mainMenu") == 0) {
             next = mainMenu;
@@ -401,6 +565,100 @@ namespace Framework {
         if (imgui) {
             imgui->Enable();
         }
+        return 0;
+    }
+
+    // --- Animation ---
+
+    int LevelLoader::Lua_LoadAnimationConfig(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LUA_ANIM", "Invalid loader state");
+            return 0;
+        }
+
+        const char* configPath = luaL_checkstring(L, 1);
+        LOG_INFO("LUA_ANIM", "=== LoadAnimationConfig called: '%s' ===", configPath);
+
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        if (!animSys) {
+            LOG_ERROR("LUA_ANIM", "AnimationSystem not available");
+            return 0;
+        }
+
+        animSys->LoadAnimationConfig(configPath);
+        LOG_INFO("LUA_ANIM", " Animation config loaded from '%s'", configPath);
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_LoadPlayerAnimation(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LOAD_ANIM", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LOAD_ANIM", "EntityManager not available");
+            return 0;
+        }
+
+        const char* animName = luaL_checkstring(L, 1);
+        LOG_INFO("LOAD_ANIM", "=== LoadPlayerAnimation called: '%s' ===", animName);
+
+        // Find player entity (CircleCollider)
+        Entity player{ INVALID_ENTITY };
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e)) {
+                player = e;
+                LOG_INFO("LOAD_ANIM", "Found player entity: %u", player.GetID());
+                break;
+            }
+        }
+
+        if (player.GetID() == INVALID_ENTITY) {
+            LOG_ERROR("LOAD_ANIM", "Player not found!");
+            return 0;
+        }
+
+        // Check player's current material
+        if (em->HasComponent<MeshRenderer>(player)) {
+            auto& mr = em->GetComponent<MeshRenderer>(player);
+            LOG_INFO("LOAD_ANIM", "Player material handle: %u", mr.material.GetID());
+        }
+
+        // Add SpriteAnimation component if not present
+        if (!em->HasComponent<SpriteAnimation>(player)) {
+            em->AddComponent<SpriteAnimation>(player);
+            LOG_INFO("LOAD_ANIM", " Added SpriteAnimation component");
+        }
+        else {
+            LOG_INFO("LOAD_ANIM", "Player already has SpriteAnimation");
+        }
+
+        // Get animation component
+        auto& anim = em->GetComponent<SpriteAnimation>(player);
+        anim.playing = true;
+
+        // Load animation
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (animSys && gfx) {
+            animSys->LoadAnimation(player, anim, gfx, animName);
+            LOG_INFO("LOAD_ANIM", " Animation loaded:");
+            LOG_INFO("LOAD_ANIM", "  - Name: '%s'", anim.animName.c_str());
+            LOG_INFO("LOAD_ANIM", "  - Grid: %dx%d", anim.rows, anim.columns);
+            LOG_INFO("LOAD_ANIM", "  - Frames: %d", anim.frameCount);
+            LOG_INFO("LOAD_ANIM", "  - SpriteSheet: %u", anim.spriteSheet.GetID());
+            LOG_INFO("LOAD_ANIM", "  - Playing: %d", anim.playing);
+        }
+        else {
+            LOG_ERROR("LOAD_ANIM", "AnimationSystem or GraphicsSystem not available");
+        }
+
         return 0;
     }
 

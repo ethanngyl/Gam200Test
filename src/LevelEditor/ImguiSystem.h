@@ -4,7 +4,7 @@ File:        ImGuiSystem.h
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
 Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
 Date:        2025-11-07
-Contribution: 42%(Ethan), 53%(Jiahao), 5%(kahyan)
+Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
@@ -38,11 +38,24 @@ namespace Framework {
     * @brief declare a structure to store the undo step information
     */
 
+    //Define types of actions we can undo
+    enum class UndoType {
+        Transform,  // Moving, Scaling, Rotating
+        Creation,   // Spawning a new entity
+        Deletion    // Deleting an entity
+    };
+
     struct UndoStep {
-        //the entity that user select and need to undo
-        Entity entity;
-        //the previous position of the entity before user move it
+        UndoType type;          // What kind of action was this?
+        Entity entity;          // Which entity was affected?
+
+        // Data for Transform Undo
         Vector2D oldPosition;
+        Vector2D oldScale;
+        float oldRotation;
+
+        // Data for Deletion Undo (To restore it, we save it as a temp file)
+        std::string tempFilePath;
     };
 
     /**
@@ -106,15 +119,45 @@ namespace Framework {
         }
         void RequestToggle() { pendingToggle = true; }
 
+        // ========================================================================
+        // VIEWPORT INFORMATION ACCESS
+        // ========================================================================
+
+        /**
+         * @brief Get the screen position of the viewport (top-left corner)
+         */
+        ImVec2 GetViewportPos() const { return m_viewportPos; }
+
+        /**
+         * @brief Get the size of the viewport in pixels
+         */
+        ImVec2 GetViewportSize() const { return m_viewportSize; }
+
+        /**
+         * @brief Check if mouse is currently hovering the viewport
+         */
+        bool IsViewportHovered() const { return m_isViewportHovered; }
+
+        /**
+         * @brief Check if viewport is currently focused
+         */
+        bool IsViewportFocused() const { return m_isViewportFocused; }
+
+
         //undo function - jiahao
         void PerformUndo();
         void RecordUndoStep(Entity entity);
+        void RecordCreationStep(Entity entity);         // For Spawning
+        void RecordDeletionStep(Entity entity);         // For Deleting
+
         //jiahao
         Framework::Vector2D EditorScreenWorld();
 
         bool IsAudioFile(const std::filesystem::path& path) const;
         bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
         bool AddAudioToJSON(const std::string& jsonPath, const std::string& audioPath);
+
+
 
     private:
         GLFWwindow* window;
@@ -127,7 +170,6 @@ namespace Framework {
         //in order to save and load level files
         std::string currentLevelPath;
         std::string openPath;
-        std::string defaultLevelPath = "assets/defaultLevel.txt";
 
         AudioSystem* audioSystem;
         GraphicsSystemV2* graphicsSystem;
@@ -204,6 +246,8 @@ namespace Framework {
 
         bool enabled;
 
+        bool imguiInitialized = false;  // Track if ImGui was successfully initialized
+
         float frameTime;
         int entityCount;
 
@@ -232,6 +276,11 @@ namespace Framework {
 
         //undo step - jiahao
         std::vector<UndoStep> undoStack;
+
+		//audio pop up window variables - jiahao
+		bool showAudioNamePopup = false;
+		char newAudioKeyBuffer[256] = "";
+		std::filesystem::path pendingAudioPath;
     };
 
 } // namespace Framework

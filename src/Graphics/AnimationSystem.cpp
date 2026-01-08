@@ -36,6 +36,7 @@ Usage:
  */
 
 #include "Precompiled.h"
+#include "AnimationSystem.h"
 #include "ConfigReader.h"
 #include "Component.h"
 #include "TimeConstants.h"
@@ -108,9 +109,18 @@ namespace Framework {
      *
      * Currently handles basic cleanup. Can be extended for
      * resource deallocation if needed in the future.
+     * 
     ===============================================================================
      */
-    AnimationSystem::~AnimationSystem() {}
+    AnimationSystem::~AnimationSystem() {
+        LOG_INFO("ANIMATION", "Destroying Animation System...");
+
+        //// 1. Clear any maps or vectors
+        //for (auto& anim : loadedAnimations) {
+        //    delete anim.second; // If you stored pointers to Animation objects
+        //}
+        //loadedAnimations.clear();
+    }
 
     // ==================== CORE LIFECYCLE METHODS ====================
 
@@ -249,7 +259,8 @@ namespace Framework {
                     anim.currentFrame = anim.loop ? anim_current_frame : anim.frameCount - anim_frame_mod;
                 }
 
-                LOG_INFO("ANIM", "Entity %u Animation '%s' advanced to frame %d", (unsigned)e.id, anim.animName.c_str(), anim.currentFrame);
+                // PERFORMANCE FIX: Removed per-frame logging (was causing 1-3ms lag per frame)
+                // LOG_INFO("ANIM", "Entity %u Animation '%s' advanced to frame %d", (unsigned)e.id, anim.animName.c_str(), anim.currentFrame);
             }
         }
     }
@@ -454,8 +465,12 @@ namespace Framework {
             auto& mr = entityManager->GetComponent<MeshRenderer>(e);
             mr.spriteName = spritePath;
 
-            // Let GraphicsSystemV2 assign mesh + material for this sprite
-            gfx->AssignMeshAndMaterial(mr, spritePath);
+            // DON'T call AssignMeshAndMaterial - it overwrites the unique material instance!
+            // The entity already has its material set up from spawning.
+            // Just update the sprite name so the animation texture is referenced.
+            // gfx->AssignMeshAndMaterial(mr, spritePath);  // COMMENTED OUT - preserves unique materials
+
+            LOG_INFO("ANIM", "Updated MeshRenderer spriteName to '%s' (preserved existing material)", spritePath.c_str());
         }
 
         LOG_INFO("ANIM",

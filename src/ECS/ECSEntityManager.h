@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <memory>
 #include <typeindex>
+#include <stdexcept>
 
 namespace Framework
 {
@@ -163,7 +164,21 @@ namespace Framework
     T& EntityManager::GetComponent(Entity entity)
     {
         std::type_index typeIndex(typeid(T));
-        return *static_cast<T*>(components[typeIndex][entity.GetID()].get());
+        auto typeIt = components.find(typeIndex);
+
+        // Check if component type exists
+        if (typeIt == components.end()) {
+            throw std::runtime_error("GetComponent: Component type does not exist");
+        }
+
+        auto entityIt = typeIt->second.find(entity.GetID());
+
+        // Check if entity has this component
+        if (entityIt == typeIt->second.end()) {
+            throw std::runtime_error("GetComponent: Entity does not have this component");
+        }
+
+        return *static_cast<T*>(entityIt->second.get());
     }
 
     template<typename T>
@@ -179,6 +194,9 @@ namespace Framework
     void EntityManager::RemoveComponent(Entity entity)
     {
         std::type_index typeIndex(typeid(T));
-        components[typeIndex].erase(entity.GetID());
+        auto it = components.find(typeIndex);
+        if (it != components.end()) {
+            it->second.erase(entity.GetID());
+        }
     }
 }

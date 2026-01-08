@@ -25,9 +25,9 @@ Details:
 Notes:
 - Vertex attributes are expected to be interleaved.
 - Attribute locations follow this convention:
-    0 → Position (x,y,z)
-    1 → Color (r,g,b)
-    2 → TexCoords (u,v) [optional]
+    0  Position (x,y,z)
+    1  Color (r,g,b)
+    2  TexCoords (u,v) [optional]
 - Requires a valid OpenGL context before construction or drawing.
 
 Safety:
@@ -104,6 +104,9 @@ namespace Framework {
         const std::vector<unsigned int>& indices,
         const std::vector<int>& attribSizes)
     {
+        if (VAO != 0) glDeleteVertexArrays(1, &VAO);
+        if (VBO != 0) glDeleteBuffers(1, &VBO);
+        if (EBO != 0) glDeleteBuffers(1, &EBO);
         this->vertice = vertices;
         vertexCount = static_cast<unsigned int>(vertices.size());
         indexCount = static_cast<unsigned int>(indices.size());
@@ -210,7 +213,44 @@ namespace Framework {
         {
             glCreateBuffers(1, &instanceVBO);
             glNamedBufferStorage(instanceVBO, num_of_mesh * sizeof(glm::mat4), nullptr, GL_DYNAMIC_STORAGE_BIT);
+
+            // ================================================================
+            // AMD FIX: Properly set up instance buffer as vertex attributes
+            // ================================================================
+            // AMD drivers require explicit vertex attribute setup for instanced
+            // rendering. NVIDIA drivers are more forgiving and may work without this.
+            //
+            // A mat4 model matrix requires 4 vec4 attributes (16 floats total).
+            // We use attribute locations 3, 4, 5, 6 for the 4 columns.
+            // ================================================================
+
+            // Bind VAO to associate instance attributes with it
+            glBindVertexArray(VAO);
+            glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+
+            // Set up 4 vertex attributes for the mat4 (one vec4 per column)
+            std::size_t vec4Size = sizeof(glm::vec4);
+            for (GLuint i = 0; i < 4; i++) {
+                GLuint location = 3 + i;  // Locations 3, 4, 5, 6
+                glEnableVertexAttribArray(location);
+                glVertexAttribPointer(
+                    location,               // Attribute location
+                    4,                      // Size (vec4)
+                    GL_FLOAT,               // Type
+                    GL_FALSE,               // Normalized
+                    sizeof(glm::mat4),      // Stride (size of one instance)
+                    (void*)(i * vec4Size)   // Offset to this column
+                );
+                // Set divisor to 1 = advance once per instance (not per vertex)
+                glVertexAttribDivisor(location, 1);
+            }
+
+            // Unbind to prevent accidental state changes
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
         }
+
+        // Keep SSBO binding for backwards compatibility (if shaders use it)
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, instanceVBO);
     }
 

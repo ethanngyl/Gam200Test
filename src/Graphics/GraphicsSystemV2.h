@@ -66,7 +66,7 @@ namespace Framework {
      * 2) Camera management (view/projection, editor helpers, follow target)
      * 3) Gather renderables into RenderQueue (from ECS MeshRenderer/Transform)
      * 4) Sort/batch commands to reduce state changes
-     * 5) Execute draw calls (BindMaterial → DrawMesh)
+     * 5) Execute draw calls (BindMaterial  DrawMesh)
      * 6) Overlay debug primitives and text (TextRenderer, DebugRenderQueue)
      */
     class GraphicsSystemV2 : public EngineSystem {

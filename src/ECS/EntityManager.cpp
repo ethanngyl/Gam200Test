@@ -14,8 +14,9 @@
 ===============================================================================
  */
 
+#include "Precompiled.h"
 #include "ECSEntityManager.h"
-
+#include <iostream>
 namespace Framework
 {
     /**
@@ -37,14 +38,20 @@ namespace Framework
         {
             id = freeEntityIDs.back();
             freeEntityIDs.pop_back();
+            // Debug logging removed for performance (was causing 20-30ms lag per frame)
+            // std::cout << "[EntityManager] Created entity ID " << id << " (recycled from free list, " << freeEntityIDs.size() << " free IDs remaining)\n";
         }
         else
         {
             id = nextEntityID++;
+            // Debug logging removed for performance
+            // std::cout << "[EntityManager] Created entity ID " << id << " (new, next ID will be " << nextEntityID << ")\n";
         }
 
         Entity entity(id);
         allEntities.push_back(entity);
+        // Debug logging removed for performance
+        // std::cout << "[EntityManager]   Total entities now: " << allEntities.size() << "\n";
         return entity;
     }
 
@@ -92,9 +99,17 @@ namespace Framework
      */
     void EntityManager::ClearAllEntities()
     {
+        // Debug logging removed for performance (was causing severe lag)
+        // size_t entityCount = allEntities.size();
+        // size_t componentTypeCount = components.size();
+        // size_t freeIDCount = freeEntityIDs.size();
+
         components.clear();
         allEntities.clear();
         freeEntityIDs.clear();
         nextEntityID = 1;
+
+        // Debug: Uncomment for troubleshooting entity cleanup issues
+        // std::cout << "[EntityManager] Cleared " << entityCount << " entities\n";
 	}
 }

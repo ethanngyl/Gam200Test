@@ -1,7 +1,7 @@
 ﻿/*
 ===============================================================================
  File:          Pause.cpp (Fixed Version - Config-Driven Layout)
- Author:        Padilla Carl Jameson Z + Claude Assistant
+ Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-27
  Contribution:  Original: Carl | Fix: Claude
@@ -23,6 +23,10 @@
 
 namespace PauseMenuSimple
 {
+    /**
+    * @brief Handles pause menu input and navigation.
+    * @return true if a menu action was executed, false otherwise
+    */
     bool UpdatePauseMenu(Framework::CoreEngine* engine,
         PauseMenuState& state,
         const PauseMenuCallbacks& callbacks)
@@ -94,6 +98,9 @@ namespace PauseMenuSimple
         return false;
     }
 
+    /**
+     * @brief Renders the pause menu with config-driven layout.
+     */
     void DrawPauseMenu(Framework::CoreEngine* engine,
         const PauseMenuState& state)
     {
@@ -167,7 +174,7 @@ namespace PauseMenuSimple
         float textBaseX = centerX + textOffsetX;
 
         // Menu option texts
-        const char* options[] = { "Resume", "Main Menu", "Exit Game" };
+        const char* options[] = { "Resume Game", "Main Menu", "Quit Game" };
 
         for (int i = 0; i < 3; ++i) {
             bool isSelected = (state.selectedOption == i);

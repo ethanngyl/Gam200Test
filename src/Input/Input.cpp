@@ -111,7 +111,7 @@ namespace Framework
 
 
         // Check for quit conditions
-        if (IsKeyPressed(KEY_Q) || IsKeyPressed(KEY_ESCAPE))
+        if (IsKeyPressed(KEY_Q))
         {
             std::cout << "InputSystem: Quit key pressed!\n";
             Message quitMsg(Status::Quit);
@@ -157,6 +157,19 @@ namespace Framework
         // - (0, 0) = top-left of window
         // - (windowWidth, windowHeight) = bottom-right of window
         // - Independent of window position on screen
+    }
+
+    void InputSystem::ResetAllKeyStates()
+    {
+        std::cout << "InputSystem: Resetting all key states\n";
+
+        // Clear all current key states
+        CurrentKeys.clear();
+
+        // Clear all previous key states
+        PreviousKeys.clear();
+
+        std::cout << "InputSystem: All key states reset (CurrentKeys and PreviousKeys cleared)\n";
     }
 
     void InputSystem::SendEngineMessage(Message* message)

@@ -1,6 +1,6 @@
 /*
 ===============================================================================
-File:        Camera.h 
+File:        Camera.h
 Author:      Sim Kah Yan
 Email:       kahyan.sim@digipen.edu
 Date:        2025-11-07
@@ -47,7 +47,7 @@ namespace Framework {
          * @param farPlane Far clipping plane
          */
         Camera(float left, float right, float bottom, float top,
-               float nearPlane = -1.0f, float farPlane = 1.0f);
+            float nearPlane = -1.0f, float farPlane = 1.0f);
 
         /**
          * @brief Construct perspective camera
@@ -59,7 +59,7 @@ namespace Framework {
         Camera(float fov, float aspectRatio, float nearPlane, float farPlane);
 
         // === GETTERS ===
-        
+
         const glm::mat4& GetViewMatrix() const { return viewMatrix; }
         const glm::mat4& GetProjectionMatrix() const { return projectionMatrix; }
         glm::mat4 GetViewProjectionMatrix() const { return projectionMatrix * viewMatrix; }
@@ -68,8 +68,10 @@ namespace Framework {
         const glm::vec3& GetRotation() const { return rotation; }
         float GetZoom() const { return zoom; }
 
+        glm::vec2 GetOrthoHalfExtents() const;
+
         // === SETTERS ===
-        
+
         void SetPosition(const glm::vec3& pos);
         void SetRotation(const glm::vec3& rot);
         void SetZoom(float z);
@@ -83,7 +85,7 @@ namespace Framework {
          * @brief Set orthographic bounds
          */
         void SetOrthographic(float left, float right, float bottom, float top,
-                            float nearPlane = -1.0f, float farPlane = 1.0f);
+            float nearPlane = -1.0f, float farPlane = 1.0f);
 
         /**
          * @brief Set perspective parameters
@@ -117,14 +119,14 @@ namespace Framework {
 
         // Projection parameters
         ProjectionType projectionType;
-        
+
         // Orthographic
         float orthoLeft, orthoRight, orthoBottom, orthoTop;
-        
+
         // Perspective
         float fov;  // Field of view in degrees
         float aspectRatio;
-        
+
         // Common
         float nearPlane, farPlane;
 

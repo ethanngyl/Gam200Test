@@ -140,6 +140,86 @@ bool ConfigReader::HasKey(const std::string& key)
     return configData.find(key) != configData.end();
 }
 
+bool ConfigReader::SetFloat(const std::string& key, float value)
+{
+    // Convert float to string with precision
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << value;
+
+    configData[key] = oss.str();
+
+    // Save to file
+    return SaveConfig();
+}
+
+bool ConfigReader::SetString(const std::string& key, const std::string& value)
+{
+    configData[key] = value;
+
+    // Save to file
+    return SaveConfig();
+}
+
+bool ConfigReader::SaveConfig(const std::string& filename)
+{
+    // Use loaded config path if no filename specified
+    std::string targetFile = filename.empty() ? loadedConfigPath : filename;
+
+    if (targetFile.empty()) {
+        targetFile = CONFIG_FILE_PATH;
+    }
+
+    // Read the original file to preserve comments and structure
+    std::ifstream inFile(targetFile);
+    std::vector<std::string> lines;
+    std::map<std::string, bool> keysWritten;
+
+    if (inFile.is_open()) {
+        std::string line;
+        while (std::getline(inFile, line)) {
+            // Check if this line contains a key we have in configData
+            size_t pos = line.find('=');
+            if (pos != std::string::npos && !line.empty() && line[0] != '#') {
+                std::string key = Trim(line.substr(0, pos));
+
+                // If we have this key in our data, update it
+                if (configData.find(key) != configData.end()) {
+                    lines.push_back(key + " = " + configData[key]);
+                    keysWritten[key] = true;
+                } else {
+                    lines.push_back(line);
+                }
+            } else {
+                // Preserve comments and empty lines
+                lines.push_back(line);
+            }
+        }
+        inFile.close();
+    }
+
+    // Add any new keys that weren't in the original file
+    for (const auto& pair : configData) {
+        if (keysWritten.find(pair.first) == keysWritten.end()) {
+            lines.push_back(pair.first + " = " + pair.second);
+        }
+    }
+
+    // Write everything back to file
+    std::ofstream outFile(targetFile);
+    if (!outFile.is_open()) {
+        LOG_ERROR("CONFIG", "Failed to open config file for writing: %s", targetFile.c_str());
+        return false;
+    }
+
+    for (const auto& line : lines) {
+        outFile << line << "\n";
+    }
+
+    outFile.close();
+    LOG_INFO("CONFIG", "Configuration saved to: %s", targetFile.c_str());
+    return true;
+}
+
 // ============================================================================
 // PRIVATE HELPER METHODS
 // ============================================================================
@@ -230,9 +310,6 @@ int ConfigReader::ParseStateName(const std::string& stateName, int defaultState)
     // Parse state names
     if (lowerName == "mainmenu" || lowerName == "main_menu") {
         return mainMenu;
-    }
-    else if (lowerName == "level1" || lowerName == "level_1") {
-        return LEVEL_1;
     }
     else if (lowerName == "level2" || lowerName == "level_2") {
         return LEVEL_2;

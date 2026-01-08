@@ -1,11 +1,11 @@
 /******************************************************************************
 ===============================================================================
  File:           PlayerManager.h
- Author:         <MAIN AUTHOR NAME>
+ Author:         ETHAN NG YONG LE
  Co-authors:     PADILLA CARL JAMESON Z.
- Email:          <main.author@digipen.edu>
+ Email:          n.ethanyongle@digipen.edu, c.padilla@digipen.edu
  Date:           2025/11/07
- Contribution:   PADILLA CARL JAMESON Z.: 10%
+ Contribution:   ETHAN NG YONG LE: 90 % PADILLA CARL JAMESON Z.: 10%
  ------------------------------------------------------------------------------
   Description:
   Declares the player control interface for a grid-based, turn-driven game.
@@ -14,7 +14,7 @@
 
   Design notes:
   - Single-tile movement semantics with bounds/walkability checks
-  - Turn integration: movements can end the player’s turn
+  - Turn integration: movements can end the playerï¿½s turn
   - Non-blocking, timer-based UI feedback (start/stop pulse; show/hide outline)
   - Minimal surface area: effects are initiated here and updated per frame
 ===============================================================================
@@ -65,6 +65,7 @@ namespace Framework {
 
         void ResetGridState();
         void SetGridMovementEnabled(bool enabled);
+		bool HandleTileInteraction(const GridCoord& tileCoord);
 
     private:
         // ========================================================================
@@ -74,6 +75,10 @@ namespace Framework {
         void HandleShootUp(const Vector2D& playerPos);
         void HandleShootDown(const Vector2D& playerPos);
         void HandleShootAtMouse(const Vector2D& playerPos);
+        void HandleAttackAction();
+		void ClearAttackPreview();
+		void ShowAttackPreview(int minRange, int maxRange);
+		Entity FindFirstEnemyInRange(int minRange, int maxRange);
 
         // ========================================================================
         // PLAYER MOVEMENT HANDLERS
@@ -82,7 +87,7 @@ namespace Framework {
         void UpdateBorderOutlineAnimation();
         void HandleArrowKeyMovement();
         void StartTilePulse(Framework::Entity tileEntity, float pulseScale, DWORD pulseDurationMs);
-        void ShowBorderOutline(const GridCoord& tile, float thicknessFraction, DWORD durationMs);
+        //void ShowBorderOutline(const GridCoord& tile, float thicknessFraction, DWORD durationMs);
 
         // ========================================================================
         // MEMBER VARIABLES
@@ -100,6 +105,13 @@ namespace Framework {
         float shootCooldownTime;
         float projectileSpeed;
         bool gridMovementEnabled = false;
+		bool attackPreviewActive = false;
+		bool spaceReleased = true;
+		std::vector<Entity> attackPreviewTiles;
+
+        // Arrow key movement cooldown to prevent double AP consumption
+        float arrowMoveCooldown = 0.0f;
+		float spaceAttackCooldown = 0.0f;
 
         uint64_t lastTurnIndex = 0;
     };

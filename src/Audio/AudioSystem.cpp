@@ -375,7 +375,7 @@ namespace Framework {
         }
     }
 
-    void AudioSystem::ReloadAudioLibrary() {
+    /*void AudioSystem::ReloadAudioLibrary() {
         std::cout << "[AudioSystem] ============================================\n";
         std::cout << "[AudioSystem] Reloading audio library from audio.json...\n";
         std::cout << "[AudioSystem] ============================================\n";
@@ -411,7 +411,7 @@ namespace Framework {
         // ========================================================================
         std::cout << "[AudioSystem] Reading audio.json...\n";
 
-        const std::string jsonPath = "assets/audio.json";
+        const std::string jsonPath = "assets/JSON/AudioConfig.json";
         std::ifstream file(jsonPath);
 
         if (!file.is_open()) {
@@ -477,7 +477,7 @@ namespace Framework {
             // ====================================================================
             // STEP 5: Load this sound into FMOD
             // ====================================================================
-            std::string fullPath = "assets/" + fileName;
+            std::string fullPath = "assets/Audio/" + fileName;
 
             std::cout << "[AudioSystem] Loading: \"" << audioName << "\" -> " << fullPath << "\n";
 
@@ -523,7 +523,95 @@ namespace Framework {
 
         std::cout << "[AudioSystem] Total sounds available: " << sounds.size() << "\n";
         std::cout << "[AudioSystem] ============================================\n";
+    }*/
+    // This function converts the mouse cursor's screen position (pixels) into 
+    // Game World coordinates, accounting for the camera and editor viewport.
+    void AudioSystem::ReloadAudioLibrary() {
+    std::cout << "[AudioSystem] Reloading from AudioConfig.json...\n";
+
+    // 1. Cleanup old sounds
+    StopAllSounds();
+    for (auto& [name, sound] : sounds) {
+        if (sound) sound->release();
+    }
+    sounds.clear();
+
+    // 2. Read File
+    std::ifstream file("assets/JSON/AudioConfig.json");
+    if (!file.is_open()) {
+        std::cerr << "[AudioSystem] Failed to open config file!\n";
+        return;
     }
 
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string json = buffer.str();
+
+    // --- PARSING LOGIC ---
+
+    // 1. Locate the "sounds" array
+    size_t soundsPos = json.find("\"sounds\"");
+    size_t arrayStart = json.find("[", soundsPos);
+    if (soundsPos == std::string::npos || arrayStart == std::string::npos) {
+        std::cout << "[AudioSystem] No 'sounds' array found.\n";
+        return;
+    }
+
+    // 2. Loop through objects inside the array
+    size_t currentPos = arrayStart;
+    int loadedCount = 0;
+
+    while (true) {
+        // Find start of next object
+        size_t objStart = json.find("{", currentPos);
+        size_t objEnd = json.find("}", objStart);
+
+        // Stop if no more objects or we passed the end of the array
+        // (A simple heuristic: if we find ']' before the next '{', we are done)
+        size_t arrayClose = json.find("]", currentPos);
+        if (objStart == std::string::npos || (arrayClose != std::string::npos && objStart > arrayClose)) {
+            break;
+        }
+
+        // Extract the single object string: { "name": "...", "filepath": "..." }
+        std::string entry = json.substr(objStart, objEnd - objStart + 1);
+
+        // Parse "name"
+        std::string nameVal, pathVal;
+
+        size_t nKey = entry.find("\"name\"");
+        if (nKey != std::string::npos) {
+            size_t nColon = entry.find(":", nKey);
+            size_t nQ1 = entry.find("\"", nColon);
+            size_t nQ2 = entry.find("\"", nQ1 + 1);
+            if (nQ1 != std::string::npos && nQ2 != std::string::npos) {
+                nameVal = entry.substr(nQ1 + 1, nQ2 - nQ1 - 1);
+            }
+        }
+
+        // Parse "filepath"
+        size_t pKey = entry.find("\"filepath\"");
+        if (pKey != std::string::npos) {
+            size_t pColon = entry.find(":", pKey);
+            size_t pQ1 = entry.find("\"", pColon);
+            size_t pQ2 = entry.find("\"", pQ1 + 1);
+            if (pQ1 != std::string::npos && pQ2 != std::string::npos) {
+                pathVal = entry.substr(pQ1 + 1, pQ2 - pQ1 - 1);
+            }
+        }
+
+        // Load if valid
+        if (!nameVal.empty() && !pathVal.empty()) {
+            if (LoadSound(pathVal, nameVal)) {
+                loadedCount++;
+            }
+        }
+
+        // Move cursor past this object
+        currentPos = objEnd + 1;
+    }
+
+    std::cout << "[AudioSystem] Reload Complete. Loaded " << loadedCount << " sounds.\n";
+}
 
 } // namespace Framework
