@@ -949,7 +949,7 @@ namespace Framework {
 
             // 1. Bind Material
             if (batchBase->material != currentBoundMaterial) {
-                BindMaterial(batchBase->material, glm::vec4(1.0f));
+                BindMaterial(batchBase->material, batchBase->tint);
                 currentBoundMaterial = batchBase->material;
             }
 
