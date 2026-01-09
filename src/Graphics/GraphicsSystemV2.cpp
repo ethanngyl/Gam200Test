@@ -988,7 +988,8 @@ namespace Framework {
             bool isSameBatch = false;
             if (batchBase && cmd.mesh == batchBase->mesh &&
                 cmd.material == batchBase->material &&
-                cmd.texture == batchBase->texture) {
+                cmd.texture == batchBase->texture &&
+                cmd.tint == batchBase->tint) {
                 isSameBatch = true;
             }
 
