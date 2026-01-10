@@ -1422,6 +1422,15 @@ namespace Framework {
 
                         ImGui::DragInt("Layer", &sprite.layer, 1, -100, 100);
 
+                        // Tint color picker
+                        float tint[4] = { sprite.tint.r, sprite.tint.g, sprite.tint.b, sprite.tint.a };
+                        if (ImGui::ColorEdit4("Tint##SpriteTint", tint)) {
+                            sprite.tint.r = tint[0];
+                            sprite.tint.g = tint[1];
+                            sprite.tint.b = tint[2];
+                            sprite.tint.a = tint[3];
+                        }
+
                         ImGui::TreePop();
                     }
                 }
