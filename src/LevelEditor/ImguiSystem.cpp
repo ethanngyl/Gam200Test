@@ -217,12 +217,18 @@ namespace Framework {
 
             if (word == "Sprite") {
                 std::string name;
-                if (iss >> name) {
+                float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;  // Default white tint
+                iss >> name;
+                // Try to read optional tint values (r g b a)
+                iss >> r >> g >> b >> a;
+
+                if (!name.empty()) {
                     entityManager->AddComponent<Framework::Sprite>(Entity);
                     auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
                     //sprite.texturePath =  name;
                     std::string label = std::filesystem::path(name).filename().string();
                     sprite.texturePath = std::string("assets/") + label;
+                    sprite.tint = glm::vec4(r, g, b, a);
                 }
                 continue;
             }
@@ -399,11 +405,13 @@ namespace Framework {
             if (entityManager->HasComponent<MeshRenderer>(entity)) {
                 // get reference to the meshRenderer component
                 // in renderring system, there is also meshrenderer component to generate image
-                // some entity may not have 
+                // some entity may not have
                 auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
-                //write the sprite name
+                //write the sprite name with tint
                 if (!meshRenderer.spriteName.empty()) {
-                    writeFile << "Sprite " << meshRenderer.spriteName << "\n";
+                    writeFile << "Sprite " << meshRenderer.spriteName << " "
+                             << meshRenderer.tint.r << " " << meshRenderer.tint.g << " "
+                             << meshRenderer.tint.b << " " << meshRenderer.tint.a << "\n";
                 }
             }
 
@@ -412,7 +420,10 @@ namespace Framework {
                 // get reference to the sprite component
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
-                    writeFile << "Sprite " << sprite.texturePath << "\n";
+                    // Save sprite with tint values (r g b a)
+                    writeFile << "Sprite " << sprite.texturePath << " "
+                             << sprite.tint.r << " " << sprite.tint.g << " "
+                             << sprite.tint.b << " " << sprite.tint.a << "\n";
                 }
 
             }

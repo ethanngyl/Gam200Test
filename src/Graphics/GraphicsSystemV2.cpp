@@ -772,7 +772,7 @@ namespace Framework {
                     cmd.texture = INVALID_TEXTURE_HANDLE;
                 }
 
-                cmd.tint = glm::vec4(1.0f);
+                cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
                 cmd.layer = sp.layer;
             }
 
