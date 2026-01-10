@@ -17,6 +17,7 @@
 #include "ECSComponent.h"
 #include "Vector2D.h"
 #include "ResourceHandle.h"   // <-- REQUIRED for TextureHandle
+#include <glm/glm.hpp>         // <-- REQUIRED for glm::vec4
 #include <string>
 
 extern "C" {
