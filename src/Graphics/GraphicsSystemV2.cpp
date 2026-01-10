@@ -956,11 +956,9 @@ namespace Framework {
         auto FlushBatch = [&]() {
             if (batchMatrices.empty() || !batchBase) return;
 
-            // 1. Bind Material
-            if (batchBase->material != currentBoundMaterial) {
-                BindMaterial(batchBase->material, batchBase->tint);
-                currentBoundMaterial = batchBase->material;
-            }
+            // 1. Bind Material (ALWAYS rebind because tint may have changed)
+            BindMaterial(batchBase->material, batchBase->tint);
+            currentBoundMaterial = batchBase->material;
 
             Shader* shader = resourceManager.GetShader(currentBoundShader);
             if (shader) {
