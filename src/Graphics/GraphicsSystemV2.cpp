@@ -755,6 +755,15 @@ namespace Framework {
                 cmd.tint = mr.tint;
                 cmd.layer = mr.layer;
                 cmd.orderInLayer = mr.orderInLayer;
+
+                // DEBUG: Log tint values
+                static int debugCounter = 0;
+                if (debugCounter++ % 60 == 0) {  // Log once per second
+                    std::cout << "[DEBUG] Entity " << e.GetID()
+                              << " MeshRenderer tint: ("
+                              << mr.tint.r << ", " << mr.tint.g << ", "
+                              << mr.tint.b << ", " << mr.tint.a << ")\n";
+                }
             }
 
             // ---------- SPRITE ----------
@@ -1183,6 +1192,17 @@ namespace Framework {
         GLint colorLoc = glGetUniformLocation(shader->GetID(), "uColor");
         if (colorLoc != -1) {
             glUniform3f(colorLoc, finalTint.r, finalTint.g, finalTint.b);
+
+            // DEBUG: Log tint being sent to shader
+            static int debugCounter = 0;
+            if (debugCounter++ % 60 == 0) {  // Log once per second
+                std::cout << "[DEBUG] Shader tint: material=("
+                          << material->tint.r << "," << material->tint.g << ","
+                          << material->tint.b << "," << material->tint.a
+                          << ") instance=(" << tint.r << "," << tint.g << ","
+                          << tint.b << "," << tint.a << ") final=("
+                          << finalTint.r << "," << finalTint.g << "," << finalTint.b << ")\n";
+            }
         }
         return true;
     }
