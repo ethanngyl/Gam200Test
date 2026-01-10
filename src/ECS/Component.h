@@ -122,6 +122,7 @@ namespace Framework
         int layer = 0;
         bool flipX = false;
         bool flipY = false;
+        glm::vec4 tint = glm::vec4(1.0f);  // Color tint multiplier (RGBA)
     };
 
     /**
