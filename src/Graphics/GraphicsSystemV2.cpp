@@ -735,7 +735,16 @@ namespace Framework {
                     if (!pm) continue;
 
                     *pm = *base; // shallow copy of defaults
+                    pm->tint = glm::vec4(1.0f); // Force material tint to white
                     mr.material = inst;
+
+                    // DEBUG: Log material creation
+                    static int createCounter = 0;
+                    if (createCounter++ < 5) {  // Log first 5 materials created
+                        std::cout << "[DEBUG] Created material for entity " << e.GetID()
+                                  << " with tint (" << pm->tint.r << "," << pm->tint.g << ","
+                                  << pm->tint.b << "," << pm->tint.a << ")\n";
+                    }
                 }
 
                 cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
