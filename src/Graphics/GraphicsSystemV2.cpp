@@ -726,10 +726,16 @@ namespace Framework {
                     Material* base = resourceManager.GetMaterial(defaultMaterial);
                     if (!base) continue;
 
-                    MaterialHandle inst = resourceManager.CreateMaterial(
-                        "entity_mat_" + std::to_string(e.GetID()),
-                        base->shader
-                    );
+                    std::string matName = "entity_mat_" + std::to_string(e.GetID());
+
+                    // DEBUG: Check if this material already exists to avoid duplicates
+                    MaterialHandle existing = resourceManager.GetMaterialHandle(matName);
+                    if (existing.IsValid()) {
+                        mr.material = existing;
+                        continue;
+                    }
+
+                    MaterialHandle inst = resourceManager.CreateMaterial(matName, base->shader);
 
                     Material* pm = resourceManager.GetMaterial(inst);
                     if (!pm) continue;
@@ -740,10 +746,9 @@ namespace Framework {
 
                     // DEBUG: Log material creation
                     static int createCounter = 0;
-                    if (createCounter++ < 5) {  // Log first 5 materials created
-                        std::cout << "[DEBUG] Created material for entity " << e.GetID()
-                                  << " with tint (" << pm->tint.r << "," << pm->tint.g << ","
-                                  << pm->tint.b << "," << pm->tint.a << ")\n";
+                    if (createCounter++ < 10) {  // Log first 10 materials created
+                        std::cout << "[DEBUG] Created material '" << matName
+                                  << "' for entity " << e.GetID() << "\n";
                     }
                 }
 
