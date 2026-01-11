@@ -813,8 +813,15 @@ namespace Framework {
             enabled = !enabled;
             pendingToggle = false;
             std::cout << "[ImGuiSystem] Toggled to: " << (enabled ? "ON" : "OFF") << "\n";
+
+            
+
         }
 
+        // Auto-Switch Screen Mode
+        if (Framework::CORE && Framework::CORE->GetWindowSystem()) {
+            Framework::CORE->GetWindowSystem()->SetFullScreen(!enabled);
+        }
 
         if (!enabled) {
             return;
@@ -836,16 +843,16 @@ namespace Framework {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        //frameTime = dt;
+        frameTime = ImGui::GetIO().DeltaTime;
         if (entityManager) {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
         }
 
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        //ImGui_ImplOpenGL3_NewFrame();
+        //ImGui_ImplGlfw_NewFrame();
 
-        frameTime = ImGui::GetIO().DeltaTime;
+        
 
         // ========================================================================
         // SETUP DOCKSPACE - Handle docking layout and menu bar
