@@ -1269,7 +1269,7 @@ namespace Framework {
         }
         else {
             mr.mesh = resourceManager.GetMeshHandle("quad");
-            mr.material = Material2;
+            mr.material = defaultMaterial;  // Use defaultMaterial which supports tinting
         }
     }
 
