@@ -759,10 +759,10 @@ namespace Framework {
                 // DEBUG: Log tint values
                 static int debugCounter = 0;
                 if (debugCounter++ % 60 == 0) {  // Log once per second
-                    std::cout << "[DEBUG] Entity " << e.GetID()
+                    /*std::cout << "[DEBUG] Entity " << e.GetID()
                               << " MeshRenderer tint: ("
                               << mr.tint.r << ", " << mr.tint.g << ", "
-                              << mr.tint.b << ", " << mr.tint.a << ")\n";
+                              << mr.tint.b << ", " << mr.tint.a << ")\n";*/
                 }
             }
 

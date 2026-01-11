@@ -258,7 +258,7 @@ namespace Framework {
         int thisFrame = static_cast<int>(frameCounter / 60); // Approximate frame number
         if (thisFrame != currentFrame) {
             if (callsThisFrame > 2) {  // Expected: 2 calls (Play + Exit buttons)
-                LOG_WARN("LevelLoader", "!!! DrawButtonText called %d times last frame (expected 2) !!!", callsThisFrame);
+                /*LOG_WARN("LevelLoader", "!!! DrawButtonText called %d times last frame (expected 2) !!!", callsThisFrame);*/
             }
             currentFrame = thisFrame;
             callsThisFrame = 0;
@@ -375,7 +375,7 @@ namespace Framework {
 
         static int debugCount = 0;
         if (debugCount++ % 60 == 0) {  // Print once per second
-            LOG_INFO("LevelLoader", "========== DrawButtonText: '%s' ==========", text);
+            /*LOG_INFO("LevelLoader", "========== DrawButtonText: '%s' ==========", text);
             LOG_INFO("LevelLoader", "  Editor: %s | FBO: %u",
                 editorEnabled ? "ENABLED" : "DISABLED",
                 editorEnabled ? imgui->GetViewportFBO() : 0);
@@ -387,7 +387,7 @@ namespace Framework {
                 scale, viewportScale, finalScale);
             LOG_INFO("LevelLoader", "  Offsets: raw=(%.2f, %.2f) scaled=(%.2f, %.2f)",
                 offsetX, offsetY, scaledOffsetX, scaledOffsetY);
-            LOG_INFO("LevelLoader", "========================================");
+            LOG_INFO("LevelLoader", "========================================");*/
         }
         // ========================================
 
