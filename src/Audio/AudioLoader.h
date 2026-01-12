@@ -129,6 +129,12 @@ namespace Framework {
          */
         static bool SaveAudioConfig(const std::string& filepath = "assets/JSON/AudioConfig.json");
 
+        /**
+         * @brief Clean up static resources and free memory
+         * @note Call this before program exit to prevent memory leak reports
+         */
+        static void Shutdown();
+
     private:
         /**
          * @brief Internal helper to parse raw JSON into internal structures
