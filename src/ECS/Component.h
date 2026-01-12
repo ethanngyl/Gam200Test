@@ -62,6 +62,17 @@ namespace Framework
         bool blocked = false;
     };
 
+    struct ParticleEmitter : public Component<ParticleEmitter>
+    {
+        std::string preset = "smoke"; // preset name in particles.json
+        bool enabled = true;
+        bool looping = true;          // for rate emitters
+
+        // runtime
+        float emitAccumulator = 0.0f;
+        bool burstFired = false;
+    };
+
     enum class AnimGroup {
         Idle,
         Walk,

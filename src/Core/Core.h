@@ -25,7 +25,6 @@
 ===============================================================================
 */
 
-
 #pragma once
 #include "Precompiled.h"
 #include "Event/Event.h"
@@ -57,6 +56,7 @@ namespace Framework
     class EventSystem;
     class DamageIndicatorSystem;
     class PathfindingSystem;
+	class ParticleSystem;
 
     /**
      * @class CoreEngine
@@ -187,7 +187,7 @@ namespace Framework
         EventSystem* GetEventSystem() const { return eventSystem; }
         PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
         LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
-
+        ParticleSystem* GetParticleSystem() const { return particleSystem; }
 
         /**
          * @brief Initializes the added system
@@ -245,6 +245,7 @@ namespace Framework
         DamageIndicatorSystem* damageIndicator;
         PathfindingSystem* pathfindingSystem;
         ScriptSystem* scriptSystem = nullptr;
+		ParticleSystem* particleSystem = nullptr;
 
         // state
         unsigned LastTime;

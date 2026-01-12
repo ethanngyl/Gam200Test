@@ -25,7 +25,6 @@
 ===============================================================================
 */
 
-
 #include "Precompiled.h"
 
 #include "ProjectileSystem.h"        
@@ -67,6 +66,7 @@ namespace Framework
         , GameActive(true)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
+		, particleSystem(nullptr)
     {
         CORE = this;
     }
@@ -150,6 +150,7 @@ namespace Framework
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
         scriptSystem = new ScriptSystem();
+		particleSystem = new ParticleSystem();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
@@ -178,6 +179,7 @@ namespace Framework
             delete damageIndicator;
             delete pathfindingSystem;
             delete scriptSystem;
+            delete particleSystem;
 
             throw std::runtime_error("System allocation failure");
         }
@@ -204,8 +206,7 @@ namespace Framework
         audioSystem->SetEntityManager(entityManager);
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
-
-
+        particleSystem->SetEntityManager(entityManager);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -275,6 +276,7 @@ namespace Framework
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
+        AddSystem(particleSystem);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -361,6 +363,7 @@ namespace Framework
         animationSystem = nullptr;
         uiSystem = nullptr;
         eventSystem = nullptr;
+		particleSystem = nullptr;
 
         // Delete EntityManager (not added to engine)
         if (entityManager) {

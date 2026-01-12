@@ -163,6 +163,7 @@ namespace Framework {
     ===============================================================================
      */
     void AnimationSystem::Update(float dt) {
+		UNREFERENCED_PARAMETER(dt);
         if (!entityManager) return;
 
         // === Sprite sheet frame stepping ===

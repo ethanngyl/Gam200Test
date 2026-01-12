@@ -1,0 +1,28 @@
+{
+  "presets": {
+    "smoke": {
+      "emit_mode": "rate",
+      "emit_rate": 80,
+      "max_particles": 150,
+      "lifetime": [1.0, 2.5],
+      "speed": [10, 40],
+      "spread_deg": 70,
+      "start_size": 0.18,
+      "end_size": 0.45,
+      "start_color": [0.6, 0.6, 0.6, 0.35],
+      "end_color":   [0.6, 0.6, 0.6, 0.0]
+    },
+    "explosion": {
+      "emit_mode": "burst",
+      "burst_count": 120,
+      "max_particles": 200,
+      "lifetime": [0.25, 1.0],
+      "speed": [80, 260],
+      "spread_deg": 360,
+      "start_size": 0.25,
+      "end_size": 0.0,
+      "start_color": [1.0, 0.7, 0.2, 1.0],
+      "end_color":   [1.0, 0.2, 0.0, 0.0]
+    }
+  }
+}
