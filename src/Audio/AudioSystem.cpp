@@ -121,8 +121,20 @@ namespace Framework {
 
         if (!fmodSystem) return;
 
+        bool shouldPlay = false;
+        if (Framework::CORE) {
+            shouldPlay = Framework::CORE->IsPlaying() && !Framework::CORE->IsEditorMode();
+        }
+
+        if (masterGroup) {
+            masterGroup->setPaused(!shouldPlay);
+        }
         // Update FMOD
         fmodSystem->update();
+
+        if (shouldPlay) {
+            UpdateAudioSources();
+        }
 
         // Update all audio source components
         UpdateAudioSources();
@@ -329,6 +341,12 @@ namespace Framework {
      */
     void AudioSystem::PlaySound(const std::string& soundName, bool loop) {
         if (!fmodSystem) return;
+
+        if (Framework::CORE) {
+            if (!Framework::CORE->IsPlaying() || Framework::CORE->IsEditorMode()) {
+                return;
+            }
+        }
 
         auto it = sounds.find(soundName);
         if (it == sounds.end()) {

@@ -171,6 +171,10 @@ namespace Framework {
         std::string currentLevelPath;
         std::string openPath;
 
+        //pending gsm state when loading lua
+        std::string currentLuaLevelPath = "";
+        int pendingLuaGsmState = -1;
+
         AudioSystem* audioSystem;
         GraphicsSystemV2* graphicsSystem;
 
