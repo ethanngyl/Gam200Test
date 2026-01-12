@@ -371,6 +371,7 @@ namespace Framework
 
         // Clean up static resources to prevent memory leak reports
         ConfigReader::Shutdown();
+        AudioLoader::Shutdown();
         eng::debug::Log::shutdown();
 
         LOG_INFO("CORE", "Cleanup complete");
