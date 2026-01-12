@@ -369,6 +369,10 @@ namespace Framework
             glfwTerminate();
         }
 
+        // Clean up static resources to prevent memory leak reports
+        ConfigReader::Shutdown();
+        eng::debug::Log::shutdown();
+
         LOG_INFO("CORE", "Cleanup complete");
     }
 
