@@ -16,9 +16,9 @@ Key Points:
 - Thread-safe via a single mutex guarding all resource maps/caches.
 - Ref-counting for release semantics; resources are freed when count hits 0.
 - Cache keys:
-  • Shaders: combined vert+frag path key
-  • Textures: normalized path string
-  • Meshes: logical name key (e.g., "quad")
+  ï¿½ Shaders: combined vert+frag path key
+  ï¿½ Textures: normalized path string
+  ï¿½ Meshes: logical name key (e.g., "quad")
 - Utility stats and a master Clear() for shutdown.
 
 Safety:
@@ -362,16 +362,26 @@ namespace Framework {
     // Drop all resource maps and caches (used on shutdown)
     void ResourceManager::Clear() {
         std::lock_guard<std::mutex> lock(resourceMutex);
-        
+
         materials.clear();
         meshes.clear();
         textures.clear();
         shaders.clear();
-        
+
         shaderCache.clear();
         textureCache.clear();
         meshCache.clear();
-        
+
+        // Force deallocation using swap trick to prevent memory leaks
+        std::unordered_map<MaterialHandle, ResourceEntry<Material>>().swap(materials);
+        std::unordered_map<MeshHandle, ResourceEntry<Mesh>>().swap(meshes);
+        std::unordered_map<TextureHandle, ResourceEntry<Texture>>().swap(textures);
+        std::unordered_map<ShaderHandle, ResourceEntry<Shader>>().swap(shaders);
+
+        std::unordered_map<std::string, ShaderHandle>().swap(shaderCache);
+        std::unordered_map<std::string, TextureHandle>().swap(textureCache);
+        std::unordered_map<std::string, MeshHandle>().swap(meshCache);
+
         std::cout << "ResourceManager: Cleared all resources\n";
     }
 
