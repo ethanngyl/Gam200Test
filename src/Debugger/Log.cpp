@@ -92,6 +92,8 @@ namespace eng::debug {
         auto& S = state();
         std::scoped_lock lk(S.mtx);
         S.sinks.clear();
+        // Force deallocation of vector capacity to prevent memory leak
+        std::vector<std::unique_ptr<ILogSink>>().swap(S.sinks);
     }
 
     // Runtime control of threshold (useful to toggle verbose output).
