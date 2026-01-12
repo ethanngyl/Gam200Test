@@ -43,6 +43,7 @@
 #include "AudioLoader.h"
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
+#include "PrefabInstanceRegistry.h"
 
 namespace Framework
 {
@@ -372,6 +373,7 @@ namespace Framework
         // Clean up static resources to prevent memory leak reports
         ConfigReader::Shutdown();
         AudioLoader::Shutdown();
+        PrefabInstanceRegistry::Get().Clear();
         eng::debug::Log::shutdown();
 
         LOG_INFO("CORE", "Cleanup complete");
