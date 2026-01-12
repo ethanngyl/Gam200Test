@@ -220,6 +220,21 @@ bool ConfigReader::SaveConfig(const std::string& filename)
     return true;
 }
 
+void ConfigReader::Shutdown()
+{
+    // Clear the map and force deallocation
+    configData.clear();
+    std::map<std::string, std::string>().swap(configData);
+
+    // Clear and shrink the string to free its buffer
+    loadedConfigPath.clear();
+    loadedConfigPath.shrink_to_fit();
+
+    configLoaded = false;
+
+    LOG_INFO("CONFIG", "ConfigReader shutdown complete - static resources freed");
+}
+
 // ============================================================================
 // PRIVATE HELPER METHODS
 // ============================================================================
