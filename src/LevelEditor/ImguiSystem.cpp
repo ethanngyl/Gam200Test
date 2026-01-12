@@ -52,10 +52,22 @@ Safety:
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
 #include <string.h>
+#include <GlobalPauseManager.h>
 namespace Framework {
 
     static bool wantOpenModal = false;
     static bool wantSaveAsModal = false;
+
+    static int GetGsmStateFromLuaName(const std::string& lowerName) {
+        if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
+        if (lowerName.find("level2") != std::string::npos) return LEVEL_2;
+        if (lowerName.find("levelselect") != std::string::npos) return Level_select;
+        if (lowerName.find("mainmenu") != std::string::npos) return mainMenu;
+        if (lowerName.find("tutorial") != std::string::npos) return TUTORIAL;
+        if (lowerName.find("end") != std::string::npos) return LEVEL_END;
+
+        return -1;
+    }
 
     ImGuiSystem::ImGuiSystem()
         : window(nullptr)
@@ -690,6 +702,9 @@ namespace Framework {
                         if (isLevel) {
                             std::cout << "[Assets] Double-click detected: Loading " << filename << "\n";
 
+							currentLuaLevelPath = fullPath;
+                            pendingLuaGsmState = GetGsmStateFromLuaName(lowerName);
+
                             // 1. Clear Game Viewport
                             if (entityManager) {
                                 entityManager->ClearAllEntities();
@@ -863,7 +878,7 @@ namespace Framework {
         UpdatePicking();
 
         UpdateEntityDragging();
-        InputSystem* input = Framework::CORE->GetInputSystem();
+        InputSystem* input = CORE->GetInputSystem();
         if (input) {
             // Check if either Left Control or Right Control is being held down
             bool isCtrlHeld = input->IsKeyDown(KEY_LEFT_CONTROL) || input->IsKeyDown(KEY_RIGHT_CONTROL);
@@ -879,7 +894,7 @@ namespace Framework {
         }
 
         //delete button to delete selected entity
-        if (!CORE->IsPlaying() && entityManager) {
+        if (CORE->IsEditorMode() && entityManager) {
             InputSystem* input = Framework::CORE->GetInputSystem();
 
             if (input && selectedEntity.IsValid()) {
@@ -2659,7 +2674,7 @@ namespace Framework {
         // If the core engine does not exist, stop and do nothing
         if (!CORE) return;
         // If the game is currently playing (not in editor mode), do not handle picking
-        if (CORE->IsPlaying()) return;
+        if (!CORE->IsEditorMode()) return;
         // If there is no entity manager, we cannot access entities, so stop
         if (!entityManager) return;
 
@@ -2769,7 +2784,7 @@ namespace Framework {
         // Safety check: Ensure the Core engine exists
         if (!CORE) return;
         // If the game is currently playing, disable editor dragging to prevent conflicts
-        if (CORE->IsPlaying()) return;
+        if (!CORE->IsEditorMode()) return;
         // Safety check: Ensure the entity manager exists
         if (!entityManager) return;
 
@@ -3670,11 +3685,42 @@ namespace Framework {
                 if (CORE->IsEditorMode()) {
                     //  In editor mode: Show "PLAY" to exit editor
                     if (ImGui::MenuItem("PLAY")) {
+
+                        CORE->SetPlaying(true);
                         // Exit editor mode
                         CORE->SetEditorMode(false);
 
+						GlobalPause::SetPaused(false);
                         //  CRITICAL: Use RequestToggle() instead of Disable()
                         // This schedules the disable for AFTER this frame completes
+                        
+
+                        if (!currentLuaLevelPath.empty()) {
+
+                            // If we can map it to a GSM state, transition GSM so Level3 init runs correctly
+                            if (pendingLuaGsmState != -1)
+                            {
+                                // If already in that state, just reload as GAME-load (IS_EDITOR_LOAD = false)
+                                if (pendingLuaGsmState == current)
+                                {
+                                    Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
+                                }
+                                else
+                                {
+                                    next = pendingLuaGsmState;
+                                }
+                            }
+                            else {
+                                Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
+                            }
+                            currentLuaLevelPath.clear();
+							pendingLuaGsmState = -1;
+                        }
+
+                        else if (!currentLevelPath.empty()) {
+                            Framework::LevelLoader::GetInstance().LoadLevel(currentLevelPath, false);
+                        }
+
                         this->RequestToggle();
 
                         LOG_INFO("IMGUI", "PLAY clicked - Exiting editor mode");

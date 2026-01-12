@@ -240,6 +240,17 @@ namespace Framework {
             CallLuaFunction("OnDestroy");
         }
 
+        // NEW: Clear entities that were spawned by the Lua level
+        if (coreEngine)
+        {
+            auto* em = coreEngine->GetEntityManager();
+            if (em)
+            {
+                em->ClearAllEntities();
+                em->ResetEntityIDCounter();
+            }
+        }
+
         levelLoaded = false;
         currentLevelPath.clear();
 
