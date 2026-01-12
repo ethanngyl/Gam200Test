@@ -67,6 +67,7 @@ namespace Framework
         , GameActive(true)
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
+        , skillSystem(nullptr)
     {
         CORE = this;
     }
@@ -149,6 +150,7 @@ namespace Framework
         eventSystem = new EventSystem();
         damageIndicator = new DamageIndicatorSystem();
         pathfindingSystem = new PathfindingSystem();
+        skillSystem = new SkillSystem();
         scriptSystem = new ScriptSystem();
 
         // Check for allocation failures
@@ -156,7 +158,7 @@ namespace Framework
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem) {
+            !scriptSystem || !skillSystem) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -177,6 +179,7 @@ namespace Framework
             delete eventSystem;
             delete damageIndicator;
             delete pathfindingSystem;
+            delete skillSystem;
             delete scriptSystem;
 
             throw std::runtime_error("System allocation failure");
@@ -204,7 +207,7 @@ namespace Framework
         audioSystem->SetEntityManager(entityManager);
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
-
+        skillSystem->SetEntityManager(entityManager);
 
 
         // Wire InputSystem
@@ -212,6 +215,7 @@ namespace Framework
         movementSystem->SetInputSystem(inputSystem);
         graphicsSystem->SetInputSystem(inputSystem);
         collisionSystem->SetInput(inputSystem);
+        skillSystem->SetInputSystem(inputSystem);
         playerController->SetEntitySpawner(spawner);
 
         // Wire AudioSystem
@@ -275,6 +279,7 @@ namespace Framework
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
+        AddSystem(skillSystem);
 
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
