@@ -1260,19 +1260,27 @@ namespace Framework {
     }
 
     void GraphicsSystemV2::AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName) {
-        static std::unordered_map<std::string, std::pair<std::string, std::string>> lookup = {
-            {"wireframequad", {"wireframequad", "wireframeq_mat"}},
-            {"circle", {"circle", "circle_mat"}},
-            {"quad", {"quad", "quad_mat"}},
-            {"line", {"line", "line_mat"}}
-        };
+        // Use string comparisons instead of static unordered_map to avoid memory leak
+        // Static containers never get freed, causing 8-byte leak reports
 
-        auto it = lookup.find(spriteName);
-        if (it != lookup.end()) {
-            mr.mesh = resourceManager.GetMeshHandle(it->second.first);
-            mr.material = resourceManager.GetMaterialHandle(it->second.second);
+        if (spriteName == "wireframequad") {
+            mr.mesh = resourceManager.GetMeshHandle("wireframequad");
+            mr.material = resourceManager.GetMaterialHandle("wireframeq_mat");
+        }
+        else if (spriteName == "circle") {
+            mr.mesh = resourceManager.GetMeshHandle("circle");
+            mr.material = resourceManager.GetMaterialHandle("circle_mat");
+        }
+        else if (spriteName == "quad") {
+            mr.mesh = resourceManager.GetMeshHandle("quad");
+            mr.material = resourceManager.GetMaterialHandle("quad_mat");
+        }
+        else if (spriteName == "line") {
+            mr.mesh = resourceManager.GetMeshHandle("line");
+            mr.material = resourceManager.GetMaterialHandle("line_mat");
         }
         else {
+            // Default case for textures
             mr.mesh = resourceManager.GetMeshHandle("quad");
             mr.material = defaultMaterial;  // Use defaultMaterial which supports tinting
         }
