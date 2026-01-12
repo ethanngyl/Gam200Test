@@ -139,6 +139,10 @@ namespace Framework
         // switching levels/scenes so we don't keep stale data.
         entityToPrefab.clear();
         prefabToEntities.clear();
+
+        // Force deallocation to prevent memory leaks
+        std::unordered_map<unsigned, std::string>().swap(entityToPrefab);
+        std::unordered_map<std::string, std::vector<Entity>>().swap(prefabToEntities);
     }
 
 } // namespace Framework
