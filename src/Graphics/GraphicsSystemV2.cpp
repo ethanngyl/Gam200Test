@@ -708,8 +708,8 @@ namespace Framework {
             auto& transform = entityManager->GetComponent<Transform>(e);
 
             const bool hasRenderer = entityManager->HasComponent<MeshRenderer>(e);
-            const bool hasSprite = entityManager->HasComponent<Sprite>(e);
-            if (!hasRenderer && !hasSprite) continue;
+            //const bool hasSprite = entityManager->HasComponent<Sprite>(e);
+            if (!hasRenderer/* && !hasSprite*/) continue;
 
             RenderCommand cmd;
 
@@ -765,23 +765,23 @@ namespace Framework {
             }
 
             // ---------- SPRITE ----------
-            else if (hasSprite) {
-                auto& sp = entityManager->GetComponent<Sprite>(e);
+            //else if (hasSprite) {
+            //    auto& sp = entityManager->GetComponent<Sprite>(e);
 
-                cmd.mesh = quadMesh;
-                cmd.material = defaultMaterial;
-                // Load texture only if spritePath looks like a real file
-                if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
-                    TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
-                    cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
-                }
-                else {
-                    cmd.texture = INVALID_TEXTURE_HANDLE;
-                }
+            //    cmd.mesh = quadMesh;
+            //    cmd.material = defaultMaterial;
+            //    // Load texture only if spritePath looks like a real file
+            //    if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
+            //        TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
+            //        cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
+            //    }
+            //    else {
+            //        cmd.texture = INVALID_TEXTURE_HANDLE;
+            //    }
 
-                cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
-                cmd.layer = sp.layer;
-            }
+            //    cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
+            //    cmd.layer = sp.layer;
+            //}
 
             // ============================================================================
             // Author:        Tan Wei Leong
@@ -839,6 +839,10 @@ namespace Framework {
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (!entityManager->HasComponent<SpriteAnimation>(e))
             {
+                Material* mat = resourceManager.GetMaterial(cmd.material);
+                mat->u1 = mat->v1 = 1.f;
+                mat->u0 = mat->v0 = 0.f;
+
                 // Entity has no animation  safe to submit as-is
                 renderQueue.Submit(cmd);
                 continue;
@@ -862,6 +866,8 @@ namespace Framework {
             // If still failed for some reason, skip this entity
             if (!mat)
                 continue;
+            mat->u0 = mat->v0;
+            mat->u1 = mat->v1 = 1.f;
 
             // Ensure the material is bound to this sprite sheet
             mat->albedoTexture = anim.spriteSheet;
