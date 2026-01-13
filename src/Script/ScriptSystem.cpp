@@ -111,16 +111,53 @@ namespace Framework {
      * - Calls UnloadScript for each to ensure 'OnDestroy' is called and memory freed
      */
     void ScriptSystem::Shutdown() {
-        if (!entityManager) return;
-
-        // Clean up all script states
-        auto entities = entityManager->GetAllEntities();
-        for (auto entity : entities) {
-            if (entityManager->HasComponent<ScriptComponent>(entity)) {
-                UnloadScript(entity);
-            }
+        if (isShutdown) {
+            LOG_DEBUG("ScriptSystem", "Already shutdown, skipping");
+            return;
         }
 
+        if (!entityManager) {
+            LOG_DEBUG("ScriptSystem", "EntityManager null, marking as shutdown");
+            isShutdown = true;
+            return;
+        }
+
+        LOG_INFO("ScriptSystem", "Shutting down...");
+
+        try {
+            // Clean up all script states
+            auto entities = entityManager->GetAllEntities();
+            for (auto entity : entities) {
+                if (entityManager->HasComponent<ScriptComponent>(entity)) {
+                    auto& script = entityManager->GetComponent<ScriptComponent>(entity);
+
+                    // Call OnDestroy if exists
+                    if (script.hasOnDestroy && script.L) {
+                        lua_getglobal(script.L, "OnDestroy");
+                        if (lua_isfunction(script.L, -1)) {
+                            if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                                const char* error = lua_tostring(script.L, -1);
+                                LOG_WARN("ScriptSystem", "OnDestroy error: %s", error);
+                                lua_pop(script.L, 1);
+                            }
+                        }
+                    }
+
+                    // Close Lua state safely
+                    if (script.L) {
+                        lua_close(script.L);
+                        script.L = nullptr;
+                    }
+
+                    script.initialized = false;
+                }
+            }
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR("ScriptSystem", "Exception during shutdown: %s", e.what());
+        }
+
+        isShutdown = true; 
         LOG_INFO("ScriptSystem", "Shutdown complete");
     }
 

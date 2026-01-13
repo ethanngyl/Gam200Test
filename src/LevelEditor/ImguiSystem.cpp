@@ -239,12 +239,18 @@ namespace Framework {
 
             if (word == "Sprite") {
                 std::string name;
-                if (iss >> name) {
+                float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;  // Default white tint
+                iss >> name;
+                // Try to read optional tint values (r g b a)
+                iss >> r >> g >> b >> a;
+
+                if (!name.empty()) {
                     entityManager->AddComponent<Framework::Sprite>(Entity);
                     auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
                     //sprite.texturePath =  name;
                     std::string label = std::filesystem::path(name).filename().string();
                     sprite.texturePath = std::string("assets/") + label;
+                    sprite.tint = glm::vec4(r, g, b, a);
                 }
                 continue;
             }
@@ -422,11 +428,13 @@ namespace Framework {
             if (entityManager->HasComponent<MeshRenderer>(entity)) {
                 // get reference to the meshRenderer component
                 // in renderring system, there is also meshrenderer component to generate image
-                // some entity may not have 
+                // some entity may not have
                 auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
-                //write the sprite name
+                //write the sprite name with tint
                 if (!meshRenderer.spriteName.empty()) {
-                    writeFile << "Sprite " << meshRenderer.spriteName << "\n";
+                    writeFile << "Sprite " << meshRenderer.spriteName << " "
+                             << meshRenderer.tint.r << " " << meshRenderer.tint.g << " "
+                             << meshRenderer.tint.b << " " << meshRenderer.tint.a << "\n";
                 }
             }
 
@@ -435,7 +443,10 @@ namespace Framework {
                 // get reference to the sprite component
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
-                    writeFile << "Sprite " << sprite.texturePath << "\n";
+                    // Save sprite with tint values (r g b a)
+                    writeFile << "Sprite " << sprite.texturePath << " "
+                             << sprite.tint.r << " " << sprite.tint.g << " "
+                             << sprite.tint.b << " " << sprite.tint.a << "\n";
                 }
 
             }
@@ -1156,6 +1167,7 @@ namespace Framework {
 
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
+        ShowScriptBrowserPopup();
         if (showGameViewport) ShowGameViewport();
     }
 
@@ -1223,6 +1235,58 @@ namespace Framework {
         if (!ImGui::Begin("Entity Inspector##Inspector1", &showEntityInspector)) {
             ImGui::End();
             return;
+        }
+
+        if (entityManager->HasComponent<ScriptComponent>(selectedEntity)) {
+            if (ImGui::CollapsingHeader("Script Component", ImGuiTreeNodeFlags_DefaultOpen)) {
+                auto& sc = entityManager->GetComponent<ScriptComponent>(selectedEntity);
+
+                ImGui::Text("Script Path:");
+                ImGui::SameLine();
+
+                char buffer[512];
+                strncpy(buffer, sc.scriptPath.c_str(), 511);
+                buffer[511] = '\0';
+
+                ImGui::PushItemWidth(-100);  
+                if (ImGui::InputText("##ScriptPath", buffer, 512)) {
+                    sc.scriptPath = buffer;
+                }
+                ImGui::PopItemWidth();
+
+                ImGui::SameLine();
+
+                if (ImGui::Button("Browse...", ImVec2(90, 0))) {
+                    entityPendingScriptAssignment = selectedEntity;
+                    showScriptBrowser = true;
+                }
+
+                ImGui::Spacing();
+                if (!sc.scriptPath.empty()) {
+                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "✓ Script: %s", sc.scriptPath.c_str());
+
+                    if (sc.initialized) {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "(Initialized)");
+                    }
+                }
+                else {
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "⚠ No script assigned");
+                }
+
+                if (sc.initialized) {
+                    ImGui::Spacing();
+                    ImGui::Text("Callbacks:");
+                    ImGui::SameLine();
+                    if (sc.hasOnInit) ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnInit]");
+                    ImGui::SameLine();
+                    if (sc.hasOnUpdate) ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnUpdate]");
+                    ImGui::SameLine();
+                    if (sc.hasOnDestroy) ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnDestroy]");
+                }
+
+                ImGui::Separator();
+            }
         }
 
         std::vector<Entity> allEntities = entityManager->GetAllEntities();
@@ -1388,6 +1452,15 @@ namespace Framework {
                         }
 
                         ImGui::DragInt("Layer", &sprite.layer, 1, -100, 100);
+
+                        // Tint color picker
+                        float tint[4] = { sprite.tint.r, sprite.tint.g, sprite.tint.b, sprite.tint.a };
+                        if (ImGui::ColorEdit4("Tint##SpriteTint", tint)) {
+                            sprite.tint.r = tint[0];
+                            sprite.tint.g = tint[1];
+                            sprite.tint.b = tint[2];
+                            sprite.tint.a = tint[3];
+                        }
 
                         ImGui::TreePop();
                     }
@@ -1566,8 +1639,8 @@ namespace Framework {
                 }
 
                 // ==================================================================
-                // SCRIPT COMPONENT
-                // ==================================================================
+                                // SCRIPT COMPONENT
+                                // ==================================================================
                 if (entityManager->HasComponent<ScriptComponent>(entity)) {
                     if (ImGui::TreeNode("Script##ScriptNode")) {
                         ImGui::SameLine();
@@ -1577,89 +1650,70 @@ namespace Framework {
 
                         auto& script = entityManager->GetComponent<ScriptComponent>(entity);
 
+                        // Display script path with Browse button
+                        ImGui::Text("Script Path:");
+
                         // Editable script path
                         char pathBuffer[512];
-                        //strncpy(pathBuffer, script.scriptPath.c_str(), sizeof(pathBuffer) - 1);
                         strncpy_s(pathBuffer, sizeof(pathBuffer), script.scriptPath.c_str(), _TRUNCATE);
                         pathBuffer[sizeof(pathBuffer) - 1] = '\0';
 
-                        if (ImGui::InputText("Script Path", pathBuffer, sizeof(pathBuffer))) {
+                        // Input field takes most of the width
+                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100);
+                        if (ImGui::InputText("##ScriptPath", pathBuffer, sizeof(pathBuffer))) {
                             script.scriptPath = pathBuffer;
                         }
 
-                        // File browser button
+                        // Browse button on the same line
                         ImGui::SameLine();
-                        if (ImGui::Button("Browse##BrowseScript")) {
-                            ImGui::OpenPopup("SelectScriptPopup");
+                        if (ImGui::Button("Browse...##BrowseScript", ImVec2(90, 0))) {
+                            entityPendingScriptAssignment = entity;
+                            showScriptBrowser = true;
                         }
 
-                        // Script file browser popup
-                        if (ImGui::BeginPopup("SelectScriptPopup")) {
-                            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.3f, 1.0f), "Select Lua Script");
-                            ImGui::Separator();
+                        // Display script status with color coding
+                        ImGui::Spacing();
+                        if (!script.scriptPath.empty()) {
+                            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f),
+                                "✓ Script: %s", script.scriptPath.c_str());
 
-                            // List available .lua files from assets/scripts/
-                            static std::vector<std::string> scriptFiles;
-                            static bool scriptsLoaded = false;
-
-                            if (!scriptsLoaded) {
-                                scriptsLoaded = true;
-                                scriptFiles.clear();
-
-                                // Scan assets/scripts/ directory for .lua files
-                                std::string scriptsDir = "assets/scripts/";
-                                if (std::filesystem::exists(scriptsDir)) {
-                                    for (const auto& entry : std::filesystem::directory_iterator(scriptsDir)) {
-                                        if (entry.is_regular_file() && entry.path().extension() == ".lua") {
-                                            scriptFiles.push_back(entry.path().string());
-                                        }
-                                    }
-                                }
+                            if (script.initialized) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "(Initialized)");
                             }
-
-                            // Display script files
-                            for (const auto& scriptPath : scriptFiles) {
-                                std::string scriptName = std::filesystem::path(scriptPath).filename().string();
-                                if (ImGui::Selectable(scriptName.c_str())) {
-                                    script.scriptPath = scriptPath;
-                                    ImGui::CloseCurrentPopup();
-                                }
-
-                                // Show tooltip with full path
-                                if (ImGui::IsItemHovered()) {
-                                    ImGui::SetTooltip("%s", scriptPath.c_str());
-                                }
-                            }
-
-                            ImGui::Separator();
-                            if (ImGui::Button("Refresh List")) {
-                                scriptsLoaded = false;
-                            }
-                            ImGui::SameLine();
-                            if (ImGui::Button("Cancel")) {
-                                ImGui::CloseCurrentPopup();
-                            }
-
-                            ImGui::EndPopup();
+                        }
+                        else {
+                            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f),
+                                "⚠ No script assigned");
                         }
 
-                        // Extract and show script name
-                        std::string scriptName = std::filesystem::path(script.scriptPath).stem().string();
-                        ImGui::Text("Name: %s", scriptName.c_str());
-
-                        // Status
-                        ImGui::Text("Initialized: %s", script.initialized ? "Yes" : "No");
+                        // Show Lua state info
+                        ImGui::Spacing();
+                        ImGui::Separator();
                         ImGui::Text("Lua State: %s", script.L ? "Active" : "None");
 
-                        // Functions available
-                        ImGui::Separator();
-                        ImGui::Text("Functions:");
-                        ImGui::BulletText("OnInit: %s", script.hasOnInit ? "Yes" : "No");
-                        ImGui::BulletText("OnUpdate: %s", script.hasOnUpdate ? "Yes" : "No");
-                        ImGui::BulletText("OnDestroy: %s", script.hasOnDestroy ? "Yes" : "No");
+                        // Show available callback functions with visual indicators
+                        if (script.initialized) {
+                            ImGui::Spacing();
+                            ImGui::Text("Callbacks:");
 
-                        // Update timer
-                        ImGui::Text("Update Timer: %.3f", script.updateTimer);
+                            if (script.hasOnInit) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnInit]");
+                            }
+                            if (script.hasOnUpdate) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnUpdate]");
+                            }
+                            if (script.hasOnDestroy) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnDestroy]");
+                            }
+
+                            // Update timer (useful for debugging)
+                            ImGui::Spacing();
+                            ImGui::Text("Update Timer: %.3f", script.updateTimer);
+                        }
 
                         ImGui::TreePop();
                     }
@@ -3789,5 +3843,125 @@ namespace Framework {
         ImGui::End();
 
         ImGui::PopStyleVar();
+    }
+
+    std::vector<std::string> ImGuiSystem::GetLuaFilesInDirectory(const std::string& directory) {
+        std::vector<std::string> luaFiles;
+
+        try {
+            if (!std::filesystem::exists(directory)) {
+                std::cerr << "[ImGuiSystem] Scripts directory not found: " << directory << std::endl;
+                return luaFiles;
+            }
+
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(directory)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".lua") {
+                    std::filesystem::path relativePath = std::filesystem::relative(entry.path(), directory);
+
+                    std::string pathStr = relativePath.string();
+                    std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+
+                    luaFiles.push_back(pathStr);
+                }
+            }
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "[ImGuiSystem] Error reading scripts directory: " << e.what() << std::endl;
+        }
+
+        std::sort(luaFiles.begin(), luaFiles.end());
+
+        return luaFiles;
+    }
+
+    void ImGuiSystem::ShowScriptBrowserPopup() {
+        if (showScriptBrowser) {
+            ImGui::OpenPopup("Script Browser");
+            showScriptBrowser = false;  
+        }
+
+        ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_FirstUseEver);
+
+        if (ImGui::BeginPopupModal("Script Browser", nullptr)) {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), "Select a Lua Script");
+            ImGui::Separator();
+
+            static char searchBuffer[256] = "";
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::InputTextWithHint("##search", "Search scripts...", searchBuffer, 256)) {
+            }
+
+            ImGui::Separator();
+
+            ImGui::BeginChild("ScriptList", ImVec2(0, -35), true);
+
+            auto scriptFiles = GetLuaFilesInDirectory("assets/scripts/");
+
+            std::string searchStr = searchBuffer;
+            std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
+
+            int selectableCount = 0;
+            for (const auto& scriptFile : scriptFiles) {
+                std::string lowerScriptFile = scriptFile;
+                std::transform(lowerScriptFile.begin(), lowerScriptFile.end(),
+                    lowerScriptFile.begin(), ::tolower);
+
+                if (!searchStr.empty() && lowerScriptFile.find(searchStr) == std::string::npos) {
+                    continue;
+                }
+
+                selectableCount++;
+
+                if (ImGui::Selectable(scriptFile.c_str())) {
+                    selectedScriptPath = scriptFile;
+
+                    if (entityPendingScriptAssignment.IsValid() &&
+                        entityManager) {
+
+                        if (entityManager->HasComponent<ScriptComponent>(entityPendingScriptAssignment)) {
+                            auto& sc = entityManager->GetComponent<ScriptComponent>(entityPendingScriptAssignment);
+                            sc.scriptPath = "assets/scripts/" + selectedScriptPath;
+                        }
+                        else {
+                            auto& sc = entityManager->AddComponent<ScriptComponent>(entityPendingScriptAssignment);
+                            sc.scriptPath = "assets/scripts/" + selectedScriptPath;
+                        }
+
+                        std::cout << "[ImGuiSystem] Assigned script: scripts/" << selectedScriptPath
+                            << " to entity " << entityPendingScriptAssignment.GetID() << std::endl;
+                    }
+
+                    ImGui::CloseCurrentPopup();
+                }
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Full path: scripts/%s", scriptFile.c_str());
+                    ImGui::EndTooltip();
+                }
+            }
+
+            if (selectableCount == 0) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                    "No scripts found matching '%s'", searchBuffer);
+            }
+
+            ImGui::EndChild();
+
+            
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                searchBuffer[0] = '\0';
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+                "Found %d script(s)", selectableCount);
+
+            ImGui::EndPopup();
+        }
     }
 } // namespace Framework

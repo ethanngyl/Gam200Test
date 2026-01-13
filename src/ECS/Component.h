@@ -17,6 +17,7 @@
 #include "ECSComponent.h"
 #include "Vector2D.h"
 #include "ResourceHandle.h"   // <-- REQUIRED for TextureHandle
+#include <glm/glm.hpp>         // <-- REQUIRED for glm::vec4
 #include <string>
 
 extern "C" {
@@ -122,6 +123,7 @@ namespace Framework
         int layer = 0;
         bool flipX = false;
         bool flipY = false;
+        glm::vec4 tint = glm::vec4(1.0f);  // Color tint multiplier (RGBA)
     };
 
     /**
