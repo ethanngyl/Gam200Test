@@ -275,7 +275,6 @@ namespace Framework
         AddSystem(animationSystem);
         AddSystem(uiSystem);
         AddSystem(eventSystem);
-        AddSystem(damageIndicator);
         AddSystem(pathfindingSystem);
 
 
@@ -353,6 +352,13 @@ namespace Framework
             delete scriptSystem;
             scriptSystem = nullptr;
             LOG_INFO("CORE", "ScriptSystem destroyed");
+        }
+
+        // Delete DamageIndicatorSystem (not in Systems vector because it only inherits IMessageHandler)
+        if (damageIndicator) {
+            delete damageIndicator;
+            damageIndicator = nullptr;
+            LOG_INFO("CORE", "DamageIndicatorSystem destroyed");
         }
 
         // Destroy all other systems
