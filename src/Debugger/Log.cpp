@@ -91,8 +91,7 @@ namespace eng::debug {
     void Log::shutdown() {
         auto& S = state();
         std::scoped_lock lk(S.mtx);
-        S.sinks.clear();
-        // Force deallocation of vector capacity to prevent memory leak
+        // Force deallocation using swap trick - don't call clear() first
         std::vector<std::unique_ptr<ILogSink>>().swap(S.sinks);
     }
 
