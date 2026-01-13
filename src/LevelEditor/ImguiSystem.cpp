@@ -892,7 +892,7 @@ namespace Framework {
                 PerformUndo();
             }
         }
-
+        
         //delete button to delete selected entity
         if (CORE->IsEditorMode() && entityManager) {
             InputSystem* input = Framework::CORE->GetInputSystem();
@@ -3682,7 +3682,7 @@ namespace Framework {
             }
 
             if (ImGui::BeginMenu("Editor")) {
-                if (CORE->IsEditorMode()) {
+                if (!CORE->IsPlaying()) {
                     //  In editor mode: Show "PLAY" to exit editor
                     if (ImGui::MenuItem("PLAY")) {
 
@@ -3694,8 +3694,7 @@ namespace Framework {
                         //  CRITICAL: Use RequestToggle() instead of Disable()
                         // This schedules the disable for AFTER this frame completes
                         
-
-                        if (!currentLuaLevelPath.empty()) {
+                        /*if (!currentLuaLevelPath.empty()) {
 
                             // If we can map it to a GSM state, transition GSM so Level3 init runs correctly
                             if (pendingLuaGsmState != -1)
@@ -3719,22 +3718,30 @@ namespace Framework {
 
                         else if (!currentLevelPath.empty()) {
                             Framework::LevelLoader::GetInstance().LoadLevel(currentLevelPath, false);
-                        }
+                        }*/
 
-                        this->RequestToggle();
+                        //this->RequestToggle();
 
                         LOG_INFO("IMGUI", "PLAY clicked - Exiting editor mode");
                     }
                 }
                 else {
-                    // Not in editor mode: Show hint
-                    ImGui::TextDisabled("Press F1 to enter editor mode");
-                }
+                    if (ImGui::MenuItem("Stop"))
+                    {
+                        // Stop simulation, return to editing
+                        CORE->SetPlaying(false);
+                        CORE->SetEditorMode(true);
+                        GlobalPause::SetPaused(false);
+                        // Not in editor mode: Show hint
+                        //ImGui::TextDisabled("Press F1 to enter editor mode"); // Re-enable the hint display
+                    }
 
+                }
                 ImGui::EndMenu();
             }
 
             ImGui::EndMenuBar();
+
         }
 
         ImGui::End();  // End DockSpace Window

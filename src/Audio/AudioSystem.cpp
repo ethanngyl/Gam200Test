@@ -342,11 +342,11 @@ namespace Framework {
     void AudioSystem::PlaySound(const std::string& soundName, bool loop) {
         if (!fmodSystem) return;
 
-        if (Framework::CORE) {
+        /*if (Framework::CORE) {
             if (!Framework::CORE->IsPlaying() || Framework::CORE->IsEditorMode()) {
                 return;
             }
-        }
+        */
 
         auto it = sounds.find(soundName);
         if (it == sounds.end()) {

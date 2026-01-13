@@ -36,6 +36,7 @@
 #include "Turn.h"         // Turn system
 #include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
 #include "Grid/GridECS.h" // Grid system functions
+#include "PlayerManager.h"
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -659,6 +660,49 @@ namespace Framework {
         bool success = TileMapLevelLoader::LoadLevel(jsonPath, spawner, em, startPos, spacing, tileSize);
 
         if (success) {
+            if (loader->coreEngine) {
+                auto* em = loader->coreEngine->GetEntityManager();
+                auto* pc = loader->coreEngine->GetPlayerController();
+                auto* spawner = loader->coreEngine->GetSpawner();
+                auto* input = loader->coreEngine->GetInputSystem();
+                auto* audio = loader->coreEngine->GetAudioSystem();
+
+                if (em && pc && spawner && input) {
+                    Framework::Entity player{ Framework::INVALID_ENTITY };
+                    for (Framework::Entity e : em->GetAllEntities())
+                    {
+                        if (em->HasComponent<Framework::CircleCollider>(e) &&
+                            !em->HasComponent<Framework::EnemyAI>(e))
+                        {
+                            player = e;
+                            break;
+                        }
+                    }
+
+                    if (player.GetID() != Framework::INVALID_ENTITY) {
+                        pc->SetPlayerEntity(player);
+                        pc->SetEntitySpawner(spawner);
+                        pc->SetEntityManager(em);
+                        pc->SetInputSystem(input);
+                        pc->SetGridMovementEnabled(true);
+
+                        // Optional but recommended: enables walk SFX calls from PlayerManager
+                        pc->SetAudioSystem(audio);
+
+                        LOG_INFO("LevelLoader", "Configured PlayerController for player ID=%u (grid movement enabled)", player.GetID());
+
+                        // Optional: ensure turn starts in player phase when editor-loading
+                        auto& turn = Framework::Turn();
+                        turn.phase = Framework::TurnPhase::Player;
+                        turn.busy = false;
+                    }
+                    else {
+                        LOG_WARN("LevelLoader", "Lua_LoadTileMap: Could not find player entity to configure controller");
+                    }
+
+                }
+            }
+
             LOG_INFO("LevelLoader", "TileMap loaded successfully from: %s", jsonPath);
         }
         else {

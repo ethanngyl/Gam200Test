@@ -187,6 +187,18 @@ namespace Framework {
             return false;
         }
 
+        // When loading a Lua level from the editor (Asset Browser double-click), we want a
+        // deterministic state: editor mode ON, simulation OFF.
+        // Some Lua scripts call SetEnginePlayState(true) inside OnInit(), which can create an
+        // invalid mixed state (IsPlaying == true while IsEditorMode == true). That breaks
+        // input/audio update gating.
+        if (isEditorMode && coreEngine)
+        {
+            coreEngine->SetEditorMode(true);
+            coreEngine->SetPlaying(false);
+            GlobalPause::SetPaused(false);
+        }
+
         lua_pushboolean(L, isEditorMode);
         lua_setglobal(L, "IS_EDITOR_LOAD");
 
@@ -196,6 +208,14 @@ namespace Framework {
             LOG_ERROR("LevelLoader", "Failed to load: %s", error);
             lua_pop(L, 1);
             return false;
+        }
+
+        // Re-enforce editor-load state in case the script ran top-level code that changed it.
+        if (isEditorMode && coreEngine)
+        {
+            coreEngine->SetEditorMode(true);
+            coreEngine->SetPlaying(false);
+            GlobalPause::SetPaused(false);
         }
 
         // Check required functions
@@ -220,6 +240,14 @@ namespace Framework {
                 LOG_ERROR("LevelLoader", "OnInit() failed!");
                 return false;
             }
+        }
+
+
+        if (isEditorMode && coreEngine)
+        {
+            coreEngine->SetEditorMode(true);
+            coreEngine->SetPlaying(false);
+            GlobalPause::SetPaused(false);
         }
 
         // Mark as loaded
