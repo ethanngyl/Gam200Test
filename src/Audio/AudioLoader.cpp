@@ -286,8 +286,7 @@ namespace Framework {
     }
 
     void AudioLoader::Shutdown() {
-        // Clear and force deallocation of the configs vector
-        loadedConfigs.clear();
+        // Force deallocation using swap trick - don't call clear() first
         std::vector<AudioConfig>().swap(loadedConfigs);
 
         // Reset settings to defaults

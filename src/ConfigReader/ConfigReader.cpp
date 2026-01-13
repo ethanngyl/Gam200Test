@@ -222,8 +222,7 @@ bool ConfigReader::SaveConfig(const std::string& filename)
 
 void ConfigReader::Shutdown()
 {
-    // Clear the map and force deallocation
-    configData.clear();
+    // Force deallocation using swap trick - don't call clear() first
     std::map<std::string, std::string>().swap(configData);
 
     // Clear and shrink the string to free its buffer

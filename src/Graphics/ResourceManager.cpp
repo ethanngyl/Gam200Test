@@ -363,16 +363,8 @@ namespace Framework {
     void ResourceManager::Clear() {
         std::lock_guard<std::mutex> lock(resourceMutex);
 
-        materials.clear();
-        meshes.clear();
-        textures.clear();
-        shaders.clear();
-
-        shaderCache.clear();
-        textureCache.clear();
-        meshCache.clear();
-
         // Force deallocation using swap trick to prevent memory leaks
+        // Don't call clear() first - swap directly with empty maps
         std::unordered_map<MaterialHandle, ResourceEntry<Material>>().swap(materials);
         std::unordered_map<MeshHandle, ResourceEntry<Mesh>>().swap(meshes);
         std::unordered_map<TextureHandle, ResourceEntry<Texture>>().swap(textures);
