@@ -7,7 +7,19 @@
 -- ============================================================================
 
 local UIComponent = require("UI/UIComponent")
-local HealthUI = UIComponent:New()
+local HealthUI = {}
+setmetatable(HealthUI, {__index = UIComponent})
+HealthUI.__index = HealthUI
+
+-- ============================================================================
+-- CONSTRUCTOR
+-- ============================================================================
+
+function HealthUI:New()
+    local instance = UIComponent:New()
+    setmetatable(instance, self)
+    return instance
+end
 
 -- ============================================================================
 -- INITIALIZATION
