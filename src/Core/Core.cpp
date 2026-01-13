@@ -275,6 +275,7 @@ namespace Framework
         AddSystem(animationSystem);
         AddSystem(uiSystem);
         AddSystem(eventSystem);
+        AddSystem(damageIndicator);
         AddSystem(pathfindingSystem);
 
 
