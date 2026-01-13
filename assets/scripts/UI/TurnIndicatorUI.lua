@@ -7,7 +7,19 @@
 -- ============================================================================
 
 local UIComponent = require("UI/UIComponent")
-local TurnIndicatorUI = UIComponent:New()
+local TurnIndicatorUI = {}
+setmetatable(TurnIndicatorUI, {__index = UIComponent})
+TurnIndicatorUI.__index = TurnIndicatorUI
+
+-- ============================================================================
+-- CONSTRUCTOR
+-- ============================================================================
+
+function TurnIndicatorUI:New()
+    local instance = UIComponent:New()
+    setmetatable(instance, self)
+    return instance
+end
 
 -- ============================================================================
 -- INITIALIZATION

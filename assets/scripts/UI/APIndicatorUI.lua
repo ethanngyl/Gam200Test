@@ -7,7 +7,19 @@
 -- ============================================================================
 
 local UIComponent = require("UI/UIComponent")
-local APIndicatorUI = UIComponent:New()
+local APIndicatorUI = {}
+setmetatable(APIndicatorUI, {__index = UIComponent})
+APIndicatorUI.__index = APIndicatorUI
+
+-- ============================================================================
+-- CONSTRUCTOR
+-- ============================================================================
+
+function APIndicatorUI:New()
+    local instance = UIComponent:New()
+    setmetatable(instance, self)
+    return instance
+end
 
 -- ============================================================================
 -- INITIALIZATION
