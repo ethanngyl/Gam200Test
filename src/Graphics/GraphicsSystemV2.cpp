@@ -743,13 +743,6 @@ namespace Framework {
                     *pm = *base; // shallow copy of defaults
                     pm->tint = glm::vec4(1.0f); // Force material tint to white
                     mr.material = inst;
-
-                    // DEBUG: Log material creation
-                    static int createCounter = 0;
-                    if (createCounter++ < 10) {  // Log first 10 materials created
-                        std::cout << "[DEBUG] Created material '" << matName
-                                  << "' for entity " << e.GetID() << "\n";
-                    }
                 }
 
                 cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
@@ -769,15 +762,6 @@ namespace Framework {
                 cmd.tint = mr.tint;
                 cmd.layer = mr.layer;
                 cmd.orderInLayer = mr.orderInLayer;
-
-                // DEBUG: Log tint values
-                static int debugCounter = 0;
-                if (debugCounter++ % 60 == 0) {  // Log once per second
-                    std::cout << "[DEBUG] Entity " << e.GetID()
-                              << " MeshRenderer tint: ("
-                              << mr.tint.r << ", " << mr.tint.g << ", "
-                              << mr.tint.b << ", " << mr.tint.a << ")\n";
-                }
             }
 
             // ---------- SPRITE ----------
@@ -938,23 +922,6 @@ namespace Framework {
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
         if (commands.empty()) return;
-        // ========================================================================
-    // DEBUG: PRINT DRAW ORDER (Run this once to verify sorting)
-    // ========================================================================
-        static int frameCount = 0;
-        if (frameCount == 0) { // Only log on the very first frame to avoid spam
-            std::cout << "\n=== RENDER QUEUE DRAW ORDER (Frame 0) ===" << std::endl;
-            int i = 0;
-            for (const auto& cmd : commands) {
-                std::cout << "Cmd [" << i << "]: "
-                    << " Layer: " << cmd.layer
-                    << " | Mesh: " << cmd.mesh.GetID()
-                    << " | Z-Depth: " << cmd.depth << std::endl;
-                i++;
-            }
-            std::cout << "=========================================\n" << std::endl;
-        }
-        frameCount++;
 
         Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
@@ -1204,17 +1171,6 @@ namespace Framework {
         GLint colorLoc = glGetUniformLocation(shader->GetID(), "uColor");
         if (colorLoc != -1) {
             glUniform3f(colorLoc, finalTint.r, finalTint.g, finalTint.b);
-
-            // DEBUG: Log tint being sent to shader
-            static int debugCounter = 0;
-            if (debugCounter++ % 60 == 0) {  // Log once per second
-                std::cout << "[DEBUG] Shader tint: material=("
-                          << material->tint.r << "," << material->tint.g << ","
-                          << material->tint.b << "," << material->tint.a
-                          << ") instance=(" << tint.r << "," << tint.g << ","
-                          << tint.b << "," << tint.a << ") final=("
-                          << finalTint.r << "," << finalTint.g << "," << finalTint.b << ")\n";
-            }
         }
         return true;
     }
