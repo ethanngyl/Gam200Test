@@ -53,6 +53,8 @@ Safety:
 #include "PrefabTracker.h"
 #include <string.h>
 #include <GlobalPauseManager.h>
+#include <regex> 
+
 namespace Framework {
 
     static bool wantOpenModal = false;
@@ -1168,6 +1170,7 @@ namespace Framework {
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
         ShowScriptBrowserPopup();
+        ShowLevelBrowserPopup();
         if (showGameViewport) ShowGameViewport();
     }
 
@@ -1263,7 +1266,7 @@ namespace Framework {
 
                 ImGui::Spacing();
                 if (!sc.scriptPath.empty()) {
-                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "✓ Script: %s", sc.scriptPath.c_str());
+                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), " Script: %s", sc.scriptPath.c_str());
 
                     if (sc.initialized) {
                         ImGui::SameLine();
@@ -1675,7 +1678,7 @@ namespace Framework {
                         ImGui::Spacing();
                         if (!script.scriptPath.empty()) {
                             ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f),
-                                "✓ Script: %s", script.scriptPath.c_str());
+                                " Script: %s", script.scriptPath.c_str());
 
                             if (script.initialized) {
                                 ImGui::SameLine();
@@ -3676,48 +3679,50 @@ namespace Framework {
         if (ImGui::BeginMenuBar()) {
             //File bar
             if (ImGui::BeginMenu("File")) {
-                if (CORE->IsPlaying()) {
-                    ImGui::BeginDisabled();
+                // Open Level
+                if (ImGui::MenuItem("Open Level...", "Ctrl+O")) {
+                    showLevelBrowser = true;
+                    selectedLevelPath = "";
                 }
-                if (ImGui::MenuItem("Open")) {
-                    bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
-                    if (!isOpen) {
-                        std::cerr << "[ImGuiError] Failed to open level.txt\n";
-                    }
-                    else {
-                        currentLevelPath = "assets/level1.txt";
-                    }
+
+                ImGui::Separator();
+
+                // Save Level
+                if (ImGui::MenuItem("Save Level", "Ctrl+S")) {
+                    SaveCurrentLevel();
                 }
-                if (ImGui::MenuItem("Open...")) {
+
+                // Save As
+                if (ImGui::MenuItem("Save As...")) {
                     if (currentLevelPath.empty()) {
-                        currentLevelPath = "assets/level1.txt";
+                        currentLevelPath = "assets/level_new.txt";
                     }
                     openPath = currentLevelPath;
+                    ImGui::OpenPopup("Save Level As...");
+                }
 
-					wantOpenModal = true; // Trigger open modal
-                }
-                if (ImGui::MenuItem("Save")) {
-                    const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
-                    bool isSave = SaveLevelToTxt(path);
-                    if (!isSave) {
-                        std::cerr << "[ImGuiError] Failed to save level.txt\n";
-                    }
-                }
-                if (ImGui::MenuItem("Save as ...")) {
-                    if (currentLevelPath.empty()) {
-                        currentLevelPath = "assets/level1.txt";
-                    }
-                    openPath = currentLevelPath;
+                ImGui::Separator();
 
-                    wantSaveAsModal = true;
+                // 显示当前关卡
+                extern int current;
+                const char* currentLevelName = "Unknown";
+
+                switch (current) {
+                case mainMenu: currentLevelName = "Main Menu"; break;
+                case Level_select: currentLevelName = "Level Select"; break;
+                case LEVEL_2: currentLevelName = "Level 2"; break;
+                case LEVEL_3: currentLevelName = "Level 3"; break;
                 }
+
+                ImGui::TextDisabled("Current: %s", currentLevelName);
+
+                ImGui::Separator();
+
                 if (ImGui::MenuItem("Exit")) {
                     Message quitMsg(Status::Quit);
                     CORE->BroadcastMessage(&quitMsg);
                 }
-                if (CORE->IsPlaying()) {
-                    ImGui::EndDisabled();
-                }
+
                 ImGui::EndMenu();
             }
 
@@ -3960,6 +3965,222 @@ namespace Framework {
             ImGui::SameLine();
             ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
                 "Found %d script(s)", selectableCount);
+
+            ImGui::EndPopup();
+        }
+    }
+
+    std::vector<std::string> ImGuiSystem::GetLuaLevelsInDirectory(const std::string& directory) {
+        std::vector<std::string> levelFiles;
+
+        try {
+            if (!std::filesystem::exists(directory)) {
+                LOG_ERROR("ImGuiSystem", "Directory not found: %s", directory.c_str());
+                return levelFiles;
+            }
+
+            for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".lua") {
+                    std::string filename = entry.path().filename().string();
+
+                    // 只包含关卡文件
+                    if (filename.find("Level") != std::string::npos) {
+                        levelFiles.push_back(filename);
+                    }
+                }
+            }
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            LOG_ERROR("ImGuiSystem", "Error reading directory: %s", e.what());
+        }
+
+        std::sort(levelFiles.begin(), levelFiles.end());
+        return levelFiles;
+    }
+
+    int ImGuiSystem::GetGameStateFromLevelName(const std::string& levelName) {
+        // MainMenu
+        if (levelName.find("MainMenu") != std::string::npos) {
+            return mainMenu;
+        }
+
+        // LevelSelect
+        if (levelName.find("LevelSelect") != std::string::npos) {
+            return Level_select;
+        }
+
+        // Level1, Level2, Level3...
+        std::regex levelRegex(R"(Level(\d+)\.lua)");
+        std::smatch match;
+
+        if (std::regex_match(levelName, match, levelRegex)) {
+            int levelNum = std::stoi(match[1].str());
+
+            switch (levelNum) {
+            case 2: return LEVEL_2;
+            case 3: return LEVEL_2;
+            default:
+                LOG_WARN("ImGuiSystem", "Unknown level number: %d", levelNum);
+                return -1;
+            }
+        }
+
+        LOG_ERROR("ImGuiSystem", "Failed to parse level name: %s", levelName.c_str());
+        return -1;
+    }
+
+    bool ImGuiSystem::LoadLevelViaGSM(const std::string& levelName) {
+        LOG_INFO("ImGuiSystem", "Loading level via GSM: %s", levelName.c_str());
+
+        int gameState = GetGameStateFromLevelName(levelName);
+
+        if (gameState == -1) {
+            LOG_ERROR("ImGuiSystem", "Invalid level name: %s", levelName.c_str());
+            return false;
+        }
+
+        extern int next;
+        next = gameState;
+
+        currentEditingLevel = levelName;
+
+        LOG_INFO("ImGuiSystem", " Switching to game state %d", gameState);
+
+        return true;
+    }
+
+    bool ImGuiSystem::SaveCurrentLevel() {
+        extern int current;
+
+        std::string levelName;
+
+        switch (current) {
+        case LEVEL_2: levelName = "Level2"; break;
+        case LEVEL_3: levelName = "Level3"; break;
+        case mainMenu: levelName = "MainMenu"; break;
+        case Level_select: levelName = "LevelSelect"; break;
+        default:
+            LOG_WARN("ImGuiSystem", "Cannot save: unknown game state");
+            return false;
+        }
+
+        LOG_INFO("ImGuiSystem", "Saving level: %s", levelName.c_str());
+
+        std::string savePath = "assets/" + levelName + "_saved.txt";
+        bool success = SaveLevelToTxt(savePath);
+
+        if (success) {
+            LOG_INFO("ImGuiSystem", " Saved to: %s", savePath.c_str());
+            return true;
+        }
+        else {
+            LOG_ERROR("ImGuiSystem", " Failed to save: %s", savePath.c_str());
+            return false;
+        }
+    }
+
+    void ImGuiSystem::ShowLevelBrowserPopup() {
+        if (showLevelBrowser) {
+            ImGui::OpenPopup("Open Level");
+            showLevelBrowser = false;
+        }
+
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+
+        if (ImGui::BeginPopupModal("Open Level", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "Select a level to load:");
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            static char searchBuffer[256] = "";
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputTextWithHint("##search", "Search...", searchBuffer, 256);
+            ImGui::Spacing();
+
+            ImGui::BeginChild("LevelList", ImVec2(0, 250), true);
+
+            auto levelFiles = GetLuaLevelsInDirectory("assets/scripts/");
+
+            std::string searchStr = searchBuffer;
+            std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
+
+            bool foundAny = false;
+
+            for (const auto& levelFile : levelFiles) {
+                std::string lowerLevelFile = levelFile;
+                std::transform(lowerLevelFile.begin(), lowerLevelFile.end(),
+                    lowerLevelFile.begin(), ::tolower);
+
+                if (!searchStr.empty() && lowerLevelFile.find(searchStr) == std::string::npos) {
+                    continue;
+                }
+
+                foundAny = true;
+                ImGui::PushID(levelFile.c_str());
+
+                ImGui::Text("📄");
+                ImGui::SameLine();
+
+                if (ImGui::Selectable(levelFile.c_str(), selectedLevelPath == levelFile,
+                    ImGuiSelectableFlags_AllowDoubleClick)) {
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        if (LoadLevelViaGSM(levelFile)) {
+                            LOG_INFO("ImGuiSystem", "Loading: %s", levelFile.c_str());
+                        }
+                        ImGui::PopID();
+                        ImGui::CloseCurrentPopup();
+                        break;
+                    }
+                    else {
+                        selectedLevelPath = levelFile;
+                    }
+                }
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Double-click to load");
+                    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Path: assets/scripts/%s", levelFile.c_str());
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::PopID();
+            }
+
+            if (!foundAny) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No levels found");
+            }
+
+            ImGui::EndChild();
+
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (!selectedLevelPath.empty()) {
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Selected: %s", selectedLevelPath.c_str());
+            }
+
+            ImGui::Spacing();
+
+            if (!selectedLevelPath.empty()) {
+                if (ImGui::Button("Load", ImVec2(120, 0))) {
+                    if (LoadLevelViaGSM(selectedLevelPath)) {
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+            }
+            else {
+                ImGui::BeginDisabled();
+                ImGui::Button("Load", ImVec2(120, 0));
+                ImGui::EndDisabled();
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                searchBuffer[0] = '\0';
+                selectedLevelPath = "";
+                ImGui::CloseCurrentPopup();
+            }
 
             ImGui::EndPopup();
         }
