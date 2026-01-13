@@ -79,8 +79,8 @@ namespace eng::debug {
         S.level = cfg.level;
         S.showSource = cfg.showSourceInfo;
 
-        // Drop existing sinks (if any) so re-initialization is safe.
-        S.sinks.clear();
+        // Force deallocation using swap trick - don't call clear() first
+        std::vector<std::unique_ptr<ILogSink>>().swap(S.sinks);
 
         // Add built-in sinks according to the config.
         if (cfg.useConsole)       S.sinks.emplace_back(std::make_unique<ConsoleSink>(cfg.usePlatformOutput));
