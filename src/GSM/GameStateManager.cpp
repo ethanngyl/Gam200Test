@@ -302,7 +302,7 @@ void GSM_Update()
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Level3 Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/Level3.lua exists");
+                LOG_ERROR("GSM", "Check: assets/scripts/Level3Clean.lua exists");
                 next = GS_QUIT;
             }
             else {
