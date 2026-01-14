@@ -80,6 +80,9 @@ function UIComponent:SpawnSprite(texture, x, y, scaleX, scaleY, layer)
     local entityID = SpawnSprite(texture, x, y, scaleX, scaleY, layer)
     if entityID > 0 then
         table.insert(self.entities, entityID)
+        -- Use nearest-neighbor filtering to prevent black box artifacts
+        -- Pixel art/UI should not use linear filtering which creates semi-transparent edge pixels
+        SetSpriteFilterMode(entityID, true)
     end
     return entityID
 end

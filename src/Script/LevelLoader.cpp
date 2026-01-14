@@ -465,6 +465,7 @@ namespace Framework {
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
         lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
         lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
+        lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
