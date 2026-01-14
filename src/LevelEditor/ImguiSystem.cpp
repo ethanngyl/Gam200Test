@@ -842,9 +842,6 @@ namespace Framework {
             enabled = !enabled;
             pendingToggle = false;
             std::cout << "[ImGuiSystem] Toggled to: " << (enabled ? "ON" : "OFF") << "\n";
-
-            
-
         }
 
         // Auto-Switch Screen Mode
@@ -4054,7 +4051,7 @@ namespace Framework {
     }
 
     bool ImGuiSystem::LoadLevelViaGSM(const std::string& levelName) {
-        LOG_INFO("ImGuiSystem", "Loading level via GSM: %s", levelName.c_str());
+        LOG_INFO("ImGuiSystem", "Loading level via GSM (Editor Mode): %s", levelName.c_str());
 
         int gameState = GetGameStateFromLevelName(levelName);
 
@@ -4064,11 +4061,17 @@ namespace Framework {
         }
 
         extern int next;
+        extern bool g_loadAsEditorMode;
+        
         next = gameState;
+        g_loadAsEditorMode = true;  // Tell GSM to load in editor mode
 
         currentEditingLevel = levelName;
 
-        LOG_INFO("ImGuiSystem", " Switching to game state %d", gameState);
+        // Enable ImGui immediately since we're loading in editor mode
+        enabled = true;
+
+        LOG_INFO("ImGuiSystem", " Switching to game state %d (editor mode)", gameState);
 
         return true;
     }

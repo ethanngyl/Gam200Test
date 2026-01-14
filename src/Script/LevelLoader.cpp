@@ -197,6 +197,10 @@ namespace Framework {
             coreEngine->SetEditorMode(true);
             coreEngine->SetPlaying(false);
             GlobalPause::SetPaused(false);
+            // Enable ImGui when loading in editor mode
+            if (coreEngine->GetImGuiSystem()) {
+                coreEngine->GetImGuiSystem()->Enable();
+            }
         }
 
         lua_pushboolean(L, isEditorMode);
@@ -216,6 +220,10 @@ namespace Framework {
             coreEngine->SetEditorMode(true);
             coreEngine->SetPlaying(false);
             GlobalPause::SetPaused(false);
+            // Ensure ImGui stays enabled
+            if (coreEngine->GetImGuiSystem()) {
+                coreEngine->GetImGuiSystem()->Enable();
+            }
         }
 
         // Check required functions
@@ -248,6 +256,11 @@ namespace Framework {
             coreEngine->SetEditorMode(true);
             coreEngine->SetPlaying(false);
             GlobalPause::SetPaused(false);
+            // Final ensure ImGui is enabled after OnInit
+            if (coreEngine->GetImGuiSystem()) {
+                coreEngine->GetImGuiSystem()->Enable();
+                LOG_INFO("LevelLoader", "Editor mode enabled - ImGui activated");
+            }
         }
 
         // Mark as loaded

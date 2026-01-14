@@ -39,6 +39,10 @@ typedef void(*FP)(void);
 extern int current, previous, next;
 extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 
+// Flag to indicate if the next level should be loaded in editor mode
+// Set by ImGuiSystem::LoadLevelViaGSM, consumed by GSM_Update
+extern bool g_loadAsEditorMode;
+
 // ============================================================================
 // GSM FUNCTIONS
 // ============================================================================
