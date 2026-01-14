@@ -1711,6 +1711,26 @@ namespace Framework {
     }
 
     /**
+     * @brief Enable or disable C++ grid movement (when using Lua PlayerScript)
+     * @param enabled true to enable C++ grid movement, false to disable
+     * Usage: SetGridMovementEnabled(false) -- Disable C++ movement, use Lua script instead
+     */
+    int LevelLoader::Lua_SetGridMovementEnabled(lua_State* L) {
+        bool enabled = lua_toboolean(L, 1);
+
+        auto* pc = CORE ? CORE->GetPlayerController() : nullptr;
+        if (!pc) {
+            LOG_WARN("LevelLoader", "SetGridMovementEnabled: No PlayerController");
+            return 0;
+        }
+
+        pc->SetGridMovementEnabled(enabled);
+        LOG_INFO("LevelLoader", "Grid movement %s via Lua", enabled ? "ENABLED" : "DISABLED");
+
+        return 0;
+    }
+
+    /**
      * @brief Check if chest exists at tile
      * @param x, y Grid coordinates
      * @return true if chest exists
