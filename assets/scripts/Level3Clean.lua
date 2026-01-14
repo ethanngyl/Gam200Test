@@ -224,13 +224,21 @@ function SetupPlayer()
 
     Log(" Found Player (Entity ID: " .. playerID .. ")")
 
+    -- Disable C++ grid movement (Lua script will handle movement instead)
+    SetGridMovementEnabled(false)
+    Log("   C++ grid movement disabled")
+
     -- Attach player movement script
     local scriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
 
     if scriptSuccess then
         Log("   PlayerScript.lua attached successfully")
+        Log("  Player movement now handled by Lua script")
     else
         Log("  ✗ FAILED to attach PlayerScript.lua")
+        -- Re-enable C++ movement as fallback
+        SetGridMovementEnabled(true)
+        Log("  C++ grid movement re-enabled as fallback")
     end
 
     return true
