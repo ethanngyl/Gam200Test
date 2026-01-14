@@ -297,7 +297,7 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Level3 Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/Level3.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel("assets/scripts/Level3Clean.lua", g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
