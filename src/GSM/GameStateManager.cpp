@@ -20,6 +20,7 @@
 #include "Precompiled.h"
 #include "LevelLoader.h"
 #include "TimeConstants.h"
+#include "ImguiSystem.h"  // For GSM_SetNextState to check ImGui state
 
 // Level 3 Lua-specific includes
 #include "PlayerManager.h"
@@ -43,6 +44,9 @@ FP fpUnload = nullptr;
 
 // Flag to indicate if the next level should be loaded in editor mode
 bool g_loadAsEditorMode = false;
+
+// Flag to indicate if the game was playing when transitioning to next level
+bool g_preservePlayingState = false;
 
 // ============================================================================
 // GSM FUNCTIONS
@@ -701,4 +705,24 @@ void GSM_Update()
         fpUnload = nullptr;
         break;
     }
+}
+
+/**
+ * @brief Set the next game state, preserving editor mode if ImGui is enabled
+ */
+void GSM_SetNextState(int nextState) {
+    // Check if ImGui is currently enabled
+    if (Framework::CORE) {
+        auto* imgui = Framework::CORE->GetImGuiSystem();
+        if (imgui && imgui->IsEnabled()) {
+            g_loadAsEditorMode = true;
+            LOG_INFO("GSM", "ImGui enabled - next level will load in editor mode");
+        }
+        // Check if game is currently playing - preserve this state for next level
+        if (Framework::CORE->IsPlaying()) {
+            g_preservePlayingState = true;
+            LOG_INFO("GSM", "Game is playing - next level will start in playing state");
+        }
+    }
+    next = nextState;
 }

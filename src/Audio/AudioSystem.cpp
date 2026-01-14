@@ -123,7 +123,12 @@ namespace Framework {
 
         bool shouldPlay = false;
         if (Framework::CORE) {
-            shouldPlay = Framework::CORE->IsPlaying() && !Framework::CORE->IsEditorMode();
+            // Audio should play when:
+            // 1. Normal gameplay: IsPlaying() = true, IsEditorMode() = false
+            // 2. Editor + PLAY mode: IsPlaying() = true, IsEditorMode() = true
+            // Audio should NOT play when:
+            // - Editor + STOP mode: IsPlaying() = false, IsEditorMode() = true
+            shouldPlay = Framework::CORE->IsPlaying();
         }
 
         if (masterGroup) {

@@ -1287,6 +1287,38 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Check if gameplay should be disabled (buttons grayed out, etc.)
+     * @return boolean - true if gameplay should be disabled
+     * 
+     * Returns true when:
+     * - In editor mode AND not playing (STOP state)
+     * 
+     * Returns false when:
+     * - Not in editor mode (normal gameplay)
+     * - In editor mode but playing (PLAY button was clicked)
+     * 
+     * Usage in Lua:
+     *   if ShouldDisableGameplay() then
+     *       -- Gray out buttons, disable input
+     *   end
+     */
+    int LevelLoader::Lua_ShouldDisableGameplay(lua_State* L) {
+        if (!CORE) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        
+        bool isEditorMode = CORE->IsEditorMode();
+        bool isPlaying = CORE->IsPlaying();
+        
+        // Disable gameplay only when in editor mode AND not playing
+        bool shouldDisable = isEditorMode && !isPlaying;
+        
+        lua_pushboolean(L, shouldDisable);
+        return 1;
+    }
+
     // ========================================================================
     // SCRIPT COMPONENT MANAGEMENT
     // ========================================================================
