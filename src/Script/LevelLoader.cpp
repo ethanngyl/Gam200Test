@@ -477,7 +477,13 @@ namespace Framework {
         lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
         lua_register(L, "IsEditorMode", lua_IsEditorMode);
 
-
+        // Save/Load API
+        lua_register(L, "SaveSceneToJSON", Lua_SaveSceneToJSON);
+        lua_register(L, "LoadSceneFromJSON", Lua_LoadSceneFromJSON);
+        lua_register(L, "AutoSaveScene", Lua_AutoSaveScene);
+        lua_register(L, "LoadAutoSave", Lua_LoadAutoSave);
+        lua_register(L, "HasAutoSave", Lua_HasAutoSave);
+        lua_register(L, "ClearAutoSave", Lua_ClearAutoSave);
 
         LOG_INFO("LevelLoader", "API registered");
     }

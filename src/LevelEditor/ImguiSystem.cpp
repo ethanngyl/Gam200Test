@@ -51,6 +51,7 @@ Safety:
 #include "Pathfinding.h"
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
+#include "SaveLoadSystem.h"
 #include <string.h>
 #include <GlobalPauseManager.h>
 #include <regex> 
@@ -3687,18 +3688,92 @@ namespace Framework {
 
                 ImGui::Separator();
 
-                // Save Level
-                if (ImGui::MenuItem("Save Level", "Ctrl+S")) {
+                // Save Level (TXT format - legacy)
+                if (ImGui::MenuItem("Save Level (TXT)", "Ctrl+S")) {
                     SaveCurrentLevel();
                 }
 
-                // Save As
-                if (ImGui::MenuItem("Save As...")) {
+                // Save As (TXT)
+                if (ImGui::MenuItem("Save As (TXT)...")) {
                     if (currentLevelPath.empty()) {
                         currentLevelPath = "assets/level_new.txt";
                     }
                     openPath = currentLevelPath;
                     ImGui::OpenPopup("Save Level As...");
+                }
+
+                ImGui::Separator();
+
+                // ================================================================
+                // JSON SAVE/LOAD - Universal format for all level types
+                // ================================================================
+                if (ImGui::BeginMenu("JSON Save/Load")) {
+                    extern int current;
+                    std::string levelName = "Unknown";
+                    switch (current) {
+                        case mainMenu: levelName = "MainMenu"; break;
+                        case Level_select: levelName = "LevelSelect"; break;
+                        case LEVEL_2: levelName = "Level2"; break;
+                        case LEVEL_3: levelName = "Level3"; break;
+                        case TUTORIAL: levelName = "Tutorial"; break;
+                        case LEVEL_END: levelName = "LevelEnd"; break;
+                    }
+
+                    // Save to JSON
+                    if (ImGui::MenuItem("Save Scene to JSON")) {
+                        std::string savePath = "assets/saves/" + levelName + "_save.json";
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::SaveToJSON(savePath, entityManager, levelName)) {
+                            LOG_INFO("ImGuiSystem", "Saved scene to: %s", savePath.c_str());
+                        }
+                    }
+
+                    // Load from JSON
+                    if (ImGui::MenuItem("Load Scene from JSON")) {
+                        std::string loadPath = "assets/saves/" + levelName + "_save.json";
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::LoadFromJSON(loadPath, entityManager, true)) {
+                            LOG_INFO("ImGuiSystem", "Loaded scene from: %s", loadPath.c_str());
+                            RebuildSpatialPartition();
+                        }
+                    }
+
+                    ImGui::Separator();
+
+                    // Auto-save
+                    if (ImGui::MenuItem("Auto-Save")) {
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::AutoSave(entityManager, levelName)) {
+                            LOG_INFO("ImGuiSystem", "Auto-saved: %s", levelName.c_str());
+                        }
+                    }
+
+                    // Load Auto-save
+                    bool hasAutoSave = SaveLoadSystem::HasAutoSave(levelName);
+                    if (ImGui::MenuItem("Load Auto-Save", nullptr, false, hasAutoSave)) {
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::LoadAutoSave(entityManager, levelName)) {
+                            LOG_INFO("ImGuiSystem", "Loaded auto-save: %s", levelName.c_str());
+                            RebuildSpatialPartition();
+                        }
+                    }
+
+                    // Clear Auto-save
+                    if (ImGui::MenuItem("Clear Auto-Save", nullptr, false, hasAutoSave)) {
+                        SaveLoadSystem::ClearAutoSave(levelName);
+                        LOG_INFO("ImGuiSystem", "Cleared auto-save: %s", levelName.c_str());
+                    }
+
+                    ImGui::Separator();
+
+                    // Show auto-save status
+                    if (hasAutoSave) {
+                        ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Auto-save exists");
+                    } else {
+                        ImGui::TextDisabled("No auto-save");
+                    }
+
+                    ImGui::EndMenu();
                 }
 
                 ImGui::Separator();
@@ -3712,6 +3787,8 @@ namespace Framework {
                 case Level_select: currentLevelName = "Level Select"; break;
                 case LEVEL_2: currentLevelName = "Level 2"; break;
                 case LEVEL_3: currentLevelName = "Level 3"; break;
+                case TUTORIAL: currentLevelName = "Tutorial"; break;
+                case LEVEL_END: currentLevelName = "Level End"; break;
                 }
 
                 ImGui::TextDisabled("Current: %s", currentLevelName);

@@ -37,6 +37,7 @@
 #include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
 #include "Grid/GridECS.h" // Grid system functions
 #include "PlayerManager.h"
+#include "SaveLoadSystem.h"  // JSON Save/Load system
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -2023,6 +2024,187 @@ namespace Framework {
             lua_settable(L, -3);
         }
 
+        return 1;
+    }
+
+    // ========================================================================
+    // SAVE/LOAD API - JSON Serialization for Lua
+    // ========================================================================
+
+    /**
+     * @brief Save current scene to JSON file
+     * @param filepath Path to save file
+     * @param levelName Name of the level (for metadata)
+     * @return boolean success
+     *
+     * Usage: local success = SaveSceneToJSON("assets/saves/level3.json", "Level3")
+     */
+    int LevelLoader::Lua_SaveSceneToJSON(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* filepath = luaL_checkstring(L, 1);
+        const char* levelName = luaL_optstring(L, 2, "Unknown");
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "SaveSceneToJSON: EntityManager not available");
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Set graphics system for texture loading during serialization
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+
+        bool success = SaveLoadSystem::SaveToJSON(filepath, em, levelName);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Scene saved to: %s", filepath);
+        } else {
+            LOG_ERROR("LevelLoader", "Failed to save scene to: %s", filepath);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Load scene from JSON file
+     * @param filepath Path to load file
+     * @param clearExisting Whether to clear existing entities (default: true)
+     * @return boolean success
+     *
+     * Usage: local success = LoadSceneFromJSON("assets/saves/level3.json", true)
+     */
+    int LevelLoader::Lua_LoadSceneFromJSON(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* filepath = luaL_checkstring(L, 1);
+        bool clearExisting = lua_isboolean(L, 2) ? lua_toboolean(L, 2) : true;
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "LoadSceneFromJSON: EntityManager not available");
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Set graphics system for texture loading during deserialization
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+
+        bool success = SaveLoadSystem::LoadFromJSON(filepath, em, clearExisting);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Scene loaded from: %s", filepath);
+            // Rebuild spatial partition after loading
+            RebuildSpatialPartition();
+        } else {
+            LOG_ERROR("LevelLoader", "Failed to load scene from: %s", filepath);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Auto-save current scene
+     * @param levelName Name of the level
+     * @return boolean success
+     *
+     * Usage: local success = AutoSaveScene("Level3")
+     */
+    int LevelLoader::Lua_AutoSaveScene(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* levelName = luaL_checkstring(L, 1);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+        bool success = SaveLoadSystem::AutoSave(em, levelName);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Auto-saved: %s", levelName);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Load auto-save for a level
+     * @param levelName Name of the level
+     * @return boolean success
+     *
+     * Usage: local success = LoadAutoSave("Level3")
+     */
+    int LevelLoader::Lua_LoadAutoSave(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* levelName = luaL_checkstring(L, 1);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+        bool success = SaveLoadSystem::LoadAutoSave(em, levelName);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Loaded auto-save: %s", levelName);
+            RebuildSpatialPartition();
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Check if auto-save exists for a level
+     * @param levelName Name of the level
+     * @return boolean exists
+     *
+     * Usage: local exists = HasAutoSave("Level3")
+     */
+    int LevelLoader::Lua_HasAutoSave(lua_State* L) {
+        const char* levelName = luaL_checkstring(L, 1);
+        bool exists = SaveLoadSystem::HasAutoSave(levelName);
+        lua_pushboolean(L, exists);
+        return 1;
+    }
+
+    /**
+     * @brief Clear auto-save for a level
+     * @param levelName Name of the level
+     * @return boolean success
+     *
+     * Usage: local success = ClearAutoSave("Level3")
+     */
+    int LevelLoader::Lua_ClearAutoSave(lua_State* L) {
+        const char* levelName = luaL_checkstring(L, 1);
+        bool success = SaveLoadSystem::ClearAutoSave(levelName);
+        lua_pushboolean(L, success);
         return 1;
     }
 
