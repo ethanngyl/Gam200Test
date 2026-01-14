@@ -165,20 +165,22 @@ end
 
 ---
 -- Draw all button text with editor mode support
--- Automatically grays out buttons when in editor mode
+-- Automatically grays out buttons when gameplay is disabled (editor mode + not playing)
 --
 function ButtonManager.DrawAll()
-    local editorMode = IsEditorMode()
+    -- Use ShouldDisableGameplay() instead of IsEditorMode()
+    -- This allows buttons to work when in editor mode but playing
+    local disableButtons = ShouldDisableGameplay()
 
     -- Draw text for each button
     for buttonKey, buttonData in pairs(buttonIDs) do
         local button = buttonData.config
         local text = button.text
 
-        -- Gray out buttons in editor mode
-        local colorR = editorMode and 0.5 or text.color.r
-        local colorG = editorMode and 0.5 or text.color.g
-        local colorB = editorMode and 0.5 or text.color.b
+        -- Gray out buttons only when gameplay is disabled
+        local colorR = disableButtons and 0.5 or text.color.r
+        local colorG = disableButtons and 0.5 or text.color.g
+        local colorB = disableButtons and 0.5 or text.color.b
 
         DrawButtonText(
             buttonData.id,
@@ -193,8 +195,8 @@ function ButtonManager.DrawAll()
         )
     end
 
-    -- Display editor mode indicator
-    if editorMode then
+    -- Display editor mode indicator (show when in editor mode, regardless of playing state)
+    if IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
 end
@@ -221,13 +223,15 @@ end
 -- ============================================================================
 
 ---
--- Check if a button callback should execute (not in editor mode)
+-- Check if a button callback should execute
 -- Call this at the start of your button callback functions
--- @return boolean True if button can execute (not in editor mode)
+-- @return boolean True if button can execute (gameplay not disabled)
 --
 function ButtonManager.CanExecuteCallback()
-    if IsEditorMode() then
-        Log("[ButtonManager] Button disabled in editor mode")
+    -- Use ShouldDisableGameplay() instead of IsEditorMode()
+    -- This allows buttons to work when in editor mode but playing
+    if ShouldDisableGameplay() then
+        Log("[ButtonManager] Button disabled - gameplay paused")
         return false
     end
     return true
@@ -268,6 +272,14 @@ end
 --
 function ButtonManager.IsInEditorMode()
     return IsEditorMode()
+end
+
+---
+-- Check if gameplay should be disabled (buttons grayed out)
+-- @return boolean True if gameplay is disabled
+--
+function ButtonManager.IsGameplayDisabled()
+    return ShouldDisableGameplay()
 end
 
 -- ============================================================================

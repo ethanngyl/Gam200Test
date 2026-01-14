@@ -226,6 +226,7 @@ namespace Framework {
 
         static int lua_ToggleEditorMode(lua_State* L);
         static int lua_IsEditorMode(lua_State* L);
+        static int Lua_ShouldDisableGameplay(lua_State* L);
 
         // Save/Load API
         static int Lua_SaveSceneToJSON(lua_State* L);

@@ -43,8 +43,21 @@ extern FP fpLoad, fpInitialize, fpUpdate, fpDraw, fpFree, fpUnload;
 // Set by ImGuiSystem::LoadLevelViaGSM, consumed by GSM_Update
 extern bool g_loadAsEditorMode;
 
+// Flag to indicate if the game was playing when transitioning to next level
+// When true, the next level will start in playing state (not paused in editor)
+extern bool g_preservePlayingState;
+
 // ============================================================================
 // GSM FUNCTIONS
 // ============================================================================
 void GSM_Initialize(int startingState);
 void GSM_Update();
+
+/**
+ * @brief Set the next game state, preserving editor mode if ImGui is enabled
+ * @param nextState The next game state to transition to
+ * 
+ * Use this function instead of directly setting 'next' to ensure
+ * ImGui stays enabled during level transitions when in editor mode.
+ */
+void GSM_SetNextState(int nextState);

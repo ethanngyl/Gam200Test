@@ -187,15 +187,23 @@ namespace Framework {
             return false;
         }
 
-        // When loading a Lua level from the editor (Asset Browser double-click), we want a
-        // deterministic state: editor mode ON, simulation OFF.
-        // Some Lua scripts call SetEnginePlayState(true) inside OnInit(), which can create an
-        // invalid mixed state (IsPlaying == true while IsEditorMode == true). That breaks
-        // input/audio update gating.
+        // When loading a Lua level from the editor, we need to handle two cases:
+        // 1. Fresh load from Open Level menu - editor mode ON, simulation OFF
+        // 2. Level transition while playing - editor mode ON, simulation ON (preserve playing state)
+        extern bool g_preservePlayingState;
+        
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            coreEngine->SetPlaying(false);
+            
+            // If game was playing when transitioning, keep it playing
+            if (g_preservePlayingState) {
+                coreEngine->SetPlaying(true);
+                LOG_INFO("LevelLoader", "Preserving playing state for level transition");
+            } else {
+                coreEngine->SetPlaying(false);
+            }
+            
             GlobalPause::SetPaused(false);
             // Enable ImGui when loading in editor mode
             if (coreEngine->GetImGuiSystem()) {
@@ -218,7 +226,14 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            coreEngine->SetPlaying(false);
+            
+            // Preserve playing state if transitioning between levels while playing
+            if (g_preservePlayingState) {
+                coreEngine->SetPlaying(true);
+            } else {
+                coreEngine->SetPlaying(false);
+            }
+            
             GlobalPause::SetPaused(false);
             // Ensure ImGui stays enabled
             if (coreEngine->GetImGuiSystem()) {
@@ -254,13 +269,24 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            coreEngine->SetPlaying(false);
+            
+            // Preserve playing state if transitioning between levels while playing
+            if (g_preservePlayingState) {
+                coreEngine->SetPlaying(true);
+                LOG_INFO("LevelLoader", "Editor mode with playing state preserved");
+            } else {
+                coreEngine->SetPlaying(false);
+                LOG_INFO("LevelLoader", "Editor mode enabled - simulation stopped");
+            }
+            
             GlobalPause::SetPaused(false);
             // Final ensure ImGui is enabled after OnInit
             if (coreEngine->GetImGuiSystem()) {
                 coreEngine->GetImGuiSystem()->Enable();
-                LOG_INFO("LevelLoader", "Editor mode enabled - ImGui activated");
             }
+            
+            // Reset the preserve playing state flag after use
+            g_preservePlayingState = false;
         }
 
         // Mark as loaded
@@ -489,6 +515,7 @@ namespace Framework {
 
         lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
         lua_register(L, "IsEditorMode", lua_IsEditorMode);
+        lua_register(L, "ShouldDisableGameplay", Lua_ShouldDisableGameplay);
 
         // Save/Load API
         lua_register(L, "SaveSceneToJSON", Lua_SaveSceneToJSON);
@@ -572,6 +599,23 @@ namespace Framework {
 
     int LevelLoader::Lua_SetNextGameState(lua_State* L) {
         const char* stateName = luaL_checkstring(L, 1);
+
+        // Check if ImGui is currently enabled - if so, preserve editor mode for next level
+        LevelLoader* loader = GetLevelLoader(L);
+        if (loader && loader->coreEngine) {
+            auto* imgui = loader->coreEngine->GetImGuiSystem();
+            if (imgui && imgui->IsEnabled()) {
+                extern bool g_loadAsEditorMode;
+                g_loadAsEditorMode = true;
+                LOG_INFO("LevelLoader", "ImGui enabled - next level will load in editor mode");
+            }
+            // Check if game is currently playing - preserve this state for next level
+            if (loader->coreEngine->IsPlaying()) {
+                extern bool g_preservePlayingState;
+                g_preservePlayingState = true;
+                LOG_INFO("LevelLoader", "Game is playing - next level will start in playing state");
+            }
+        }
 
         // Map state names to enum values
         if (strcmp(stateName, "Level_select") == 0) {
