@@ -1263,6 +1263,57 @@ namespace Framework {
         return 0;
     }
 
+    // SetSpriteBlendMode(entityID, "Opaque" | "AlphaBlend" | "Additive" | "Multiply")
+    int LevelLoader::Lua_SetSpriteBlendMode(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* blendModeStr = luaL_checkstring(L, 2);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gs = static_cast<GraphicsSystemV2*>(loader->coreEngine->GetGraphicsSystem());
+        if (!em || !gs) return 0;
+
+        Entity e(static_cast<uint32_t>(entityID));
+        if (!e.IsValid() || !em->HasComponent<MeshRenderer>(e)) {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Entity %d has no MeshRenderer", entityID);
+            return 0;
+        }
+
+        auto& mr = em->GetComponent<MeshRenderer>(e);
+        if (!mr.material.IsValid()) {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Entity %d has no valid material", entityID);
+            return 0;
+        }
+
+        // Get material and set blend mode
+        auto* mat = gs->GetResourceManager().GetMaterial(mr.material);
+        if (!mat) {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Failed to get material for entity %d", entityID);
+            return 0;
+        }
+
+        // Parse blend mode string
+        std::string mode(blendModeStr);
+        if (mode == "Opaque") {
+            mat->blendMode = BlendMode::Opaque;
+        } else if (mode == "AlphaBlend") {
+            mat->blendMode = BlendMode::AlphaBlend;
+        } else if (mode == "Additive") {
+            mat->blendMode = BlendMode::Additive;
+        } else if (mode == "Multiply") {
+            mat->blendMode = BlendMode::Multiply;
+        } else {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Unknown blend mode '%s', use: Opaque, AlphaBlend, Additive, or Multiply", blendModeStr);
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "SetSpriteBlendMode: Entity %d set to %s", entityID, blendModeStr);
+        return 0;
+    }
+
     // Toggle editor mode
     int LevelLoader::lua_ToggleEditorMode(lua_State* L) {
         (void)L;
