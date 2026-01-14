@@ -182,6 +182,7 @@ namespace Framework {
         static int Lua_SetSpritePosition(lua_State* L);
         static int Lua_SetSpriteVisibility(lua_State* L);
         static int Lua_SetSpriteBlendMode(lua_State* L);
+        static int Lua_SetSpriteFilterMode(lua_State* L);
         static int Lua_DestroyEntity(lua_State* L);
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
