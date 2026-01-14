@@ -80,9 +80,6 @@ function UIComponent:SpawnSprite(texture, x, y, scaleX, scaleY, layer)
     local entityID = SpawnSprite(texture, x, y, scaleX, scaleY, layer)
     if entityID > 0 then
         table.insert(self.entities, entityID)
-        -- Set to Opaque blend mode to fix black pixel transparency issue
-        -- UI elements should render solid colors, not blend with alpha
-        SetSpriteBlendMode(entityID, "Opaque")
     end
     return entityID
 end

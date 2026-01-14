@@ -1263,7 +1263,8 @@ namespace Framework {
         return 0;
     }
 
-    // SetSpriteBlendMode(entityID, "Opaque" | "AlphaBlend" | "Additive" | "Multiply")
+    // SetSpriteBlendMode(entityID, "Opaque" | "AlphaBlend" | "Additive" | "Multiply", forceOpaqueAlpha=false)
+    // forceOpaqueAlpha: If true, ignores texture alpha and renders all pixels as opaque (fixes black pixels with alpha=0)
     int LevelLoader::Lua_SetSpriteBlendMode(lua_State* L)
     {
         LevelLoader* loader = GetLevelLoader(L);
@@ -1271,6 +1272,7 @@ namespace Framework {
 
         lua_Integer entityID = luaL_checkinteger(L, 1);
         const char* blendModeStr = luaL_checkstring(L, 2);
+        bool forceOpaqueAlpha = lua_toboolean(L, 3);  // Optional third parameter (default false)
 
         auto* em = loader->coreEngine->GetEntityManager();
         auto* gs = static_cast<GraphicsSystemV2*>(loader->coreEngine->GetGraphicsSystem());
@@ -1310,7 +1312,11 @@ namespace Framework {
             return 0;
         }
 
-        LOG_INFO("LevelLoader", "SetSpriteBlendMode: Entity %d set to %s", entityID, blendModeStr);
+        // Set force opaque alpha flag
+        mat->forceOpaqueAlpha = forceOpaqueAlpha;
+
+        LOG_INFO("LevelLoader", "SetSpriteBlendMode: Entity %d set to %s, forceOpaqueAlpha=%s",
+                 entityID, blendModeStr, forceOpaqueAlpha ? "true" : "false");
         return 0;
     }
 
