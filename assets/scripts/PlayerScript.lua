@@ -50,17 +50,17 @@ function OnUpdate(dt)
     local targetX, targetY = currentX, currentY
     local moveAttempted = false
 
-    -- Arrow keys / WASD input
-    if IsKeyDown("Up") or IsKeyDown("W") then
+    -- WASD input only (arrow keys disabled)
+    if IsKeyDown("W") then
         targetY = currentY + 1
         moveAttempted = true
-    elseif IsKeyDown("Down") or IsKeyDown("S") then
+    elseif IsKeyDown("S") then
         targetY = currentY - 1
         moveAttempted = true
-    elseif IsKeyDown("Left") or IsKeyDown("A") then
+    elseif IsKeyDown("A") then
         targetX = currentX - 1
         moveAttempted = true
-    elseif IsKeyDown("Right") or IsKeyDown("D") then
+    elseif IsKeyDown("D") then
         targetX = currentX + 1
         moveAttempted = true
     end
