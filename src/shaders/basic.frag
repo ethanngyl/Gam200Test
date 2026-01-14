@@ -6,7 +6,8 @@ out vec4 FragColor;
 layout (binding=0) uniform sampler2D uTexture;
 uniform vec3 uColor;
 uniform vec4 uUVRect;
-uniform bool uUseAlphaDiscard; // New: control alpha-based discard
+uniform bool uUseAlphaDiscard;  // Control alpha-based discard
+uniform bool uForceOpaqueAlpha; // Force alpha to 1.0, ignore texture alpha
 
 void main()
 {
@@ -16,6 +17,11 @@ void main()
     );
 
     vec4 texColor = texture(uTexture, uv);
+
+    // Force alpha to fully opaque if requested (fixes black pixels with alpha=0)
+    if (uForceOpaqueAlpha) {
+        texColor.a = 1.0;
+    }
 
     // Only discard based on alpha if uUseAlphaDiscard is true
     // This allows opaque rendering modes to show all pixels including black
