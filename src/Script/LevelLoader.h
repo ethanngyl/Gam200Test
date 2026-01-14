@@ -227,6 +227,14 @@ namespace Framework {
         static int lua_ToggleEditorMode(lua_State* L);
         static int lua_IsEditorMode(lua_State* L);
 
+        // Save/Load API
+        static int Lua_SaveSceneToJSON(lua_State* L);
+        static int Lua_LoadSceneFromJSON(lua_State* L);
+        static int Lua_AutoSaveScene(lua_State* L);
+        static int Lua_LoadAutoSave(lua_State* L);
+        static int Lua_HasAutoSave(lua_State* L);
+        static int Lua_ClearAutoSave(lua_State* L);
+
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };
