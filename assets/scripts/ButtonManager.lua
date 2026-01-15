@@ -113,7 +113,7 @@ function ButtonManager.CreateButton(buttonConfig)
         Log("[ButtonManager]    '" .. buttonConfig.id .. "' created (ID: " .. buttonID .. ")")
         return true
     else
-        Log("[ButtonManager]   ✗ Failed to create '" .. buttonConfig.id .. "'")
+        Log("[ButtonManager]   Failed to create '" .. buttonConfig.id .. "'")
         return false
     end
 end

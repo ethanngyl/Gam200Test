@@ -708,8 +708,8 @@ namespace Framework {
             auto& transform = entityManager->GetComponent<Transform>(e);
 
             const bool hasRenderer = entityManager->HasComponent<MeshRenderer>(e);
-            //const bool hasSprite = entityManager->HasComponent<Sprite>(e);
-            if (!hasRenderer/* && !hasSprite*/) continue;
+            const bool hasSprite = entityManager->HasComponent<Sprite>(e);
+            if (!hasRenderer && !hasSprite) continue;
 
             RenderCommand cmd;
 
@@ -764,24 +764,24 @@ namespace Framework {
                 cmd.orderInLayer = mr.orderInLayer;
             }
 
-            // ---------- SPRITE ----------
-            //else if (hasSprite) {
-            //    auto& sp = entityManager->GetComponent<Sprite>(e);
+             //---------- SPRITE ----------
+             else if (hasSprite) {
+                auto& sp = entityManager->GetComponent<Sprite>(e);
 
-            //    cmd.mesh = quadMesh;
-            //    cmd.material = defaultMaterial;
-            //    // Load texture only if spritePath looks like a real file
-            //    if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
-            //        TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
-            //        cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
-            //    }
-            //    else {
-            //        cmd.texture = INVALID_TEXTURE_HANDLE;
-            //    }
+                cmd.mesh = quadMesh;
+                cmd.material = defaultMaterial;
+                // Load texture only if spritePath looks like a real file
+                if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
+                    TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
+                    cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
+                }
+                else {
+                    cmd.texture = INVALID_TEXTURE_HANDLE;
+                }
 
-            //    cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
-            //    cmd.layer = sp.layer;
-            //}
+                cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
+                cmd.layer = sp.layer;
+            }
 
             // ============================================================================
             // Author:        Tan Wei Leong
@@ -793,13 +793,13 @@ namespace Framework {
             //   This section handles per-entity transformation and sprite sheet UV
             //   animation logic within the rendering pipeline.
             //
-            //   • Transformation Block
+            //   - Transformation Block
             //     Converts ECS Transform component data (position, rotation, scale) into a
             //     model matrix used by the GPU for world-space rendering.
             //     Each entity receives its own transform, enabling independent movement
             //     and scaling across the scene.
             //
-            //   • UV Animation Block
+            //   - UV Animation Block
             //     Computes UV coordinates for the active animation frame defined by
             //     SpriteAnimation. It divides the sprite sheet into frame-sized cells and
             //     dynamically adjusts UVs each frame, also supporting horizontal flipping.
