@@ -664,7 +664,7 @@ namespace Framework {
             //         - Drag-and-drop exposes a "Prefab" payload for drop zones
             // author: Sim Kah Yan 
             // ============================================================================
-            if (path.extension() == ".prefab" || path.extension() == ".json") {
+            if (path.extension() == ".prefab") {
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Double-click to spawn prefab\nDrag to drop zone");
 
@@ -685,6 +685,30 @@ namespace Framework {
                     ImGui::SetDragDropPayload("Prefab", prefabPath.c_str(), prefabPath.size() + 1);
                     ImGui::Text("Prefab: %s", label.c_str());
                     ImGui::EndDragDropSource();
+                }
+            }
+
+            if (path.extension() == ".json")
+            {
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Double-click to load scene (JSON)");
+
+                    if (ImGui::IsMouseDoubleClicked(0))
+                    {
+                        std::string scenePath = path.string(); // should already be like "assets/saves/xxx.json"
+
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::LoadFromJSON(scenePath, entityManager, true))
+                        {
+                            std::cout << "[Assets] Loaded scene JSON: " << scenePath << "\n";
+                            RebuildSpatialPartition();
+                        }
+                        else
+                        {
+                            std::cerr << "[Assets] Failed to load scene JSON: " << scenePath << "\n";
+                        }
+                    }
                 }
             }
 
