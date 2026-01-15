@@ -165,6 +165,37 @@ namespace Framework {
 
 
     private:
+
+        // Level Browser & Save
+        bool showLevelBrowser = false;
+        std::string selectedLevelPath = "";
+        std::string currentEditingLevel = "";
+
+        /**
+         * @brief Shows level browser popup
+         */
+        void ShowLevelBrowserPopup();
+
+        /**
+         * @brief Gets all .lua level files in a directory
+         */
+        std::vector<std::string> GetLuaLevelsInDirectory(const std::string& directory);
+
+        /**
+         * @brief Loads a level via GSM state transition
+         */
+        bool LoadLevelViaGSM(const std::string& levelName);
+
+        /**
+         * @brief Saves current level's entity data
+         */
+        bool SaveCurrentLevel();
+
+        /**
+         * @brief Maps level filename to GSM state enum
+         */
+        int GetGameStateFromLevelName(const std::string& levelName);
+
         GLFWwindow* window;
         EntityManager* entityManager;
         EntitySpawner* entitySpawner;
@@ -175,6 +206,10 @@ namespace Framework {
         //in order to save and load level files
         std::string currentLevelPath;
         std::string openPath;
+
+        //pending gsm state when loading lua
+        std::string currentLuaLevelPath = "";
+        int pendingLuaGsmState = -1;
 
         AudioSystem* audioSystem;
         GraphicsSystemV2* graphicsSystem;

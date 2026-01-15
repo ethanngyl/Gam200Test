@@ -147,6 +147,12 @@ public:
      */
     static bool SaveConfig(const std::string& filename = "");
 
+    /**
+     * @brief Clean up static resources and free memory
+     * @note Call this before program exit to prevent memory leak reports
+     */
+    static void Shutdown();
+
 private:
     // ========================================================================
     // PRIVATE MEMBERS

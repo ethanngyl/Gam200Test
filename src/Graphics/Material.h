@@ -65,7 +65,8 @@ namespace Framework {
         bool depthTest = true;
         bool depthWrite = true;
         bool cullBackFace = true;
-        
+        bool forceOpaqueAlpha = false;  // Ignore texture alpha, render all pixels as opaque
+
         // Color tint
         glm::vec4 tint = glm::vec4(1.0f);
 

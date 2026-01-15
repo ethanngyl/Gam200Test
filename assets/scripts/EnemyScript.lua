@@ -1,0 +1,468 @@
+-- ============================================================================
+-- EnemyScript.lua
+-- Enemy AI behavior component for grid-based turn-based combat
+-- ============================================================================
+-- Handles enemy turn logic, pathfinding, movement, and attacking
+-- Attach to enemy entities via: AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+-- ============================================================================
+
+-- ============================================================================
+-- CONFIGURATION
+-- ============================================================================
+
+-- Enemy behavior types
+local BEHAVIOR = {
+    AGGRESSIVE = "aggressive",  -- Always chase and attack player
+    DEFENSIVE = "defensive",    -- Only attack if player gets close
+    PATROL = "patrol",          -- Move randomly unless player is near
+    RANGED = "ranged"          -- Keep distance, attack from afar
+}
+
+-- AI state machine
+local STATE = {
+    IDLE = "idle",
+    CHASING = "chasing",
+    ATTACKING = "attacking",
+    FLEEING = "fleeing",
+    PATROLLING = "patrolling"
+}
+
+-- Entity state
+local entityID = 0              -- This enemy's ID (set in OnInit)
+local currentState = STATE.IDLE
+local behaviorType = BEHAVIOR.AGGRESSIVE  -- Default behavior
+local targetPlayerID = 0        -- Player to chase/attack
+
+-- AI parameters (configurable per enemy type)
+local config = {
+    -- Movement
+    apCostPerMove = 1,          -- AP cost to move 1 tile
+    maxMovesPerTurn = 3,        -- Maximum tiles to move per turn
+
+    -- Combat
+    attackRange = 1,            -- How many tiles away enemy can attack
+    attackAPCost = 2,           -- AP cost to attack
+    attackDamage = 1,           -- Damage dealt per attack
+
+    -- Behavior
+    aggroRange = 8,             -- Tiles away to detect player
+    fleeHealthPercent = 0.3,    -- Flee when health drops below this
+    preferredDistance = 1,      -- For ranged enemies
+
+    -- Pathfinding
+    maxPathLength = 10,         -- Maximum path length to consider
+    recalculatePathEveryNTurns = 3  -- Recalculate path periodically
+}
+
+-- Internal state
+local currentPath = {}          -- List of tiles to move through
+local pathIndex = 1             -- Current position in path
+local turnsSincePathUpdate = 0  -- Track when to recalculate path
+local lastKnownPlayerX = nil    -- Cache player position
+local lastKnownPlayerY = nil
+
+-- ============================================================================
+-- LIFECYCLE CALLBACKS
+-- ============================================================================
+
+function OnInit()
+    -- Get this entity's ID from the script system (automatically set as 'self')
+    entityID = self
+
+    if not entityID or entityID == 0 then
+        Log("[EnemyScript] ERROR: Invalid entity ID")
+        return
+    end
+
+    Log("[EnemyScript] Enemy " .. entityID .. " initialized")
+
+    -- Initialize state
+    currentState = STATE.IDLE
+    currentPath = {}
+    pathIndex = 1
+
+    -- Try to find player automatically
+    targetPlayerID = FindPlayer()
+    if targetPlayerID and targetPlayerID > 0 then
+        Log("[EnemyScript] Enemy " .. entityID .. " locked onto Player " .. targetPlayerID)
+    else
+        Log("[EnemyScript] WARNING: Enemy " .. entityID .. " could not find player")
+    end
+end
+
+function OnUpdate(dt)
+    -- Enemy AI only runs during enemy turn
+    local currentTurn = GetCurrentTurn()
+    if currentTurn ~= "Enemy" then
+        return
+    end
+
+    -- Make sure we have a valid target
+    if not targetPlayerID or targetPlayerID == 0 then
+        targetPlayerID = FindPlayer()
+        if not targetPlayerID or targetPlayerID == 0 then
+            return  -- No player to target
+        end
+    end
+
+    -- Execute AI decision making
+    ProcessAITurn()
+end
+
+function OnDestroy()
+    Log("[EnemyScript] Enemy " .. entityID .. " destroyed")
+end
+
+-- ============================================================================
+-- AI DECISION MAKING
+-- ============================================================================
+
+function ProcessAITurn()
+    -- Get enemy AP
+    local currentAP, maxAP = GetEnemyAP(entityID)
+    if not currentAP then
+        return
+    end
+
+    -- Check if we have enough AP to act
+    if currentAP < config.apCostPerMove then
+        -- Not enough AP, end turn
+        EndEnemyTurn(entityID)
+        return
+    end
+
+    -- Update state based on situation
+    UpdateAIState()
+
+    -- Execute action based on current state
+    if currentState == STATE.ATTACKING then
+        ExecuteAttack()
+    elseif currentState == STATE.CHASING then
+        ExecuteChase()
+    elseif currentState == STATE.FLEEING then
+        ExecuteFlee()
+    elseif currentState == STATE.PATROLLING then
+        ExecutePatrol()
+    else
+        -- IDLE or unknown state
+        EndEnemyTurn(entityID)
+    end
+end
+
+function UpdateAIState()
+    -- Get enemy and player positions
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    local playerX, playerY = GetEntityGridPosition(targetPlayerID)
+
+    if not enemyX or not playerX then
+        currentState = STATE.IDLE
+        return
+    end
+
+    -- Calculate distance to player
+    local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
+
+    -- Check health for flee condition
+    local hp, maxHP = GetEntityHP(entityID)
+    local healthPercent = hp / maxHP
+
+    if healthPercent <= config.fleeHealthPercent then
+        currentState = STATE.FLEEING
+        return
+    end
+
+    -- State transition logic based on behavior type and distance
+    if behaviorType == BEHAVIOR.AGGRESSIVE then
+        if distance <= config.attackRange then
+            currentState = STATE.ATTACKING
+        elseif distance <= config.aggroRange then
+            currentState = STATE.CHASING
+        else
+            currentState = STATE.IDLE
+        end
+
+    elseif behaviorType == BEHAVIOR.DEFENSIVE then
+        if distance <= config.attackRange then
+            currentState = STATE.ATTACKING
+        elseif distance <= 3 then  -- Smaller aggro range
+            currentState = STATE.CHASING
+        else
+            currentState = STATE.IDLE
+        end
+
+    elseif behaviorType == BEHAVIOR.RANGED then
+        if distance <= config.attackRange and distance >= config.preferredDistance then
+            currentState = STATE.ATTACKING
+        elseif distance < config.preferredDistance then
+            currentState = STATE.FLEEING  -- Too close, back away
+        elseif distance > config.attackRange then
+            currentState = STATE.CHASING  -- Too far, move closer
+        end
+
+    elseif behaviorType == BEHAVIOR.PATROL then
+        if distance <= config.attackRange then
+            currentState = STATE.ATTACKING
+        elseif distance <= 4 then
+            currentState = STATE.CHASING
+        else
+            currentState = STATE.PATROLLING
+        end
+    end
+end
+
+-- ============================================================================
+-- ACTION EXECUTION
+-- ============================================================================
+
+function ExecuteAttack()
+    local currentAP, maxAP = GetEnemyAP(entityID)
+
+    -- Check if we have enough AP to attack
+    if currentAP < config.attackAPCost then
+        -- Try to move closer or end turn
+        ExecuteChase()
+        return
+    end
+
+    -- Verify player is still in range
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    local playerX, playerY = GetEntityGridPosition(targetPlayerID)
+    local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
+
+    if distance > config.attackRange then
+        -- Player moved out of range, chase instead
+        currentState = STATE.CHASING
+        ExecuteChase()
+        return
+    end
+
+    -- Execute attack
+    Log("[EnemyScript] Enemy " .. entityID .. " attacks Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage!")
+
+    local success = DamageEntity(targetPlayerID, config.attackDamage)
+    if success then
+        -- Consume attack AP
+        ConsumeEnemyAP(entityID, config.attackAPCost)
+
+        -- Visual feedback
+        PulseTile(playerX, playerY, 0.3, 1.0, 0.0, 0.0)  -- Red pulse for damage
+    end
+
+    -- Check if we can still act
+    currentAP = currentAP - config.attackAPCost
+    if currentAP >= config.apCostPerMove then
+        -- We can still move, try to chase
+        ExecuteChase()
+    else
+        -- End turn
+        EndEnemyTurn(entityID)
+    end
+end
+
+function ExecuteChase()
+    local currentAP, maxAP = GetEnemyAP(entityID)
+
+    -- Get positions
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    local playerX, playerY = GetEntityGridPosition(targetPlayerID)
+
+    if not enemyX or not playerX then
+        EndEnemyTurn(entityID)
+        return
+    end
+
+    -- Check if we need to recalculate path
+    local needsNewPath = false
+    if #currentPath == 0 or pathIndex > #currentPath then
+        needsNewPath = true
+    elseif lastKnownPlayerX ~= playerX or lastKnownPlayerY ~= playerY then
+        turnsSincePathUpdate = turnsSincePathUpdate + 1
+        if turnsSincePathUpdate >= config.recalculatePathEveryNTurns then
+            needsNewPath = true
+            turnsSincePathUpdate = 0
+        end
+    end
+
+    -- Calculate path to player
+    if needsNewPath then
+        currentPath = FindPathToTarget(entityID, playerX, playerY)
+        pathIndex = 1
+        lastKnownPlayerX = playerX
+        lastKnownPlayerY = playerY
+
+        if not currentPath or #currentPath == 0 then
+            Log("[EnemyScript] Enemy " .. entityID .. " could not find path to player")
+            EndEnemyTurn(entityID)
+            return
+        end
+    end
+
+    -- Move along path
+    local movesMade = 0
+    while currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesMade < config.maxMovesPerTurn do
+        local nextTile = currentPath[pathIndex]
+
+        -- Validate tile is still walkable
+        if IsWalkableTile(nextTile.x, nextTile.y) then
+            local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
+
+            if success then
+                ConsumeEnemyAP(entityID, config.apCostPerMove)
+                currentAP = currentAP - config.apCostPerMove
+                movesMade = movesMade + 1
+                pathIndex = pathIndex + 1
+
+                -- Visual feedback
+                ShowTileBorder(nextTile.x, nextTile.y, 0.3)
+                PulseTile(nextTile.x, nextTile.y, 0.2, 1.0, 0.5, 0.0)  -- Orange pulse
+            else
+                -- Movement failed, recalculate path next turn
+                currentPath = {}
+                break
+            end
+        else
+            -- Tile became unwalkable, recalculate path
+            currentPath = {}
+            break
+        end
+    end
+
+    -- Check if we're now in attack range after moving
+    local newEnemyX, newEnemyY = GetEntityGridPosition(entityID)
+    local distance = CalculateDistance(newEnemyX, newEnemyY, playerX, playerY)
+
+    if distance <= config.attackRange and currentAP >= config.attackAPCost then
+        -- We reached attack range and have AP, attack!
+        currentState = STATE.ATTACKING
+        ExecuteAttack()
+    else
+        -- End turn
+        EndEnemyTurn(entityID)
+    end
+end
+
+function ExecuteFlee()
+    -- Move away from player
+    local currentAP, maxAP = GetEnemyAP(entityID)
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    local playerX, playerY = GetEntityGridPosition(targetPlayerID)
+
+    if not enemyX or not playerX then
+        EndEnemyTurn(entityID)
+        return
+    end
+
+    -- Calculate direction away from player
+    local deltaX = enemyX - playerX
+    local deltaY = enemyY - playerY
+
+    -- Try to move in opposite direction
+    local fleeX = enemyX
+    local fleeY = enemyY
+
+    if math.abs(deltaX) > math.abs(deltaY) then
+        -- Move horizontally away
+        fleeX = enemyX + (deltaX > 0 and 1 or -1)
+    else
+        -- Move vertically away
+        fleeY = enemyY + (deltaY > 0 and 1 or -1)
+    end
+
+    -- Attempt flee movement
+    if IsWalkableTile(fleeX, fleeY) and currentAP >= config.apCostPerMove then
+        local success = MoveEntityToTile(entityID, fleeX, fleeY)
+        if success then
+            ConsumeEnemyAP(entityID, config.apCostPerMove)
+            PulseTile(fleeX, fleeY, 0.2, 1.0, 1.0, 0.0)  -- Yellow pulse (fleeing)
+        end
+    end
+
+    EndEnemyTurn(entityID)
+end
+
+function ExecutePatrol()
+    -- Simple random movement
+    local currentAP, maxAP = GetEnemyAP(entityID)
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+
+    if currentAP < config.apCostPerMove then
+        EndEnemyTurn(entityID)
+        return
+    end
+
+    -- Pick random adjacent tile
+    local directions = {
+        {x = 1, y = 0},
+        {x = -1, y = 0},
+        {x = 0, y = 1},
+        {x = 0, y = -1}
+    }
+
+    local dir = directions[math.random(1, #directions)]
+    local newX = enemyX + dir.x
+    local newY = enemyY + dir.y
+
+    if IsWalkableTile(newX, newY) then
+        local success = MoveEntityToTile(entityID, newX, newY)
+        if success then
+            ConsumeEnemyAP(entityID, config.apCostPerMove)
+            PulseTile(newX, newY, 0.2, 0.5, 0.5, 1.0)  -- Blue pulse (patrol)
+        end
+    end
+
+    EndEnemyTurn(entityID)
+end
+
+-- ============================================================================
+-- HELPER FUNCTIONS
+-- ============================================================================
+
+function CalculateDistance(x1, y1, x2, y2)
+    -- Manhattan distance (grid-based)
+    return math.abs(x2 - x1) + math.abs(y2 - y1)
+end
+
+function GetEntityHP(entity)
+    -- TODO: Add GetEntityHP(entityID) API to LevelLoader
+    -- For now, check if it's the player
+    if entity == targetPlayerID then
+        local hp, maxHP = GetPlayerHP()
+        if hp and maxHP then
+            return hp, maxHP
+        end
+    end
+
+    -- Return default HP for enemies (assume full health for now)
+    -- This means flee behavior won't trigger until API is added
+    return 5, 5
+end
+
+-- ============================================================================
+-- CONFIGURATION API (Called from Level Scripts)
+-- ============================================================================
+
+function SetBehavior(behavior)
+    behaviorType = behavior
+    Log("[EnemyScript] Enemy " .. entityID .. " behavior set to: " .. behavior)
+end
+
+function SetAggression(range)
+    config.aggroRange = range
+end
+
+function SetAttackRange(range)
+    config.attackRange = range
+end
+
+function SetAttackDamage(damage)
+    config.attackDamage = damage
+end
+
+function SetMovementSpeed(tilesPerTurn)
+    config.maxMovesPerTurn = tilesPerTurn
+end
+
+-- ============================================================================
+-- Export behavior types for level scripts
+-- ============================================================================
+ENEMY_BEHAVIOR = BEHAVIOR

@@ -187,6 +187,30 @@ namespace Framework {
             return false;
         }
 
+        // When loading a Lua level from the editor, we need to handle two cases:
+        // 1. Fresh load from Open Level menu - editor mode ON, simulation OFF
+        // 2. Level transition while playing - editor mode ON, simulation ON (preserve playing state)
+        extern bool g_preservePlayingState;
+        
+        if (isEditorMode && coreEngine)
+        {
+            coreEngine->SetEditorMode(true);
+            
+            // If game was playing when transitioning, keep it playing
+            if (g_preservePlayingState) {
+                coreEngine->SetPlaying(true);
+                LOG_INFO("LevelLoader", "Preserving playing state for level transition");
+            } else {
+                coreEngine->SetPlaying(false);
+            }
+            
+            GlobalPause::SetPaused(false);
+            // Enable ImGui when loading in editor mode
+            if (coreEngine->GetImGuiSystem()) {
+                coreEngine->GetImGuiSystem()->Enable();
+            }
+        }
+
         lua_pushboolean(L, isEditorMode);
         lua_setglobal(L, "IS_EDITOR_LOAD");
 
@@ -196,6 +220,25 @@ namespace Framework {
             LOG_ERROR("LevelLoader", "Failed to load: %s", error);
             lua_pop(L, 1);
             return false;
+        }
+
+        // Re-enforce editor-load state in case the script ran top-level code that changed it.
+        if (isEditorMode && coreEngine)
+        {
+            coreEngine->SetEditorMode(true);
+            
+            // Preserve playing state if transitioning between levels while playing
+            if (g_preservePlayingState) {
+                coreEngine->SetPlaying(true);
+            } else {
+                coreEngine->SetPlaying(false);
+            }
+            
+            GlobalPause::SetPaused(false);
+            // Ensure ImGui stays enabled
+            if (coreEngine->GetImGuiSystem()) {
+                coreEngine->GetImGuiSystem()->Enable();
+            }
         }
 
         // Check required functions
@@ -222,6 +265,30 @@ namespace Framework {
             }
         }
 
+
+        if (isEditorMode && coreEngine)
+        {
+            coreEngine->SetEditorMode(true);
+            
+            // Preserve playing state if transitioning between levels while playing
+            if (g_preservePlayingState) {
+                coreEngine->SetPlaying(true);
+                LOG_INFO("LevelLoader", "Editor mode with playing state preserved");
+            } else {
+                coreEngine->SetPlaying(false);
+                LOG_INFO("LevelLoader", "Editor mode enabled - simulation stopped");
+            }
+            
+            GlobalPause::SetPaused(false);
+            // Final ensure ImGui is enabled after OnInit
+            if (coreEngine->GetImGuiSystem()) {
+                coreEngine->GetImGuiSystem()->Enable();
+            }
+            
+            // Reset the preserve playing state flag after use
+            g_preservePlayingState = false;
+        }
+
         // Mark as loaded
         levelLoaded = true;
         currentLevelPath = scriptPath;
@@ -238,6 +305,17 @@ namespace Framework {
         // Call OnDestroy() if it exists
         if (HasLuaFunction("OnDestroy")) {
             CallLuaFunction("OnDestroy");
+        }
+
+        // NEW: Clear entities that were spawned by the Lua level
+        if (coreEngine)
+        {
+            auto* em = coreEngine->GetEntityManager();
+            if (em)
+            {
+                em->ClearAllEntities();
+                em->ResetEntityIDCounter();
+            }
         }
 
         levelLoaded = false;
@@ -386,6 +464,8 @@ namespace Framework {
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
         lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
+        lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
+        lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
@@ -414,6 +494,7 @@ namespace Framework {
         lua_register(L, "IsValidGridPosition", Lua_IsValidGridPosition);
         lua_register(L, "IsWalkableTile", Lua_IsWalkableTile);
         lua_register(L, "MovePlayerToTile", Lua_MovePlayerToTile);
+        lua_register(L, "SetGridMovementEnabled", Lua_SetGridMovementEnabled);
         lua_register(L, "ShowTileBorder", Lua_ShowTileBorder);
         lua_register(L, "PulseTile", Lua_PulseTile);
         lua_register(L, "ConsumePlayerAP", Lua_ConsumePlayerAP);
@@ -437,8 +518,15 @@ namespace Framework {
 
         lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
         lua_register(L, "IsEditorMode", lua_IsEditorMode);
+        lua_register(L, "ShouldDisableGameplay", Lua_ShouldDisableGameplay);
 
-
+        // Save/Load API
+        lua_register(L, "SaveSceneToJSON", Lua_SaveSceneToJSON);
+        lua_register(L, "LoadSceneFromJSON", Lua_LoadSceneFromJSON);
+        lua_register(L, "AutoSaveScene", Lua_AutoSaveScene);
+        lua_register(L, "LoadAutoSave", Lua_LoadAutoSave);
+        lua_register(L, "HasAutoSave", Lua_HasAutoSave);
+        lua_register(L, "ClearAutoSave", Lua_ClearAutoSave);
 
         LOG_INFO("LevelLoader", "API registered");
     }
@@ -514,6 +602,23 @@ namespace Framework {
 
     int LevelLoader::Lua_SetNextGameState(lua_State* L) {
         const char* stateName = luaL_checkstring(L, 1);
+
+        // Check if ImGui is currently enabled - if so, preserve editor mode for next level
+        LevelLoader* loader = GetLevelLoader(L);
+        if (loader && loader->coreEngine) {
+            auto* imgui = loader->coreEngine->GetImGuiSystem();
+            if (imgui && imgui->IsEnabled()) {
+                extern bool g_loadAsEditorMode;
+                g_loadAsEditorMode = true;
+                LOG_INFO("LevelLoader", "ImGui enabled - next level will load in editor mode");
+            }
+            // Check if game is currently playing - preserve this state for next level
+            if (loader->coreEngine->IsPlaying()) {
+                extern bool g_preservePlayingState;
+                g_preservePlayingState = true;
+                LOG_INFO("LevelLoader", "Game is playing - next level will start in playing state");
+            }
+        }
 
         // Map state names to enum values
         if (strcmp(stateName, "Level_select") == 0) {

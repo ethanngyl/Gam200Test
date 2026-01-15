@@ -181,6 +181,8 @@ namespace Framework {
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);
         static int Lua_SetSpriteVisibility(lua_State* L);
+        static int Lua_SetSpriteBlendMode(lua_State* L);
+        static int Lua_SetSpriteFilterMode(lua_State* L);
         static int Lua_DestroyEntity(lua_State* L);
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
@@ -207,6 +209,7 @@ namespace Framework {
         static int Lua_EndPlayerTurn(lua_State* L);
         static int Lua_EndEnemyTurn(lua_State* L);
         static int Lua_SetPlayerFlipX(lua_State* L);
+        static int Lua_SetGridMovementEnabled(lua_State* L);
         static int Lua_HasChestAtTile(lua_State* L);
         static int Lua_CollectChest(lua_State* L);
         static int Lua_HasGoalAtTile(lua_State* L);
@@ -226,6 +229,15 @@ namespace Framework {
 
         static int lua_ToggleEditorMode(lua_State* L);
         static int lua_IsEditorMode(lua_State* L);
+        static int Lua_ShouldDisableGameplay(lua_State* L);
+
+        // Save/Load API
+        static int Lua_SaveSceneToJSON(lua_State* L);
+        static int Lua_LoadSceneFromJSON(lua_State* L);
+        static int Lua_AutoSaveScene(lua_State* L);
+        static int Lua_LoadAutoSave(lua_State* L);
+        static int Lua_HasAutoSave(lua_State* L);
+        static int Lua_ClearAutoSave(lua_State* L);
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

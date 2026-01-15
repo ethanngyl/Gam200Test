@@ -99,4 +99,25 @@ namespace Framework {
     void Texture::Unbind() const {
         glBindTexture(GL_TEXTURE_2D, 0);
     }
+
+    /*
+    ------------------------------------------------------------------------------
+    SetFilterMode: Changes the texture filtering mode to prevent artifacts.
+    ------------------------------------------------------------------------------
+    */
+    void Texture::SetFilterMode(bool useNearest) {
+        glBindTexture(GL_TEXTURE_2D, id);
+
+        if (useNearest) {
+            // Pixel-perfect rendering (no interpolation) - best for pixel art/UI
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        } else {
+            // Smooth rendering with mipmaps - best for 3D textures
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        }
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }

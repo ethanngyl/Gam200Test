@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Precompiled.h"
 /*
 ===============================================================================
@@ -89,6 +89,9 @@ namespace Framework {
         int GetWidth() const { return windowWidth; }
         int GetHeight() const { return windowHeight; }
         std::string GetTitle() const { return windowTitle; }
+
+        // jiahao
+		void SetFullScreen(bool isFullscreen);
 
     private:
         GLFWwindow* window;         // Pointer to GLFW window instance

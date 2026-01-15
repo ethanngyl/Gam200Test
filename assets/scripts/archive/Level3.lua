@@ -153,7 +153,13 @@ function OnInit()
     end
 
     -- Set engine to playing state (required for physics/movement)
-    SetEnginePlayState(true)  -- Game level should be in playing state
+    if IS_EDITOR_LOAD then
+        -- Loaded inside editor: do not start simulation automatically
+        SetEnginePlayState(false)
+    else
+        -- Normal runtime load: start simulation
+        SetEnginePlayState(true)
+    end  -- Game level should be in playing state
 
     -- Load the tilemap from JSON
     -- Parameters: LoadTileMap(jsonPath, startX, startY, spacingX, spacingY)

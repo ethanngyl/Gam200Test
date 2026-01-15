@@ -20,6 +20,7 @@
 #include "Precompiled.h"
 #include "LevelLoader.h"
 #include "TimeConstants.h"
+#include "ImguiSystem.h"  // For GSM_SetNextState to check ImGui state
 
 // Level 3 Lua-specific includes
 #include "PlayerManager.h"
@@ -40,6 +41,12 @@ FP fpUpdate = nullptr;
 FP fpDraw = nullptr;
 FP fpFree = nullptr;
 FP fpUnload = nullptr;
+
+// Flag to indicate if the next level should be loaded in editor mode
+bool g_loadAsEditorMode = false;
+
+// Flag to indicate if the game was playing when transitioning to next level
+bool g_preservePlayingState = false;
 
 // ============================================================================
 // GSM FUNCTIONS
@@ -72,7 +79,8 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/MainMenuLevel.lua");
+            bool success = loader.LoadLevel("assets/scripts/MainMenuLevel.lua", g_loadAsEditorMode);
+            g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load MainMenu Lua script!");
@@ -167,7 +175,8 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading LevelSelect Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/LevelSelectLevel.lua");
+            bool success = loader.LoadLevel("assets/scripts/LevelSelectLevel.lua", g_loadAsEditorMode);
+            g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load LevelSelect Lua script!");
@@ -255,10 +264,11 @@ void GSM_Update()
     case LEVEL_2:
         // Use LevelLoader to load Level2.lua
         fpLoad = []() {
-            Framework::LevelLoader::GetInstance().LoadLevel(
+                Framework::LevelLoader::GetInstance().LoadLevel(
                 "assets/scripts/Level2.lua",
-                false  // isEditorMode = false
+                g_loadAsEditorMode
             );
+            g_loadAsEditorMode = false;  // Reset flag after use
             };
         fpInitialize = []() {}; // LevelLoader handles init via OnInit()
         fpUpdate = []() {
@@ -287,11 +297,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Level3 Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/Level3.lua");
+            bool success = loader.LoadLevel("assets/scripts/Level3Clean.lua", g_loadAsEditorMode);
+            g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Level3 Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/Level3.lua exists");
+                LOG_ERROR("GSM", "Check: assets/scripts/Level3Clean.lua exists");
                 next = GS_QUIT;
             }
             else {
@@ -495,7 +506,8 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Tutorial Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/TutorialLevel.lua");
+            bool success = loader.LoadLevel("assets/scripts/TutorialLevel.lua", g_loadAsEditorMode);
+            g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Tutorial Lua script!");
@@ -590,7 +602,8 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/EndLevel.lua");
+            bool success = loader.LoadLevel("assets/scripts/EndLevel.lua", g_loadAsEditorMode);
+            g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load MainMenu Lua script!");
@@ -692,4 +705,24 @@ void GSM_Update()
         fpUnload = nullptr;
         break;
     }
+}
+
+/**
+ * @brief Set the next game state, preserving editor mode if ImGui is enabled
+ */
+void GSM_SetNextState(int nextState) {
+    // Check if ImGui is currently enabled
+    if (Framework::CORE) {
+        auto* imgui = Framework::CORE->GetImGuiSystem();
+        if (imgui && imgui->IsEnabled()) {
+            g_loadAsEditorMode = true;
+            LOG_INFO("GSM", "ImGui enabled - next level will load in editor mode");
+        }
+        // Check if game is currently playing - preserve this state for next level
+        if (Framework::CORE->IsPlaying()) {
+            g_preservePlayingState = true;
+            LOG_INFO("GSM", "Game is playing - next level will start in playing state");
+        }
+    }
+    next = nextState;
 }
