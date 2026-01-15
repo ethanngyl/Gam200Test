@@ -301,7 +301,7 @@ void CollisionSystem::CheckECSCollisions()
 // Clear current test and unlock mode selection
 void CollisionSystem::clearScene()
 {
-    // Logically “despawn”: flip flags; objects will be rebuilt by setupScene().
+    // Logically despawn: flip flags; objects will be rebuilt by setupScene().
     mode = CollTest::None;
     sceneReady = false;
     collidedLastFrame = false;

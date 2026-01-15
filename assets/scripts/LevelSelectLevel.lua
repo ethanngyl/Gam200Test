@@ -75,9 +75,9 @@ function OnInit()
     )
 
     if backgroundSpriteID > 0 then
-        Log("✓ Background sprite created (ID: " .. backgroundSpriteID .. ")")
+        Log("Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
-        Log("✗ WARNING: Failed to create background sprite")
+        Log("WARNING: Failed to create background sprite")
     end
 
     -- ========================================================================
@@ -97,9 +97,9 @@ function OnInit()
         )
 
         if logoSpriteID > 0 then
-            Log("✓ Logo sprite created (ID: " .. logoSpriteID .. ")")
+            Log("Logo sprite created (ID: " .. logoSpriteID .. ")")
         else
-            Log("✗ WARNING: Failed to create logo sprite")
+            Log("WARNING: Failed to create logo sprite")
         end
     else
         Log("No logo configuration found in JSON")
@@ -124,9 +124,9 @@ function OnInit()
 
             if spriteID > 0 then
                 cornerSpriteIDs[corner.id] = spriteID
-                Log("  ✓ Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. "°)")
+                Log("  Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. " degrees)")
             else
-                Log("  ✗ FAILED to create corner sprite: " .. corner.id)
+                Log("  FAILED to create corner sprite: " .. corner.id)
             end
         end
 
