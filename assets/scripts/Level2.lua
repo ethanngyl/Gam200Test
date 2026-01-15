@@ -30,7 +30,7 @@ local function SafeSwitchLevel(targetLevel, levelName)
     
     -- Exit editor mode if active
     if IsEditorMode() then
-        Log("⚠ Currently in editor mode - exiting before level switch")
+        Log("WARNING: Currently in editor mode - exiting before level switch")
         ToggleEditorMode()          -- Exit editor mode
         SetEnginePlayState(true)    -- Restore game state
         Log(" Editor mode exited")

@@ -1,5 +1,5 @@
 ﻿#include "Precompiled.h"
-#include "ConfigReader/ConfigReader.h"  // 使用优化版 ConfigReader
+#include "ConfigReader/ConfigReader.h"  // Using optimized ConfigReader
 
 /*
 ===============================================================================
@@ -83,7 +83,7 @@ namespace Framework
     */
     void WindowSystem::Initialize()
     {
-        std::cout << "WindowSystem: Initializing...\n";
+        // WindowSystem initializing
         static bool alreadyInitialized = false;
         if (alreadyInitialized) return;
         alreadyInitialized = true;
@@ -113,13 +113,7 @@ namespace Framework
 
         WindowOpen = true;
 
-        // Output confirmation
-        std::cout << "WindowSystem: Window created! Press 'q' + Enter to quit.\n";
-        std::cout << "WindowSystem: Size: " << windowWidth << "x" << windowHeight << "\n";
-        std::cout << "WindowSystem: Title: " << windowTitle << "\n";
-        if (fullscreen) {
-            std::cout << "WindowSystem: Fullscreen mode enabled\n";
-        }
+        // Window created successfully
     }
 
     /*

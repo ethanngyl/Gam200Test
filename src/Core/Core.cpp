@@ -349,7 +349,7 @@ namespace Framework
             audioSystem->StopAllSounds();
         }
 
-        // ⭐ 关闭并删除 ScriptSystem（单独管理）
+        // Close and delete ScriptSystem (managed separately)
         if (scriptSystem) {
             LOG_INFO("CORE", "Shutting down ScriptSystem...");
             scriptSystem->Shutdown();

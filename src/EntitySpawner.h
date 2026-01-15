@@ -200,12 +200,12 @@ namespace Framework {
             //   based on the sprite name provided.
             //
             //   Implementation Details:
-            //   • Uses GraphicsSystemV2::AssignMeshAndMaterial() to assign the correct
+            //   - Uses GraphicsSystemV2::AssignMeshAndMaterial() to assign the correct
             //     mesh-material pair to the entity's MeshRenderer component.
-            //   • Creates a shallow clone of the base material for each entity, ensuring
+            //   - Creates a shallow clone of the base material for each entity, ensuring
             //     that material properties (tint, texture, shader uniforms) are not shared
             //     between entities.
-            //   • This prevents side effects where changing one material (e.g. tint or UVs)
+            //   - This prevents side effects where changing one material (e.g. tint or UVs)
             //     unintentionally affects all other entities using the same base material.
             //
             //   Key Features:
