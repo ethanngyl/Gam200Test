@@ -219,6 +219,7 @@ namespace Framework {
         void ShowSpawnerWindow();
         void ShowDebugWindow();
         void ShowDemoWindow();
+        void ShowFPSOverlay();
 
         // ========================================================================
         // ADDED: DockSpace setup function

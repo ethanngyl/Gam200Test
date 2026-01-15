@@ -1170,6 +1170,9 @@ namespace Framework {
         ShowScriptBrowserPopup();
         ShowLevelBrowserPopup();
         if (showGameViewport) ShowGameViewport();
+        
+        // Show FPS overlay in corner
+        ShowFPSOverlay();
     }
 
     void ImGuiSystem::Render()
@@ -2715,6 +2718,53 @@ namespace Framework {
         ImGui::End();
     }
 
+    void ImGuiSystem::ShowFPSOverlay()
+    {
+        // Set window flags for overlay: no title bar, no resize, always on top, no background
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration 
+            | ImGuiWindowFlags_AlwaysAutoResize 
+            | ImGuiWindowFlags_NoSavedSettings 
+            | ImGuiWindowFlags_NoFocusOnAppearing 
+            | ImGuiWindowFlags_NoNav
+            | ImGuiWindowFlags_NoMove;
+
+        // Position in top-right corner with padding
+        const float PAD = 10.0f;
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu bar
+        ImVec2 work_size = viewport->WorkSize;
+        ImVec2 window_pos, window_pos_pivot;
+        window_pos.x = work_pos.x + work_size.x - PAD;
+        window_pos.y = work_pos.y + PAD;
+        window_pos_pivot.x = 1.0f;
+        window_pos_pivot.y = 0.0f;
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+        ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+
+        // Calculate FPS
+        float fps = 1.0f / (frameTime + 0.001f);
+        float msPerFrame = frameTime * 1000.0f;
+
+        if (ImGui::Begin("FPS Overlay", nullptr, window_flags))
+        {
+            // Color code based on FPS performance
+            ImVec4 fpsColor;
+            if (fps >= 60.0f) {
+                fpsColor = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // Green for 60+ FPS
+            }
+            else if (fps >= 30.0f) {
+                fpsColor = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for 30-60 FPS
+            }
+            else {
+                fpsColor = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // Red for <30 FPS
+            }
+
+            ImGui::TextColored(fpsColor, "%.1f FPS", fps);
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "%.2f ms", msPerFrame);
+        }
+        ImGui::End();
+    }
+
     // ============================================================================
     //
     // This is the function that allows picking/selecting game objects in editor mode
@@ -4020,17 +4070,21 @@ namespace Framework {
     }
 
     int ImGuiSystem::GetGameStateFromLevelName(const std::string& levelName) {
+        // Convert to lowercase for case-insensitive matching
+        std::string lowerName = levelName;
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
         // MainMenu
-        if (levelName.find("MainMenu") != std::string::npos) {
+        if (lowerName.find("mainmenu") != std::string::npos) {
             return mainMenu;
         }
 
         // LevelSelect
-        if (levelName.find("LevelSelect") != std::string::npos) {
+        if (lowerName.find("levelselect") != std::string::npos) {
             return Level_select;
         }
 
-        // Level1, Level2, Level3...
+        // Try regex first for exact match (Level1.lua, Level2.lua, Level3.lua)
         std::regex levelRegex(R"(Level(\d+)\.lua)");
         std::smatch match;
 
@@ -4039,11 +4093,24 @@ namespace Framework {
 
             switch (levelNum) {
             case 2: return LEVEL_2;
-            case 3: return LEVEL_2;
+            case 3: return LEVEL_3;
             default:
                 LOG_WARN("ImGuiSystem", "Unknown level number: %d", levelNum);
                 return -1;
             }
+        }
+
+        // If regex fails, try string search for variants like Level3Clean.lua
+        if (lowerName.find("level3") != std::string::npos) {
+            return LEVEL_3;
+        }
+        if (lowerName.find("level2") != std::string::npos) {
+            return LEVEL_2;
+        }
+        if (lowerName.find("level1") != std::string::npos) {
+            // Assuming LEVEL_1 exists, otherwise return -1
+            LOG_WARN("ImGuiSystem", "Level1 detected but no game state defined");
+            return -1;
         }
 
         LOG_ERROR("ImGuiSystem", "Failed to parse level name: %s", levelName.c_str());
