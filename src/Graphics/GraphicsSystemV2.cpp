@@ -1143,6 +1143,23 @@ namespace Framework {
             break;
         }
 
+        // Set alpha discard flag based on blend mode
+        // Opaque mode: don't discard pixels based on alpha (render everything including black)
+        // Other modes: discard transparent pixels for proper alpha blending
+        GLint alphaDiscardLoc = glGetUniformLocation(shader->GetID(), "uUseAlphaDiscard");
+        if (alphaDiscardLoc != -1) {
+            bool useAlphaDiscard = (material->blendMode != BlendMode::Opaque);
+            glUniform1i(alphaDiscardLoc, useAlphaDiscard ? 1 : 0);
+        }
+
+        // Set force opaque alpha flag
+        // When true, ignores texture alpha channel and forces all pixels to alpha=1.0
+        // This fixes black pixels with alpha=0 in PNG files
+        GLint forceOpaqueAlphaLoc = glGetUniformLocation(shader->GetID(), "uForceOpaqueAlpha");
+        if (forceOpaqueAlphaLoc != -1) {
+            glUniform1i(forceOpaqueAlphaLoc, material->forceOpaqueAlpha ? 1 : 0);
+        }
+
         // Set depth test
         if (material->depthTest) {
             glEnable(GL_DEPTH_TEST);

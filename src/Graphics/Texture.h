@@ -68,6 +68,16 @@ namespace Framework {
         // Unbind: Unbinds the currently bound texture from the active texture unit.
         void Unbind() const;
 
+        /*
+        ------------------------------------------------------------------------------
+        SetFilterMode: Changes texture filtering mode.
+        @param useNearest If true, uses GL_NEAREST (pixel-perfect, no filtering).
+                         If false, uses GL_LINEAR (smooth filtering).
+        Use GL_NEAREST for pixel art and UI to avoid filtering artifacts.
+        ------------------------------------------------------------------------------
+        */
+        void SetFilterMode(bool useNearest);
+
         // GetID: Returns the OpenGL texture object ID.
         unsigned GetID() const { return id; }
 
