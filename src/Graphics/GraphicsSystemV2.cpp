@@ -793,13 +793,13 @@ namespace Framework {
             //   This section handles per-entity transformation and sprite sheet UV
             //   animation logic within the rendering pipeline.
             //
-            //   • Transformation Block
+            //   - Transformation Block
             //     Converts ECS Transform component data (position, rotation, scale) into a
             //     model matrix used by the GPU for world-space rendering.
             //     Each entity receives its own transform, enabling independent movement
             //     and scaling across the scene.
             //
-            //   • UV Animation Block
+            //   - UV Animation Block
             //     Computes UV coordinates for the active animation frame defined by
             //     SpriteAnimation. It divides the sprite sheet into frame-sized cells and
             //     dynamically adjusts UVs each frame, also supporting horizontal flipping.

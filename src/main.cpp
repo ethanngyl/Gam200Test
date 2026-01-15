@@ -137,30 +137,25 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
         // ===============================================================================
         if (current != GS_RESTART)
         {
-            LOG_INFO("CORE", "[GSM] Transitioning to state: %d", current);
             GSM_Update();
 
             if (fpLoad) {
-                LOG_INFO("CORE", "[GSM] Load phase...");
                 fpLoad();
             }
         }
         else
         {
-            LOG_INFO("CORE", "[GSM] Restarting state: %d", previous);
             next = previous;
             current = previous;
         }
 
         if (fpInitialize) {
-            LOG_INFO("CORE", "[GSM] Initialize phase...");
             fpInitialize();
         }
 
         // ===============================================================================
         // STATE LOOP
         // ===============================================================================
-        LOG_INFO("CORE", "[GSM] Entering state loop...");
 
         while (next == current)
         {
