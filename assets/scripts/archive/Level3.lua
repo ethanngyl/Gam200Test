@@ -242,7 +242,7 @@ function OnInit()
             if success then
                 Log("   Enemy " .. enemyID .. " configured to chase Player " .. playerID)
             else
-                Log("  ✗ FAILED to configure Enemy " .. enemyID)
+                Log("  FAILED to configure Enemy " .. enemyID)
             end
         end
     end
@@ -261,7 +261,7 @@ function OnInit()
         Log("   PlayerScript.lua attached successfully")
         Log("  Player movement now handled by Lua script")
     else
-        Log("  ✗ FAILED to attach PlayerScript.lua")
+        Log("  FAILED to attach PlayerScript.lua")
         Log("  Player will use C++ PlayerController instead")
     end
 
@@ -276,7 +276,7 @@ function OnInit()
             if enemyScriptSuccess then
                 Log("   Enemy " .. enemyID .. " - EnemyScript.lua attached")
             else
-                Log("  ✗ Enemy " .. enemyID .. " - FAILED to attach script")
+                Log("  Enemy " .. enemyID .. " - FAILED to attach script")
             end
         end
         Log("  All enemies now use Lua pathfinding AI")
@@ -318,7 +318,7 @@ function OnInit()
             apIndicatorsEmpty[i] = entityID
             Log("   Empty crystal " .. i .. " (ID: " .. entityID .. ")")
         else
-            Log("  ✗ FAILED to create empty crystal " .. i)
+            Log("  FAILED to create empty crystal " .. i)
         end
     end
 
@@ -341,7 +341,7 @@ function OnInit()
             apIndicatorsFilled[i] = entityID
             Log("   Filled crystal " .. i .. " (ID: " .. entityID .. ")")
         else
-            Log("  ✗ FAILED to create filled crystal " .. i)
+            Log("  FAILED to create filled crystal " .. i)
         end
     end
 
@@ -379,7 +379,7 @@ function OnInit()
             Log("   Empty Attack AP " .. i .. " (ID: " .. entityID .. ")")
         else
             atkIndicatorsEmpty[i] = 0
-            Log("  ✗ FAILED to create empty Attack AP " .. i)
+            Log("  FAILED to create empty Attack AP " .. i)
         end
     end
 
@@ -400,7 +400,7 @@ function OnInit()
             Log("   Filled Attack AP " .. i .. " (ID: " .. entityID .. ")")
         else
             atkIndicatorsFilled[i] = 0
-            Log("  ✗ FAILED to create filled Attack AP " .. i)
+            Log("  FAILED to create filled Attack AP " .. i)
         end
     end
 
@@ -689,7 +689,7 @@ function OnUpdate(dt)
                         apIndicatorsFilled[i] = entityID
                         Log("  Created filled crystal #" .. i .. " (ID: " .. entityID .. ")")
                     else
-                        Log("  ✗ FAILED to create filled crystal #" .. i)
+                        Log("  FAILED to create filled crystal #" .. i)
                     end
                 end
             end
@@ -835,7 +835,7 @@ function OnUpdate(dt)
                         atkIndicatorsFilled[i] = entityID
                         Log("  Created Attack AP crystal #" .. i .. " (ID: " .. entityID .. ")")
                     else
-                        Log("  ✗ FAILED to create Attack AP crystal #" .. i)
+                        Log("  FAILED to create Attack AP crystal #" .. i)
                     end
                 end
             end

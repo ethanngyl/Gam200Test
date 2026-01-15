@@ -219,6 +219,7 @@ namespace Framework {
         void ShowSpawnerWindow();
         void ShowDebugWindow();
         void ShowDemoWindow();
+        void ShowFPSOverlay();
 
         // ========================================================================
         // ADDED: DockSpace setup function
@@ -303,6 +304,7 @@ namespace Framework {
         std::string selectedPrefabPath;
 
         bool enabled;
+        bool lastEnabledState = false;  // Track previous enabled state to avoid forcing fullscreen every frame
 
         bool imguiInitialized = false;  // Track if ImGui was successfully initialized
 

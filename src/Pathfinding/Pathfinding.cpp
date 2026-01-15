@@ -50,7 +50,7 @@ namespace Framework {
      * Called once during system startup. Currently logs initialization status.
      */
     void PathfindingSystem::Initialize() {
-        std::cout << "[PathfindingSystem] Initialized\n";
+        // PathfindingSystem initialized
     }
 
     /**
@@ -92,8 +92,6 @@ namespace Framework {
 
         // Check if this is a NEW enemy turn (regenerate AP for all enemies)
         if (globalTurn.turnIndex > lastEnemyTurnIndex) {
-            LOG_INFO("EnemyTurn", "=== NEW ENEMY TURN #%llu - Regenerating AP ===", globalTurn.turnIndex);
-
             for (Entity entity : entityManager->GetAllEntities()) {
                 if (entityManager->HasComponent<EnemyAI>(entity) &&
                     entityManager->HasComponent<Health>(entity)  && 
@@ -106,7 +104,6 @@ namespace Framework {
 
                     // Regenerate AP
                     stats.actionPoints = stats.maxActionPoints;
-                    LOG_INFO("EnemyTurn", "Enemy %u AP refilled to %d", entity.GetID(), stats.actionPoints);
                 }
             }
 
@@ -144,7 +141,6 @@ namespace Framework {
         // Check if current enemy finished their turn
         if (currentEnemyIndex >= livingEnemies.size()) {
             // All enemies done, end turn
-            LOG_INFO("EnemyTurn", "=== ALL %zu ENEMIES FINISHED - ENDING TURN ===", livingEnemies.size());
             EndEnemyTurn();
             currentEnemyIndex = 0;
             needsReset = true;
@@ -160,7 +156,6 @@ namespace Framework {
 
         // Check if this enemy has AP left
         if (stats.actionPoints <= 0) {
-            LOG_INFO("EnemyTurn", "Enemy %u out of AP, moving to next enemy", currentEnemy.GetID());
             currentEnemyIndex++;  // Move to next enemy
             return;
         }
@@ -220,9 +215,6 @@ namespace Framework {
             stats.actionPoints--;
             ai.moveTimer = ai.moveDelay;
 
-            LOG_INFO("EnemyAI", "Enemy %u ATTACKS target! AP left: %d",
-                currentEnemy.GetID(), stats.actionPoints);
-
             // Deal damage to target
             if (entityManager->HasComponent<Health>(ai.targetEntity)) {
                 auto& targetHp = entityManager->GetComponent<Health>(ai.targetEntity);
@@ -235,7 +227,7 @@ namespace Framework {
                     audioSystem->PlaySound("takedmg", false);  // Play take damage sound
                 }
 
-                LOG_INFO("Combat", "Target hit! HP: %d", targetHp.currentHealth);
+                // Target hit
 
                 if (targetHp.currentHealth <= 0) {                                              
                     targetHp.currentHealth = 0;                                                 
@@ -255,9 +247,6 @@ namespace Framework {
         // ========================================================================
         // PATHFINDING: Calculate path to target
         // ========================================================================
-        LOG_INFO("EnemyAI", "Enemy %u calculating path from (%d,%d) to (%d,%d)",
-            currentEnemy.GetID(), enemyTile.x, enemyTile.y, targetTile.x, targetTile.y);
-
         ai.currentPath = FindPath(enemyTile, targetTile, grid);
 
         if (ai.currentPath.empty()) {
@@ -275,8 +264,7 @@ namespace Framework {
             ai.pathIndex = 0;
         }
 
-        LOG_INFO("EnemyAI", "Enemy %u: Path found with %zu tiles",
-            currentEnemy.GetID(), ai.currentPath.size());
+        // Path found
 
         // ========================================================================
         // MOVEMENT: Move to next tile in path
@@ -317,13 +305,10 @@ namespace Framework {
             ai.pathIndex++;
             stats.actionPoints--;
 
-            LOG_INFO("EnemyAI", "Enemy %u moved from (%d,%d) to (%d,%d). AP: %d/%d",
-                currentEnemy.GetID(), enemyTile.x, enemyTile.y, nextTile.x, nextTile.y,
-                stats.actionPoints, stats.maxActionPoints);
+            // Enemy moved
 
             // If out of AP, move to next enemy
             if (stats.actionPoints <= 0) {
-                LOG_INFO("EnemyAI", "Enemy %u finished turn, moving to next enemy", currentEnemy.GetID());
                 currentEnemyIndex++;
             }
         }
@@ -547,19 +532,19 @@ namespace Framework {
     {
         // Validate inputs
         if (!entityManager || !entitySpawner) {
-            std::cout << "[Pathfinding] Error: EntityManager or EntitySpawner is null!\n";
+            // Error: EntityManager or EntitySpawner is null
             return Entity{ INVALID_ENTITY };
         }
 
         if (!entityManager->HasComponent<Transform>(playerEntity)) {
-            std::cout << "[Pathfinding] Error: Player entity has no Transform component!\n";
+            // Error: Player entity has no Transform component
             return Entity{ INVALID_ENTITY };
         }
 
         // Get grid
         const Grid& grid = GetGrid();
         if (grid.cols <= 0 || grid.rows <= 0) {
-            std::cout << "[Pathfinding] Error: Grid not initialized!\n";
+            // Error: Grid not initialized
             return Entity{ INVALID_ENTITY };
         }
 
@@ -568,12 +553,12 @@ namespace Framework {
         auto playerTileOpt = WorldToTile(playerTransform.position);
 
         if (!playerTileOpt.has_value()) {
-            std::cout << "[Pathfinding] Error: Player is not on a valid grid tile!\n";
+            // Error: Player is not on a valid grid tile
             return Entity{ INVALID_ENTITY };
         }
 
         GridCoord playerTile = *playerTileOpt;
-        std::cout << "[Pathfinding] Player at tile (" << playerTile.x << "," << playerTile.y << ")\n";
+        // Player tile position retrieved
 
         // Find the furthest walkable tile from the player
         int maxDistance = -1;
@@ -602,12 +587,11 @@ namespace Framework {
 
         // Check if we found any valid tile
         if (!foundValidTile || maxDistance < 0) {
-            std::cout << "[Pathfinding] Error: No walkable tiles found on grid!\n";
+            // Error: No walkable tiles found on grid
             return Entity{ INVALID_ENTITY };
         }
 
-        std::cout << "[Pathfinding] Furthest tile: (" << furthestTile.x << "," << furthestTile.y
-            << ") at distance " << maxDistance << "\n";
+        // Furthest tile found
 
         // Convert tile coordinate to world position
         Vector2D spawnPos = TileToWorld(furthestTile);
@@ -629,8 +613,7 @@ namespace Framework {
         // Mark the tile as occupied
         SetOccupant(furthestTile, enemy);
 
-        std::cout << "[Pathfinding] Successfully spawned enemy at tile ("
-            << furthestTile.x << "," << furthestTile.y << ") - will pathfind to player\n";
+        // Enemy spawned successfully
 
         return enemy;
     }

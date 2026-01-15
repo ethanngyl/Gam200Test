@@ -17,7 +17,7 @@ drag–drop, asset browser) to ECS and subsystems.
 Responsibilities:
 - Initialize/Shutdown ImGui (context, backends) and per-frame begin/end.
 - Render main menu bar (File/Windows/Editor) and windows:
-  • Entity Inspector, Spawner ,Debug Info ,ImGui Demo ,Assets Browser.
+  - Entity Inspector, Spawner, Debug Info, ImGui Demo, Assets Browser.
 - Level I/O: Open/Save/Save-As of simple TXT format (Transform/Sprite/Colliders).
 - File Drag-and-Drop: load txt file as level, spawn sprites for image files
 - Editor controls: Play/Stop toggle, default level caching & reload.
@@ -33,8 +33,8 @@ Controls for:
 - Assets Browser: double-click texture to spawn at origin; drag filename to future
   drop targets; click “<” to go up one folder
 - OS Drag-&-Drop onto window:
-  • .txt  load level (clears scene if requested
-  • .png, .jpg, .jpeg  spawn sprite
+  - .txt  load level (clears scene if requested
+  - .png, .jpg, .jpeg  spawn sprite
 
 Notes:
 
@@ -60,6 +60,9 @@ namespace Framework {
 
     static bool wantOpenModal = false;
     static bool wantSaveAsModal = false;
+    static bool wantOpenSceneModal = false;
+    static bool wantSaveSceneAsModal = false;
+    static std::string currentScenePath = "";
 
     static int GetGsmStateFromLuaName(const std::string& lowerName) {
         if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
@@ -83,6 +86,7 @@ namespace Framework {
         , showSpawner(true)
         , showDebug(true)
         , enabled(false)
+        , lastEnabledState(false)
         , frameTime(0.0f)
         , entityCount(0)
         , showAssets(true)
@@ -99,15 +103,11 @@ namespace Framework {
     {
         // Prevent double shutdown
         if (!imguiInitialized) {
-            std::cout << "[ImGui] Already shutdown or never initialized - skipping\n";
             return;
         }
 
-        std::cout << "[ImGui] Shutting down...\n";
-
         // Stop all audio if audio system exists
         if (audioSystem) {
-            std::cout << "[ImGui] Stopping all audio...\n";
             audioSystem->StopAllSounds();
         }
 
@@ -117,7 +117,6 @@ namespace Framework {
         DeleteViewportFramebuffer();
 
         imguiInitialized = false;  // Mark as shutdown
-        std::cout << "[ImGui] Shutdown complete\n";
     }
 
     ImGuiSystem::~ImGuiSystem()
@@ -128,7 +127,6 @@ namespace Framework {
     void ImGuiSystem::Initialize()
     {
         if (!window) {
-            std::cout << "[ImGui] Error: Window not set!\n";
             imguiInitialized = false;
             return;
         }
@@ -153,11 +151,8 @@ namespace Framework {
         CreateViewportFramebuffer(1280, 720);
         showGameViewport = true;
         renderToViewport = true;
-        std::cout << "[ImGuiSystem] Viewport ready - FBO: " << viewportFBO
-            << ", Texture: " << viewportTexture << "\n";
 
         imguiInitialized = true;  // Mark as successfully initialized
-        std::cout << "[ImGui] Initialization complete\n";
     }
 
 	
@@ -169,7 +164,7 @@ namespace Framework {
 
         // this is to declare a input file stream called readFile and open the file
         std::ifstream readFile(file);
-
+        
         // check if the file is open, display error message if not
         if (!readFile.is_open()) {
             std::cerr << "[ImGuiError] Could not open file for reading: " << file << "\n";
@@ -637,8 +632,7 @@ namespace Framework {
 
                             RecordCreationStep(entity);//Record the creation for Undo
 
-                            std::cout << "[Drop] Spawned sprite from: " << filePath
-                                << " as entity" << entity.id << "\n";
+                            // Spawned sprite from dropped file
                         }
                     }
                 }
@@ -670,7 +664,7 @@ namespace Framework {
             //         - Drag-and-drop exposes a "Prefab" payload for drop zones
             // author: Sim Kah Yan 
             // ============================================================================
-            if (path.extension() == ".prefab" || path.extension() == ".json") {
+            if (path.extension() == ".prefab") {
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Double-click to spawn prefab\nDrag to drop zone");
 
@@ -680,8 +674,7 @@ namespace Framework {
                         Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, prefabPath);
 
                         if (newEntity.IsValid()) {
-                            std::cout << "[Assets] Spawned prefab: " << label
-                                << " as entity " << newEntity.GetID() << "\n";
+                            // Prefab spawned from assets
                         }
                     }
                 }
@@ -692,6 +685,30 @@ namespace Framework {
                     ImGui::SetDragDropPayload("Prefab", prefabPath.c_str(), prefabPath.size() + 1);
                     ImGui::Text("Prefab: %s", label.c_str());
                     ImGui::EndDragDropSource();
+                }
+            }
+
+            if (path.extension() == ".json")
+            {
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::SetTooltip("Double-click to load scene (JSON)");
+
+                    if (ImGui::IsMouseDoubleClicked(0))
+                    {
+                        std::string scenePath = path.string(); // should already be like "assets/saves/xxx.json"
+
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::LoadFromJSON(scenePath, entityManager, true))
+                        {
+                            std::cout << "[Assets] Loaded scene JSON: " << scenePath << "\n";
+                            RebuildSpatialPartition();
+                        }
+                        else
+                        {
+                            std::cerr << "[Assets] Failed to load scene JSON: " << scenePath << "\n";
+                        }
+                    }
                 }
             }
 
@@ -714,7 +731,7 @@ namespace Framework {
                             (lowerName.find("menu") != std::string::npos);
 
                         if (isLevel) {
-                            std::cout << "[Assets] Double-click detected: Loading " << filename << "\n";
+                            // Loading level from double-click
 
 							currentLuaLevelPath = fullPath;
                             pendingLuaGsmState = GetGsmStateFromLuaName(lowerName);
@@ -736,7 +753,7 @@ namespace Framework {
                             if (graphicsSystem) graphicsSystem->SetCameraPosition(glm::vec3(0, 0, 0));
                         }
                         else {
-                            std::cout << "[Assets] Ignored double-click on non-level script: " << filename << "\n";
+                            // Ignored non-level script
                         }
                     }
                 }
@@ -841,12 +858,16 @@ namespace Framework {
         if (pendingToggle) {
             enabled = !enabled;
             pendingToggle = false;
-            std::cout << "[ImGuiSystem] Toggled to: " << (enabled ? "ON" : "OFF") << "\n";
+            // ImGui toggled
         }
 
-        // Auto-Switch Screen Mode
-        if (Framework::CORE && Framework::CORE->GetWindowSystem()) {
-            Framework::CORE->GetWindowSystem()->SetFullScreen(!enabled);
+        // Auto-Switch Screen Mode - only when enabled state actually changes
+        // This prevents forcing fullscreen every frame and allows user to override with Ctrl+Alt+Enter
+        if (enabled != lastEnabledState) {
+            if (Framework::CORE && Framework::CORE->GetWindowSystem()) {
+                Framework::CORE->GetWindowSystem()->SetFullScreen(!enabled);
+            }
+            lastEnabledState = enabled;
         }
 
         if (!enabled) {
@@ -899,7 +920,7 @@ namespace Framework {
 
             // If both Ctrl and Z are active, trigger the Undo
             if (isCtrlHeld && isZPressed) {
-                std::cout << "[Editor] Ctrl+Z pressed - Attempting Undo...\n";
+                // Undo triggered
                 PerformUndo();
             }
         }
@@ -911,8 +932,7 @@ namespace Framework {
             if (input && selectedEntity.IsValid()) {
                 if (input->IsKeyPressed(KEY_DELETE))
                 {
-                    std::cout << "[ImGui] Delete key pressed on entity "
-                        << selectedEntity.id << "\n";
+                    // Entity deleted
 
                     RecordDeletionStep(selectedEntity);
 
@@ -947,6 +967,18 @@ namespace Framework {
         if (wantSaveAsModal) {
             ImGui::OpenPopup("Save Level As...");
             wantSaveAsModal = false;
+        }
+
+        if (wantOpenSceneModal)
+        {
+            ImGui::OpenPopup("Open Scene...");
+            wantOpenSceneModal = false;
+        }
+
+        if (wantSaveSceneAsModal)
+        {
+            ImGui::OpenPopup("Save Scene As...");
+            wantSaveSceneAsModal = false;
         }
 
         // open level modal window. auto resize to fit content
@@ -1052,6 +1084,139 @@ namespace Framework {
             ImGui::EndPopup();
         }
 
+        // ============================================================================
+        // JSON: Open Scene... (file-based)
+        // ============================================================================
+        if (ImGui::BeginPopupModal("Open Scene...", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            static char openSceneBuffer[256] = "";
+            static bool openSceneError = false;
+            static std::string openSceneErrorMsg = "";
+
+            extern int current;
+            std::string levelName = "Unknown";
+            switch (current)
+            {
+            case mainMenu: levelName = "MainMenu"; break;
+            case Level_select: levelName = "LevelSelect"; break;
+            case LEVEL_2: levelName = "Level2"; break;
+            case LEVEL_3: levelName = "Level3"; break;
+            case TUTORIAL: levelName = "Tutorial"; break;
+            case LEVEL_END: levelName = "LevelEnd"; break;
+            }
+
+            if (ImGui::IsWindowAppearing())
+            {
+                std::string defaultPath = currentScenePath.empty()
+                    ? ("assets/saves/" + levelName + "_save.json")
+                    : currentScenePath;
+
+                std::snprintf(openSceneBuffer, sizeof(openSceneBuffer), "%s", defaultPath.c_str());
+                openSceneError = false;
+                openSceneErrorMsg.clear();
+            }
+
+            ImGui::InputText("Path", openSceneBuffer, sizeof(openSceneBuffer));
+
+            if (openSceneError)
+            {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", openSceneErrorMsg.c_str());
+            }
+
+            if (ImGui::Button("Open"))
+            {
+                currentScenePath = openSceneBuffer;
+
+                SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                if (SaveLoadSystem::LoadFromJSON(currentScenePath, entityManager, true))
+                {
+                    LOG_INFO("ImGuiSystem", "Opened scene (JSON): %s", currentScenePath.c_str());
+                    RebuildSpatialPartition();
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    openSceneError = true;
+                    openSceneErrorMsg = "Invalid path or JSON format: " + std::string(openSceneBuffer);
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel"))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
+        // ============================================================================
+        // JSON: Save Scene As... (file-based)
+        // ============================================================================
+        if (ImGui::BeginPopupModal("Save Scene As...", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            static char saveSceneBuffer[256] = "";
+            static bool saveSceneError = false;
+            static std::string saveSceneErrorMsg = "";
+
+            extern int current;
+            std::string levelName = "Unknown";
+            switch (current)
+            {
+            case mainMenu: levelName = "MainMenu"; break;
+            case Level_select: levelName = "LevelSelect"; break;
+            case LEVEL_2: levelName = "Level2"; break;
+            case LEVEL_3: levelName = "Level3"; break;
+            case TUTORIAL: levelName = "Tutorial"; break;
+            case LEVEL_END: levelName = "LevelEnd"; break;
+            }
+
+            if (ImGui::IsWindowAppearing())
+            {
+                std::string defaultPath = currentScenePath.empty()
+                    ? ("assets/saves/" + levelName + "_save.json")
+                    : currentScenePath;
+
+                std::snprintf(saveSceneBuffer, sizeof(saveSceneBuffer), "%s", defaultPath.c_str());
+                saveSceneError = false;
+                saveSceneErrorMsg.clear();
+            }
+
+            ImGui::InputText("Path", saveSceneBuffer, sizeof(saveSceneBuffer));
+
+            if (saveSceneError)
+            {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", saveSceneErrorMsg.c_str());
+            }
+
+            if (ImGui::Button("Save"))
+            {
+                currentScenePath = saveSceneBuffer;
+
+                SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                if (SaveLoadSystem::SaveToJSON(currentScenePath, entityManager, levelName))
+                {
+                    LOG_INFO("ImGuiSystem", "Saved scene (JSON): %s", currentScenePath.c_str());
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    saveSceneError = true;
+                    saveSceneErrorMsg = "Could not save to path: " + std::string(saveSceneBuffer);
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel"))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
         if (showAudioErrorPopup) {
             ImGui::OpenPopup("Audio Format Error##AudioError");
             showAudioErrorPopup = false;
@@ -1125,7 +1290,7 @@ namespace Framework {
                     if (!std::filesystem::exists(destPath)) {
                         try {
                             std::filesystem::copy_file(pendingAudioPath, destPath);
-                            std::cout << "[Import] Copied file to: " << destPath << "\n";
+                            // Audio file imported
                         }
                         catch (const std::exception& e) {
                             std::cerr << "[Import] Copy failed: " << e.what() << "\n";
@@ -1136,13 +1301,13 @@ namespace Framework {
                     // 2. Update JSON and Reload if copy succeeded (or file existed)
                     if (copySuccess) {
                         // Use the user-entered KEY (newAudioKeyBuffer) instead of just the filename
-                        std::cout << "DEBUG: Calling AddAudioToJSON with Key='" << keyName << "' and File='" << fileName << "'\n";
+                        // Adding audio to JSON
                         bool added = AddAudioToJSON(keyName, fileName);
 
                         if (added) {
                             // 3. Reload Audio System
                             audioSystem->ReloadAudioLibrary();
-                            std::cout << "[Import] Audio library reloaded with key: " << keyName << "\n";
+                            // Audio library reloaded
 
                             // Optional: Play it to confirm
                             audioSystem->PlaySound(keyName.c_str(), false);
@@ -1170,6 +1335,9 @@ namespace Framework {
         ShowScriptBrowserPopup();
         ShowLevelBrowserPopup();
         if (showGameViewport) ShowGameViewport();
+        
+        // Show FPS overlay in corner
+        ShowFPSOverlay();
     }
 
     void ImGuiSystem::Render()
@@ -1272,7 +1440,7 @@ namespace Framework {
                     }
                 }
                 else {
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "⚠ No script assigned");
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "WARNING: No script assigned");
                 }
 
                 if (sc.initialized) {
@@ -1685,7 +1853,7 @@ namespace Framework {
                         }
                         else {
                             ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f),
-                                "⚠ No script assigned");
+                                "WARNING: No script assigned");
                         }
 
                         // Show Lua state info
@@ -1940,7 +2108,7 @@ namespace Framework {
 
                     bool saved = PrefabSerializer::SavePrefab(*entityManager, entity, prefabPath);
                     if (saved) {
-                        std::cout << "[Inspector] Saved entity " << entity.GetID() << " as prefab\n";
+                        // Entity saved as prefab
                     }
                 }
 
@@ -1974,7 +2142,7 @@ namespace Framework {
                                 t.position.x += 0.5f;
                                 t.position.y += 0.5f;
                             }
-                            std::cout << "[Inspector] Duplicated as entity " << newEntity.GetID() << "\n";
+                            // Entity duplicated
                         }
                     }
                 }
@@ -2156,15 +2324,14 @@ namespace Framework {
                 bool saved = PrefabSerializer::SavePrefab(*entityManager, selectedEntity, path);
 
                 if (saved) {
-                    std::cout << "[Prefab] Saved entity " << selectedEntity.GetID()
-                        << " to: " << path << "\n";
+                    // Prefab saved
                 }
                 else {
                     std::cerr << "[Prefab]  Failed to save prefab to: " << path << "\n";
                 }
             }
             else {
-                std::cout << "[Prefab] No entity selected!\n";
+                // No entity selected for prefab save
             }
         }
 
@@ -2253,15 +2420,14 @@ namespace Framework {
                         transform.position.y = spawnPos[1];
                     }
 
-                    std::cout << "[Prefab]  Loaded prefab '" << prefabFiles[selectedPrefabIdx]
-                        << "' as entity " << newEntity.GetID() << "\n";
+                    // Prefab loaded
                 }
                 else {
                     std::cerr << "[Prefab]  Failed to load prefab: " << selectedPrefabPath << "\n";
                 }
             }
             else {
-                std::cout << "[Prefab] No prefab selected!\n";
+                // No prefab selected
             }
         }
 
@@ -2505,8 +2671,7 @@ namespace Framework {
                     // 2) write the prefab file using the template entity
                     PrefabSerializer::SavePrefab(*entityManager, templateEntity, prefabPath);
 
-                    std::cout << "[Prefab] Applied changes to " << instances.size()
-                        << " instances and saved prefab: " << prefabPath << "\n";
+                    // Prefab changes applied and saved
                 }
             }
         }
@@ -2515,7 +2680,7 @@ namespace Framework {
         // Does NOT delete entities, only clears the registry mapping.
         if (ImGui::Button("Clear All Tracking##ClearTracking", ImVec2(-1, 0))) {
             Framework::PrefabInstanceTracker::Get().Clear();
-            std::cout << "[Prefab] Cleared all instance tracking\n";
+            // Prefab instance tracking cleared
         }
 
 
@@ -2563,7 +2728,7 @@ namespace Framework {
                 transform.position = Vector2D(spawnX, spawnY);
                 transform.scale = Vector2D(1.0f, 1.0f); // Default scale so it's visible if you add a sprite later
 
-                std::cout << "[Spawner] Spawned Blank Entity ID: " << blankEntity.GetID() << "\n";
+                // Blank entity spawned
             }
         }
 
@@ -2571,34 +2736,19 @@ namespace Framework {
 
         if (ImGui::Button("Trigger Menu BGM##Btn9", ImVec2(-1, 0))) {
             if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("mmbgm", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
         }
 
         if (ImGui::Button("Trigger In-Game BGM##Btn10", ImVec2(-1, 0))) {
             if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("igbgm", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
         }
 
         if (ImGui::Button("Stop All Audio##Btn11", ImVec2(-1, 0))) {
             if (audioSystem) {
-                std::cout << "[DEBUG] Stopping all audio\n";
                 audioSystem->StopAllSounds();
-                std::cout << "[DEBUG] All audio stopped\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
         }
 
@@ -2615,7 +2765,7 @@ namespace Framework {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Audio")) {
                 const char* audioName = static_cast<const char*>(payload->Data);
 
-                std::cout << "[Spawner] Playing dropped audio: " << audioName << "\n";
+                // Playing dropped audio
 
                 if (audioSystem) {
                     audioSystem->PlaySound(audioName, false);
@@ -2657,7 +2807,7 @@ namespace Framework {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("Prefab")) {
                 const char* prefabPath = static_cast<const char*>(payload->Data);
 
-                std::cout << "[Spawner] Prefab dropped: " << prefabPath << "\n";
+                // Prefab dropped
 
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, prefabPath);
 
@@ -2671,7 +2821,7 @@ namespace Framework {
                         transform.position.y = spawnY;
                     }
 
-                    std::cout << "[Spawner]  Spawned prefab as entity " << newEntity.GetID() << "\n";
+                    // Prefab spawned
                 }
             }
             ImGui::EndDragDropTarget();
@@ -2712,6 +2862,53 @@ namespace Framework {
 
 
 
+        ImGui::End();
+    }
+
+    void ImGuiSystem::ShowFPSOverlay()
+    {
+        // Set window flags for overlay: no title bar, no resize, always on top, no background
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration 
+            | ImGuiWindowFlags_AlwaysAutoResize 
+            | ImGuiWindowFlags_NoSavedSettings 
+            | ImGuiWindowFlags_NoFocusOnAppearing 
+            | ImGuiWindowFlags_NoNav
+            | ImGuiWindowFlags_NoMove;
+
+        // Position in top-right corner with padding
+        const float PAD = 10.0f;
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 work_pos = viewport->WorkPos; // Use work area to avoid menu bar
+        ImVec2 work_size = viewport->WorkSize;
+        ImVec2 window_pos, window_pos_pivot;
+        window_pos.x = work_pos.x + work_size.x - PAD;
+        window_pos.y = work_pos.y + PAD;
+        window_pos_pivot.x = 1.0f;
+        window_pos_pivot.y = 0.0f;
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+        ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+
+        // Calculate FPS
+        float fps = 1.0f / (frameTime + 0.001f);
+        float msPerFrame = frameTime * 1000.0f;
+
+        if (ImGui::Begin("FPS Overlay", nullptr, window_flags))
+        {
+            // Color code based on FPS performance
+            ImVec4 fpsColor;
+            if (fps >= 60.0f) {
+                fpsColor = ImVec4(0.0f, 1.0f, 0.0f, 1.0f); // Green for 60+ FPS
+            }
+            else if (fps >= 30.0f) {
+                fpsColor = ImVec4(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for 30-60 FPS
+            }
+            else {
+                fpsColor = ImVec4(1.0f, 0.0f, 0.0f, 1.0f); // Red for <30 FPS
+            }
+
+            ImGui::TextColored(fpsColor, "%.1f FPS", fps);
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "%.2f ms", msPerFrame);
+        }
         ImGui::End();
     }
 
@@ -2821,14 +3018,7 @@ namespace Framework {
         }
         // After checking all entities, store the picked entity as the current selected entity
         selectedEntity = picked;
-        // If we picked a valid entity, print its ID for debugging
-        if (selectedEntity.GetID() != INVALID_ENTITY) {
-            std::cout << "[ImGui Picking] Selected entity ID: " << selectedEntity.GetID() << "\n";
-        }
-        // Otherwise, the mouse click did not hit any collider, so we clicked on empty space
-        else {
-            std::cout << "[ImGui Picking] Clicked empty space\n";
-        }
+        // Entity selection updated
     }
 
     // ============================================================================
@@ -3033,7 +3223,7 @@ namespace Framework {
         }
 
         // Log for debugging purposes
-        std::cout << "[Editor] Recorded undo step for Entity " << entity.GetID() << "\n";
+        // Undo step recorded
     }
 
     // ============================================================================
@@ -3046,7 +3236,7 @@ namespace Framework {
         step.type = UndoType::Creation;
         step.entity = entity;
         undoStack.push_back(step);
-        std::cout << "[Undo] Recorded Creation step for Entity " << entity.GetID() << "\n";
+        // Creation undo step recorded
     }
 
     // ============================================================================
@@ -3070,7 +3260,7 @@ namespace Framework {
             // Note: We don't store step.entity here because the ID might change or be invalid after delete
             
             undoStack.push_back(step);
-            std::cout << "[Undo] Recorded Deletion step. Backup at: " << tempPath << "\n";
+            // Deletion undo step recorded
         }
     }
 
@@ -3085,7 +3275,7 @@ namespace Framework {
 
     void ImGuiSystem::PerformUndo() {
         if (undoStack.empty()) {
-            std::cout << "[Editor] Nothing to undo.\n";
+            // No undo steps available
             return;
         }
 
@@ -3104,7 +3294,7 @@ namespace Framework {
                 transform.scale = lastStep.oldScale;
                 transform.rotation = lastStep.oldRotation;
 
-                std::cout << "[Undo] Restored Transform for Entity " << lastStep.entity.GetID() << "\n";
+                // Transform restored
             }
         }
         // --------------------------------------------------------------------
@@ -3112,7 +3302,7 @@ namespace Framework {
         // --------------------------------------------------------------------
         else if (lastStep.type == UndoType::Creation) {
             if (lastStep.entity.IsValid()) {
-                std::cout << "[Undo] Destroying created entity " << lastStep.entity.GetID() << "\n";
+                // Created entity destroyed
                 entityManager->DestroyEntity(lastStep.entity);
                 SpatialPartitioningRemove(lastStep.entity);
             }
@@ -3125,7 +3315,7 @@ namespace Framework {
             Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, lastStep.tempFilePath);
 
             if (newEntity.IsValid()) {
-                std::cout << "[Undo] Restored deleted entity from " << lastStep.tempFilePath << "\n";
+                // Deleted entity restored
                 // Optional: Delete the temp file now that we've used it? 
                 // Or keep it in case we Redo (if you implement Redo later).
             }
@@ -3153,18 +3343,18 @@ namespace Framework {
     // author: Ethan Ng (modification)
     // ============================================================================
     void ImGuiSystem::OnFileDrop(int count, const char** paths) {
-        std::cout << "\n[FileDrop] Received " << count << " file(s)\n";
+        // Files dropped
 
         for (int i = 0; i < count; ++i) {
             std::filesystem::path path(paths[i]);
-            std::cout << "[FileDrop] Processing: " << path.filename() << "\n";
+            // Processing dropped file
 
             // Handle level files
             if (IsLevelFile(path)) {
                 bool isOpen = OpenLevelFromTxt(path.string(), true);
                 if (isOpen) {
                     currentLevelPath = path.string();
-                    std::cout << "[FileDrop]  Loaded level\n";
+                    // Level loaded from file drop
                 }
                 else {
                     std::cerr << "[FileDrop]  Failed to load level\n";
@@ -3191,10 +3381,10 @@ namespace Framework {
                         Vector2D(0.0f, 0.0f),
                         Vector2D(1.0f, 1.0f)
                     );
-                    std::cout << "[FileDrop] Spawned sprite as entity " << entity.GetID() << "\n";
+                    // Sprite spawned from file drop
                 }
                 else {
-                    std::cout << "[FileDrop] Ignored texture drop (not in Viewport)\n";
+                    // Texture drop ignored (not in viewport)
                 }
                 continue;
             }
@@ -3219,7 +3409,7 @@ namespace Framework {
                     // 3. Flag the popup to open next frame
                     showAudioNamePopup = true;
 
-                    std::cout << "[FileDrop] Audio detected. Opening import dialog...\n";
+                    // Audio import dialog opened
                 }
                 continue;
             }
@@ -3231,7 +3421,7 @@ namespace Framework {
             if (ext == ".ogg" || ext == ".mp3" || ext == ".txt" || ext == ".mp4" ||
                 ext == ".flac" || ext == ".aiff" || ext == ".aac" || ext == ".m4a") {
 
-                std::cout << "[FileDrop]  Unsupported format: " << ext << "\n";
+                // Unsupported file format dropped
                 audioErrorMessage = errorMsg;
                 showAudioErrorPopup = true;
                 continue;
@@ -3256,8 +3446,7 @@ namespace Framework {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, path.string());
 
                 if (newEntity.IsValid()) {
-                    std::cout << "[FileDrop]  Loaded prefab: " << path.filename()
-                        << " as entity " << newEntity.GetID() << "\n";
+                    // Prefab loaded from file drop
                 }
                 else {
                     std::cerr << "[FileDrop]  Failed to load prefab: " << path << "\n";
@@ -3280,7 +3469,7 @@ namespace Framework {
 
                 if (isLevel) {
                     // --- LOAD NEW LEVEL ---
-                    std::cout << "[FileDrop] Detected LEVEL Script: " << filename << "\n";
+                    // Level script detected
 
                     // Clean sweep: Remove current entities
                     if (entityManager) {
@@ -3298,7 +3487,7 @@ namespace Framework {
                     // --- SPAWN ENTITY SCRIPT ---
                     // Only allow spawning if we drop it onto the game world (Viewport)
                     if (m_isViewportHovered && entityManager) {
-                        std::cout << "[FileDrop] Detected ENTITY Script: " << filename << "\n";
+                        // Entity script detected
 
                         // 1. Create a blank entity
                         Entity e = entityManager->CreateEntity();
@@ -3321,10 +3510,10 @@ namespace Framework {
                         auto& script = entityManager->GetComponent<ScriptComponent>(e);
                         script.scriptPath = fullPath;
 
-                        std::cout << "[FileDrop] Spawned Entity " << e.GetID() << " with script: " << filename << "\n";
+                        // Entity spawned with script
                     }
                     else {
-                        std::cout << "[FileDrop] Entity script ignored (Not dropped in Viewport)\n";
+                        // Entity script ignored (not in viewport)
                     }
                 }
                 continue; // Stop processing this file
@@ -3336,7 +3525,7 @@ namespace Framework {
 
 
 
-        std::cout << "[FileDrop] Processing complete\n\n";
+        // File drop processing complete
     }
 
     bool ImGuiSystem::IsAudioFileSupported(const std::filesystem::path& path, std::string& errorMsg) const {
@@ -3385,7 +3574,7 @@ namespace Framework {
     bool ImGuiSystem::AddAudioToJSON(const std::string& audioName, const std::string& fileName) {
         const std::string jsonPath = "assets/JSON/AudioConfig.json";
 
-        std::cout << "[JSON] Opening: " << jsonPath << "\n";
+        // Opening JSON file
 
         // Read existing JSON
         std::ifstream readFile(jsonPath);
@@ -3403,7 +3592,7 @@ namespace Framework {
 
         // Check if audio already exists
         /*if (jsonContent.find("\"" + audioName + "\"") != std::string::npos) {
-            std::cout << "[JSON] Audio '" << audioName << "' already exists in JSON\n";
+            // Audio already exists in JSON
             return true;
         }
 
@@ -3434,7 +3623,7 @@ namespace Framework {
         // Insert new entry
         jsonContent.insert(insertPos + 1, newEntry);
 
-        std::cout << "[JSON] Adding entry: \"" << audioName << "\": \"" << fileName << "\"\n";
+        // Adding audio entry to JSON
 
         // Write updated JSON
         std::ofstream writeFile(jsonPath);
@@ -3510,7 +3699,7 @@ namespace Framework {
         writeFile << jsonContent;
         writeFile.close();
 
-        std::cout << "[JSON]  Successfully updated audio.json\n";
+        // JSON file updated
 
         return true;
     }
@@ -3545,7 +3734,7 @@ namespace Framework {
         glGenFramebuffers(1, &viewportFBO);
         glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
 
-        std::cout << "[ImGuiSystem] Created FBO: " << viewportFBO << "\n";
+        // Viewport FBO created
 
         // Create color texture
         glGenTextures(1, &viewportTexture);
@@ -3555,7 +3744,7 @@ namespace Framework {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, viewportTexture, 0);
 
-        std::cout << "[ImGuiSystem] Created Texture: " << viewportTexture << "\n";
+        // Viewport texture created
 
         // Create depth/stencil renderbuffer
         glGenRenderbuffers(1, &viewportRBO);
@@ -3570,7 +3759,7 @@ namespace Framework {
                 << std::hex << status << std::dec << "\n";
         }
         else {
-            std::cout << "[ImGuiSystem] Framebuffer complete: " << width << "x" << height << "\n";
+            // Framebuffer created
         }
 
         // IMPORTANT: Unbind framebuffer
@@ -3593,7 +3782,7 @@ namespace Framework {
         glBindRenderbuffer(GL_RENDERBUFFER, viewportRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
 
-        std::cout << "[ImGuiSystem] Viewport resized: " << width << "x" << height << "\n";
+        // Viewport resized
     }
 
     void ImGuiSystem::DeleteViewportFramebuffer()
@@ -3677,6 +3866,8 @@ namespace Framework {
         if (ImGui::BeginMenuBar()) {
             //File bar
             if (ImGui::BeginMenu("File")) {
+
+                
                 // Open Level
                 if (ImGui::MenuItem("Open Level...", "Ctrl+O")) {
                     showLevelBrowser = true;
@@ -3705,8 +3896,13 @@ namespace Framework {
                         std::string savePath = "assets/saves/" + levelName + "_save.json";
                         SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
                         if (SaveLoadSystem::SaveToJSON(savePath, entityManager, levelName)) {
-                            LOG_INFO("ImGuiSystem", "Saved scene to: %s", savePath.c_str());
+                            // Scene saved
                         }
+                    }
+
+                    if (ImGui::MenuItem("Save Scene As..."))
+                    {
+                        wantSaveSceneAsModal = true;
                     }
 
                     // Load Scene (JSON)
@@ -3714,15 +3910,20 @@ namespace Framework {
                         std::string loadPath = "assets/saves/" + levelName + "_save.json";
                         SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
                         if (SaveLoadSystem::LoadFromJSON(loadPath, entityManager, true)) {
-                            LOG_INFO("ImGuiSystem", "Loaded scene from: %s", loadPath.c_str());
+                            // Scene loaded
                             RebuildSpatialPartition();
                         }
+                    }
+
+                    if (ImGui::MenuItem("Load Scene..."))
+                    {
+                        wantOpenSceneModal = true;
                     }
                 }
 
                 ImGui::Separator();
 
-                // 显示当前关卡
+                // Display current level
                 extern int current;
                 const char* currentLevelName = "Unknown";
 
@@ -3802,7 +4003,7 @@ namespace Framework {
 
                         //this->RequestToggle();
 
-                        LOG_INFO("IMGUI", "PLAY clicked - Exiting editor mode");
+                        // Play mode activated
                     }
                 }
                 else {
@@ -3953,8 +4154,7 @@ namespace Framework {
                             sc.scriptPath = "assets/scripts/" + selectedScriptPath;
                         }
 
-                        std::cout << "[ImGuiSystem] Assigned script: scripts/" << selectedScriptPath
-                            << " to entity " << entityPendingScriptAssignment.GetID() << std::endl;
+                        // Script assigned to entity
                     }
 
                     ImGui::CloseCurrentPopup();
@@ -4004,7 +4204,7 @@ namespace Framework {
                 if (entry.is_regular_file() && entry.path().extension() == ".lua") {
                     std::string filename = entry.path().filename().string();
 
-                    // 只包含关卡文件
+                    // Only include level files
                     if (filename.find("Level") != std::string::npos) {
                         levelFiles.push_back(filename);
                     }
@@ -4020,17 +4220,21 @@ namespace Framework {
     }
 
     int ImGuiSystem::GetGameStateFromLevelName(const std::string& levelName) {
+        // Convert to lowercase for case-insensitive matching
+        std::string lowerName = levelName;
+        std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+
         // MainMenu
-        if (levelName.find("MainMenu") != std::string::npos) {
+        if (lowerName.find("mainmenu") != std::string::npos) {
             return mainMenu;
         }
 
         // LevelSelect
-        if (levelName.find("LevelSelect") != std::string::npos) {
+        if (lowerName.find("levelselect") != std::string::npos) {
             return Level_select;
         }
 
-        // Level1, Level2, Level3...
+        // Try regex first for exact match (Level1.lua, Level2.lua, Level3.lua)
         std::regex levelRegex(R"(Level(\d+)\.lua)");
         std::smatch match;
 
@@ -4039,11 +4243,24 @@ namespace Framework {
 
             switch (levelNum) {
             case 2: return LEVEL_2;
-            case 3: return LEVEL_2;
+            case 3: return LEVEL_3;
             default:
                 LOG_WARN("ImGuiSystem", "Unknown level number: %d", levelNum);
                 return -1;
             }
+        }
+
+        // If regex fails, try string search for variants like Level3Clean.lua
+        if (lowerName.find("level3") != std::string::npos) {
+            return LEVEL_3;
+        }
+        if (lowerName.find("level2") != std::string::npos) {
+            return LEVEL_2;
+        }
+        if (lowerName.find("level1") != std::string::npos) {
+            // Assuming LEVEL_1 exists, otherwise return -1
+            LOG_WARN("ImGuiSystem", "Level1 detected but no game state defined");
+            return -1;
         }
 
         LOG_ERROR("ImGuiSystem", "Failed to parse level name: %s", levelName.c_str());
@@ -4051,7 +4268,7 @@ namespace Framework {
     }
 
     bool ImGuiSystem::LoadLevelViaGSM(const std::string& levelName) {
-        LOG_INFO("ImGuiSystem", "Loading level via GSM (Editor Mode): %s", levelName.c_str());
+        // Loading level via GSM
 
         int gameState = GetGameStateFromLevelName(levelName);
 
@@ -4071,7 +4288,7 @@ namespace Framework {
         // Enable ImGui immediately since we're loading in editor mode
         enabled = true;
 
-        LOG_INFO("ImGuiSystem", " Switching to game state %d (editor mode)", gameState);
+        // Switched to game state
 
         return true;
     }
@@ -4091,13 +4308,13 @@ namespace Framework {
             return false;
         }
 
-        LOG_INFO("ImGuiSystem", "Saving level: %s", levelName.c_str());
+        // Saving level
 
         std::string savePath = "assets/" + levelName + "_saved.txt";
         bool success = SaveLevelToTxt(savePath);
 
         if (success) {
-            LOG_INFO("ImGuiSystem", " Saved to: %s", savePath.c_str());
+            // Level saved successfully
             return true;
         }
         else {
@@ -4152,7 +4369,7 @@ namespace Framework {
                     ImGuiSelectableFlags_AllowDoubleClick)) {
                     if (ImGui::IsMouseDoubleClicked(0)) {
                         if (LoadLevelViaGSM(levelFile)) {
-                            LOG_INFO("ImGuiSystem", "Loading: %s", levelFile.c_str());
+                            // Loading level file
                         }
                         ImGui::PopID();
                         ImGui::CloseCurrentPopup();

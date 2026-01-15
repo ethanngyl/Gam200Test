@@ -53,32 +53,26 @@ namespace Framework {
 
 	inline void EndPlayerTurn() {
 		if (GlobalPause::IsPaused()) {
-			std::cout << "[Turn] Turn switch BLOCKED - game is paused\n";
 			return;
 		}
 		auto& t = Turn();
 		if (t.phase != TurnPhase::Player) {
-			std::cout << "[Turn ERROR] Tried to end player turn during enemy phase!\n";
 			return;  // Prevent invalid state
 		}
 		t.phase = TurnPhase::Enemy;
 		++t.turnIndex;
-		std::cout << "[Turn] Player turn ended. Turn #" << t.turnIndex << " - Enemy phase.\n";
 	}
 
 	inline void EndEnemyTurn() {
 		if (GlobalPause::IsPaused()) {
-			std::cout << "[Turn] Turn switch BLOCKED - game is paused\n";
 			return;
 		}
 		auto& t = Turn();
 		if (t.phase != TurnPhase::Enemy) {
-			std::cout << "[Turn ERROR] Tried to end enemy turn during player phase!\n";
 			return;
 		}
 		t.phase = TurnPhase::Player;
 		++t.turnIndex;
-		std::cout << "[Turn] Enemy turn ended. Turn #" << t.turnIndex << " - Player phase.\n";
 	}
 
 }

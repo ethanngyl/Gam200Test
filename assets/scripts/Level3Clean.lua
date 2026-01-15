@@ -49,13 +49,14 @@ function OnInit()
     -- Configure editor mode
     if IS_EDITOR_LOAD then
         Log("Level loaded from Editor - Keeping ImGui ENABLED")
+        -- Don't set playing state in editor mode - let LevelLoader handle it
+        -- This allows the editor to control play/stop state
     else
         DisableImGui()
         Log("ImGui disabled (Press F1 to toggle)")
+        -- Set engine state only when NOT in editor mode
+        SetEnginePlayState(true)
     end
-
-    -- Set engine state
-    SetEnginePlayState(true)
 
     -- Load tilemap
     if not LoadTileMapData() then
@@ -235,7 +236,7 @@ function SetupPlayer()
         Log("   PlayerScript.lua attached successfully")
         Log("  Player movement now handled by Lua script")
     else
-        Log("  ✗ FAILED to attach PlayerScript.lua")
+        Log("  FAILED to attach PlayerScript.lua")
         -- Re-enable C++ movement as fallback
         SetGridMovementEnabled(true)
         Log("  C++ grid movement re-enabled as fallback")
@@ -276,7 +277,7 @@ function SetupEnemies()
         if targetSuccess and scriptSuccess then
             Log("   Enemy " .. enemyID .. " configured successfully")
         else
-            Log("  ✗ Enemy " .. enemyID .. " configuration failed")
+            Log("  Enemy " .. enemyID .. " configuration failed")
         end
     end
 
