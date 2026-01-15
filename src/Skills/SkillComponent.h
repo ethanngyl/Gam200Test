@@ -1,7 +1,7 @@
 /**
 ===============================================================================
  File:           SkillComponent.h
- Author:        
+ Author:
  Date:           2025-01-12
  ------------------------------------------------------------------------------
 
@@ -16,6 +16,7 @@
 
 #pragma once
 #include "Precompiled.h"
+#include <iostream>
 
 namespace Framework {
 
@@ -64,19 +65,18 @@ namespace Framework {
 
         void UnlockSkill(int skillID, const std::string& skillName, CharacterClass charClass) {
             if (HasSkill(skillID)) {
-                LOG_WARN("SKILL", "Skill %d (%s) already unlocked!", skillID, skillName.c_str());
+                std::cout << "[SKILL] Skill " << skillID << " (" << skillName << ") already unlocked!" << std::endl;
                 return;
             }
 
             unlockedSkills.push_back(SkillData(skillID, skillName, charClass, true));
-            LOG_INFO("SKILL", "Unlocked new skill: %s (ID: %d, Class: %d)",
-                skillName.c_str(), skillID, static_cast<int>(charClass));
+            std::cout << "[SKILL] Unlocked new skill: " << skillName << " (ID: " << skillID << ")" << std::endl;
 
             // Auto-equip to first empty slot
             for (int i = 0; i < 4; ++i) {
                 if (equippedSlots[i] == -1) {
                     equippedSlots[i] = static_cast<int>(unlockedSkills.size()) - 1;
-                    LOG_INFO("SKILL", "Auto-equipped %s to slot %d", skillName.c_str(), i + 1);
+                    std::cout << "[SKILL] Auto-equipped " << skillName << " to slot " << (i + 1) << std::endl;
                     break;
                 }
             }
@@ -84,18 +84,17 @@ namespace Framework {
 
         bool EquipSkill(int slotIndex, int unlockedIndex) {
             if (slotIndex < 0 || slotIndex >= 4) {
-                LOG_ERROR("SKILL", "Invalid slot index: %d", slotIndex);
+                std::cout << "[SKILL] Invalid slot index: " << slotIndex << std::endl;
                 return false;
             }
 
             if (unlockedIndex < 0 || unlockedIndex >= static_cast<int>(unlockedSkills.size())) {
-                LOG_ERROR("SKILL", "Invalid unlocked skill index: %d", unlockedIndex);
+                std::cout << "[SKILL] Invalid unlocked skill index: " << unlockedIndex << std::endl;
                 return false;
             }
 
             equippedSlots[slotIndex] = unlockedIndex;
-            LOG_INFO("SKILL", "Equipped %s to slot %d",
-                unlockedSkills[unlockedIndex].skillName.c_str(), slotIndex + 1);
+            std::cout << "[SKILL] Equipped " << unlockedSkills[unlockedIndex].skillName << " to slot " << (slotIndex + 1) << std::endl;
             return true;
         }
 
@@ -119,29 +118,30 @@ namespace Framework {
             default: className = "None"; break;
             }
 
-            LOG_INFO("SKILL", "========================================");
-            LOG_INFO("SKILL", "PLAYER SKILL LOADOUT - %s", className);
-            LOG_INFO("SKILL", "========================================");
-            LOG_INFO("SKILL", "Equipped Skills:");
+            std::cout << std::endl;
+            std::cout << "========================================" << std::endl;
+            std::cout << "PLAYER SKILL LOADOUT - " << className << std::endl;
+            std::cout << "========================================" << std::endl;
+            std::cout << "Equipped Skills:" << std::endl;
             for (int i = 0; i < 4; ++i) {
                 if (equippedSlots[i] != -1) {
                     const auto& skill = unlockedSkills[equippedSlots[i]];
-                    LOG_INFO("SKILL", "  Slot %d: %s (ID: %d)",
-                        i + 1, skill.skillName.c_str(), skill.skillID);
+                    std::cout << "  Slot " << (i + 1) << ": " << skill.skillName << " (ID: " << skill.skillID << ")" << std::endl;
                 }
                 else {
-                    LOG_INFO("SKILL", "  Slot %d: [EMPTY]", i + 1);
+                    std::cout << "  Slot " << (i + 1) << ": [EMPTY]" << std::endl;
                 }
             }
 
-            LOG_INFO("SKILL", "\nUnlocked Skills (%zu total):", unlockedSkills.size());
+            std::cout << std::endl;
+            std::cout << "Unlocked Skills (" << unlockedSkills.size() << " total):" << std::endl;
             for (size_t i = 0; i < unlockedSkills.size(); ++i) {
                 const auto& skill = unlockedSkills[i];
-                LOG_INFO("SKILL", "  %zu. %s (ID: %d)",
-                    i + 1, skill.skillName.c_str(), skill.skillID);
+                std::cout << "  " << (i + 1) << ". " << skill.skillName << " (ID: " << skill.skillID << ")" << std::endl;
             }
 
-            LOG_INFO("SKILL", "========================================");
+            std::cout << "========================================" << std::endl;
+            std::cout << std::endl;
         }
     };
 

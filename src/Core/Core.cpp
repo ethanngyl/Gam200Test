@@ -209,7 +209,6 @@ namespace Framework
         pathfindingSystem->SetEntityManager(entityManager);
         skillSystem->SetEntityManager(entityManager);
 
-
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
         movementSystem->SetInputSystem(inputSystem);
@@ -448,6 +447,9 @@ namespace Framework
             uiSystem->Update(dt);
         }
 
+        if (skillSystem) {
+            skillSystem->Update(dt);
+        }
         // ====================================================================
         // CONDITIONALLY UPDATE GAME LOGIC
         // ====================================================================
