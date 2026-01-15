@@ -167,7 +167,7 @@ namespace Framework {
 
     void PlayerControllerSystem::Initialize()
     {
-        std::cout << "[PlayerController] Initialized\n";
+        // PlayerController initialized
     }
 
     void PlayerControllerSystem::Update(float dt)
@@ -214,14 +214,12 @@ namespace Framework {
                 {
                     auto& stats = entityManager->GetComponent<AP>(playerEntity);
                     stats.actionPoints = stats.maxActionPoints;
-                    LOG_INFO("PlayerTurn", "New Turn Started! AP Refilled to %d", stats.actionPoints);
                 }
 
                 //Regen attack AP
                 if (entityManager->HasComponent<AttackAP>(playerEntity)) {
                     auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);
                     aap.points = aap.maxPoints;
-                    LOG_INFO("PlayerTurn", "Attack AP refilled to %d", aap.points);
                 }
 
                 // Update our tracker so we don't regen again this turn
@@ -235,7 +233,6 @@ namespace Framework {
                 if (stats.actionPoints <= 0)
                 {
                     EndPlayerTurn();
-                    LOG_INFO("PlayerTurn", "Player out of AP. Auto-ending turn.");
                     // Return here to stop further actions for this frame
                     return;
                 }
@@ -385,10 +382,6 @@ namespace Framework {
             // Play shooting sound effect
             if (audioSystem) {
                 audioSystem->PlaySound("shooting", false);
-                std::cout << "[PlayerController] Shoot up with SFX!\n";
-            }
-            else {
-                std::cout << "[PlayerController] Shoot up! (No audio system)\n";
             }
         }
     }
@@ -405,13 +398,8 @@ namespace Framework {
             // Play shooting sound effect
             if (audioSystem) {
                 audioSystem->PlaySound("shooting", false);
-                std::cout << "[PlayerController] Shoot up with SFX!\n";
-            }
-            else {
-                std::cout << "[PlayerController] Shoot up! (No audio system)\n";
             }
             shootCooldown = shootCooldownTime;
-            std::cout << "[PlayerController] Shoot down!\n";
         }
     }
 
@@ -451,7 +439,6 @@ namespace Framework {
                     std::cout << "[PlayerController] Shoot up! (No audio system)\n";
                 }
                 shootCooldown = shootCooldownTime;
-                std::cout << "[PlayerController] Shoot at mouse!\n";
             }
         }
     }
@@ -462,21 +449,8 @@ namespace Framework {
     */
 
     void PlayerControllerSystem::HandleArrowKeyMovement() {
-        // DEBUG: Log entry to this function
-        static bool firstCall = true;
-        static int callCounter = 0;
-        if (firstCall) {
-            LOG_INFO("PlayerManager", "=== HandleArrowKeyMovement FIRST CALL ===");
-            firstCall = false;
-        }
-
-        callCounter++;
-        // Performance: Disabled per-call logging
-        // LOG_INFO("PlayerManager", ">>> HandleArrowKeyMovement called (call #%d this frame)", callCounter);
-
         // FIX: Check cooldown to prevent double AP consumption from same key press
         if (arrowMoveCooldown > 0.0f) {
-            LOG_INFO("PlayerManager", "Arrow movement blocked by cooldown (%.3fs remaining)", arrowMoveCooldown);
             return;
         }
 
@@ -497,15 +471,10 @@ namespace Framework {
         }
 
         if (attackPreviewActive) {
-            LOG_INFO("PlayerAttack", "Attack preview active -> movement disabled");
             return;
         }
 
         if (!IsPlayerTurn()) {
-            static int logThrottle = 0;
-            if (logThrottle++ % 60 == 0) { // Log every 60 frames
-                LOG_WARN("PlayerManager", "Arrow keys BLOCKED: Not player's turn (throttled log)");
-            }
             return;
         }
 
@@ -532,8 +501,7 @@ namespace Framework {
             return;
         }
 
-        LOG_INFO("PlayerManager", "Arrow key handler ACTIVE: AP=%d/%d, Turn=Player, Grid=%dx%d",
-                 stats.actionPoints, stats.maxActionPoints, g.cols, g.rows);
+        // Arrow key handler active
 
         // Get current player position
         auto& xform = entityManager->GetComponent<Transform>(playerEntity);
@@ -560,12 +528,7 @@ namespace Framework {
             stepY = 1;  // Move up (increase Y)
             animationName = "Idle_back";
             if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("walk1", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
             // PERFORMANCE FIX: Removed movement logging
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: UP >>>");
@@ -575,12 +538,7 @@ namespace Framework {
             stepY = -1; // Move down (decrease Y)
             animationName = "Idle_front";
             if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("walk1", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: DOWN >>>");
             // std::cout << "[Arrow] Moving DOWN\n";
@@ -592,12 +550,7 @@ namespace Framework {
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: LEFT >>>");
             // std::cout << "[Arrow] Moving LEFT\n";
             if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("walk1", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
         }
         else if (inputSystem->IsKeyPressed(KEY_D)) {
@@ -607,12 +560,7 @@ namespace Framework {
             // LOG_INFO("PlayerManager", "<<< KEY PRESS DETECTED: RIGHT >>>");
             // std::cout << "[Arrow] Moving RIGHT\n";
             if (audioSystem) {
-                std::cout << "[DEBUG] AudioSystem exists\n";
                 audioSystem->PlaySound("walk1", false);
-                std::cout << "[DEBUG] PlaySound called\n";
-            }
-            else {
-                std::cout << "[DEBUG] ERROR: AudioSystem is NULL!\n";
             }
         }
         else {
