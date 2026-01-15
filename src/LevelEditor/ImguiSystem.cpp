@@ -17,7 +17,7 @@ drag–drop, asset browser) to ECS and subsystems.
 Responsibilities:
 - Initialize/Shutdown ImGui (context, backends) and per-frame begin/end.
 - Render main menu bar (File/Windows/Editor) and windows:
-  • Entity Inspector, Spawner ,Debug Info ,ImGui Demo ,Assets Browser.
+  - Entity Inspector, Spawner, Debug Info, ImGui Demo, Assets Browser.
 - Level I/O: Open/Save/Save-As of simple TXT format (Transform/Sprite/Colliders).
 - File Drag-and-Drop: load txt file as level, spawn sprites for image files
 - Editor controls: Play/Stop toggle, default level caching & reload.
@@ -33,8 +33,8 @@ Controls for:
 - Assets Browser: double-click texture to spawn at origin; drag filename to future
   drop targets; click “<” to go up one folder
 - OS Drag-&-Drop onto window:
-  • .txt  load level (clears scene if requested
-  • .png, .jpg, .jpeg  spawn sprite
+  - .txt  load level (clears scene if requested
+  - .png, .jpg, .jpeg  spawn sprite
 
 Notes:
 
@@ -1268,7 +1268,7 @@ namespace Framework {
                     }
                 }
                 else {
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "⚠ No script assigned");
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "WARNING: No script assigned");
                 }
 
                 if (sc.initialized) {
@@ -1681,7 +1681,7 @@ namespace Framework {
                         }
                         else {
                             ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f),
-                                "⚠ No script assigned");
+                                "WARNING: No script assigned");
                         }
 
                         // Show Lua state info
@@ -3739,7 +3739,7 @@ namespace Framework {
 
                 ImGui::Separator();
 
-                // 显示当前关卡
+                // Display current level
                 extern int current;
                 const char* currentLevelName = "Unknown";
 
@@ -4020,7 +4020,7 @@ namespace Framework {
                 if (entry.is_regular_file() && entry.path().extension() == ".lua") {
                     std::string filename = entry.path().filename().string();
 
-                    // 只包含关卡文件
+                    // Only include level files
                     if (filename.find("Level") != std::string::npos) {
                         levelFiles.push_back(filename);
                     }

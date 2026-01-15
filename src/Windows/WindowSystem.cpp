@@ -1,5 +1,5 @@
 ﻿#include "Precompiled.h"
-#include "ConfigReader/ConfigReader.h"  // 使用优化版 ConfigReader
+#include "ConfigReader/ConfigReader.h"  // Using optimized ConfigReader
 
 /*
 ===============================================================================

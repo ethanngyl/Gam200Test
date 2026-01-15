@@ -438,7 +438,7 @@ namespace Framework {
         std::ifstream file(jsonPath);
 
         if (!file.is_open()) {
-            std::cerr << "[AudioSystem] ❌ ERROR: Could not open " << jsonPath << "\n";
+            std::cerr << "[AudioSystem] ERROR: Could not open " << jsonPath << "\n";
             std::cerr << "[AudioSystem] No audio will be available!\n";
             return;
         }
@@ -519,7 +519,7 @@ namespace Framework {
             }
             else {
                 failedCount++;
-                std::cerr << "[AudioSystem] ❌ Failed to load: " << fullPath << "\n";
+                std::cerr << "[AudioSystem] Failed to load: " << fullPath << "\n";
                 std::cerr << "[AudioSystem]    FMOD Error: " << FMOD_ErrorString(result) << "\n";
             }
 

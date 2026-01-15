@@ -454,7 +454,7 @@ namespace Framework {
             glfwGetWindowSize(window, &windowWidth, &windowHeight);
         }
 
-        // ⭐ Key insight: On high-DPI displays, framebuffer can be 2x window size
+        // Key insight: On high-DPI displays, framebuffer can be 2x window size
         // Example (Retina display):
         //   Window: 1600x800
         //   Framebuffer: 3200x1600
