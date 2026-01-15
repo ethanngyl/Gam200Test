@@ -42,6 +42,7 @@
 #include "AudioLoader.h"
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
+#include "PrefabInstanceRegistry.h"
 
 namespace Framework
 {
@@ -278,6 +279,7 @@ namespace Framework
         AddSystem(pathfindingSystem);
         AddSystem(particleSystem);
 
+
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
 
@@ -340,44 +342,48 @@ namespace Framework
         LOG_INFO("CORE", " CoreEngine: Cleaning Up");
         LOG_INFO("CORE", "================================================");
 
-        // Stop all audio before destroying systems
+        // Stop audio
         if (audioSystem) {
-            LOG_INFO("CORE", "Stopping all audio...");
             audioSystem->StopAllSounds();
         }
 
-        // Destroy all systems added to engine
+        // ⭐ 关闭并删除 ScriptSystem（单独管理）
+        if (scriptSystem) {
+            LOG_INFO("CORE", "Shutting down ScriptSystem...");
+            scriptSystem->Shutdown();
+            delete scriptSystem;
+            scriptSystem = nullptr;
+            LOG_INFO("CORE", "ScriptSystem destroyed");
+        }
+
+        // Delete DamageIndicatorSystem (not in Systems vector because it only inherits IMessageHandler)
+        if (damageIndicator) {
+            delete damageIndicator;
+            damageIndicator = nullptr;
+            LOG_INFO("CORE", "DamageIndicatorSystem destroyed");
+        }
+
+        // Destroy all other systems
         DestroySystems();
 
-        // Clear system pointers
-        windowSystem = nullptr;
-        inputSystem = nullptr;
-        spawner = nullptr;
-        playerController = nullptr;
-        movementSystem = nullptr;
-        collisionSystem = nullptr;
-        projectileSystem = nullptr;
-        graphicsSystem = nullptr;
-        imguiSystem = nullptr;
-        audioSystem = nullptr;
-        animationSystem = nullptr;
-        uiSystem = nullptr;
-        eventSystem = nullptr;
-		particleSystem = nullptr;
-
-        // Delete EntityManager (not added to engine)
+        // Clear entities
         if (entityManager) {
+            LOG_INFO("CORE", "Clearing all entities...");
+            entityManager->ClearAllEntities();
             delete entityManager;
             entityManager = nullptr;
         }
 
-        if (damageIndicator) {
-            delete damageIndicator;
-            damageIndicator = nullptr;
+        // Terminate GLFW
+        if (windowSystem) {
+            glfwTerminate();
         }
 
-        // Terminate GLFW
-        glfwTerminate();
+        // Clean up static resources to prevent memory leak reports
+        ConfigReader::Shutdown();
+        AudioLoader::Shutdown();
+        PrefabInstanceRegistry::Get().Clear();
+        eng::debug::Log::shutdown();
 
         LOG_INFO("CORE", "Cleanup complete");
     }
@@ -483,9 +489,9 @@ namespace Framework
             }
 
             // Game Logic (ScriptSystem disabled - using C++ only)
-            // if (scriptSystem) {
-            //     scriptSystem->Update(dt);
-            // }
+            if (scriptSystem) {
+                scriptSystem->Update(dt);
+            }
 
             // C++ PlayerController
             if (playerController) {
@@ -615,11 +621,7 @@ namespace Framework
         {
             delete Systems[Systems.size() - i - 1];
         }
-        if (scriptSystem) {
-            scriptSystem->Shutdown();
-            delete scriptSystem;
-            scriptSystem = nullptr;
-        }
+
         Systems.clear();
     }
 }

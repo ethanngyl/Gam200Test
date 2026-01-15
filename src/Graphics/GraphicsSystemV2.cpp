@@ -708,8 +708,8 @@ namespace Framework {
             auto& transform = entityManager->GetComponent<Transform>(e);
 
             const bool hasRenderer = entityManager->HasComponent<MeshRenderer>(e);
-            const bool hasSprite = entityManager->HasComponent<Sprite>(e);
-            if (!hasRenderer && !hasSprite) continue;
+            //const bool hasSprite = entityManager->HasComponent<Sprite>(e);
+            if (!hasRenderer/* && !hasSprite*/) continue;
 
             RenderCommand cmd;
 
@@ -726,15 +726,22 @@ namespace Framework {
                     Material* base = resourceManager.GetMaterial(defaultMaterial);
                     if (!base) continue;
 
-                    MaterialHandle inst = resourceManager.CreateMaterial(
-                        "entity_mat_" + std::to_string(e.GetID()),
-                        base->shader
-                    );
+                    std::string matName = "entity_mat_" + std::to_string(e.GetID());
+
+                    // DEBUG: Check if this material already exists to avoid duplicates
+                    MaterialHandle existing = resourceManager.GetMaterialHandle(matName);
+                    if (existing.IsValid()) {
+                        mr.material = existing;
+                        continue;
+                    }
+
+                    MaterialHandle inst = resourceManager.CreateMaterial(matName, base->shader);
 
                     Material* pm = resourceManager.GetMaterial(inst);
                     if (!pm) continue;
 
                     *pm = *base; // shallow copy of defaults
+                    pm->tint = glm::vec4(1.0f); // Force material tint to white
                     mr.material = inst;
                 }
 
@@ -758,23 +765,23 @@ namespace Framework {
             }
 
             // ---------- SPRITE ----------
-            else if (hasSprite) {
-                auto& sp = entityManager->GetComponent<Sprite>(e);
+            //else if (hasSprite) {
+            //    auto& sp = entityManager->GetComponent<Sprite>(e);
 
-                cmd.mesh = quadMesh;
-                cmd.material = defaultMaterial;
-                // Load texture only if spritePath looks like a real file
-                if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
-                    TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
-                    cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
-                }
-                else {
-                    cmd.texture = INVALID_TEXTURE_HANDLE;
-                }
+            //    cmd.mesh = quadMesh;
+            //    cmd.material = defaultMaterial;
+            //    // Load texture only if spritePath looks like a real file
+            //    if (!sp.texturePath.empty() && LooksLikeFilePath(sp.texturePath)) {
+            //        TextureHandle tex = resourceManager.LoadTexture(sp.texturePath);
+            //        cmd.texture = tex.IsValid() ? tex : INVALID_TEXTURE_HANDLE;
+            //    }
+            //    else {
+            //        cmd.texture = INVALID_TEXTURE_HANDLE;
+            //    }
 
-                cmd.tint = glm::vec4(1.0f);
-                cmd.layer = sp.layer;
-            }
+            //    cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
+            //    cmd.layer = sp.layer;
+            //}
 
             // ============================================================================
             // Author:        Tan Wei Leong
@@ -832,6 +839,10 @@ namespace Framework {
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (!entityManager->HasComponent<SpriteAnimation>(e))
             {
+                Material* mat = resourceManager.GetMaterial(cmd.material);
+                mat->u1 = mat->v1 = 1.f;
+                mat->u0 = mat->v0 = 0.f;
+
                 // Entity has no animation  safe to submit as-is
                 renderQueue.Submit(cmd);
                 continue;
@@ -855,6 +866,8 @@ namespace Framework {
             // If still failed for some reason, skip this entity
             if (!mat)
                 continue;
+            mat->u0 = mat->v0;
+            mat->u1 = mat->v1 = 1.f;
 
             // Ensure the material is bound to this sprite sheet
             mat->albedoTexture = anim.spriteSheet;
@@ -915,23 +928,6 @@ namespace Framework {
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
         if (commands.empty()) return;
-        // ========================================================================
-    // DEBUG: PRINT DRAW ORDER (Run this once to verify sorting)
-    // ========================================================================
-        static int frameCount = 0;
-        if (frameCount == 0) { // Only log on the very first frame to avoid spam
-            std::cout << "\n=== RENDER QUEUE DRAW ORDER (Frame 0) ===" << std::endl;
-            int i = 0;
-            for (const auto& cmd : commands) {
-                std::cout << "Cmd [" << i << "]: "
-                    << " Layer: " << cmd.layer
-                    << " | Mesh: " << cmd.mesh.GetID()
-                    << " | Z-Depth: " << cmd.depth << std::endl;
-                i++;
-            }
-            std::cout << "=========================================\n" << std::endl;
-        }
-        frameCount++;
 
         Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
@@ -947,11 +943,9 @@ namespace Framework {
         auto FlushBatch = [&]() {
             if (batchMatrices.empty() || !batchBase) return;
 
-            // 1. Bind Material
-            if (batchBase->material != currentBoundMaterial) {
-                BindMaterial(batchBase->material, glm::vec4(1.0f));
-                currentBoundMaterial = batchBase->material;
-            }
+            // 1. Bind Material (ALWAYS rebind because tint may have changed)
+            BindMaterial(batchBase->material, batchBase->tint);
+            currentBoundMaterial = batchBase->material;
 
             Shader* shader = resourceManager.GetShader(currentBoundShader);
             if (shader) {
@@ -988,7 +982,8 @@ namespace Framework {
             bool isSameBatch = false;
             if (batchBase && cmd.mesh == batchBase->mesh &&
                 cmd.material == batchBase->material &&
-                cmd.texture == batchBase->texture) {
+                cmd.texture == batchBase->texture &&
+                cmd.tint == batchBase->tint) {
                 isSameBatch = true;
             }
 
@@ -1148,6 +1143,23 @@ namespace Framework {
             break;
         }
 
+        // Set alpha discard flag based on blend mode
+        // Opaque mode: don't discard pixels based on alpha (render everything including black)
+        // Other modes: discard transparent pixels for proper alpha blending
+        GLint alphaDiscardLoc = glGetUniformLocation(shader->GetID(), "uUseAlphaDiscard");
+        if (alphaDiscardLoc != -1) {
+            bool useAlphaDiscard = (material->blendMode != BlendMode::Opaque);
+            glUniform1i(alphaDiscardLoc, useAlphaDiscard ? 1 : 0);
+        }
+
+        // Set force opaque alpha flag
+        // When true, ignores texture alpha channel and forces all pixels to alpha=1.0
+        // This fixes black pixels with alpha=0 in PNG files
+        GLint forceOpaqueAlphaLoc = glGetUniformLocation(shader->GetID(), "uForceOpaqueAlpha");
+        if (forceOpaqueAlphaLoc != -1) {
+            glUniform1i(forceOpaqueAlphaLoc, material->forceOpaqueAlpha ? 1 : 0);
+        }
+
         // Set depth test
         if (material->depthTest) {
             glEnable(GL_DEPTH_TEST);
@@ -1227,21 +1239,29 @@ namespace Framework {
     }
 
     void GraphicsSystemV2::AssignMeshAndMaterial(MeshRenderer& mr, const std::string& spriteName) {
-        static std::unordered_map<std::string, std::pair<std::string, std::string>> lookup = {
-            {"wireframequad", {"wireframequad", "wireframeq_mat"}},
-            {"circle", {"circle", "circle_mat"}},
-            {"quad", {"quad", "quad_mat"}},
-            {"line", {"line", "line_mat"}}
-        };
+        // Use string comparisons instead of static unordered_map to avoid memory leak
+        // Static containers never get freed, causing 8-byte leak reports
 
-        auto it = lookup.find(spriteName);
-        if (it != lookup.end()) {
-            mr.mesh = resourceManager.GetMeshHandle(it->second.first);
-            mr.material = resourceManager.GetMaterialHandle(it->second.second);
+        if (spriteName == "wireframequad") {
+            mr.mesh = resourceManager.GetMeshHandle("wireframequad");
+            mr.material = resourceManager.GetMaterialHandle("wireframeq_mat");
+        }
+        else if (spriteName == "circle") {
+            mr.mesh = resourceManager.GetMeshHandle("circle");
+            mr.material = resourceManager.GetMaterialHandle("circle_mat");
+        }
+        else if (spriteName == "quad") {
+            mr.mesh = resourceManager.GetMeshHandle("quad");
+            mr.material = resourceManager.GetMaterialHandle("quad_mat");
+        }
+        else if (spriteName == "line") {
+            mr.mesh = resourceManager.GetMeshHandle("line");
+            mr.material = resourceManager.GetMaterialHandle("line_mat");
         }
         else {
+            // Default case for textures
             mr.mesh = resourceManager.GetMeshHandle("quad");
-            mr.material = Material2;
+            mr.material = defaultMaterial;  // Use defaultMaterial which supports tinting
         }
     }
 

@@ -240,7 +240,7 @@ namespace Framework {
                 if (targetHp.currentHealth <= 0) {                                              
                     targetHp.currentHealth = 0;                                                 
                     targetHp.isDead = true;     
-                    next = LEVEL_END;
+                    GSM_SetNextState(LEVEL_END);
                     LOG_ERROR("Combat", "TARGET DEFEATED!");
                 }
             }
@@ -531,12 +531,12 @@ namespace Framework {
 
     /**
     * @brief Spawns an enemy at the farthest walkable tile from the player.
-    * @param playerEntity Player’s entity reference
+    * @param playerEntity Playerï¿½s entity reference
     * @param entityManager Entity manager for component access
     * @param entitySpawner Entity spawner for creating enemies
     * @return Enemy entity with AI component, or INVALID_ENTITY if spawn fails
     *
-    * Finds the player’s tile, checks all walkable tiles for the one farthest away
+    * Finds the playerï¿½s tile, checks all walkable tiles for the one farthest away
     * (by Manhattan distance), then spawns an enemy there with an AI set to chase
     * the player. Returns INVALID_ENTITY if setup or spawn fails.
     */

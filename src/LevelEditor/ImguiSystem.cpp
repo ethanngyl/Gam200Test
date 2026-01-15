@@ -51,8 +51,26 @@ Safety:
 #include "Pathfinding.h"
 #include "PrefabSerializer.h"
 #include "PrefabTracker.h"
+#include "SaveLoadSystem.h"
 #include <string.h>
+#include <GlobalPauseManager.h>
+#include <regex> 
+
 namespace Framework {
+
+    static bool wantOpenModal = false;
+    static bool wantSaveAsModal = false;
+
+    static int GetGsmStateFromLuaName(const std::string& lowerName) {
+        if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
+        if (lowerName.find("level2") != std::string::npos) return LEVEL_2;
+        if (lowerName.find("levelselect") != std::string::npos) return Level_select;
+        if (lowerName.find("mainmenu") != std::string::npos) return mainMenu;
+        if (lowerName.find("tutorial") != std::string::npos) return TUTORIAL;
+        if (lowerName.find("end") != std::string::npos) return LEVEL_END;
+
+        return -1;
+    }
 
     ImGuiSystem::ImGuiSystem()
         : window(nullptr)
@@ -203,11 +221,18 @@ namespace Framework {
             // if else condition to check which component to add to the entity
             if (word == "Transform") {
                 float px, py, sx, sy;
-                if (iss >> px >> py >> sx >> sy) {
+                float rot = 0.0f;
+                if (iss >> px >> py >> sx >> sy ) {
+
+                    if (!(iss >> rot)) {
+                        iss.clear(); // Clear the error state if the 5th read failed
+                    }
+
                     entityManager->AddComponent<Framework::Transform>(Entity);
                     auto& transform = entityManager->GetComponent<Framework::Transform>(Entity);
                     transform.position = Vector2D(px, py);
                     transform.scale = Vector2D(sx, sy);
+                    transform.rotation = rot;
                 }
                 else {
                     std::cerr << "[ImGuiError] parsing Transform at line " << lineNumber << "\n";
@@ -217,12 +242,18 @@ namespace Framework {
 
             if (word == "Sprite") {
                 std::string name;
-                if (iss >> name) {
+                float r = 1.0f, g = 1.0f, b = 1.0f, a = 1.0f;  // Default white tint
+                iss >> name;
+                // Try to read optional tint values (r g b a)
+                iss >> r >> g >> b >> a;
+
+                if (!name.empty()) {
                     entityManager->AddComponent<Framework::Sprite>(Entity);
                     auto& sprite = entityManager->GetComponent<Framework::Sprite>(Entity);
                     //sprite.texturePath =  name;
                     std::string label = std::filesystem::path(name).filename().string();
                     sprite.texturePath = std::string("assets/") + label;
+                    sprite.tint = glm::vec4(r, g, b, a);
                 }
                 continue;
             }
@@ -392,18 +423,21 @@ namespace Framework {
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 //write position (x,y) and the scale(x,y)
                 writeFile << "Transform " << transform.position.x << " " << transform.position.y << " "
-                    << transform.scale.x << " " << transform.scale.y << "\n";
+                    << transform.scale.x << " " << transform.scale.y << " " 
+					<< transform.rotation <<"\n";
             }
 
             //this if else condition is to check if entity has sprite component
             if (entityManager->HasComponent<MeshRenderer>(entity)) {
                 // get reference to the meshRenderer component
                 // in renderring system, there is also meshrenderer component to generate image
-                // some entity may not have 
+                // some entity may not have
                 auto& meshRenderer = entityManager->GetComponent<MeshRenderer>(entity);
-                //write the sprite name
+                //write the sprite name with tint
                 if (!meshRenderer.spriteName.empty()) {
-                    writeFile << "Sprite " << meshRenderer.spriteName << "\n";
+                    writeFile << "Sprite " << meshRenderer.spriteName << " "
+                             << meshRenderer.tint.r << " " << meshRenderer.tint.g << " "
+                             << meshRenderer.tint.b << " " << meshRenderer.tint.a << "\n";
                 }
             }
 
@@ -412,7 +446,10 @@ namespace Framework {
                 // get reference to the sprite component
                 auto& sprite = entityManager->GetComponent<Sprite>(entity);
                 if (!sprite.texturePath.empty()) {
-                    writeFile << "Sprite " << sprite.texturePath << "\n";
+                    // Save sprite with tint values (r g b a)
+                    writeFile << "Sprite " << sprite.texturePath << " "
+                             << sprite.tint.r << " " << sprite.tint.g << " "
+                             << sprite.tint.b << " " << sprite.tint.a << "\n";
                 }
 
             }
@@ -679,6 +716,9 @@ namespace Framework {
                         if (isLevel) {
                             std::cout << "[Assets] Double-click detected: Loading " << filename << "\n";
 
+							currentLuaLevelPath = fullPath;
+                            pendingLuaGsmState = GetGsmStateFromLuaName(lowerName);
+
                             // 1. Clear Game Viewport
                             if (entityManager) {
                                 entityManager->ClearAllEntities();
@@ -804,6 +844,10 @@ namespace Framework {
             std::cout << "[ImGuiSystem] Toggled to: " << (enabled ? "ON" : "OFF") << "\n";
         }
 
+        // Auto-Switch Screen Mode
+        if (Framework::CORE && Framework::CORE->GetWindowSystem()) {
+            Framework::CORE->GetWindowSystem()->SetFullScreen(!enabled);
+        }
 
         if (!enabled) {
             return;
@@ -825,18 +869,16 @@ namespace Framework {
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        //frameTime = dt;
+        frameTime = ImGui::GetIO().DeltaTime;
         if (entityManager) {
             entityCount = static_cast<int>(entityManager->GetAllEntities().size());
         }
 
-        static bool wantOpenModal = false;
-        static bool wantSaveAsModal = false;
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        //ImGui_ImplOpenGL3_NewFrame();
+        //ImGui_ImplGlfw_NewFrame();
 
-        frameTime = ImGui::GetIO().DeltaTime;
+        
 
         // ========================================================================
         // SETUP DOCKSPACE - Handle docking layout and menu bar
@@ -847,7 +889,7 @@ namespace Framework {
         UpdatePicking();
 
         UpdateEntityDragging();
-        InputSystem* input = Framework::CORE->GetInputSystem();
+        InputSystem* input = CORE->GetInputSystem();
         if (input) {
             // Check if either Left Control or Right Control is being held down
             bool isCtrlHeld = input->IsKeyDown(KEY_LEFT_CONTROL) || input->IsKeyDown(KEY_RIGHT_CONTROL);
@@ -861,9 +903,9 @@ namespace Framework {
                 PerformUndo();
             }
         }
-
+        
         //delete button to delete selected entity
-        if (!CORE->IsPlaying() && entityManager) {
+        if (CORE->IsEditorMode() && entityManager) {
             InputSystem* input = Framework::CORE->GetInputSystem();
 
             if (input && selectedEntity.IsValid()) {
@@ -1125,6 +1167,8 @@ namespace Framework {
 
         // show prefab window - kahyan
         if (showPrefabWindow) ShowPrefabWindow();
+        ShowScriptBrowserPopup();
+        ShowLevelBrowserPopup();
         if (showGameViewport) ShowGameViewport();
     }
 
@@ -1192,6 +1236,58 @@ namespace Framework {
         if (!ImGui::Begin("Entity Inspector##Inspector1", &showEntityInspector)) {
             ImGui::End();
             return;
+        }
+
+        if (entityManager->HasComponent<ScriptComponent>(selectedEntity)) {
+            if (ImGui::CollapsingHeader("Script Component", ImGuiTreeNodeFlags_DefaultOpen)) {
+                auto& sc = entityManager->GetComponent<ScriptComponent>(selectedEntity);
+
+                ImGui::Text("Script Path:");
+                ImGui::SameLine();
+
+                char buffer[512];
+                strncpy(buffer, sc.scriptPath.c_str(), 511);
+                buffer[511] = '\0';
+
+                ImGui::PushItemWidth(-100);  
+                if (ImGui::InputText("##ScriptPath", buffer, 512)) {
+                    sc.scriptPath = buffer;
+                }
+                ImGui::PopItemWidth();
+
+                ImGui::SameLine();
+
+                if (ImGui::Button("Browse...", ImVec2(90, 0))) {
+                    entityPendingScriptAssignment = selectedEntity;
+                    showScriptBrowser = true;
+                }
+
+                ImGui::Spacing();
+                if (!sc.scriptPath.empty()) {
+                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), " Script: %s", sc.scriptPath.c_str());
+
+                    if (sc.initialized) {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "(Initialized)");
+                    }
+                }
+                else {
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f), "⚠ No script assigned");
+                }
+
+                if (sc.initialized) {
+                    ImGui::Spacing();
+                    ImGui::Text("Callbacks:");
+                    ImGui::SameLine();
+                    if (sc.hasOnInit) ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnInit]");
+                    ImGui::SameLine();
+                    if (sc.hasOnUpdate) ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnUpdate]");
+                    ImGui::SameLine();
+                    if (sc.hasOnDestroy) ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnDestroy]");
+                }
+
+                ImGui::Separator();
+            }
         }
 
         std::vector<Entity> allEntities = entityManager->GetAllEntities();
@@ -1357,6 +1453,15 @@ namespace Framework {
                         }
 
                         ImGui::DragInt("Layer", &sprite.layer, 1, -100, 100);
+
+                        // Tint color picker
+                        float tint[4] = { sprite.tint.r, sprite.tint.g, sprite.tint.b, sprite.tint.a };
+                        if (ImGui::ColorEdit4("Tint##SpriteTint", tint)) {
+                            sprite.tint.r = tint[0];
+                            sprite.tint.g = tint[1];
+                            sprite.tint.b = tint[2];
+                            sprite.tint.a = tint[3];
+                        }
 
                         ImGui::TreePop();
                     }
@@ -1535,8 +1640,8 @@ namespace Framework {
                 }
 
                 // ==================================================================
-                // SCRIPT COMPONENT
-                // ==================================================================
+                                // SCRIPT COMPONENT
+                                // ==================================================================
                 if (entityManager->HasComponent<ScriptComponent>(entity)) {
                     if (ImGui::TreeNode("Script##ScriptNode")) {
                         ImGui::SameLine();
@@ -1546,89 +1651,70 @@ namespace Framework {
 
                         auto& script = entityManager->GetComponent<ScriptComponent>(entity);
 
+                        // Display script path with Browse button
+                        ImGui::Text("Script Path:");
+
                         // Editable script path
                         char pathBuffer[512];
-                        //strncpy(pathBuffer, script.scriptPath.c_str(), sizeof(pathBuffer) - 1);
                         strncpy_s(pathBuffer, sizeof(pathBuffer), script.scriptPath.c_str(), _TRUNCATE);
                         pathBuffer[sizeof(pathBuffer) - 1] = '\0';
 
-                        if (ImGui::InputText("Script Path", pathBuffer, sizeof(pathBuffer))) {
+                        // Input field takes most of the width
+                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100);
+                        if (ImGui::InputText("##ScriptPath", pathBuffer, sizeof(pathBuffer))) {
                             script.scriptPath = pathBuffer;
                         }
 
-                        // File browser button
+                        // Browse button on the same line
                         ImGui::SameLine();
-                        if (ImGui::Button("Browse##BrowseScript")) {
-                            ImGui::OpenPopup("SelectScriptPopup");
+                        if (ImGui::Button("Browse...##BrowseScript", ImVec2(90, 0))) {
+                            entityPendingScriptAssignment = entity;
+                            showScriptBrowser = true;
                         }
 
-                        // Script file browser popup
-                        if (ImGui::BeginPopup("SelectScriptPopup")) {
-                            ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.3f, 1.0f), "Select Lua Script");
-                            ImGui::Separator();
+                        // Display script status with color coding
+                        ImGui::Spacing();
+                        if (!script.scriptPath.empty()) {
+                            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f),
+                                " Script: %s", script.scriptPath.c_str());
 
-                            // List available .lua files from assets/scripts/
-                            static std::vector<std::string> scriptFiles;
-                            static bool scriptsLoaded = false;
-
-                            if (!scriptsLoaded) {
-                                scriptsLoaded = true;
-                                scriptFiles.clear();
-
-                                // Scan assets/scripts/ directory for .lua files
-                                std::string scriptsDir = "assets/scripts/";
-                                if (std::filesystem::exists(scriptsDir)) {
-                                    for (const auto& entry : std::filesystem::directory_iterator(scriptsDir)) {
-                                        if (entry.is_regular_file() && entry.path().extension() == ".lua") {
-                                            scriptFiles.push_back(entry.path().string());
-                                        }
-                                    }
-                                }
+                            if (script.initialized) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "(Initialized)");
                             }
-
-                            // Display script files
-                            for (const auto& scriptPath : scriptFiles) {
-                                std::string scriptName = std::filesystem::path(scriptPath).filename().string();
-                                if (ImGui::Selectable(scriptName.c_str())) {
-                                    script.scriptPath = scriptPath;
-                                    ImGui::CloseCurrentPopup();
-                                }
-
-                                // Show tooltip with full path
-                                if (ImGui::IsItemHovered()) {
-                                    ImGui::SetTooltip("%s", scriptPath.c_str());
-                                }
-                            }
-
-                            ImGui::Separator();
-                            if (ImGui::Button("Refresh List")) {
-                                scriptsLoaded = false;
-                            }
-                            ImGui::SameLine();
-                            if (ImGui::Button("Cancel")) {
-                                ImGui::CloseCurrentPopup();
-                            }
-
-                            ImGui::EndPopup();
+                        }
+                        else {
+                            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.3f, 1.0f),
+                                "⚠ No script assigned");
                         }
 
-                        // Extract and show script name
-                        std::string scriptName = std::filesystem::path(script.scriptPath).stem().string();
-                        ImGui::Text("Name: %s", scriptName.c_str());
-
-                        // Status
-                        ImGui::Text("Initialized: %s", script.initialized ? "Yes" : "No");
+                        // Show Lua state info
+                        ImGui::Spacing();
+                        ImGui::Separator();
                         ImGui::Text("Lua State: %s", script.L ? "Active" : "None");
 
-                        // Functions available
-                        ImGui::Separator();
-                        ImGui::Text("Functions:");
-                        ImGui::BulletText("OnInit: %s", script.hasOnInit ? "Yes" : "No");
-                        ImGui::BulletText("OnUpdate: %s", script.hasOnUpdate ? "Yes" : "No");
-                        ImGui::BulletText("OnDestroy: %s", script.hasOnDestroy ? "Yes" : "No");
+                        // Show available callback functions with visual indicators
+                        if (script.initialized) {
+                            ImGui::Spacing();
+                            ImGui::Text("Callbacks:");
 
-                        // Update timer
-                        ImGui::Text("Update Timer: %.3f", script.updateTimer);
+                            if (script.hasOnInit) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnInit]");
+                            }
+                            if (script.hasOnUpdate) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnUpdate]");
+                            }
+                            if (script.hasOnDestroy) {
+                                ImGui::SameLine();
+                                ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[OnDestroy]");
+                            }
+
+                            // Update timer (useful for debugging)
+                            ImGui::Spacing();
+                            ImGui::Text("Update Timer: %.3f", script.updateTimer);
+                        }
 
                         ImGui::TreePop();
                     }
@@ -2643,7 +2729,7 @@ namespace Framework {
         // If the core engine does not exist, stop and do nothing
         if (!CORE) return;
         // If the game is currently playing (not in editor mode), do not handle picking
-        if (CORE->IsPlaying()) return;
+        if (!CORE->IsEditorMode()) return;
         // If there is no entity manager, we cannot access entities, so stop
         if (!entityManager) return;
 
@@ -2753,7 +2839,7 @@ namespace Framework {
         // Safety check: Ensure the Core engine exists
         if (!CORE) return;
         // If the game is currently playing, disable editor dragging to prevent conflicts
-        if (CORE->IsPlaying()) return;
+        if (!CORE->IsEditorMode()) return;
         // Safety check: Ensure the entity manager exists
         if (!entityManager) return;
 
@@ -3591,44 +3677,73 @@ namespace Framework {
         if (ImGui::BeginMenuBar()) {
             //File bar
             if (ImGui::BeginMenu("File")) {
-                if (CORE->IsPlaying()) {
-                    ImGui::BeginDisabled();
+                // Open Level
+                if (ImGui::MenuItem("Open Level...", "Ctrl+O")) {
+                    showLevelBrowser = true;
+                    selectedLevelPath = "";
                 }
-                if (ImGui::MenuItem("Open")) {
-                    bool isOpen = OpenLevelFromTxt("assets/level1.txt", true);
-                    if (!isOpen) {
-                        std::cerr << "[ImGuiError] Failed to open level.txt\n";
+
+                ImGui::Separator();
+
+                // ================================================================
+                // JSON SAVE/LOAD - Universal format for all level types
+                // ================================================================
+                {
+                    extern int current;
+                    std::string levelName = "Unknown";
+                    switch (current) {
+                        case mainMenu: levelName = "MainMenu"; break;
+                        case Level_select: levelName = "LevelSelect"; break;
+                        case LEVEL_2: levelName = "Level2"; break;
+                        case LEVEL_3: levelName = "Level3"; break;
+                        case TUTORIAL: levelName = "Tutorial"; break;
+                        case LEVEL_END: levelName = "LevelEnd"; break;
                     }
-                    else {
-                        currentLevelPath = "assets/level1.txt";
+
+                    // Save Scene (JSON)
+                    if (ImGui::MenuItem("Save Scene", "Ctrl+S")) {
+                        std::string savePath = "assets/saves/" + levelName + "_save.json";
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::SaveToJSON(savePath, entityManager, levelName)) {
+                            LOG_INFO("ImGuiSystem", "Saved scene to: %s", savePath.c_str());
+                        }
+                    }
+
+                    // Load Scene (JSON)
+                    if (ImGui::MenuItem("Load Scene")) {
+                        std::string loadPath = "assets/saves/" + levelName + "_save.json";
+                        SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                        if (SaveLoadSystem::LoadFromJSON(loadPath, entityManager, true)) {
+                            LOG_INFO("ImGuiSystem", "Loaded scene from: %s", loadPath.c_str());
+                            RebuildSpatialPartition();
+                        }
                     }
                 }
-                if (ImGui::MenuItem("Open...")) {
-                    if (currentLevelPath.empty()) {
-                        currentLevelPath = "assets/level1.txt";
-                    }
-                    openPath = currentLevelPath;
+
+                ImGui::Separator();
+
+                // 显示当前关卡
+                extern int current;
+                const char* currentLevelName = "Unknown";
+
+                switch (current) {
+                case mainMenu: currentLevelName = "Main Menu"; break;
+                case Level_select: currentLevelName = "Level Select"; break;
+                case LEVEL_2: currentLevelName = "Level 2"; break;
+                case LEVEL_3: currentLevelName = "Level 3"; break;
+                case TUTORIAL: currentLevelName = "Tutorial"; break;
+                case LEVEL_END: currentLevelName = "Level End"; break;
                 }
-                if (ImGui::MenuItem("Save")) {
-                    const std::string path = currentLevelPath.empty() ? "assets/level1.txt" : currentLevelPath;
-                    bool isSave = SaveLevelToTxt(path);
-                    if (!isSave) {
-                        std::cerr << "[ImGuiError] Failed to save level.txt\n";
-                    }
-                }
-                if (ImGui::MenuItem("Save as ...")) {
-                    if (currentLevelPath.empty()) {
-                        currentLevelPath = "assets/level1.txt";
-                    }
-                    openPath = currentLevelPath;
-                }
+
+                ImGui::TextDisabled("Current: %s", currentLevelName);
+
+                ImGui::Separator();
+
                 if (ImGui::MenuItem("Exit")) {
                     Message quitMsg(Status::Quit);
                     CORE->BroadcastMessage(&quitMsg);
                 }
-                if (CORE->IsPlaying()) {
-                    ImGui::EndDisabled();
-                }
+
                 ImGui::EndMenu();
             }
 
@@ -3647,28 +3762,66 @@ namespace Framework {
             }
 
             if (ImGui::BeginMenu("Editor")) {
-                if (CORE->IsEditorMode()) {
+                if (!CORE->IsPlaying()) {
                     //  In editor mode: Show "PLAY" to exit editor
                     if (ImGui::MenuItem("PLAY")) {
+
+                        CORE->SetPlaying(true);
                         // Exit editor mode
                         CORE->SetEditorMode(false);
 
+						GlobalPause::SetPaused(false);
                         //  CRITICAL: Use RequestToggle() instead of Disable()
                         // This schedules the disable for AFTER this frame completes
-                        this->RequestToggle();
+                        
+                        /*if (!currentLuaLevelPath.empty()) {
+
+                            // If we can map it to a GSM state, transition GSM so Level3 init runs correctly
+                            if (pendingLuaGsmState != -1)
+                            {
+                                // If already in that state, just reload as GAME-load (IS_EDITOR_LOAD = false)
+                                if (pendingLuaGsmState == current)
+                                {
+                                    Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
+                                }
+                                else
+                                {
+                                    next = pendingLuaGsmState;
+                                }
+                            }
+                            else {
+                                Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
+                            }
+                            currentLuaLevelPath.clear();
+							pendingLuaGsmState = -1;
+                        }
+
+                        else if (!currentLevelPath.empty()) {
+                            Framework::LevelLoader::GetInstance().LoadLevel(currentLevelPath, false);
+                        }*/
+
+                        //this->RequestToggle();
 
                         LOG_INFO("IMGUI", "PLAY clicked - Exiting editor mode");
                     }
                 }
                 else {
-                    // Not in editor mode: Show hint
-                    ImGui::TextDisabled("Press F1 to enter editor mode");
-                }
+                    if (ImGui::MenuItem("Stop"))
+                    {
+                        // Stop simulation, return to editing
+                        CORE->SetPlaying(false);
+                        CORE->SetEditorMode(true);
+                        GlobalPause::SetPaused(false);
+                        // Not in editor mode: Show hint
+                        //ImGui::TextDisabled("Press F1 to enter editor mode"); // Re-enable the hint display
+                    }
 
+                }
                 ImGui::EndMenu();
             }
 
             ImGui::EndMenuBar();
+
         }
 
         ImGui::End();  // End DockSpace Window
@@ -3716,5 +3869,347 @@ namespace Framework {
         ImGui::End();
 
         ImGui::PopStyleVar();
+    }
+
+    std::vector<std::string> ImGuiSystem::GetLuaFilesInDirectory(const std::string& directory) {
+        std::vector<std::string> luaFiles;
+
+        try {
+            if (!std::filesystem::exists(directory)) {
+                std::cerr << "[ImGuiSystem] Scripts directory not found: " << directory << std::endl;
+                return luaFiles;
+            }
+
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(directory)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".lua") {
+                    std::filesystem::path relativePath = std::filesystem::relative(entry.path(), directory);
+
+                    std::string pathStr = relativePath.string();
+                    std::replace(pathStr.begin(), pathStr.end(), '\\', '/');
+
+                    luaFiles.push_back(pathStr);
+                }
+            }
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "[ImGuiSystem] Error reading scripts directory: " << e.what() << std::endl;
+        }
+
+        std::sort(luaFiles.begin(), luaFiles.end());
+
+        return luaFiles;
+    }
+
+    void ImGuiSystem::ShowScriptBrowserPopup() {
+        if (showScriptBrowser) {
+            ImGui::OpenPopup("Script Browser");
+            showScriptBrowser = false;  
+        }
+
+        ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_FirstUseEver);
+
+        if (ImGui::BeginPopupModal("Script Browser", nullptr)) {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 1.0f, 1.0f), "Select a Lua Script");
+            ImGui::Separator();
+
+            static char searchBuffer[256] = "";
+            ImGui::SetNextItemWidth(-1);
+            if (ImGui::InputTextWithHint("##search", "Search scripts...", searchBuffer, 256)) {
+            }
+
+            ImGui::Separator();
+
+            ImGui::BeginChild("ScriptList", ImVec2(0, -35), true);
+
+            auto scriptFiles = GetLuaFilesInDirectory("assets/scripts/");
+
+            std::string searchStr = searchBuffer;
+            std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
+
+            int selectableCount = 0;
+            for (const auto& scriptFile : scriptFiles) {
+                std::string lowerScriptFile = scriptFile;
+                std::transform(lowerScriptFile.begin(), lowerScriptFile.end(),
+                    lowerScriptFile.begin(), ::tolower);
+
+                if (!searchStr.empty() && lowerScriptFile.find(searchStr) == std::string::npos) {
+                    continue;
+                }
+
+                selectableCount++;
+
+                if (ImGui::Selectable(scriptFile.c_str())) {
+                    selectedScriptPath = scriptFile;
+
+                    if (entityPendingScriptAssignment.IsValid() &&
+                        entityManager) {
+
+                        if (entityManager->HasComponent<ScriptComponent>(entityPendingScriptAssignment)) {
+                            auto& sc = entityManager->GetComponent<ScriptComponent>(entityPendingScriptAssignment);
+                            sc.scriptPath = "assets/scripts/" + selectedScriptPath;
+                        }
+                        else {
+                            auto& sc = entityManager->AddComponent<ScriptComponent>(entityPendingScriptAssignment);
+                            sc.scriptPath = "assets/scripts/" + selectedScriptPath;
+                        }
+
+                        std::cout << "[ImGuiSystem] Assigned script: scripts/" << selectedScriptPath
+                            << " to entity " << entityPendingScriptAssignment.GetID() << std::endl;
+                    }
+
+                    ImGui::CloseCurrentPopup();
+                }
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Full path: scripts/%s", scriptFile.c_str());
+                    ImGui::EndTooltip();
+                }
+            }
+
+            if (selectableCount == 0) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                    "No scripts found matching '%s'", searchBuffer);
+            }
+
+            ImGui::EndChild();
+
+            
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                searchBuffer[0] = '\0';
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+                "Found %d script(s)", selectableCount);
+
+            ImGui::EndPopup();
+        }
+    }
+
+    std::vector<std::string> ImGuiSystem::GetLuaLevelsInDirectory(const std::string& directory) {
+        std::vector<std::string> levelFiles;
+
+        try {
+            if (!std::filesystem::exists(directory)) {
+                LOG_ERROR("ImGuiSystem", "Directory not found: %s", directory.c_str());
+                return levelFiles;
+            }
+
+            for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".lua") {
+                    std::string filename = entry.path().filename().string();
+
+                    // 只包含关卡文件
+                    if (filename.find("Level") != std::string::npos) {
+                        levelFiles.push_back(filename);
+                    }
+                }
+            }
+        }
+        catch (const std::filesystem::filesystem_error& e) {
+            LOG_ERROR("ImGuiSystem", "Error reading directory: %s", e.what());
+        }
+
+        std::sort(levelFiles.begin(), levelFiles.end());
+        return levelFiles;
+    }
+
+    int ImGuiSystem::GetGameStateFromLevelName(const std::string& levelName) {
+        // MainMenu
+        if (levelName.find("MainMenu") != std::string::npos) {
+            return mainMenu;
+        }
+
+        // LevelSelect
+        if (levelName.find("LevelSelect") != std::string::npos) {
+            return Level_select;
+        }
+
+        // Level1, Level2, Level3...
+        std::regex levelRegex(R"(Level(\d+)\.lua)");
+        std::smatch match;
+
+        if (std::regex_match(levelName, match, levelRegex)) {
+            int levelNum = std::stoi(match[1].str());
+
+            switch (levelNum) {
+            case 2: return LEVEL_2;
+            case 3: return LEVEL_2;
+            default:
+                LOG_WARN("ImGuiSystem", "Unknown level number: %d", levelNum);
+                return -1;
+            }
+        }
+
+        LOG_ERROR("ImGuiSystem", "Failed to parse level name: %s", levelName.c_str());
+        return -1;
+    }
+
+    bool ImGuiSystem::LoadLevelViaGSM(const std::string& levelName) {
+        LOG_INFO("ImGuiSystem", "Loading level via GSM (Editor Mode): %s", levelName.c_str());
+
+        int gameState = GetGameStateFromLevelName(levelName);
+
+        if (gameState == -1) {
+            LOG_ERROR("ImGuiSystem", "Invalid level name: %s", levelName.c_str());
+            return false;
+        }
+
+        extern int next;
+        extern bool g_loadAsEditorMode;
+        
+        next = gameState;
+        g_loadAsEditorMode = true;  // Tell GSM to load in editor mode
+
+        currentEditingLevel = levelName;
+
+        // Enable ImGui immediately since we're loading in editor mode
+        enabled = true;
+
+        LOG_INFO("ImGuiSystem", " Switching to game state %d (editor mode)", gameState);
+
+        return true;
+    }
+
+    bool ImGuiSystem::SaveCurrentLevel() {
+        extern int current;
+
+        std::string levelName;
+
+        switch (current) {
+        case LEVEL_2: levelName = "Level2"; break;
+        case LEVEL_3: levelName = "Level3"; break;
+        case mainMenu: levelName = "MainMenu"; break;
+        case Level_select: levelName = "LevelSelect"; break;
+        default:
+            LOG_WARN("ImGuiSystem", "Cannot save: unknown game state");
+            return false;
+        }
+
+        LOG_INFO("ImGuiSystem", "Saving level: %s", levelName.c_str());
+
+        std::string savePath = "assets/" + levelName + "_saved.txt";
+        bool success = SaveLevelToTxt(savePath);
+
+        if (success) {
+            LOG_INFO("ImGuiSystem", " Saved to: %s", savePath.c_str());
+            return true;
+        }
+        else {
+            LOG_ERROR("ImGuiSystem", " Failed to save: %s", savePath.c_str());
+            return false;
+        }
+    }
+
+    void ImGuiSystem::ShowLevelBrowserPopup() {
+        if (showLevelBrowser) {
+            ImGui::OpenPopup("Open Level");
+            showLevelBrowser = false;
+        }
+
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+
+        if (ImGui::BeginPopupModal("Open Level", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "Select a level to load:");
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            static char searchBuffer[256] = "";
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputTextWithHint("##search", "Search...", searchBuffer, 256);
+            ImGui::Spacing();
+
+            ImGui::BeginChild("LevelList", ImVec2(0, 250), true);
+
+            auto levelFiles = GetLuaLevelsInDirectory("assets/scripts/");
+
+            std::string searchStr = searchBuffer;
+            std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
+
+            bool foundAny = false;
+
+            for (const auto& levelFile : levelFiles) {
+                std::string lowerLevelFile = levelFile;
+                std::transform(lowerLevelFile.begin(), lowerLevelFile.end(),
+                    lowerLevelFile.begin(), ::tolower);
+
+                if (!searchStr.empty() && lowerLevelFile.find(searchStr) == std::string::npos) {
+                    continue;
+                }
+
+                foundAny = true;
+                ImGui::PushID(levelFile.c_str());
+
+                ImGui::Text("📄");
+                ImGui::SameLine();
+
+                if (ImGui::Selectable(levelFile.c_str(), selectedLevelPath == levelFile,
+                    ImGuiSelectableFlags_AllowDoubleClick)) {
+                    if (ImGui::IsMouseDoubleClicked(0)) {
+                        if (LoadLevelViaGSM(levelFile)) {
+                            LOG_INFO("ImGuiSystem", "Loading: %s", levelFile.c_str());
+                        }
+                        ImGui::PopID();
+                        ImGui::CloseCurrentPopup();
+                        break;
+                    }
+                    else {
+                        selectedLevelPath = levelFile;
+                    }
+                }
+
+                if (ImGui::IsItemHovered()) {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Double-click to load");
+                    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Path: assets/scripts/%s", levelFile.c_str());
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::PopID();
+            }
+
+            if (!foundAny) {
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "No levels found");
+            }
+
+            ImGui::EndChild();
+
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (!selectedLevelPath.empty()) {
+                ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Selected: %s", selectedLevelPath.c_str());
+            }
+
+            ImGui::Spacing();
+
+            if (!selectedLevelPath.empty()) {
+                if (ImGui::Button("Load", ImVec2(120, 0))) {
+                    if (LoadLevelViaGSM(selectedLevelPath)) {
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+            }
+            else {
+                ImGui::BeginDisabled();
+                ImGui::Button("Load", ImVec2(120, 0));
+                ImGui::EndDisabled();
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                searchBuffer[0] = '\0';
+                selectedLevelPath = "";
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
     }
 } // namespace Framework
