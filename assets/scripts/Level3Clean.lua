@@ -49,13 +49,14 @@ function OnInit()
     -- Configure editor mode
     if IS_EDITOR_LOAD then
         Log("Level loaded from Editor - Keeping ImGui ENABLED")
+        -- Don't set playing state in editor mode - let LevelLoader handle it
+        -- This allows the editor to control play/stop state
     else
         DisableImGui()
         Log("ImGui disabled (Press F1 to toggle)")
+        -- Set engine state only when NOT in editor mode
+        SetEnginePlayState(true)
     end
-
-    -- Set engine state
-    SetEnginePlayState(true)
 
     -- Load tilemap
     if not LoadTileMapData() then
