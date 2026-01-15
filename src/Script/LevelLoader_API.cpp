@@ -207,7 +207,7 @@ namespace Framework {
         if (button) {
             // Note: We don't need 'button->layer = layer' here anymore 
             // because the CreateButton function inside UISystem handles it.
-            LOG_INFO("LevelLoader", "Button created with layer %d", layer);
+            // Button created
             lua_pushinteger(L, static_cast<lua_Integer>(reinterpret_cast<intptr_t>(button)));
         }
         else {
@@ -375,22 +375,7 @@ namespace Framework {
         // ========================================
         bool editorEnabled = imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport();
 
-        static int debugCount = 0;
-        if (debugCount++ % 60 == 0) {  // Print once per second
-            LOG_INFO("LevelLoader", "========== DrawButtonText: '%s' ==========", text);
-            LOG_INFO("LevelLoader", "  Editor: %s | FBO: %u",
-                editorEnabled ? "ENABLED" : "DISABLED",
-                editorEnabled ? imgui->GetViewportFBO() : 0);
-            LOG_INFO("LevelLoader", "  Viewport: %dx%d", fbWidth, fbHeight);
-            LOG_INFO("LevelLoader", "  World pos: (%.2f, %.2f)", worldX, worldY);
-            LOG_INFO("LevelLoader", "  Screen: (%.2f, %.2f)", screenX, screenY);
-            LOG_INFO("LevelLoader", "  Final: (%.2f, %.2f) [SNAPPED TO BUTTON]", centeredX, centeredY);
-            LOG_INFO("LevelLoader", "  Scale: base=%.2f viewport=%.2f final=%.2f",
-                scale, viewportScale, finalScale);
-            LOG_INFO("LevelLoader", "  Offsets: raw=(%.2f, %.2f) scaled=(%.2f, %.2f)",
-                offsetX, offsetY, scaledOffsetX, scaledOffsetY);
-            LOG_INFO("LevelLoader", "========================================");
-        }
+        // Debug output removed for performance
         // ========================================
 
         glm::vec3 textColor(colorR, colorG, colorB);
@@ -408,10 +393,7 @@ namespace Framework {
                 glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
                 needsRestore = true;
 
-                static int bindLog = 0;
-                if (bindLog++ % 60 == 0) {
-                    LOG_INFO("LevelLoader", "Text rendering to viewport FBO %u (was %u)", viewportFBO, previousFBO);
-                }
+                // Rendering text to viewport FBO
             }
         }
 
@@ -517,7 +499,7 @@ namespace Framework {
     int LevelLoader::Lua_LoadJSON(lua_State* L) {
         const char* filepath = luaL_checkstring(L, 1);
 
-        LOG_INFO("LevelLoader", "Loading JSON file: %s", filepath);
+        // Loading JSON file
 
         // Load JSON and convert to Lua table
         bool success = LevelLoaderJSON::LoadJSONToLua(L, filepath);
@@ -557,7 +539,7 @@ namespace Framework {
             // ========================================
             if (willBeEnabled) {
                 loader->coreEngine->SetPlaying(false);
-                LOG_INFO("LevelLoader", "Game paused (editor toggled on)");
+                // Game paused (editor mode)
             }
             // ========================================
 
@@ -590,11 +572,11 @@ namespace Framework {
         if (imgui) {
             if (enable) {
                 imgui->Enable();
-                LOG_INFO("LevelLoader", "Editor enabled via SetEditorMode");
+                // Editor enabled
             }
             else {
                 imgui->Disable();
-                LOG_INFO("LevelLoader", "Editor disabled via SetEditorMode");
+                // Editor disabled
             }
         }
 
@@ -608,7 +590,7 @@ namespace Framework {
     int LevelLoader::Lua_TogglePause(lua_State* L) {
         (void)L;
         GlobalPause::Toggle();
-        LOG_INFO("LevelLoader", "Pause toggled - Now %s", GlobalPause::IsPaused() ? "PAUSED" : "UNPAUSED");
+        // Pause toggled
         return 0;
     }
 
@@ -690,7 +672,7 @@ namespace Framework {
                         // Optional but recommended: enables walk SFX calls from PlayerManager
                         pc->SetAudioSystem(audio);
 
-                        LOG_INFO("LevelLoader", "Configured PlayerController for player ID=%u (grid movement enabled)", player.GetID());
+                        // PlayerController configured
 
                         // Optional: ensure turn starts in player phase when editor-loading
                         auto& turn = Framework::Turn();
@@ -704,7 +686,7 @@ namespace Framework {
                 }
             }
 
-            LOG_INFO("LevelLoader", "TileMap loaded successfully from: %s", jsonPath);
+            // TileMap loaded successfully
         }
         else {
             LOG_ERROR("LevelLoader", "Failed to load TileMap from: %s", jsonPath);
@@ -773,8 +755,7 @@ namespace Framework {
             transform.rotation = rotation;  // Assuming rotation is stored in degrees
         }
 
-        LOG_INFO("LevelLoader", "Spawned sprite '%s' at (%.2f, %.2f) size (%.2f, %.2f), layer=%d, rotation=%.1f°, ID=%u",
-            texture, x, y, width, height, layer, rotation, entity.GetID());
+        // Sprite spawned
 
         // Return entity ID as integer
         lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
@@ -807,10 +788,7 @@ namespace Framework {
 
         // Debug: Log tint changes
         static int logThrottle = 0;
-        if (logThrottle++ % 60 == 0) {  // Log once per second
-            LOG_INFO("LevelLoader", "SetSpriteColor: Entity %lld -> tint(%.2f, %.2f, %.2f, %.2f)",
-                entityID, r, g, b, a);
-        }
+        // Sprite color set
 
         return 0;
     }
@@ -840,7 +818,7 @@ namespace Framework {
         // Request graphics system to update the mesh and material for this sprite
         gfx->AssignMeshAndMaterial(mr, texturePath);
 
-        LOG_INFO("LevelLoader", "SetSpriteTexture: Entity %lld -> texture '%s'", entityID, texturePath);
+        // Sprite texture set
 
         return 0;
     }
@@ -885,7 +863,7 @@ namespace Framework {
 
         if (entity.IsValid()) {
             em->DestroyEntity(entity);
-            LOG_INFO("LevelLoader", "Destroyed entity ID=%lld", entityID);
+            // Entity destroyed
         }
         else {
             LOG_WARN("LevelLoader", "DestroyEntity: Invalid entity (ID=%lld)", entityID);
@@ -913,7 +891,7 @@ namespace Framework {
         // Clear all entities using existing ECS function
         em->ClearAllEntities();
 
-        LOG_INFO("LevelLoader", "Cleared all entities (%zu destroyed)", entityCount);
+        // All entities cleared
         return 0;
     }
 
@@ -961,8 +939,7 @@ namespace Framework {
 
         auto& ap = em->GetComponent<AP>(player);
 
-        LOG_INFO("LevelLoader", "GetPlayerAP: Player %u has %d/%d AP",
-                 player.GetID(), ap.actionPoints, ap.maxActionPoints);
+        // Player AP retrieved
 
         // Return currentAP, maxAP
         lua_pushinteger(L, ap.actionPoints);
@@ -1045,7 +1022,7 @@ namespace Framework {
         for (Entity e : em->GetAllEntities()) {
             if (em->HasComponent<CircleCollider>(e) &&
                 !em->HasComponent<EnemyAI>(e)) {
-                LOG_INFO("LevelLoader", "FindPlayer: Found player entity ID=%u", e.GetID());
+                // Player found
                 lua_pushinteger(L, e.GetID());
                 return 1;
             }
@@ -1083,11 +1060,11 @@ namespace Framework {
                 lua_pushinteger(L, index++);
                 lua_pushinteger(L, e.GetID());
                 lua_settable(L, -3);
-                LOG_INFO("LevelLoader", "GetAllEnemies: Found enemy ID=%u", e.GetID());
+                // Enemy found
             }
         }
 
-        LOG_INFO("LevelLoader", "GetAllEnemies: Found %d enemies total", index - 1);
+        // All enemies retrieved
         return 1;
     }
 
