@@ -60,6 +60,9 @@ namespace Framework {
 
     static bool wantOpenModal = false;
     static bool wantSaveAsModal = false;
+    static bool wantOpenSceneModal = false;
+    static bool wantSaveSceneAsModal = false;
+    static std::string currentScenePath = "";
 
     static int GetGsmStateFromLuaName(const std::string& lowerName) {
         if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
@@ -169,7 +172,7 @@ namespace Framework {
 
         // this is to declare a input file stream called readFile and open the file
         std::ifstream readFile(file);
-
+        
         // check if the file is open, display error message if not
         if (!readFile.is_open()) {
             std::cerr << "[ImGuiError] Could not open file for reading: " << file << "\n";
@@ -949,6 +952,18 @@ namespace Framework {
             wantSaveAsModal = false;
         }
 
+        if (wantOpenSceneModal)
+        {
+            ImGui::OpenPopup("Open Scene...");
+            wantOpenSceneModal = false;
+        }
+
+        if (wantSaveSceneAsModal)
+        {
+            ImGui::OpenPopup("Save Scene As...");
+            wantSaveSceneAsModal = false;
+        }
+
         // open level modal window. auto resize to fit content
         if (ImGui::BeginPopupModal("Open Level...", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             // according research, openbuffer must be char array
@@ -1049,6 +1064,139 @@ namespace Framework {
             if (ImGui::Button("Cancel")) {
                 ImGui::CloseCurrentPopup();
             }
+            ImGui::EndPopup();
+        }
+
+        // ============================================================================
+        // JSON: Open Scene... (file-based)
+        // ============================================================================
+        if (ImGui::BeginPopupModal("Open Scene...", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            static char openSceneBuffer[256] = "";
+            static bool openSceneError = false;
+            static std::string openSceneErrorMsg = "";
+
+            extern int current;
+            std::string levelName = "Unknown";
+            switch (current)
+            {
+            case mainMenu: levelName = "MainMenu"; break;
+            case Level_select: levelName = "LevelSelect"; break;
+            case LEVEL_2: levelName = "Level2"; break;
+            case LEVEL_3: levelName = "Level3"; break;
+            case TUTORIAL: levelName = "Tutorial"; break;
+            case LEVEL_END: levelName = "LevelEnd"; break;
+            }
+
+            if (ImGui::IsWindowAppearing())
+            {
+                std::string defaultPath = currentScenePath.empty()
+                    ? ("assets/saves/" + levelName + "_save.json")
+                    : currentScenePath;
+
+                std::snprintf(openSceneBuffer, sizeof(openSceneBuffer), "%s", defaultPath.c_str());
+                openSceneError = false;
+                openSceneErrorMsg.clear();
+            }
+
+            ImGui::InputText("Path", openSceneBuffer, sizeof(openSceneBuffer));
+
+            if (openSceneError)
+            {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", openSceneErrorMsg.c_str());
+            }
+
+            if (ImGui::Button("Open"))
+            {
+                currentScenePath = openSceneBuffer;
+
+                SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                if (SaveLoadSystem::LoadFromJSON(currentScenePath, entityManager, true))
+                {
+                    LOG_INFO("ImGuiSystem", "Opened scene (JSON): %s", currentScenePath.c_str());
+                    RebuildSpatialPartition();
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    openSceneError = true;
+                    openSceneErrorMsg = "Invalid path or JSON format: " + std::string(openSceneBuffer);
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel"))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
+        // ============================================================================
+        // JSON: Save Scene As... (file-based)
+        // ============================================================================
+        if (ImGui::BeginPopupModal("Save Scene As...", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            static char saveSceneBuffer[256] = "";
+            static bool saveSceneError = false;
+            static std::string saveSceneErrorMsg = "";
+
+            extern int current;
+            std::string levelName = "Unknown";
+            switch (current)
+            {
+            case mainMenu: levelName = "MainMenu"; break;
+            case Level_select: levelName = "LevelSelect"; break;
+            case LEVEL_2: levelName = "Level2"; break;
+            case LEVEL_3: levelName = "Level3"; break;
+            case TUTORIAL: levelName = "Tutorial"; break;
+            case LEVEL_END: levelName = "LevelEnd"; break;
+            }
+
+            if (ImGui::IsWindowAppearing())
+            {
+                std::string defaultPath = currentScenePath.empty()
+                    ? ("assets/saves/" + levelName + "_save.json")
+                    : currentScenePath;
+
+                std::snprintf(saveSceneBuffer, sizeof(saveSceneBuffer), "%s", defaultPath.c_str());
+                saveSceneError = false;
+                saveSceneErrorMsg.clear();
+            }
+
+            ImGui::InputText("Path", saveSceneBuffer, sizeof(saveSceneBuffer));
+
+            if (saveSceneError)
+            {
+                ImGui::Spacing();
+                ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", saveSceneErrorMsg.c_str());
+            }
+
+            if (ImGui::Button("Save"))
+            {
+                currentScenePath = saveSceneBuffer;
+
+                SaveLoadSystem::SetGraphicsSystem(graphicsSystem);
+                if (SaveLoadSystem::SaveToJSON(currentScenePath, entityManager, levelName))
+                {
+                    LOG_INFO("ImGuiSystem", "Saved scene (JSON): %s", currentScenePath.c_str());
+                    ImGui::CloseCurrentPopup();
+                }
+                else
+                {
+                    saveSceneError = true;
+                    saveSceneErrorMsg = "Could not save to path: " + std::string(saveSceneBuffer);
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel"))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
             ImGui::EndPopup();
         }
 
@@ -3677,6 +3825,8 @@ namespace Framework {
         if (ImGui::BeginMenuBar()) {
             //File bar
             if (ImGui::BeginMenu("File")) {
+
+                
                 // Open Level
                 if (ImGui::MenuItem("Open Level...", "Ctrl+O")) {
                     showLevelBrowser = true;
@@ -3709,6 +3859,11 @@ namespace Framework {
                         }
                     }
 
+                    if (ImGui::MenuItem("Save Scene As..."))
+                    {
+                        wantSaveSceneAsModal = true;
+                    }
+
                     // Load Scene (JSON)
                     if (ImGui::MenuItem("Load Scene")) {
                         std::string loadPath = "assets/saves/" + levelName + "_save.json";
@@ -3717,6 +3872,11 @@ namespace Framework {
                             LOG_INFO("ImGuiSystem", "Loaded scene from: %s", loadPath.c_str());
                             RebuildSpatialPartition();
                         }
+                    }
+
+                    if (ImGui::MenuItem("Load Scene..."))
+                    {
+                        wantOpenSceneModal = true;
                     }
                 }
 
