@@ -137,8 +137,9 @@ namespace Framework
     {
         // Drop all mappings in both directions. Typically used when
         // switching levels/scenes so we don't keep stale data.
-        entityToPrefab.clear();
-        prefabToEntities.clear();
+        // Force deallocation using swap trick - don't call clear() first
+        std::unordered_map<unsigned, std::string>().swap(entityToPrefab);
+        std::unordered_map<std::string, std::vector<Entity>>().swap(prefabToEntities);
     }
 
 } // namespace Framework

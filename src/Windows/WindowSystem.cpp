@@ -1,5 +1,5 @@
-#include "Precompiled.h"
-#include "ConfigReader/ConfigReader.h"  // Ê¹ÓÃÓÅ»¯°æ ConfigReader
+ï»¿#include "Precompiled.h"
+#include "ConfigReader/ConfigReader.h"  // ä½¿ç”¨ä¼˜åŒ–ç‰ˆ ConfigReader
 
 /*
 ===============================================================================
@@ -160,6 +160,27 @@ namespace Framework
     bool WindowSystem::ShouldClose() const
     {
         return window ? glfwWindowShouldClose(window) : true;
+    }
+
+    //jiahao
+    void WindowSystem::SetFullScreen(bool fullscreen) {
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+        if (fullscreen) {
+            // Switch to exclusive fullscreen at current desktop resolution
+            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        }
+        else {
+            // Switch to windowed mode 
+            int width = 1920;
+            int height = 1060;
+            int xpos = (mode->width - width) / 2;
+            int ypos = (mode->height - height) / 2;
+            glfwSetWindowMonitor(window, nullptr, xpos, ypos, width, height, 0);
+            glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+            glfwMaximizeWindow(window);
+        }
     }
 
 }  // End of Framework namespace

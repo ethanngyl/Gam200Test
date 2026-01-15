@@ -36,6 +36,8 @@
 #include "Turn.h"         // Turn system
 #include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
 #include "Grid/GridECS.h" // Grid system functions
+#include "PlayerManager.h"
+#include "SaveLoadSystem.h"  // JSON Save/Load system
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -659,6 +661,49 @@ namespace Framework {
         bool success = TileMapLevelLoader::LoadLevel(jsonPath, spawner, em, startPos, spacing, tileSize);
 
         if (success) {
+            if (loader->coreEngine) {
+                auto* em = loader->coreEngine->GetEntityManager();
+                auto* pc = loader->coreEngine->GetPlayerController();
+                auto* spawner = loader->coreEngine->GetSpawner();
+                auto* input = loader->coreEngine->GetInputSystem();
+                auto* audio = loader->coreEngine->GetAudioSystem();
+
+                if (em && pc && spawner && input) {
+                    Framework::Entity player{ Framework::INVALID_ENTITY };
+                    for (Framework::Entity e : em->GetAllEntities())
+                    {
+                        if (em->HasComponent<Framework::CircleCollider>(e) &&
+                            !em->HasComponent<Framework::EnemyAI>(e))
+                        {
+                            player = e;
+                            break;
+                        }
+                    }
+
+                    if (player.GetID() != Framework::INVALID_ENTITY) {
+                        pc->SetPlayerEntity(player);
+                        pc->SetEntitySpawner(spawner);
+                        pc->SetEntityManager(em);
+                        pc->SetInputSystem(input);
+                        pc->SetGridMovementEnabled(true);
+
+                        // Optional but recommended: enables walk SFX calls from PlayerManager
+                        pc->SetAudioSystem(audio);
+
+                        LOG_INFO("LevelLoader", "Configured PlayerController for player ID=%u (grid movement enabled)", player.GetID());
+
+                        // Optional: ensure turn starts in player phase when editor-loading
+                        auto& turn = Framework::Turn();
+                        turn.phase = Framework::TurnPhase::Player;
+                        turn.busy = false;
+                    }
+                    else {
+                        LOG_WARN("LevelLoader", "Lua_LoadTileMap: Could not find player entity to configure controller");
+                    }
+
+                }
+            }
+
             LOG_INFO("LevelLoader", "TileMap loaded successfully from: %s", jsonPath);
         }
         else {
@@ -1218,6 +1263,110 @@ namespace Framework {
         return 0;
     }
 
+    // SetSpriteBlendMode(entityID, "Opaque" | "AlphaBlend" | "Additive" | "Multiply", forceOpaqueAlpha=false)
+    // forceOpaqueAlpha: If true, ignores texture alpha and renders all pixels as opaque (fixes black pixels with alpha=0)
+    int LevelLoader::Lua_SetSpriteBlendMode(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* blendModeStr = luaL_checkstring(L, 2);
+        bool forceOpaqueAlpha = lua_toboolean(L, 3);  // Optional third parameter (default false)
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gs = static_cast<GraphicsSystemV2*>(loader->coreEngine->GetGraphicsSystem());
+        if (!em || !gs) return 0;
+
+        Entity e(static_cast<uint32_t>(entityID));
+        if (!e.IsValid() || !em->HasComponent<MeshRenderer>(e)) {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Entity %d has no MeshRenderer", entityID);
+            return 0;
+        }
+
+        auto& mr = em->GetComponent<MeshRenderer>(e);
+        if (!mr.material.IsValid()) {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Entity %d has no valid material", entityID);
+            return 0;
+        }
+
+        // Get material and set blend mode
+        auto* mat = gs->GetResourceManager().GetMaterial(mr.material);
+        if (!mat) {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Failed to get material for entity %d", entityID);
+            return 0;
+        }
+
+        // Parse blend mode string
+        std::string mode(blendModeStr);
+        if (mode == "Opaque") {
+            mat->blendMode = BlendMode::Opaque;
+        } else if (mode == "AlphaBlend") {
+            mat->blendMode = BlendMode::AlphaBlend;
+        } else if (mode == "Additive") {
+            mat->blendMode = BlendMode::Additive;
+        } else if (mode == "Multiply") {
+            mat->blendMode = BlendMode::Multiply;
+        } else {
+            LOG_WARN("LevelLoader", "SetSpriteBlendMode: Unknown blend mode '%s', use: Opaque, AlphaBlend, Additive, or Multiply", blendModeStr);
+            return 0;
+        }
+
+        // Set force opaque alpha flag
+        mat->forceOpaqueAlpha = forceOpaqueAlpha;
+
+        LOG_INFO("LevelLoader", "SetSpriteBlendMode: Entity %d set to %s, forceOpaqueAlpha=%s",
+                 entityID, blendModeStr, forceOpaqueAlpha ? "true" : "false");
+        return 0;
+    }
+
+    // SetSpriteFilterMode(entityID, useNearest=true)
+    // useNearest: true = pixel-perfect (GL_NEAREST), false = smooth (GL_LINEAR)
+    // Use true for pixel art/UI to prevent black box artifacts from filtering
+    int LevelLoader::Lua_SetSpriteFilterMode(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool useNearest = lua_toboolean(L, 2);  // Default false if not provided
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gs = static_cast<GraphicsSystemV2*>(loader->coreEngine->GetGraphicsSystem());
+        if (!em || !gs) return 0;
+
+        Entity e(static_cast<uint32_t>(entityID));
+        if (!e.IsValid() || !em->HasComponent<MeshRenderer>(e)) {
+            LOG_WARN("LevelLoader", "SetSpriteFilterMode: Entity %d has no MeshRenderer", entityID);
+            return 0;
+        }
+
+        auto& mr = em->GetComponent<MeshRenderer>(e);
+        if (!mr.material.IsValid()) {
+            LOG_WARN("LevelLoader", "SetSpriteFilterMode: Entity %d has no valid material", entityID);
+            return 0;
+        }
+
+        // Get material to access texture
+        auto* mat = gs->GetResourceManager().GetMaterial(mr.material);
+        if (!mat || !mat->albedoTexture.IsValid()) {
+            LOG_WARN("LevelLoader", "SetSpriteFilterMode: Entity %d has no texture", entityID);
+            return 0;
+        }
+
+        // Get texture and set filter mode
+        auto* tex = gs->GetResourceManager().GetTexture(mat->albedoTexture);
+        if (tex) {
+            tex->SetFilterMode(useNearest);
+            LOG_INFO("LevelLoader", "SetSpriteFilterMode: Entity %d set to %s filtering",
+                     entityID, useNearest ? "NEAREST" : "LINEAR");
+        } else {
+            LOG_WARN("LevelLoader", "SetSpriteFilterMode: Failed to get texture for entity %d", entityID);
+        }
+
+        return 0;
+    }
+
     // Toggle editor mode
     int LevelLoader::lua_ToggleEditorMode(lua_State* L) {
         (void)L;
@@ -1239,6 +1388,38 @@ namespace Framework {
     int LevelLoader::lua_IsEditorMode(lua_State* L) {
         bool isEditor = CORE ? CORE->IsEditorMode() : false;
         lua_pushboolean(L, isEditor);
+        return 1;
+    }
+
+    /**
+     * @brief Check if gameplay should be disabled (buttons grayed out, etc.)
+     * @return boolean - true if gameplay should be disabled
+     * 
+     * Returns true when:
+     * - In editor mode AND not playing (STOP state)
+     * 
+     * Returns false when:
+     * - Not in editor mode (normal gameplay)
+     * - In editor mode but playing (PLAY button was clicked)
+     * 
+     * Usage in Lua:
+     *   if ShouldDisableGameplay() then
+     *       -- Gray out buttons, disable input
+     *   end
+     */
+    int LevelLoader::Lua_ShouldDisableGameplay(lua_State* L) {
+        if (!CORE) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        
+        bool isEditorMode = CORE->IsEditorMode();
+        bool isPlaying = CORE->IsPlaying();
+        
+        // Disable gameplay only when in editor mode AND not playing
+        bool shouldDisable = isEditorMode && !isPlaying;
+        
+        lua_pushboolean(L, shouldDisable);
         return 1;
     }
 
@@ -1634,6 +1815,26 @@ namespace Framework {
     }
 
     /**
+     * @brief Enable or disable C++ grid movement (when using Lua PlayerScript)
+     * @param enabled true to enable C++ grid movement, false to disable
+     * Usage: SetGridMovementEnabled(false) -- Disable C++ movement, use Lua script instead
+     */
+    int LevelLoader::Lua_SetGridMovementEnabled(lua_State* L) {
+        bool enabled = lua_toboolean(L, 1);
+
+        auto* pc = CORE ? CORE->GetPlayerController() : nullptr;
+        if (!pc) {
+            LOG_WARN("LevelLoader", "SetGridMovementEnabled: No PlayerController");
+            return 0;
+        }
+
+        pc->SetGridMovementEnabled(enabled);
+        LOG_INFO("LevelLoader", "Grid movement %s via Lua", enabled ? "ENABLED" : "DISABLED");
+
+        return 0;
+    }
+
+    /**
      * @brief Check if chest exists at tile
      * @param x, y Grid coordinates
      * @return true if chest exists
@@ -1979,6 +2180,187 @@ namespace Framework {
             lua_settable(L, -3);
         }
 
+        return 1;
+    }
+
+    // ========================================================================
+    // SAVE/LOAD API - JSON Serialization for Lua
+    // ========================================================================
+
+    /**
+     * @brief Save current scene to JSON file
+     * @param filepath Path to save file
+     * @param levelName Name of the level (for metadata)
+     * @return boolean success
+     *
+     * Usage: local success = SaveSceneToJSON("assets/saves/level3.json", "Level3")
+     */
+    int LevelLoader::Lua_SaveSceneToJSON(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* filepath = luaL_checkstring(L, 1);
+        const char* levelName = luaL_optstring(L, 2, "Unknown");
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "SaveSceneToJSON: EntityManager not available");
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Set graphics system for texture loading during serialization
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+
+        bool success = SaveLoadSystem::SaveToJSON(filepath, em, levelName);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Scene saved to: %s", filepath);
+        } else {
+            LOG_ERROR("LevelLoader", "Failed to save scene to: %s", filepath);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Load scene from JSON file
+     * @param filepath Path to load file
+     * @param clearExisting Whether to clear existing entities (default: true)
+     * @return boolean success
+     *
+     * Usage: local success = LoadSceneFromJSON("assets/saves/level3.json", true)
+     */
+    int LevelLoader::Lua_LoadSceneFromJSON(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* filepath = luaL_checkstring(L, 1);
+        bool clearExisting = lua_isboolean(L, 2) ? lua_toboolean(L, 2) : true;
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "LoadSceneFromJSON: EntityManager not available");
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Set graphics system for texture loading during deserialization
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+
+        bool success = SaveLoadSystem::LoadFromJSON(filepath, em, clearExisting);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Scene loaded from: %s", filepath);
+            // Rebuild spatial partition after loading
+            RebuildSpatialPartition();
+        } else {
+            LOG_ERROR("LevelLoader", "Failed to load scene from: %s", filepath);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Auto-save current scene
+     * @param levelName Name of the level
+     * @return boolean success
+     *
+     * Usage: local success = AutoSaveScene("Level3")
+     */
+    int LevelLoader::Lua_AutoSaveScene(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* levelName = luaL_checkstring(L, 1);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+        bool success = SaveLoadSystem::AutoSave(em, levelName);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Auto-saved: %s", levelName);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Load auto-save for a level
+     * @param levelName Name of the level
+     * @return boolean success
+     *
+     * Usage: local success = LoadAutoSave("Level3")
+     */
+    int LevelLoader::Lua_LoadAutoSave(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* levelName = luaL_checkstring(L, 1);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
+        bool success = SaveLoadSystem::LoadAutoSave(em, levelName);
+        
+        if (success) {
+            LOG_INFO("LevelLoader", "Loaded auto-save: %s", levelName);
+            RebuildSpatialPartition();
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Check if auto-save exists for a level
+     * @param levelName Name of the level
+     * @return boolean exists
+     *
+     * Usage: local exists = HasAutoSave("Level3")
+     */
+    int LevelLoader::Lua_HasAutoSave(lua_State* L) {
+        const char* levelName = luaL_checkstring(L, 1);
+        bool exists = SaveLoadSystem::HasAutoSave(levelName);
+        lua_pushboolean(L, exists);
+        return 1;
+    }
+
+    /**
+     * @brief Clear auto-save for a level
+     * @param levelName Name of the level
+     * @return boolean success
+     *
+     * Usage: local success = ClearAutoSave("Level3")
+     */
+    int LevelLoader::Lua_ClearAutoSave(lua_State* L) {
+        const char* levelName = luaL_checkstring(L, 1);
+        bool success = SaveLoadSystem::ClearAutoSave(levelName);
+        lua_pushboolean(L, success);
         return 1;
     }
 

@@ -802,13 +802,13 @@ namespace Framework {
 
                     // Trigger level completion (you can customize this)
                     // Option 1: Return to main menu
-                    next = LEVEL_END;
+                    GSM_SetNextState(LEVEL_END);
 
                     // Option 2: Load next level
-                    // next = LEVEL_4;
+                    // GSM_SetNextState(LEVEL_4);
 
                     // Option 3: Show victory screen
-                    // next = victoryScreen;
+                    // GSM_SetNextState(victoryScreen);
 
                     return true;  // Allow movement onto goal
                 }

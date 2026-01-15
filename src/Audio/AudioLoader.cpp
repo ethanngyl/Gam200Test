@@ -285,4 +285,14 @@ namespace Framework {
         }
     }
 
+    void AudioLoader::Shutdown() {
+        // Force deallocation using swap trick - don't call clear() first
+        std::vector<AudioConfig>().swap(loadedConfigs);
+
+        // Reset settings to defaults
+        settings = AudioSettings();
+
+        LOG_INFO("AudioLoader", "AudioLoader shutdown complete - static resources freed");
+    }
+
 } // namespace Framework

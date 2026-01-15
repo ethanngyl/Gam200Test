@@ -43,6 +43,7 @@
 #include "AudioLoader.h"
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
+#include "PrefabInstanceRegistry.h"
 
 namespace Framework
 {
@@ -357,6 +358,13 @@ namespace Framework
             LOG_INFO("CORE", "ScriptSystem destroyed");
         }
 
+        // Delete DamageIndicatorSystem (not in Systems vector because it only inherits IMessageHandler)
+        if (damageIndicator) {
+            delete damageIndicator;
+            damageIndicator = nullptr;
+            LOG_INFO("CORE", "DamageIndicatorSystem destroyed");
+        }
+
         // Destroy all other systems
         DestroySystems();
 
@@ -372,6 +380,12 @@ namespace Framework
         if (windowSystem) {
             glfwTerminate();
         }
+
+        // Clean up static resources to prevent memory leak reports
+        ConfigReader::Shutdown();
+        AudioLoader::Shutdown();
+        PrefabInstanceRegistry::Get().Clear();
+        eng::debug::Log::shutdown();
 
         LOG_INFO("CORE", "Cleanup complete");
     }
