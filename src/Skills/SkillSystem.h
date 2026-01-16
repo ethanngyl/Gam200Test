@@ -5,42 +5,30 @@
  Date:           2025-01-12
  ------------------------------------------------------------------------------
 
- System for managing skill unlocks and skill replacement.
+ SKILL SYSTEM - Manages player skill progression
 
- Key Functions:
- - GiveStartingSkills(): Give player their class's starting 4 skills
- - UnlockNextSkill(): Unlock the next skill in progression (level complete)
- - ReplaceSkill(): Replace an equipped skill with a newly unlocked skill
+ PUBLIC API:
+ - GiveStartingSkills()  : Give player their class's first 4 skills
+ - UnlockNextSkill()     : Unlock the next skill (call on level complete)
+ - ReplaceSkillByID()    : Swap an equipped skill with another unlocked skill
+ - SwapSkillSlots()      : Swap positions of two equipped skills
 
- HOTKEY TESTING (remove when integrating real UI):
- ----------------------------------------
- [Z] - Select Class: Swordmaster
- [X] - Select Class: Magus
- [C] - Select Class: Berserker
+ USAGE:
+ 1. Call SetInputSystem() and SetEntityManager() during engine init
+ 2. Player selects class -> call GiveStartingSkills()
+ 3. Player completes level -> call UnlockNextSkill()
+ 4. Player wants to change loadout -> call ReplaceSkillByID()
 
- [V] - Unlock next skill (simulates level complete)
-
- [B] - Replace Slot 1 with newest unlocked skill
- [N] - Replace Slot 2 with newest unlocked skill
- [M] - Replace Slot 3 with newest unlocked skill
- [J] - Replace Slot 4 with newest unlocked skill
-
- [P] - Print current skill loadout
- ----------------------------------------
 ===============================================================================
 */
 
 #pragma once
 
-// DON'T include Precompiled.h here - it causes circular dependency
-// Include only what we need
 #include "SkillComponent.h"
 #include "Interface.h"
-#include "Log.h"
 
 namespace Framework {
 
-    // Forward declarations - these are defined elsewhere
     class InputSystem;
     class EntityManager;
 
@@ -49,53 +37,62 @@ namespace Framework {
         SkillSystem() = default;
         ~SkillSystem() = default;
 
+        // === ENGINE INTERFACE ===
         void Initialize() override;
         void Update(float dt) override;
         void SendEngineMessage(Message* msg) override;
 
-        // ====================================================================
-        // DEPENDENCY SETTERS
-        // ====================================================================
-        void SetEntityManager(EntityManager* em) {
-            entityManager = em;
-        }
+        // === DEPENDENCIES ===
+        void SetEntityManager(EntityManager* em) { entityManager = em; }
+        void SetInputSystem(InputSystem* input) { inputSystem = input; }
 
-        void SetInputSystem(InputSystem* input) {
-            inputSystem = input;
-        }
+        // === ACCESSORS ===
+        SkillComponent* GetPlayerSkills() { return &playerSkills; }
+        bool HasSelectedClass() const { return hasSelectedClass; }
 
-        // ====================================================================
-        // GET PLAYER SKILLS (for external access)
-        // ====================================================================
-        SkillComponent* GetPlayerSkills() {
-            return &playerSkills;
-        }
+        // =================================================================
+        // PUBLIC API - Use these functions in your game code
+        // =================================================================
 
-        // ====================================================================
-        // MAIN FUNCTIONS (static for use anywhere)
-        // ====================================================================
+        /**
+         * @brief Give player their starting skills (first 4 with unlockOrder 0-3)
+         * @param skillComp The player's skill component
+         * @param charClass The class to initialize
+         */
         static void GiveStartingSkills(SkillComponent& skillComp, CharacterClass charClass);
-        static void UnlockNextSkill(SkillComponent& skillComp);
-        static bool ReplaceSkill(SkillComponent& skillComp, int slotIndex, int newSkillID);
-        static void SwapSkillSlots(SkillComponent& skillComp, int fromSlot, int toSlot);
 
-        // ====================================================================
-        // HELPER FUNCTIONS
-        // ====================================================================
-        static std::vector<SkillData> GetClassSkills(CharacterClass charClass);
-        static const char* GetClassName(CharacterClass charClass);
+        /**
+         * @brief Unlock the next skill in progression order
+         * @param skillComp The player's skill component
+         * @return true if a skill was unlocked, false if all skills already unlocked
+         */
+        static bool UnlockNextSkill(SkillComponent& skillComp);
+
+        /**
+         * @brief Replace an equipped slot with a different unlocked skill
+         * @param skillComp The player's skill component
+         * @param slotIndex Which slot to replace (0-3)
+         * @param skillID The skill ID to equip
+         * @return true if successful
+         */
+        static bool ReplaceSkillByID(SkillComponent& skillComp, int slotIndex, int skillID);
+
+        /**
+         * @brief Swap two equipped skill slots
+         * @param skillComp The player's skill component
+         * @param fromSlot First slot (0-3)
+         * @param toSlot Second slot (0-3)
+         */
+        static void SwapSkillSlots(SkillComponent& skillComp, int fromSlot, int toSlot);
 
     private:
         EntityManager* entityManager = nullptr;
         InputSystem* inputSystem = nullptr;
 
-        // Player skill data (for testing - later attach to player entity)
         SkillComponent playerSkills;
         bool hasSelectedClass = false;
 
-        // ====================================================================
-        // HOTKEY HELPER FUNCTIONS
-        // ====================================================================
+        // Test hotkey helpers
         void SelectClass(CharacterClass charClass);
         void ReplaceSlotWithNewest(int slotIndex);
     };
