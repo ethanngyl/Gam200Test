@@ -1,6 +1,6 @@
 -- ============================================================================
 -- PlayerScript.lua
--- Grid-based player movement component script
+-- Grid-based player movement and animation component script
 -- ============================================================================
 -- This script handles player movement on a grid using arrow keys or WASD
 -- Features:
@@ -9,7 +9,27 @@
 -- - Action Point (AP) consumption
 -- - Turn-based movement with cooldown
 -- - Visual feedback (tile borders and pulses)
+-- - Automatic animation state management (Idle/Walk/Attack/Injured/Death)
 -- ============================================================================
+
+-- ============================================================================
+-- ANIMATION STATE ENUMS
+-- ============================================================================
+
+local AnimGroup = {
+    Idle = 0,
+    Walk = 1,
+    Attack = 2,
+    Injured = 3,
+    Death = 4
+}
+
+local AnimDirection = {
+    Front = 0,
+    Back = 1,
+    Side = 2,
+    None = 3
+}
 
 -- ============================================================================
 -- SCRIPT STATE
@@ -20,13 +40,28 @@ local moveCooldown = 0.0
 local moveCooldownTime = 0.2  -- Seconds between moves (prevents rapid input)
 local apCostPerMove = 1  -- AP cost for each movement
 
+-- Animation state
+local currentAnimGroup = AnimGroup.Idle
+local currentAnimDirection = AnimDirection.Front
+local isFlippedX = false
+
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit(id)
     entityID = id
-    Log("[PlayerScript] Initialized for entity " .. entityID)
+
+    -- Initialize animation state
+    currentAnimGroup = AnimGroup.Idle
+    currentAnimDirection = AnimDirection.Front
+    isFlippedX = false
+
+    SetAnimationGroup(entityID, currentAnimGroup)
+    SetAnimationDirection(entityID, currentAnimDirection)
+    SetAnimationFlipX(entityID, isFlippedX)
+
+    Log("[PlayerScript] Initialized for entity " .. entityID .. " with animation control")
 end
 
 -- ============================================================================
@@ -34,9 +69,54 @@ end
 -- ============================================================================
 
 function OnUpdate(dt)
+    -- ========================================================================
+    -- ANIMATION STATE MANAGEMENT
+    -- ========================================================================
+
+    -- Check for manual animation triggers (debug keys)
+    if IsKeyPressed(75) then  -- KEY_K = Attack
+        currentAnimGroup = AnimGroup.Attack
+        SetAnimationGroup(entityID, currentAnimGroup)
+        SetAnimationLoop(entityID, false)
+        Log("[PlayerScript] Attack animation triggered")
+    end
+
+    if IsKeyPressed(74) then  -- KEY_J = Injured
+        currentAnimGroup = AnimGroup.Injured
+        SetAnimationGroup(entityID, currentAnimGroup)
+        SetAnimationLoop(entityID, false)
+        Log("[PlayerScript] Injured animation triggered")
+    end
+
+    if IsKeyPressed(76) then  -- KEY_L = Death
+        currentAnimGroup = AnimGroup.Death
+        SetAnimationGroup(entityID, currentAnimGroup)
+        SetAnimationLoop(entityID, false)
+        Log("[PlayerScript] Death animation triggered")
+        -- Death animation blocks all movement
+        return
+    end
+
+    -- Block movement during Death animation
+    local currentAnim = GetAnimationGroup(entityID)
+    if currentAnim == AnimGroup.Death then
+        return
+    end
+
+    -- ========================================================================
+    -- MOVEMENT INPUT
+    -- ========================================================================
+
     -- Update cooldown timer
     if moveCooldown > 0 then
         moveCooldown = moveCooldown - dt
+
+        -- Return to Idle if not moving
+        if currentAnimGroup == AnimGroup.Walk then
+            currentAnimGroup = AnimGroup.Idle
+            SetAnimationGroup(entityID, currentAnimGroup)
+        end
+
         return
     end
 
@@ -49,24 +129,33 @@ function OnUpdate(dt)
     -- Check for movement input
     local targetX, targetY = currentX, currentY
     local moveAttempted = false
+    local moveDirX, moveDirY = 0, 0
 
     -- WASD input only (arrow keys disabled)
     if IsKeyDown("W") then
         targetY = currentY + 1
+        moveDirY = 1
         moveAttempted = true
     elseif IsKeyDown("S") then
         targetY = currentY - 1
+        moveDirY = -1
         moveAttempted = true
     elseif IsKeyDown("A") then
         targetX = currentX - 1
+        moveDirX = -1
         moveAttempted = true
     elseif IsKeyDown("D") then
         targetX = currentX + 1
+        moveDirX = 1
         moveAttempted = true
     end
 
-    -- If no movement input, return early
+    -- If no movement input, return to Idle
     if not moveAttempted then
+        if currentAnimGroup == AnimGroup.Walk then
+            currentAnimGroup = AnimGroup.Idle
+            SetAnimationGroup(entityID, currentAnimGroup)
+        end
         return
     end
 
@@ -114,11 +203,49 @@ function OnUpdate(dt)
         ShowTileBorder(targetX, targetY, 0.5)  -- Show border for 0.5 seconds
         PulseTile(targetX, targetY, 0.3, 0.3, 1.0, 0.3)  -- Green pulse
 
-        -- Determine player facing direction and flip sprite
-        if targetX > currentX then
-            SetPlayerFlipX(false)  -- Moving right - face right
-        elseif targetX < currentX then
-            SetPlayerFlipX(true)   -- Moving left - face left
+        -- ====================================================================
+        -- UPDATE ANIMATION STATE BASED ON MOVEMENT
+        -- ====================================================================
+
+        -- Determine animation direction and flip state
+        local newDirection = currentAnimDirection
+        local newFlipX = isFlippedX
+
+        if moveDirY > 0 then
+            -- Moving up
+            newDirection = AnimDirection.Back
+        elseif moveDirY < 0 then
+            -- Moving down
+            newDirection = AnimDirection.Front
+        elseif moveDirX > 0 then
+            -- Moving right
+            newDirection = AnimDirection.Side
+            newFlipX = false
+        elseif moveDirX < 0 then
+            -- Moving left
+            newDirection = AnimDirection.Side
+            newFlipX = true
+        end
+
+        -- Update direction if changed
+        if newDirection ~= currentAnimDirection then
+            currentAnimDirection = newDirection
+            SetAnimationDirection(entityID, currentAnimDirection)
+        end
+
+        -- Update flip state if changed
+        if newFlipX ~= isFlippedX then
+            isFlippedX = newFlipX
+            SetAnimationFlipX(entityID, isFlippedX)
+        end
+
+        -- Switch to Walk animation (unless in special state)
+        if currentAnimGroup ~= AnimGroup.Attack and
+           currentAnimGroup ~= AnimGroup.Injured and
+           currentAnimGroup ~= AnimGroup.Death then
+            currentAnimGroup = AnimGroup.Walk
+            SetAnimationGroup(entityID, currentAnimGroup)
+            SetAnimationPlaying(entityID, true)
         end
 
         -- Check for chest collection
