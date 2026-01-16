@@ -509,6 +509,7 @@ namespace Framework {
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
+        lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
 
         // Script Component Management
         lua_register(L, "AddScriptComponentToEntity", Lua_AddScriptComponentToEntity);
@@ -1105,6 +1106,54 @@ namespace Framework {
         health.currentHealth = std::max(0, std::min(static_cast<int>(newHP), health.maxHealth));
 
         return 0;
+    }
+
+    /**
+     * @brief Check if entity is the active character (for party system)
+     * Lua usage: isActive = IsActiveCharacter(entityID)
+     * @param entityID Entity ID to check
+     * @return boolean - true if this entity is the currently active character
+     *
+     * This function bridges entity scripts to the party system by calling
+     * the Lua IsActiveCharacter function defined in PartyTurnManager.lua
+     */
+    int LevelLoader::Lua_IsActiveCharacter(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        // Get the LevelLoader instance to access its main Lua state
+        LevelLoader& loader = LevelLoader::GetInstance();
+        if (!loader.L) {
+            // No main Lua state - default to true (single player mode)
+            lua_pushboolean(L, true);
+            return 1;
+        }
+
+        // Call the Lua IsActiveCharacter function in the main state
+        lua_getglobal(loader.L, "IsActiveCharacter");
+        if (!lua_isfunction(loader.L, -1)) {
+            // IsActiveCharacter not found - default to true (no party system active)
+            lua_pop(loader.L, 1);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+
+        // Push entityID and call the function
+        lua_pushinteger(loader.L, entityID);
+        if (lua_pcall(loader.L, 1, 1, 0) != LUA_OK) {
+            const char* error = lua_tostring(loader.L, -1);
+            LOG_ERROR("LUA_PARTY", "IsActiveCharacter error: %s", error);
+            lua_pop(loader.L, 1);
+            lua_pushboolean(L, true);  // Default to true on error
+            return 1;
+        }
+
+        // Get the boolean result
+        bool isActive = lua_toboolean(loader.L, -1);
+        lua_pop(loader.L, 1);
+
+        // Return result to calling state
+        lua_pushboolean(L, isActive);
+        return 1;
     }
 
     // [CONTINUED IN NEXT PART...]
