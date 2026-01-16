@@ -105,86 +105,28 @@ namespace Framework
                     if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += x_mov_displacement;
 
                    // ============================================================================
-                   // Author:        Tan Wei Leong
-                   // Email:         weileong.tan@digipen.edu
-                   // Date:          2025-11-06
-                   // Contribution:  100% (Animation flipping, scaling, and rotation logic)
-                   // -----------------------------------------------------------------------------
-                   // Description:
-                   //   This section handles sprite flipping, scaling, and rotation behaviors
-                   //   in response to player input. It extends the basic MovementSystem to
-                   //   interact directly with the SpriteAnimation and Transform components,
-                   //   enabling visual feedback tied to player movement.
+                   // ANIMATION LOGIC MOVED TO: assets/scripts/AnimationController.lua
+                   // ============================================================================
+                   // Animation control has been refactored into a reusable Lua script.
+                   // To add animation control to an entity, attach the AnimationController script:
                    //
-                   //   Features implemented:
-                   //   - Direction-based sprite flipping using flipX
-                   //   - Real-time scaling controls (KEY_3 to enlarge, KEY_4 to shrink)
-                   //   - Rotation controls (KEY_7 / KEY_8)
-                   //   - Clamp enforcement for scaling within Transform bounds
+                   //   AddScriptComponentToEntity(entityID, "assets/scripts/AnimationController.lua")
+                   //
+                   // Features now in AnimationController.lua:
+                   //   - Automatic Idle/Walk transitions based on movement
+                   //   - Direction-based sprite flipping and animation selection
+                   //   - Attack/Injured/Death animation triggers (KEY_K/J/L)
+                   //   - Movement blocking during Death animation
+                   //
+                   // Benefits of Lua-based animation control:
+                   //   - Reusable across any entity type
+                   //   - Hot-reloadable without recompilation
+                   //   - Easy to customize per-entity
+                   //   - Cleaner separation of concerns (Movement vs Animation)
                    // ============================================================================
 
-                   // ---------------------- Direction-based flipping ----------------------
-                   // When pressing D  face right; A  face left
-                    // -----------------------------------------------------------
-                    // SAFETY CHECK: Only animated entities should use animation
-                    // -----------------------------------------------------------
-                    if (!entityManager->HasComponent<SpriteAnimation>(entity))
-                        continue;  // <-- prevents crash!
-
-                    auto& anim = entityManager->GetComponent<SpriteAnimation>(entity);
-
-                    // -----------------------------------------
-                    // BLOCK MOVEMENT WHEN DEATH ANIMATION PLAYS
-                    // -----------------------------------------
-                    if (anim.group == AnimGroup::Death)
-                    {
-                        movement.direction = { 0, 0 };           // stop all motion
-                        transform.rotation = transform.rotation; // (optional) allow no rotation changes
-                        continue;                                // skip ALL movement logic
-                    }
-
-                    // Determine if moving
-                    bool moving = fabs(inputDir.x) > 0.01f || fabs(inputDir.y) > 0.01f;
-
-                    if (moving)
-                    {
-                        if (inputDir.y > 0)       anim.direction = AnimDirection::Back;
-                        else if (inputDir.y < 0)  anim.direction = AnimDirection::Front;
-                        else if (inputDir.x > 0) { anim.direction = AnimDirection::Side; anim.flipX = false; }
-                        else if (inputDir.x < 0) { anim.direction = AnimDirection::Side; anim.flipX = true; }
-                    }
-                    // DO NOT change direction when idle  preserves last direction
-
-                    if (moving)
-                    {
-                        if (anim.group != AnimGroup::Attack &&
-                            anim.group != AnimGroup::Injured &&
-                            anim.group != AnimGroup::Death)
-                        {
-                            anim.group = AnimGroup::Walk;
-                            anim.playing = true;
-                        }
-                    }
-                    else
-                    {
-                        if (anim.group == AnimGroup::Walk)
-                            anim.group = AnimGroup::Idle;
-                    }
-
-                    if (inputSystem->IsKeyPressed(KEY_K)) {
-                        anim.group = AnimGroup::Attack;
-                        anim.loop = false;
-                    }
-                    if (inputSystem->IsKeyPressed(KEY_J)) {
-                        anim.group = AnimGroup::Injured;
-                        anim.loop = false;
-                    }
-                    if (inputSystem->IsKeyPressed(KEY_L)) {
-                        anim.group = AnimGroup::Death;
-                        anim.loop = false;
-                    }
-
                     // ---------------------- Scaling controls (KEY 3 / 4) ----------------------
+                    // DEBUG/TEST FEATURE: Manual scaling controls
                     if (inputSystem->IsKeyDown(KEY_3))
                     {
                         transform.scale.x += scale_multiplier * dt;
@@ -197,6 +139,7 @@ namespace Framework
                     }
 
                     // ---------------------- Rotation controls (KEY 7 / 8) ----------------------
+                    // DEBUG/TEST FEATURE: Manual rotation controls
                     if (inputSystem->IsKeyDown(KEY_7))
                     {
                         transform.rotation += rotation_angle * dt;
