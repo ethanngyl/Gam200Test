@@ -70,6 +70,17 @@ end
 
 function OnUpdate(dt)
     -- ========================================================================
+    -- PARTY SYSTEM: INPUT ROUTING
+    -- ========================================================================
+
+    -- CRITICAL: Only process input if this is the active character
+    -- Prevents all 3 party members from responding to input simultaneously
+    if not IsActiveCharacter(entityID) then
+        -- Not this character's turn - do nothing
+        return
+    end
+
+    -- ========================================================================
     -- ANIMATION STATE MANAGEMENT
     -- ========================================================================
 
@@ -180,11 +191,20 @@ function OnUpdate(dt)
     -- AP CHECK
     -- ========================================================================
 
-    local currentAP, maxAP = GetPlayerAP()
+    -- Use entity-based AP API (supports party system)
+    local currentAP, maxAP = GetEntityAP(entityID)
     if currentAP < apCostPerMove then
         Log("[PlayerScript] Not enough AP to move (current: " .. currentAP .. ", need: " .. apCostPerMove .. ")")
         -- Show visual feedback for insufficient AP
         PulseTile(targetX, targetY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse
+
+        -- Check if this character's turn should end
+        if currentAP == 0 then
+            Log("[PlayerScript] Character out of AP - ending turn")
+            -- Optional: Auto-advance to next character when AP depleted
+            -- EndCharacterTurn()
+        end
+
         return
     end
 
@@ -196,8 +216,8 @@ function OnUpdate(dt)
     local success = MovePlayerToTile(targetX, targetY)
 
     if success then
-        -- Consume AP
-        ConsumePlayerAP(apCostPerMove)
+        -- Consume AP (use entity-based API for party system)
+        ConsumeEntityAP(entityID, apCostPerMove)
 
         -- Visual feedback
         ShowTileBorder(targetX, targetY, 0.5)  -- Show border for 0.5 seconds
