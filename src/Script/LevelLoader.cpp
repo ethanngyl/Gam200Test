@@ -798,7 +798,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -823,7 +823,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -848,7 +848,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -873,7 +873,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -898,7 +898,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -925,7 +925,7 @@ namespace Framework {
             return 1;
         }
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             lua_pushinteger(L, 0);  // Default to Idle
             return 1;
@@ -952,7 +952,7 @@ namespace Framework {
             return 2;
         }
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<Movement>(e)) {
             lua_pushnumber(L, 0.0);
             lua_pushnumber(L, 0.0);
@@ -983,7 +983,7 @@ namespace Framework {
             return 2;
         }
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<AP>(e)) {
             lua_pushinteger(L, 0);
             lua_pushinteger(L, 0);
@@ -1009,7 +1009,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<AP>(e)) {
             LOG_WARN("LUA_PARTY", "Entity %u has no AP component", entityID);
             return 0;
@@ -1032,7 +1032,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<AP>(e)) {
             LOG_WARN("LUA_PARTY", "Entity %u has no AP component", entityID);
             return 0;
@@ -1060,7 +1060,7 @@ namespace Framework {
             return 2;
         }
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<Health>(e)) {
             lua_pushinteger(L, 0);
             lua_pushinteger(L, 0);
@@ -1068,8 +1068,8 @@ namespace Framework {
         }
 
         auto& health = em->GetComponent<Health>(e);
-        lua_pushinteger(L, health.hp);
-        lua_pushinteger(L, health.maxHP);
+        lua_pushinteger(L, health.currentHealth);
+        lua_pushinteger(L, health.maxHealth);
         return 2;
     }
 
@@ -1086,14 +1086,14 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<Health>(e)) {
             LOG_WARN("LUA_PARTY", "Entity %u has no Health component", entityID);
             return 0;
         }
 
         auto& health = em->GetComponent<Health>(e);
-        health.hp = std::max(0, std::min(static_cast<int>(newHP), health.maxHP));
+        health.currentHealth = std::max(0, std::min(static_cast<int>(newHP), health.maxHealth));
 
         return 0;
     }
