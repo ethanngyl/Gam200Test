@@ -330,9 +330,6 @@ function SetupPlayer()
     return SetupParty()
 end
 
-    return true
-end
-
 function SetupEnemies()
     Log("========================================")
     Log("Configuring enemies...")
