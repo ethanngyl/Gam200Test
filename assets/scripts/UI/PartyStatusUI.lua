@@ -39,7 +39,11 @@ PartyStatusUI.__index = PartyStatusUI
 -- ============================================================================
 
 function PartyStatusUI:new(entityID)
-    local instance = setmetatable(UIComponent:new(entityID), PartyStatusUI)
+    -- Use UIComponent:New() (capital N) - base class constructor
+    local instance = setmetatable(UIComponent:New(), PartyStatusUI)
+
+    -- Store entity ID (unused for now, but kept for interface compatibility)
+    instance.entityID = entityID
 
     -- UI configuration
     instance.baseX = -0.8          -- Left side of screen
@@ -61,6 +65,9 @@ function PartyStatusUI:new(entityID)
 
     -- Cached party data
     instance.partyMembers = {}
+
+    -- Initialization flag
+    instance.initialized = false
 
     return instance
 end
