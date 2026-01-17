@@ -27,8 +27,8 @@
 ===============================================================================
 ]]--
 
--- Import UIComponent base class
-dofile("assets/scripts/UI/UIComponent.lua")
+-- Import UIComponent base class (capture the returned module)
+UIComponent = dofile("assets/scripts/UI/UIComponent.lua")
 
 -- Inherit from UIComponent
 PartyStatusUI = setmetatable({}, {__index = UIComponent})
