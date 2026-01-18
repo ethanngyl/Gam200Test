@@ -1,14 +1,18 @@
 -- ============================================================================
 -- Level3Clean.lua
--- REFACTORED - Clean, modular version of Level3
+-- REFACTORED - Clean, modular version of Level3 with 3-character party system
 -- ============================================================================
 -- This is a refactored version showing proper separation of concerns
 -- UI management is delegated to UIManager
 -- Level script focuses on level lifecycle and coordination
+-- Party system: 3 characters act sequentially before enemy turn
 -- ============================================================================
 
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
+
+-- Load Party Turn Manager (REQUIRED for party system)
+dofile("assets/scripts/PartyTurnManager.lua")
 
 -- ============================================================================
 -- LEVEL STATE
@@ -16,6 +20,10 @@ local UIManager = require("UIManager")
 
 local initialized = false
 local editorToggleCooldown = 0
+
+-- Party members
+local partyMembers = {}  -- {warrior, mage, rogue}
+local partyUI = nil
 
 -- Grid configuration
 local kStartX = -0.6
@@ -69,17 +77,21 @@ function OnInit()
     LoadPlayerAnimation("Idle_front")
 
     -- Setup entities
-    SetupPlayer()
+    SetupParty()  -- Changed from SetupPlayer() to SetupParty()
     SetupEnemies()
 
     -- Initialize UI system (replaces 500+ lines of UI code!)
     UIManager.Init()
 
+    -- Setup Party UI (shows all 3 characters)
+    SetupPartyUI()
+
     initialized = true
     Log("========================================")
     Log("Level 3 initialization complete")
     Log("Controls:")
-    Log("  - Arrow keys/WASD to move")
+    Log("  - WASD to move ACTIVE character")
+    Log("  - Characters take turns: Warrior → Mage → Rogue → Enemies")
     Log("  - Press P/ESC to pause")
     Log("  - Press F1 to toggle editor")
     Log("  - Press 5 to return to main menu")
@@ -96,6 +108,11 @@ function OnUpdate(dt)
 
     -- Handle pause menu (always runs)
     PauseMenu.Update(dt)
+
+    -- Update party UI (shows HP/AP for all characters)
+    if partyUI then
+        partyUI:OnUpdate(dt)
+    end
 
     -- Skip game logic if paused
     if IsPaused() then
@@ -131,6 +148,13 @@ function OnDestroy()
     Log("========================================")
     Log("Level 3 cleanup...")
     Log("========================================")
+
+    -- Cleanup party UI
+    if partyUI then
+        partyUI:OnDestroy()
+        partyUI = nil
+        Log(" Party UI destroyed")
+    end
 
     -- Stop audio
     StopAllSounds()
@@ -211,38 +235,99 @@ end
 -- HELPER FUNCTIONS - Entity Setup
 -- ============================================================================
 
-function SetupPlayer()
+function SetupParty()
     Log("========================================")
-    Log("Setting up player...")
+    Log("Setting up 3-character party...")
     Log("========================================")
 
-    local playerID = FindPlayer()
+    -- Find the original player entity from tilemap
+    local originalPlayer = FindPlayer()
 
-    if not playerID or playerID == 0 then
+    if not originalPlayer or originalPlayer == 0 then
         Log("ERROR: Player not found!")
         return false
     end
 
-    Log(" Found Player (Entity ID: " .. playerID .. ")")
+    Log(" Found original player (Entity ID: " .. originalPlayer .. ")")
+
+    -- Get the player's starting position
+    local startX, startY = GetPlayerGridPosition()
+
+    if not startX or not startY then
+        Log("ERROR: Could not get player position!")
+        return false
+    end
+
+    Log("  Starting position: (" .. startX .. ", " .. startY .. ")")
+
+    -- For now, use the original player as Character 1 (Warrior)
+    -- In a full implementation, you'd spawn 3 separate entities
+    -- but for testing, we'll start with just enhancing the single player
 
     -- Disable C++ grid movement (Lua script will handle movement instead)
     SetGridMovementEnabled(false)
     Log("   C++ grid movement disabled")
 
-    -- Attach player movement script
-    local scriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
+    -- Attach player movement script to the player
+    local scriptSuccess = AddScriptComponentToEntity(originalPlayer, "assets/scripts/PlayerScript.lua")
 
     if scriptSuccess then
         Log("   PlayerScript.lua attached successfully")
-        Log("  Player movement now handled by Lua script")
+        Log("  Character 1 (Warrior) movement handled by Lua script")
     else
-        Log("  FAILED to attach PlayerScript.lua")
+        Log("  ✗ FAILED to attach PlayerScript.lua")
         -- Re-enable C++ movement as fallback
         SetGridMovementEnabled(true)
         Log("  C++ grid movement re-enabled as fallback")
+        return false
+    end
+
+    -- TODO: Spawn additional party members (Mage and Rogue)
+    -- For now, initialize party with just the warrior
+    -- This allows the infrastructure to work with 1 character until full implementation
+
+    -- Initialize party system with the warrior
+    -- Note: InitializeParty expects 3 entities, so for now we'll use the same entity
+    -- In full implementation, replace with actual character entities
+    partyMembers = {originalPlayer, originalPlayer, originalPlayer}
+
+    local partyInitialized = InitializeParty(partyMembers)
+
+    if partyInitialized then
+        Log("✓ Party system initialized (currently with 1 character)")
+        Log("  - Character 1: Warrior (Entity " .. originalPlayer .. ")")
+        Log("  - Character 2: [TODO - Not yet spawned]")
+        Log("  - Character 3: [TODO - Not yet spawned]")
+        Log("")
+        Log("NOTE: Party system infrastructure ready, but only 1 character active")
+        Log("Full 3-character support coming in next update!")
+    else
+        Log("✗ FAILED to initialize party")
+        return false
     end
 
     return true
+end
+
+function SetupPartyUI()
+    Log("========================================")
+    Log("Setting up Party UI...")
+    Log("========================================")
+
+    -- Load PartyStatusUI
+    dofile("assets/scripts/UI/PartyStatusUI.lua")
+
+    -- Create UI instance
+    partyUI = PartyStatusUI:new(0)
+    partyUI:OnInit()
+
+    Log("✓ Party status UI created")
+    Log("  UI will display HP/AP for all party members")
+end
+
+-- Legacy function name for compatibility
+function SetupPlayer()
+    return SetupParty()
 end
 
 function SetupEnemies()

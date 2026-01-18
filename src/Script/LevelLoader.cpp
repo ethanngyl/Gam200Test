@@ -53,6 +53,15 @@
 #include "GameStateList.h"
 #include "Pause/GlobalPauseManager.h"
 
+// Fix for Windows min/max macro conflicts
+#include <algorithm>
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
+
 namespace Framework {
 
     // ========================================================================
@@ -494,6 +503,14 @@ namespace Framework {
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
         lua_register(L, "GetEntityMovementDirection", Lua_GetEntityMovementDirection);
 
+        // Party System - Entity-Based APIs
+        lua_register(L, "GetEntityAP", Lua_GetEntityAP);
+        lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
+        lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
+        lua_register(L, "GetEntityHP", Lua_GetEntityHP);
+        lua_register(L, "SetEntityHP", Lua_SetEntityHP);
+        lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
+
         // Script Component Management
         lua_register(L, "AddScriptComponentToEntity", Lua_AddScriptComponentToEntity);
         lua_register(L, "RemoveScriptComponentFromEntity", Lua_RemoveScriptComponentFromEntity);
@@ -791,7 +808,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -816,7 +833,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -841,7 +858,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -866,7 +883,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -891,7 +908,7 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
             return 0;
@@ -918,7 +935,7 @@ namespace Framework {
             return 1;
         }
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<SpriteAnimation>(e)) {
             lua_pushinteger(L, 0);  // Default to Idle
             return 1;
@@ -945,7 +962,7 @@ namespace Framework {
             return 2;
         }
 
-        Entity e{ static_cast<EntityID>(entityID) };
+        Entity e(static_cast<EntityID>(entityID));
         if (!em->HasComponent<Movement>(e)) {
             lua_pushnumber(L, 0.0);
             lua_pushnumber(L, 0.0);
@@ -956,6 +973,187 @@ namespace Framework {
         lua_pushnumber(L, movement.direction.x);
         lua_pushnumber(L, movement.direction.y);
         return 2;
+    }
+
+    // --- Party System - Entity-Based APIs ---
+
+    /**
+     * @brief Get AP for any entity
+     * Lua usage: currentAP, maxAP = GetEntityAP(entityID)
+     * @param entityID Entity ID
+     * @return currentAP, maxAP (0, 0 if entity has no AP component)
+     */
+    int LevelLoader::Lua_GetEntityAP(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<AP>(e)) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& ap = em->GetComponent<AP>(e);
+        lua_pushinteger(L, ap.actionPoints);
+        lua_pushinteger(L, ap.maxActionPoints);
+        return 2;
+    }
+
+    /**
+     * @brief Consume AP from any entity
+     * Lua usage: ConsumeEntityAP(entityID, amount)
+     * @param entityID Entity ID
+     * @param amount Amount of AP to consume
+     */
+    int LevelLoader::Lua_ConsumeEntityAP(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer amount = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<AP>(e)) {
+            LOG_WARN("LUA_PARTY", "Entity %u has no AP component", entityID);
+            return 0;
+        }
+
+        auto& ap = em->GetComponent<AP>(e);
+        ap.actionPoints = std::max(0, ap.actionPoints - static_cast<int>(amount));
+
+        return 0;
+    }
+
+    /**
+     * @brief Refill AP for any entity
+     * Lua usage: RefillEntityAP(entityID)
+     * @param entityID Entity ID
+     */
+    int LevelLoader::Lua_RefillEntityAP(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<AP>(e)) {
+            LOG_WARN("LUA_PARTY", "Entity %u has no AP component", entityID);
+            return 0;
+        }
+
+        auto& ap = em->GetComponent<AP>(e);
+        ap.actionPoints = ap.maxActionPoints;
+
+        return 0;
+    }
+
+    /**
+     * @brief Get HP for any entity
+     * Lua usage: currentHP, maxHP = GetEntityHP(entityID)
+     * @param entityID Entity ID
+     * @return currentHP, maxHP (0, 0 if entity has no Health component)
+     */
+    int LevelLoader::Lua_GetEntityHP(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<Health>(e)) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& health = em->GetComponent<Health>(e);
+        lua_pushinteger(L, health.currentHealth);
+        lua_pushinteger(L, health.maxHealth);
+        return 2;
+    }
+
+    /**
+     * @brief Set HP for any entity
+     * Lua usage: SetEntityHP(entityID, newHP)
+     * @param entityID Entity ID
+     * @param newHP New HP value (will be clamped to 0-maxHP)
+     */
+    int LevelLoader::Lua_SetEntityHP(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer newHP = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<Health>(e)) {
+            LOG_WARN("LUA_PARTY", "Entity %u has no Health component", entityID);
+            return 0;
+        }
+
+        auto& health = em->GetComponent<Health>(e);
+        health.currentHealth = std::max(0, std::min(static_cast<int>(newHP), health.maxHealth));
+
+        return 0;
+    }
+
+    /**
+     * @brief Check if entity is the active character (for party system)
+     * Lua usage: isActive = IsActiveCharacter(entityID)
+     * @param entityID Entity ID to check
+     * @return boolean - true if this entity is the currently active character
+     *
+     * This function bridges entity scripts to the party system by calling
+     * the Lua IsActiveCharacter function defined in PartyTurnManager.lua
+     */
+    int LevelLoader::Lua_IsActiveCharacter(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        // Get the LevelLoader instance to access its main Lua state
+        LevelLoader& loader = LevelLoader::GetInstance();
+        if (!loader.L) {
+            // No main Lua state - default to true (single player mode)
+            lua_pushboolean(L, true);
+            return 1;
+        }
+
+        // Call the Lua IsActiveCharacter function in the main state
+        lua_getglobal(loader.L, "IsActiveCharacter");
+        if (!lua_isfunction(loader.L, -1)) {
+            // IsActiveCharacter not found - default to true (no party system active)
+            lua_pop(loader.L, 1);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+
+        // Push entityID and call the function
+        lua_pushinteger(loader.L, entityID);
+        if (lua_pcall(loader.L, 1, 1, 0) != LUA_OK) {
+            const char* error = lua_tostring(loader.L, -1);
+            LOG_ERROR("LUA_PARTY", "IsActiveCharacter error: %s", error);
+            lua_pop(loader.L, 1);
+            lua_pushboolean(L, true);  // Default to true on error
+            return 1;
+        }
+
+        // Get the boolean result
+        bool isActive = lua_toboolean(loader.L, -1);
+        lua_pop(loader.L, 1);
+
+        // Return result to calling state
+        lua_pushboolean(L, isActive);
+        return 1;
     }
 
     // [CONTINUED IN NEXT PART...]
