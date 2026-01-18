@@ -477,6 +477,23 @@ namespace Framework {
 
         // Game API - Audio
         lua_register(L, "PlaySound", LevelLoader::Lua_PlaySound);
+
+        // Game API - Animation Control
+        lua_register(L, "SetAnimationGroup", LevelLoader::Lua_SetAnimationGroup);
+        lua_register(L, "SetAnimationDirection", LevelLoader::Lua_SetAnimationDirection);
+        lua_register(L, "SetAnimationFlipX", LevelLoader::Lua_SetAnimationFlipX);
+        lua_register(L, "SetAnimationPlaying", LevelLoader::Lua_SetAnimationPlaying);
+        lua_register(L, "SetAnimationLoop", LevelLoader::Lua_SetAnimationLoop);
+        lua_register(L, "GetAnimationGroup", LevelLoader::Lua_GetAnimationGroup);
+        lua_register(L, "GetEntityMovementDirection", LevelLoader::Lua_GetEntityMovementDirection);
+
+        // Game API - Party System (Entity-Based APIs)
+        lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
+        lua_register(L, "ConsumeEntityAP", LevelLoader::Lua_ConsumeEntityAP);
+        lua_register(L, "RefillEntityAP", LevelLoader::Lua_RefillEntityAP);
+        lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
+        lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);
+        lua_register(L, "IsActiveCharacter", LevelLoader::Lua_IsActiveCharacter);
     }
 
     /**
