@@ -742,6 +742,18 @@ namespace Framework {
                                 entityManager->ResetEntityIDCounter();
                             }
 
+
+                            extern bool g_preservePlayingState;
+                            g_preservePlayingState = false;
+
+                            if (Framework::CORE)
+                            {
+                                Framework::CORE->SetPlaying(false);
+                                Framework::CORE->SetEditorMode(true);
+                            }
+
+                            GlobalPause::SetPaused(false);
+
                             // 2. Load the new Level
                             // Pass 'true' to tell the script we are in Editor Mode (keep UI enabled)
                             Framework::LevelLoader::GetInstance().LoadLevel(fullPath, true);
@@ -3477,6 +3489,17 @@ namespace Framework {
                         // Optional: Reset ID counter if your engine needs it
                         // entityManager->ResetEntityIDCounter(); 
                     }
+
+                    extern bool g_preservePlayingState;
+                    g_preservePlayingState = false;
+
+                    if (Framework::CORE)
+                    {
+                        Framework::CORE->SetPlaying(false);
+                        Framework::CORE->SetEditorMode(true);
+                    }
+
+                    GlobalPause::SetPaused(false);
 
                     // Load the level via LevelLoader
                     Framework::LevelLoader::GetInstance().LoadLevel(fullPath, true);
