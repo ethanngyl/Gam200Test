@@ -193,6 +193,24 @@ namespace Framework {
         static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
+
+        // Animation Control API
+        static int Lua_SetAnimationGroup(lua_State* L);
+        static int Lua_SetAnimationDirection(lua_State* L);
+        static int Lua_SetAnimationFlipX(lua_State* L);
+        static int Lua_SetAnimationPlaying(lua_State* L);
+        static int Lua_SetAnimationLoop(lua_State* L);
+        static int Lua_GetAnimationGroup(lua_State* L);
+        static int Lua_GetEntityMovementDirection(lua_State* L);
+
+        // Party System - Entity-Based APIs
+        static int Lua_GetEntityAP(lua_State* L);
+        static int Lua_ConsumeEntityAP(lua_State* L);
+        static int Lua_RefillEntityAP(lua_State* L);
+        static int Lua_GetEntityHP(lua_State* L);
+        static int Lua_SetEntityHP(lua_State* L);
+        static int Lua_IsActiveCharacter(lua_State* L);
+
         static int Lua_GetPlayerAttackAP(lua_State* L);
         static int Lua_GetPlayerHP(lua_State* L);
 
