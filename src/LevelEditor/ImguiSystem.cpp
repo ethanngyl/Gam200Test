@@ -55,6 +55,7 @@ Safety:
 #include <string.h>
 #include <GlobalPauseManager.h>
 #include <regex> 
+#include "Graphics/RenderLayers.h"
 
 namespace Framework {
 
@@ -1270,6 +1271,7 @@ namespace Framework {
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
         // show asset window - jiahao
         if (showAssets) ShowAssetsWindow();
+        if (showLayersWindow) ShowLayersWindow();
 
         if (showAudioNamePopup) {
             ImGui::OpenPopup("Import Audio Asset");
@@ -1632,7 +1634,7 @@ namespace Framework {
                             ImGui::EndDragDropTarget();
                         }
 
-                        ImGui::DragInt("Layer", &sprite.layer, 1, -100, 100);
+                        ImGui::DragInt("Layer", &sprite.layer, 1, -2000, 2000);
 
                         // Tint color picker
                         float tint[4] = { sprite.tint.r, sprite.tint.g, sprite.tint.b, sprite.tint.a };
@@ -1693,7 +1695,7 @@ namespace Framework {
                             ImGui::EndDragDropTarget();
                         }
 
-                        ImGui::DragInt("Layer", &meshRenderer.layer, 1, -100, 100);
+                        ImGui::DragInt("Layer", &meshRenderer.layer, 1, -2000, 2000);
                         ImGui::DragInt("Order in Layer", &meshRenderer.orderInLayer, 1, -100, 100);
 
                         // Tint color
@@ -2844,6 +2846,69 @@ namespace Framework {
 
     }
 
+    void ImGuiSystem::ShowLayersWindow()
+    {
+        if (!ImGui::Begin("Layers##LayersWindow", &showLayersWindow))
+        {
+            ImGui::End();
+            return;
+        }
+
+        ImGui::Text("Hide/Show render layers (Editor mode only).");
+        ImGui::Separator();
+
+        if (ImGui::Button("Show All##LayersShowAll"))
+        {
+            hiddenRenderLayers.clear();
+        }
+
+        ImGui::Spacing();
+
+        struct LayerEntry
+        {
+            int layer;
+            const char* name;
+        };
+
+        static const LayerEntry kLayers[] =
+        {
+          { Framework::RenderLayers::Background,      "Background (-1000)" },
+          { Framework::RenderLayers::Ground,          "Ground (0)" },
+          { Framework::RenderLayers::Props,           "Props/Items (1)" },
+          { Framework::RenderLayers::Enemies,         "Enemies/Characters (2)" },
+          { Framework::RenderLayers::RangeIndicators, "Range Indicators (3)" },
+          { Framework::RenderLayers::Player,          "Player (4)" },
+          { Framework::RenderLayers::Projectiles,     "Projectiles (5)" },
+          { Framework::RenderLayers::Effects,         "Effects (10)" },
+          { Framework::RenderLayers::UI,              "UI (100)" },
+          { Framework::RenderLayers::Overlay,         "Overlay (1000)" }
+        };
+
+        for (const LayerEntry& entry : kLayers)
+        {
+            bool visible = IsRenderLayerVisible(entry.layer);
+            if (ImGui::Checkbox(entry.name, &visible))
+            {
+                if (visible) hiddenRenderLayers.erase(entry.layer);
+                else hiddenRenderLayers.insert(entry.layer);
+            }
+        }
+
+        ImGui::Separator();
+
+        static int customLayer = 0;
+        ImGui::InputInt("Custom Layer##LayersCustom", &customLayer);
+
+        bool customVisible = IsRenderLayerVisible(customLayer);
+        if (ImGui::Checkbox("Visible##LayersCustomVisible", &customVisible))
+        {
+            if (customVisible) hiddenRenderLayers.erase(customLayer);
+            else hiddenRenderLayers.insert(customLayer);
+        }
+
+        ImGui::End();
+    }
+
     void ImGuiSystem::ShowDebugWindow()
     {
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiCond_FirstUseEver);
@@ -2977,6 +3042,23 @@ namespace Framework {
             // If this entity is a grid tile (part of the background tilemap), skip it
             // This prevents selecting the entire tile grid when clicking
             if (entityManager->HasComponent<GridTiles>(e)) continue;
+
+            int renderLayer = 0;
+
+            if (entityManager->HasComponent<MeshRenderer>(e))
+            {
+                renderLayer = entityManager->GetComponent<MeshRenderer>(e).layer;
+            }
+            else if (entityManager->HasComponent<Sprite>(e))
+            {
+                renderLayer = entityManager->GetComponent<Sprite>(e).layer;
+            }
+
+            if (!IsRenderLayerVisible(renderLayer))
+            {
+                continue;
+            }
+
             // Temporary collider object that we will build for this entity
             Collider collider;
             // Flag to remember if this entity actually has a collider we can test
@@ -3348,6 +3430,12 @@ namespace Framework {
 
         // Accept .wav format
         return ext == ".wav";
+    }
+
+    //layer
+    bool ImGuiSystem::IsRenderLayerVisible(int layer) const
+    {
+        return hiddenRenderLayers.find(layer) == hiddenRenderLayers.end();
     }
 
     // ============================================================================
@@ -3979,6 +4067,7 @@ namespace Framework {
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
                 ImGui::MenuItem("Assets", nullptr, &showAssets);
                 ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
+                ImGui::MenuItem("Layers", nullptr, &showLayersWindow);
                 ImGui::MenuItem("Game Viewport", nullptr, &showGameViewport);
                 ImGui::Separator();
                 ImGui::MenuItem("Render to Viewport", nullptr, &renderToViewport);
