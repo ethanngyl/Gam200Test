@@ -109,13 +109,21 @@ function InitializeParty(entityIDs)
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
 
+    -- Ensure all characters start with full AP
+    for i = 1, 3 do
+        RefillEntityAP(PartyMembers[i].entityID)
+    end
+
     Log("[PartyTurnManager] Party initialized with 3 characters:")
     for i = 1, 3 do
-        Log(string.format("  %d. %s (Entity %d) - %s",
+        local currentAP, maxAP = GetEntityAP(PartyMembers[i].entityID)
+        Log(string.format("  %d. %s (Entity %d) - %s - AP: %d/%d",
             i,
             PartyMembers[i].name,
             PartyMembers[i].entityID,
-            PartyMembers[i].role))
+            PartyMembers[i].role,
+            currentAP,
+            maxAP))
     end
 
     Log(string.format("[PartyTurnManager] Active character: %s (index %d)",
@@ -273,14 +281,25 @@ function NextCharacterTurn()
     end
 
     -- Switch to new active character
+    local newActiveEntity = PartyMembers[ActiveCharacterIndex].entityID
+
     Log(string.format("[PartyTurnManager] Switching to: %s (Entity %d, Index %d)",
         PartyMembers[ActiveCharacterIndex].name,
-        PartyMembers[ActiveCharacterIndex].entityID,
+        newActiveEntity,
         ActiveCharacterIndex))
+
+    -- Refill AP for the new active character
+    RefillEntityAP(newActiveEntity)
+    local currentAP, maxAP = GetEntityAP(newActiveEntity)
+    Log(string.format("[PartyTurnManager] %s AP refilled to %d/%d",
+        PartyMembers[ActiveCharacterIndex].name,
+        currentAP,
+        maxAP))
+
     Log("[PartyTurnManager] ======================================")
 
     -- Optional: Trigger camera switch
-    OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
+    OnCharacterSwitched(newActiveEntity)
 end
 
 --[[
@@ -331,12 +350,22 @@ function ResetPartyTurn()
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
 
-    -- Reset hasActed flags
+    -- Reset hasActed flags and refill AP for all party members
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
+        RefillEntityAP(PartyMembers[i].entityID)
     end
 
     Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[1].name)
+
+    -- Log AP status for all characters
+    for i = 1, #PartyMembers do
+        local currentAP, maxAP = GetEntityAP(PartyMembers[i].entityID)
+        Log(string.format("[PartyTurnManager] %s AP: %d/%d",
+            PartyMembers[i].name,
+            currentAP,
+            maxAP))
+    end
 
     -- Optional: Trigger camera switch to first character
     if #PartyMembers > 0 then
