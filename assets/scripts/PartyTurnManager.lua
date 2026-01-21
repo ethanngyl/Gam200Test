@@ -231,10 +231,16 @@ function NextCharacterTurn()
         return
     end
 
+    Log("[PartyTurnManager] ========== TURN ADVANCEMENT ==========")
+    Log(string.format("[PartyTurnManager] Current: %s (Entity %d, Index %d)",
+        PartyMembers[ActiveCharacterIndex].name,
+        PartyMembers[ActiveCharacterIndex].entityID,
+        ActiveCharacterIndex))
+
     -- Mark current character as having acted
     PartyMembers[ActiveCharacterIndex].hasActed = true
 
-    Log(string.format("[PartyTurnManager] %s finished turn",
+    Log(string.format("[PartyTurnManager] %s marked as ACTED",
         PartyMembers[ActiveCharacterIndex].name))
 
     -- Move to next character
@@ -243,15 +249,20 @@ function NextCharacterTurn()
     -- Check if all characters have acted
     if ActiveCharacterIndex > #PartyMembers then
         PartyTurnComplete = true
-        Log("[PartyTurnManager] All party members have acted - party turn complete")
-        Log("[PartyTurnManager] Call EndPartyTurn() to switch to enemy phase")
+        Log("[PartyTurnManager] ======================================")
+        Log("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED!")
+        Log("[PartyTurnManager] PartyTurnComplete = true")
+        Log("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
+        Log("[PartyTurnManager] ======================================")
         return
     end
 
     -- Switch to new active character
-    Log(string.format("[PartyTurnManager] Switching to %s (index %d)",
+    Log(string.format("[PartyTurnManager] Switching to: %s (Entity %d, Index %d)",
         PartyMembers[ActiveCharacterIndex].name,
+        PartyMembers[ActiveCharacterIndex].entityID,
         ActiveCharacterIndex))
+    Log("[PartyTurnManager] ======================================")
 
     -- Optional: Trigger camera switch
     OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)

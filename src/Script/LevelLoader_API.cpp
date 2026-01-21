@@ -1055,6 +1055,44 @@ namespace Framework {
     }
 
     /**
+     * @brief Gets all player entities
+     * Lua usage: players = GetAllPlayers() -- returns {playerID1, playerID2, playerID3}
+     * @return Lua table of player entity IDs
+     */
+    int LevelLoader::Lua_GetAllPlayers(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_newtable(L);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_newtable(L);
+            return 1;
+        }
+
+        lua_newtable(L);
+        int index = 1;
+
+        // Find all entities with Movement component (indicates player/controllable entity)
+        // Players have: Movement, CircleCollider, AP, Health components
+        // Enemies have: EnemyAI component instead
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Movement>(e) &&
+                em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
+                lua_pushinteger(L, index++);
+                lua_pushinteger(L, e.GetID());
+                lua_settable(L, -3);
+            }
+        }
+
+        // All players retrieved
+        return 1;
+    }
+
+    /**
      * @brief Sets an enemy's target entity (what it chases)
      * Lua usage: SetEnemyTarget(enemyID, playerID)
      * @param enemyID Enemy entity ID
