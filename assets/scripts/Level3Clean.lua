@@ -116,6 +116,10 @@ end
 -- ============================================================================
 
 function OnUpdate(dt)
+    -- CRITICAL: Force grid movement to stay disabled every frame
+    -- Something keeps re-enabling it, so we force it off continuously
+    SetGridMovementEnabled(false)
+
     -- Update audio
     UpdateAudio(dt)
 
