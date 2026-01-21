@@ -87,6 +87,10 @@ function InitializeParty(entityIDs)
 
     PartyMembers = {}
 
+    -- DEBUG: Log before populating
+    Log("[PartyTurnManager DEBUG] InitializeParty called with " .. #entityIDs .. " entity IDs")
+    Log("[PartyTurnManager DEBUG] PartyMembers cleared, now has " .. #PartyMembers .. " entries")
+
     for i = 1, 3 do
         PartyMembers[i] = {
             entityID = entityIDs[i],
@@ -95,7 +99,12 @@ function InitializeParty(entityIDs)
             hasActed = false,
             turnIndex = i
         }
+        -- DEBUG: Log each addition
+        Log("[PartyTurnManager DEBUG]   Added PartyMembers[" .. i .. "] = Entity " .. entityIDs[i])
     end
+
+    -- DEBUG: Log after populating
+    Log("[PartyTurnManager DEBUG] PartyMembers now has " .. #PartyMembers .. " entries")
 
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
@@ -183,10 +192,16 @@ end
     @return {entityID1, entityID2, entityID3}
 ]]--
 function GetPartyMembers()
+    -- DEBUG: Log when this function is called
+    Log("[PartyTurnManager DEBUG] GetPartyMembers() called - PartyMembers has " .. #PartyMembers .. " entries")
+
     local ids = {}
     for i = 1, #PartyMembers do
         ids[i] = PartyMembers[i].entityID
+        Log("[PartyTurnManager DEBUG]   ids[" .. i .. "] = " .. ids[i])
     end
+
+    Log("[PartyTurnManager DEBUG] GetPartyMembers() returning " .. #ids .. " IDs")
     return ids
 end
 
