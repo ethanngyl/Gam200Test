@@ -79,8 +79,19 @@ end
 function PartyStatusUI:OnInit()
     Log("[PartyStatusUI] Initializing party status display")
 
+    -- DEBUG: Check if GetPartyMembers function exists
+    Log("[PartyStatusUI DEBUG] GetPartyMembers function exists: " .. tostring(GetPartyMembers ~= nil))
+    Log("[PartyStatusUI DEBUG] _G.GetPartyMembers exists: " .. tostring(_G.GetPartyMembers ~= nil))
+
     -- Get party members
     self.partyMembers = GetPartyMembers()
+
+    -- DEBUG: Log what we got
+    Log("[PartyStatusUI DEBUG] GetPartyMembers() returned: " .. tostring(self.partyMembers))
+    Log("[PartyStatusUI DEBUG] Type: " .. type(self.partyMembers))
+    if self.partyMembers then
+        Log("[PartyStatusUI DEBUG] Length: " .. #self.partyMembers)
+    end
 
     if not self.partyMembers or #self.partyMembers ~= 3 then
         Log("[PartyStatusUI] ERROR: Expected 3 party members, got " .. (#self.partyMembers or 0))
