@@ -653,7 +653,8 @@ namespace Framework {
                         pc->SetEntitySpawner(spawner);
                         pc->SetEntityManager(em);
                         pc->SetInputSystem(input);
-                        pc->SetGridMovementEnabled(true);
+                        // DISABLED: Don't force grid movement ON - let Lua scripts control it
+                        // pc->SetGridMovementEnabled(true);
 
                         // Optional but recommended: enables walk SFX calls from PlayerManager
                         pc->SetAudioSystem(audio);
