@@ -91,7 +91,7 @@ function OnInit()
     Log("Level 3 initialization complete")
     Log("Controls:")
     Log("  - WASD to move ACTIVE character")
-    Log("  - Characters take turns: Warrior → Mage → Rogue → Enemies")
+    Log("  - Characters take turns: Warrior -> Mage -> Rogue -> Enemies")
     Log("  - Press P/ESC to pause")
     Log("  - Press F1 to toggle editor")
     Log("  - Press 5 to return to main menu")
@@ -275,7 +275,7 @@ function SetupParty()
         Log("   PlayerScript.lua attached successfully")
         Log("  Character 1 (Warrior) movement handled by Lua script")
     else
-        Log("  ✗ FAILED to attach PlayerScript.lua")
+        Log("  FAILED to attach PlayerScript.lua")
         -- Re-enable C++ movement as fallback
         SetGridMovementEnabled(true)
         Log("  C++ grid movement re-enabled as fallback")
@@ -294,7 +294,7 @@ function SetupParty()
     local partyInitialized = InitializeParty(partyMembers)
 
     if partyInitialized then
-        Log("✓ Party system initialized (currently with 1 character)")
+        Log("Party system initialized (currently with 1 character)")
         Log("  - Character 1: Warrior (Entity " .. originalPlayer .. ")")
         Log("  - Character 2: [TODO - Not yet spawned]")
         Log("  - Character 3: [TODO - Not yet spawned]")
@@ -302,7 +302,7 @@ function SetupParty()
         Log("NOTE: Party system infrastructure ready, but only 1 character active")
         Log("Full 3-character support coming in next update!")
     else
-        Log("✗ FAILED to initialize party")
+        Log("FAILED to initialize party")
         return false
     end
 
@@ -321,7 +321,7 @@ function SetupPartyUI()
     partyUI = PartyStatusUI:new(0)
     partyUI:OnInit()
 
-    Log("✓ Party status UI created")
+    Log("Party status UI created")
     Log("  UI will display HP/AP for all party members")
 end
 

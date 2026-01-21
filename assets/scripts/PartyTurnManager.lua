@@ -11,7 +11,7 @@
     character acts individually before the enemy turn begins.
 
  Turn Flow:
-    Character 1 → Character 2 → Character 3 → Enemy Phase → Repeat
+    Character 1 -> Character 2 -> Character 3 -> Enemy Phase -> Repeat
 
  Features:
     - Sequential character turns (not simultaneous)

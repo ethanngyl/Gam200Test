@@ -13,8 +13,8 @@
 
  Features:
     - Shows all 3 characters in a row
-    - Health hearts (♥♥♥♥♥)
-    - AP crystals (◆◆◆)
+    - Health hearts (5 max)
+    - AP crystals (5 max)
     - Active character highlight
     - Real-time updates
     - Responsive to party turn changes

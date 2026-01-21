@@ -12,7 +12,7 @@ Modified: 2025-11-30
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
-drag–drop, asset browser) to ECS and subsystems.
+drag-drop, asset browser) to ECS and subsystems.
 
 Responsibilities:
 - Initialize/Shutdown ImGui (context, backends) and per-frame begin/end.
