@@ -307,6 +307,12 @@ end
     Called automatically when enemy turn ends
 ]]--
 function ResetPartyTurn()
+    -- Safety check: Don't reset if party not initialized
+    if #PartyMembers == 0 then
+        Log("[PartyTurnManager] WARNING: ResetPartyTurn called but party not initialized yet")
+        return
+    end
+
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
 
