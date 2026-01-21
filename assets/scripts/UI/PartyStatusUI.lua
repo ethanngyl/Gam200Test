@@ -54,10 +54,10 @@ function PartyStatusUI:new(entityID)
     -- Character slots
     instance.characterSlots = {}   -- {character1, character2, character3}
 
-    -- Icons
-    instance.heartIcon = "assets/UI/heart.png"
-    instance.apIcon = "assets/UI/gem.png"
-    instance.highlightBorder = "assets/UI/HighlightBorder.png"
+    -- Icons (using actual asset paths)
+    instance.heartIcon = "assets/UI/Health_5.png"  -- Full heart icon
+    instance.apIcon = "assets/UI/AP_Crystal.png"    -- AP crystal icon
+    instance.highlightBorder = "PLACEHOLDER_HighlightBorder.png"  -- TODO: Replace with actual asset
 
     -- Colors
     instance.activeColor = {r = 1.0, g = 1.0, b = 1.0}    -- White (active)
