@@ -198,11 +198,10 @@ function OnUpdate(dt)
         -- Show visual feedback for insufficient AP
         PulseTile(targetX, targetY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse
 
-        -- Check if this character's turn should end
+        -- Automatically end character turn when AP depleted
         if currentAP == 0 then
-            Log("[PlayerScript] Character out of AP - ending turn")
-            -- Optional: Auto-advance to next character when AP depleted
-            -- EndCharacterTurn()
+            Log("[PlayerScript] Character out of AP - ending turn and advancing to next party member")
+            EndCharacterTurn()
         end
 
         return

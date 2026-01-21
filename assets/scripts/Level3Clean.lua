@@ -25,6 +25,9 @@ local editorToggleCooldown = 0
 local partyMembers = {}  -- {warrior, mage, rogue}
 local partyUI = nil
 
+-- Turn tracking (for party reset)
+local previousTurn = "Player"
+
 -- Grid configuration
 local kStartX = -0.6
 local kStartY = -0.4
@@ -121,6 +124,24 @@ function OnUpdate(dt)
 
     -- Handle editor toggle
     HandleEditorToggle(dt)
+
+    -- Party system turn management
+    local currentTurn = GetCurrentTurn()
+
+    -- Reset party when enemy turn ends and player turn begins
+    if previousTurn == "Enemy" and currentTurn == "Player" then
+        Log("[Level3Clean] Enemy turn ended - resetting party for new player turn")
+        OnEnemyTurnEnded()
+    end
+
+    -- Transition to enemy turn when all party members have acted
+    if currentTurn == "Player" and IsPartyTurnComplete() then
+        Log("[Level3Clean] All party members have acted - transitioning to enemy turn")
+        EndPartyTurn()
+    end
+
+    -- Update previous turn tracker
+    previousTurn = currentTurn
 
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
