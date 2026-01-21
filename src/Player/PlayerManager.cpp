@@ -207,8 +207,11 @@ namespace Framework {
             // When false, Lua scripts (PartyTurnManager) handle turn management
             if (!gridMovementEnabled) {
                 // Lua party system is managing turns - skip C++ turn logic
+                LOG_INFO("PlayerManager", "Skipping C++ turn logic - gridMovementEnabled=false (Lua party system active)");
                 return;
             }
+
+            LOG_INFO("PlayerManager", "Running C++ turn logic - gridMovementEnabled=true");
 
             // Get global turn info
             auto& globalTurn = Turn();
