@@ -260,53 +260,97 @@ function SetupParty()
 
     Log("  Starting position: (" .. startX .. ", " .. startY .. ")")
 
-    -- For now, use the original player as Character 1 (Warrior)
-    -- In a full implementation, you'd spawn 3 separate entities
-    -- but for testing, we'll start with just enhancing the single player
-
     -- Disable C++ grid movement (Lua script will handle movement instead)
     SetGridMovementEnabled(false)
     Log("   C++ grid movement disabled")
 
-    -- Attach player movement script to the player
-    local scriptSuccess = AddScriptComponentToEntity(originalPlayer, "assets/scripts/PlayerScript.lua")
-
-    if scriptSuccess then
-        Log("   PlayerScript.lua attached successfully")
-        Log("  Character 1 (Warrior) movement handled by Lua script")
-    else
-        Log("  FAILED to attach PlayerScript.lua")
-        -- Re-enable C++ movement as fallback
+    -- Setup Character 1 (Original Player - Warrior)
+    local scriptSuccess1 = AddScriptComponentToEntity(originalPlayer, "assets/scripts/PlayerScript.lua")
+    if not scriptSuccess1 then
+        Log("  FAILED to attach PlayerScript.lua to Character 1")
         SetGridMovementEnabled(true)
-        Log("  C++ grid movement re-enabled as fallback")
         return false
     end
+    Log("  Character 1 (Warrior) - Entity " .. originalPlayer .. " - Script attached")
 
-    -- TODO: Spawn additional party members (Mage and Rogue)
-    -- For now, initialize party with just the warrior
-    -- This allows the infrastructure to work with 1 character until full implementation
+    -- Spawn Character 2 (Mage) - one tile to the right
+    local char2X = startX + 1
+    local char2Y = startY
+    local character2 = SpawnPartyMember(char2X, char2Y, "Mage")
 
-    -- Initialize party system with the warrior
-    -- Note: InitializeParty expects 3 entities, so for now we'll use the same entity
-    -- In full implementation, replace with actual character entities
-    partyMembers = {originalPlayer, originalPlayer, originalPlayer}
+    if not character2 or character2 == 0 then
+        Log("  WARNING: Failed to spawn Character 2, using placeholder")
+        character2 = originalPlayer
+    else
+        Log("  Character 2 (Mage) - Entity " .. character2 .. " - Spawned at (" .. char2X .. ", " .. char2Y .. ")")
+    end
+
+    -- Spawn Character 3 (Rogue) - one tile down from original
+    local char3X = startX
+    local char3Y = startY + 1
+    local character3 = SpawnPartyMember(char3X, char3Y, "Rogue")
+
+    if not character3 or character3 == 0 then
+        Log("  WARNING: Failed to spawn Character 3, using placeholder")
+        character3 = originalPlayer
+    else
+        Log("  Character 3 (Rogue) - Entity " .. character3 .. " - Spawned at (" .. char3X .. ", " .. char3Y .. ")")
+    end
+
+    -- Initialize party system with all 3 characters
+    partyMembers = {originalPlayer, character2, character3}
 
     local partyInitialized = InitializeParty(partyMembers)
 
     if partyInitialized then
-        Log("Party system initialized (currently with 1 character)")
+        Log("========================================")
+        Log("Party system initialized with 3 characters!")
         Log("  - Character 1: Warrior (Entity " .. originalPlayer .. ")")
-        Log("  - Character 2: [TODO - Not yet spawned]")
-        Log("  - Character 3: [TODO - Not yet spawned]")
-        Log("")
-        Log("NOTE: Party system infrastructure ready, but only 1 character active")
-        Log("Full 3-character support coming in next update!")
+        Log("  - Character 2: Mage (Entity " .. character2 .. ")")
+        Log("  - Character 3: Rogue (Entity " .. character3 .. ")")
+        Log("========================================")
     else
         Log("FAILED to initialize party")
         return false
     end
 
     return true
+end
+
+-- Helper function to spawn a party member entity
+function SpawnPartyMember(gridX, gridY, name)
+    Log("  Spawning " .. name .. " at grid position (" .. gridX .. ", " .. gridY .. ")")
+
+    -- Calculate world position from grid position
+    local worldX = kStartX + (gridX * kSpacingX)
+    local worldY = kStartY + (gridY * kSpacingY)
+
+    -- Spawn sprite entity (using same texture as original player for now)
+    -- Note: This spawns a visual entity, but it won't have full player components
+    -- (CircleCollider, Movement, etc.) without C++ support
+    local spriteID = SpawnSprite(
+        "assets/Player/Idlesheet.png",  -- Same sprite as player
+        worldX,
+        worldY,
+        0.1,   -- Scale X
+        0.1,   -- Scale Y
+        5      -- Layer (same as player)
+    )
+
+    if spriteID == 0 then
+        Log("    ERROR: Failed to spawn sprite for " .. name)
+        return 0
+    end
+
+    -- Try to attach player script (will have limited functionality without full components)
+    local scriptSuccess = AddScriptComponentToEntity(spriteID, "assets/scripts/PlayerScript.lua")
+    if scriptSuccess then
+        Log("    Script attached to " .. name)
+    else
+        Log("    WARNING: Could not attach script to " .. name)
+    end
+
+    return spriteID
 end
 
 function SetupPartyUI()
