@@ -278,31 +278,80 @@ function SetupParty()
         return false
     end
 
-    -- TODO: Spawn additional party members (Mage and Rogue)
-    -- For now, initialize party with just the warrior
-    -- This allows the infrastructure to work with 1 character until full implementation
+    -- Spawn additional party members on walkable tiles
+    -- Player is at (9, 24) in TileMap.json
+    -- Spawn Mage at (8, 24) - one tile LEFT (walkable '0')
+    -- Spawn Rogue at (10, 24) - one tile RIGHT (walkable '0')
 
-    -- Initialize party system with the warrior
-    -- Note: InitializeParty expects 3 entities, so for now we'll use the same entity
-    -- In full implementation, replace with actual character entities
-    partyMembers = {originalPlayer, originalPlayer, originalPlayer}
+    local character2 = SpawnPartyMember(startX - 1, startY, "Mage")
+    local character3 = SpawnPartyMember(startX + 1, startY, "Rogue")
+
+    if not character2 or character2 == 0 then
+        Log("  WARNING: Failed to spawn Character 2 (Mage), using placeholder")
+        character2 = originalPlayer
+    else
+        Log("  Character 2 (Mage) - Entity " .. character2)
+    end
+
+    if not character3 or character3 == 0 then
+        Log("  WARNING: Failed to spawn Character 3 (Rogue), using placeholder")
+        character3 = originalPlayer
+    else
+        Log("  Character 3 (Rogue) - Entity " .. character3)
+    end
+
+    -- Initialize party system with all 3 characters
+    partyMembers = {originalPlayer, character2, character3}
 
     local partyInitialized = InitializeParty(partyMembers)
 
     if partyInitialized then
-        Log("Party system initialized (currently with 1 character)")
+        Log("========================================")
+        Log("Party system initialized with 3 characters!")
         Log("  - Character 1: Warrior (Entity " .. originalPlayer .. ")")
-        Log("  - Character 2: [TODO - Not yet spawned]")
-        Log("  - Character 3: [TODO - Not yet spawned]")
-        Log("")
-        Log("NOTE: Party system infrastructure ready, but only 1 character active")
-        Log("Full 3-character support coming in next update!")
+        Log("  - Character 2: Mage (Entity " .. character2 .. ")")
+        Log("  - Character 3: Rogue (Entity " .. character3 .. ")")
+        Log("========================================")
     else
         Log("FAILED to initialize party")
         return false
     end
 
     return true
+end
+
+-- Helper function to spawn a party member entity
+function SpawnPartyMember(gridX, gridY, name)
+    Log("  Spawning " .. name .. " at grid position (" .. gridX .. ", " .. gridY .. ")")
+
+    -- Calculate world position from grid position
+    local worldX = kStartX + (gridX * kSpacingX)
+    local worldY = kStartY + (gridY * kSpacingY)
+
+    -- Spawn sprite entity (using same texture as original player for now)
+    local spriteID = SpawnSprite(
+        "assets/Player/Idlesheet.png",  -- Same sprite as player
+        worldX,
+        worldY,
+        0.1,   -- Scale X
+        0.1,   -- Scale Y
+        5      -- Layer (same as player)
+    )
+
+    if spriteID == 0 then
+        Log("    ERROR: Failed to spawn sprite for " .. name)
+        return 0
+    end
+
+    -- Attach player script
+    local scriptSuccess = AddScriptComponentToEntity(spriteID, "assets/scripts/PlayerScript.lua")
+    if scriptSuccess then
+        Log("    Script attached to " .. name)
+    else
+        Log("    WARNING: Could not attach script to " .. name)
+    end
+
+    return spriteID
 end
 
 function SetupPartyUI()
