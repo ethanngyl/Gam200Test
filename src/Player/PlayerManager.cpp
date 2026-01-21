@@ -91,7 +91,7 @@ namespace Framework {
         }
 
         if (s_pulseEnt.GetID() == clickedEnt.GetID()) {
-            // Same tile: don't multiply again — just extend the timer
+            // Same tile: don't multiply again - just extend the timer
             s_pulseEndMs = now + pulseDurationMs;
         }
         else {
