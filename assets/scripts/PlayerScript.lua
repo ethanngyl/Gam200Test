@@ -45,12 +45,24 @@ local currentAnimGroup = AnimGroup.Idle
 local currentAnimDirection = AnimDirection.Front
 local isFlippedX = false
 
+-- Debug tracking
+local hasLoggedActive = false  -- Reset when turn changes
+
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit(id)
     entityID = id
+
+    Log("[PlayerScript] ========================================")
+    Log("[PlayerScript] OnInit() called for entity " .. entityID)
+
+    -- Check if this entity has required components
+    local ap, maxAP = GetEntityAP(entityID)
+    local hp, maxHP = GetEntityHP(entityID)
+    Log("[PlayerScript] Entity " .. entityID .. " has AP: " .. ap .. "/" .. maxAP)
+    Log("[PlayerScript] Entity " .. entityID .. " has HP: " .. hp .. "/" .. maxHP)
 
     -- Initialize animation state
     currentAnimGroup = AnimGroup.Idle
@@ -61,7 +73,8 @@ function OnInit(id)
     SetAnimationDirection(entityID, currentAnimDirection)
     SetAnimationFlipX(entityID, isFlippedX)
 
-    Log("[PlayerScript] Initialized for entity " .. entityID .. " with animation control")
+    Log("[PlayerScript] Entity " .. entityID .. " initialized with animation control")
+    Log("[PlayerScript] ========================================")
 end
 
 -- ============================================================================
@@ -75,9 +88,20 @@ function OnUpdate(dt)
 
     -- CRITICAL: Only process input if this is the active character
     -- Prevents all 3 party members from responding to input simultaneously
-    if not IsActiveCharacter(entityID) then
+    local isActive = IsActiveCharacter(entityID)
+    if not isActive then
         -- Not this character's turn - do nothing
         return
+    end
+
+    -- DEBUG: Log when this character becomes active (once per turn)
+    if not hasLoggedActive then
+        local currentAP, maxAP = GetEntityAP(entityID)
+        Log("[PlayerScript DEBUG] ========================================")
+        Log("[PlayerScript DEBUG] Entity " .. entityID .. " is now ACTIVE")
+        Log("[PlayerScript DEBUG] Current AP: " .. currentAP .. "/" .. maxAP)
+        Log("[PlayerScript DEBUG] ========================================")
+        hasLoggedActive = true
     end
 
     -- ========================================================================
@@ -170,6 +194,9 @@ function OnUpdate(dt)
         return
     end
 
+    -- DEBUG: Log movement attempt
+    Log("[PlayerScript DEBUG] Entity " .. entityID .. " attempting move to (" .. targetX .. ", " .. targetY .. ")")
+
     -- ========================================================================
     -- MOVEMENT VALIDATION
     -- ========================================================================
@@ -193,6 +220,10 @@ function OnUpdate(dt)
 
     -- Use entity-based AP API (supports party system)
     local currentAP, maxAP = GetEntityAP(entityID)
+
+    -- DEBUG: Log AP check
+    Log("[PlayerScript DEBUG] Entity " .. entityID .. " AP check: " .. currentAP .. "/" .. maxAP .. " (need " .. apCostPerMove .. " to move)")
+
     if currentAP < apCostPerMove then
         Log("[PlayerScript] Not enough AP to move (current: " .. currentAP .. ", need: " .. apCostPerMove .. ")")
         -- Show visual feedback for insufficient AP
@@ -200,8 +231,9 @@ function OnUpdate(dt)
 
         -- Automatically end character turn when AP depleted
         if currentAP == 0 then
-            Log("[PlayerScript] Character out of AP - ending turn and advancing to next party member")
+            Log("[PlayerScript] !!!!! Character out of AP - ending turn and advancing to next party member !!!!!")
             EndCharacterTurn()
+            hasLoggedActive = false  -- Reset for next character
         end
 
         return
