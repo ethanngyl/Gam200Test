@@ -234,6 +234,8 @@ end
     @return true if party turn is done, false otherwise
 ]]--
 function IsPartyTurnComplete()
+    Log(string.format("[PartyTurnManager DEBUG] IsPartyTurnComplete() called - returning %s (ActiveCharacterIndex=%d, #PartyMembers=%d)",
+        tostring(PartyTurnComplete), ActiveCharacterIndex, #PartyMembers))
     return PartyTurnComplete
 end
 
@@ -267,7 +269,15 @@ function NextCharacterTurn()
         PartyMembers[ActiveCharacterIndex].name))
 
     -- Move to next character
+    Log(string.format("[PartyTurnManager DEBUG] BEFORE increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
+        ActiveCharacterIndex, #PartyMembers))
+
     ActiveCharacterIndex = ActiveCharacterIndex + 1
+
+    Log(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
+        ActiveCharacterIndex, #PartyMembers))
+    Log(string.format("[PartyTurnManager DEBUG] Check: %d > %d = %s",
+        ActiveCharacterIndex, #PartyMembers, tostring(ActiveCharacterIndex > #PartyMembers)))
 
     -- Check if all characters have acted
     if ActiveCharacterIndex > #PartyMembers then
@@ -308,10 +318,19 @@ end
     Automatically advances to next character
 ]]--
 function EndCharacterTurn()
-    Log(string.format("[PartyTurnManager] EndCharacterTurn() called for %s",
-        GetActiveCharacterName()))
+    Log("[PartyTurnManager] ==========================================")
+    Log(string.format("[PartyTurnManager] EndCharacterTurn() called for %s (Entity %d)",
+        GetActiveCharacterName(), GetActiveCharacter()))
+    Log(string.format("[PartyTurnManager DEBUG] Before advancing - ActiveCharacterIndex=%d, PartyTurnComplete=%s",
+        ActiveCharacterIndex, tostring(PartyTurnComplete)))
+    Log("[PartyTurnManager] ==========================================")
 
     NextCharacterTurn()
+
+    Log("[PartyTurnManager] ==========================================")
+    Log(string.format("[PartyTurnManager DEBUG] After advancing - ActiveCharacterIndex=%d, PartyTurnComplete=%s",
+        ActiveCharacterIndex, tostring(PartyTurnComplete)))
+    Log("[PartyTurnManager] ==========================================")
 end
 
 --[[
@@ -320,6 +339,17 @@ end
     Switches to enemy turn phase
 ]]--
 function EndPartyTurn()
+    Log("[PartyTurnManager] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("[PartyTurnManager] !!! EndPartyTurn() CALLED !!!")
+    Log(string.format("[PartyTurnManager DEBUG] PartyTurnComplete=%s, ActiveCharacterIndex=%d, #PartyMembers=%d",
+        tostring(PartyTurnComplete), ActiveCharacterIndex, #PartyMembers))
+
+    -- Log which characters have acted
+    for i = 1, #PartyMembers do
+        Log(string.format("[PartyTurnManager DEBUG] %s: hasActed=%s",
+            PartyMembers[i].name, tostring(PartyMembers[i].hasActed)))
+    end
+
     if not PartyTurnComplete then
         Log("[PartyTurnManager] WARNING: EndPartyTurn() called but not all characters have acted")
         -- Force complete anyway
@@ -327,6 +357,7 @@ function EndPartyTurn()
     end
 
     Log("[PartyTurnManager] Ending party turn - switching to Enemy phase")
+    Log("[PartyTurnManager] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     -- Switch to enemy turn using existing API
     EndPlayerTurn()

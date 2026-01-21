@@ -135,9 +135,15 @@ function OnUpdate(dt)
     end
 
     -- Transition to enemy turn when all party members have acted
-    if currentTurn == "Player" and IsPartyTurnComplete() then
-        Log("[Level3Clean] All party members have acted - transitioning to enemy turn")
-        EndPartyTurn()
+    if currentTurn == "Player" then
+        local partyComplete = IsPartyTurnComplete()
+        if partyComplete then
+            Log("[Level3Clean] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            Log("[Level3Clean] !!! IsPartyTurnComplete() returned TRUE !!!")
+            Log("[Level3Clean] !!! Calling EndPartyTurn() !!!")
+            Log("[Level3Clean] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            EndPartyTurn()
+        end
     end
 
     -- Update previous turn tracker
