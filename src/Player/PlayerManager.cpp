@@ -203,18 +203,16 @@ namespace Framework {
         //}
 
         if (IsPlayerTurn()) {
-            // DISABLED: C++ turn management for party system
-            // Lua PartyTurnManager.lua now handles all turn logic
-            //
-            // The code below was causing issues:
-            // - AP regeneration conflicted with Lua AP management
-            // - Auto-end turn bypassed the party system (ended after Char1, skipped Char2/3)
-            //
-            // All turn management is now in:
-            // - assets/scripts/PartyTurnManager.lua (turn advancement, AP refills)
-            // - assets/scripts/PlayerScript.lua (individual character movement)
+            // IMPORTANT: Only run C++ turn management when gridMovementEnabled is true
+            // When false, Lua scripts (PartyTurnManager) handle turn management
+            if (!gridMovementEnabled) {
+                // Lua party system is managing turns - skip C++ turn logic
+                LOG_INFO("PlayerManager", "Skipping C++ turn logic - gridMovementEnabled=false (Lua party system active)");
+                return;
+            }
 
-            /*
+            LOG_INFO("PlayerManager", "Running C++ turn logic - gridMovementEnabled=true");
+
             // Get global turn info
             auto& globalTurn = Turn();
 
@@ -251,7 +249,6 @@ namespace Framework {
             }
 
             HandleAttackAction();
-            */
 
             //// --- (Optional) PLAYER ATTACK on SPACE ---
             //if (inputSystem->IsKeyPressed(KEY_SPACE))
