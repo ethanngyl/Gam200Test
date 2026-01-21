@@ -279,7 +279,8 @@ function SetupParty()
     end
 
     -- Spawn additional party members on walkable tiles
-    -- Player is at (9, 24) in TileMap.json
+    -- TileMap.json legend: W=wall, 0=grass, 1=grass_alt, P=player, E=enemy, S=chest, M=goal
+    -- Player 'P' is at (9, 24) in TileMap.json Row24
     -- Spawn Mage at (8, 24) - one tile LEFT (walkable '0')
     -- Spawn Rogue at (10, 24) - one tile RIGHT (walkable '0')
 
@@ -330,7 +331,7 @@ function SpawnPartyMember(gridX, gridY, name)
 
     -- Spawn sprite entity (using same texture as original player for now)
     local spriteID = SpawnSprite(
-        "assets/Player/Idlesheet.png",  -- Same sprite as player
+        "assets/player.png",  -- PLACEHOLDER: Use single sprite until animation sheet available
         worldX,
         worldY,
         0.1,   -- Scale X
