@@ -57,7 +57,7 @@ function PartyStatusUI:new(entityID)
     -- Icons (using actual asset paths)
     instance.heartIcon = "assets/UI/Health_5.png"  -- Full heart icon
     instance.apIcon = "assets/UI/AP_Crystal.png"    -- AP crystal icon
-    instance.highlightBorder = "PLACEHOLDER_HighlightBorder.png"  -- TODO: Replace with actual asset
+    instance.highlightBorder = nil  -- DISABLED: Placeholder asset not available yet
 
     -- Colors
     instance.activeColor = {r = 1.0, g = 1.0, b = 1.0}    -- White (active)
@@ -153,16 +153,20 @@ function PartyStatusUI:CreateCharacterSlot(slotIndex)
     end
 
     -- Highlight border (shown only for active character)
-    slot.highlightBorder = self:SpawnSprite(
-        self.highlightBorder,
-        posX + 0.1,
-        posY + 0.02,
-        0.25,
-        0.12,
-        99  -- Behind icons
-    )
-    -- Start hidden
-    SetSpriteVisibility(slot.highlightBorder, false)
+    if self.highlightBorder then
+        slot.highlightBorder = self:SpawnSprite(
+            self.highlightBorder,
+            posX + 0.1,
+            posY + 0.02,
+            0.25,
+            0.12,
+            99  -- Behind icons
+        )
+        -- Start hidden
+        SetSpriteVisibility(slot.highlightBorder, false)
+    else
+        slot.highlightBorder = nil  -- No highlight border available
+    end
 
     slot.entityID = entityID
     slot.slotIndex = slotIndex
@@ -215,11 +219,15 @@ function PartyStatusUI:UpdateCharacterSlot(slotIndex)
     if isActive then
         -- Active character: white color, show highlight
         self:SetSlotColor(slot, self.activeColor)
-        SetSpriteVisibility(slot.highlightBorder, true)
+        if slot.highlightBorder then
+            SetSpriteVisibility(slot.highlightBorder, true)
+        end
     else
         -- Inactive character: gray color, hide highlight
         self:SetSlotColor(slot, self.inactiveColor)
-        SetSpriteVisibility(slot.highlightBorder, false)
+        if slot.highlightBorder then
+            SetSpriteVisibility(slot.highlightBorder, false)
+        end
     end
 end
 

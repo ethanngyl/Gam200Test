@@ -108,22 +108,24 @@ function OnUpdate(dt)
     -- ANIMATION STATE MANAGEMENT
     -- ========================================================================
 
-    -- Check for manual animation triggers (debug keys)
-    if IsKeyPressed(75) then  -- KEY_K = Attack
+    -- DISABLED: Debug animation triggers (causing errors)
+    -- Uncomment if needed, but use IsKeyDown() not IsKeyPressed()
+    --[[
+    if IsKeyDown(75) then  -- KEY_K = Attack
         currentAnimGroup = AnimGroup.Attack
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Attack animation triggered")
     end
 
-    if IsKeyPressed(74) then  -- KEY_J = Injured
+    if IsKeyDown(74) then  -- KEY_J = Injured
         currentAnimGroup = AnimGroup.Injured
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Injured animation triggered")
     end
 
-    if IsKeyPressed(76) then  -- KEY_L = Death
+    if IsKeyDown(76) then  -- KEY_L = Death
         currentAnimGroup = AnimGroup.Death
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
@@ -131,6 +133,7 @@ function OnUpdate(dt)
         -- Death animation blocks all movement
         return
     end
+    ]]--
 
     -- Block movement during Death animation
     local currentAnim = GetAnimationGroup(entityID)
