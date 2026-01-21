@@ -326,8 +326,13 @@ function SetupParty()
         Log("  - Character 2: Mage (Entity " .. player2 .. ") - PLACEHOLDER")
         Log("  - Character 3: Rogue (Entity " .. player3 .. ") - PLACEHOLDER")
         Log("========================================")
-        Log("")
-        Log("DEBUG: All 3 should have same entity ID until GetAllPlayers() is implemented")
+
+        -- DEBUG: Verify GetPartyMembers() returns correct data immediately after initialization
+        local verifyMembers = GetPartyMembers()
+        Log("[DEBUG SetupParty] After InitializeParty, GetPartyMembers() returns " .. #verifyMembers .. " members")
+        for i = 1, #verifyMembers do
+            Log("[DEBUG SetupParty]   Member " .. i .. ": Entity " .. verifyMembers[i])
+        end
     else
         Log("FAILED to initialize party")
         return false
