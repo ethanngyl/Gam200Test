@@ -271,8 +271,14 @@ function SetupParty()
     -- All 3 are created by C++ with full ECS components (AP, Health, Movement, CircleCollider)
 
     -- Disable C++ grid movement (Lua script will handle movement instead)
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("!!! CALLING SetGridMovementEnabled(false) !!!")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     SetGridMovementEnabled(false)
-    Log("   C++ grid movement disabled")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("!!! SetGridMovementEnabled(false) COMPLETED !!!")
+    Log("!!! C++ grid movement should now be DISABLED !!!")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     -- Find all player entities from tilemap
     -- TileMap.json Row24: "W1010W01QPR10W010101W" spawns 3 players (Q, P, R)
