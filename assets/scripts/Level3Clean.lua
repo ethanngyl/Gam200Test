@@ -261,119 +261,79 @@ function SetupParty()
     Log("Setting up 3-character party...")
     Log("========================================")
 
-    -- Find the original player entity from tilemap
-    local originalPlayer = FindPlayer()
-
-    if not originalPlayer or originalPlayer == 0 then
-        Log("ERROR: Player not found!")
-        return false
-    end
-
-    Log(" Found original player (Entity ID: " .. originalPlayer .. ")")
-
-    -- Get the player's starting position
-    local startX, startY = GetPlayerGridPosition()
-
-    if not startX or not startY then
-        Log("ERROR: Could not get player position!")
-        return false
-    end
-
-    Log("  Starting position: (" .. startX .. ", " .. startY .. ")")
+    -- TileMap.json now spawns 3 players: P, Q, R at Row24 positions 8, 9, 10
+    -- All 3 are created by C++ with full ECS components (AP, Health, Movement, CircleCollider)
 
     -- Disable C++ grid movement (Lua script will handle movement instead)
     SetGridMovementEnabled(false)
     Log("   C++ grid movement disabled")
 
-    -- Attach player movement script to the player
-    local scriptSuccess = AddScriptComponentToEntity(originalPlayer, "assets/scripts/PlayerScript.lua")
+    -- Find all player entities from tilemap
+    -- TileMap.json Row24: "W1010W01QPR10W010101W" spawns 3 players (Q, P, R)
+    local allPlayers = GetAllPlayers()
 
-    if scriptSuccess then
-        Log("   PlayerScript.lua attached successfully")
-        Log("  Character 1 (Warrior) movement handled by Lua script")
-    else
-        Log("  FAILED to attach PlayerScript.lua")
-        -- Re-enable C++ movement as fallback
-        SetGridMovementEnabled(true)
-        Log("  C++ grid movement re-enabled as fallback")
+    if not allPlayers or #allPlayers == 0 then
+        Log("ERROR: No players found in tilemap!")
         return false
     end
 
-    -- Spawn additional party members on walkable tiles
-    -- TileMap.json legend: W=wall, 0=grass, 1=grass_alt, P=player, E=enemy, S=chest, M=goal
-    -- Player 'P' is at (9, 24) in TileMap.json Row24
-    -- Spawn Mage at (8, 24) - one tile LEFT (walkable '0')
-    -- Spawn Rogue at (10, 24) - one tile RIGHT (walkable '0')
+    Log(" Found " .. #allPlayers .. " player(s) in tilemap:")
 
-    local character2 = SpawnPartyMember(startX - 1, startY, "Mage")
-    local character3 = SpawnPartyMember(startX + 1, startY, "Rogue")
-
-    if not character2 or character2 == 0 then
-        Log("  WARNING: Failed to spawn Character 2 (Mage), using placeholder")
-        character2 = originalPlayer
-    else
-        Log("  Character 2 (Mage) - Entity " .. character2)
+    -- Verify we have exactly 3 players
+    if #allPlayers < 3 then
+        Log("WARNING: Expected 3 players but found " .. #allPlayers)
+        Log("Make sure TileMap.json Row24 has P, Q, and R symbols")
+        return false
     end
 
-    if not character3 or character3 == 0 then
-        Log("  WARNING: Failed to spawn Character 3 (Rogue), using placeholder")
-        character3 = originalPlayer
-    else
-        Log("  Character 3 (Rogue) - Entity " .. character3)
+    -- Extract player entity IDs (should be 3)
+    local player1 = allPlayers[1]
+    local player2 = allPlayers[2]
+    local player3 = allPlayers[3]
+
+    Log("  Player 1 (Warrior): Entity " .. player1)
+    Log("  Player 2 (Mage):    Entity " .. player2)
+    Log("  Player 3 (Rogue):   Entity " .. player3)
+
+    -- Attach scripts to all 3 players
+    for i = 1, 3 do
+        local playerID = allPlayers[i]
+        local scriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
+
+        if scriptSuccess then
+            Log("  [Player " .. i .. "] Script attached successfully")
+        else
+            Log("  [Player " .. i .. "] ERROR: Failed to attach script")
+            SetGridMovementEnabled(true)
+            return false
+        end
+
+        -- Debug: Check components
+        local ap, maxap = GetEntityAP(playerID)
+        local hp, maxhp = GetEntityHP(playerID)
+        Log("  [Player " .. i .. "] AP: " .. ap .. "/" .. maxap .. ", HP: " .. hp .. "/" .. maxhp)
     end
 
-    -- Initialize party system with all 3 characters
-    partyMembers = {originalPlayer, character2, character3}
+    -- Initialize party system with all 3 real players
+    partyMembers = {player1, player2, player3}
 
     local partyInitialized = InitializeParty(partyMembers)
 
     if partyInitialized then
         Log("========================================")
-        Log("Party system initialized with 3 characters!")
-        Log("  - Character 1: Warrior (Entity " .. originalPlayer .. ")")
-        Log("  - Character 2: Mage (Entity " .. character2 .. ")")
-        Log("  - Character 3: Rogue (Entity " .. character3 .. ")")
+        Log("Party system initialized!")
+        Log("  - Character 1: Warrior (Entity " .. player1 .. ") - FUNCTIONAL")
+        Log("  - Character 2: Mage (Entity " .. player2 .. ") - PLACEHOLDER")
+        Log("  - Character 3: Rogue (Entity " .. player3 .. ") - PLACEHOLDER")
         Log("========================================")
+        Log("")
+        Log("DEBUG: All 3 should have same entity ID until GetAllPlayers() is implemented")
     else
         Log("FAILED to initialize party")
         return false
     end
 
     return true
-end
-
--- Helper function to spawn a party member entity
-function SpawnPartyMember(gridX, gridY, name)
-    Log("  Spawning " .. name .. " at grid position (" .. gridX .. ", " .. gridY .. ")")
-
-    -- Calculate world position from grid position
-    local worldX = kStartX + (gridX * kSpacingX)
-    local worldY = kStartY + (gridY * kSpacingY)
-
-    -- Spawn sprite entity (using same texture as original player for now)
-    local spriteID = SpawnSprite(
-        "assets/player.png",  -- PLACEHOLDER: Use single sprite until animation sheet available
-        worldX,
-        worldY,
-        0.1,   -- Scale X
-        0.1,   -- Scale Y
-        5      -- Layer (same as player)
-    )
-
-    if spriteID == 0 then
-        Log("    ERROR: Failed to spawn sprite for " .. name)
-        return 0
-    end
-
-    -- Attach player script
-    local scriptSuccess = AddScriptComponentToEntity(spriteID, "assets/scripts/PlayerScript.lua")
-    if scriptSuccess then
-        Log("    Script attached to " .. name)
-    else
-        Log("    WARNING: Could not attach script to " .. name)
-    end
-
-    return spriteID
 end
 
 function SetupPartyUI()
