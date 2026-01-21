@@ -337,9 +337,11 @@ namespace Framework {
                 transform.position = position;
                 transform.scale = Vector2D(0.1f, 0.1f);
 			}*/
-           /* entityManager->AddComponent<Movement>(player);
+
+            // Add Movement component so GetAllPlayers() can find this entity
+            entityManager->AddComponent<Movement>(player);
             auto& movement = entityManager->GetComponent<Movement>(player);
-            movement.moveSpeed = 0.2f;*/
+            movement.moveSpeed = 0.2f;
 
             entityManager->AddComponent<CircleCollider>(player);
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
