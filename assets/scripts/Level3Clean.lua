@@ -89,6 +89,16 @@ function OnInit()
     -- Setup Party UI (shows all 3 characters)
     SetupPartyUI()
 
+    -- CRITICAL: Re-disable grid movement AFTER all initialization
+    -- Some systems (GameStateManager) may re-enable it during setup
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("!!! RE-DISABLING grid movement after init !!!")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    SetGridMovementEnabled(false)
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("!!! Grid movement RE-DISABLED !!!")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
     initialized = true
     Log("========================================")
     Log("Level 3 initialization complete")
