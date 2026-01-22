@@ -77,21 +77,42 @@ namespace Framework {
      * - Calls 'OnUpdate' for initialized scripts, passing delta time
      */
     void ScriptSystem::Update(float dt) {
-        if (!entityManager) return;
+        if (!entityManager) {
+            LOG_WARN("ScriptSystem", "Update() called but entityManager is null!");
+            return;
+        }
 
         // Update all entities with ScriptComponent
         auto entities = entityManager->GetAllEntities();
+
+        static bool hasLoggedUpdate = false;
+        if (!hasLoggedUpdate) {
+            LOG_INFO("ScriptSystem", "========================================");
+            LOG_INFO("ScriptSystem", "Update() CALLED - Checking %zu entities", entities.size());
+            hasLoggedUpdate = true;
+        }
+
+        int scriptCount = 0;
         for (auto entity : entities) {
             if (entityManager->HasComponent<ScriptComponent>(entity)) {
+                scriptCount++;
                 auto& script = entityManager->GetComponent<ScriptComponent>(entity);
+
+                LOG_INFO("ScriptSystem", "Found ScriptComponent on Entity %u:", entity.GetID());
+                LOG_INFO("ScriptSystem", "  scriptPath: %s", script.scriptPath.empty() ? "(empty)" : script.scriptPath.c_str());
+                LOG_INFO("ScriptSystem", "  L (Lua state): %s", script.L ? "EXISTS" : "NULL");
+                LOG_INFO("ScriptSystem", "  initialized: %s", script.initialized ? "true" : "false");
+                LOG_INFO("ScriptSystem", "  hasOnUpdate: %s", script.hasOnUpdate ? "true" : "false");
 
                 // Auto-load script if it has a path but no Lua state
                 if (!script.L && !script.scriptPath.empty()) {
+                    LOG_INFO("ScriptSystem", "  AUTO-LOADING script for Entity %u...", entity.GetID());
                     LoadScript(entity, script.scriptPath);
                 }
 
                 // Initialize script on first update
                 if (!script.initialized && script.L) {
+                    LOG_INFO("ScriptSystem", "  INITIALIZING script for Entity %u...", entity.GetID());
                     InitializeScript(entity, script);
                 }
 
@@ -100,6 +121,11 @@ namespace Framework {
                     UpdateScript(entity, script, dt);
                 }
             }
+        }
+
+        if (!hasLoggedUpdate) {
+            LOG_INFO("ScriptSystem", "Found %d entities with ScriptComponent", scriptCount);
+            LOG_INFO("ScriptSystem", "========================================");
         }
     }
 
