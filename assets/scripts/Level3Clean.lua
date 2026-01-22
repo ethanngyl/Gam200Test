@@ -8,11 +8,18 @@
 -- Party system: 3 characters act sequentially before enemy turn
 -- ============================================================================
 
+-- CRITICAL: Verify script is loading
+print("============================================================")
+print("========== Level3Clean.lua SCRIPT LOADING STARTED ==========")
+print("============================================================")
+
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 
 -- Load Party Turn Manager (REQUIRED for party system)
+print("[Level3Clean] Loading PartyTurnManager.lua...")
 dofile("assets/scripts/PartyTurnManager.lua")
+print("[Level3Clean] PartyTurnManager.lua loaded successfully")
 
 -- ============================================================================
 -- LEVEL STATE
@@ -42,9 +49,15 @@ local audioConfig = nil
 -- ============================================================================
 
 function OnInit()
+    print("============================================================")
+    print("========== Level3Clean.lua OnInit() CALLED ==========")
+    print("============================================================")
+
     Log("========================================")
     Log("LEVEL 3: Tactical Grid Level (REFACTORED)")
     Log("========================================")
+
+    print("[Level3Clean] After Log() calls - Log system working")
 
     -- Initialize pause menu
     PauseMenu.Init()
@@ -277,9 +290,15 @@ end
 -- ============================================================================
 
 function SetupParty()
+    print("============================================================")
+    print("========== SetupParty() CALLED ==========")
+    print("============================================================")
+
     Log("========================================")
     Log("Setting up 3-character party...")
     Log("========================================")
+
+    print("[SetupParty] After Log() calls")
 
     -- TileMap.json now spawns 3 players: P, Q, R at Row24 positions 8, 9, 10
     -- All 3 are created by C++ with full ECS components (AP, Health, Movement, CircleCollider)
