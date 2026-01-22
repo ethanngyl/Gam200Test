@@ -306,7 +306,7 @@ function OnInit()
         local yPos = camY + screenOffsetY
 
         local entityID = SpawnSprite(
-            "assets/UI/MovP_Black.png",
+            "assets/UI/MovP.png",
             xPos,
             yPos,
             indicatorSize,
@@ -316,6 +316,7 @@ function OnInit()
 
         if entityID > 0 then
             apIndicatorsEmpty[i] = entityID
+            SetSpriteColor(entityID, 0.45, 0.45, 0.45)
             Log("   Empty crystal " .. i .. " (ID: " .. entityID .. ")")
         else
             Log("  FAILED to create empty crystal " .. i)
