@@ -47,6 +47,8 @@ Safety:
 #include "Debugger/Trace.h"
 #include "Input/Input.h"
 #include "imgui.h"
+#include "Core/Core.h"
+#include "LevelEditor/ImguiSystem.h"
 namespace Framework {
 
     // Check if a string looks like a file path (used to decide whether to load texture by name)
@@ -762,6 +764,15 @@ namespace Framework {
                 cmd.tint = mr.tint;
                 cmd.layer = mr.layer;
                 cmd.orderInLayer = mr.orderInLayer;
+
+                if (Framework::CORE && Framework::CORE->IsEditorMode())
+                {
+                    ImGuiSystem* imgui = Framework::CORE->GetImGuiSystem();
+                    if (imgui && !imgui->IsRenderLayerVisible(cmd.layer))
+                    {
+                        continue;
+                    }
+                }
             }
 
              //---------- SPRITE ----------
@@ -781,6 +792,15 @@ namespace Framework {
 
                 cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
                 cmd.layer = sp.layer;
+
+                if (Framework::CORE && Framework::CORE->IsEditorMode())
+                {
+                    ImGuiSystem* imgui = Framework::CORE->GetImGuiSystem();
+                    if (imgui && !imgui->IsRenderLayerVisible(cmd.layer))
+                    {
+                        continue;
+                    }
+                }
             }
 
             // ============================================================================
