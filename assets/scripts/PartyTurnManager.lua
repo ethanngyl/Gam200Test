@@ -109,6 +109,9 @@ function InitializeParty(entityIDs)
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
 
+    -- Notify C++ about active character
+    SetActiveCharacter(PartyMembers[1].entityID)
+
     -- Ensure all characters start with full AP
     for i = 1, 3 do
         RefillEntityAP(PartyMembers[i].entityID)
@@ -298,6 +301,9 @@ function NextCharacterTurn()
         newActiveEntity,
         ActiveCharacterIndex))
 
+    -- Notify C++ about active character change
+    SetActiveCharacter(newActiveEntity)
+
     -- Refill AP for the new active character
     RefillEntityAP(newActiveEntity)
     local currentAP, maxAP = GetEntityAP(newActiveEntity)
@@ -380,6 +386,9 @@ function ResetPartyTurn()
 
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
+
+    -- Notify C++ about active character reset
+    SetActiveCharacter(PartyMembers[1].entityID)
 
     -- Reset hasActed flags and refill AP for all party members
     for i = 1, #PartyMembers do
