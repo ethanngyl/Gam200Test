@@ -56,6 +56,23 @@ namespace Framework
         bool blocked = false;
     };
 
+    struct Particle : public Component<Particle>
+    {
+        // Transform
+      //  Vector2D position{ 0.0f, 0.0f };   // particle position
+
+        // Velocity
+        Vector2D velocity{ 0.0f, 0.0f };   // particle movement
+
+        // Lifetime
+        float lifetime = 0.0f;      // seconds remaining
+        float age = 0.0f;           // expired particle
+
+        // Appearance
+        Vector2D size{ 0.0f, 0.0f };                         // visual size
+        float r{ 0.0f }, g{ 0.0f }, b{ 0.0f }, a{ 0.0f };    // RGBA color
+    };
+
     struct ProjectileMovement : public Component<Movement>
     {
         float moveSpeed = 100.0f;

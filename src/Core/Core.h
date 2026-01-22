@@ -58,6 +58,7 @@ namespace Framework
     class DamageIndicatorSystem;
     class PathfindingSystem;
     class SkillSystem;
+    class ParticleSystemManager;
 
     /**
      * @class CoreEngine
@@ -189,7 +190,7 @@ namespace Framework
         PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
         SkillSystem* GetSkillSystem() const { return skillSystem; }
         LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
-
+        ParticleSystemManager* GetParticleSystemManager() const { return particleSystemManager; }
 
         /**
          * @brief Initializes the added system
@@ -248,6 +249,7 @@ namespace Framework
         PathfindingSystem* pathfindingSystem;
         SkillSystem* skillSystem;
         ScriptSystem* scriptSystem = nullptr;
+        ParticleSystemManager* particleSystemManager;
 
         // state
         unsigned LastTime;

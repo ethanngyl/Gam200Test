@@ -56,6 +56,9 @@
 //Animations
 #include "AnimationSystem.h"
 
+//Particle
+#include "ParticleSystemManager.h"
+
 //Core
 #include "Core.h"
 

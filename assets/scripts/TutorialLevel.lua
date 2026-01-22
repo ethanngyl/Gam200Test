@@ -123,7 +123,7 @@ function OnInit()
     end
 
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    --PlaySound(music.name, music.loop, music.volume)
     Log("Playing tutorial music: " .. music.name)
 
     -- ========================================================================

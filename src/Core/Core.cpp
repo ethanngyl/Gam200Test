@@ -69,6 +69,7 @@ namespace Framework
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
         , skillSystem(nullptr)
+        , particleSystemManager(nullptr)
     {
         CORE = this;
     }
@@ -153,6 +154,7 @@ namespace Framework
         pathfindingSystem = new PathfindingSystem();
         skillSystem = new SkillSystem();
         scriptSystem = new ScriptSystem();
+        particleSystemManager = new ParticleSystemManager();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
@@ -182,6 +184,7 @@ namespace Framework
             delete pathfindingSystem;
             delete skillSystem;
             delete scriptSystem;
+            delete particleSystemManager;
 
             throw std::runtime_error("System allocation failure");
         }
@@ -209,6 +212,7 @@ namespace Framework
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
         skillSystem->SetEntityManager(entityManager);
+
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -280,7 +284,7 @@ namespace Framework
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
         AddSystem(skillSystem);
-
+        AddSystem(particleSystemManager);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -599,7 +603,9 @@ namespace Framework
 
         // === IMGUI ===
         if (imguiSystem) {
+
             imguiSystem->Update(dt);
+
             if (imguiSystem->IsEnabled()) {
                 imguiSystem->Render();
             }
