@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
@@ -1207,6 +1207,19 @@ namespace Framework {
                 texture->Bind(0);
                 hasTexture = true;
             }
+        }
+
+        // Set grayscale amount if provided by material parameters
+        float grayAmount = 0.0f;
+        auto grayIt = material->parameters.find("grayAmount");
+        if (grayIt != material->parameters.end()) {
+            if (auto value = std::get_if<float>(&grayIt->second)) {
+                grayAmount = std::clamp(*value, 0.0f, 1.0f);
+            }
+        }
+        GLint grayLoc = glGetUniformLocation(shader->GetID(), "uGrayAmount");
+        if (grayLoc != -1) {
+            glUniform1f(grayLoc, grayAmount);
         }
 
         // Set color tint (combine material tint with instance tint)
