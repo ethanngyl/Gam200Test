@@ -187,6 +187,7 @@ namespace Framework {
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
         static int Lua_FindPlayer(lua_State* L);
+        static int Lua_GetAllPlayers(lua_State* L);
         static int Lua_GetAllEnemies(lua_State* L);
         static int Lua_SetEnemyTarget(lua_State* L);
         static int Lua_GetCurrentTurn(lua_State* L);
