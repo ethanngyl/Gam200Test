@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          LevelLoader.h
  Author:        GE YONGQI
@@ -178,7 +178,6 @@ namespace Framework {
         // AP Indicator / Entity Management API
         static int Lua_SpawnSprite(lua_State* L);
         static int Lua_SetSpriteColor(lua_State* L);
-        static int Lua_SetSpriteGray(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);
         static int Lua_SetSpriteVisibility(lua_State* L);

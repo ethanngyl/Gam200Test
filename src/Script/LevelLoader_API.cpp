@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          LevelLoader_API.cpp (Compatible with InputSystem)
  Author:        ETHAN NG
@@ -785,44 +785,6 @@ namespace Framework {
         static int logThrottle = 0;
         // Sprite color set
 
-        return 0;
-    }
-
-    int LevelLoader::Lua_SetSpriteGray(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) return 0;
-
-        // Parse parameters: SetSpriteGray(entityID, grayAmount)
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-        float grayAmount = luaL_checknumber(L, 2);
-        if (grayAmount < 0.0f) grayAmount = 0.0f;
-        if (grayAmount > 1.0f) grayAmount = 1.0f;
-
-        auto* em = loader->coreEngine->GetEntityManager();
-        auto* gfx = loader->coreEngine->GetGraphicsSystem();
-        if (!em || !gfx) return 0;
-
-        Entity entity(static_cast<uint32_t>(entityID));
-
-        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) {
-            LOG_WARN("LevelLoader", "SetSpriteGray: Invalid entity or no MeshRenderer (ID=%lld)", entityID);
-            return 0;
-        }
-
-        auto& mr = em->GetComponent<MeshRenderer>(entity);
-        if (!mr.material.IsValid()) {
-            LOG_WARN("LevelLoader", "SetSpriteGray: Entity %lld has no valid material", entityID);
-            return 0;
-        }
-
-        auto* gs = static_cast<GraphicsSystemV2*>(gfx);
-        Material* mat = gs->GetResourceManager().GetMaterial(mr.material);
-        if (!mat) {
-            LOG_WARN("LevelLoader", "SetSpriteGray: Failed to get material for entity %lld", entityID);
-            return 0;
-        }
-
-        mat->parameters["grayAmount"] = grayAmount;
         return 0;
     }
 

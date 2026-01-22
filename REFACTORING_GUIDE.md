@@ -89,8 +89,8 @@ apUI:Init({
     spacing = 0.1,
     offsetX = -0.64,
     offsetY = -0.42,
-    filledTexture = "assets/UI/MovP.png",
-    emptyTint = { r = 0.45, g = 0.45, b = 0.45 }
+    emptyTexture = "assets/UI/MovP_Black.png",
+    filledTexture = "assets/UI/MovP.png"
 })
 
 -- In update loop:

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          LevelLoader.cpp
  Author:        GE YONGQI
@@ -470,7 +470,6 @@ namespace Framework {
         // AP Indicator / Entity Management
         lua_register(L, "SpawnSprite", Lua_SpawnSprite);
         lua_register(L, "SetSpriteColor", Lua_SetSpriteColor);
-        lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
         lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);

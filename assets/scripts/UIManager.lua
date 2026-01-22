@@ -10,7 +10,6 @@ local UIManager = {}
 
 -- Import UI components
 local APIndicatorUI = require("UI/APIndicatorUI")
-local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 
@@ -42,16 +41,12 @@ function UIManager.Init(config)
         offsetX = -0.64,
         offsetY = -0.42,
         layer = 4,
-        filledTexture = "assets/UI/MovP.png",
-        useTint = true,
-        useGray = true,
-        emptyGrayAmount = 1.0,
-        filledGrayAmount = 0.0,
-        emptyTint = { r = 0.45, g = 0.45, b = 0.45 }
+        emptyTexture = "assets/UI/MovP_Black.png",
+        filledTexture = "assets/UI/MovP.png"
     })
 
     -- Create Attack AP Indicator
-    UIManager.components.attackAP = AttackAPIndicatorUI:New()
+    UIManager.components.attackAP = APIndicatorUI:New()
     UIManager.components.attackAP:Init({
         maxAP = 3,
         size = 0.06,
@@ -59,14 +54,30 @@ function UIManager.Init(config)
         offsetX = -0.64,
         offsetY = -0.32,
         layer = 4,
-        filledTexture = "assets/UI/AP_Crystal.png",
-        useTint = true,
-        useGray = true,
-        emptyGrayAmount = 1.0,
-        filledGrayAmount = 0.0,
-        emptyTint = { r = 0.45, g = 0.45, b = 0.45 },
-        filledTint = { r = 0.75, g = 0.85, b = 1.0 }
+        emptyTexture = "assets/UI/AP_Empty.png",
+        filledTexture = "assets/UI/AP_Crystal.png"
     })
+
+    -- Override GetPlayerAP to use GetPlayerAttackAP for attack component
+    local originalUpdate = UIManager.components.attackAP.Update
+    UIManager.components.attackAP.Update = function(self, dt, cameraPos)
+        if not self.enabled then return end
+
+        -- Get attack AP instead of movement AP
+        local currentAP, maxPlayerAP = GetPlayerAttackAP()
+        if not currentAP then return end
+
+        -- Update sprite positions if camera moved
+        if self:ShouldUpdatePosition(cameraPos) then
+            self:UpdatePositions(cameraPos)
+        end
+
+        -- Handle AP changes
+        if currentAP ~= self.lastKnownAP then
+            self:HandleAPChange(currentAP, cameraPos)
+            self.lastKnownAP = currentAP
+        end
+    end
 
     -- Create Health UI
     UIManager.components.health = HealthUI:New()

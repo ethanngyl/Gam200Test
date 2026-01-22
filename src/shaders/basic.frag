@@ -8,7 +8,6 @@ uniform vec3 uColor;
 uniform vec4 uUVRect;
 uniform bool uUseAlphaDiscard;  // Control alpha-based discard
 uniform bool uForceOpaqueAlpha; // Force alpha to 1.0, ignore texture alpha
-uniform float uGrayAmount;      // 0 = normal, 1 = grayscale
 
 void main()
 {
@@ -18,9 +17,6 @@ void main()
     );
 
     vec4 texColor = texture(uTexture, uv);
-
-    float gray = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-    texColor.rgb = mix(texColor.rgb, vec3(gray), clamp(uGrayAmount, 0.0, 1.0));
 
     // Force alpha to fully opaque if requested (fixes black pixels with alpha=0)
     if (uForceOpaqueAlpha) {
