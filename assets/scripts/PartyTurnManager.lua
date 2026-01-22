@@ -84,18 +84,27 @@ CharacterConfig = {
     @param entityIDs Table of entity IDs {warrior, mage, rogue}
 ]]--
 function InitializeParty(entityIDs)
-    if not entityIDs or #entityIDs ~= 3 then
-        Log("[PartyTurnManager] ERROR: InitializeParty requires exactly 3 entity IDs")
+    print("[InitializeParty] Called with entityIDs table")
+
+    if not entityIDs then
+        print("[InitializeParty] ERROR: entityIDs is nil!")
         return false
     end
 
+    print("[InitializeParty] entityIDs has " .. #entityIDs .. " entries")
+
+    if #entityIDs ~= 3 then
+        print("[InitializeParty] ERROR: Need exactly 3 entity IDs, got " .. #entityIDs)
+        return false
+    end
+
+    print("[InitializeParty] Step 1: Clearing PartyMembers...")
     PartyMembers = {}
+    print("[InitializeParty] Step 1: DONE")
 
-    -- DEBUG: Log before populating
-    Log("[PartyTurnManager DEBUG] InitializeParty called with " .. #entityIDs .. " entity IDs")
-    Log("[PartyTurnManager DEBUG] PartyMembers cleared, now has " .. #PartyMembers .. " entries")
-
+    print("[InitializeParty] Step 2: Populating PartyMembers...")
     for i = 1, 3 do
+        print("[InitializeParty]   Creating member " .. i .. " for Entity " .. entityIDs[i])
         PartyMembers[i] = {
             entityID = entityIDs[i],
             name = CharacterConfig[i].name,
@@ -103,40 +112,35 @@ function InitializeParty(entityIDs)
             hasActed = false,
             turnIndex = i
         }
-        -- DEBUG: Log each addition
-        Log("[PartyTurnManager DEBUG]   Added PartyMembers[" .. i .. "] = Entity " .. entityIDs[i])
+        print("[InitializeParty]   Member " .. i .. " created: " .. PartyMembers[i].name .. " (" .. PartyMembers[i].role .. ")")
     end
+    print("[InitializeParty] Step 2: DONE - PartyMembers has " .. #PartyMembers .. " entries")
 
-    -- DEBUG: Log after populating
-    Log("[PartyTurnManager DEBUG] PartyMembers now has " .. #PartyMembers .. " entries")
-
+    print("[InitializeParty] Step 3: Setting initial state...")
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
+    print("[InitializeParty] Step 3: DONE")
 
-    -- Notify C++ about active character
+    print("[InitializeParty] Step 4: Calling SetActiveCharacter(" .. PartyMembers[1].entityID .. ")...")
     SetActiveCharacter(PartyMembers[1].entityID)
+    print("[InitializeParty] Step 4: DONE")
 
-    -- Ensure all characters start with full AP
+    print("[InitializeParty] Step 5: Refilling AP for all characters...")
     for i = 1, 3 do
+        print("[InitializeParty]   Refilling AP for character " .. i .. " (Entity " .. PartyMembers[i].entityID .. ")...")
         RefillEntityAP(PartyMembers[i].entityID)
+        print("[InitializeParty]   Done")
     end
+    print("[InitializeParty] Step 5: DONE")
 
-    Log("[PartyTurnManager] Party initialized with 3 characters:")
+    print("[InitializeParty] Step 6: Checking AP/HP for all characters...")
     for i = 1, 3 do
         local currentAP, maxAP = GetEntityAP(PartyMembers[i].entityID)
-        Log(string.format("  %d. %s (Entity %d) - %s - AP: %d/%d",
-            i,
-            PartyMembers[i].name,
-            PartyMembers[i].entityID,
-            PartyMembers[i].role,
-            currentAP,
-            maxAP))
+        print("[InitializeParty]   " .. i .. ". " .. PartyMembers[i].name .. " (Entity " .. PartyMembers[i].entityID .. ") - AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
     end
+    print("[InitializeParty] Step 6: DONE")
 
-    Log(string.format("[PartyTurnManager] Active character: %s (index %d)",
-        PartyMembers[ActiveCharacterIndex].name,
-        ActiveCharacterIndex))
-
+    print("[InitializeParty] COMPLETED SUCCESSFULLY - Active character: " .. PartyMembers[ActiveCharacterIndex].name)
     return true
 end
 
