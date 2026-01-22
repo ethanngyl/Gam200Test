@@ -543,6 +543,15 @@ namespace Framework {
         lua_register(L, "DamageEntity", Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
+        // Entity-specific APIs (proper naming)
+        lua_register(L, "GetEntityAP", Lua_GetEntityAP);
+        lua_register(L, "GetEntityHP", Lua_GetEntityHP);
+        lua_register(L, "SetEntityHP", Lua_SetEntityHP);
+        lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
+        lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
+        lua_register(L, "SetActiveCharacter", Lua_SetActiveCharacter);
+        lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
+
         lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
         lua_register(L, "IsEditorMode", lua_IsEditorMode);
         lua_register(L, "ShouldDisableGameplay", Lua_ShouldDisableGameplay);

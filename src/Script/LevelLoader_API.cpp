@@ -51,6 +51,14 @@
 namespace Framework {
 
     // ========================================================================
+    // PARTY SYSTEM STATE - Shared between Lua and C++
+    // ========================================================================
+
+    // Global variable to track the currently active character for party system
+    // Set by Lua's PartyTurnManager, queried by entity scripts
+    static uint32_t g_activeCharacterID = 0;
+
+    // ========================================================================
     // AUDIO API
     // ========================================================================
 
@@ -1204,6 +1212,132 @@ namespace Framework {
         return 2;
     }
 
+    /**
+     * @brief Get entity's current HP (Health Points)
+     * @param entityID The entity ID
+     * @return current HP, max HP (two numbers)
+     *
+     * Usage: local currentHP, maxHP = GetEntityHP(entityID)
+     */
+    int LevelLoader::Lua_GetEntityHP(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "GetEntityHP: No core engine");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "GetEntityHP: No entity manager");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Health>(entity)) {
+            LOG_WARN("LevelLoader", "GetEntityHP: Entity %d invalid or missing Health component", entityID);
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& hp = em->GetComponent<Health>(entity);
+        LOG_INFO("LevelLoader", "GetEntityHP: Entity %d has HP=%d/%d",
+                 entityID, hp.currentHealth, hp.maxHealth);
+        lua_pushinteger(L, hp.currentHealth);
+        lua_pushinteger(L, hp.maxHealth);
+        return 2;
+    }
+
+    /**
+     * @brief Set the currently active character for party turn system
+     * @param entityID The entity ID of the active character
+     *
+     * Usage: SetActiveCharacter(entityID)
+     * Called by PartyTurnManager when switching characters
+     */
+    int LevelLoader::Lua_SetActiveCharacter(lua_State* L)
+    {
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        g_activeCharacterID = static_cast<uint32_t>(entityID);
+        LOG_INFO("LevelLoader", "SetActiveCharacter: Active character set to entity %d", entityID);
+        return 0;
+    }
+
+    /**
+     * @brief Check if an entity is the currently active character
+     * @param entityID The entity ID to check
+     * @return boolean true if this entity is the active character
+     *
+     * Usage: local isActive = IsActiveCharacter(entityID)
+     * Used by PlayerScript to determine if it should process input
+     */
+    int LevelLoader::Lua_IsActiveCharacter(lua_State* L)
+    {
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        bool isActive = (g_activeCharacterID == static_cast<uint32_t>(entityID));
+        LOG_INFO("LevelLoader", "IsActiveCharacter: Entity %d is %s (active=%u)",
+                 entityID, isActive ? "ACTIVE" : "INACTIVE", g_activeCharacterID);
+        lua_pushboolean(L, isActive);
+        return 1;
+    }
+
+    /**
+     * @brief Set entity's HP (Health Points)
+     * @param entityID The entity ID
+     * @param currentHP New current HP value
+     * @param maxHP New max HP value (optional, keeps existing if not provided)
+     *
+     * Usage: SetEntityHP(entityID, 10, 20) or SetEntityHP(entityID, 10)
+     */
+    int LevelLoader::Lua_SetEntityHP(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "SetEntityHP: No core engine");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "SetEntityHP: No entity manager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int currentHP = static_cast<int>(luaL_checknumber(L, 2));
+        int maxHP = -1;  // Optional parameter
+        if (lua_gettop(L) >= 3) {
+            maxHP = static_cast<int>(luaL_checknumber(L, 3));
+        }
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Health>(entity)) {
+            LOG_WARN("LevelLoader", "SetEntityHP: Entity %d invalid or missing Health component", entityID);
+            return 0;
+        }
+
+        auto& hp = em->GetComponent<Health>(entity);
+        hp.currentHealth = currentHP;
+        if (maxHP >= 0) {
+            hp.maxHealth = maxHP;
+        }
+
+        // Update dead flag
+        hp.isDead = (hp.currentHealth <= 0);
+
+        LOG_INFO("LevelLoader", "SetEntityHP: Entity %d HP set to %d/%d (dead=%d)",
+                 entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
+        return 0;
+    }
+
     int LevelLoader::Lua_GetPlayerHP(lua_State* L)
     {
         LevelLoader* loader = GetLevelLoader(L);
@@ -1927,6 +2061,40 @@ namespace Framework {
     /**
      * @brief Get entity's current AP (Action Points)
      * @param entityID The entity ID
+     * @return current AP, max AP (two numbers)
+     *
+     * Usage: local currentAP, maxAP = GetEntityAP(entityID)
+     */
+    int LevelLoader::Lua_GetEntityAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "GetEntityAP: No EntityManager");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AP>(entity)) {
+            LOG_WARN("LevelLoader", "GetEntityAP: Entity %d invalid or missing AP component", entityID);
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& ap = em->GetComponent<AP>(entity);
+        LOG_INFO("LevelLoader", "GetEntityAP: Entity %d has AP=%d/%d",
+                 entityID, ap.actionPoints, ap.maxActionPoints);
+        lua_pushinteger(L, ap.actionPoints);
+        lua_pushinteger(L, ap.maxActionPoints);
+        return 2;
+    }
+
+    /**
+     * @brief Get entity's current AP (Action Points) - legacy name
+     * @param entityID The entity ID
      * @return AP value, or 0 if entity doesn't have AP component
      *
      * Usage: local ap = GetEnemyAP(enemyID)
@@ -1952,7 +2120,36 @@ namespace Framework {
     }
 
     /**
-     * @brief Refill enemy AP to maximum
+     * @brief Refill entity AP to maximum
+     * Lua usage: RefillEntityAP(entityID)
+     * @param entityID The entity ID
+     */
+    int LevelLoader::Lua_RefillEntityAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "RefillEntityAP: No EntityManager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AP>(entity)) {
+            LOG_WARN("LevelLoader", "RefillEntityAP: Entity %d invalid or missing AP component", entityID);
+            return 0;
+        }
+
+        auto& ap = em->GetComponent<AP>(entity);
+        int oldAP = ap.actionPoints;
+        ap.actionPoints = ap.maxActionPoints;
+        LOG_INFO("LevelLoader", "RefillEntityAP: Entity %d AP refilled %d -> %d",
+                 entityID, oldAP, ap.actionPoints);
+
+        return 0;
+    }
+
+    /**
+     * @brief Refill enemy AP to maximum - legacy name
      * Lua usage: RefillEnemyAP(entityID)
      * @param entityID The enemy entity ID
      */
@@ -1982,50 +2179,70 @@ namespace Framework {
     int LevelLoader::Lua_GetEntityGridPosition(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            return 0;
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: No core engine");
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            return 0;
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: No entity manager");
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
         }
 
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
         Entity entity(static_cast<uint32_t>(entityID));
 
-        if (!em->HasComponent<Transform>(entity)) {
-            return 0;
+        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d invalid or missing Transform", entityID);
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
         auto tileOpt = Framework::WorldToTile(transform.position);
 
         if (!tileOpt.has_value()) {
-            return 0;
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d position (%.2f, %.2f) not on valid tile",
+                     entityID, transform.position.x, transform.position.y);
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
         }
 
+        LOG_INFO("LevelLoader", "GetEntityGridPosition: Entity %d at grid (%d, %d)",
+                 entityID, tileOpt->x, tileOpt->y);
         lua_pushnumber(L, tileOpt->x);
         lua_pushnumber(L, tileOpt->y);
         return 2;
     }
 
     /**
-     * @brief Move entity to specified tile
+     * @brief Move entity to specified tile with full validation
      * @param entityID The entity ID
      * @param x Grid X coordinate
      * @param y Grid Y coordinate
+     * @return boolean true if move succeeded, false if failed
      *
-     * Usage: MoveEntityToTile(enemyID, x, y)
+     * Usage: local success = MoveEntityToTile(entityID, x, y)
      */
     int LevelLoader::Lua_MoveEntityToTile(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            return 0;
+            LOG_ERROR("LevelLoader", "MoveEntityToTile: No core engine");
+            lua_pushboolean(L, false);
+            return 1;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            return 0;
+            LOG_ERROR("LevelLoader", "MoveEntityToTile: No entity manager");
+            lua_pushboolean(L, false);
+            return 1;
         }
 
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
@@ -2034,8 +2251,28 @@ namespace Framework {
 
         Entity entity(static_cast<uint32_t>(entityID));
 
-        if (!em->HasComponent<Transform>(entity)) {
-            return 0;
+        // Validate entity has Transform
+        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
+            LOG_ERROR("LevelLoader", "MoveEntityToTile: Entity %d invalid or missing Transform", entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Validate target coordinates
+        Framework::GridCoord targetCoord{ x, y };
+
+        if (!Framework::InBounds(targetCoord)) {
+            LOG_WARN("LevelLoader", "MoveEntityToTile: Entity %d target (%d, %d) out of bounds",
+                     entityID, x, y);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        if (!Framework::IsWalkable(targetCoord)) {
+            LOG_WARN("LevelLoader", "MoveEntityToTile: Entity %d target (%d, %d) not walkable",
+                     entityID, x, y);
+            lua_pushboolean(L, false);
+            return 1;
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
@@ -2043,19 +2280,66 @@ namespace Framework {
         // Get current position to clear occupancy
         auto currentTileOpt = Framework::WorldToTile(transform.position);
         if (currentTileOpt.has_value()) {
+            LOG_INFO("LevelLoader", "MoveEntityToTile: Entity %d clearing occupancy at (%d, %d)",
+                     entityID, currentTileOpt->x, currentTileOpt->y);
             Framework::SetOccupant(*currentTileOpt, Framework::Entity{ Framework::INVALID_ENTITY });
         }
 
         // Move to new position
-        Framework::GridCoord newCoord{ x, y };
-        transform.position = Framework::TileToWorld(newCoord);
-        Framework::SetOccupant(newCoord, entity);
+        transform.position = Framework::TileToWorld(targetCoord);
+        Framework::SetOccupant(targetCoord, entity);
+
+        LOG_INFO("LevelLoader", "MoveEntityToTile: Entity %d moved to (%d, %d) successfully",
+                 entityID, x, y);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    /**
+     * @brief Consume entity's AP
+     * @param entityID The entity ID
+     * @param amount Amount of AP to consume
+     *
+     * Usage: ConsumeEntityAP(entityID, 1)
+     */
+    int LevelLoader::Lua_ConsumeEntityAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAP: No core engine");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAP: No entity manager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AP>(entity)) {
+            LOG_WARN("LevelLoader", "ConsumeEntityAP: Entity %d invalid or missing AP component", entityID);
+            return 0;
+        }
+
+        auto& ap = em->GetComponent<AP>(entity);
+        int oldAP = ap.actionPoints;
+        ap.actionPoints -= amount;
+        if (ap.actionPoints < 0) {
+            ap.actionPoints = 0;
+        }
+
+        LOG_INFO("LevelLoader", "ConsumeEntityAP: Entity %d AP consumed %d -> %d (-%d)",
+                 entityID, oldAP, ap.actionPoints, amount);
 
         return 0;
     }
 
     /**
-     * @brief Consume entity's AP
+     * @brief Consume entity's AP - legacy name
      * @param entityID The entity ID
      * @param amount Amount of AP to consume
      *
