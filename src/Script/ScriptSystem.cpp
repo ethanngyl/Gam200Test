@@ -473,6 +473,7 @@ namespace Framework {
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", LevelLoader::Lua_FindPathToTarget);
+        lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
 
         // Game API - Audio

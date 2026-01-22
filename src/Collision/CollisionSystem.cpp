@@ -43,8 +43,8 @@ Safety:
 namespace Framework {
 
 void CollisionSystem::Initialize()
-{ 
-  // inform system Do NOT create any shapes here—wait until a mode is chosen.
+{
+  // inform system Do NOT create any shapes here - wait until a mode is chosen.
   testActive = false;
   sceneReady = false;
   collidedLastFrame = false;
