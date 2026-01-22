@@ -8,7 +8,7 @@ Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
-drag–drop, asset browser) to ECS and subsystems.
+drag-drop, asset browser) to ECS and subsystems.
 
 @brief ImGui editor/overlay declarations: menu bar, panels, level I/O, drag-drop,
        and play/stop handoff to subsystems.

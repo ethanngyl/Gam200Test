@@ -653,7 +653,8 @@ namespace Framework {
                         pc->SetEntitySpawner(spawner);
                         pc->SetEntityManager(em);
                         pc->SetInputSystem(input);
-                        pc->SetGridMovementEnabled(true);
+                        // DISABLED: Don't force grid movement ON - let Lua scripts control it
+                        // pc->SetGridMovementEnabled(true);
 
                         // Optional but recommended: enables walk SFX calls from PlayerManager
                         pc->SetAudioSystem(audio);
@@ -1051,6 +1052,44 @@ namespace Framework {
         }
 
         // All enemies retrieved
+        return 1;
+    }
+
+    /**
+     * @brief Gets all player entities
+     * Lua usage: players = GetAllPlayers() -- returns {playerID1, playerID2, playerID3}
+     * @return Lua table of player entity IDs
+     */
+    int LevelLoader::Lua_GetAllPlayers(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_newtable(L);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_newtable(L);
+            return 1;
+        }
+
+        lua_newtable(L);
+        int index = 1;
+
+        // Find all entities with Movement component (indicates player/controllable entity)
+        // Players have: Movement, CircleCollider, AP, Health components
+        // Enemies have: EnemyAI component instead
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<Movement>(e) &&
+                em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
+                lua_pushinteger(L, index++);
+                lua_pushinteger(L, e.GetID());
+                lua_settable(L, -3);
+            }
+        }
+
+        // All players retrieved
         return 1;
     }
 

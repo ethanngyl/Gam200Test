@@ -359,7 +359,8 @@ void GSM_Update()
                         playerController->SetEntitySpawner(spawner);
                         playerController->SetEntityManager(em);
                         playerController->SetInputSystem(input);
-                        playerController->SetGridMovementEnabled(true);
+                        // DISABLED: Don't force grid movement ON - let Lua scripts control it
+                        // playerController->SetGridMovementEnabled(true);
 
                         // Set camera follow
                         if (auto* gfx = engine->GetGraphicsSystem()) {
@@ -367,7 +368,7 @@ void GSM_Update()
                         }
 
                         LOG_INFO("GSM", "Player controller configured for entity ID: %u", player.GetID());
-                        LOG_INFO("GSM", "Grid movement enabled: TRUE");
+                        // LOG_INFO("GSM", "Grid movement enabled: TRUE");
                     }
                     else {
                         LOG_ERROR("GSM", "No player entity found!");
