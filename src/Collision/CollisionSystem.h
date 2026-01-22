@@ -10,7 +10,7 @@ Contribution: 85%(Jiahao), 15%(Ethan)
 Test harness interface for running interactive collision cases.
 
 Responsibilities:
-- Declare CollTest modes (circle–rect, rect–rect, circle–circle, point tests,
+- Declare CollTest modes (circle-rect, rect-rect, circle-circle, point tests,
   triangle tests, bounds checks).
 - (Before render system is done)Create a simple test scenes and routes input to test all collision functions.
 - (After render system is done)Create ECS ...
