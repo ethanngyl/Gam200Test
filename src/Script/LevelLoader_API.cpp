@@ -2215,8 +2215,12 @@ namespace Framework {
      * Usage: local x, y = GetEntityGridPosition(entityID)
      */
     int LevelLoader::Lua_GetEntityGridPosition(lua_State* L) {
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        std::cout << "[GetEntityGridPosition] Called for entity " << entityID << std::endl;
+
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
+            std::cout << "[GetEntityGridPosition] ERROR: No core engine!" << std::endl;
             LOG_ERROR("LevelLoader", "GetEntityGridPosition: No core engine");
             lua_pushnil(L);
             lua_pushnil(L);
@@ -2225,26 +2229,44 @@ namespace Framework {
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
+            std::cout << "[GetEntityGridPosition] ERROR: No entity manager!" << std::endl;
             LOG_ERROR("LevelLoader", "GetEntityGridPosition: No entity manager");
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
-        int entityID = static_cast<int>(luaL_checknumber(L, 1));
         Entity entity(static_cast<uint32_t>(entityID));
+        std::cout << "[GetEntityGridPosition] Entity.IsValid() = " << entity.IsValid() << std::endl;
 
-        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
-            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d invalid or missing Transform", entityID);
+        if (!entity.IsValid()) {
+            std::cout << "[GetEntityGridPosition] ERROR: Entity " << entityID << " is INVALID!" << std::endl;
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d invalid", entityID);
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        bool hasTransform = em->HasComponent<Transform>(entity);
+        std::cout << "[GetEntityGridPosition] Entity " << entityID << " HasComponent<Transform> = " << hasTransform << std::endl;
+
+        if (!hasTransform) {
+            std::cout << "[GetEntityGridPosition] ERROR: Entity " << entityID << " missing Transform component!" << std::endl;
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d missing Transform", entityID);
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
+        std::cout << "[GetEntityGridPosition] Entity " << entityID << " Transform position: ("
+                  << transform.position.x << ", " << transform.position.y << ")" << std::endl;
+
         auto tileOpt = Framework::WorldToTile(transform.position);
 
         if (!tileOpt.has_value()) {
+            std::cout << "[GetEntityGridPosition] ERROR: WorldToTile failed for position ("
+                      << transform.position.x << ", " << transform.position.y << ")!" << std::endl;
             LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d position (%.2f, %.2f) not on valid tile",
                      entityID, transform.position.x, transform.position.y);
             lua_pushnil(L);
@@ -2252,6 +2274,8 @@ namespace Framework {
             return 2;
         }
 
+        std::cout << "[GetEntityGridPosition] SUCCESS: Entity " << entityID << " at grid ("
+                  << tileOpt->x << ", " << tileOpt->y << ")" << std::endl;
         LOG_INFO("LevelLoader", "GetEntityGridPosition: Entity %d at grid (%d, %d)",
                  entityID, tileOpt->x, tileOpt->y);
         lua_pushnumber(L, tileOpt->x);
