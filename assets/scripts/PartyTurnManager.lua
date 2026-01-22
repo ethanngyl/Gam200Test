@@ -1,3 +1,7 @@
+print("============================================================")
+print("========== PartyTurnManager.lua LOADING START ==========")
+print("============================================================")
+
 --[[
 ===============================================================================
  File:           PartyTurnManager.lua
@@ -505,5 +509,9 @@ _G.ResetPartyTurn = ResetPartyTurn
 _G.OnCharacterSwitched = OnCharacterSwitched
 _G.OnEnemyTurnEnded = OnEnemyTurnEnded
 _G.DebugPrintPartyState = DebugPrintPartyState
+
+print("============================================================")
+print("========== PartyTurnManager.lua LOADED SUCCESSFULLY ==========")
+print("============================================================")
 
 Log("[PartyTurnManager] Loaded successfully")
