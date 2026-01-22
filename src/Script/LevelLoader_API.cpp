@@ -484,8 +484,8 @@ namespace Framework {
         else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
         else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
         else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;
-        // Check key state
-        bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyPressed(keyCode);
+        // Check key state - use IsKeyDown for continuous input
+        bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyDown(keyCode);
         lua_pushboolean(L, pressed);
         return 1;
     }
