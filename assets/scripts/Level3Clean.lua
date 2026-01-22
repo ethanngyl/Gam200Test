@@ -175,7 +175,7 @@ function InitializeAudio()
 
     if bgmSound then
         Log("Starting background music: " .. bgmSound.name)
-        PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
+        --PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
         Log(" Background music started: " .. bgmSound.filepath)
     else
         Log("WARNING: Background music 'igbgm' not found")

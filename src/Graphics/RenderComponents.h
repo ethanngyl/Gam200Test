@@ -67,19 +67,19 @@ namespace Framework {
     // New name, same type. Can attach/get MeshRenderer in ECS code
     using MeshRenderer = Renderable;
 
-    /**
-     * @struct ParticleEmitter
-     * @brief Component for particle effects
-     * 
-     * Future extension for particle systems
-     */
-    struct ParticleEmitter : public Component<ParticleEmitter> {
-        MaterialHandle material;
-        int maxParticles = 100;
-        float emissionRate = 10.0f;
-        glm::vec3 velocity = glm::vec3(0.0f, 1.0f, 0.0f);
-        float lifetime = 2.0f;
-        bool emit = true;
-    };
+    ///**
+    // * @struct ParticleEmitter
+    // * @brief Component for particle effects
+    // * 
+    // * Future extension for particle systems
+    // */
+    //struct ParticleEmitter : public Component<ParticleEmitter> {
+    //    MaterialHandle material;
+    //    int maxParticles = 100;
+    //    float emissionRate = 10.0f;
+    //    glm::vec3 velocity = glm::vec3(0.0f, 1.0f, 0.0f);
+    //    float lifetime = 2.0f;
+    //    bool emit = true;
+    //};
 
 } // namespace Framework

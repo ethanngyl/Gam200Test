@@ -135,7 +135,7 @@ function OnInit()
 
     -- Start menu background music from JSON config
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    --PlaySound(music.name, music.loop, music.volume)
     Log("Playing level select music: " .. music.name)
 
     -- ========================================================================
