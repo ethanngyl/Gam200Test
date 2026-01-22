@@ -246,8 +246,9 @@ function OnUpdate(dt)
     -- EXECUTE MOVEMENT
     -- ========================================================================
 
-    -- Move the player
-    local success = MovePlayerToTile(targetX, targetY)
+    -- Move THIS specific entity (not just "the player")
+    -- Use MoveEntityToTile instead of MovePlayerToTile for party system
+    local success = MoveEntityToTile(entityID, targetX, targetY)
 
     if success then
         -- Consume AP (use entity-based API for party system)
