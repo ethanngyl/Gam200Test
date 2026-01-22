@@ -158,10 +158,10 @@ function OnUpdate(dt)
         return
     end
 
-    -- Get current grid position
-    local currentX, currentY = GetPlayerGridPosition()
+    -- Get THIS entity's current grid position (not just "the player")
+    local currentX, currentY = GetEntityGridPosition(entityID)
     if currentX == nil or currentY == nil then
-        return  -- Player position not available
+        return  -- Entity position not available
     end
 
     -- Check for movement input
