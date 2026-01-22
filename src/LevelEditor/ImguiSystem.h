@@ -8,7 +8,7 @@ Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
 ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
 OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
-drag–drop, asset browser) to ECS and subsystems.
+drag-drop, asset browser) to ECS and subsystems.
 
 @brief ImGui editor/overlay declarations: menu bar, panels, level I/O, drag-drop,
        and play/stop handoff to subsystems.
@@ -33,6 +33,7 @@ Modified: 2026-01-08
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "AudioSystem.h"
+#include <unordered_set>
 
 namespace Framework {
 
@@ -162,6 +163,7 @@ namespace Framework {
         bool IsAudioFileSupported(const std::filesystem::path& path, std::string& outExtension) const;
         bool AddAudioToJSON(const std::string& jsonPath, const std::string& audioPath);
 
+        bool IsRenderLayerVisible(int layer) const;
 
 
     private:
@@ -341,6 +343,10 @@ namespace Framework {
         bool showAudioNamePopup = false;
         char newAudioKeyBuffer[256] = "";
         std::filesystem::path pendingAudioPath;
+
+        void ShowLayersWindow();
+		bool showLayersWindow = false;
+		std::unordered_set<int> hiddenRenderLayers;
     };
 
 } // namespace Framework
