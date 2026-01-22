@@ -210,6 +210,7 @@ namespace Framework {
         static int Lua_RefillEntityAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);
+        static int Lua_SetActiveCharacter(lua_State* L);
         static int Lua_IsActiveCharacter(lua_State* L);
 
         static int Lua_GetPlayerAttackAP(lua_State* L);
@@ -241,15 +242,6 @@ namespace Framework {
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
-
-        // Entity-specific APIs (proper naming)
-        static int Lua_GetEntityAP(lua_State* L);
-        static int Lua_GetEntityHP(lua_State* L);
-        static int Lua_SetEntityHP(lua_State* L);
-        static int Lua_RefillEntityAP(lua_State* L);
-        static int Lua_ConsumeEntityAP(lua_State* L);
-        static int Lua_SetActiveCharacter(lua_State* L);
-        static int Lua_IsActiveCharacter(lua_State* L);
 
         // Script Component Management API
         static int Lua_AddScriptComponentToEntity(lua_State* L);
