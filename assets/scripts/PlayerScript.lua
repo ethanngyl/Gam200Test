@@ -53,18 +53,19 @@ local hasLoggedActive = false  -- Reset when turn changes
 -- ============================================================================
 
 function OnInit(id)
+    print("============================================================")
+    print("========== PlayerScript OnInit() CALLED for Entity " .. id .. " ==========")
+    print("============================================================")
+
     entityID = id
 
-    Log("[PlayerScript] ========================================")
-    Log("[PlayerScript] OnInit() called for entity " .. entityID)
-
-    -- Check if this entity has required components
+    print("[PlayerScript] Checking AP/HP for Entity " .. entityID .. "...")
     local ap, maxAP = GetEntityAP(entityID)
     local hp, maxHP = GetEntityHP(entityID)
-    Log("[PlayerScript] Entity " .. entityID .. " has AP: " .. ap .. "/" .. maxAP)
-    Log("[PlayerScript] Entity " .. entityID .. " has HP: " .. hp .. "/" .. maxHP)
+    print("[PlayerScript] Entity " .. entityID .. " - AP: " .. tostring(ap) .. "/" .. tostring(maxAP) .. ", HP: " .. tostring(hp) .. "/" .. tostring(maxHP))
 
     -- Initialize animation state
+    print("[PlayerScript] Initializing animation state...")
     currentAnimGroup = AnimGroup.Idle
     currentAnimDirection = AnimDirection.Front
     isFlippedX = false
@@ -73,8 +74,8 @@ function OnInit(id)
     SetAnimationDirection(entityID, currentAnimDirection)
     SetAnimationFlipX(entityID, isFlippedX)
 
-    Log("[PlayerScript] Entity " .. entityID .. " initialized with animation control")
-    Log("[PlayerScript] ========================================")
+    print("[PlayerScript] Entity " .. entityID .. " initialized successfully")
+    print("============================================================")
 end
 
 -- ============================================================================
@@ -96,11 +97,13 @@ function OnUpdate(dt)
 
     -- DEBUG: Log when this character becomes active (once per turn)
     if not hasLoggedActive then
+        print("============================================================")
+        print("========== PlayerScript: Entity " .. entityID .. " is now ACTIVE ==========")
+        print("============================================================")
         local currentAP, maxAP = GetEntityAP(entityID)
-        Log("[PlayerScript DEBUG] ========================================")
-        Log("[PlayerScript DEBUG] Entity " .. entityID .. " is now ACTIVE")
-        Log("[PlayerScript DEBUG] Current AP: " .. currentAP .. "/" .. maxAP)
-        Log("[PlayerScript DEBUG] ========================================")
+        print("[PlayerScript] Entity " .. entityID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
+        print("[PlayerScript] This entity will now respond to WASD input")
+        print("============================================================")
         hasLoggedActive = true
     end
 
