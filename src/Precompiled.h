@@ -120,10 +120,6 @@
 #include "Grid/GridTile.h"
 //#include "Grid/GridECS.h"
 
-//Skills
-#include "Skills/SkillComponent.h"
-#include "Skills/SkillSystem.h"
-
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

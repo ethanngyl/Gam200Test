@@ -45,24 +45,12 @@ local currentAnimGroup = AnimGroup.Idle
 local currentAnimDirection = AnimDirection.Front
 local isFlippedX = false
 
--- Debug tracking
-local hasLoggedActive = false  -- Reset when turn changes
-
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit(id)
     entityID = id
-
-    Log("[PlayerScript] ========================================")
-    Log("[PlayerScript] OnInit() called for entity " .. entityID)
-
-    -- Check if this entity has required components
-    local ap, maxAP = GetEntityAP(entityID)
-    local hp, maxHP = GetEntityHP(entityID)
-    Log("[PlayerScript] Entity " .. entityID .. " has AP: " .. ap .. "/" .. maxAP)
-    Log("[PlayerScript] Entity " .. entityID .. " has HP: " .. hp .. "/" .. maxHP)
 
     -- Initialize animation state
     currentAnimGroup = AnimGroup.Idle
@@ -73,8 +61,7 @@ function OnInit(id)
     SetAnimationDirection(entityID, currentAnimDirection)
     SetAnimationFlipX(entityID, isFlippedX)
 
-    Log("[PlayerScript] Entity " .. entityID .. " initialized with animation control")
-    Log("[PlayerScript] ========================================")
+    Log("[PlayerScript] Initialized for entity " .. entityID .. " with animation control")
 end
 
 -- ============================================================================
@@ -88,44 +75,31 @@ function OnUpdate(dt)
 
     -- CRITICAL: Only process input if this is the active character
     -- Prevents all 3 party members from responding to input simultaneously
-    local isActive = IsActiveCharacter(entityID)
-    if not isActive then
+    if not IsActiveCharacter(entityID) then
         -- Not this character's turn - do nothing
         return
-    end
-
-    -- DEBUG: Log when this character becomes active (once per turn)
-    if not hasLoggedActive then
-        local currentAP, maxAP = GetEntityAP(entityID)
-        Log("[PlayerScript DEBUG] ========================================")
-        Log("[PlayerScript DEBUG] Entity " .. entityID .. " is now ACTIVE")
-        Log("[PlayerScript DEBUG] Current AP: " .. currentAP .. "/" .. maxAP)
-        Log("[PlayerScript DEBUG] ========================================")
-        hasLoggedActive = true
     end
 
     -- ========================================================================
     -- ANIMATION STATE MANAGEMENT
     -- ========================================================================
 
-    -- DISABLED: Debug animation triggers (causing errors)
-    -- Uncomment if needed, but use IsKeyDown() not IsKeyPressed()
-    --[[
-    if IsKeyDown(75) then  -- KEY_K = Attack
+    -- Check for manual animation triggers (debug keys)
+    if IsKeyPressed(75) then  -- KEY_K = Attack
         currentAnimGroup = AnimGroup.Attack
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Attack animation triggered")
     end
 
-    if IsKeyDown(74) then  -- KEY_J = Injured
+    if IsKeyPressed(74) then  -- KEY_J = Injured
         currentAnimGroup = AnimGroup.Injured
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Injured animation triggered")
     end
 
-    if IsKeyDown(76) then  -- KEY_L = Death
+    if IsKeyPressed(76) then  -- KEY_L = Death
         currentAnimGroup = AnimGroup.Death
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
@@ -133,7 +107,6 @@ function OnUpdate(dt)
         -- Death animation blocks all movement
         return
     end
-    ]]--
 
     -- Block movement during Death animation
     local currentAnim = GetAnimationGroup(entityID)
@@ -158,10 +131,10 @@ function OnUpdate(dt)
         return
     end
 
-    -- Get THIS entity's current grid position (not just "the player")
-    local currentX, currentY = GetEntityGridPosition(entityID)
+    -- Get current grid position
+    local currentX, currentY = GetPlayerGridPosition()
     if currentX == nil or currentY == nil then
-        return  -- Entity position not available
+        return  -- Player position not available
     end
 
     -- Check for movement input
@@ -197,9 +170,6 @@ function OnUpdate(dt)
         return
     end
 
-    -- DEBUG: Log movement attempt
-    Log("[PlayerScript DEBUG] Entity " .. entityID .. " attempting move to (" .. targetX .. ", " .. targetY .. ")")
-
     -- ========================================================================
     -- MOVEMENT VALIDATION
     -- ========================================================================
@@ -223,20 +193,16 @@ function OnUpdate(dt)
 
     -- Use entity-based AP API (supports party system)
     local currentAP, maxAP = GetEntityAP(entityID)
-
-    -- DEBUG: Log AP check
-    Log("[PlayerScript DEBUG] Entity " .. entityID .. " AP check: " .. currentAP .. "/" .. maxAP .. " (need " .. apCostPerMove .. " to move)")
-
     if currentAP < apCostPerMove then
         Log("[PlayerScript] Not enough AP to move (current: " .. currentAP .. ", need: " .. apCostPerMove .. ")")
         -- Show visual feedback for insufficient AP
         PulseTile(targetX, targetY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse
 
-        -- Automatically end character turn when AP depleted
+        -- Check if this character's turn should end
         if currentAP == 0 then
-            Log("[PlayerScript] !!!!! Character out of AP - ending turn and advancing to next party member !!!!!")
-            EndCharacterTurn()
-            hasLoggedActive = false  -- Reset for next character
+            Log("[PlayerScript] Character out of AP - ending turn")
+            -- Optional: Auto-advance to next character when AP depleted
+            -- EndCharacterTurn()
         end
 
         return
@@ -246,9 +212,8 @@ function OnUpdate(dt)
     -- EXECUTE MOVEMENT
     -- ========================================================================
 
-    -- Move THIS specific entity (not just "the player")
-    -- Use MoveEntityToTile instead of MovePlayerToTile for party system
-    local success = MoveEntityToTile(entityID, targetX, targetY)
+    -- Move the player
+    local success = MovePlayerToTile(targetX, targetY)
 
     if success then
         -- Consume AP (use entity-based API for party system)

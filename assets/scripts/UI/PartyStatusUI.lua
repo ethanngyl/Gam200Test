@@ -13,8 +13,8 @@
 
  Features:
     - Shows all 3 characters in a row
-    - Health hearts (5 max)
-    - AP crystals (5 max)
+    - Health hearts (♥♥♥♥♥)
+    - AP crystals (◆◆◆)
     - Active character highlight
     - Real-time updates
     - Responsive to party turn changes
@@ -54,10 +54,10 @@ function PartyStatusUI:new(entityID)
     -- Character slots
     instance.characterSlots = {}   -- {character1, character2, character3}
 
-    -- Icons (using actual asset paths)
-    instance.heartIcon = "assets/UI/Health_5.png"  -- Full heart icon
-    instance.apIcon = "assets/UI/AP_Crystal.png"    -- AP crystal icon
-    instance.highlightBorder = nil  -- DISABLED: Placeholder asset not available yet
+    -- Icons
+    instance.heartIcon = "assets/UI/heart.png"
+    instance.apIcon = "assets/UI/gem.png"
+    instance.highlightBorder = "assets/UI/HighlightBorder.png"
 
     -- Colors
     instance.activeColor = {r = 1.0, g = 1.0, b = 1.0}    -- White (active)
@@ -79,19 +79,8 @@ end
 function PartyStatusUI:OnInit()
     Log("[PartyStatusUI] Initializing party status display")
 
-    -- DEBUG: Check if GetPartyMembers function exists
-    Log("[PartyStatusUI DEBUG] GetPartyMembers function exists: " .. tostring(GetPartyMembers ~= nil))
-    Log("[PartyStatusUI DEBUG] _G.GetPartyMembers exists: " .. tostring(_G.GetPartyMembers ~= nil))
-
     -- Get party members
     self.partyMembers = GetPartyMembers()
-
-    -- DEBUG: Log what we got
-    Log("[PartyStatusUI DEBUG] GetPartyMembers() returned: " .. tostring(self.partyMembers))
-    Log("[PartyStatusUI DEBUG] Type: " .. type(self.partyMembers))
-    if self.partyMembers then
-        Log("[PartyStatusUI DEBUG] Length: " .. #self.partyMembers)
-    end
 
     if not self.partyMembers or #self.partyMembers ~= 3 then
         Log("[PartyStatusUI] ERROR: Expected 3 party members, got " .. (#self.partyMembers or 0))
@@ -153,20 +142,16 @@ function PartyStatusUI:CreateCharacterSlot(slotIndex)
     end
 
     -- Highlight border (shown only for active character)
-    if self.highlightBorder then
-        slot.highlightBorder = self:SpawnSprite(
-            self.highlightBorder,
-            posX + 0.1,
-            posY + 0.02,
-            0.25,
-            0.12,
-            99  -- Behind icons
-        )
-        -- Start hidden
-        SetSpriteVisibility(slot.highlightBorder, false)
-    else
-        slot.highlightBorder = nil  -- No highlight border available
-    end
+    slot.highlightBorder = self:SpawnSprite(
+        self.highlightBorder,
+        posX + 0.1,
+        posY + 0.02,
+        0.25,
+        0.12,
+        99  -- Behind icons
+    )
+    -- Start hidden
+    SetSpriteVisibility(slot.highlightBorder, false)
 
     slot.entityID = entityID
     slot.slotIndex = slotIndex
@@ -219,15 +204,11 @@ function PartyStatusUI:UpdateCharacterSlot(slotIndex)
     if isActive then
         -- Active character: white color, show highlight
         self:SetSlotColor(slot, self.activeColor)
-        if slot.highlightBorder then
-            SetSpriteVisibility(slot.highlightBorder, true)
-        end
+        SetSpriteVisibility(slot.highlightBorder, true)
     else
         -- Inactive character: gray color, hide highlight
         self:SetSlotColor(slot, self.inactiveColor)
-        if slot.highlightBorder then
-            SetSpriteVisibility(slot.highlightBorder, false)
-        end
+        SetSpriteVisibility(slot.highlightBorder, false)
     end
 end
 

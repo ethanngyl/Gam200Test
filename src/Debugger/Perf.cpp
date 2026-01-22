@@ -99,17 +99,17 @@ namespace eng::debug {
         // 1) Log one line per second (optional). We intentionally pass empty
         //    file/line so normal logs stay clean and do not show "(file:line)".
         if (m_logEnabled) {
-            /*Log::writef(LogLevel::Info, "PERF", __FILE__, __LINE__,
+            Log::writef(LogLevel::Info, "PERF", __FILE__, __LINE__,
                 "FPS(avg): %.1f, frame(avg): %.2f ms, FPS(smooth): %.1f",
-                m_lastFps, m_lastAvgMs, m_smoothFps);*/
+                m_lastFps, m_lastAvgMs, m_smoothFps);
         }
 
         // 2) Update the window title if the user provided a callback.
         if (m_titleUpdater) {
             char title[128];
-            /*std::snprintf(title, sizeof(title),
+            std::snprintf(title, sizeof(title),
                 "StructSquad - FPS: %.1f (avg) | %.1f (smooth)",
-                m_lastFps, m_smoothFps);*/
+                m_lastFps, m_smoothFps);
             m_titleUpdater(title);
         }
     }

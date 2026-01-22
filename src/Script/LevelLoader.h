@@ -187,7 +187,6 @@ namespace Framework {
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
         static int Lua_FindPlayer(lua_State* L);
-        static int Lua_GetAllPlayers(lua_State* L);
         static int Lua_GetAllEnemies(lua_State* L);
         static int Lua_SetEnemyTarget(lua_State* L);
         static int Lua_GetCurrentTurn(lua_State* L);
@@ -210,7 +209,6 @@ namespace Framework {
         static int Lua_RefillEntityAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);
-        static int Lua_SetActiveCharacter(lua_State* L);
         static int Lua_IsActiveCharacter(lua_State* L);
 
         static int Lua_GetPlayerAttackAP(lua_State* L);

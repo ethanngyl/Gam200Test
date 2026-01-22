@@ -22,16 +22,6 @@
         "solid": 0,
         "entityType": "Player"
       },
-      "Q": {
-        "texture": "assets/player.png",
-        "solid": 0,
-        "entityType": "Player"
-      },
-      "R": {
-        "texture": "assets/player.png",
-        "solid": 0,
-        "entityType": "Player"
-      },
       "E": {
         "texture": "assets/player.png",
         "solid": 0,
@@ -73,7 +63,7 @@
       "Row21": "W0101W101S101W101010W",
       "Row22": "W1010W0101010W010101W",
       "Row23": "W0101010101010101010W",
-      "Row24": "W1010W01QPR10W010101W",
+      "Row24": "W1010W010P010W010101W",
       "Row25": "WWWWWWWWWWWWWWWWWWWWW"
     }
   }

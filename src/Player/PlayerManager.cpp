@@ -91,7 +91,7 @@ namespace Framework {
         }
 
         if (s_pulseEnt.GetID() == clickedEnt.GetID()) {
-            // Same tile: don't multiply again - just extend the timer
+            // Same tile: don't multiply again — just extend the timer
             s_pulseEndMs = now + pulseDurationMs;
         }
         else {
@@ -203,16 +203,6 @@ namespace Framework {
         //}
 
         if (IsPlayerTurn()) {
-            // IMPORTANT: Only run C++ turn management when gridMovementEnabled is true
-            // When false, Lua scripts (PartyTurnManager) handle turn management
-            if (!gridMovementEnabled) {
-                // Lua party system is managing turns - skip C++ turn logic
-                LOG_INFO("PlayerManager", "Skipping C++ turn logic - gridMovementEnabled=false (Lua party system active)");
-                return;
-            }
-
-            LOG_INFO("PlayerManager", "Running C++ turn logic - gridMovementEnabled=true");
-
             // Get global turn info
             auto& globalTurn = Turn();
 

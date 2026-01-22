@@ -1,4 +1,4 @@
-﻿
+
 /*
 ============================================================================
  File:          GameStateManager.cpp (With F9 Hot Reload + Fixed DT)
@@ -359,8 +359,7 @@ void GSM_Update()
                         playerController->SetEntitySpawner(spawner);
                         playerController->SetEntityManager(em);
                         playerController->SetInputSystem(input);
-                        // DISABLED: Don't force grid movement ON - let Lua scripts control it
-                        // playerController->SetGridMovementEnabled(true);
+                        playerController->SetGridMovementEnabled(true);
 
                         // Set camera follow
                         if (auto* gfx = engine->GetGraphicsSystem()) {
@@ -368,7 +367,7 @@ void GSM_Update()
                         }
 
                         LOG_INFO("GSM", "Player controller configured for entity ID: %u", player.GetID());
-                        // LOG_INFO("GSM", "Grid movement enabled: TRUE");
+                        LOG_INFO("GSM", "Grid movement enabled: TRUE");
                     }
                     else {
                         LOG_ERROR("GSM", "No player entity found!");
@@ -401,7 +400,7 @@ void GSM_Update()
             }
 
             // C++ system updates (player controller, pathfinding)
-            /*if (engine) {
+            if (engine) {
                 auto* pcs = engine->GetPlayerController();
                 if (pcs) {
                     pcs->Update(Framework::Time::FIXED_DT_F);
@@ -415,7 +414,7 @@ void GSM_Update()
                 // Camera follow (MUST be set every frame like original level3_Update)
                 if (auto* gfx = engine->GetGraphicsSystem()) {
                     // Set engine to playing state
-                    //engine->SetPlaying(true);
+                    engine->SetPlaying(true);
 
                     // Find and cache player entity if needed
                     // Player has CircleCollider but NOT EnemyAI (Movement component removed for grid movement)
@@ -433,42 +432,6 @@ void GSM_Update()
                     }
 
                     // Set camera follow target every frame (matches original)
-                    if (cachedPlayer.GetID() != Framework::INVALID_ENTITY) {
-                        gfx->SetFollowTarget(cachedPlayer);
-                    }
-                }
-            }*/
-
-            if (engine) {
-
-                // STOP must actually stop: if not playing, do not run demo updates
-                if (!engine->IsPlaying()) {
-                    if (auto* gfx = engine->GetGraphicsSystem()) {
-                        gfx->ClearFollowTarget();
-                    }
-                    return;
-                }
-
-                auto* pcs = engine->GetPlayerController();
-                if (pcs) {
-                    pcs->Update(Framework::Time::FIXED_DT_F);
-                }
-
-                auto* pfs = engine->GetPathfindingSystem();
-                if (pfs) {
-                    pfs->Update(Framework::Time::FIXED_DT_F);
-                }
-
-                // Camera follow (set every frame like original)
-                if (auto* gfx = engine->GetGraphicsSystem()) {
-
-                    // REMOVE THIS LINE:
-                    // engine->SetPlaying(true);
-
-                    // ... keep the cachedPlayer logic and SetFollowTarget exactly as-is ...
-                    // Find and cache player entity if needed
-                    // ...
-                    // Set camera follow target every frame
                     if (cachedPlayer.GetID() != Framework::INVALID_ENTITY) {
                         gfx->SetFollowTarget(cachedPlayer);
                     }

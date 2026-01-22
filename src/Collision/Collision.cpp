@@ -9,9 +9,9 @@ Contribution: 100%
 Implementations for primitive collision/bounds/triangle tests.
 
 Key ideas:
-- Circle-circle: center distance vs (r1 + r2).
-- Rect-rect (AABB): overlap test on X and Y (y-up).
-- Circle-rect: clamp circle center to rect; compare to radius.
+- Circle–circle: center distance vs (r1 + r2).
+- Rect–rect (AABB): overlap test on X and Y (y-up).
+- Circle–rect: clamp circle center to rect; compare to radius.
 - Point tests: follow circle/rect rules.
 - Bounds checks: compare shape extents to world bounds.
 
