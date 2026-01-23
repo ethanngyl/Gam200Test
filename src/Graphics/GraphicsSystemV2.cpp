@@ -298,8 +298,10 @@ namespace Framework {
             glViewport(0, 0, targetWidth, targetHeight);
 
             // Update camera aspect ratio for the viewport size
-            float aspectRatio = static_cast<float>(targetWidth) / static_cast<float>(targetHeight);
-            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+            float aspectRatio = static_cast<float>(targetWidth) / static_cast<float>(targetHeight);  // FIXED -- 22 Jan 26
+            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f); // FIXED -- 22 Jan 26
+            //mainCamera.SetOrthographic(-targetWidth * 0.5f, targetWidth * 0.5f,
+            //    -targetHeight * 0.5f, targetHeight * 0.5f);
 
             // Update text renderer for viewport size
             text_.setScreenSize(targetWidth, targetHeight);
@@ -378,8 +380,10 @@ namespace Framework {
             glViewport(0, 0, fbWidth, fbHeight);
 
             // Restore camera aspect ratio
-            float aspectRatio = static_cast<float>(fbWidth) / static_cast<float>(fbHeight);
-            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+            float aspectRatio = static_cast<float>(fbWidth) / static_cast<float>(fbHeight);                 //-- FIXED 22 Jan 2026
+            mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);        //-- FIXED 22 Jan 2026
+            //mainCamera.SetOrthographic(-fbWidth * 0.5f, fbWidth * 0.5f,
+            //    -fbHeight * 0.5f, fbHeight * 0.5f);
 
             // Restore text renderer
             text_.setScreenSize(fbWidth, fbHeight);
@@ -419,8 +423,13 @@ namespace Framework {
         glViewport(0, 0, width, height);
 
         // Maintain orthographic projection with aspect-preserving extents
-        float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
-        mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);
+        float aspectRatio = static_cast<float>(width) / static_cast<float>(height);                 // -- BUG (FIXED 22 Jan 2026)
+        mainCamera.SetOrthographic(-aspectRatio, aspectRatio, -1.0f, 1.0f);    // -- BUG (FIXED 22 Jan 2026)
+        //mainCamera.SetOrthographic(-width * 0.5f, width * 0.5f,
+        //    -height * 0.5f, height * 0.5f);
+        editorCamera.SetOrthographic(-width * 0.5f, width * 0.5f,
+            -height * 0.5f, height * 0.5f);
+        
         // Keep text renderer aligned to screen size
         text_.setScreenSize(width, height);
 

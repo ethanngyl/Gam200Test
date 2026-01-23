@@ -59,7 +59,7 @@ namespace Framework
     struct Particle : public Component<Particle>
     {
         // Transform
-      //  Vector2D position{ 0.0f, 0.0f };   // particle position
+        // Vector2D position{ 0.0f, 0.0f };   // particle position
 
         // Velocity
         Vector2D velocity{ 0.0f, 0.0f };   // particle movement

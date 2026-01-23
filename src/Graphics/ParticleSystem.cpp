@@ -1,50 +1,53 @@
 #include "ParticleSystem.h"
 #include "ECSEntityManager.h"
-#include "EntitySpawner.h"
 
 namespace Framework {
-	ParticleSystem::ParticleSystem() {}
-	//ParticleSystem::~ParticleSystem() {}
-
 	void ParticleSystem::CreateParticle() {
-		Entity entity = engine->GetEntityManager()->CreateEntity();
+		// Query active graphics system to convert pixel size into world-space scale
+		// Size (pixel -> world conversion)
+		auto* graphics = CORE->GetGraphicsSystem();
+		//float pixelSize = 15.0f; // desired size in pixels
+		float worldScale = (2.0f * settings.size) / float(graphics->GetRenderHeight());
+
+		Entity entity = CORE->GetEntityManager()->CreateEntity();
 		
-		engine->GetEntityManager()->AddComponent<Transform>(entity, emitter);
-		auto& transform = engine->GetEntityManager()->GetComponent<Transform>(entity);
+		CORE->GetEntityManager()->AddComponent<Transform>(entity, emitter);
+		auto& transform = CORE->GetEntityManager()->GetComponent<Transform>(entity);
 		transform.position = emitter;
-		transform.scale = { 0.05f, 0.05f };
+		transform.scale = { worldScale , worldScale };	// Size
 
-		engine->GetEntityManager()->AddComponent<Particle>(entity);
-		auto& particle = engine->GetEntityManager()->GetComponent<Particle>(entity);
-
-		//auto& meshrenderer = engine->GetEntityManager()->AddComponent<MeshRenderer>(entity);
-		//meshrenderer.tint.r = particle.r;
-		//meshrenderer.tint.g = particle.g;
-		//meshrenderer.tint.b = particle.b;
-
-		engine->GetEntityManager()->AddComponent<Sprite>(entity);
-		auto& sprite = engine->GetEntityManager()->GetComponent<Sprite>(entity);
-		sprite.texturePath = "assets/TileMap/Grass_Block.png";   //test
-		sprite.layer = 5;
-		sprite.tint = { 1.0f, 1.0f, 1.0f, 1.0f };  //red
-
-		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };	  // 0 to 1
-
-		//particle.position = emitter;
+		CORE->GetEntityManager()->AddComponent<Particle>(entity);
+		auto& particle = CORE->GetEntityManager()->GetComponent<Particle>(entity);
 		
-		//particle.velocity = { (frand() * 2.0f - 1.0f) * 100.0f, (frand() * 2.0f - 1.0f) * 100.0f };
+		// Sprite
+		CORE->GetEntityManager()->AddComponent<Sprite>(entity);
+		auto& sprite = CORE->GetEntityManager()->GetComponent<Sprite>(entity);
+		sprite.texturePath = settings.texturePath; //"assets/UI/AP_Crystal.png";   //test
+		sprite.layer = settings.layer; //5;
+		sprite.tint = settings.tint; //{ 1.0f, 1.0f, 1.0f, 1.0f };  //white
+
+		// frand: gives any random number from 0.0f to 1.0f
+		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };
 		
-		float speed = (frand()*0.25f)+0.01f;
-		float fuzz = 0.3f;
+		// Lifetime
+		particle.lifetime = settings.minLifetime + frand() * (settings.maxLifetime - settings.minLifetime);
 
-		dir.x = (frand()*2.0f)-1.0f; // scale up by 2 then shift by -1 ( to get -1 to 1)
-		dir.y = (frand()*2.0f)-1.0f;
+		// Speed
+		float speed = settings.minSpeed + frand() * (settings.maxSpeed - settings.minSpeed);
+		//float speed = (frand()*0.25f)+0.01f;
+		//float speed = (frand()*4.0f)+1.0f; - 1 to 5
+		//float speed = (frand() * 2.0f) + 1.0f;
 
-		dir.normalize(); // direction normalized
+		// scale up by 2 then shift by -1 (Range: -1 to 1)
+		direction.x = (frand()*2.0f)-1.0f;
+		direction.y = (frand()*2.0f)-1.0f;
+
+		// direction normalized
+		direction.normalize();
 
 		particle.velocity = {
-			dir.x * speed,
-			dir.y * speed
+			direction.x * speed,
+			direction.y * speed
 		};
 
 		particle.lifetime = 10.0f;
@@ -54,22 +57,41 @@ namespace Framework {
 		particle.g = 0.0f;
 		particle.b = 0.0f;
 
+		// Direction: if direction is (0,0) => random radial, else biased cone
+		//Vector2D dir;
+		//if (settings.direction.x == 0.0f && settings.direction.y == 0.0f) {
+		//	dir.x = frand() * 2.0f - 1.0f;
+		//	dir.y = frand() * 2.0f - 1.0f;
+		//	dir.normalize();
+		//}
+		//else {
+		//	dir = settings.direction;
+		//	dir.normalize();
+		//	// add fuzz
+		//	dir.x += (frand() * 2.0f - 1.0f) * settings.directionFuzz;
+		//	dir.y += (frand() * 2.0f - 1.0f) * settings.directionFuzz;
+		//	dir.normalize();
+		//}
+		//particle.velocity = { dir.x * spd, dir.y * spd };
+
 		// debug test console
-		std::cout << "[PS] Spawned entity= " << entity.id << " at (" << emitter.x << "," << emitter.y << ")\n";
+		//std::cout << "[PS] Spawned entity= " << entity.id << " at (" << emitter.x << "," << emitter.y << ")\n";
 		particles.push_back(entity);
 	}
 
 	void ParticleSystem::Update(float dt) {
-		EntityManager* entityManager = engine->GetEntityManager();
+		EntityManager* entityManager = CORE->GetEntityManager();
 
 		// debug test console
-		static float printAcc = 0.0f;
-		printAcc += dt;
-		if (printAcc >= 1.0f) {
-			std::cout << "[PS] Alive=" << particles.size()
-				<< " spawnAcc=" << spawnAcc << "\n";
-			printAcc = 0.0f;
-		}
+		//static float printAcc = 0.0f;
+		//printAcc += dt;
+		//if (printAcc >= 1.0f) {
+		//	std::cout << "[PS] Alive=" << particles.size()
+		//		<< " spawnAcc=" << spawnAcc << "\n";
+		//	printAcc = 0.0f;
+		//}
+
+		spawnRate = 20.0f;
 
 		// spawn new particles over time
 		if (spawnRate > 0.0f) {
@@ -86,7 +108,7 @@ namespace Framework {
 		for (auto count = particles.begin(); count != particles.end(); ) {
 			Entity entity = *count;
 
-			// safety (prevents GetComponent throwing if something removed it)
+			// Checks if components if is exist (prevents GetComponent throwing if something removed it)
 			if (!entityManager->HasComponent<Transform>(entity) || !entityManager->HasComponent<Particle>(entity)) {
 				count = particles.erase(count);
 				continue;
@@ -111,24 +133,9 @@ namespace Framework {
 		}
 
 		// debug test console
-		if (!particles.empty() && printAcc == 0.0f) {
-			auto& t0 = entityManager->GetComponent<Transform>(particles[0]);
-			std::cout << "[PS] P0 pos=(" << t0.position.x << "," << t0.position.y << ")\n";
-		}
-
-		/*for (auto& p : particles) {
-			
-			p += p.velocity.x * dt;
-			p.position.y += p.velocity.y * dt;
-			p.lifetime -= dt;
-		}
-		particles.erase(
-			std::remove_if(particles.begin(), particles.end(),
-				[](Particle& p) { return p.lifetime <= 0.0f; }),
-			particles.end()
-		);
-
-		emitter.x += spawnRate * dt;
-		emitter.y += spawnRate * dt;*/
+		//if (!particles.empty() && printAcc == 0.0f) {
+		//	auto& t0 = entityManager->GetComponent<Transform>(particles[0]);
+		//	std::cout << "[PS] P0 pos=(" << t0.position.x << "," << t0.position.y << ")\n";
+		//}
 	}
 } // namespace Framework

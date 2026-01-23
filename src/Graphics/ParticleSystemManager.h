@@ -20,5 +20,6 @@ namespace Framework {
 	private:
 		// Internal data (emitters, particle systems)
 		std::vector<ParticleSystem> particleSystems;
+		size_t controlled { 0 };
 	};
 } // namespace Framework
