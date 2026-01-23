@@ -425,6 +425,17 @@ namespace Framework {
         lua_pushlightuserdata(L, this);
         lua_setglobal(L, "__script_system_ptr");
 
+        // Store pointer to LevelLoader for entity scripts to access game API
+        if (coreEngine) {
+            std::cout << "[ScriptSystem] Registering LevelLoader pointer in entity Lua state..." << std::endl;
+            LevelLoader* levelLoader = &(coreEngine->GetLevelLoader());
+            lua_pushlightuserdata(L, levelLoader);
+            lua_setglobal(L, "__level_loader_ptr");
+            std::cout << "[ScriptSystem] LevelLoader pointer registered successfully!" << std::endl;
+        } else {
+            std::cout << "[ScriptSystem] WARNING: coreEngine is NULL, cannot register LevelLoader!" << std::endl;
+        }
+
         return L;
     }
 
