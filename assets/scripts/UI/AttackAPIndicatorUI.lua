@@ -1,21 +1,21 @@
 -- ============================================================================
--- APIndicatorUI.lua
--- Movement Action Point (AP) indicator component
+-- AttackAPIndicatorUI.lua
+-- Attack Action Point (AP) indicator component
 -- ============================================================================
--- Displays movement AP as a row of crystals that fill/empty
--- Uses two-layer system: empty background + filled foreground
+-- Displays attack AP as a row of diamonds
+-- Uses tint-based single layer by default (no empty sprite)
 -- ============================================================================
 
 local UIComponent = require("UI/UIComponent")
-local APIndicatorUI = {}
-setmetatable(APIndicatorUI, {__index = UIComponent})
-APIndicatorUI.__index = APIndicatorUI
+local AttackAPIndicatorUI = {}
+setmetatable(AttackAPIndicatorUI, {__index = UIComponent})
+AttackAPIndicatorUI.__index = AttackAPIndicatorUI
 
 -- ============================================================================
 -- CONSTRUCTOR
 -- ============================================================================
 
-function APIndicatorUI:New()
+function AttackAPIndicatorUI:New()
     local instance = UIComponent:New()
     setmetatable(instance, self)
     return instance
@@ -25,60 +25,49 @@ end
 -- INITIALIZATION
 -- ============================================================================
 
-function APIndicatorUI:Init(config)
+function AttackAPIndicatorUI:Init(config)
     self.config = config or {}
 
     -- Configuration
-    self.maxAP = self.config.maxAP or 5
+    self.maxAP = self.config.maxAP or 3
     self.indicatorSize = self.config.size or 0.06
     self.indicatorSpacing = self.config.spacing or 0.1
     self.offsetX = self.config.offsetX or -0.64
-    self.offsetY = self.config.offsetY or -0.42
+    self.offsetY = self.config.offsetY or -0.32
     self.layer = self.config.layer or 4
+    self.emptyLayerOffset = self.config.emptyLayerOffset or 0
+    self.filledLayerOffset = self.config.filledLayerOffset or 1
 
     -- Textures
-    self.filledTexture = self.config.filledTexture or "assets/UI/MovP.png"
-    self.emptyTexture = self.config.emptyTexture or self.filledTexture
+    self.emptyTexture = self.config.emptyTexture or "assets/UI/AP_Empty.png"
+    self.filledTexture = self.config.filledTexture or "assets/UI/AP_Crystal.png"
 
-    -- Tint configuration (used when sharing texture instead of separate empty sprite)
-    self.useTint = self.config.useTint or false
+    -- Tint configuration
+    self.useTint = self.config.useTint
+    if self.useTint == nil then
+        self.useTint = true
+    end
     self.filledTint = self.config.filledTint or { r = 1.0, g = 1.0, b = 1.0 }
     self.emptyTint = self.config.emptyTint or self.filledTint
-
-    -- Optional grayscale control (uses shader parameter in GraphicsSystemV2)
     self.useGray = self.config.useGray or false
     self.filledGrayAmount = self.config.filledGrayAmount or 0.0
     self.emptyGrayAmount = self.config.emptyGrayAmount or 1.0
 
-    -- AP source + empty layer toggle
-    self.getAPFunc = self.config.getAPFunc or GetPlayerAP
-    self.showEmpty = self.config.showEmpty
-    if self.showEmpty == nil then
-        self.showEmpty = true
-    end
-    self.useMaxFromAP = self.config.useMaxFromAP
-    if self.useMaxFromAP == nil then
-        self.useMaxFromAP = true
-    end
-
     -- State
+    self.indicators = {}
     self.emptyIndicators = {}
     self.filledIndicators = {}
     self.lastKnownAP = 0
 
-    -- Get current AP (needed for initial tinting)
-    local currentAP, maxPlayerAP = self.getAPFunc()
-    if self.useMaxFromAP and maxPlayerAP and maxPlayerAP > 0 then
-        self.maxAP = maxPlayerAP
-    end
-    self.lastKnownAP = currentAP or 0
+    -- Get current AP
+    local currentAP = self:GetCurrentAP()
+    self.lastKnownAP = math.min(currentAP or 0, self.maxAP)
 
     -- Get camera position for initial placement
     local camX, camY, camZ = GetCameraPosition()
 
     if self.useTint then
-        -- Single-layer mode: tint sprites based on AP
-        self.indicators = {}
+        -- Single-layer: tint diamonds based on AP
         for i = 1, self.maxAP do
             local xPos = camX + self.offsetX + ((i - 1) * self.indicatorSpacing)
             local yPos = camY + self.offsetY
@@ -99,28 +88,21 @@ function APIndicatorUI:Init(config)
             end
         end
     else
-        -- Two-layer mode: empty background + filled foreground
-        if self.showEmpty then
-            for i = 1, self.maxAP do
-                local xPos = camX + self.offsetX + ((i - 1) * self.indicatorSpacing)
-                local yPos = camY + self.offsetY
+        -- Two-layer: empty background + filled foreground
+        for i = 1, self.maxAP do
+            local xPos = camX + self.offsetX + ((i - 1) * self.indicatorSpacing)
+            local yPos = camY + self.offsetY
 
-                local entityID = self:SpawnSprite(
-                    self.emptyTexture,
-                    xPos, yPos,
-                    self.indicatorSize, self.indicatorSize,
-                    self.layer
-                )
+            local entityID = self:SpawnSprite(
+                self.emptyTexture,
+                xPos, yPos,
+                self.indicatorSize, self.indicatorSize,
+                self.layer + self.emptyLayerOffset
+            )
 
-                self.emptyIndicators[i] = entityID
-
-                if entityID and entityID > 0 then
-                    self:ApplyVisual(entityID, self.emptyTint, self.emptyGrayAmount)
-                end
-            end
+            self.emptyIndicators[i] = entityID
         end
 
-        -- Create filled crystal foreground layer
         for i = 1, self.lastKnownAP do
             local xPos = camX + self.offsetX + ((i - 1) * self.indicatorSpacing)
             local yPos = camY + self.offsetY
@@ -129,7 +111,7 @@ function APIndicatorUI:Init(config)
                 self.filledTexture,
                 xPos, yPos,
                 self.indicatorSize, self.indicatorSize,
-                self.layer
+                self.layer + self.filledLayerOffset
             )
 
             self.filledIndicators[i] = entityID
@@ -140,19 +122,21 @@ function APIndicatorUI:Init(config)
         end
     end
 
-    Log("[APIndicatorUI] Initialized - " .. self.lastKnownAP .. "/" .. self.maxAP .. " AP")
+    Log("[AttackAPIndicatorUI] Initialized - " .. self.lastKnownAP .. "/" .. self.maxAP .. " AP")
 end
 
 -- ============================================================================
 -- UPDATE
 -- ============================================================================
 
-function APIndicatorUI:Update(dt, cameraPos)
+function AttackAPIndicatorUI:Update(dt, cameraPos)
     if not self.enabled then return end
 
     -- Get current AP
-    local currentAP, maxPlayerAP = self.getAPFunc()
-    if not currentAP then return end
+    local currentAP = self:GetCurrentAP()
+    if currentAP == nil then return end
+
+    currentAP = math.min(currentAP, self.maxAP)
 
     -- Update sprite positions if camera moved
     if self:ShouldUpdatePosition(cameraPos) then
@@ -174,9 +158,13 @@ end
 -- HELPER METHODS
 -- ============================================================================
 
-function APIndicatorUI:UpdatePositions(cameraPos)
+function AttackAPIndicatorUI:GetCurrentAP()
+    local currentAP, maxPlayerAP = GetPlayerAttackAP()
+    return currentAP or 0
+end
+
+function AttackAPIndicatorUI:UpdatePositions(cameraPos)
     if self.useTint then
-        -- Update single-layer indicators
         for i = 1, #self.indicators do
             local entityID = self.indicators[i]
             if entityID and entityID > 0 then
@@ -186,7 +174,6 @@ function APIndicatorUI:UpdatePositions(cameraPos)
             end
         end
     else
-        -- Update empty indicators
         for i = 1, #self.emptyIndicators do
             local entityID = self.emptyIndicators[i]
             if entityID and entityID > 0 then
@@ -196,7 +183,6 @@ function APIndicatorUI:UpdatePositions(cameraPos)
             end
         end
 
-        -- Update filled indicators
         for i = 1, #self.filledIndicators do
             local entityID = self.filledIndicators[i]
             if entityID and entityID > 0 then
@@ -208,9 +194,11 @@ function APIndicatorUI:UpdatePositions(cameraPos)
     end
 end
 
-function APIndicatorUI:HandleAPChange(newAP, cameraPos)
+function AttackAPIndicatorUI:HandleAPChange(newAP, cameraPos)
+    newAP = math.max(0, math.min(newAP, self.maxAP))
+
     if newAP < self.lastKnownAP then
-        -- AP decreased - destroy filled crystals
+        -- AP decreased - destroy extra diamonds
         for i = self.lastKnownAP, newAP + 1, -1 do
             if self.filledIndicators[i] then
                 DestroyEntity(self.filledIndicators[i])
@@ -218,7 +206,7 @@ function APIndicatorUI:HandleAPChange(newAP, cameraPos)
             end
         end
     elseif newAP > self.lastKnownAP then
-        -- AP increased - create new filled crystals
+        -- AP increased - create new diamonds
         for i = self.lastKnownAP + 1, newAP do
             local xPos = cameraPos.x + self.offsetX + ((i - 1) * self.indicatorSpacing)
             local yPos = cameraPos.y + self.offsetY
@@ -227,19 +215,19 @@ function APIndicatorUI:HandleAPChange(newAP, cameraPos)
                 self.filledTexture,
                 xPos, yPos,
                 self.indicatorSize, self.indicatorSize,
-                self.layer
+                self.layer + self.filledLayerOffset
             )
 
             self.filledIndicators[i] = entityID
 
             if entityID and entityID > 0 then
-                self:ApplyVisual(entityID, self.filledTint, self.filledGrayAmount)
+                self:ApplyTint(entityID, self.filledTint)
             end
         end
     end
 end
 
-function APIndicatorUI:UpdateTints(currentAP)
+function AttackAPIndicatorUI:UpdateTints(currentAP)
     for i = 1, #self.indicators do
         local entityID = self.indicators[i]
         if entityID and entityID > 0 then
@@ -250,14 +238,14 @@ function APIndicatorUI:UpdateTints(currentAP)
     end
 end
 
-function APIndicatorUI:ApplyVisual(entityID, tint, grayAmount)
+function AttackAPIndicatorUI:ApplyVisual(entityID, tint, grayAmount)
     self:ApplyTint(entityID, tint)
     if self.useGray then
         SetSpriteGray(entityID, grayAmount or 0.0)
     end
 end
 
-function APIndicatorUI:ApplyTint(entityID, tint)
+function AttackAPIndicatorUI:ApplyTint(entityID, tint)
     if not entityID or entityID <= 0 or not tint then
         return
     end
@@ -268,7 +256,7 @@ function APIndicatorUI:ApplyTint(entityID, tint)
     SetSpriteColor(entityID, r, g, b)
 end
 
-function APIndicatorUI:Destroy()
+function AttackAPIndicatorUI:Destroy()
     if self.useTint then
         for i = 1, #self.indicators do
             if self.indicators[i] and self.indicators[i] > 0 then
@@ -277,25 +265,23 @@ function APIndicatorUI:Destroy()
         end
         self.indicators = {}
     else
-        -- Destroy empty indicators
         for i = 1, #self.emptyIndicators do
             if self.emptyIndicators[i] and self.emptyIndicators[i] > 0 then
                 DestroyEntity(self.emptyIndicators[i])
             end
         end
 
-        -- Destroy filled indicators
         for i = 1, #self.filledIndicators do
             if self.filledIndicators[i] and self.filledIndicators[i] > 0 then
                 DestroyEntity(self.filledIndicators[i])
             end
         end
-
-        self.emptyIndicators = {}
-        self.filledIndicators = {}
     end
 
-    Log("[APIndicatorUI] Destroyed")
+    self.emptyIndicators = {}
+    self.filledIndicators = {}
+
+    Log("[AttackAPIndicatorUI] Destroyed")
 end
 
-return APIndicatorUI
+return AttackAPIndicatorUI

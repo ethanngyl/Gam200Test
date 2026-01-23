@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          LevelLoader_API.cpp (Compatible with InputSystem)
  Author:        ETHAN NG
@@ -484,8 +484,8 @@ namespace Framework {
         else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
         else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
         else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;
-        // Check key state
-        bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyPressed(keyCode);
+        // Check key state - use IsKeyDown for continuous input
+        bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyDown(keyCode);
         lua_pushboolean(L, pressed);
         return 1;
     }
@@ -785,6 +785,44 @@ namespace Framework {
         static int logThrottle = 0;
         // Sprite color set
 
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetSpriteGray(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: SetSpriteGray(entityID, grayAmount)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        float grayAmount = luaL_checknumber(L, 2);
+        if (grayAmount < 0.0f) grayAmount = 0.0f;
+        if (grayAmount > 1.0f) grayAmount = 1.0f;
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gfx = loader->coreEngine->GetGraphicsSystem();
+        if (!em || !gfx) return 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) {
+            LOG_WARN("LevelLoader", "SetSpriteGray: Invalid entity or no MeshRenderer (ID=%lld)", entityID);
+            return 0;
+        }
+
+        auto& mr = em->GetComponent<MeshRenderer>(entity);
+        if (!mr.material.IsValid()) {
+            LOG_WARN("LevelLoader", "SetSpriteGray: Entity %lld has no valid material", entityID);
+            return 0;
+        }
+
+        auto* gs = static_cast<GraphicsSystemV2*>(gfx);
+        Material* mat = gs->GetResourceManager().GetMaterial(mr.material);
+        if (!mat) {
+            LOG_WARN("LevelLoader", "SetSpriteGray: Failed to get material for entity %lld", entityID);
+            return 0;
+        }
+
+        mat->parameters["grayAmount"] = grayAmount;
         return 0;
     }
 
@@ -2177,8 +2215,12 @@ namespace Framework {
      * Usage: local x, y = GetEntityGridPosition(entityID)
      */
     int LevelLoader::Lua_GetEntityGridPosition(lua_State* L) {
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        std::cout << "[GetEntityGridPosition] Called for entity " << entityID << std::endl;
+
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
+            std::cout << "[GetEntityGridPosition] ERROR: No core engine!" << std::endl;
             LOG_ERROR("LevelLoader", "GetEntityGridPosition: No core engine");
             lua_pushnil(L);
             lua_pushnil(L);
@@ -2187,26 +2229,44 @@ namespace Framework {
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
+            std::cout << "[GetEntityGridPosition] ERROR: No entity manager!" << std::endl;
             LOG_ERROR("LevelLoader", "GetEntityGridPosition: No entity manager");
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
-        int entityID = static_cast<int>(luaL_checknumber(L, 1));
         Entity entity(static_cast<uint32_t>(entityID));
+        std::cout << "[GetEntityGridPosition] Entity.IsValid() = " << entity.IsValid() << std::endl;
 
-        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
-            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d invalid or missing Transform", entityID);
+        if (!entity.IsValid()) {
+            std::cout << "[GetEntityGridPosition] ERROR: Entity " << entityID << " is INVALID!" << std::endl;
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d invalid", entityID);
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        bool hasTransform = em->HasComponent<Transform>(entity);
+        std::cout << "[GetEntityGridPosition] Entity " << entityID << " HasComponent<Transform> = " << hasTransform << std::endl;
+
+        if (!hasTransform) {
+            std::cout << "[GetEntityGridPosition] ERROR: Entity " << entityID << " missing Transform component!" << std::endl;
+            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d missing Transform", entityID);
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
+        std::cout << "[GetEntityGridPosition] Entity " << entityID << " Transform position: ("
+                  << transform.position.x << ", " << transform.position.y << ")" << std::endl;
+
         auto tileOpt = Framework::WorldToTile(transform.position);
 
         if (!tileOpt.has_value()) {
+            std::cout << "[GetEntityGridPosition] ERROR: WorldToTile failed for position ("
+                      << transform.position.x << ", " << transform.position.y << ")!" << std::endl;
             LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d position (%.2f, %.2f) not on valid tile",
                      entityID, transform.position.x, transform.position.y);
             lua_pushnil(L);
@@ -2214,6 +2274,8 @@ namespace Framework {
             return 2;
         }
 
+        std::cout << "[GetEntityGridPosition] SUCCESS: Entity " << entityID << " at grid ("
+                  << tileOpt->x << ", " << tileOpt->y << ")" << std::endl;
         LOG_INFO("LevelLoader", "GetEntityGridPosition: Entity %d at grid (%d, %d)",
                  entityID, tileOpt->x, tileOpt->y);
         lua_pushnumber(L, tileOpt->x);
