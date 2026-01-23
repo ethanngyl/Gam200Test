@@ -436,7 +436,7 @@ function OnCharacterSwitched(newCharID)
     print("[PartyTurnManager] OnCharacterSwitched() called for entity " .. newCharID)
 
     -- Get character position (world coordinates from Transform)
-    local worldX, worldY = GetPosition(newCharID)
+    local worldX, worldY = GetEntityWorldPosition(newCharID)
 
     if worldX and worldY then
         print(string.format("[PartyTurnManager] Camera: Moving to character at world (%.2f, %.2f)", worldX, worldY))
@@ -446,7 +446,7 @@ function OnCharacterSwitched(newCharID)
 
         print("[PartyTurnManager] Camera position updated successfully!")
     else
-        print("[PartyTurnManager] ERROR: Could not get position for entity " .. newCharID)
+        print("[PartyTurnManager] ERROR: Could not get world position for entity " .. newCharID)
     end
 
     -- Optional: Play sound effect for character switch

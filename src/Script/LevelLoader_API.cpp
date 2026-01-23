@@ -2284,6 +2284,52 @@ namespace Framework {
     }
 
     /**
+     * @brief Get entity's world position (from Transform component)
+     * @param entityID The entity ID
+     * @return x, y World coordinates, or nil, nil if entity invalid/no Transform
+     *
+     * Usage: local worldX, worldY = GetEntityWorldPosition(entityID)
+     *
+     * This is used by camera following to center on the active character.
+     */
+    int LevelLoader::Lua_GetEntityWorldPosition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            std::cout << "[GetEntityWorldPosition] ERROR: No core engine!" << std::endl;
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            std::cout << "[GetEntityWorldPosition] ERROR: No entity manager!" << std::endl;
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
+            std::cout << "[GetEntityWorldPosition] ERROR: Entity " << entityID
+                      << " invalid or missing Transform!" << std::endl;
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        auto& transform = em->GetComponent<Transform>(entity);
+        std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
+                  << transform.position.x << ", " << transform.position.y << ")" << std::endl;
+
+        lua_pushnumber(L, transform.position.x);
+        lua_pushnumber(L, transform.position.y);
+        return 2;
+    }
+
+    /**
      * @brief Move entity to specified tile with full validation
      * @param entityID The entity ID
      * @param x Grid X coordinate
