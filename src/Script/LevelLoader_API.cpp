@@ -2712,4 +2712,53 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief End the current character's turn and advance to next party member
+     * @return none
+     *
+     * Usage: EndCharacterTurn()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to call the EndCharacterTurn() function in the LevelLoader's
+     * Lua state where PartyTurnManager is running.
+     */
+    int LevelLoader::Lua_EndCharacterTurn(lua_State* L) {
+        std::cout << "[LevelLoader API] EndCharacterTurn() called from entity script" << std::endl;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            std::cout << "[LevelLoader API] ERROR: GetLevelLoader returned NULL!" << std::endl;
+            return 0;
+        }
+
+        // Get the LevelLoader's Lua state (where PartyTurnManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            std::cout << "[LevelLoader API] ERROR: LevelLoader's Lua state is NULL!" << std::endl;
+            return 0;
+        }
+
+        std::cout << "[LevelLoader API] Calling EndCharacterTurn() in LevelLoader's Lua state..." << std::endl;
+
+        // Call the EndCharacterTurn function in the LevelLoader's Lua state
+        lua_getglobal(levelL, "EndCharacterTurn");
+        if (!lua_isfunction(levelL, -1)) {
+            std::cout << "[LevelLoader API] ERROR: EndCharacterTurn is not a function!" << std::endl;
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        // Call the function (0 arguments, 0 return values)
+        int result = lua_pcall(levelL, 0, 0, 0);
+        if (result != LUA_OK) {
+            const char* error = lua_tostring(levelL, -1);
+            std::cout << "[LevelLoader API] ERROR calling EndCharacterTurn: " << error << std::endl;
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        std::cout << "[LevelLoader API] EndCharacterTurn() executed successfully!" << std::endl;
+        return 0;
+    }
+
 } // namespace Framework

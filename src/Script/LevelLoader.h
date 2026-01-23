@@ -229,6 +229,7 @@ namespace Framework {
         static int Lua_GetTurnIndex(lua_State* L);
         static int Lua_EndPlayerTurn(lua_State* L);
         static int Lua_EndEnemyTurn(lua_State* L);
+        static int Lua_EndCharacterTurn(lua_State* L);  // Party turn system
         static int Lua_SetPlayerFlipX(lua_State* L);
         static int Lua_SetGridMovementEnabled(lua_State* L);
         static int Lua_HasChestAtTile(lua_State* L);

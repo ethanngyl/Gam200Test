@@ -480,6 +480,7 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", LevelLoader::Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", LevelLoader::Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", LevelLoader::Lua_EndEnemyTurn);
+        lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
 
         // Game API - Player
         lua_register(L, "GetPlayerAP", LevelLoader::Lua_GetPlayerAP);
