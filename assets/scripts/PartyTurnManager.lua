@@ -263,12 +263,12 @@ end
 ]]--
 function NextCharacterTurn()
     if #PartyMembers == 0 then
-        Log("[PartyTurnManager] ERROR: No party initialized")
+        print("[PartyTurnManager] ERROR: No party initialized")
         return
     end
 
-    Log("[PartyTurnManager] ========== TURN ADVANCEMENT ==========")
-    Log(string.format("[PartyTurnManager] Current: %s (Entity %d, Index %d)",
+    print("[PartyTurnManager] ========== TURN ADVANCEMENT ==========")
+    print(string.format("[PartyTurnManager] Current: %s (Entity %d, Index %d)",
         PartyMembers[ActiveCharacterIndex].name,
         PartyMembers[ActiveCharacterIndex].entityID,
         ActiveCharacterIndex))
@@ -276,35 +276,35 @@ function NextCharacterTurn()
     -- Mark current character as having acted
     PartyMembers[ActiveCharacterIndex].hasActed = true
 
-    Log(string.format("[PartyTurnManager] %s marked as ACTED",
+    print(string.format("[PartyTurnManager] %s marked as ACTED",
         PartyMembers[ActiveCharacterIndex].name))
 
     -- Move to next character
-    Log(string.format("[PartyTurnManager DEBUG] BEFORE increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
+    print(string.format("[PartyTurnManager DEBUG] BEFORE increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
 
     ActiveCharacterIndex = ActiveCharacterIndex + 1
 
-    Log(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
+    print(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
-    Log(string.format("[PartyTurnManager DEBUG] Check: %d > %d = %s",
+    print(string.format("[PartyTurnManager DEBUG] Check: %d > %d = %s",
         ActiveCharacterIndex, #PartyMembers, tostring(ActiveCharacterIndex > #PartyMembers)))
 
     -- Check if all characters have acted
     if ActiveCharacterIndex > #PartyMembers then
         PartyTurnComplete = true
-        Log("[PartyTurnManager] ======================================")
-        Log("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED!")
-        Log("[PartyTurnManager] PartyTurnComplete = true")
-        Log("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
-        Log("[PartyTurnManager] ======================================")
+        print("[PartyTurnManager] ======================================")
+        print("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED!")
+        print("[PartyTurnManager] PartyTurnComplete = true")
+        print("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
+        print("[PartyTurnManager] ======================================")
         return
     end
 
     -- Switch to new active character
     local newActiveEntity = PartyMembers[ActiveCharacterIndex].entityID
 
-    Log(string.format("[PartyTurnManager] Switching to: %s (Entity %d, Index %d)",
+    print(string.format("[PartyTurnManager] Switching to: %s (Entity %d, Index %d)",
         PartyMembers[ActiveCharacterIndex].name,
         newActiveEntity,
         ActiveCharacterIndex))
@@ -315,12 +315,12 @@ function NextCharacterTurn()
     -- Refill AP for the new active character
     RefillEntityAP(newActiveEntity)
     local currentAP, maxAP = GetEntityAP(newActiveEntity)
-    Log(string.format("[PartyTurnManager] %s AP refilled to %d/%d",
+    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d",
         PartyMembers[ActiveCharacterIndex].name,
         currentAP,
         maxAP))
 
-    Log("[PartyTurnManager] ======================================")
+    print("[PartyTurnManager] ======================================")
 
     -- Optional: Trigger camera switch
     OnCharacterSwitched(newActiveEntity)
@@ -332,12 +332,12 @@ end
     Automatically advances to next character
 ]]--
 function EndCharacterTurn()
-    Log("[PartyTurnManager] ==========================================")
-    Log(string.format("[PartyTurnManager] EndCharacterTurn() called for %s (Entity %d)",
+    print("[PartyTurnManager] ==========================================")
+    print(string.format("[PartyTurnManager] EndCharacterTurn() called for %s (Entity %d)",
         GetActiveCharacterName(), GetActiveCharacter()))
-    Log(string.format("[PartyTurnManager DEBUG] Before advancing - ActiveCharacterIndex=%d, PartyTurnComplete=%s",
+    print(string.format("[PartyTurnManager DEBUG] Before advancing - ActiveCharacterIndex=%d, PartyTurnComplete=%s",
         ActiveCharacterIndex, tostring(PartyTurnComplete)))
-    Log("[PartyTurnManager] ==========================================")
+    print("[PartyTurnManager] ==========================================")
 
     NextCharacterTurn()
 
