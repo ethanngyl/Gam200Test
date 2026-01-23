@@ -282,6 +282,16 @@ function OnUpdate(dt)
         -- Consume AP (use entity-based API for party system)
         ConsumeEntityAP(entityID, apCostPerMove)
 
+        -- Check if AP depleted after movement
+        local newAP, maxAP = GetEntityAP(entityID)
+        print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
+
+        if newAP == 0 then
+            print("[PlayerScript] AP depleted after movement - ending turn!")
+            EndCharacterTurn()
+            hasLoggedActive = false  -- Reset for next character
+        end
+
         -- Visual feedback
         ShowTileBorder(targetX, targetY, 0.5)  -- Show border for 0.5 seconds
         PulseTile(targetX, targetY, 0.3, 0.3, 1.0, 0.3)  -- Green pulse
