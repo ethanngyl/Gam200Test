@@ -430,6 +430,7 @@ namespace Framework {
         // Camera
         lua_register(L, "SetCameraPosition", Lua_SetCameraPosition);
         lua_register(L, "SetCameraZoom", Lua_SetCameraZoom);
+        lua_register(L, "SetCameraFollowTarget", Lua_SetCameraFollowTarget);
         lua_register(L, "GetFramebufferSize", Lua_GetFramebufferSize);
 
         // Engine control
@@ -601,6 +602,26 @@ namespace Framework {
 
         float zoom = luaL_checknumber(L, 1);
         loader->graphicsSystem->SetCameraZoom(zoom);
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetCameraFollowTarget(lua_State* L) {
+        std::cout << "[LevelLoader] SetCameraFollowTarget() called from Lua" << std::endl;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->graphicsSystem) {
+            std::cout << "[LevelLoader] ERROR: No graphics system!" << std::endl;
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity targetEntity(static_cast<uint32_t>(entityID));
+
+        std::cout << "[LevelLoader] Setting camera follow target to Entity " << entityID << std::endl;
+
+        loader->graphicsSystem->SetFollowTarget(targetEntity);
+
+        std::cout << "[LevelLoader] Camera follow target updated successfully!" << std::endl;
         return 0;
     }
 
