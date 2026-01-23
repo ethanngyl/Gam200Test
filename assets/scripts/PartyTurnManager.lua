@@ -433,14 +433,20 @@ end
     @param newCharID Entity ID of new active character
 ]]--
 function OnCharacterSwitched(newCharID)
-    -- Get character position
-    local x, y = GetEntityGridPosition(newCharID)
+    print("[PartyTurnManager] OnCharacterSwitched() called for entity " .. newCharID)
 
-    if x and y then
-        -- Optional: Smooth camera pan to new character
-        -- SetCameraPosition(x * tileSize, y * tileSize, cameraZ)
+    -- Get character position (world coordinates from Transform)
+    local worldX, worldY = GetPosition(newCharID)
 
-        Log(string.format("[PartyTurnManager] Camera: Active character at (%d, %d)", x, y))
+    if worldX and worldY then
+        print(string.format("[PartyTurnManager] Camera: Moving to character at world (%.2f, %.2f)", worldX, worldY))
+
+        -- Set camera to follow the active character (Z = 0 for 2D)
+        SetCameraPosition(worldX, worldY, 0.0)
+
+        print("[PartyTurnManager] Camera position updated successfully!")
+    else
+        print("[PartyTurnManager] ERROR: Could not get position for entity " .. newCharID)
     end
 
     -- Optional: Play sound effect for character switch
