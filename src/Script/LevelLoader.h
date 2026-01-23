@@ -139,6 +139,7 @@ namespace Framework {
         // Camera control
         static int Lua_SetCameraPosition(lua_State* L);
         static int Lua_SetCameraZoom(lua_State* L);
+        static int Lua_SetCameraFollowTarget(lua_State* L);  // Set which entity camera follows
         static int Lua_GetFramebufferSize(lua_State* L);
 
         // Engine control

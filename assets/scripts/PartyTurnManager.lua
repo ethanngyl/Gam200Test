@@ -433,21 +433,17 @@ end
     @param newCharID Entity ID of new active character
 ]]--
 function OnCharacterSwitched(newCharID)
+    print("[PartyTurnManager] ==========================================")
     print("[PartyTurnManager] OnCharacterSwitched() called for entity " .. newCharID)
+    print("[PartyTurnManager] ==========================================")
 
-    -- Get character position (world coordinates from Transform)
-    local worldX, worldY = GetEntityWorldPosition(newCharID)
+    -- Update the graphics system's camera follow target
+    -- This is more robust than SetCameraPosition because the camera
+    -- will continuously follow the entity every frame
+    SetCameraFollowTarget(newCharID)
 
-    if worldX and worldY then
-        print(string.format("[PartyTurnManager] Camera: Moving to character at world (%.2f, %.2f)", worldX, worldY))
-
-        -- Set camera to follow the active character (Z = 0 for 2D)
-        SetCameraPosition(worldX, worldY, 0.0)
-
-        print("[PartyTurnManager] Camera position updated successfully!")
-    else
-        print("[PartyTurnManager] ERROR: Could not get world position for entity " .. newCharID)
-    end
+    print("[PartyTurnManager] Camera now following Entity " .. newCharID)
+    print("[PartyTurnManager] ==========================================")
 
     -- Optional: Play sound effect for character switch
     -- PlaySound("character_switch.wav", false)
