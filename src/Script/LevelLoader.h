@@ -240,6 +240,7 @@ namespace Framework {
         static int Lua_GetEnemyAP(lua_State* L);
         static int Lua_RefillEnemyAP(lua_State* L);
         static int Lua_GetEntityGridPosition(lua_State* L);
+        static int Lua_GetEntityWorldPosition(lua_State* L);  // Get world coords from Transform
         static int Lua_MoveEntityToTile(lua_State* L);
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
