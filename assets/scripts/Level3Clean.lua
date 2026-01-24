@@ -471,7 +471,7 @@ function SetupEnemies()
 
         -- Check enemy's AP and position
         local enemyX, enemyY = GetEntityGridPosition(enemyID)
-        local currentAP, maxAP = GetEnemyAP(enemyID)
+        local currentAP, maxAP = GetEntityAP(enemyID)
         print("[SetupEnemies]     Enemy position: (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
         print("[SetupEnemies]     Enemy AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
     end
