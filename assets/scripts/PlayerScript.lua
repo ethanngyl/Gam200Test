@@ -160,6 +160,17 @@ function OnUpdate(dt)
         return
     end
 
+    -- ========================================================================
+    -- BLOCK INPUT DURING AP REFILL ANIMATION
+    -- ========================================================================
+
+    -- Check if UI is animating (AP crystals refilling)
+    -- Uses C++ bridge to access UIManager in LevelLoader's Lua state
+    if IsUIAnimating and IsUIAnimating() then
+        -- Don't allow movement during AP refill animation
+        return
+    end
+
     -- Get THIS entity's current grid position (not just "the player")
     local currentX, currentY = GetEntityGridPosition(entityID)
     if currentX == nil or currentY == nil then

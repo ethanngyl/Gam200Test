@@ -2807,4 +2807,60 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Check if UI is currently animating (AP refill animation)
+     * @return boolean - true if animating, false otherwise
+     *
+     * Usage: local isAnimating = IsUIAnimating()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to check if the UIManager in the LevelLoader's Lua state is
+     * currently animating. Used to block player input during AP refill animations.
+     */
+    int LevelLoader::Lua_IsUIAnimating(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the LevelLoader's Lua state (where UIManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call UIManager.IsAPAnimating() in the LevelLoader's Lua state
+        lua_getglobal(levelL, "UIManager");
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_getfield(levelL, -1, "IsAPAnimating");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop function and UIManager table
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call the function (0 arguments, 1 return value)
+        int result = lua_pcall(levelL, 0, 1, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 2);  // Pop error and UIManager table
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the return value
+        bool isAnimating = lua_toboolean(levelL, -1);
+        lua_pop(levelL, 2);  // Pop return value and UIManager table
+
+        // Return the result in the entity's Lua state
+        lua_pushboolean(L, isAnimating);
+        return 1;
+    }
+
 } // namespace Framework
