@@ -49,8 +49,9 @@ local isFlippedX = false
 local hasLoggedActive = false  -- Reset when turn changes
 
 -- Input state tracking (prevents carry-over from previous character's turn)
-local requireKeyRelease = true  -- Require all keys released before accepting input
 local lastActiveCheck = false   -- Track if we were active last frame
+local blockedKeys = {}          -- Keys that were held when we became active (must be released first)
+-- blockedKeys["W"] = true means W was held when turn started, ignore until released
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -100,6 +101,7 @@ function OnUpdate(dt)
             -- Just became inactive
             lastActiveCheck = false
             hasLoggedActive = false
+            blockedKeys = {}  -- Clear blocked keys
         end
         return
     end
@@ -122,27 +124,51 @@ function OnUpdate(dt)
 
     -- Detect if we just became active this frame
     if isActive and not lastActiveCheck then
-        -- Just became active - require all keys released before accepting input
-        requireKeyRelease = true
-        print("[PlayerScript] Entity " .. entityID .. " just became active - requiring key release")
+        -- Just became active - check which keys are currently held and block them
+        print("[PlayerScript] Entity " .. entityID .. " just became active - checking held keys...")
+
+        blockedKeys = {}  -- Reset blocked keys
+
+        -- Check each movement key and block it if currently held
+        if IsKeyDown("W") then
+            blockedKeys["W"] = true
+            print("[PlayerScript]   W is held - blocking until released")
+        end
+        if IsKeyDown("S") then
+            blockedKeys["S"] = true
+            print("[PlayerScript]   S is held - blocking until released")
+        end
+        if IsKeyDown("A") then
+            blockedKeys["A"] = true
+            print("[PlayerScript]   A is held - blocking until released")
+        end
+        if IsKeyDown("D") then
+            blockedKeys["D"] = true
+            print("[PlayerScript]   D is held - blocking until released")
+        end
+
+        if next(blockedKeys) == nil then
+            print("[PlayerScript]   No keys held - input ready!")
+        end
     end
     lastActiveCheck = isActive
 
-    -- If we require key release, check if all movement keys are released
-    if requireKeyRelease then
-        local wDown = IsKeyDown("W")
-        local sDown = IsKeyDown("S")
-        local aDown = IsKeyDown("A")
-        local dDown = IsKeyDown("D")
-
-        -- Check if all movement keys are released
-        if not wDown and not sDown and not aDown and not dDown then
-            requireKeyRelease = false
-            print("[PlayerScript] Entity " .. entityID .. " - all keys released, input now enabled")
-        else
-            -- Keys still held - don't process input this frame
-            return
-        end
+    -- Update blocked keys - unblock keys that have been released
+    if blockedKeys["W"] and not IsKeyDown("W") then
+        blockedKeys["W"] = nil
+        print("[PlayerScript] W released - unblocked")
+    end
+    if blockedKeys["S"] and not IsKeyDown("S") then
+        blockedKeys["S"] = nil
+        print("[PlayerScript] S released - unblocked")
+    end
+    if blockedKeys["A"] and not IsKeyDown("A") then
+        blockedKeys["A"] = nil
+        print("[PlayerScript] A released - unblocked")
+    end
+    if blockedKeys["D"] and not IsKeyDown("D") then
+        blockedKeys["D"] = nil
+        print("[PlayerScript] D released - unblocked")
     end
 
     -- ========================================================================
@@ -235,30 +261,30 @@ function OnUpdate(dt)
     -- WASD input only (arrow keys disabled)
     print("[PlayerScript] Entity " .. entityID .. " checking input at position (" .. currentX .. ", " .. currentY .. ")...")
 
-    local wDown = IsKeyDown("W")
-    local sDown = IsKeyDown("S")
-    local aDown = IsKeyDown("A")
-    local dDown = IsKeyDown("D")
+    local wDown = IsKeyDown("W") and not blockedKeys["W"]
+    local sDown = IsKeyDown("S") and not blockedKeys["S"]
+    local aDown = IsKeyDown("A") and not blockedKeys["A"]
+    local dDown = IsKeyDown("D") and not blockedKeys["D"]
 
     print("[PlayerScript]   W=" .. tostring(wDown) .. " S=" .. tostring(sDown) .. " A=" .. tostring(aDown) .. " D=" .. tostring(dDown))
 
     if wDown then
-        print("[PlayerScript] W key detected - moving UP")
+        print("[PlayerScript] W key detected (not blocked) - moving UP")
         targetY = currentY + 1
         moveDirY = 1
         moveAttempted = true
     elseif sDown then
-        print("[PlayerScript] S key detected - moving DOWN")
+        print("[PlayerScript] S key detected (not blocked) - moving DOWN")
         targetY = currentY - 1
         moveDirY = -1
         moveAttempted = true
     elseif aDown then
-        print("[PlayerScript] A key detected - moving LEFT")
+        print("[PlayerScript] A key detected (not blocked) - moving LEFT")
         targetX = currentX - 1
         moveDirX = -1
         moveAttempted = true
     elseif dDown then
-        print("[PlayerScript] D key detected - moving RIGHT")
+        print("[PlayerScript] D key detected (not blocked) - moving RIGHT")
         targetX = currentX + 1
         moveDirX = 1
         moveAttempted = true
@@ -319,6 +345,7 @@ function OnUpdate(dt)
             EndCharacterTurn()
             hasLoggedActive = false  -- Reset for next character
             lastActiveCheck = false  -- Reset active tracking
+            blockedKeys = {}  -- Clear blocked keys
         end
 
         return
@@ -352,6 +379,7 @@ function OnUpdate(dt)
             EndCharacterTurn()
             hasLoggedActive = false  -- Reset for next character
             lastActiveCheck = false  -- Reset active tracking
+            blockedKeys = {}  -- Clear blocked keys
         end
 
         -- Visual feedback
