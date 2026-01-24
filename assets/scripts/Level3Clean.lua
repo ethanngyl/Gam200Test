@@ -8,11 +8,22 @@
 -- Party system: 3 characters act sequentially before enemy turn
 -- ============================================================================
 
+-- CRITICAL: Verify script is loading
+print("============================================================")
+print("========== Level3Clean.lua SCRIPT LOADING STARTED ==========")
+print("============================================================")
+
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 
+-- Export UIManager globally so entity scripts can access it
+-- (Entity scripts run in separate Lua states and need global access)
+_G.UIManager = UIManager
+
 -- Load Party Turn Manager (REQUIRED for party system)
+print("[Level3Clean] Loading PartyTurnManager.lua...")
 dofile("assets/scripts/PartyTurnManager.lua")
+print("[Level3Clean] PartyTurnManager.lua loaded successfully")
 
 -- ============================================================================
 -- LEVEL STATE
@@ -24,6 +35,9 @@ local editorToggleCooldown = 0
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
 local partyUI = nil
+
+-- Turn tracking (for party reset)
+local previousTurn = "Player"
 
 -- Grid configuration
 local kStartX = -0.6
@@ -39,9 +53,15 @@ local audioConfig = nil
 -- ============================================================================
 
 function OnInit()
+    print("============================================================")
+    print("========== Level3Clean.lua OnInit() CALLED ==========")
+    print("============================================================")
+
     Log("========================================")
     Log("LEVEL 3: Tactical Grid Level (REFACTORED)")
     Log("========================================")
+
+    print("[Level3Clean] After Log() calls - Log system working")
 
     -- Initialize pause menu
     PauseMenu.Init()
@@ -86,12 +106,22 @@ function OnInit()
     -- Setup Party UI (shows all 3 characters)
     SetupPartyUI()
 
+    -- CRITICAL: Re-disable grid movement AFTER all initialization
+    -- Some systems (GameStateManager) may re-enable it during setup
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("!!! RE-DISABLING grid movement after init !!!")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    SetGridMovementEnabled(false)
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("!!! Grid movement RE-DISABLED !!!")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
     initialized = true
     Log("========================================")
     Log("Level 3 initialization complete")
     Log("Controls:")
     Log("  - WASD to move ACTIVE character")
-    Log("  - Characters take turns: Warrior → Mage → Rogue → Enemies")
+    Log("  - Characters take turns: Warrior -> Mage -> Rogue -> Enemies")
     Log("  - Press P/ESC to pause")
     Log("  - Press F1 to toggle editor")
     Log("  - Press 5 to return to main menu")
@@ -103,6 +133,10 @@ end
 -- ============================================================================
 
 function OnUpdate(dt)
+    -- CRITICAL: Force grid movement to stay disabled every frame
+    -- Something keeps re-enabling it, so we force it off continuously
+    SetGridMovementEnabled(false)
+
     -- Update audio
     UpdateAudio(dt)
 
@@ -121,6 +155,30 @@ function OnUpdate(dt)
 
     -- Handle editor toggle
     HandleEditorToggle(dt)
+
+    -- Party system turn management
+    local currentTurn = GetCurrentTurn()
+
+    -- Reset party when enemy turn ends and player turn begins
+    if previousTurn == "Enemy" and currentTurn == "Player" then
+        Log("[Level3Clean] Enemy turn ended - resetting party for new player turn")
+        OnEnemyTurnEnded()
+    end
+
+    -- Transition to enemy turn when all party members have acted
+    if currentTurn == "Player" then
+        local partyComplete = IsPartyTurnComplete()
+        if partyComplete then
+            Log("[Level3Clean] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            Log("[Level3Clean] !!! IsPartyTurnComplete() returned TRUE !!!")
+            Log("[Level3Clean] !!! Calling EndPartyTurn() !!!")
+            Log("[Level3Clean] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            EndPartyTurn()
+        end
+    end
+
+    -- Update previous turn tracker
+    previousTurn = currentTurn
 
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
@@ -236,76 +294,110 @@ end
 -- ============================================================================
 
 function SetupParty()
+    print("============================================================")
+    print("========== SetupParty() CALLED ==========")
+    print("============================================================")
+
     Log("========================================")
     Log("Setting up 3-character party...")
     Log("========================================")
 
-    -- Find the original player entity from tilemap
-    local originalPlayer = FindPlayer()
-
-    if not originalPlayer or originalPlayer == 0 then
-        Log("ERROR: Player not found!")
-        return false
-    end
-
-    Log(" Found original player (Entity ID: " .. originalPlayer .. ")")
-
-    -- Get the player's starting position
-    local startX, startY = GetPlayerGridPosition()
-
-    if not startX or not startY then
-        Log("ERROR: Could not get player position!")
-        return false
-    end
-
-    Log("  Starting position: (" .. startX .. ", " .. startY .. ")")
-
-    -- For now, use the original player as Character 1 (Warrior)
-    -- In a full implementation, you'd spawn 3 separate entities
-    -- but for testing, we'll start with just enhancing the single player
+    print("[SetupParty] After Log() calls")
 
     -- Disable C++ grid movement (Lua script will handle movement instead)
+    print("[SetupParty] Step 1: Calling SetGridMovementEnabled(false)...")
     SetGridMovementEnabled(false)
-    Log("   C++ grid movement disabled")
+    print("[SetupParty] Step 1: DONE")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    -- Find all player entities from tilemap
+    print("[SetupParty] Step 2: Calling GetAllPlayers()...")
+    local allPlayers = GetAllPlayers()
+    print("[SetupParty] Step 2: GetAllPlayers() returned")
+    Log("!!! C++ grid movement should now be DISABLED !!!")
+    if not allPlayers then
+        print("[SetupParty] ERROR: GetAllPlayers() returned nil!")
+    -- Find all player entities from tilemap
+    -- TileMap.json Row24: "W1010W01QPR10W010101W" spawns 3 players (Q, P, R)
+    local allPlayers = GetAllPlayers()
+    print("[SetupParty] Step 3: Found " .. #allPlayers .. " players")
 
-    -- Attach player movement script to the player
-    local scriptSuccess = AddScriptComponentToEntity(originalPlayer, "assets/scripts/PlayerScript.lua")
-
-    if scriptSuccess then
-        Log("   PlayerScript.lua attached successfully")
-        Log("  Character 1 (Warrior) movement handled by Lua script")
-    else
-        Log("  ✗ FAILED to attach PlayerScript.lua")
-        -- Re-enable C++ movement as fallback
-        SetGridMovementEnabled(true)
-        Log("  C++ grid movement re-enabled as fallback")
+    if #allPlayers == 0 then
+        print("[SetupParty] ERROR: No players in table!")
         return false
     end
 
-    -- TODO: Spawn additional party members (Mage and Rogue)
-    -- For now, initialize party with just the warrior
-    -- This allows the infrastructure to work with 1 character until full implementation
+    -- Verify we have exactly 3 players
+    if #allPlayers < 3 then
+        print("[SetupParty] ERROR: Expected 3 players but found " .. #allPlayers)
+        return false
+    end
+    -- Verify we have exactly 3 players
+    -- Extract player entity IDs (should be 3)
+    local player1 = allPlayers[1]
+    local player2 = allPlayers[2]
+    local player3 = allPlayers[3]
+        return false
+    print("[SetupParty] Step 4: Player entities:")
+    print("  Player 1: " .. tostring(player1))
+    print("  Player 2: " .. tostring(player2))
+    print("  Player 3: " .. tostring(player3))
+    -- In a full implementation, you'd spawn 3 separate entities
+    -- Attach scripts to all 3 players
+    print("[SetupParty] Step 5: Attaching PlayerScript.lua to all 3 players...")
+    for i = 1, 3 do
+        local playerID = allPlayers[i]
+        print("[SetupParty]   Attaching to Player " .. i .. " (Entity " .. playerID .. ")...")
+        local scriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
+    Log("  Player 3 (Rogue):   Entity " .. player3)
+        if scriptSuccess then
+            print("[SetupParty]   SUCCESS: Player " .. i .. " script attached")
+        else
+            print("[SetupParty]   ERROR: Failed to attach script to Player " .. i)
+            SetGridMovementEnabled(true)
+            return false
+        end
+            Log("  [Player " .. i .. "] Script attached successfully")
+        -- Debug: Check components
+        print("[SetupParty]   Checking AP/HP for Player " .. i .. "...")
+        local ap, maxap = GetEntityAP(playerID)
+        local hp, maxhp = GetEntityHP(playerID)
+        print("[SetupParty]   Player " .. i .. " - AP: " .. tostring(ap) .. "/" .. tostring(maxap) .. ", HP: " .. tostring(hp) .. "/" .. tostring(maxhp))
+    end
 
-    -- Initialize party system with the warrior
-    -- Note: InitializeParty expects 3 entities, so for now we'll use the same entity
-    -- In full implementation, replace with actual character entities
-    partyMembers = {originalPlayer, originalPlayer, originalPlayer}
+    print("[SetupParty] Step 6: All scripts attached successfully")
 
-    local partyInitialized = InitializeParty(partyMembers)
+    -- Initialize party system with all 3 real players
+    partyMembers = {player1, player2, player3}
+        local hp, maxhp = GetEntityHP(playerID)
+        Log("  [Player " .. i .. "] AP: " .. ap .. "/" .. maxap .. ", HP: " .. hp .. "/" .. maxhp)
+    end
 
-    if partyInitialized then
-        Log("✓ Party system initialized (currently with 1 character)")
-        Log("  - Character 1: Warrior (Entity " .. originalPlayer .. ")")
-        Log("  - Character 2: [TODO - Not yet spawned]")
-        Log("  - Character 3: [TODO - Not yet spawned]")
-        Log("")
-        Log("NOTE: Party system infrastructure ready, but only 1 character active")
-        Log("Full 3-character support coming in next update!")
+    -- Initialize party system with all 3 real players
+    partyMembers = {player1, player2, player3}
+        print("[SetupParty] Step 8: Party system initialized successfully!")
+        print("[SetupParty]   Character 1: Warrior (Entity " .. player1 .. ")")
+        print("[SetupParty]   Character 2: Mage (Entity " .. player2 .. ")")
+        print("[SetupParty]   Character 3: Rogue (Entity " .. player3 .. ")")
+
+        -- DEBUG: Verify GetPartyMembers() returns correct data
+        print("[SetupParty] Step 9: Verifying party members...")
+        local verifyMembers = GetPartyMembers()
+        print("[SetupParty]   GetPartyMembers() returned " .. #verifyMembers .. " members")
+        for i = 1, #verifyMembers do
+            print("[SetupParty]     Member " .. i .. ": Entity " .. verifyMembers[i])
+        end
+        -- DEBUG: Verify GetPartyMembers() returns correct data immediately after initialization
+        print("[SetupParty] ERROR: InitializeParty() FAILED!")
+        Log("[DEBUG SetupParty] After InitializeParty, GetPartyMembers() returns " .. #verifyMembers .. " members")
+        for i = 1, #verifyMembers do
+            Log("[DEBUG SetupParty]   Member " .. i .. ": Entity " .. verifyMembers[i])
+        end
     else
-        Log("✗ FAILED to initialize party")
+        Log("FAILED to initialize party")
         return false
     end
 
+    print("[SetupParty] Step 10: SetupParty() COMPLETED SUCCESSFULLY")
     return true
 end
 
@@ -315,7 +407,7 @@ function SetupPartyUI()
     Log("========================================")
 
     -- Load PartyStatusUI
-    dofile("assets/scripts/UI/PartyStatusUI.lua")
+    Log("Party status UI created")
 
     -- Create UI instance
     partyUI = PartyStatusUI:new(0)
