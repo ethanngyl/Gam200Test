@@ -93,14 +93,24 @@ end
 function OnUpdate(dt)
     -- Enemy AI only runs during enemy turn
     local currentTurn = GetCurrentTurn()
+
+    -- DEBUG: Print turn state occasionally (not every frame)
+    if not lastTurnCheck or lastTurnCheck ~= currentTurn then
+        print("[EnemyScript] Entity " .. entityID .. " - Current turn: " .. tostring(currentTurn))
+        lastTurnCheck = currentTurn
+    end
+
     if currentTurn ~= "Enemy" then
         return
     end
+
+    print("[EnemyScript] Entity " .. entityID .. " - ENEMY TURN! Processing AI...")
 
     -- Make sure we have a valid target
     if not targetPlayerID or targetPlayerID == 0 then
         targetPlayerID = FindPlayer()
         if not targetPlayerID or targetPlayerID == 0 then
+            print("[EnemyScript] Entity " .. entityID .. " - No player target found!")
             return  -- No player to target
         end
     end
@@ -118,33 +128,46 @@ end
 -- ============================================================================
 
 function ProcessAITurn()
+    print("[EnemyScript] Entity " .. entityID .. " - ProcessAITurn() called")
+
     -- Get enemy AP
-    local currentAP, maxAP = GetEnemyAP(entityID)
-    if not currentAP then
+    local currentAP, maxAP = GetEntityAP(entityID)
+    print("[EnemyScript] Entity " .. entityID .. " - AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
+
+    if not currentAP or currentAP == 0 then
+        print("[EnemyScript] Entity " .. entityID .. " - No AP, ending turn")
         return
     end
 
     -- Check if we have enough AP to act
     if currentAP < config.apCostPerMove then
+        print("[EnemyScript] Entity " .. entityID .. " - Not enough AP to move (" .. currentAP .. " < " .. config.apCostPerMove .. "), ending turn")
         -- Not enough AP, end turn
         EndEnemyTurn(entityID)
         return
     end
 
     -- Update state based on situation
+    print("[EnemyScript] Entity " .. entityID .. " - Updating AI state...")
     UpdateAIState()
+    print("[EnemyScript] Entity " .. entityID .. " - Current state: " .. tostring(currentState))
 
     -- Execute action based on current state
     if currentState == STATE.ATTACKING then
+        print("[EnemyScript] Entity " .. entityID .. " - Executing ATTACK")
         ExecuteAttack()
     elseif currentState == STATE.CHASING then
+        print("[EnemyScript] Entity " .. entityID .. " - Executing CHASE")
         ExecuteChase()
     elseif currentState == STATE.FLEEING then
+        print("[EnemyScript] Entity " .. entityID .. " - Executing FLEE")
         ExecuteFlee()
     elseif currentState == STATE.PATROLLING then
+        print("[EnemyScript] Entity " .. entityID .. " - Executing PATROL")
         ExecutePatrol()
     else
         -- IDLE or unknown state
+        print("[EnemyScript] Entity " .. entityID .. " - State is IDLE, ending turn")
         EndEnemyTurn(entityID)
     end
 end
@@ -154,22 +177,31 @@ function UpdateAIState()
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
+    print("[EnemyScript] Entity " .. entityID .. " - Enemy position: (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
+    print("[EnemyScript] Entity " .. entityID .. " - Player " .. targetPlayerID .. " position: (" .. tostring(playerX) .. ", " .. tostring(playerY) .. ")")
+
     if not enemyX or not playerX then
+        print("[EnemyScript] Entity " .. entityID .. " - ERROR: Invalid positions, setting state to IDLE")
         currentState = STATE.IDLE
         return
     end
 
     -- Calculate distance to player
     local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
+    print("[EnemyScript] Entity " .. entityID .. " - Distance to player: " .. distance)
 
     -- Check health for flee condition
     local hp, maxHP = GetEntityHP(entityID)
     local healthPercent = hp / maxHP
+    print("[EnemyScript] Entity " .. entityID .. " - Health: " .. hp .. "/" .. maxHP .. " (" .. (healthPercent * 100) .. "%)")
 
     if healthPercent <= config.fleeHealthPercent then
+        print("[EnemyScript] Entity " .. entityID .. " - Low health, FLEEING")
         currentState = STATE.FLEEING
         return
     end
+
+    print("[EnemyScript] Entity " .. entityID .. " - Behavior type: " .. tostring(behaviorType))
 
     -- State transition logic based on behavior type and distance
     if behaviorType == BEHAVIOR.AGGRESSIVE then
