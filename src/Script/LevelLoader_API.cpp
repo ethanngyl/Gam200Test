@@ -2863,4 +2863,53 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Check if we're in turn transition cooldown
+     * @return boolean - true if in cooldown, false otherwise
+     *
+     * Usage: local inTransition = IsInTurnTransition()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to check if PartyTurnManager in the LevelLoader's Lua state is
+     * currently in turn transition cooldown. Used to block player input after turn switches.
+     */
+    int LevelLoader::Lua_IsInTurnTransition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the LevelLoader's Lua state (where PartyTurnManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call IsInTurnTransition() in the LevelLoader's Lua state
+        lua_getglobal(levelL, "IsInTurnTransition");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call the function (0 arguments, 1 return value)
+        int result = lua_pcall(levelL, 0, 1, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 1);  // Pop error
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the return value
+        bool inTransition = lua_toboolean(levelL, -1);
+        lua_pop(levelL, 1);  // Pop return value
+
+        // Return the result in the entity's Lua state
+        lua_pushboolean(L, inTransition);
+        return 1;
+    }
+
 } // namespace Framework
