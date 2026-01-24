@@ -209,6 +209,17 @@ function OnUpdate(dt)
         return
     end
 
+    -- ========================================================================
+    -- BLOCK INPUT DURING TURN TRANSITION COOLDOWN
+    -- ========================================================================
+
+    -- Check if we're in turn transition cooldown (prevents input carry-over)
+    -- Uses C++ bridge to access PartyTurnManager in LevelLoader's Lua state
+    if IsInTurnTransition and IsInTurnTransition() then
+        -- Don't allow movement during turn transition cooldown
+        return
+    end
+
     -- Get THIS entity's current grid position (not just "the player")
     local currentX, currentY = GetEntityGridPosition(entityID)
     if currentX == nil or currentY == nil then

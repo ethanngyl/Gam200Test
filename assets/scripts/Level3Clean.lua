@@ -180,6 +180,9 @@ function OnUpdate(dt)
     -- Update previous turn tracker
     previousTurn = currentTurn
 
+    -- Update party turn manager (handles turn transition cooldown)
+    UpdatePartyTurnManager(dt)
+
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
 end

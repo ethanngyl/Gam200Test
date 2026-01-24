@@ -51,6 +51,10 @@ PartyMembers = {}           -- Array of {entityID, name, hasActed}
 ActiveCharacterIndex = 1    -- Index in PartyMembers (1-3)
 PartyTurnComplete = false   -- True when all 3 characters have acted
 
+-- Turn transition cooldown (prevents input carry-over between characters)
+TurnTransitionCooldown = 0.0         -- Current cooldown timer
+TurnTransitionCooldownTime = 0.5     -- Delay in seconds after turn switch
+
 -- Character definitions (can be customized)
 CharacterConfig = {
     {
@@ -320,6 +324,10 @@ function NextCharacterTurn()
         currentAP,
         maxAP))
 
+    -- Start turn transition cooldown to prevent input carry-over
+    TurnTransitionCooldown = TurnTransitionCooldownTime
+    print(string.format("[PartyTurnManager] Turn transition cooldown started: %.2fs", TurnTransitionCooldown))
+
     print("[PartyTurnManager] ======================================")
 
     -- Optional: Trigger camera switch
@@ -497,6 +505,39 @@ function OnEnemyTurnEnded()
 end
 
 -- ============================================================================
+-- UPDATE / COOLDOWN MANAGEMENT
+-- ============================================================================
+
+--[[
+    UpdatePartyTurnManager(dt)
+    Updates turn transition cooldown timer
+
+    Must be called every frame from level's Update() function
+
+    @param dt Delta time in seconds
+]]--
+function UpdatePartyTurnManager(dt)
+    if TurnTransitionCooldown > 0 then
+        TurnTransitionCooldown = TurnTransitionCooldown - dt
+        if TurnTransitionCooldown < 0 then
+            TurnTransitionCooldown = 0
+        end
+    end
+end
+
+--[[
+    IsInTurnTransition()
+    Checks if we're currently in turn transition cooldown
+
+    Used by PlayerScript to block input during character transitions
+
+    @return true if in cooldown, false otherwise
+]]--
+function IsInTurnTransition()
+    return TurnTransitionCooldown > 0
+end
+
+-- ============================================================================
 -- GLOBAL EXPORTS
 -- ============================================================================
 
@@ -515,6 +556,8 @@ _G.ResetPartyTurn = ResetPartyTurn
 _G.OnCharacterSwitched = OnCharacterSwitched
 _G.OnEnemyTurnEnded = OnEnemyTurnEnded
 _G.DebugPrintPartyState = DebugPrintPartyState
+_G.UpdatePartyTurnManager = UpdatePartyTurnManager
+_G.IsInTurnTransition = IsInTurnTransition
 
 print("============================================================")
 print("========== PartyTurnManager.lua LOADED SUCCESSFULLY ==========")
