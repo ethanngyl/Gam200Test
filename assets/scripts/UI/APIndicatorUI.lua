@@ -66,13 +66,6 @@ function APIndicatorUI:Init(config)
     self.filledIndicators = {}
     self.lastKnownAP = 0
 
-    -- Animation state for refill
-    self.isAnimatingRefill = false
-    self.refillAnimTimer = 0.0
-    self.refillAnimDelay = 0.15  -- Delay between each crystal appearing (seconds)
-    self.refillAnimTarget = 0    -- Target AP to animate to
-    self.refillAnimCurrent = 0   -- Current animated AP value
-
     -- Get current AP (needed for initial tinting)
     local currentAP, maxPlayerAP = self.getAPFunc()
     if self.useMaxFromAP and maxPlayerAP and maxPlayerAP > 0 then
@@ -166,49 +159,14 @@ function APIndicatorUI:Update(dt, cameraPos)
         self:UpdatePositions(cameraPos)
     end
 
-    -- Handle refill animation
-    if self.isAnimatingRefill then
-        self.refillAnimTimer = self.refillAnimTimer + dt
-
-        -- Check if it's time to show next crystal
-        if self.refillAnimTimer >= self.refillAnimDelay then
-            self.refillAnimTimer = self.refillAnimTimer - self.refillAnimDelay
-            self.refillAnimCurrent = self.refillAnimCurrent + 1
-
-            -- Update visual
-            if self.useTint then
-                self:UpdateTints(self.refillAnimCurrent)
-            else
-                self:HandleAPChange(self.refillAnimCurrent, cameraPos)
-            end
-
-            print("[APIndicatorUI] Refill animation: " .. self.refillAnimCurrent .. "/" .. self.refillAnimTarget)
-
-            -- Check if animation complete
-            if self.refillAnimCurrent >= self.refillAnimTarget then
-                self.isAnimatingRefill = false
-                self.lastKnownAP = currentAP
-                print("[APIndicatorUI] Refill animation COMPLETE!")
-            end
-        end
-        return  -- Don't process normal AP changes during animation
-    end
-
-    -- Handle normal AP changes (not during animation)
+    -- Handle AP changes
     if currentAP ~= self.lastKnownAP then
-        -- Check if this is a full refill (turn switch)
-        if currentAP == self.maxAP and self.lastKnownAP == 0 then
-            -- Start refill animation
-            self:StartRefillAnimation(currentAP)
+        if self.useTint then
+            self:UpdateTints(currentAP)
         else
-            -- Instant update for normal AP changes (consumption)
-            if self.useTint then
-                self:UpdateTints(currentAP)
-            else
-                self:HandleAPChange(currentAP, cameraPos)
-            end
-            self.lastKnownAP = currentAP
+            self:HandleAPChange(currentAP, cameraPos)
         end
+        self.lastKnownAP = currentAP
     end
 end
 
@@ -309,31 +267,6 @@ function APIndicatorUI:ApplyTint(entityID, tint)
     local b = tint.b or tint[3] or 1.0
     SetSpriteColor(entityID, r, g, b)
 end
-
--- ============================================================================
--- REFILL ANIMATION
--- ============================================================================
-
-function APIndicatorUI:StartRefillAnimation(targetAP)
-    print("[APIndicatorUI] Starting refill animation from 0 to " .. targetAP)
-    self.isAnimatingRefill = true
-    self.refillAnimTimer = 0.0
-    self.refillAnimTarget = targetAP
-    self.refillAnimCurrent = 0
-
-    -- Reset visuals to empty state
-    if self.useTint then
-        self:UpdateTints(0)
-    end
-end
-
-function APIndicatorUI:IsAnimating()
-    return self.isAnimatingRefill
-end
-
--- ============================================================================
--- CLEANUP
--- ============================================================================
 
 function APIndicatorUI:Destroy()
     if self.useTint then

@@ -1,7 +1,3 @@
-print("============================================================")
-print("========== PartyTurnManager.lua LOADING START ==========")
-print("============================================================")
-
 --[[
 ===============================================================================
  File:           PartyTurnManager.lua
@@ -15,7 +11,7 @@ print("============================================================")
     character acts individually before the enemy turn begins.
 
  Turn Flow:
-    Character 1 -> Character 2 -> Character 3 -> Enemy Phase -> Repeat
+    Character 1 → Character 2 → Character 3 → Enemy Phase → Repeat
 
  Features:
     - Sequential character turns (not simultaneous)
@@ -84,27 +80,14 @@ CharacterConfig = {
     @param entityIDs Table of entity IDs {warrior, mage, rogue}
 ]]--
 function InitializeParty(entityIDs)
-    print("[InitializeParty] Called with entityIDs table")
-
-    if not entityIDs then
-        print("[InitializeParty] ERROR: entityIDs is nil!")
+    if not entityIDs or #entityIDs ~= 3 then
+        Log("[PartyTurnManager] ERROR: InitializeParty requires exactly 3 entity IDs")
         return false
     end
 
-    print("[InitializeParty] entityIDs has " .. #entityIDs .. " entries")
-
-    if #entityIDs ~= 3 then
-        print("[InitializeParty] ERROR: Need exactly 3 entity IDs, got " .. #entityIDs)
-        return false
-    end
-
-    print("[InitializeParty] Step 1: Clearing PartyMembers...")
     PartyMembers = {}
-    print("[InitializeParty] Step 1: DONE")
 
-    print("[InitializeParty] Step 2: Populating PartyMembers...")
     for i = 1, 3 do
-        print("[InitializeParty]   Creating member " .. i .. " for Entity " .. entityIDs[i])
         PartyMembers[i] = {
             entityID = entityIDs[i],
             name = CharacterConfig[i].name,
@@ -112,35 +95,24 @@ function InitializeParty(entityIDs)
             hasActed = false,
             turnIndex = i
         }
-        print("[InitializeParty]   Member " .. i .. " created: " .. PartyMembers[i].name .. " (" .. PartyMembers[i].role .. ")")
     end
-    print("[InitializeParty] Step 2: DONE - PartyMembers has " .. #PartyMembers .. " entries")
 
-    print("[InitializeParty] Step 3: Setting initial state...")
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
-    print("[InitializeParty] Step 3: DONE")
 
-    print("[InitializeParty] Step 4: Calling SetActiveCharacter(" .. PartyMembers[1].entityID .. ")...")
-    SetActiveCharacter(PartyMembers[1].entityID)
-    print("[InitializeParty] Step 4: DONE")
-
-    print("[InitializeParty] Step 5: Refilling AP for all characters...")
+    Log("[PartyTurnManager] Party initialized with 3 characters:")
     for i = 1, 3 do
-        print("[InitializeParty]   Refilling AP for character " .. i .. " (Entity " .. PartyMembers[i].entityID .. ")...")
-        RefillEntityAP(PartyMembers[i].entityID)
-        print("[InitializeParty]   Done")
+        Log(string.format("  %d. %s (Entity %d) - %s",
+            i,
+            PartyMembers[i].name,
+            PartyMembers[i].entityID,
+            PartyMembers[i].role))
     end
-    print("[InitializeParty] Step 5: DONE")
 
-    print("[InitializeParty] Step 6: Checking AP/HP for all characters...")
-    for i = 1, 3 do
-        local currentAP, maxAP = GetEntityAP(PartyMembers[i].entityID)
-        print("[InitializeParty]   " .. i .. ". " .. PartyMembers[i].name .. " (Entity " .. PartyMembers[i].entityID .. ") - AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
-    end
-    print("[InitializeParty] Step 6: DONE")
+    Log(string.format("[PartyTurnManager] Active character: %s (index %d)",
+        PartyMembers[ActiveCharacterIndex].name,
+        ActiveCharacterIndex))
 
-    print("[InitializeParty] COMPLETED SUCCESSFULLY - Active character: " .. PartyMembers[ActiveCharacterIndex].name)
     return true
 end
 
@@ -211,16 +183,10 @@ end
     @return {entityID1, entityID2, entityID3}
 ]]--
 function GetPartyMembers()
-    -- DEBUG: Log when this function is called
-    Log("[PartyTurnManager DEBUG] GetPartyMembers() called - PartyMembers has " .. #PartyMembers .. " entries")
-
     local ids = {}
     for i = 1, #PartyMembers do
         ids[i] = PartyMembers[i].entityID
-        Log("[PartyTurnManager DEBUG]   ids[" .. i .. "] = " .. ids[i])
     end
-
-    Log("[PartyTurnManager DEBUG] GetPartyMembers() returning " .. #ids .. " IDs")
     return ids
 end
 
@@ -245,8 +211,6 @@ end
     @return true if party turn is done, false otherwise
 ]]--
 function IsPartyTurnComplete()
-    Log(string.format("[PartyTurnManager DEBUG] IsPartyTurnComplete() called - returning %s (ActiveCharacterIndex=%d, #PartyMembers=%d)",
-        tostring(PartyTurnComplete), ActiveCharacterIndex, #PartyMembers))
     return PartyTurnComplete
 end
 
@@ -263,67 +227,34 @@ end
 ]]--
 function NextCharacterTurn()
     if #PartyMembers == 0 then
-        print("[PartyTurnManager] ERROR: No party initialized")
+        Log("[PartyTurnManager] ERROR: No party initialized")
         return
     end
-
-    print("[PartyTurnManager] ========== TURN ADVANCEMENT ==========")
-    print(string.format("[PartyTurnManager] Current: %s (Entity %d, Index %d)",
-        PartyMembers[ActiveCharacterIndex].name,
-        PartyMembers[ActiveCharacterIndex].entityID,
-        ActiveCharacterIndex))
 
     -- Mark current character as having acted
     PartyMembers[ActiveCharacterIndex].hasActed = true
 
-    print(string.format("[PartyTurnManager] %s marked as ACTED",
+    Log(string.format("[PartyTurnManager] %s finished turn",
         PartyMembers[ActiveCharacterIndex].name))
 
     -- Move to next character
-    print(string.format("[PartyTurnManager DEBUG] BEFORE increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
-        ActiveCharacterIndex, #PartyMembers))
-
     ActiveCharacterIndex = ActiveCharacterIndex + 1
-
-    print(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
-        ActiveCharacterIndex, #PartyMembers))
-    print(string.format("[PartyTurnManager DEBUG] Check: %d > %d = %s",
-        ActiveCharacterIndex, #PartyMembers, tostring(ActiveCharacterIndex > #PartyMembers)))
 
     -- Check if all characters have acted
     if ActiveCharacterIndex > #PartyMembers then
         PartyTurnComplete = true
-        print("[PartyTurnManager] ======================================")
-        print("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED!")
-        print("[PartyTurnManager] PartyTurnComplete = true")
-        print("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
-        print("[PartyTurnManager] ======================================")
+        Log("[PartyTurnManager] All party members have acted - party turn complete")
+        Log("[PartyTurnManager] Call EndPartyTurn() to switch to enemy phase")
         return
     end
 
     -- Switch to new active character
-    local newActiveEntity = PartyMembers[ActiveCharacterIndex].entityID
-
-    print(string.format("[PartyTurnManager] Switching to: %s (Entity %d, Index %d)",
+    Log(string.format("[PartyTurnManager] Switching to %s (index %d)",
         PartyMembers[ActiveCharacterIndex].name,
-        newActiveEntity,
         ActiveCharacterIndex))
 
-    -- Notify C++ about active character change
-    SetActiveCharacter(newActiveEntity)
-
-    -- Refill AP for the new active character
-    RefillEntityAP(newActiveEntity)
-    local currentAP, maxAP = GetEntityAP(newActiveEntity)
-    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d",
-        PartyMembers[ActiveCharacterIndex].name,
-        currentAP,
-        maxAP))
-
-    print("[PartyTurnManager] ======================================")
-
     -- Optional: Trigger camera switch
-    OnCharacterSwitched(newActiveEntity)
+    OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
 end
 
 --[[
@@ -332,19 +263,10 @@ end
     Automatically advances to next character
 ]]--
 function EndCharacterTurn()
-    print("[PartyTurnManager] ==========================================")
-    print(string.format("[PartyTurnManager] EndCharacterTurn() called for %s (Entity %d)",
-        GetActiveCharacterName(), GetActiveCharacter()))
-    print(string.format("[PartyTurnManager DEBUG] Before advancing - ActiveCharacterIndex=%d, PartyTurnComplete=%s",
-        ActiveCharacterIndex, tostring(PartyTurnComplete)))
-    print("[PartyTurnManager] ==========================================")
+    Log(string.format("[PartyTurnManager] EndCharacterTurn() called for %s",
+        GetActiveCharacterName()))
 
     NextCharacterTurn()
-
-    Log("[PartyTurnManager] ==========================================")
-    Log(string.format("[PartyTurnManager DEBUG] After advancing - ActiveCharacterIndex=%d, PartyTurnComplete=%s",
-        ActiveCharacterIndex, tostring(PartyTurnComplete)))
-    Log("[PartyTurnManager] ==========================================")
 end
 
 --[[
@@ -353,17 +275,6 @@ end
     Switches to enemy turn phase
 ]]--
 function EndPartyTurn()
-    Log("[PartyTurnManager] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    Log("[PartyTurnManager] !!! EndPartyTurn() CALLED !!!")
-    Log(string.format("[PartyTurnManager DEBUG] PartyTurnComplete=%s, ActiveCharacterIndex=%d, #PartyMembers=%d",
-        tostring(PartyTurnComplete), ActiveCharacterIndex, #PartyMembers))
-
-    -- Log which characters have acted
-    for i = 1, #PartyMembers do
-        Log(string.format("[PartyTurnManager DEBUG] %s: hasActed=%s",
-            PartyMembers[i].name, tostring(PartyMembers[i].hasActed)))
-    end
-
     if not PartyTurnComplete then
         Log("[PartyTurnManager] WARNING: EndPartyTurn() called but not all characters have acted")
         -- Force complete anyway
@@ -371,7 +282,6 @@ function EndPartyTurn()
     end
 
     Log("[PartyTurnManager] Ending party turn - switching to Enemy phase")
-    Log("[PartyTurnManager] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     -- Switch to enemy turn using existing API
     EndPlayerTurn()
@@ -386,34 +296,15 @@ end
     Called automatically when enemy turn ends
 ]]--
 function ResetPartyTurn()
-    -- Safety check: Don't reset if party not initialized
-    if #PartyMembers == 0 then
-        Log("[PartyTurnManager] WARNING: ResetPartyTurn called but party not initialized yet")
-        return
-    end
-
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
 
-    -- Notify C++ about active character reset
-    SetActiveCharacter(PartyMembers[1].entityID)
-
-    -- Reset hasActed flags and refill AP for all party members
+    -- Reset hasActed flags
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
-        RefillEntityAP(PartyMembers[i].entityID)
     end
 
     Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[1].name)
-
-    -- Log AP status for all characters
-    for i = 1, #PartyMembers do
-        local currentAP, maxAP = GetEntityAP(PartyMembers[i].entityID)
-        Log(string.format("[PartyTurnManager] %s AP: %d/%d",
-            PartyMembers[i].name,
-            currentAP,
-            maxAP))
-    end
 
     -- Optional: Trigger camera switch to first character
     if #PartyMembers > 0 then
@@ -433,17 +324,15 @@ end
     @param newCharID Entity ID of new active character
 ]]--
 function OnCharacterSwitched(newCharID)
-    print("[PartyTurnManager] ==========================================")
-    print("[PartyTurnManager] OnCharacterSwitched() called for entity " .. newCharID)
-    print("[PartyTurnManager] ==========================================")
+    -- Get character position
+    local x, y = GetEntityGridPosition(newCharID)
 
-    -- Update the graphics system's camera follow target
-    -- This is more robust than SetCameraPosition because the camera
-    -- will continuously follow the entity every frame
-    SetCameraFollowTarget(newCharID)
+    if x and y then
+        -- Optional: Smooth camera pan to new character
+        -- SetCameraPosition(x * tileSize, y * tileSize, cameraZ)
 
-    print("[PartyTurnManager] Camera now following Entity " .. newCharID)
-    print("[PartyTurnManager] ==========================================")
+        Log(string.format("[PartyTurnManager] Camera: Active character at (%d, %d)", x, y))
+    end
 
     -- Optional: Play sound effect for character switch
     -- PlaySound("character_switch.wav", false)
@@ -515,9 +404,5 @@ _G.ResetPartyTurn = ResetPartyTurn
 _G.OnCharacterSwitched = OnCharacterSwitched
 _G.OnEnemyTurnEnded = OnEnemyTurnEnded
 _G.DebugPrintPartyState = DebugPrintPartyState
-
-print("============================================================")
-print("========== PartyTurnManager.lua LOADED SUCCESSFULLY ==========")
-print("============================================================")
 
 Log("[PartyTurnManager] Loaded successfully")

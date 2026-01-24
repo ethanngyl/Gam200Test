@@ -45,31 +45,14 @@ local currentAnimGroup = AnimGroup.Idle
 local currentAnimDirection = AnimDirection.Front
 local isFlippedX = false
 
--- Debug tracking
-local hasLoggedActive = false  -- Reset when turn changes
-
--- Input state tracking (prevents carry-over from previous character's turn)
-local requireKeyRelease = true  -- Require all keys released before accepting input
-local lastActiveCheck = false   -- Track if we were active last frame
-
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit(id)
-    print("============================================================")
-    print("========== PlayerScript OnInit() CALLED for Entity " .. id .. " ==========")
-    print("============================================================")
-
     entityID = id
 
-    print("[PlayerScript] Checking AP/HP for Entity " .. entityID .. "...")
-    local ap, maxAP = GetEntityAP(entityID)
-    local hp, maxHP = GetEntityHP(entityID)
-    print("[PlayerScript] Entity " .. entityID .. " - AP: " .. tostring(ap) .. "/" .. tostring(maxAP) .. ", HP: " .. tostring(hp) .. "/" .. tostring(maxHP))
-
     -- Initialize animation state
-    print("[PlayerScript] Initializing animation state...")
     currentAnimGroup = AnimGroup.Idle
     currentAnimDirection = AnimDirection.Front
     isFlippedX = false
@@ -78,8 +61,7 @@ function OnInit(id)
     SetAnimationDirection(entityID, currentAnimDirection)
     SetAnimationFlipX(entityID, isFlippedX)
 
-    print("[PlayerScript] Entity " .. entityID .. " initialized successfully")
-    print("============================================================")
+    Log("[PlayerScript] Initialized for entity " .. entityID .. " with animation control")
 end
 
 -- ============================================================================
@@ -93,80 +75,31 @@ function OnUpdate(dt)
 
     -- CRITICAL: Only process input if this is the active character
     -- Prevents all 3 party members from responding to input simultaneously
-    local isActive = IsActiveCharacter(entityID)
-    if not isActive then
-        -- Not this character's turn - reset state
-        if lastActiveCheck then
-            -- Just became inactive
-            lastActiveCheck = false
-            hasLoggedActive = false
-        end
+    if not IsActiveCharacter(entityID) then
+        -- Not this character's turn - do nothing
         return
-    end
-
-    -- DEBUG: Log when this character becomes active (once per turn)
-    if not hasLoggedActive then
-        print("============================================================")
-        print("========== PlayerScript: Entity " .. entityID .. " is now ACTIVE ==========")
-        print("============================================================")
-        local currentAP, maxAP = GetEntityAP(entityID)
-        print("[PlayerScript] Entity " .. entityID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
-        print("[PlayerScript] This entity will now respond to WASD input")
-        print("============================================================")
-        hasLoggedActive = true
-    end
-
-    -- ========================================================================
-    -- INPUT STATE TRACKING (prevents key carry-over from previous turn)
-    -- ========================================================================
-
-    -- Detect if we just became active this frame
-    if isActive and not lastActiveCheck then
-        -- Just became active - require all keys released before accepting input
-        requireKeyRelease = true
-        print("[PlayerScript] Entity " .. entityID .. " just became active - requiring key release")
-    end
-    lastActiveCheck = isActive
-
-    -- If we require key release, check if all movement keys are released
-    if requireKeyRelease then
-        local wDown = IsKeyDown("W")
-        local sDown = IsKeyDown("S")
-        local aDown = IsKeyDown("A")
-        local dDown = IsKeyDown("D")
-
-        -- Check if all movement keys are released
-        if not wDown and not sDown and not aDown and not dDown then
-            requireKeyRelease = false
-            print("[PlayerScript] Entity " .. entityID .. " - all keys released, input now enabled")
-        else
-            -- Keys still held - don't process input this frame
-            return
-        end
     end
 
     -- ========================================================================
     -- ANIMATION STATE MANAGEMENT
     -- ========================================================================
 
-    -- DISABLED: Debug animation triggers (causing errors)
-    -- Uncomment if needed, but use IsKeyDown() not IsKeyPressed()
-    --[[
-    if IsKeyDown(75) then  -- KEY_K = Attack
+    -- Check for manual animation triggers (debug keys)
+    if IsKeyPressed(75) then  -- KEY_K = Attack
         currentAnimGroup = AnimGroup.Attack
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Attack animation triggered")
     end
 
-    if IsKeyDown(74) then  -- KEY_J = Injured
+    if IsKeyPressed(74) then  -- KEY_J = Injured
         currentAnimGroup = AnimGroup.Injured
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Injured animation triggered")
     end
 
-    if IsKeyDown(76) then  -- KEY_L = Death
+    if IsKeyPressed(76) then  -- KEY_L = Death
         currentAnimGroup = AnimGroup.Death
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
@@ -174,12 +107,10 @@ function OnUpdate(dt)
         -- Death animation blocks all movement
         return
     end
-    ]]--
 
     -- Block movement during Death animation
     local currentAnim = GetAnimationGroup(entityID)
     if currentAnim == AnimGroup.Death then
-        print("[PlayerScript] Entity " .. entityID .. " in Death animation - blocking movement")
         return
     end
 
@@ -190,30 +121,20 @@ function OnUpdate(dt)
     -- Update cooldown timer
     if moveCooldown > 0 then
         moveCooldown = moveCooldown - dt
+
         -- Return to Idle if not moving
         if currentAnimGroup == AnimGroup.Walk then
             currentAnimGroup = AnimGroup.Idle
             SetAnimationGroup(entityID, currentAnimGroup)
         end
+
         return
     end
 
-    -- ========================================================================
-    -- BLOCK INPUT DURING AP REFILL ANIMATION
-    -- ========================================================================
-
-    -- Check if UI is animating (AP crystals refilling)
-    -- Uses C++ bridge to access UIManager in LevelLoader's Lua state
-    if IsUIAnimating and IsUIAnimating() then
-        -- Don't allow movement during AP refill animation
-        return
-    end
-
-    -- Get THIS entity's current grid position (not just "the player")
-    local currentX, currentY = GetEntityGridPosition(entityID)
+    -- Get current grid position
+    local currentX, currentY = GetPlayerGridPosition()
     if currentX == nil or currentY == nil then
-        print("[PlayerScript] ERROR: Entity " .. entityID .. " position is nil! (currentX=" .. tostring(currentX) .. ", currentY=" .. tostring(currentY) .. ")")
-        return  -- Entity position not available
+        return  -- Player position not available
     end
 
     -- Check for movement input
@@ -222,32 +143,19 @@ function OnUpdate(dt)
     local moveDirX, moveDirY = 0, 0
 
     -- WASD input only (arrow keys disabled)
-    print("[PlayerScript] Entity " .. entityID .. " checking input at position (" .. currentX .. ", " .. currentY .. ")...")
-
-    local wDown = IsKeyDown("W")
-    local sDown = IsKeyDown("S")
-    local aDown = IsKeyDown("A")
-    local dDown = IsKeyDown("D")
-
-    print("[PlayerScript]   W=" .. tostring(wDown) .. " S=" .. tostring(sDown) .. " A=" .. tostring(aDown) .. " D=" .. tostring(dDown))
-
-    if wDown then
-        print("[PlayerScript] W key detected - moving UP")
+    if IsKeyDown("W") then
         targetY = currentY + 1
         moveDirY = 1
         moveAttempted = true
-    elseif sDown then
-        print("[PlayerScript] S key detected - moving DOWN")
+    elseif IsKeyDown("S") then
         targetY = currentY - 1
         moveDirY = -1
         moveAttempted = true
-    elseif aDown then
-        print("[PlayerScript] A key detected - moving LEFT")
+    elseif IsKeyDown("A") then
         targetX = currentX - 1
         moveDirX = -1
         moveAttempted = true
-    elseif dDown then
-        print("[PlayerScript] D key detected - moving RIGHT")
+    elseif IsKeyDown("D") then
         targetX = currentX + 1
         moveDirX = 1
         moveAttempted = true
@@ -262,86 +170,54 @@ function OnUpdate(dt)
         return
     end
 
-    print("[PlayerScript] Movement attempted! Target: (" .. targetX .. ", " .. targetY .. ")")
-
     -- ========================================================================
     -- MOVEMENT VALIDATION
     -- ========================================================================
 
-    print("[PlayerScript] Step 1: Validating target position (" .. targetX .. ", " .. targetY .. ")...")
-
     -- Check if the target position is valid and walkable
-    local isValid = IsValidGridPosition(targetX, targetY)
-    print("[PlayerScript]   IsValidGridPosition: " .. tostring(isValid))
-    if not isValid then
-        print("[PlayerScript] FAILED: Invalid grid position!")
+    if not IsValidGridPosition(targetX, targetY) then
+        Log("[PlayerScript] Invalid grid position: (" .. targetX .. ", " .. targetY .. ")")
         return
     end
 
-    local isWalkable = IsWalkableTile(targetX, targetY)
-    print("[PlayerScript]   IsWalkableTile: " .. tostring(isWalkable))
-    if not isWalkable then
-        print("[PlayerScript] FAILED: Tile not walkable!")
+    if not IsWalkableTile(targetX, targetY) then
+        Log("[PlayerScript] Tile not walkable: (" .. targetX .. ", " .. targetY .. ")")
+        -- Show visual feedback for blocked tile
         PulseTile(targetX, targetY, 0.3, 1.0, 0.3, 0.3)  -- Red pulse
         return
     end
-
-    print("[PlayerScript] Step 1: PASSED - target is valid and walkable")
 
     -- ========================================================================
     -- AP CHECK
     -- ========================================================================
 
-    print("[PlayerScript] Step 2: Checking AP...")
-
     -- Use entity-based AP API (supports party system)
     local currentAP, maxAP = GetEntityAP(entityID)
-    print("[PlayerScript]   Entity " .. entityID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP) .. " (need " .. apCostPerMove .. ")")
-
     if currentAP < apCostPerMove then
-        print("[PlayerScript] FAILED: Not enough AP!")
+        Log("[PlayerScript] Not enough AP to move (current: " .. currentAP .. ", need: " .. apCostPerMove .. ")")
+        -- Show visual feedback for insufficient AP
         PulseTile(targetX, targetY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse
 
         -- Check if this character's turn should end
         if currentAP == 0 then
-            print("[PlayerScript] AP depleted - ending turn!")
-            EndCharacterTurn()
-            hasLoggedActive = false  -- Reset for next character
-            lastActiveCheck = false  -- Reset active tracking
+            Log("[PlayerScript] Character out of AP - ending turn")
+            -- Optional: Auto-advance to next character when AP depleted
+            -- EndCharacterTurn()
         end
 
         return
     end
 
-    print("[PlayerScript] Step 2: PASSED - sufficient AP")
-
     -- ========================================================================
     -- EXECUTE MOVEMENT
     -- ========================================================================
 
-    print("[PlayerScript] Step 3: Calling MoveEntityToTile(" .. entityID .. ", " .. targetX .. ", " .. targetY .. ")...")
-
-    -- Move THIS specific entity (not just "the player")
-    -- Use MoveEntityToTile instead of MovePlayerToTile for party system
-    local success = MoveEntityToTile(entityID, targetX, targetY)
-
-    print("[PlayerScript] Step 3: MoveEntityToTile returned: " .. tostring(success))
+    -- Move the player
+    local success = MovePlayerToTile(targetX, targetY)
 
     if success then
-        print("[PlayerScript] Step 4: Movement SUCCESS! Consuming AP...")
         -- Consume AP (use entity-based API for party system)
         ConsumeEntityAP(entityID, apCostPerMove)
-
-        -- Check if AP depleted after movement
-        local newAP, maxAP = GetEntityAP(entityID)
-        print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
-
-        if newAP == 0 then
-            print("[PlayerScript] AP depleted after movement - ending turn!")
-            EndCharacterTurn()
-            hasLoggedActive = false  -- Reset for next character
-            lastActiveCheck = false  -- Reset active tracking
-        end
 
         -- Visual feedback
         ShowTileBorder(targetX, targetY, 0.5)  -- Show border for 0.5 seconds

@@ -26,18 +26,6 @@ UIManager.cameraMoveThreshold = 0.01
 -- INITIALIZATION
 -- ============================================================================
 
--- Helper function to get active character's movement AP (for party system)
-local function GetActiveCharacterAP()
-    if GetActiveCharacter then
-        local activeEntityID = GetActiveCharacter()
-        if activeEntityID and activeEntityID > 0 then
-            return GetEntityAP(activeEntityID)
-        end
-    end
-    -- Fallback to old single-player API
-    return GetPlayerAP()
-end
-
 function UIManager.Init(config)
     config = config or {}
 
@@ -59,8 +47,7 @@ function UIManager.Init(config)
         useGray = true,
         emptyGrayAmount = 1.0,
         filledGrayAmount = 0.0,
-        emptyTint = { r = 0.45, g = 0.45, b = 0.45 },
-        getAPFunc = GetActiveCharacterAP  -- Use active character's AP
+        emptyTint = { r = 0.45, g = 0.45, b = 0.45 }
     })
 
     -- Create Attack AP Indicator
@@ -136,23 +123,6 @@ function UIManager.Update(dt)
             component:Update(dt, cameraPos)
         end
     end
-end
-
--- ============================================================================
--- ANIMATION STATE QUERIES
--- ============================================================================
-
-function UIManager.IsAPAnimating()
-    if not UIManager.initialized then
-        return false
-    end
-
-    -- Check if movement AP is animating
-    if UIManager.components.movementAP and UIManager.components.movementAP.IsAnimating then
-        return UIManager.components.movementAP:IsAnimating()
-    end
-
-    return false
 end
 
 -- ============================================================================
