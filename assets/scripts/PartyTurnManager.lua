@@ -53,7 +53,7 @@ PartyTurnComplete = false   -- True when all 3 characters have acted
 
 -- Turn transition cooldown (prevents input carry-over between characters)
 TurnTransitionCooldown = 0.0         -- Current cooldown timer
-TurnTransitionCooldownTime = 0.5     -- Delay in seconds after turn switch
+TurnTransitionCooldownTime = 0.0     -- Delay in seconds after turn switch (0 = instant with per-key blocking)
 
 -- Character definitions (can be customized)
 CharacterConfig = {
