@@ -48,6 +48,10 @@ local isFlippedX = false
 -- Debug tracking
 local hasLoggedActive = false  -- Reset when turn changes
 
+-- Input state tracking (prevents carry-over from previous character's turn)
+local requireKeyRelease = true  -- Require all keys released before accepting input
+local lastActiveCheck = false   -- Track if we were active last frame
+
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
@@ -91,7 +95,12 @@ function OnUpdate(dt)
     -- Prevents all 3 party members from responding to input simultaneously
     local isActive = IsActiveCharacter(entityID)
     if not isActive then
-        -- Not this character's turn - do nothing
+        -- Not this character's turn - reset state
+        if lastActiveCheck then
+            -- Just became inactive
+            lastActiveCheck = false
+            hasLoggedActive = false
+        end
         return
     end
 
@@ -105,6 +114,35 @@ function OnUpdate(dt)
         print("[PlayerScript] This entity will now respond to WASD input")
         print("============================================================")
         hasLoggedActive = true
+    end
+
+    -- ========================================================================
+    -- INPUT STATE TRACKING (prevents key carry-over from previous turn)
+    -- ========================================================================
+
+    -- Detect if we just became active this frame
+    if isActive and not lastActiveCheck then
+        -- Just became active - require all keys released before accepting input
+        requireKeyRelease = true
+        print("[PlayerScript] Entity " .. entityID .. " just became active - requiring key release")
+    end
+    lastActiveCheck = isActive
+
+    -- If we require key release, check if all movement keys are released
+    if requireKeyRelease then
+        local wDown = IsKeyDown("W")
+        local sDown = IsKeyDown("S")
+        local aDown = IsKeyDown("A")
+        local dDown = IsKeyDown("D")
+
+        -- Check if all movement keys are released
+        if not wDown and not sDown and not aDown and not dDown then
+            requireKeyRelease = false
+            print("[PlayerScript] Entity " .. entityID .. " - all keys released, input now enabled")
+        else
+            -- Keys still held - don't process input this frame
+            return
+        end
     end
 
     -- ========================================================================
@@ -269,6 +307,7 @@ function OnUpdate(dt)
             print("[PlayerScript] AP depleted - ending turn!")
             EndCharacterTurn()
             hasLoggedActive = false  -- Reset for next character
+            lastActiveCheck = false  -- Reset active tracking
         end
 
         return
@@ -301,6 +340,7 @@ function OnUpdate(dt)
             print("[PlayerScript] AP depleted after movement - ending turn!")
             EndCharacterTurn()
             hasLoggedActive = false  -- Reset for next character
+            lastActiveCheck = false  -- Reset active tracking
         end
 
         -- Visual feedback
