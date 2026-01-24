@@ -361,31 +361,60 @@ end
     Switches to enemy turn phase
 ]]--
 function EndPartyTurn()
-    Log("[PartyTurnManager] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    Log("[PartyTurnManager] !!! EndPartyTurn() CALLED !!!")
-    Log(string.format("[PartyTurnManager DEBUG] PartyTurnComplete=%s, ActiveCharacterIndex=%d, #PartyMembers=%d",
+    print("============================================================")
+    print("[PartyTurnManager] !!! EndPartyTurn() CALLED !!!")
+    print(string.format("[PartyTurnManager DEBUG] PartyTurnComplete=%s, ActiveCharacterIndex=%d, #PartyMembers=%d",
         tostring(PartyTurnComplete), ActiveCharacterIndex, #PartyMembers))
 
     -- Log which characters have acted
     for i = 1, #PartyMembers do
-        Log(string.format("[PartyTurnManager DEBUG] %s: hasActed=%s",
+        print(string.format("[PartyTurnManager DEBUG] %s: hasActed=%s",
             PartyMembers[i].name, tostring(PartyMembers[i].hasActed)))
     end
 
     if not PartyTurnComplete then
-        Log("[PartyTurnManager] WARNING: EndPartyTurn() called but not all characters have acted")
+        print("[PartyTurnManager] WARNING: EndPartyTurn() called but not all characters have acted")
         -- Force complete anyway
         PartyTurnComplete = true
     end
 
-    Log("[PartyTurnManager] Ending party turn - switching to Enemy phase")
-    Log("[PartyTurnManager] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    print("[PartyTurnManager] Calling EndPlayerTurn() to switch to Enemy phase...")
 
     -- Switch to enemy turn using existing API
     EndPlayerTurn()
 
+    -- Check what turn it is now
+    local currentTurn = GetCurrentTurn()
+    print("[PartyTurnManager] After EndPlayerTurn(), GetCurrentTurn() = " .. tostring(currentTurn))
+    print("[PartyTurnManager] Turn should now be 'Enemy'")
+
+    if currentTurn ~= "Enemy" then
+        print("[PartyTurnManager] ERROR: Turn is NOT 'Enemy' after EndPlayerTurn()!")
+        print("[PartyTurnManager] This means enemies won't act!")
+    else
+        print("[PartyTurnManager] SUCCESS: Turn is now 'Enemy' - enemies should start acting")
+
+        -- CRITICAL: Refill AP for all enemies at the start of enemy turn
+        print("[PartyTurnManager] Refilling AP for all enemies...")
+        local enemies = GetAllEnemies()
+        if enemies and #enemies > 0 then
+            print("[PartyTurnManager] Found " .. #enemies .. " enemies to refill")
+            for i, enemyID in ipairs(enemies) do
+                print("[PartyTurnManager]   Refilling AP for Enemy " .. enemyID .. "...")
+                RefillEntityAP(enemyID)
+                local currentAP, maxAP = GetEntityAP(enemyID)
+                print("[PartyTurnManager]   Enemy " .. enemyID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
+            end
+        else
+            print("[PartyTurnManager] WARNING: No enemies found to refill AP")
+        end
+    end
+
     -- Reset party state for next turn
     ResetPartyTurn()
+
+    print("[PartyTurnManager] EndPartyTurn() COMPLETE")
+    print("============================================================")
 end
 
 --[[
