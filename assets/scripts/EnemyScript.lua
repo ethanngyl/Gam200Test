@@ -45,7 +45,7 @@ local config = {
     attackDamage = 1,           -- Damage dealt per attack
 
     -- Behavior
-    aggroRange = 8,             -- Tiles away to detect player
+    aggroRange = 8,             -- Tiles away to detect player (used by DEFENSIVE/PATROL behaviors; AGGRESSIVE ignores this)
     fleeHealthPercent = 0.3,    -- Flee when health drops below this
     preferredDistance = 1,      -- For ranged enemies
 
@@ -106,13 +106,17 @@ function OnUpdate(dt)
 
     print("[EnemyScript] Entity " .. entityID .. " - ENEMY TURN! Processing AI...")
 
-    -- Make sure we have a valid target
-    if not targetPlayerID or targetPlayerID == 0 then
-        targetPlayerID = FindPlayer()
-        if not targetPlayerID or targetPlayerID == 0 then
-            print("[EnemyScript] Entity " .. entityID .. " - No player target found!")
-            return  -- No player to target
+    -- CRITICAL: Find closest player dynamically each turn
+    -- This allows enemies to switch targets as players move
+    local closestPlayer, closestDistance = FindClosestPlayer()
+    if closestPlayer and closestPlayer > 0 then
+        if closestPlayer ~= targetPlayerID then
+            print("[EnemyScript] Entity " .. entityID .. " - Switching target from " .. tostring(targetPlayerID) .. " to " .. closestPlayer)
         end
+        targetPlayerID = closestPlayer
+    else
+        print("[EnemyScript] Entity " .. entityID .. " - No player target found!")
+        return  -- No player to target
     end
 
     -- Execute AI decision making
@@ -205,12 +209,14 @@ function UpdateAIState()
 
     -- State transition logic based on behavior type and distance
     if behaviorType == BEHAVIOR.AGGRESSIVE then
+        -- AGGRESSIVE enemies ALWAYS chase players regardless of distance
         if distance <= config.attackRange then
+            print("[EnemyScript] Entity " .. entityID .. " - Within attack range, ATTACKING")
             currentState = STATE.ATTACKING
-        elseif distance <= config.aggroRange then
-            currentState = STATE.CHASING
         else
-            currentState = STATE.IDLE
+            -- Always chase if not in attack range (removed aggro range limit)
+            print("[EnemyScript] Entity " .. entityID .. " - Outside attack range, CHASING")
+            currentState = STATE.CHASING
         end
 
     elseif behaviorType == BEHAVIOR.DEFENSIVE then
@@ -247,7 +253,7 @@ end
 -- ============================================================================
 
 function ExecuteAttack()
-    local currentAP, maxAP = GetEnemyAP(entityID)
+    local currentAP, maxAP = GetEntityAP(entityID)
 
     -- Check if we have enough AP to attack
     if currentAP < config.attackAPCost then
@@ -292,7 +298,7 @@ function ExecuteAttack()
 end
 
 function ExecuteChase()
-    local currentAP, maxAP = GetEnemyAP(entityID)
+    local currentAP, maxAP = GetEntityAP(entityID)
 
     -- Get positions
     local enemyX, enemyY = GetEntityGridPosition(entityID)
@@ -375,7 +381,7 @@ end
 
 function ExecuteFlee()
     -- Move away from player
-    local currentAP, maxAP = GetEnemyAP(entityID)
+    local currentAP, maxAP = GetEntityAP(entityID)
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
@@ -414,7 +420,7 @@ end
 
 function ExecutePatrol()
     -- Simple random movement
-    local currentAP, maxAP = GetEnemyAP(entityID)
+    local currentAP, maxAP = GetEntityAP(entityID)
     local enemyX, enemyY = GetEntityGridPosition(entityID)
 
     if currentAP < config.apCostPerMove then
@@ -452,6 +458,54 @@ end
 function CalculateDistance(x1, y1, x2, y2)
     -- Manhattan distance (grid-based)
     return math.abs(x2 - x1) + math.abs(y2 - y1)
+end
+
+-- Find the closest player from all party members
+function FindClosestPlayer()
+    print("[EnemyScript] Entity " .. entityID .. " - Finding closest player from party...")
+
+    -- Get enemy position
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    if not enemyX then
+        print("[EnemyScript] Entity " .. entityID .. " - ERROR: Cannot get enemy position")
+        return nil
+    end
+
+    -- Get all party members
+    local partyMembers = GetPartyMembers()
+    if not partyMembers or #partyMembers == 0 then
+        print("[EnemyScript] Entity " .. entityID .. " - No party members found, falling back to FindPlayer()")
+        return FindPlayer()
+    end
+
+    print("[EnemyScript] Entity " .. entityID .. " - Found " .. #partyMembers .. " party members")
+
+    -- Find closest player
+    local closestPlayerID = nil
+    local closestDistance = 999999
+
+    for i, playerID in ipairs(partyMembers) do
+        local playerX, playerY = GetEntityGridPosition(playerID)
+        if playerX then
+            local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
+            print("[EnemyScript] Entity " .. entityID .. " - Distance to Player " .. playerID .. ": " .. distance)
+
+            if distance < closestDistance then
+                closestDistance = distance
+                closestPlayerID = playerID
+            end
+        else
+            print("[EnemyScript] Entity " .. entityID .. " - WARNING: Could not get position for Player " .. playerID)
+        end
+    end
+
+    if closestPlayerID then
+        print("[EnemyScript] Entity " .. entityID .. " - Closest player: " .. closestPlayerID .. " (distance: " .. closestDistance .. ")")
+    else
+        print("[EnemyScript] Entity " .. entityID .. " - ERROR: No valid closest player found")
+    end
+
+    return closestPlayerID, closestDistance
 end
 
 function GetEntityHP(entity)
