@@ -481,6 +481,7 @@ namespace Framework {
         lua_register(L, "EndPlayerTurn", LevelLoader::Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", LevelLoader::Lua_EndEnemyTurn);
         lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
+        lua_register(L, "IsUIAnimating", LevelLoader::Lua_IsUIAnimating);  // Check UI animation state
 
         // Game API - Player
         lua_register(L, "GetPlayerAP", LevelLoader::Lua_GetPlayerAP);

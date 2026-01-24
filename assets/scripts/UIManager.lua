@@ -139,6 +139,23 @@ function UIManager.Update(dt)
 end
 
 -- ============================================================================
+-- ANIMATION STATE QUERIES
+-- ============================================================================
+
+function UIManager.IsAPAnimating()
+    if not UIManager.initialized then
+        return false
+    end
+
+    -- Check if movement AP is animating
+    if UIManager.components.movementAP and UIManager.components.movementAP.IsAnimating then
+        return UIManager.components.movementAP:IsAnimating()
+    end
+
+    return false
+end
+
+-- ============================================================================
 -- CLEANUP
 -- ============================================================================
 
