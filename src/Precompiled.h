@@ -123,6 +123,7 @@
 //Skills
 #include "Skills/SkillComponent.h"
 #include "Skills/SkillSystem.h"
+#include "Skills/PopUp.h"
 
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32
