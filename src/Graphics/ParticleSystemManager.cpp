@@ -37,9 +37,9 @@ namespace Framework {
 		smokeSetting.maxSpeed = 0.3f;
 		//smokeSetting.direction = { 0.0f, 1.0f };        // up
 		//smokeSetting.directionFuzz = 0.4f;            // a bit spread
-		//smoke.SetSettings(smokeSetting);
-		//smoke.SetEmitter(0.0f, 0.0f);
-		//smoke.CreateParticle();
+		smoke.SetSettings(smokeSetting);
+		smoke.SetEmitter(0.0f, 0.0f);
+		smoke.CreateParticle();
 
 		// Explosion emitter (burst-like feel)
 		auto& explosion = AddParticleSystem();
@@ -55,9 +55,9 @@ namespace Framework {
 		explosionSetting.maxSpeed = 5.0f;
 		//explosionSetting.direction = { 0.0f, 0.0f }; // radial
 		//explosionSetting.directionFuzz = 1.0f;
-		//explosion.SetSettings(explosionSetting);
-		//explosion.SetEmitter(0.5f, 0.0f);
-		//explosion.CreateParticle();
+		explosion.SetSettings(explosionSetting);
+		explosion.SetEmitter(0.5f, 0.0f);
+		explosion.CreateParticle();
 
 		// do a burst by manually spawning a bunch once
 		//for (int i = 0; i < 60; ++i) explosion.CreateParticle();
