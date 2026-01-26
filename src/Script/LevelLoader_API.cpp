@@ -2284,6 +2284,52 @@ namespace Framework {
     }
 
     /**
+     * @brief Get entity's world position (from Transform component)
+     * @param entityID The entity ID
+     * @return x, y World coordinates, or nil, nil if entity invalid/no Transform
+     *
+     * Usage: local worldX, worldY = GetEntityWorldPosition(entityID)
+     *
+     * This is used by camera following to center on the active character.
+     */
+    int LevelLoader::Lua_GetEntityWorldPosition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            std::cout << "[GetEntityWorldPosition] ERROR: No core engine!" << std::endl;
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            std::cout << "[GetEntityWorldPosition] ERROR: No entity manager!" << std::endl;
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
+            std::cout << "[GetEntityWorldPosition] ERROR: Entity " << entityID
+                      << " invalid or missing Transform!" << std::endl;
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        auto& transform = em->GetComponent<Transform>(entity);
+        std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
+                  << transform.position.x << ", " << transform.position.y << ")" << std::endl;
+
+        lua_pushnumber(L, transform.position.x);
+        lua_pushnumber(L, transform.position.y);
+        return 2;
+    }
+
+    /**
      * @brief Move entity to specified tile with full validation
      * @param entityID The entity ID
      * @param x Grid X coordinate
@@ -2709,6 +2755,160 @@ namespace Framework {
         const char* levelName = luaL_checkstring(L, 1);
         bool success = SaveLoadSystem::ClearAutoSave(levelName);
         lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief End the current character's turn and advance to next party member
+     * @return none
+     *
+     * Usage: EndCharacterTurn()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to call the EndCharacterTurn() function in the LevelLoader's
+     * Lua state where PartyTurnManager is running.
+     */
+    int LevelLoader::Lua_EndCharacterTurn(lua_State* L) {
+        std::cout << "[LevelLoader API] EndCharacterTurn() called from entity script" << std::endl;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            std::cout << "[LevelLoader API] ERROR: GetLevelLoader returned NULL!" << std::endl;
+            return 0;
+        }
+
+        // Get the LevelLoader's Lua state (where PartyTurnManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            std::cout << "[LevelLoader API] ERROR: LevelLoader's Lua state is NULL!" << std::endl;
+            return 0;
+        }
+
+        std::cout << "[LevelLoader API] Calling EndCharacterTurn() in LevelLoader's Lua state..." << std::endl;
+
+        // Call the EndCharacterTurn function in the LevelLoader's Lua state
+        lua_getglobal(levelL, "EndCharacterTurn");
+        if (!lua_isfunction(levelL, -1)) {
+            std::cout << "[LevelLoader API] ERROR: EndCharacterTurn is not a function!" << std::endl;
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        // Call the function (0 arguments, 0 return values)
+        int result = lua_pcall(levelL, 0, 0, 0);
+        if (result != LUA_OK) {
+            const char* error = lua_tostring(levelL, -1);
+            std::cout << "[LevelLoader API] ERROR calling EndCharacterTurn: " << error << std::endl;
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        std::cout << "[LevelLoader API] EndCharacterTurn() executed successfully!" << std::endl;
+        return 0;
+    }
+
+    /**
+     * @brief Check if UI is currently animating (AP refill animation)
+     * @return boolean - true if animating, false otherwise
+     *
+     * Usage: local isAnimating = IsUIAnimating()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to check if the UIManager in the LevelLoader's Lua state is
+     * currently animating. Used to block player input during AP refill animations.
+     */
+    int LevelLoader::Lua_IsUIAnimating(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the LevelLoader's Lua state (where UIManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call UIManager.IsAPAnimating() in the LevelLoader's Lua state
+        lua_getglobal(levelL, "UIManager");
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_getfield(levelL, -1, "IsAPAnimating");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop function and UIManager table
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call the function (0 arguments, 1 return value)
+        int result = lua_pcall(levelL, 0, 1, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 2);  // Pop error and UIManager table
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the return value
+        bool isAnimating = lua_toboolean(levelL, -1);
+        lua_pop(levelL, 2);  // Pop return value and UIManager table
+
+        // Return the result in the entity's Lua state
+        lua_pushboolean(L, isAnimating);
+        return 1;
+    }
+
+    /**
+     * @brief Check if we're in turn transition cooldown
+     * @return boolean - true if in cooldown, false otherwise
+     *
+     * Usage: local inTransition = IsInTurnTransition()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to check if PartyTurnManager in the LevelLoader's Lua state is
+     * currently in turn transition cooldown. Used to block player input after turn switches.
+     */
+    int LevelLoader::Lua_IsInTurnTransition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the LevelLoader's Lua state (where PartyTurnManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call IsInTurnTransition() in the LevelLoader's Lua state
+        lua_getglobal(levelL, "IsInTurnTransition");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call the function (0 arguments, 1 return value)
+        int result = lua_pcall(levelL, 0, 1, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 1);  // Pop error
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the return value
+        bool inTransition = lua_toboolean(levelL, -1);
+        lua_pop(levelL, 1);  // Pop return value
+
+        // Return the result in the entity's Lua state
+        lua_pushboolean(L, inTransition);
         return 1;
     }
 

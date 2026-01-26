@@ -425,6 +425,17 @@ namespace Framework {
         lua_pushlightuserdata(L, this);
         lua_setglobal(L, "__script_system_ptr");
 
+        // Store pointer to LevelLoader for entity scripts to access game API
+        if (coreEngine) {
+            std::cout << "[ScriptSystem] Registering LevelLoader pointer in entity Lua state..." << std::endl;
+            LevelLoader* levelLoader = &(coreEngine->GetLevelLoader());
+            lua_pushlightuserdata(L, levelLoader);
+            lua_setglobal(L, "__level_loader_ptr");
+            std::cout << "[ScriptSystem] LevelLoader pointer registered successfully!" << std::endl;
+        } else {
+            std::cout << "[ScriptSystem] WARNING: coreEngine is NULL, cannot register LevelLoader!" << std::endl;
+        }
+
         return L;
     }
 
@@ -469,6 +480,9 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", LevelLoader::Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", LevelLoader::Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", LevelLoader::Lua_EndEnemyTurn);
+        lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
+        lua_register(L, "IsUIAnimating", LevelLoader::Lua_IsUIAnimating);  // Check UI animation state
+        lua_register(L, "IsInTurnTransition", LevelLoader::Lua_IsInTurnTransition);  // Check turn transition cooldown
 
         // Game API - Player
         lua_register(L, "GetPlayerAP", LevelLoader::Lua_GetPlayerAP);

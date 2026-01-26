@@ -16,6 +16,10 @@ print("============================================================")
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 
+-- Export UIManager globally so entity scripts can access it
+-- (Entity scripts run in separate Lua states and need global access)
+_G.UIManager = UIManager
+
 -- Load Party Turn Manager (REQUIRED for party system)
 print("[Level3Clean] Loading PartyTurnManager.lua...")
 dofile("assets/scripts/PartyTurnManager.lua")
@@ -175,6 +179,9 @@ function OnUpdate(dt)
 
     -- Update previous turn tracker
     previousTurn = currentTurn
+
+    -- Update party turn manager (handles turn transition cooldown)
+    UpdatePartyTurnManager(dt)
 
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
@@ -413,42 +420,64 @@ function SetupPlayer()
 end
 
 function SetupEnemies()
-    Log("========================================")
-    Log("Configuring enemies...")
-    Log("========================================")
+    print("============================================================")
+    print("========== SetupEnemies() CALLED ==========")
+    print("============================================================")
 
+    print("[SetupEnemies] Step 1: Finding player for enemy targeting...")
     local playerID = FindPlayer()
+
     if not playerID or playerID == 0 then
-        Log("ERROR: Cannot configure enemies without player")
+        print("[SetupEnemies] ERROR: Cannot configure enemies without player")
         return false
     end
 
+    print("[SetupEnemies] Found player: Entity " .. playerID)
+
+    print("[SetupEnemies] Step 2: Calling GetAllEnemies()...")
     local enemies = GetAllEnemies() or {}
     local enemyCount = #enemies
 
+    print("[SetupEnemies] GetAllEnemies() returned " .. enemyCount .. " enemies")
+
     if enemyCount == 0 then
-        Log("WARNING: No enemies found in level")
+        print("[SetupEnemies] WARNING: No enemies found in level")
         return true
     end
 
-    Log("Found " .. enemyCount .. " enemies")
+    print("[SetupEnemies] Step 3: Configuring " .. enemyCount .. " enemies...")
 
     -- Configure each enemy
     for i, enemyID in ipairs(enemies) do
+        print("[SetupEnemies]   === Configuring Enemy " .. i .. " (Entity " .. enemyID .. ") ===")
+
         -- Set target
+        print("[SetupEnemies]     Calling SetEnemyTarget(" .. enemyID .. ", " .. playerID .. ")...")
         local targetSuccess = SetEnemyTarget(enemyID, playerID)
+        print("[SetupEnemies]     SetEnemyTarget result: " .. tostring(targetSuccess))
 
         -- Attach enemy script
+        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", 'EnemyScript.lua')...")
         local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+        print("[SetupEnemies]     AddScriptComponentToEntity result: " .. tostring(scriptSuccess))
 
         if targetSuccess and scriptSuccess then
-            Log("   Enemy " .. enemyID .. " configured successfully")
+            print("[SetupEnemies]   ✓ Enemy " .. enemyID .. " configured successfully")
         else
-            Log("  Enemy " .. enemyID .. " configuration failed")
+            print("[SetupEnemies]   ✗ Enemy " .. enemyID .. " configuration FAILED")
+            print("[SetupEnemies]     targetSuccess: " .. tostring(targetSuccess))
+            print("[SetupEnemies]     scriptSuccess: " .. tostring(scriptSuccess))
         end
+
+        -- Check enemy's AP and position
+        local enemyX, enemyY = GetEntityGridPosition(enemyID)
+        local currentAP, maxAP = GetEntityAP(enemyID)
+        print("[SetupEnemies]     Enemy position: (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
+        print("[SetupEnemies]     Enemy AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
     end
 
-    Log("========================================")
+    print("[SetupEnemies] Step 4: All enemies configured")
+    print("============================================================")
     return true
 end
 
