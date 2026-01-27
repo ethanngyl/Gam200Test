@@ -37,7 +37,7 @@
       "key": "O"
     },
     "Walk_front": {
-      "sprite": "assets/Warrior/FrontView/WarriorWalkFront.png",
+      "sprite": "assets/Warrior/FrontView/WarriorWalkingFront.png",
       "group": "Walk",
       "direction": "Front",
       "rows": 4,
@@ -47,7 +47,7 @@
       "loop": true
     },
     "Walk_back": {
-      "sprite": "assets/Warrior/BackView/WarriorWalkBack.png",
+      "sprite": "assets/Warrior/BackView/WarriorWalkBackView.png",
       "group": "Walk",
       "direction": "Back",
       "rows": 4,
@@ -57,7 +57,7 @@
       "loop": true
     },
     "Walk_side": {
-      "sprite": "assets/Warrior/SideView/WarriorWalkSide.png",
+      "sprite": "assets/Warrior/SideView/WarriorSideViewWalk.png",
       "group": "Walk",
       "direction": "Side",
       "rows": 4,
@@ -76,18 +76,8 @@
       "frameTime": 0.08,
       "loop": false
     },
-    "Attack_back": {
-      "sprite": "assets/Warrior/BackView/WarriorAttackBack.png",
-      "group": "Attack",
-      "direction": "Back",
-      "rows": 3,
-      "columns": 3,
-      "frameCount": 6,
-      "frameTime": 0.08,
-      "loop": false
-    },
     "Attack_side": {
-      "sprite": "assets/Warrior/SideView/WarriorAttackSide.png",
+      "sprite": "assets/Warrior/SideView/WarriorSideViewAttack.png",
       "group": "Attack",
       "direction": "Side",
       "rows": 3,
