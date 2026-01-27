@@ -265,32 +265,24 @@ function OnUpdate(dt)
     local moveDirX, moveDirY = 0, 0
 
     -- WASD input only (arrow keys disabled)
-    print("[PlayerScript] Entity " .. entityID .. " checking input at position (" .. currentX .. ", " .. currentY .. ")...")
-
     local wDown = IsKeyDown("W") and not blockedKeys["W"]
     local sDown = IsKeyDown("S") and not blockedKeys["S"]
     local aDown = IsKeyDown("A") and not blockedKeys["A"]
     local dDown = IsKeyDown("D") and not blockedKeys["D"]
 
-    print("[PlayerScript]   W=" .. tostring(wDown) .. " S=" .. tostring(sDown) .. " A=" .. tostring(aDown) .. " D=" .. tostring(dDown))
-
     if wDown then
-        print("[PlayerScript] W key detected (not blocked) - moving UP")
         targetY = currentY + 1
         moveDirY = 1
         moveAttempted = true
     elseif sDown then
-        print("[PlayerScript] S key detected (not blocked) - moving DOWN")
         targetY = currentY - 1
         moveDirY = -1
         moveAttempted = true
     elseif aDown then
-        print("[PlayerScript] A key detected (not blocked) - moving LEFT")
         targetX = currentX - 1
         moveDirX = -1
         moveAttempted = true
     elseif dDown then
-        print("[PlayerScript] D key detected (not blocked) - moving RIGHT")
         targetX = currentX + 1
         moveDirX = 1
         moveAttempted = true
