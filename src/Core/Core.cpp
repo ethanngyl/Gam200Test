@@ -72,6 +72,7 @@ namespace Framework
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
         , skillSystem(nullptr)
+        , fsmSystem(nullptr)
     {
         CORE = this;
     }
