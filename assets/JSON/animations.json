@@ -36,8 +36,6 @@
       "uvShrinkPx": 0.0,
       "key": "O"
     },
-
-    "_COMMENT_WARRIOR": "Add Warrior Walk animations here",
     "Walk_front": {
       "sprite": "assets/Warrior/FrontView/WarriorWalkFront.png",
       "group": "Walk",
@@ -68,8 +66,6 @@
       "frameTime": 0.1,
       "loop": true
     },
-
-    "_COMMENT_ATTACK": "Add Attack animations",
     "Attack_front": {
       "sprite": "assets/Warrior/FrontView/WarriorAttackFront.png",
       "group": "Attack",
