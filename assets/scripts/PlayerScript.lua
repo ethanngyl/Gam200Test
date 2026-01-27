@@ -98,10 +98,16 @@ function OnUpdate(dt)
     if not isActive then
         -- Not this character's turn - reset state
         if lastActiveCheck then
-            -- Just became inactive
+            -- Just became inactive - reset animation to Idle
             lastActiveCheck = false
             hasLoggedActive = false
             blockedKeys = {}  -- Clear blocked keys
+
+            -- Set animation to Idle when no longer active
+            if currentAnimGroup ~= AnimGroup.Idle then
+                currentAnimGroup = AnimGroup.Idle
+                SetAnimationGroup(entityID, currentAnimGroup)
+            end
         end
         return
     end
@@ -376,10 +382,19 @@ function OnUpdate(dt)
 
         if newAP == 0 then
             print("[PlayerScript] AP depleted after movement - ending turn!")
+
+            -- Set animation back to Idle before ending turn
+            currentAnimGroup = AnimGroup.Idle
+            SetAnimationGroup(entityID, currentAnimGroup)
+
             EndCharacterTurn()
             hasLoggedActive = false  -- Reset for next character
             lastActiveCheck = false  -- Reset active tracking
             blockedKeys = {}  -- Clear blocked keys
+
+            -- IMPORTANT: Return early - don't continue updating animations
+            -- The character is no longer active, so we shouldn't modify its state
+            return
         end
 
         -- Visual feedback
