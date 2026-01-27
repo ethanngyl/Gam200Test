@@ -153,13 +153,14 @@ namespace Framework
         pathfindingSystem = new PathfindingSystem();
         skillSystem = new SkillSystem();
         scriptSystem = new ScriptSystem();
+        fsmSystem = new FSMSystem();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !skillSystem) {
+            !scriptSystem || !skillSystem || !fsmSystem) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -182,6 +183,7 @@ namespace Framework
             delete pathfindingSystem;
             delete skillSystem;
             delete scriptSystem;
+            delete fsmSystem;
 
             throw std::runtime_error("System allocation failure");
         }
@@ -209,6 +211,7 @@ namespace Framework
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
         skillSystem->SetEntityManager(entityManager);
+        fsmSystem->SetEntityManager(entityManager);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -223,6 +226,8 @@ namespace Framework
         pathfindingSystem->SetAudioSystem(audioSystem);  // Enemy walking sounds
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
+
+
 
         // Load master volume from audio config JSON and apply it
         float masterVolume = AudioLoader::GetSettings().masterVolume;
@@ -280,6 +285,7 @@ namespace Framework
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
         AddSystem(skillSystem);
+        AddSystem(fsmSystem);
 
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());

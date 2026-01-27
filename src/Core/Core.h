@@ -58,6 +58,7 @@ namespace Framework
     class DamageIndicatorSystem;
     class PathfindingSystem;
     class SkillSystem;
+    class FSMSystem;
 
     /**
      * @class CoreEngine
@@ -189,6 +190,7 @@ namespace Framework
         PathfindingSystem* GetPathfindingSystem() const { return pathfindingSystem; }
         SkillSystem* GetSkillSystem() const { return skillSystem; }
         LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
+        FSMSystem* GetFSMSystem() const { return fsmSystem; }
 
 
         /**
@@ -248,6 +250,7 @@ namespace Framework
         PathfindingSystem* pathfindingSystem;
         SkillSystem* skillSystem;
         ScriptSystem* scriptSystem = nullptr;
+        FSMSystem* fsmSystem;
 
         // state
         unsigned LastTime;
