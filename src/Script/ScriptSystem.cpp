@@ -525,8 +525,14 @@ namespace Framework {
         lua_register(L, "SetAnimationFlipX", LevelLoader::Lua_SetAnimationFlipX);
         lua_register(L, "SetAnimationPlaying", LevelLoader::Lua_SetAnimationPlaying);
         lua_register(L, "SetAnimationLoop", LevelLoader::Lua_SetAnimationLoop);
+        lua_register(L, "SetAnimationFrameRange", LevelLoader::Lua_SetAnimationFrameRange);  // Set startFrame and frameCount for sprite sheet animations
         lua_register(L, "GetAnimationGroup", LevelLoader::Lua_GetAnimationGroup);
         lua_register(L, "GetEntityMovementDirection", LevelLoader::Lua_GetEntityMovementDirection);
+        
+        // Game API - Sprite Control
+        lua_register(L, "SetSpriteVisibility", LevelLoader::Lua_SetSpriteVisibility);
+        lua_register(L, "SetSpritePosition", LevelLoader::Lua_SetSpritePosition);
+        lua_register(L, "SetSpriteColor", LevelLoader::Lua_SetSpriteColor);
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);

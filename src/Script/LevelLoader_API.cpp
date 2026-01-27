@@ -757,6 +757,164 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Spawns a new animated sprite entity with sprite sheet animation
+     * @params texture, x, y, width, height, layer, rows, columns, frameCount, frameTime, loop
+     * @return integer (Entity ID)
+     */
+    int LevelLoader::Lua_SpawnAnimatedSprite(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Parse parameters: SpawnAnimatedSprite(texture, x, y, width, height, layer, rows, columns, frameCount, frameTime, loop)
+        const char* texture = luaL_checkstring(L, 1);
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+        float width = luaL_checknumber(L, 4);
+        float height = luaL_checknumber(L, 5);
+        int layer = luaL_optinteger(L, 6, 100);
+        int rows = luaL_optinteger(L, 7, 1);
+        int columns = luaL_optinteger(L, 8, 1);
+        int frameCount = luaL_optinteger(L, 9, rows * columns);
+        float frameTime = luaL_optnumber(L, 10, 0.1f);
+        bool loop = lua_toboolean(L, 11);
+
+        auto* spawner = loader->coreEngine->GetSpawner();
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gfx = loader->coreEngine->GetGraphicsSystem();
+
+        if (!spawner || !em || !gfx) {
+            LOG_ERROR("LevelLoader", "SpawnAnimatedSprite failed: system not available");
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Spawn sprite entity
+        Entity entity = spawner->SpawnSprite(texture, Vector2D(x, y), Vector2D(width, height));
+
+        if (entity.GetID() == INVALID_ENTITY) {
+            LOG_ERROR("LevelLoader", "Failed to spawn animated sprite: %s", texture);
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Set render layer
+        if (em->HasComponent<MeshRenderer>(entity)) {
+            auto& mr = em->GetComponent<MeshRenderer>(entity);
+            mr.layer = layer;
+        }
+
+        // Add SpriteAnimation component
+        em->AddComponent<SpriteAnimation>(entity);
+        auto& anim = em->GetComponent<SpriteAnimation>(entity);
+        anim.rows = rows;
+        anim.columns = columns;
+        anim.frameCount = frameCount;
+        anim.frameTime = frameTime;
+        anim.loop = loop;
+        anim.playing = true;
+        anim.currentFrame = 0;
+        anim.startFrame = 0;  // IMPORTANT: Initialize startFrame to 0
+        anim.elapsedTime = 0.0f;
+        anim.useJsonConfig = false;  // Don't use JSON-based animation selection
+
+        // Load sprite sheet texture
+        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(texture);
+        
+        // Calculate frame dimensions from texture size (CRITICAL for animation to work!)
+        Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+        if (tex) {
+            int texW = tex->GetWidth();
+            int texH = tex->GetHeight();
+            anim.frameWidth = texW / columns;
+            anim.frameHeight = texH / rows;
+        } else {
+            LOG_WARN("LevelLoader", "Failed to load texture for animated sprite: %s", texture);
+        }
+
+        LOG_INFO("LevelLoader", "Spawned animated sprite: %s (rows=%d, cols=%d, frames=%d)", 
+                 texture, rows, columns, frameCount);
+
+        lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
+        return 1;
+    }
+
+    /**
+     * @brief Adds or updates SpriteAnimation component on an existing sprite entity
+     * @params entityID, texture, rows, columns, frameCount, frameTime, loop
+     * @return boolean (success)
+     */
+    int LevelLoader::Lua_SetSpriteAnimationSheet(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Parse parameters: SetSpriteAnimationSheet(entityID, texture, rows, columns, frameCount, frameTime, loop)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* texture = luaL_checkstring(L, 2);
+        int rows = luaL_optinteger(L, 3, 1);
+        int columns = luaL_optinteger(L, 4, 1);
+        int frameCount = luaL_optinteger(L, 5, rows * columns);
+        float frameTime = luaL_optnumber(L, 6, 0.1f);
+        bool loop = lua_toboolean(L, 7);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gfx = loader->coreEngine->GetGraphicsSystem();
+
+        if (!em || !gfx) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        Entity entity(static_cast<uint32_t>(entityID));
+        if (!entity.IsValid()) {
+            LOG_WARN("LevelLoader", "SetSpriteAnimationSheet: Invalid entity ID=%lld", entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Add SpriteAnimation component if not present
+        if (!em->HasComponent<SpriteAnimation>(entity)) {
+            em->AddComponent<SpriteAnimation>(entity);
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(entity);
+        anim.rows = rows;
+        anim.columns = columns;
+        anim.frameCount = frameCount;
+        anim.frameTime = frameTime;
+        anim.loop = loop;
+        anim.playing = true;
+        anim.currentFrame = 0;
+        anim.elapsedTime = 0.0f;
+        anim.useJsonConfig = false;  // Don't use JSON-based animation selection
+
+        // Load sprite sheet texture
+        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(texture);
+        
+        // Calculate frame dimensions from texture size (CRITICAL for animation to work!)
+        Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+        if (tex) {
+            anim.frameWidth = tex->GetWidth() / columns;
+            anim.frameHeight = tex->GetHeight() / rows;
+            LOG_INFO("LevelLoader", "Animation texture: %dx%d, frame: %dx%d", 
+                     tex->GetWidth(), tex->GetHeight(), anim.frameWidth, anim.frameHeight);
+        } else {
+            LOG_WARN("LevelLoader", "Failed to load texture for animation: %s", texture);
+        }
+
+        LOG_INFO("LevelLoader", "Set animation sheet on entity %lld: %s (rows=%d, cols=%d, frames=%d)", 
+                 entityID, texture, rows, columns, frameCount);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
     int LevelLoader::Lua_SetSpriteColor(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;
@@ -2216,12 +2374,9 @@ namespace Framework {
      */
     int LevelLoader::Lua_GetEntityGridPosition(lua_State* L) {
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
-        std::cout << "[GetEntityGridPosition] Called for entity " << entityID << std::endl;
 
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            std::cout << "[GetEntityGridPosition] ERROR: No core engine!" << std::endl;
-            LOG_ERROR("LevelLoader", "GetEntityGridPosition: No core engine");
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
@@ -2229,55 +2384,27 @@ namespace Framework {
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            std::cout << "[GetEntityGridPosition] ERROR: No entity manager!" << std::endl;
-            LOG_ERROR("LevelLoader", "GetEntityGridPosition: No entity manager");
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
         Entity entity(static_cast<uint32_t>(entityID));
-        std::cout << "[GetEntityGridPosition] Entity.IsValid() = " << entity.IsValid() << std::endl;
-
-        if (!entity.IsValid()) {
-            std::cout << "[GetEntityGridPosition] ERROR: Entity " << entityID << " is INVALID!" << std::endl;
-            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d invalid", entityID);
-            lua_pushnil(L);
-            lua_pushnil(L);
-            return 2;
-        }
-
-        bool hasTransform = em->HasComponent<Transform>(entity);
-        std::cout << "[GetEntityGridPosition] Entity " << entityID << " HasComponent<Transform> = " << hasTransform << std::endl;
-
-        if (!hasTransform) {
-            std::cout << "[GetEntityGridPosition] ERROR: Entity " << entityID << " missing Transform component!" << std::endl;
-            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d missing Transform", entityID);
+        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
-        std::cout << "[GetEntityGridPosition] Entity " << entityID << " Transform position: ("
-                  << transform.position.x << ", " << transform.position.y << ")" << std::endl;
-
         auto tileOpt = Framework::WorldToTile(transform.position);
 
         if (!tileOpt.has_value()) {
-            std::cout << "[GetEntityGridPosition] ERROR: WorldToTile failed for position ("
-                      << transform.position.x << ", " << transform.position.y << ")!" << std::endl;
-            LOG_ERROR("LevelLoader", "GetEntityGridPosition: Entity %d position (%.2f, %.2f) not on valid tile",
-                     entityID, transform.position.x, transform.position.y);
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
-        std::cout << "[GetEntityGridPosition] SUCCESS: Entity " << entityID << " at grid ("
-                  << tileOpt->x << ", " << tileOpt->y << ")" << std::endl;
-        LOG_INFO("LevelLoader", "GetEntityGridPosition: Entity %d at grid (%d, %d)",
-                 entityID, tileOpt->x, tileOpt->y);
         lua_pushnumber(L, tileOpt->x);
         lua_pushnumber(L, tileOpt->y);
         return 2;

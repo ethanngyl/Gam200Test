@@ -87,6 +87,59 @@ function UIComponent:SpawnSprite(texture, x, y, scaleX, scaleY, layer)
     return entityID
 end
 
+-- Spawn an animated sprite with sprite sheet
+-- @param texture: path to sprite sheet
+-- @param x, y: position
+-- @param scaleX, scaleY: size
+-- @param layer: render layer
+-- @param rows, columns: sprite sheet grid dimensions
+-- @param frameCount: total frames to use (default: rows * columns)
+-- @param frameTime: seconds per frame (default: 0.1)
+-- @param loop: whether to loop animation (default: true)
+function UIComponent:SpawnAnimatedSprite(texture, x, y, scaleX, scaleY, layer, rows, columns, frameCount, frameTime, loop)
+    rows = rows or 1
+    columns = columns or 1
+    frameCount = frameCount or (rows * columns)
+    frameTime = frameTime or 0.1
+    if loop == nil then loop = true end
+    
+    local entityID = SpawnAnimatedSprite(texture, x, y, scaleX, scaleY, layer, rows, columns, frameCount, frameTime, loop)
+    if entityID > 0 then
+        table.insert(self.entities, entityID)
+        SetSpriteFilterMode(entityID, true)
+    end
+    return entityID
+end
+
+-- Add animation to an existing sprite entity
+function UIComponent:SetSpriteAnimation(entityID, texture, rows, columns, frameCount, frameTime, loop)
+    if not entityID or entityID <= 0 then return false end
+    rows = rows or 1
+    columns = columns or 1
+    frameCount = frameCount or (rows * columns)
+    frameTime = frameTime or 0.1
+    if loop == nil then loop = true end
+    
+    return SetSpriteAnimationSheet(entityID, texture, rows, columns, frameCount, frameTime, loop)
+end
+
+-- Set animation frame range for an entity
+-- @param entityID: the entity ID
+-- @param startFrame: first frame index in the animation range
+-- @param frameCount: number of frames in the animation
+-- @param resetToStart: (optional) if true, reset currentFrame to 0 (default: true)
+function UIComponent:SetAnimationFrameRange(entityID, startFrame, frameCount, resetToStart)
+    if not entityID or entityID <= 0 then return end
+    if resetToStart == nil then resetToStart = true end
+    SetAnimationFrameRange(entityID, startFrame, frameCount, resetToStart)
+end
+
+-- Set animation loop mode for an entity
+function UIComponent:SetAnimationLoop(entityID, loop)
+    if not entityID or entityID <= 0 then return end
+    SetAnimationLoop(entityID, loop)
+end
+
 function UIComponent:SetEnabled(enabled)
     self.enabled = enabled
 end

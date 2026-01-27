@@ -470,6 +470,8 @@ namespace Framework {
 
         // AP Indicator / Entity Management
         lua_register(L, "SpawnSprite", Lua_SpawnSprite);
+        lua_register(L, "SpawnAnimatedSprite", Lua_SpawnAnimatedSprite);
+        lua_register(L, "SetSpriteAnimationSheet", Lua_SetSpriteAnimationSheet);
         lua_register(L, "SetSpriteColor", Lua_SetSpriteColor);
         lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
@@ -503,6 +505,7 @@ namespace Framework {
         lua_register(L, "SetAnimationFlipX", Lua_SetAnimationFlipX);
         lua_register(L, "SetAnimationPlaying", Lua_SetAnimationPlaying);
         lua_register(L, "SetAnimationLoop", Lua_SetAnimationLoop);
+        lua_register(L, "SetAnimationFrameRange", Lua_SetAnimationFrameRange);
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
         lua_register(L, "GetEntityMovementDirection", Lua_GetEntityMovementDirection);
 
@@ -949,6 +952,47 @@ namespace Framework {
 
         auto& anim = em->GetComponent<SpriteAnimation>(e);
         anim.loop = loop;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set animation frame range (startFrame and frameCount)
+     * Lua usage: SetAnimationFrameRange(entityID, startFrame, frameCount, resetToStart)
+     * @param entityID Entity ID
+     * @param startFrame First frame index in the animation range
+     * @param frameCount Number of frames in the animation
+     * @param resetToStart (optional) If true, reset currentFrame to 0 (default: true)
+     */
+    int LevelLoader::Lua_SetAnimationFrameRange(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        int startFrame = static_cast<int>(luaL_checkinteger(L, 2));
+        int frameCount = static_cast<int>(luaL_checkinteger(L, 3));
+        bool resetToStart = true;
+        if (lua_gettop(L) >= 4) {
+            resetToStart = lua_toboolean(L, 4);
+        }
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "SetAnimationFrameRange: Entity %lld has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.startFrame = startFrame;
+        anim.frameCount = frameCount;
+        
+        if (resetToStart) {
+            anim.currentFrame = 0;
+            anim.elapsedTime = 0.0f;
+        }
+
+        LOG_INFO("LUA_ANIM", "SetAnimationFrameRange: Entity %lld -> startFrame=%d, frameCount=%d", 
+                 entityID, startFrame, frameCount);
 
         return 0;
     }
