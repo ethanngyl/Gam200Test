@@ -131,7 +131,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/LevelEditor
     ${CMAKE_SOURCE_DIR}/src/Pause
     ${CMAKE_SOURCE_DIR}/src/Character
-
+    ${CMAKE_SOURCE_DIR}/fsm
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

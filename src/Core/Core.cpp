@@ -45,6 +45,9 @@
 #include "GlobalPauseManager.h"
 #include "PrefabInstanceRegistry.h"
 
+#include "StateMachine.h"
+#include "FSMSystem.h"
+
 namespace Framework
 {
     CoreEngine* CORE = nullptr;
