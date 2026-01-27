@@ -22,6 +22,9 @@
 #include "Precompiled.h"
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
+#include "Collision/Quadtree.h"
+#include "Grid/Grid.h"
+#include <algorithm>
 namespace Framework
 {
     /**
@@ -150,6 +153,44 @@ namespace Framework
             }
         }
 
+        // --- BROADPHASE (Quadtree) ---
+        AABB worldBounds;
+        {
+            const Grid& g = GetGrid();
+            worldBounds.min = g.worldbound_min;
+            worldBounds.max = g.worldbound_max;
+
+            // Fallback if grid bounds are not initialized
+            if (worldBounds.min.x == 0.0f && worldBounds.min.y == 0.0f &&
+                worldBounds.max.x == 0.0f && worldBounds.max.y == 0.0f)
+            {
+                worldBounds.min = Vector2D(-100.0f, -100.0f);
+                worldBounds.max = Vector2D(100.0f, 100.0f);
+            }
+        }
+
+        Quadtree enemyQt(worldBounds, 6, 8);
+
+        for (Framework::Entity enemy : activeEnemies)
+        {
+            // activeEnemies already filtered, but keep this safe
+            if (!entityManager->HasComponent<Transform>(enemy) ||
+                !entityManager->HasComponent<BoxCollider>(enemy))
+            {
+                continue;
+            }
+
+            auto& enemyTransform = entityManager->GetComponent<Transform>(enemy);
+            auto& enemyCollider = entityManager->GetComponent<BoxCollider>(enemy);
+
+            const AABB enemyAABB = MakeAABBFromCenterSize(enemyTransform.position, enemyCollider.size);
+            enemyQt.Insert(enemy, enemyAABB);
+        }
+
+        std::vector<Framework::Entity> enemyCandidates;
+        enemyCandidates.reserve(32);
+
+
         // 2. COLLISION AND DEFERRED DESTRUCTION LOGIC
         std::vector<Framework::Entity> entitiesToDestroy;
 
@@ -173,7 +214,70 @@ namespace Framework
 
             Collider projShape = Collider::create_circle(projCollider.radius, projTransform.position);
 
-            for (Framework::Entity enemy : activeEnemies)
+            //for (Framework::Entity enemy : activeEnemies)
+            //{
+            //    // Skip enemy if already marked for destruction
+            //    if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), enemy) != entitiesToDestroy.end())
+            //        continue;
+
+            //    // Check enemy components
+            //    if (!entityManager->HasComponent<Transform>(enemy) ||
+            //        !entityManager->HasComponent<Health>(enemy) ||
+            //        !entityManager->HasComponent<BoxCollider>(enemy))
+            //    {
+            //        continue;
+            //    }
+
+            //    // --- FETCH ENEMY COMPONENTS ---
+            //    auto& enemyTransform = entityManager->GetComponent<Transform>(enemy);
+            //    auto& enemyHealth = entityManager->GetComponent<Health>(enemy);
+            //    auto& enemyCollider = entityManager->GetComponent<BoxCollider>(enemy);
+
+            //    // Create collision shape for enemy
+            //         Collider enemyShape = Collider::create_rect(
+            //             enemyCollider.size.x,
+            //             enemyCollider.size.y,
+            //             enemyTransform.position
+            //         );
+
+            //    // COLLISION CHECK AND EVENT HANDLING
+            //    if (check_collision(projShape, enemyShape))
+            //    {
+            //        // 1. DEAL DAMAGE and QUEUE EnemyDamagedMessage
+            //        const int damageDealt = 10;
+            //        enemyHealth.TakeDamage(damageDealt);
+
+            //        if (eventSystem) {
+            //            eventSystem->QueueMessage(new EnemyDamagedMessage(
+            //                enemy, projectile, damageDealt, enemyHealth.currentHealth, enemyTransform.position));
+            //        }
+
+            //        // 2. CHECK FOR DEATH
+            //        if (enemyHealth.isDead)
+            //        {
+            //            if (eventSystem) {
+            //                eventSystem->QueueMessage(new EnemyDeathMessage(
+            //                    enemy, projectile, enemyTransform.position));
+            //            }
+
+            //            entitiesToDestroy.push_back(enemy);
+            //        }
+
+            //        // Mark projectile for deferred destruction
+            //        entitiesToDestroy.push_back(projectile);
+            //        break; // Projectile is consumed after one hit
+            //    }
+            //}
+
+            // Query candidate enemies near this projectile.
+            
+			enemyCandidates.clear();
+
+            // Match your current projectile shape: center = projTransform.position (offset ignored in your code)
+            const AABB projAABB = MakeAABBFromCircle(projTransform.position, projCollider.radius);
+            enemyQt.Query(projAABB, enemyCandidates);
+
+            for (Framework::Entity enemy : enemyCandidates)
             {
                 // Skip enemy if already marked for destruction
                 if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), enemy) != entitiesToDestroy.end())
@@ -187,22 +291,18 @@ namespace Framework
                     continue;
                 }
 
-                // --- FETCH ENEMY COMPONENTS ---
                 auto& enemyTransform = entityManager->GetComponent<Transform>(enemy);
                 auto& enemyHealth = entityManager->GetComponent<Health>(enemy);
                 auto& enemyCollider = entityManager->GetComponent<BoxCollider>(enemy);
 
-                // Create collision shape for enemy
-                     Collider enemyShape = Collider::create_rect(
-                         enemyCollider.size.x,
-                         enemyCollider.size.y,
-                         enemyTransform.position
-                     );
+                Collider enemyShape = Collider::create_rect(
+                    enemyCollider.size.x,
+                    enemyCollider.size.y,
+                    enemyTransform.position
+                );
 
-                // COLLISION CHECK AND EVENT HANDLING
                 if (check_collision(projShape, enemyShape))
                 {
-                    // 1. DEAL DAMAGE and QUEUE EnemyDamagedMessage
                     const int damageDealt = 10;
                     enemyHealth.TakeDamage(damageDealt);
 
@@ -211,22 +311,20 @@ namespace Framework
                             enemy, projectile, damageDealt, enemyHealth.currentHealth, enemyTransform.position));
                     }
 
-                    // 2. CHECK FOR DEATH
                     if (enemyHealth.isDead)
                     {
                         if (eventSystem) {
                             eventSystem->QueueMessage(new EnemyDeathMessage(
                                 enemy, projectile, enemyTransform.position));
                         }
-
                         entitiesToDestroy.push_back(enemy);
                     }
 
-                    // Mark projectile for deferred destruction
                     entitiesToDestroy.push_back(projectile);
-                    break; // Projectile is consumed after one hit
+                    break;
                 }
             }
+
         }
 
         // 3. EXECUTE DEFERRED DESTRUCTION (Collision Hits)
