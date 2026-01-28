@@ -1478,8 +1478,11 @@ namespace Framework {
     {
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
 
+        LOG_INFO("LevelLoader", "[Bridge] IsActiveCharacter called for entity %d", entityID);
+
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader) {
+            LOG_ERROR("LevelLoader", "[Bridge] IsActiveCharacter: No loader found!");
             lua_pushboolean(L, false);
             return 1;
         }
@@ -1487,6 +1490,7 @@ namespace Framework {
         // Get the LevelLoader's Lua state (where PartyTurnManager is running)
         lua_State* levelL = loader->L;
         if (!levelL) {
+            LOG_ERROR("LevelLoader", "[Bridge] IsActiveCharacter: No level Lua state!");
             lua_pushboolean(L, false);
             return 1;
         }
@@ -1494,7 +1498,7 @@ namespace Framework {
         // Call IsActiveCharacter(entityID) in the LevelLoader's Lua state
         lua_getglobal(levelL, "IsActiveCharacter");
         if (!lua_isfunction(levelL, -1)) {
-            std::cout << "[IsActiveCharacter] ERROR: Function not found in level Lua state!" << std::endl;
+            LOG_ERROR("LevelLoader", "[Bridge] IsActiveCharacter: Function not found in level Lua state!");
             lua_pop(levelL, 1);
             lua_pushboolean(L, false);
             return 1;
@@ -1507,7 +1511,7 @@ namespace Framework {
         int result = lua_pcall(levelL, 1, 1, 0);
         if (result != LUA_OK) {
             const char* error = lua_tostring(levelL, -1);
-            std::cout << "[IsActiveCharacter] ERROR calling Lua function: " << error << std::endl;
+            LOG_ERROR("LevelLoader", "[Bridge] IsActiveCharacter: Error calling Lua function: %s", error);
             lua_pop(levelL, 1);  // Pop error
             lua_pushboolean(L, false);
             return 1;
@@ -1517,7 +1521,7 @@ namespace Framework {
         bool isActive = lua_toboolean(levelL, -1);
         lua_pop(levelL, 1);  // Pop return value
 
-        LOG_INFO("LevelLoader", "IsActiveCharacter: Entity %d is %s (via Lua bridge)",
+        LOG_INFO("LevelLoader", "[Bridge] IsActiveCharacter: Entity %d is %s",
                  entityID, isActive ? "ACTIVE" : "INACTIVE");
 
         // Return the result in the entity's Lua state
