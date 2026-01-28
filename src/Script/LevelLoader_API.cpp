@@ -1477,9 +1477,50 @@ namespace Framework {
     int LevelLoader::Lua_IsActiveCharacter(lua_State* L)
     {
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
-        bool isActive = (g_activeCharacterID == static_cast<uint32_t>(entityID));
-        LOG_INFO("LevelLoader", "IsActiveCharacter: Entity %d is %s (active=%u)",
-                 entityID, isActive ? "ACTIVE" : "INACTIVE", g_activeCharacterID);
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the LevelLoader's Lua state (where PartyTurnManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Call IsActiveCharacter(entityID) in the LevelLoader's Lua state
+        lua_getglobal(levelL, "IsActiveCharacter");
+        if (!lua_isfunction(levelL, -1)) {
+            std::cout << "[IsActiveCharacter] ERROR: Function not found in level Lua state!" << std::endl;
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Push the entity ID argument
+        lua_pushinteger(levelL, entityID);
+
+        // Call the function (1 argument, 1 return value)
+        int result = lua_pcall(levelL, 1, 1, 0);
+        if (result != LUA_OK) {
+            const char* error = lua_tostring(levelL, -1);
+            std::cout << "[IsActiveCharacter] ERROR calling Lua function: " << error << std::endl;
+            lua_pop(levelL, 1);  // Pop error
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Get the return value
+        bool isActive = lua_toboolean(levelL, -1);
+        lua_pop(levelL, 1);  // Pop return value
+
+        LOG_INFO("LevelLoader", "IsActiveCharacter: Entity %d is %s (via Lua bridge)",
+                 entityID, isActive ? "ACTIVE" : "INACTIVE");
+
+        // Return the result in the entity's Lua state
         lua_pushboolean(L, isActive);
         return 1;
     }
