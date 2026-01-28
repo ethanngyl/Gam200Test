@@ -54,6 +54,9 @@ local lastActiveCheck = false   -- Track if we were active last frame
 local blockedKeys = {}          -- Keys that were held when we became active (must be released first)
 -- blockedKeys["W"] = true means W was held when turn started, ignore until released
 
+-- P key state tracking (for single-press detection)
+local lastPKeyDown = false      -- Track if P was down last frame
+
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
@@ -110,6 +113,7 @@ function OnUpdate(dt)
             lastActiveCheck = false
             hasLoggedActive = false
             blockedKeys = {}  -- Clear blocked keys
+            lastPKeyDown = false  -- Reset P key state
 
             -- Set animation to Idle when no longer active
             if currentAnimGroup ~= AnimGroup.Idle then
@@ -161,7 +165,15 @@ function OnUpdate(dt)
             print("[PlayerScript]   D is held - blocking until released")
         end
 
-        if next(blockedKeys) == nil then
+        -- Check P key for turn ending
+        if IsKeyDown("P") then
+            lastPKeyDown = true
+            print("[PlayerScript]   P is held - will ignore until released")
+        else
+            lastPKeyDown = false
+        end
+
+        if next(blockedKeys) == nil and not lastPKeyDown then
             print("[PlayerScript]   No keys held - input ready!")
         end
     end
@@ -269,7 +281,9 @@ function OnUpdate(dt)
     -- ========================================================================
 
     -- Allow player to preemptively end their turn with P key
-    if IsKeyPressed and IsKeyPressed("P") then
+    -- Detect single press: P is down now but wasn't down last frame
+    local pKeyDown = IsKeyDown("P")
+    if pKeyDown and not lastPKeyDown then
         print("[PlayerScript] P key pressed - manually ending turn for Entity " .. entityID)
 
         -- Set animation back to Idle before ending turn
@@ -282,10 +296,12 @@ function OnUpdate(dt)
         hasLoggedActive = false  -- Reset for next character
         lastActiveCheck = false  -- Reset active tracking
         blockedKeys = {}  -- Clear blocked keys
+        lastPKeyDown = false  -- Reset P key state
 
         -- Return early - turn is over
         return
     end
+    lastPKeyDown = pKeyDown  -- Update P key state for next frame
 
     -- Get THIS entity's current grid position (not just "the player")
     local currentX, currentY = GetEntityGridPosition(entityID)
