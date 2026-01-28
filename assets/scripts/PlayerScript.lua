@@ -47,6 +47,7 @@ local isFlippedX = false
 
 -- Debug tracking
 local hasLoggedActive = false  -- Reset when turn changes
+local lastTurnPrint = nil      -- Track turn phase for debug printing
 
 -- Input state tracking (prevents carry-over from previous character's turn)
 local lastActiveCheck = false   -- Track if we were active last frame
@@ -91,6 +92,13 @@ function OnUpdate(dt)
     -- ========================================================================
     -- PARTY SYSTEM: INPUT ROUTING
     -- ========================================================================
+
+    -- DEBUG: Check what turn it is
+    local currentTurn = GetCurrentTurn()
+    if not lastTurnPrint or lastTurnPrint ~= currentTurn then
+        print("[PlayerScript] Entity " .. entityID .. " - Current turn phase: " .. tostring(currentTurn))
+        lastTurnPrint = currentTurn
+    end
 
     -- CRITICAL: Only process input if this is the active character
     -- Prevents all 3 party members from responding to input simultaneously
