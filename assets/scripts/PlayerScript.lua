@@ -245,6 +245,7 @@ function OnUpdate(dt)
     -- Check if UI is animating (AP crystals refilling)
     -- Uses C++ bridge to access UIManager in LevelLoader's Lua state
     if IsUIAnimating and IsUIAnimating() then
+        print("[PlayerScript] DEBUG: Blocked by IsUIAnimating")
         -- Don't allow movement during AP refill animation
         return
     end
@@ -256,16 +257,19 @@ function OnUpdate(dt)
     -- Check if we're in turn transition cooldown (prevents input carry-over)
     -- Uses C++ bridge to access PartyTurnManager in LevelLoader's Lua state
     if IsInTurnTransition and IsInTurnTransition() then
+        print("[PlayerScript] DEBUG: Blocked by IsInTurnTransition")
         -- Don't allow movement during turn transition cooldown
         return
     end
+
+    print("[PlayerScript] DEBUG: Passed all blocking checks, checking for input...")
 
     -- ========================================================================
     -- MANUAL TURN END (P KEY)
     -- ========================================================================
 
     -- Allow player to preemptively end their turn with P key
-    if IsKeyPressed("P") then
+    if IsKeyPressed and IsKeyPressed("P") then
         print("[PlayerScript] P key pressed - manually ending turn for Entity " .. entityID)
 
         -- Set animation back to Idle before ending turn
