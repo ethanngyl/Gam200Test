@@ -260,6 +260,29 @@ function OnUpdate(dt)
         return
     end
 
+    -- ========================================================================
+    -- MANUAL TURN END (P KEY)
+    -- ========================================================================
+
+    -- Allow player to preemptively end their turn with P key
+    if IsKeyPressed("P") then
+        print("[PlayerScript] P key pressed - manually ending turn for Entity " .. entityID)
+
+        -- Set animation back to Idle before ending turn
+        if currentAnimGroup ~= AnimGroup.Idle then
+            currentAnimGroup = AnimGroup.Idle
+            SetAnimationGroup(entityID, currentAnimGroup)
+        end
+
+        EndCharacterTurn()
+        hasLoggedActive = false  -- Reset for next character
+        lastActiveCheck = false  -- Reset active tracking
+        blockedKeys = {}  -- Clear blocked keys
+
+        -- Return early - turn is over
+        return
+    end
+
     -- Get THIS entity's current grid position (not just "the player")
     local currentX, currentY = GetEntityGridPosition(entityID)
     if currentX == nil or currentY == nil then
