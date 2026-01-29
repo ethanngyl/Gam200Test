@@ -252,6 +252,9 @@ namespace Framework {
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
 
+        // Grid Conversion API
+        static int Lua_TileToWorld(lua_State* L);
+
         // Script Component Management API
         static int Lua_AddScriptComponentToEntity(lua_State* L);
         static int Lua_RemoveScriptComponentFromEntity(lua_State* L);

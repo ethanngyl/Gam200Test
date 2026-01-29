@@ -549,6 +549,9 @@ namespace Framework {
         lua_register(L, "DamageEntity", Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
+        // Grid Conversion API
+        lua_register(L, "TileToWorld", Lua_TileToWorld);
+
         // Entity-specific APIs (proper naming)
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
@@ -828,6 +831,150 @@ namespace Framework {
 
         return 0;
     }
+
+    // --- Animation Control API ---
+
+    /**
+     * @brief Set animation group for an entity
+     * Lua usage: SetAnimationGroup(entityID, group)
+     * @param entityID Entity ID
+     * @param group Animation group (0=Idle, 1=Walk, 2=Attack, 3=Injured, 4=Death)
+     */
+    int LevelLoader::Lua_SetAnimationGroup(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer group = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.group = static_cast<AnimGroup>(group);
+
+        return 0;
+    }
+
+    /**
+     * @brief Set animation direction for an entity
+     * Lua usage: SetAnimationDirection(entityID, direction)
+     * @param entityID Entity ID
+     * @param direction Animation direction (0=Front, 1=Back, 2=Side, 3=None)
+     */
+    int LevelLoader::Lua_SetAnimationDirection(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer direction = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.direction = static_cast<AnimDirection>(direction);
+
+        return 0;
+    }
+
+    /**
+     * @brief Set horizontal flip for an entity's sprite
+     * Lua usage: SetAnimationFlipX(entityID, flipX)
+     * @param entityID Entity ID
+     * @param flipX true to flip horizontally, false for normal
+     */
+    int LevelLoader::Lua_SetAnimationFlipX(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool flipX = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.flipX = flipX;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set whether animation is playing
+     * Lua usage: SetAnimationPlaying(entityID, playing)
+     * @param entityID Entity ID
+     * @param playing true to play, false to pause
+     */
+    int LevelLoader::Lua_SetAnimationPlaying(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool playing = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.playing = playing;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set whether animation should loop
+     * Lua usage: SetAnimationLoop(entityID, loop)
+     * @param entityID Entity ID
+     * @param loop true to loop, false for one-shot
+     */
+    int LevelLoader::Lua_SetAnimationLoop(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool loop = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.loop = loop;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set animation frame range (startFrame and frameCount)
+     * Lua usage: SetAnimationFrameRange(entityID, startFrame, frameCount, resetToStart)
+     * @param entityID Entity ID
+     * @param startFrame First frame index in the animation range
+     * @param frameCount Number of frames in the animation
+     * @param resetToStart (optional) If true, reset currentFrame to 0 (default: true)
+     */
+    int LevelLoader::Lua_SetAnimationFrameRange(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        int startFrame = static_cast<int>(luaL_checkinteger(L, 2));
+        int frameCount = static_cast<int>(luaL_checkinteger(L, 3));
+        bool resetToStart = true;
+        if (lua_gettop(L) >= 4) {
+            resetToStart = lua_toboolean(L, 4);
+        }
 
     // --- Animation Control API ---
 

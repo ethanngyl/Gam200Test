@@ -364,19 +364,6 @@ function OnUpdate(dt)
     lastSpaceKeyDown = spaceKeyDown  -- Update SPACE key state for next frame
 
     -- ========================================================================
-    -- UPDATE ATTACK PREVIEW (Keep it visible)
-    -- ========================================================================
-
-    -- Refresh attack preview visuals each frame to keep them visible
-    if attackPreviewActive and #attackPreviewTiles > 0 then
-        for _, tile in ipairs(attackPreviewTiles) do
-            -- Continuously show borders and pulses
-            ShowTileBorder(tile.x, tile.y, 0.1)  -- Short refresh
-            -- Note: PulseTile creates one-time animations, so we don't call it every frame
-        end
-    end
-
-    -- ========================================================================
     -- MOVEMENT INPUT
     -- ========================================================================
 
@@ -607,28 +594,54 @@ function ShowAttackPreview()
         }
 
         for _, tile in ipairs(candidates) do
-            if IsValidGridPosition(tile.x, tile.y) then
-                -- Show red pulse for attack preview (longer duration)
-                PulseTile(tile.x, tile.y, 0.8, 1.0, 0.0, 0.0)  -- Red pulse, 0.8s duration
-                ShowTileBorder(tile.x, tile.y, 2.0)  -- Show border for 2 seconds
+            if IsValidGridPosition(tile.x, tile.y) and IsWalkableTile(tile.x, tile.y) then
+                -- Convert grid coords to world coords
+                local worldX, worldY = TileToWorld(tile.x, tile.y)
 
-                -- Track preview tiles
-                table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
+                if worldX and worldY then
+                    -- Spawn attack indicator sprite at this tile
+                    -- Note: SpawnSprite returns entity ID
+                    local indicatorID = SpawnSprite(
+                        "assets/TileMap/Attack_Indicator.png",
+                        worldX, worldY,
+                        1.0, 1.0,  -- tile size (1.0 x 1.0)
+                        1  -- layer 1 (above ground)
+                    )
 
-                print("[PlayerScript]   Attack preview at (" .. tile.x .. ", " .. tile.y .. ")")
+                    if indicatorID and indicatorID > 0 then
+                        -- Store the indicator entity ID so we can destroy it later
+                        table.insert(attackPreviewTiles, indicatorID)
+                        print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at (" .. tile.x .. ", " .. tile.y .. ")")
+                    else
+                        print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
+                    end
+                else
+                    print("[PlayerScript]   WARNING: TileToWorld failed for (" .. tile.x .. ", " .. tile.y .. ")")
+                end
             end
         end
     end
 
     if #attackPreviewTiles > 0 then
         attackPreviewActive = true
-        print("[PlayerScript] Attack preview active with " .. #attackPreviewTiles .. " tiles")
+        print("[PlayerScript] Attack preview active with " .. #attackPreviewTiles .. " indicator entities")
     else
         print("[PlayerScript] WARNING: No valid attack preview tiles found")
     end
 end
 
 function ClearAttackPreview()
+    -- Destroy all attack indicator entities
+    if #attackPreviewTiles > 0 then
+        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack indicator entities")
+        for _, indicatorID in ipairs(attackPreviewTiles) do
+            if indicatorID and indicatorID > 0 then
+                DestroyEntity(indicatorID)
+                print("[PlayerScript]   Destroyed attack indicator " .. indicatorID)
+            end
+        end
+    end
+
     -- Clear attack preview state
     attackPreviewTiles = {}
     attackPreviewActive = false
