@@ -424,8 +424,8 @@ namespace Framework {
         auto& resourceManager = gfx->GetResourceManager();
         anim.spriteSheet = resourceManager.LoadTexture(spritePath);
         if (!anim.spriteSheet.IsValid()) {
-            LOG_ERROR("ANIM", "Failed to load texture for animation '%s' (sprite=%s)",
-                animationName.c_str(), spritePath.c_str());
+            //LOG_ERROR("ANIM", "Failed to load texture for animation '%s' (sprite=%s)",
+                //animationName.c_str(), spritePath.c_str());
             return;
         }
 

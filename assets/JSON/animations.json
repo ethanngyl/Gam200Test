@@ -35,6 +35,28 @@
       "loop": true,
       "uvShrinkPx": 0.0,
       "key": "O"
+    },
+    "ScrollOpen": {
+      "sprite": "assets/UI/ScrollOpen.png",
+      "group": "Idle",
+      "direction": "",
+      "rows": 9,
+      "columns": 4,
+      "frameCount": 36,
+      "frameTime": 0.08,
+      "loop": false,
+      "uvShrinkPx": 0.0
+    },
+    "ScrollClose": {
+      "sprite": "assets/UI/ScrollOpen.png",
+      "group": "Idle",
+      "direction": "",
+      "rows": 9,
+      "columns": 4,
+      "frameCount": 36,
+      "frameTime": 0.08,
+      "loop": false,
+      "uvShrinkPx": 0.0
     }
   }
 }

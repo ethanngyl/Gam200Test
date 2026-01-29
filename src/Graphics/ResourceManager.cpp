@@ -86,7 +86,7 @@ namespace Framework {
                 // 3) Load textures immediately (cache will dedupe)
                 TextureHandle th = LoadTexture(key);
                 if (!th.IsValid()) {
-                    std::cerr << "ResourceManager::LoadFiles: failed to load texture: " << key << "\n";
+                    //std::cerr << "ResourceManager::LoadFiles: failed to load texture: " << key << "\n";
                 }
                 continue;
             }
@@ -201,7 +201,7 @@ namespace Framework {
         // Load new GL texture
         auto texture = std::make_unique<Texture>();
         if (!texture->LoadFromFile(path)) {
-            std::cerr << "ResourceManager: Failed to load texture: " << path << "\n";
+            //std::cerr << "ResourceManager: Failed to load texture: " << path << "\n";
             return INVALID_TEXTURE_HANDLE;
         }
 

@@ -13,6 +13,7 @@ local APIndicatorUI = require("UI/APIndicatorUI")
 local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
+local TurnScrollUI = require("ScrollOpen")
 
 -- ============================================================================
 -- STATE
@@ -91,6 +92,34 @@ function UIManager.Init(config)
         playerTexture = "assets/UI/Player_Turn_Icon.png"
     })
 
+    -- Create Turn Scroll Popup
+    UIManager.components.turnScroll = TurnScrollUI:New()
+    UIManager.components.turnScroll:Init({
+        offsetX = 0.0,
+        offsetY = 0.05,
+        scaleX = 0.9,
+        scaleY = 0.35,
+        layer = 6,
+        texture = "assets/UI/ScrollOpen.png",
+        openFrameTime = 0.01,
+        closeFrameTime = 0.01,
+        holdDuration = 2.5,
+        closeFallback = 1.2,
+        textColor = { 0, 0, 0 },
+        textAlign = "center",
+        textBaseSize = 48,
+        textWidthFactor = 0.6,
+        textAnchorX = 0.5,
+        textAnchorY = 0.5,
+        textStartRatio = 0.35,
+        textEndRatio = 0.5,
+        textOffsetX = 0,
+        textOffsetY = 0,
+        text = "Your Turn",
+        textFont = "Sans48",
+        textScale = 0.9
+    })
+
     -- TODO: Add more components as needed:
     -- - ChestProgressUI
     -- - PlayerIconsUI (boots, sword)
@@ -121,6 +150,22 @@ function UIManager.Update(dt)
     for name, component in pairs(UIManager.components) do
         if component and component.Update then
             component:Update(dt, cameraPos)
+        end
+    end
+end
+
+-- ============================================================================
+-- DRAW
+-- ============================================================================
+
+function UIManager.Draw()
+    if not UIManager.initialized then
+        return
+    end
+
+    for name, component in pairs(UIManager.components) do
+        if component and component.Draw then
+            component:Draw()
         end
     end
 end

@@ -415,6 +415,50 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_WorldToScreen(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->graphicsSystem || !loader->coreEngine) return 0;
+
+        float worldX = luaL_checknumber(L, 1);
+        float worldY = luaL_checknumber(L, 2);
+
+        // Determine render target size
+        int fbWidth = 0;
+        int fbHeight = 0;
+
+        auto* imgui = loader->coreEngine->GetImGuiSystem();
+        if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport() &&
+            imgui->GetViewportFBO() != 0) {
+            fbWidth = imgui->GetViewportWidth();
+            fbHeight = imgui->GetViewportHeight();
+        }
+        else {
+            auto windowSystem = loader->coreEngine->GetWindowSystem();
+            if (!windowSystem) return 0;
+            GLFWwindow* window = windowSystem->GetWindow();
+            if (!window) return 0;
+            glfwGetWindowSize(window, &fbWidth, &fbHeight);
+        }
+
+        // Use active camera based on play state
+        Camera& activeCamera = loader->coreEngine->IsPlaying()
+            ? loader->graphicsSystem->GetCamera()
+            : loader->graphicsSystem->GetEditorCamera();
+
+        glm::mat4 viewProj = activeCamera.GetViewProjectionMatrix();
+        glm::vec4 clipSpace = viewProj * glm::vec4(worldX, worldY, 0.0f, 1.0f);
+
+        float ndcX = clipSpace.x;
+        float ndcY = clipSpace.y;
+
+        float screenX = (ndcX + 1.0f) * 0.5f * fbWidth;
+        float screenY = (ndcY + 1.0f) * 0.5f * fbHeight;
+
+        lua_pushnumber(L, screenX);
+        lua_pushnumber(L, screenY);
+        return 2;
+    }
+
     // ========================================================================
     // INPUT API (FIXED for InputSystem)
     // ========================================================================

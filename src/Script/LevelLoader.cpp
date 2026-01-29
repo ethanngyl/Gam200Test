@@ -459,6 +459,7 @@ namespace Framework {
         lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
         lua_register(L, "DrawButtonText", Lua_DrawButtonText);
         lua_register(L, "DrawText", Lua_DrawText);
+        lua_register(L, "WorldToScreen", Lua_WorldToScreen);
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
@@ -494,6 +495,11 @@ namespace Framework {
         // Animation
         lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
+        lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
+        lua_register(L, "IsAnimationFinished", Lua_IsAnimationFinished);
+        lua_register(L, "GetAnimationFrame", Lua_GetAnimationFrame);
+        lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
+        lua_register(L, "GetAnimationFrameCount", Lua_GetAnimationFrameCount);
 
         // Animation Control API
         lua_register(L, "SetAnimationGroup", Lua_SetAnimationGroup);
@@ -792,6 +798,174 @@ namespace Framework {
         }
 
         return 0;
+    }
+
+    int LevelLoader::Lua_PlayAnimationByName(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LUA_ANIM", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+        if (!em || !animSys || !gfx) {
+            LOG_ERROR("LUA_ANIM", "AnimationSystem or GraphicsSystem not available");
+            return 0;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* animName = luaL_checkstring(L, 2);
+        const std::string animNameStr = animName ? std::string(animName) : std::string();
+        const bool isScrollAnim = animNameStr.rfind("Scroll", 0) == 0;
+        const bool hasLoopArg = (lua_gettop(L) >= 3) && !lua_isnil(L, 3);
+        const bool loop = hasLoopArg ? lua_toboolean(L, 3) != 0 : false;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid()) {
+            LOG_WARN("LUA_ANIM", "PlayAnimationByName: Invalid entity (ID=%lld)", entityID);
+            return 0;
+        }
+
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            em->AddComponent<SpriteAnimation>(e);
+            LOG_INFO("LUA_ANIM", "PlayAnimationByName: Added SpriteAnimation to %lld", entityID);
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.animName = animName;
+        anim.playing = true;
+
+        animSys->LoadAnimation(e, anim, gfx, animName);
+
+        if (hasLoopArg) {
+            anim.loop = loop;
+        }
+
+        anim.currentFrame = 0;
+        anim.elapsedTime = 0.0f;
+
+        if (isScrollAnim) {
+            anim.group = AnimGroup::Idle;
+            anim.direction = AnimDirection::None;
+            anim.playing = false; // keep manual control for UI scroll
+            anim.loop = false;
+            anim.currentFrame = 0;
+            anim.elapsedTime = 0.0f;
+        }
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_IsAnimationFinished(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, 1);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, 1);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid() || !em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushboolean(L, 1);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        if (anim.loop || anim.frameCount <= 0) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        const int lastFrame = anim.frameCount - 1;
+        lua_pushboolean(L, anim.currentFrame >= lastFrame);
+        return 1;
+    }
+
+    int LevelLoader::Lua_GetAnimationFrame(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid() || !em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, anim.currentFrame);
+        return 1;
+    }
+
+    int LevelLoader::Lua_SetAnimationFrame(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer frame = luaL_checkinteger(L, 2);
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid() || !em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "SetAnimationFrame: Invalid entity or no SpriteAnimation (ID=%lld)", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        int maxFrame = anim.frameCount > 0 ? (anim.frameCount - 1) : 0;
+        int clamped = static_cast<int>(frame);
+        if (clamped < 0) clamped = 0;
+        if (clamped > maxFrame) clamped = maxFrame;
+
+        anim.currentFrame = clamped;
+        anim.elapsedTime = 0.0f;
+        return 0;
+    }
+
+    int LevelLoader::Lua_GetAnimationFrameCount(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid() || !em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, anim.frameCount);
+        return 1;
     }
 
     // --- Animation Control API ---

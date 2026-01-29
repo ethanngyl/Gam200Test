@@ -62,7 +62,7 @@ namespace Framework {
         // Load image data from file
         unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
         if (!data) {
-            std::cerr << "Failed to load texture: " << path << "\n";
+            //std::cerr << "Failed to load texture: " << path << "\n";
             return false;
         }
 

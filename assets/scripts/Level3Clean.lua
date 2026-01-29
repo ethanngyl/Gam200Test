@@ -134,6 +134,9 @@ function OnDraw()
     -- Render pause menu
     PauseMenu.Draw()
 
+    -- Render UI text overlays
+    UIManager.Draw()
+
     -- Show editor mode indicator
     if IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)

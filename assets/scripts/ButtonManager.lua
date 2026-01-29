@@ -86,7 +86,7 @@ end
 
 ---
 -- Create a single button from config
--- @param buttonConfig table Button configuration from JSON
+-- @param buttonConfig table Button configuration from JSON 
 -- @return boolean True if button was created successfully
 --
 function ButtonManager.CreateButton(buttonConfig)

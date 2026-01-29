@@ -165,6 +165,7 @@ namespace Framework {
         static int Lua_ClearAllButtons(lua_State* L);
         static int Lua_DrawButtonText(lua_State* L);
         static int Lua_DrawText(lua_State* L);
+        static int Lua_WorldToScreen(lua_State* L);
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
@@ -194,6 +195,11 @@ namespace Framework {
         static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
+        static int Lua_PlayAnimationByName(lua_State* L);
+        static int Lua_IsAnimationFinished(lua_State* L);
+        static int Lua_GetAnimationFrame(lua_State* L);
+        static int Lua_SetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrameCount(lua_State* L);
 
         // Animation Control API
         static int Lua_SetAnimationGroup(lua_State* L);
