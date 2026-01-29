@@ -47,11 +47,15 @@ local isFlippedX = false
 
 -- Debug tracking
 local hasLoggedActive = false  -- Reset when turn changes
+local lastTurnPrint = nil      -- Track turn phase for debug printing
 
 -- Input state tracking (prevents carry-over from previous character's turn)
 local lastActiveCheck = false   -- Track if we were active last frame
 local blockedKeys = {}          -- Keys that were held when we became active (must be released first)
 -- blockedKeys["W"] = true means W was held when turn started, ignore until released
+
+-- P key state tracking (for single-press detection)
+local lastPKeyDown = false      -- Track if P was down last frame
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -92,16 +96,30 @@ function OnUpdate(dt)
     -- PARTY SYSTEM: INPUT ROUTING
     -- ========================================================================
 
+    -- DEBUG: Check what turn it is
+    local currentTurn = GetCurrentTurn()
+    if not lastTurnPrint or lastTurnPrint ~= currentTurn then
+        print("[PlayerScript] Entity " .. entityID .. " - Current turn phase: " .. tostring(currentTurn))
+        lastTurnPrint = currentTurn
+    end
+
     -- CRITICAL: Only process input if this is the active character
     -- Prevents all 3 party members from responding to input simultaneously
     local isActive = IsActiveCharacter(entityID)
     if not isActive then
         -- Not this character's turn - reset state
         if lastActiveCheck then
-            -- Just became inactive
+            -- Just became inactive - reset animation to Idle
             lastActiveCheck = false
             hasLoggedActive = false
             blockedKeys = {}  -- Clear blocked keys
+            lastPKeyDown = false  -- Reset P key state
+
+            -- Set animation to Idle when no longer active
+            if currentAnimGroup ~= AnimGroup.Idle then
+                currentAnimGroup = AnimGroup.Idle
+                SetAnimationGroup(entityID, currentAnimGroup)
+            end
         end
         return
     end
@@ -147,7 +165,15 @@ function OnUpdate(dt)
             print("[PlayerScript]   D is held - blocking until released")
         end
 
-        if next(blockedKeys) == nil then
+        -- Check P key for turn ending
+        if IsKeyDown("P") then
+            lastPKeyDown = true
+            print("[PlayerScript]   P is held - will ignore until released")
+        else
+            lastPKeyDown = false
+        end
+
+        if next(blockedKeys) == nil and not lastPKeyDown then
             print("[PlayerScript]   No keys held - input ready!")
         end
     end
@@ -231,6 +257,7 @@ function OnUpdate(dt)
     -- Check if UI is animating (AP crystals refilling)
     -- Uses C++ bridge to access UIManager in LevelLoader's Lua state
     if IsUIAnimating and IsUIAnimating() then
+        print("[PlayerScript] DEBUG: Blocked by IsUIAnimating")
         -- Don't allow movement during AP refill animation
         return
     end
@@ -242,9 +269,39 @@ function OnUpdate(dt)
     -- Check if we're in turn transition cooldown (prevents input carry-over)
     -- Uses C++ bridge to access PartyTurnManager in LevelLoader's Lua state
     if IsInTurnTransition and IsInTurnTransition() then
+        print("[PlayerScript] DEBUG: Blocked by IsInTurnTransition")
         -- Don't allow movement during turn transition cooldown
         return
     end
+
+    print("[PlayerScript] DEBUG: Passed all blocking checks, checking for input...")
+
+    -- ========================================================================
+    -- MANUAL TURN END (P KEY)
+    -- ========================================================================
+
+    -- Allow player to preemptively end their turn with P key
+    -- Detect single press: P is down now but wasn't down last frame
+    local pKeyDown = IsKeyDown("P")
+    if pKeyDown and not lastPKeyDown then
+        print("[PlayerScript] P key pressed - manually ending turn for Entity " .. entityID)
+
+        -- Set animation back to Idle before ending turn
+        if currentAnimGroup ~= AnimGroup.Idle then
+            currentAnimGroup = AnimGroup.Idle
+            SetAnimationGroup(entityID, currentAnimGroup)
+        end
+
+        EndCharacterTurn()
+        hasLoggedActive = false  -- Reset for next character
+        lastActiveCheck = false  -- Reset active tracking
+        blockedKeys = {}  -- Clear blocked keys
+        lastPKeyDown = false  -- Reset P key state
+
+        -- Return early - turn is over
+        return
+    end
+    lastPKeyDown = pKeyDown  -- Update P key state for next frame
 
     -- Get THIS entity's current grid position (not just "the player")
     local currentX, currentY = GetEntityGridPosition(entityID)
@@ -259,32 +316,24 @@ function OnUpdate(dt)
     local moveDirX, moveDirY = 0, 0
 
     -- WASD input only (arrow keys disabled)
-    print("[PlayerScript] Entity " .. entityID .. " checking input at position (" .. currentX .. ", " .. currentY .. ")...")
-
     local wDown = IsKeyDown("W") and not blockedKeys["W"]
     local sDown = IsKeyDown("S") and not blockedKeys["S"]
     local aDown = IsKeyDown("A") and not blockedKeys["A"]
     local dDown = IsKeyDown("D") and not blockedKeys["D"]
 
-    print("[PlayerScript]   W=" .. tostring(wDown) .. " S=" .. tostring(sDown) .. " A=" .. tostring(aDown) .. " D=" .. tostring(dDown))
-
     if wDown then
-        print("[PlayerScript] W key detected (not blocked) - moving UP")
         targetY = currentY + 1
         moveDirY = 1
         moveAttempted = true
     elseif sDown then
-        print("[PlayerScript] S key detected (not blocked) - moving DOWN")
         targetY = currentY - 1
         moveDirY = -1
         moveAttempted = true
     elseif aDown then
-        print("[PlayerScript] A key detected (not blocked) - moving LEFT")
         targetX = currentX - 1
         moveDirX = -1
         moveAttempted = true
     elseif dDown then
-        print("[PlayerScript] D key detected (not blocked) - moving RIGHT")
         targetX = currentX + 1
         moveDirX = 1
         moveAttempted = true
@@ -376,10 +425,19 @@ function OnUpdate(dt)
 
         if newAP == 0 then
             print("[PlayerScript] AP depleted after movement - ending turn!")
+
+            -- Set animation back to Idle before ending turn
+            currentAnimGroup = AnimGroup.Idle
+            SetAnimationGroup(entityID, currentAnimGroup)
+
             EndCharacterTurn()
             hasLoggedActive = false  -- Reset for next character
             lastActiveCheck = false  -- Reset active tracking
             blockedKeys = {}  -- Clear blocked keys
+
+            -- IMPORTANT: Return early - don't continue updating animations
+            -- The character is no longer active, so we shouldn't modify its state
+            return
         end
 
         -- Visual feedback

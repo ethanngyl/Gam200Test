@@ -284,6 +284,14 @@ function ExecuteAttack()
 
         -- Visual feedback
         PulseTile(playerX, playerY, 0.3, 1.0, 0.0, 0.0)  -- Red pulse for damage
+
+        -- Show damage number popup (one-time animation)
+        if PopupManager and PopupManager.ShowDamageNumber then
+            local worldX, worldY = GetEntityWorldPosition(targetPlayerID)
+            if worldX then
+                PopupManager.ShowDamageNumber(worldX, worldY + 0.2, config.attackDamage)
+            end
+        end
     end
 
     -- Check if we can still act
