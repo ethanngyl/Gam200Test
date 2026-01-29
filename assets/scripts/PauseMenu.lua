@@ -1,37 +1,105 @@
 --[[
 ===============================================================================
- File:          PauseMenu.lua
- Author:        Claude (AI Assistant)
- Date:          2025-11-28
- ------------------------------------------------------------------------------
-  Reusable Pause Menu System for Lua Levels
-
-  Usage:
-    local PauseMenu = require("PauseMenu")
-
-    -- In OnInit:
-    PauseMenu.Init()
-
-    -- In OnUpdate:
-    PauseMenu.Update(dt)
-
-    -- In OnDraw:
-    PauseMenu.Draw()
+| File:          PauseMenu.lua
+| Author:        Claude (AI Assistant)
+| Date:          2025-01-27
+| ------------------------------------------------------------------------------
+|  Reusable Pause Menu System with Visual UI Elements
+|
+|  Features:
+|  - Wood background with semi-transparent overlay
+|  - Button images with text labels
+|  - Horizontal layout: Quit | Settings | Resume
+|  - Keyboard and visual feedback
+|
+|  Usage:
+|    local PauseMenu = require("PauseMenu")
+|    PauseMenu.Init()           -- In OnInit
+|    PauseMenu.Update(dt)       -- In OnUpdate
+|    PauseMenu.Draw()           -- In OnDraw
 ===============================================================================
 --]]
 
 local PauseMenu = {}
 
 -- ============================================================================
+-- CONFIGURATION
+-- ============================================================================
+
+local config = {
+    -- Background
+    background = {
+        texture = "assets/Menu/WoodBackground.png",
+        scale = { x = 2.0, y = 1.5 },
+        layer = 50
+    },
+    
+    -- Title (adjust these values)
+    title = {
+        text = "Paused",
+        offsetX = -150,       -- X offset from center (negative = left)
+        offsetY = -0.2,       -- Y offset from center (positive = up, in screen ratio)
+        scale = 2.0,
+        color = { r = 0.2, g = 0.15, b = 0.1 }
+    },
+    
+    -- Buttons (adjust these values)
+    buttons = {
+        texture = "assets/Menu/Ui_btn.png",
+        scale = { x = 0.35, y = 0.10 },
+        layer = 51,
+        textScale = 0.8,
+        textColor = { r = 0.95, g = 0.85, b = 0.6 },
+        selectedColor = { r = 1.0, g = 0.9, b = 0.3 },
+        
+        -- Each button has its own position (adjust individually)
+        --  /imageY = world coordinates for button image (relative to camera)
+        -- textX/textY = screen coordinates for text (relative to screen center)
+        items = {
+            { 
+                id = "quit", 
+                label = "Quit",
+                imageX = -0.5,    -- World X offset from camera
+                imageY = 0.0,     -- World Y offset from camera
+                textX = -570,     -- Screen X offset from center (pixels)
+                textY = -10       -- Screen Y offset from center (pixels)
+            },
+            { 
+                id = "settings", 
+                label = "Settings",
+                imageX = 0.02,
+                imageY = 0.0,
+                textX = -50,
+                textY = -10
+            },
+            { 
+                id = "resume", 
+                label = "Resume",
+                imageX = 0.55,
+                imageY = 0.0,
+                textX = 480,
+                textY = -10
+            }
+        }
+    }
+}
+
+-- ============================================================================
 -- STATE
 -- ============================================================================
 
 local state = {
-    selectedOption = 0,  -- 0=Resume, 1=MainMenu, 2=Exit
-    wasUpPressed = false,
-    wasDownPressed = false,
+    initialized = false,
+    selectedIndex = 3,       -- Default to "Resume" (rightmost)
+    
+    -- Entity IDs
+    backgroundID = 0,
+    buttonIDs = {},
+    
+    -- Input tracking
+    wasLeftPressed = false,
+    wasRightPressed = false,
     wasEnterPressed = false,
-    wasPPressed = false,
     wasEscapePressed = false
 }
 
@@ -40,165 +108,234 @@ local state = {
 -- ============================================================================
 
 function PauseMenu.Init()
-    state.selectedOption = 0
-    state.wasUpPressed = false
-    state.wasDownPressed = false
+    state.selectedIndex = 3  -- Default to Resume
+    state.initialized = true
+    
+    -- Reset input states
+    state.wasLeftPressed = false
+    state.wasRightPressed = false
     state.wasEnterPressed = false
-    state.wasPPressed = false
     state.wasEscapePressed = false
-    Log("PauseMenu initialized")
+    
+    Log("[PauseMenu] Initialized")
 end
 
 -- ============================================================================
--- UPDATE (HANDLES INPUT)
+-- CREATE UI ELEMENTS (called when paused)
+-- ============================================================================
+
+local function CreatePauseUI()
+    local camX, camY, camZ = GetCameraPosition()
+    
+    -- Create background
+    state.backgroundID = SpawnSprite(
+        config.background.texture,
+        camX,
+        camY,
+        config.background.scale.x,
+        config.background.scale.y,
+        config.background.layer
+    )
+    
+    -- Create button sprites using individual positions
+    state.buttonIDs = {}
+    local btnConfig = config.buttons
+    
+    for i, btn in ipairs(btnConfig.items) do
+        -- Use individual button position (world coordinates, relative to camera)
+        local btnX = camX + btn.imageX
+        local btnY = camY + btn.imageY
+        
+        local btnID = SpawnSprite(
+            btnConfig.texture,
+            btnX, btnY,
+            btnConfig.scale.x, btnConfig.scale.y,
+            btnConfig.layer
+        )
+        
+        state.buttonIDs[i] = {
+            id = btnID,
+            label = btn.label,
+            textX = btn.textX,   -- Store text position
+            textY = btn.textY,
+            action = btn.id
+        }
+    end
+end
+
+-- ============================================================================
+-- DESTROY UI ELEMENTS (called when resumed)
+-- ============================================================================
+
+local function DestroyPauseUI()
+    -- Destroy background
+    if state.backgroundID and state.backgroundID > 0 then
+        DestroyEntity(state.backgroundID)
+        state.backgroundID = 0
+    end
+    
+    -- Destroy buttons
+    for i, btn in ipairs(state.buttonIDs) do
+        if btn.id and btn.id > 0 then
+            DestroyEntity(btn.id)
+        end
+    end
+    state.buttonIDs = {}
+    
+    Log("[PauseMenu] UI destroyed")
+end
+
+-- ============================================================================
+-- UPDATE
 -- ============================================================================
 
 function PauseMenu.Update(dt)
-    -- Toggle pause with P or Escape key
-    local isPPressed = IsKeyDown("Escape")
+    -- Toggle pause with Escape key
     local isEscapePressed = IsKeyDown("Escape")
-
-    if (isPPressed and not state.wasPPressed) or (isEscapePressed and not state.wasEscapePressed) then
+    
+    if isEscapePressed and not state.wasEscapePressed then
         TogglePause()
-
+        
         if IsPaused() then
-            Log("Game PAUSED")
-            SetMasterVolume(0.0)
-            state.selectedOption = 0  -- Reset to Resume option
+            Log("[PauseMenu] Game PAUSED")
+            SetMasterVolume(0.3)  -- Lower volume instead of muting
+            state.selectedIndex = 3  -- Reset to Resume
+            CreatePauseUI()
         else
-            Log("Game RESUMED")
+            Log("[PauseMenu] Game RESUMED")
             SetMasterVolume(1.0)
+            DestroyPauseUI()
         end
     end
-
-    state.wasPPressed = isPPressed
     state.wasEscapePressed = isEscapePressed
-
+    
     -- If not paused, don't handle menu input
     if not IsPaused() then
         return
     end
-
+    
     -- ========================================================================
-    -- PAUSE MENU INPUT
+    -- PAUSE MENU INPUT (horizontal navigation)
     -- ========================================================================
-
-    -- Arrow key / WASD navigation
-    local isUpPressed = IsKeyDown("Up") or IsKeyDown("W")
-    local isDownPressed = IsKeyDown("Down") or IsKeyDown("S")
+    
+    local isLeftPressed = IsKeyDown("Left") or IsKeyDown("A")
+    local isRightPressed = IsKeyDown("Right") or IsKeyDown("D")
     local isEnterPressed = IsKeyDown("Enter") or IsKeyDown("Space")
-
-    -- Edge detection for navigation
-    if isUpPressed and not state.wasUpPressed then
-        state.selectedOption = state.selectedOption - 1
-        if state.selectedOption < 0 then
-            state.selectedOption = 2
+    
+    -- Navigate left
+    if isLeftPressed and not state.wasLeftPressed then
+        state.selectedIndex = state.selectedIndex - 1
+        if state.selectedIndex < 1 then
+            state.selectedIndex = #config.buttons.items
         end
+        PlaySound("button", false, 0.5)
     end
-
-    if isDownPressed and not state.wasDownPressed then
-        state.selectedOption = state.selectedOption + 1
-        if state.selectedOption > 2 then
-            state.selectedOption = 0
+    
+    -- Navigate right
+    if isRightPressed and not state.wasRightPressed then
+        state.selectedIndex = state.selectedIndex + 1
+        if state.selectedIndex > #config.buttons.items then
+            state.selectedIndex = 1
         end
+        PlaySound("button", false, 0.5)
     end
-
-    state.wasUpPressed = isUpPressed
-    state.wasDownPressed = isDownPressed
-
-    -- Number key shortcuts (1=Resume, 2=MainMenu, 3=Exit)
+    
+    state.wasLeftPressed = isLeftPressed
+    state.wasRightPressed = isRightPressed
+    
+    -- Quick select with number keys
     if IsKeyDown("1") then
-        PauseMenu.OnResume()
+        state.selectedIndex = 1
+        PauseMenu.ExecuteAction()
         return
     elseif IsKeyDown("2") then
-        PauseMenu.OnMainMenu()
+        state.selectedIndex = 2
+        PauseMenu.ExecuteAction()
         return
     elseif IsKeyDown("3") then
-        PauseMenu.OnExit()
+        state.selectedIndex = 3
+        PauseMenu.ExecuteAction()
         return
     end
-
+    
     -- Enter/Space to select
     if isEnterPressed and not state.wasEnterPressed then
-        if state.selectedOption == 0 then
-            PauseMenu.OnResume()
-        elseif state.selectedOption == 1 then
-            PauseMenu.OnMainMenu()
-        elseif state.selectedOption == 2 then
-            PauseMenu.OnExit()
-        end
+        PauseMenu.ExecuteAction()
     end
-
     state.wasEnterPressed = isEnterPressed
 end
 
 -- ============================================================================
--- DRAW (RENDERS PAUSE MENU)
+-- EXECUTE SELECTED ACTION
+-- ============================================================================
+
+function PauseMenu.ExecuteAction()
+    local action = config.buttons.items[state.selectedIndex].id
+    
+    PlaySound("button2", false, 0.7)
+    
+    if action == "resume" then
+        PauseMenu.OnResume()
+    elseif action == "settings" then
+        PauseMenu.OnSettings()
+    elseif action == "quit" then
+        PauseMenu.OnQuit()
+    end
+end
+
+-- ============================================================================
+-- DRAW
 -- ============================================================================
 
 function PauseMenu.Draw()
     if not IsPaused() then
         return
     end
-
-    -- Get framebuffer size for centering
+    
+    local camX, camY, camZ = GetCameraPosition()
     local fbWidth, fbHeight = GetFramebufferSize()
-
     local centerX = fbWidth * 0.5
     local centerY = fbHeight * 0.5
-
+    
+    -- Screen scale factor (based on 1920x1080 reference resolution)
+    local scaleFactorX = fbWidth / 1920
+    local scaleFactorY = fbHeight / 1080
+    local scaleFactor = math.min(scaleFactorX, scaleFactorY)  -- Use smaller to maintain aspect ratio
+    
     -- ========================================================================
     -- DRAW TITLE
     -- ========================================================================
-    local titleX = centerX - 120
-    local titleY = centerY + 200
-    local titleScale = 2.5
-
-    DrawText("Sans48", "PAUSED", titleX, titleY, titleScale, 1.0, 1.0, 0.3)
-
+    local titleCfg = config.title
+    local titleX = centerX + (titleCfg.offsetX * scaleFactorX)
+    local titleY = centerY - (titleCfg.offsetY * fbHeight)
+    local titleScale = titleCfg.scale * scaleFactor
+    
+    DrawText("Sans48", titleCfg.text, titleX, titleY, titleScale,
+             titleCfg.color.r, titleCfg.color.g, titleCfg.color.b)
+    
     -- ========================================================================
-    -- DRAW MENU OPTIONS
+    -- DRAW BUTTON LABELS
     -- ========================================================================
-    local menuStartY = centerY + 80
-    local menuSpacing = 70
-    local textBaseX = centerX - 100
-
-    local options = {"Resume Game", "Main Menu", "Quit Game"}
-
-    for i = 0, 2 do
-        local isSelected = (state.selectedOption == i)
-
-        -- Add selection markers
-        local text = options[i + 1]  -- Lua arrays start at 1
+    local btnConfig = config.buttons
+    
+    for i, btn in ipairs(state.buttonIDs) do
+        local isSelected = (i == state.selectedIndex)
+        
+        -- Use individual text position (scaled by screen size)
+        local textX = centerX + (btn.textX * scaleFactorX)
+        local textY = centerY + (btn.textY * scaleFactorY)
+        
+        local scale = btnConfig.textScale * scaleFactor
+        local color = isSelected and btnConfig.selectedColor or btnConfig.textColor
+        
+        local label = btn.label
         if isSelected then
-            text = "> " .. text .. " <"
-        else
-            text = "  " .. text
+            label = "> " .. label .. " <"
+            textX = textX - (20 * scaleFactorX)
         end
-
-        local scale = isSelected and 1.3 or 1.2
-        local r, g, b = 1.0, 1.0, 0.3  -- Yellow for selected
-        if not isSelected then
-            r, g, b = 0.7, 0.7, 0.7  -- Gray for unselected
-        end
-
-        DrawText("Sans48", text, textBaseX, menuStartY - (i * menuSpacing), scale, r, g, b)
+        
+        DrawText("Sans48", label, textX, textY, scale, color.r, color.g, color.b)
     end
-
-    -- ========================================================================
-    -- DRAW CONTROL HINTS
-    -- ========================================================================
-    local hint1X = centerX - 280
-    local hint1Y = centerY - 150
-    local hint2X = centerX - 380
-    local hint2Y = centerY - 200
-    local hintScale = 0.75
-
-    DrawText("Sans48", "W/S or Arrow Keys to Navigate",
-             hint1X, hint1Y, hintScale, 1.0, 1.0, 0.3)
-
-    DrawText("Sans48", "Enter/Space to Select | 1-3 for Quick Select",
-             hint2X, hint2Y, hintScale, 1.0, 1.0, 0.3)
 end
 
 -- ============================================================================
@@ -206,21 +343,33 @@ end
 -- ============================================================================
 
 function PauseMenu.OnResume()
-    TogglePause()  -- Unpause
+    TogglePause()
     SetMasterVolume(1.0)
-    Log("Resume selected")
+    DestroyPauseUI()
+    Log("[PauseMenu] Resumed")
 end
 
-function PauseMenu.OnMainMenu()
-    TogglePause()  -- Unpause before changing state
-    SetMasterVolume(1.0)
-    SetNextGameState("mainMenu")
-    Log("Returning to main menu")
+function PauseMenu.OnSettings()
+    -- TODO: Open settings menu
+    Log("[PauseMenu] Settings - Not implemented yet")
 end
 
-function PauseMenu.OnExit()
+function PauseMenu.OnQuit()
+    DestroyPauseUI()
+    TogglePause()
+    SetMasterVolume(1.0)
     SetNextGameState("GS_QUIT")
-    Log("Exiting game")
+    Log("[PauseMenu] Quitting game")
+end
+
+-- ============================================================================
+-- CLEANUP
+-- ============================================================================
+
+function PauseMenu.Destroy()
+    DestroyPauseUI()
+    state.initialized = false
+    Log("[PauseMenu] Destroyed")
 end
 
 -- ============================================================================
