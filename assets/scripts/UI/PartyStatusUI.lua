@@ -144,11 +144,22 @@ function PartyStatusUI:CreateCharacterSlot(slotIndex)
     end
 
     -- AP crystals (5 max)
+    -- AP_Crystal.png is now a 4x4 sprite sheet, use animated sprite
     slot.apCrystals = {}
     for i = 1, 5 do
         local crystalX = posX + (i - 1) * self.iconSize * 1.2
         local crystalY = posY
-        local crystalID = self:SpawnSprite(self.apIcon, crystalX, crystalY, self.iconSize, self.iconSize, 100)
+        -- Use animated sprite with 4x4 grid, show first 4 frames in loop
+        local crystalID = self:SpawnAnimatedSprite(
+            self.apIcon, 
+            crystalX, crystalY, 
+            self.iconSize, self.iconSize, 
+            100,  -- layer
+            4, 4, -- rows, columns
+            4,    -- frameCount (first row)
+            0.15, -- frameTime
+            true  -- loop
+        )
         table.insert(slot.apCrystals, crystalID)
     end
 

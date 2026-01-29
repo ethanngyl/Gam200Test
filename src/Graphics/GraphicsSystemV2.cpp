@@ -913,9 +913,11 @@ namespace Framework {
             // Prefer the configured column count if available
             const int cols = (anim.columns > 0) ? anim.columns : (texW / anim.frameWidth);
 
-            const int frame = anim.currentFrame % max(1, anim.frameCount);
-            const int x = frame % cols;
-            const int y = frame / cols;
+            // Calculate actual frame index: startFrame + (currentFrame within range)
+            const int frameInRange = anim.currentFrame % max(1, anim.frameCount);
+            const int actualFrame = anim.startFrame + frameInRange;
+            const int x = actualFrame % cols;
+            const int y = actualFrame / cols;
 
             // Treat uvShrinkPx as pixels trimmed from each side of the frame
             float shrink = anim.uvShrinkPx;

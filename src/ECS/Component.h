@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           Component.h
  Author:         ETHAN NG YONG LE
@@ -120,7 +120,8 @@ namespace Framework
         float elapsedTime = 0.0f;
 
         /** Animation data (ALL data-driven from JSON) */
-        int frameCount = 1;
+        int startFrame = 0;   // First frame in the animation range
+        int frameCount = 1;   // Number of frames in the animation
         int rows = 1;
         int columns = 1;
         float frameTime = 0.1f;
@@ -134,6 +135,9 @@ namespace Framework
         bool loop = true;
         bool playing = true;
         bool flipX = false;
+        
+        /** If false, skip JSON-based animation selection (for UI elements, etc.) */
+        bool useJsonConfig = true;
     };
 
     /**

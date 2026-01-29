@@ -15,10 +15,12 @@ print("============================================================")
 
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
+local PopupManager = require("UI/PopupManager")
 
 -- Export UIManager globally so entity scripts can access it
 -- (Entity scripts run in separate Lua states and need global access)
 _G.UIManager = UIManager
+_G.PopupManager = PopupManager
 
 -- Load Party Turn Manager (REQUIRED for party system)
 print("[Level3Clean] Loading PartyTurnManager.lua...")
@@ -105,6 +107,9 @@ function OnInit()
 
     -- Initialize UI system (replaces 500+ lines of UI code!)
     UIManager.Init()
+
+    -- Initialize popup system for one-time animations
+    PopupManager.Init()
 
     -- Setup Party UI (shows all 3 characters)
     SetupPartyUI()
@@ -195,6 +200,9 @@ function OnUpdate(dt)
 
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
+
+    -- Update popup animations (damage numbers, status effects, etc.)
+    PopupManager.Update(dt)
 end
 
 -- ============================================================================
@@ -204,6 +212,9 @@ end
 function OnDraw()
     -- Render pause menu
     PauseMenu.Draw()
+
+    -- Render popup animations (damage numbers, status effects, etc.)
+    PopupManager.Draw()
 
     -- Show editor mode indicator
     if IsEditorMode() then
@@ -238,6 +249,9 @@ function OnDestroy()
 
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
     UIManager.Destroy()
+
+    -- Clear all popup animations
+    PopupManager.Clear()
 
     -- Reset state
     audioConfig = nil
