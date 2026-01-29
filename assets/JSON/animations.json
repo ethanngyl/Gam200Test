@@ -35,6 +35,56 @@
       "loop": true,
       "uvShrinkPx": 0.0,
       "key": "O"
+    },
+    "Walk_front": {
+      "sprite": "assets/Warrior/FrontView/WarriorWalkingFront.png",
+      "group": "Walk",
+      "direction": "Front",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 8,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Walk_back": {
+      "sprite": "assets/Warrior/BackView/WarriorWalkBackView.png",
+      "group": "Walk",
+      "direction": "Back",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 8,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Walk_side": {
+      "sprite": "assets/Warrior/SideView/WarriorSideViewWalk.png",
+      "group": "Walk",
+      "direction": "Side",
+      "rows": 4,
+      "columns": 4,
+      "frameCount": 8,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Attack_front": {
+      "sprite": "assets/Warrior/FrontView/WarriorAttackFront.png",
+      "group": "Attack",
+      "direction": "Front",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 6,
+      "frameTime": 0.08,
+      "loop": false
+    },
+    "Attack_side": {
+      "sprite": "assets/Warrior/SideView/WarriorSideViewAttack.png",
+      "group": "Attack",
+      "direction": "Side",
+      "rows": 3,
+      "columns": 3,
+      "frameCount": 6,
+      "frameTime": 0.08,
+      "loop": false
     }
   }
 }

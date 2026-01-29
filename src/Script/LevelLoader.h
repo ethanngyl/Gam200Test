@@ -178,6 +178,8 @@ namespace Framework {
 
         // AP Indicator / Entity Management API
         static int Lua_SpawnSprite(lua_State* L);
+        static int Lua_SpawnAnimatedSprite(lua_State* L);  // Spawn sprite with animation sheet
+        static int Lua_SetSpriteAnimationSheet(lua_State* L);  // Add animation to existing sprite
         static int Lua_SetSpriteColor(lua_State* L);
         static int Lua_SetSpriteGray(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
@@ -203,6 +205,7 @@ namespace Framework {
         static int Lua_SetAnimationFlipX(lua_State* L);
         static int Lua_SetAnimationPlaying(lua_State* L);
         static int Lua_SetAnimationLoop(lua_State* L);
+        static int Lua_SetAnimationFrameRange(lua_State* L);  // Set animation frame range (startFrame, frameCount)
         static int Lua_GetAnimationGroup(lua_State* L);
         static int Lua_GetEntityMovementDirection(lua_State* L);
 

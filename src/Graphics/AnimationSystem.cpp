@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           AnimationSystem.cpp
  Author:         TAN WEI LEONG
@@ -184,6 +184,25 @@ namespace Framework {
                 anim.currentFrame = 0;
                 anim.elapsedTime = 0.0f;
                 anim.playing = true;
+            }
+
+            // -------------------------------
+            // SKIP JSON CONFIG FOR STANDALONE ANIMATIONS (UI elements, etc.)
+            // -------------------------------
+            if (!anim.useJsonConfig)
+            {
+                // Just advance frames without JSON-based animation selection
+                anim.elapsedTime += dt;
+
+                if (anim.elapsedTime >= anim.frameTime) {
+                    anim.elapsedTime = 0.0f;
+                    anim.currentFrame++;
+
+                    if (anim.currentFrame >= anim.frameCount) {
+                        anim.currentFrame = anim.loop ? 0 : anim.frameCount - 1;
+                    }
+                }
+                continue;
             }
 
             // -------------------------------
