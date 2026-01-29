@@ -351,6 +351,7 @@ namespace Framework {
     nlohmann::json SaveLoadSystem::SerializeSpriteAnimation(const SpriteAnimation& sa) {
         return {
             {"animName", sa.animName},
+            {"startFrame", sa.startFrame},
             {"frameCount", sa.frameCount},
             {"rows", sa.rows},
             {"columns", sa.columns},
@@ -361,7 +362,8 @@ namespace Framework {
             {"loop", sa.loop},
             {"playing", sa.playing},
             {"flipX", sa.flipX},
-            {"currentFrame", sa.currentFrame}
+            {"currentFrame", sa.currentFrame},
+            {"useJsonConfig", sa.useJsonConfig}
         };
     }
 
@@ -583,6 +585,7 @@ namespace Framework {
         em->AddComponent<SpriteAnimation>(entity);
         auto& sa = em->GetComponent<SpriteAnimation>(entity);
         sa.animName = j.value("animName", "");
+        sa.startFrame = j.value("startFrame", 0);
         sa.frameCount = j.value("frameCount", 1);
         sa.rows = j.value("rows", 1);
         sa.columns = j.value("columns", 1);
@@ -594,6 +597,7 @@ namespace Framework {
         sa.playing = j.value("playing", true);
         sa.flipX = j.value("flipX", false);
         sa.currentFrame = j.value("currentFrame", 0);
+        sa.useJsonConfig = j.value("useJsonConfig", true);
 
         // Load sprite sheet texture if graphics system is available
         if (s_graphicsSystem && em->HasComponent<Sprite>(entity)) {

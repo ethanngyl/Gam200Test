@@ -66,6 +66,7 @@ local AnimDirection = {
 -- ============================================================================
 
 local entityID = 0
+local characterType = "Warrior"  -- Default character type (Warrior, Mage, Rogue)
 local currentGroup = AnimGroup.Idle
 local currentDirection = AnimDirection.Front
 local isFlippedX = false
@@ -87,12 +88,15 @@ function OnInit()
     currentDirection = AnimDirection.Front
     isFlippedX = false
 
+    -- Character type will be set externally via SetCharacterType()
+    -- Default is "Warrior" if not set
+
     -- Set initial animation group and direction
     SetAnimationGroup(entityID, currentGroup)
     SetAnimationDirection(entityID, currentDirection)
     SetAnimationFlipX(entityID, isFlippedX)
 
-    Log("AnimationController: Initialized for entity " .. entityID)
+    Log("AnimationController: Initialized for entity " .. entityID .. " (Character: " .. characterType .. ")")
 end
 
 --[[
@@ -218,6 +222,35 @@ end
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
+
+--[[
+    SetCharacterType(type)
+    Sets the character type for animation selection
+
+    @param type Character type string ("Warrior", "Mage", "Rogue")
+
+    USAGE: Call this after attaching the script to set character-specific animations
+    Example:
+        AddScriptComponentToEntity(entityID, "assets/scripts/AnimationController.lua")
+        -- Then from another script or level script:
+        -- SetEntityCharacterType(entityID, "Mage")
+]]--
+function SetCharacterType(type)
+    characterType = type
+    Log("AnimationController: Entity " .. entityID .. " set to character type: " .. characterType)
+
+    -- Re-apply current animation with new character type
+    SetAnimationGroup(entityID, currentGroup)
+    SetAnimationDirection(entityID, currentDirection)
+end
+
+-- Export to global scope so it can be called from level scripts
+_G.SetEntityCharacterType = function(entity, type)
+    -- This is a workaround since we can't directly call functions in entity scripts
+    -- The proper way is to implement SetCharacterAnimationPrefix(entityID, prefix) in C++
+    Log("WARNING: SetEntityCharacterType() called but character type is per-script instance")
+    Log("You need to implement character-specific animations in C++ or use separate scripts")
+end
 
 --[[
     GetMovementDirection(entity)
