@@ -20,10 +20,6 @@ namespace Framework {
 		void SpawnBurst(int emitterId, int count);
 		int CreateTemporaryEffect(const std::string& presetName, float x, float y, float duration = 0.0f);
 
-		// Serialization
-		void SaveToJSON(const std::string& filename);
-		void LoadFromJSON(const std::string& filename);
-
 		// Manadatory overrides
 		virtual void Initialize() override;
 		virtual void Update(float dt) override;

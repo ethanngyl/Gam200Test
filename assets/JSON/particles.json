@@ -2,82 +2,105 @@
   "settings": {
     "Smoke": {
       "texturePath": "assets/UI/AP_Crystal(old).png",
-      "tint": [0.8, 0.8, 0.8, 0.6],
-      "endTint": [0.4, 0.4, 0.4, 0.0],
+      "tint": [0.75, 0.75, 0.75, 0.35],
+      "endTint": [0.35, 0.35, 0.35, 0.0],
       "layer": 5,
-      "spawnRate": 10,
-      "size": 5,
-      "endSize": 10,
-      "minLifetime": 1.5,
-      "maxLifetime": 3.5,
-      "minSpeed": 0.05,
-      "maxSpeed": 0.15,
+
+      "spawnRate": 8,
+      "size": 0.6,
+      "endSize": 2.2,
+
+      "minLifetime": 1.2,
+      "maxLifetime": 2.8,
+
+      "minSpeed": 0.03,
+      "maxSpeed": 0.10,
+
       "direction": [0.0, 1.0],
-      "directionFuzz": 0.6,
-      "gravity": [0.0, 0.1],
+      "directionFuzz": 0.8,
+      "gravity": [0.0, 0.06],
+
       "fadeOut": true,
-      "shrinkOverTime": true,
+      "shrinkOverTime": false,
       "burstCount": 0
     },
 
     "Explosion": {
       "texturePath": "assets/UI/AP_Crystal(old).png",
-      "tint": [1.0, 0.6, 0.2, 1.0],
-      "endTint": [1.0, 0.2, 0.0, 0.0],
+      "tint": [1.0, 0.6, 0.2, 0.9],
+      "endTint": [0.7, 0.15, 0.0, 0.0],
       "layer": 6,
-      "spawnRate": 10,
-      "size": 5,
-      "endSize": 10,
-      "minLifetime": 9.2,
-      "maxLifetime": 20.6,
-      "minSpeed": 1.0,
-      "maxSpeed": 3.0,
+
+      "spawnRate": 0,
+      "burstCount": 40,
+
+      "size": 0.8,
+      "endSize": 2.0,
+
+      "minLifetime": 1.2,
+      "maxLifetime": 2.8,
+
+      "minSpeed": 2.2,
+      "maxSpeed": 6.0,
+
       "direction": [0.0, 0.0],
       "directionFuzz": 1.0,
-      "gravity": [0.0, -0.5],
+      "gravity": [0.0, -2.5],
+
       "fadeOut": true,
-      "shrinkOverTime": true,
-      "burstCount": 0
+      "shrinkOverTime": true
     },
 
     "Sparks": {
       "texturePath": "assets/UI/AP_Crystal(old).png",
-      "tint": [1.0, 1.0, 0.4, 1.0],
+      "tint": [1.0, 1.0, 0.5, 0.95],
       "endTint": [1.0, 0.5, 0.0, 0.0],
       "layer": 7,
-      "spawnRate": 10,
-      "size": 5,
-      "endSize": 10,
-      "minLifetime": 0.3,
-      "maxLifetime": 1.0,
-      "minSpeed": 1.5,
-      "maxSpeed": 4.0,
-      "direction": [1.0, 0.4],
-      "directionFuzz": 0.25,
-      "gravity": [0.0, -2.0],
+
+      "spawnRate": 0,
+      "burstCount": 25,
+
+      "size": 0.35,
+      "endSize": 0.15,
+
+      "minLifetime": 1.2,
+      "maxLifetime": 2.8,
+      
+      "minSpeed": 3.5,
+      "maxSpeed": 9.0,
+
+      "direction": [1.0, 0.35],
+      "directionFuzz": 0.35,
+      "gravity": [0.0, -10.0],
+
       "fadeOut": true,
-      "shrinkOverTime": true,
-      "burstCount": 0
+      "shrinkOverTime": true
     },
 
     "Rain": {
       "texturePath": "assets/UI/AP_Crystal(old).png",
-      "tint": [0.5, 0.7, 1.0, 0.8],
-      "endTint": [0.5, 0.7, 1.0, 0.8],
+      "tint": [0.55, 0.75, 1.0, 0.55],
+      "endTint": [0.55, 0.75, 1.0, 0.2],
       "layer": 3,
-      "spawnRate": 10,
-      "size": 5,
-      "endSize": 10,
-      "minLifetime": 1.0,
-      "maxLifetime": 2.0,
-      "minSpeed": 3.0,
-      "maxSpeed": 5.0,
+
+      "spawnRate": 35,
+      "burstCount": 0,
+
+      "size": 0.25,
+      "endSize": 0.25,
+
+      "minLifetime": 0.6,
+      "maxLifetime": 1.1,
+
+      "minSpeed": 6.0,
+      "maxSpeed": 10.0,
+
       "direction": [0.0, -1.0],
-      "directionFuzz": 0.1,
-      "gravity": [0.0, -15.0],
-      "fadeOut": false,
-      "shrinkOverTime": false,
-      "burstCount": 0
+      "directionFuzz": 0.12,
+      "gravity": [0.0, -28.0],
+
+      "fadeOut": true,
+      "shrinkOverTime": false
     }
   },
 
