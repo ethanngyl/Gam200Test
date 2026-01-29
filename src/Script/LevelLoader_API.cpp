@@ -2750,6 +2750,40 @@ namespace Framework {
     }
 
     // ========================================================================
+    // GRID CONVERSION API
+    // ========================================================================
+
+    /**
+     * @brief Convert grid tile coordinates to world position
+     * @param tileX Grid X coordinate
+     * @param tileY Grid Y coordinate
+     * @return worldX, worldY (two return values, or nil if invalid)
+     *
+     * Usage: local worldX, worldY = TileToWorld(5, 10)
+     */
+    int LevelLoader::Lua_TileToWorld(lua_State* L) {
+        int tileX = static_cast<int>(luaL_checknumber(L, 1));
+        int tileY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ tileX, tileY };
+
+        // Validate coordinates
+        if (!Framework::InBounds(coord)) {
+            LOG_WARN("LevelLoader", "TileToWorld: Coordinates (%d, %d) out of bounds", tileX, tileY);
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        // Convert to world position
+        Framework::Vector2D worldPos = Framework::TileToWorld(coord);
+
+        lua_pushnumber(L, worldPos.x);
+        lua_pushnumber(L, worldPos.y);
+        return 2;
+    }
+
+    // ========================================================================
     // SAVE/LOAD API - JSON Serialization for Lua
     // ========================================================================
 
