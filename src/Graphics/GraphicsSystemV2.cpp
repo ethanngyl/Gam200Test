@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
@@ -987,13 +987,24 @@ namespace Framework {
                 if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
                 // 3. Bind Texture (CRITICAL FIX for switching between Wood and Button)
-                if (batchBase->texture.IsValid()) {
-                    glBindTextureUnit(0, batchBase->texture.GetID());
-                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                if (batchBase->texture.IsValid())
+                {
+                    Texture* tex = resourceManager.GetTexture(batchBase->texture);
+                    if (tex)
+                    {
+                        glBindTextureUnit(0, tex->GetID()); // <-- bind the REAL OpenGL texture ID
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                    }
+                    else
+                    {
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
+                    }
                 }
-                else {
+                else
+                {
                     glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
                 }
+
 
                 // 4. Draw
                 Mesh* mesh = resourceManager.GetMesh(batchBase->mesh);
