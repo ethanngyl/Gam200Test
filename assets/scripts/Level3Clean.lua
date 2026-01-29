@@ -96,6 +96,9 @@ function OnInit()
     LoadAnimationConfig("assets/JSON/animations.json")
     LoadPlayerAnimation("Idle_front")
 
+    -- Initialization particle system
+    InitializeParticles()
+
     -- Setup entities
     SetupParty()  -- Changed from SetupPlayer() to SetupParty()
     SetupEnemies()
@@ -139,6 +142,13 @@ function OnUpdate(dt)
 
     -- Update audio
     UpdateAudio(dt)
+
+     -- Spawn particles when player attacks
+    if playerAttackedThisFrame then
+        local x, y = GetPlayerGridPosition(playerID)
+        local worldX, worldY = GetEntityWorldPosition(playerID)
+        CreateParticleEffect("Sparks", worldX, worldY, 1.0)
+    end
 
     -- Handle pause menu (always runs)
     PauseMenu.Update(dt)
@@ -210,6 +220,11 @@ function OnDestroy()
     Log("Level 3 cleanup...")
     Log("========================================")
 
+     -- Cleanup particle emitters
+    if rainEmitter and rainEmitter > 0 then
+        DestroyParticleEmitter(rainEmitter)
+    end
+
     -- Cleanup party UI
     if partyUI then
         partyUI:OnDestroy()
@@ -265,6 +280,27 @@ function InitializeAudio()
     else
         Log("WARNING: Background music 'igbgm' not found")
     end
+end
+
+-- ============================================================================
+-- HELPER FUNCTIONS - Initialize Particles
+-- ============================================================================
+function InitializeParticles()
+    Log("========================================")
+    Log("Initializing particle effects...")
+    Log("========================================")
+    
+    -- Create ambient particles
+    rainEmitter = CreateParticleEmitter("Rain", 0, 3)
+    if rainEmitter > 0 then
+        Log("  Rain emitter created (ID: " .. rainEmitter .. ")")
+    end
+    
+    -- Create smoke effects at torches
+    torchSmoke1 = CreateParticleEmitter("Smoke", -3, 0.5)
+    torchSmoke2 = CreateParticleEmitter("Smoke", 3, 0.5)
+    
+    Log("Particle effects initialized")
 end
 
 -- ============================================================================

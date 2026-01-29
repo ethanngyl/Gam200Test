@@ -58,19 +58,27 @@ namespace Framework
 
     struct Particle : public Component<Particle>
     {
-        // Transform
-        // Vector2D position{ 0.0f, 0.0f };   // particle position
-
-        // Velocity
+        // Movement
         Vector2D velocity{ 0.0f, 0.0f };   // particle movement
 
         // Lifetime
         float lifetime = 0.0f;      // seconds remaining
-        float age = 0.0f;           // expired particle
+        float age = 0.0f;           // seconds alive
+        float maxLifetime = 0.0f;   // total lifetime (for interpolation)
 
-        // Appearance
-        Vector2D size{ 0.0f, 0.0f };                         // visual size
-        float r{ 0.0f }, g{ 0.0f }, b{ 0.0f }, a{ 0.0f };    // RGBA color
+        // Visual interpolation
+        glm::vec4 startTint{ 1.0f, 1.0f, 1.0f, 1.0f };
+        glm::vec4 endTint{ 1.0f, 1.0f, 1.0f, 0.0f };
+        float startSize = 1.0f;
+        float endSize = 0.0f;
+
+        // Physics
+        Vector2D gravity{ 0.0f, 0.0f };
+
+        // Behavior flags
+        bool fadeOut = true;
+        bool shrinkOverTime = false;
+        bool growOverTime = false;
     };
 
     struct ProjectileMovement : public Component<Movement>

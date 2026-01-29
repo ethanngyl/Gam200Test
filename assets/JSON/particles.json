@@ -1,0 +1,90 @@
+{
+  "settings": {
+    "Smoke": {
+      "texturePath": "assets/UI/AP_Crystal.png",
+      "tint": [0.8, 0.8, 0.8, 0.6],
+      "endTint": [0.4, 0.4, 0.4, 0.0],
+      "layer": 5,
+      "spawnRate": 25,
+      "size": 1,
+      "endSize": 5,
+      "minLifetime": 1.5,
+      "maxLifetime": 3.5,
+      "minSpeed": 0.05,
+      "maxSpeed": 0.15,
+      "direction": [0.0, 1.0],
+      "directionFuzz": 0.6,
+      "gravity": [0.0, 0.1],
+      "fadeOut": true,
+      "shrinkOverTime": true,
+      "burstCount": 0
+    },
+
+    "Explosion": {
+      "texturePath": "assets/UI/AP_Crystal.png",
+      "tint": [1.0, 0.6, 0.2, 1.0],
+      "endTint": [1.0, 0.2, 0.0, 0.0],
+      "layer": 6,
+      "spawnRate": 0,
+      "size": 14,
+      "endSize": 0,
+      "minLifetime": 0.2,
+      "maxLifetime": 0.6,
+      "minSpeed": 1.0,
+      "maxSpeed": 3.0,
+      "direction": [0.0, 0.0],
+      "directionFuzz": 1.0,
+      "gravity": [0.0, -0.5],
+      "fadeOut": true,
+      "shrinkOverTime": true,
+      "burstCount": 60
+    },
+
+    "Sparks": {
+      "texturePath": "assets/UI/AP_Crystal.png",
+      "tint": [1.0, 1.0, 0.4, 1.0],
+      "endTint": [1.0, 0.5, 0.0, 0.0],
+      "layer": 7,
+      "spawnRate": 0,
+      "size": 6,
+      "endSize": 0,
+      "minLifetime": 0.3,
+      "maxLifetime": 1.0,
+      "minSpeed": 1.5,
+      "maxSpeed": 4.0,
+      "direction": [1.0, 0.4],
+      "directionFuzz": 0.25,
+      "gravity": [0.0, -2.0],
+      "fadeOut": true,
+      "shrinkOverTime": true,
+      "burstCount": 40
+    },
+
+    "Rain": {
+      "texturePath": "assets/UI/AP_Crystal.png",
+      "tint": [0.5, 0.7, 1.0, 0.8],
+      "endTint": [0.5, 0.7, 1.0, 0.8],
+      "layer": 3,
+      "spawnRate": 200,
+      "size": 3,
+      "endSize": 3,
+      "minLifetime": 1.0,
+      "maxLifetime": 2.0,
+      "minSpeed": 3.0,
+      "maxSpeed": 5.0,
+      "direction": [0.0, -1.0],
+      "directionFuzz": 0.1,
+      "gravity": [0.0, -15.0],
+      "fadeOut": false,
+      "shrinkOverTime": false,
+      "burstCount": 0
+    }
+  },
+
+  "emitters": [
+    { "setting": "Smoke",     "emitter": [0.0, 0.0] },
+    { "setting": "Explosion", "emitter": [0.5, 0.0] },
+    { "setting": "Sparks",    "emitter": [-0.5, 0.0] },
+    { "setting": "Rain",      "emitter": [0.0, 5.0] }
+  ]
+}

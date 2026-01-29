@@ -206,6 +206,13 @@ namespace Framework {
         static int Lua_GetAnimationGroup(lua_State* L);
         static int Lua_GetEntityMovementDirection(lua_State* L);
 
+        static int Lua_CreateParticleEmitter(lua_State* L);
+        static int Lua_DestroyParticleEmitter(lua_State* L);
+        static int Lua_SetParticleEmitterPosition(lua_State* L);
+        static int Lua_SetParticleEmitterActive(lua_State* L);
+        static int Lua_SpawnParticleBurst(lua_State* L);
+        static int Lua_CreateParticleEffect(lua_State* L);
+
         // Party System - Entity-Based APIs
         static int Lua_GetEntityAP(lua_State* L);
         static int Lua_ConsumeEntityAP(lua_State* L);

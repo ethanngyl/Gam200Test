@@ -506,6 +506,14 @@ namespace Framework {
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
         lua_register(L, "GetEntityMovementDirection", Lua_GetEntityMovementDirection);
 
+        // Particles
+        lua_register(L, "CreateParticleEmitter", Lua_CreateParticleEmitter);
+        lua_register(L, "DestroyParticleEmitter", Lua_DestroyParticleEmitter);
+        lua_register(L, "SetParticleEmitterPosition", Lua_SetParticleEmitterPosition);
+        lua_register(L, "SetParticleEmitterActive", Lua_SetParticleEmitterActive);
+        lua_register(L, "SpawnParticleBurst", Lua_SpawnParticleBurst);
+        lua_register(L, "CreateParticleEffect", Lua_CreateParticleEffect);
+
         // Party System - Entity-Based APIs
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
@@ -976,6 +984,87 @@ namespace Framework {
 
         auto& anim = em->GetComponent<SpriteAnimation>(e);
         lua_pushinteger(L, static_cast<int>(anim.group));
+        return 1;
+    }
+
+    int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
+        const char* presetName = luaL_checkstring(L, 1);
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+
+        auto* psm = CORE ? CORE->GetParticleSystemManager() : nullptr;
+        if (!psm) {
+            lua_pushinteger(L, -1);
+            return 1;
+        }
+
+        int emitterId = psm->CreateEmitter(presetName, x, y);
+        lua_pushinteger(L, emitterId);
+        return 1;
+    }
+
+    int LevelLoader::Lua_DestroyParticleEmitter(lua_State* L) {
+        int emitterId = luaL_checkinteger(L, 1);
+
+        auto* psm = CORE ? CORE->GetParticleSystemManager() : nullptr;
+        if (psm) {
+            psm->DestroyEmitter(emitterId);
+        }
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetParticleEmitterPosition(lua_State* L) {
+        int emitterId = luaL_checkinteger(L, 1);
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+
+        auto* psm = CORE ? CORE->GetParticleSystemManager() : nullptr;
+        if (psm) {
+            psm->SetEmitterPosition(emitterId, x, y);
+        }
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetParticleEmitterActive(lua_State* L) {
+        int emitterId = luaL_checkinteger(L, 1);
+        bool active = lua_toboolean(L, 2);
+
+        auto* psm = CORE ? CORE->GetParticleSystemManager() : nullptr;
+        if (psm) {
+            psm->SetEmitterActive(emitterId, active);
+        }
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_SpawnParticleBurst(lua_State* L) {
+        int emitterId = luaL_checkinteger(L, 1);
+        int count = luaL_checkinteger(L, 2);
+
+        auto* psm = CORE ? CORE->GetParticleSystemManager() : nullptr;
+        if (psm) {
+            psm->SpawnBurst(emitterId, count);
+        }
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_CreateParticleEffect(lua_State* L) {
+        const char* presetName = luaL_checkstring(L, 1);
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+        float duration = luaL_optnumber(L, 4, 0.0f);
+
+        auto* psm = CORE ? CORE->GetParticleSystemManager() : nullptr;
+        if (!psm) {
+            lua_pushinteger(L, -1);
+            return 1;
+        }
+
+        int emitterId = psm->CreateTemporaryEffect(presetName, x, y, duration);
+        lua_pushinteger(L, emitterId);
         return 1;
     }
 
