@@ -407,6 +407,12 @@ function OnUpdate(dt)
 
     print("[PlayerScript] Movement attempted! Target: (" .. targetX .. ", " .. targetY .. ")")
 
+    -- Clear attack preview if player moves
+    if attackPreviewActive then
+        print("[PlayerScript] Clearing attack preview due to movement")
+        ClearAttackPreview()
+    end
+
     -- ========================================================================
     -- MOVEMENT VALIDATION
     -- ========================================================================
@@ -601,17 +607,21 @@ function ShowAttackPreview()
                 if worldX and worldY then
                     -- Spawn attack indicator sprite at this tile
                     -- Note: SpawnSprite returns entity ID
+                    -- Use 0.95 size to leave a small gap between tiles for visibility
                     local indicatorID = SpawnSprite(
                         "assets/TileMap/Attack_Indicator.png",
                         worldX, worldY,
-                        1.0, 1.0,  -- tile size (1.0 x 1.0)
-                        1  -- layer 1 (above ground)
+                        0.95, 0.95,  -- Slightly smaller than tile (0.95 x 0.95)
+                        2  -- layer 2 (above tiles, below characters)
                     )
 
                     if indicatorID and indicatorID > 0 then
+                        -- Make the indicator semi-transparent red
+                        SetSpriteColor(indicatorID, 1.0, 0.0, 0.0, 0.5)  -- Red with 50% opacity
+
                         -- Store the indicator entity ID so we can destroy it later
                         table.insert(attackPreviewTiles, indicatorID)
-                        print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at (" .. tile.x .. ", " .. tile.y .. ")")
+                        print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at grid(" .. tile.x .. ", " .. tile.y .. ") world(" .. worldX .. ", " .. worldY .. ")")
                     else
                         print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
                     end
