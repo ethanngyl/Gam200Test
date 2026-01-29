@@ -82,8 +82,8 @@ namespace Framework {
 		if (!entityManager) return;
 
 		// spawn new particles over time
-		if (spawnRate > 0.0f) {
-			spawnAcc += dt * spawnRate; // how many particles we "owe"
+		if (settings.spawnRate > 0.0f) {
+			spawnAcc += dt * settings.spawnRate; // how many particles we "owe"
 			while (spawnAcc >= 1.0f) {
 				CreateParticle();
 				spawnAcc -= 1.0f;

@@ -1,13 +1,13 @@
 {
   "settings": {
     "Smoke": {
-      "texturePath": "assets/UI/AP_Crystal.png",
+      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [0.8, 0.8, 0.8, 0.6],
       "endTint": [0.4, 0.4, 0.4, 0.0],
       "layer": 5,
-      "spawnRate": 25,
-      "size": 1,
-      "endSize": 5,
+      "spawnRate": 10,
+      "size": 5,
+      "endSize": 10,
       "minLifetime": 1.5,
       "maxLifetime": 3.5,
       "minSpeed": 0.05,
@@ -21,15 +21,15 @@
     },
 
     "Explosion": {
-      "texturePath": "assets/UI/AP_Crystal.png",
+      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [1.0, 0.6, 0.2, 1.0],
       "endTint": [1.0, 0.2, 0.0, 0.0],
       "layer": 6,
-      "spawnRate": 0,
-      "size": 14,
-      "endSize": 0,
-      "minLifetime": 0.2,
-      "maxLifetime": 0.6,
+      "spawnRate": 10,
+      "size": 5,
+      "endSize": 10,
+      "minLifetime": 9.2,
+      "maxLifetime": 20.6,
       "minSpeed": 1.0,
       "maxSpeed": 3.0,
       "direction": [0.0, 0.0],
@@ -37,17 +37,17 @@
       "gravity": [0.0, -0.5],
       "fadeOut": true,
       "shrinkOverTime": true,
-      "burstCount": 60
+      "burstCount": 0
     },
 
     "Sparks": {
-      "texturePath": "assets/UI/AP_Crystal.png",
+      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [1.0, 1.0, 0.4, 1.0],
       "endTint": [1.0, 0.5, 0.0, 0.0],
       "layer": 7,
-      "spawnRate": 0,
-      "size": 6,
-      "endSize": 0,
+      "spawnRate": 10,
+      "size": 5,
+      "endSize": 10,
       "minLifetime": 0.3,
       "maxLifetime": 1.0,
       "minSpeed": 1.5,
@@ -57,17 +57,17 @@
       "gravity": [0.0, -2.0],
       "fadeOut": true,
       "shrinkOverTime": true,
-      "burstCount": 40
+      "burstCount": 0
     },
 
     "Rain": {
-      "texturePath": "assets/UI/AP_Crystal.png",
+      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [0.5, 0.7, 1.0, 0.8],
       "endTint": [0.5, 0.7, 1.0, 0.8],
       "layer": 3,
-      "spawnRate": 200,
-      "size": 3,
-      "endSize": 3,
+      "spawnRate": 10,
+      "size": 5,
+      "endSize": 10,
       "minLifetime": 1.0,
       "maxLifetime": 2.0,
       "minSpeed": 3.0,

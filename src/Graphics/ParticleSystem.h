@@ -30,7 +30,7 @@ namespace Framework {
 		void Update(float dt);
 
 		void SetEmitter(float x, float y) { emitter = { x, y }; }
-		void SetSettings(const Settings& s) { settings = s; spawnRate = s.spawnRate; }
+		void SetSettings(const Settings& s) { settings = s; }
 
 		const Settings& GetSettings() const { return settings; }
 		Vector2D GetEmitter() const { return emitter; }
@@ -48,7 +48,6 @@ namespace Framework {
 		std::vector<Entity> particles;
 		Vector2D emitter { 0.0f, 0.0f };
 				
-		float spawnRate = 0.0f;  // particles per second
 		float spawnAcc = 0.0f;   // accumulator
 		bool active = true;	     // toggle controlled emitter
 
