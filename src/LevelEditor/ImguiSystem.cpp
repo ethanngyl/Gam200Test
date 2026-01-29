@@ -686,6 +686,11 @@ namespace Framework {
                     {
                         std::filesystem::copy_file(srcPath, destPath);
                         forceRescan = true;
+
+                        if (graphicsSystem && IsTextureFile(destPath))
+                        {
+                            graphicsSystem->GetResourceManager().LoadTexture(destPath.generic_string());
+                        }
                     }
                     catch (const std::exception& e)
                     {
@@ -726,7 +731,7 @@ namespace Framework {
             auto const path = e.path();
             std::string const label = path.filename().string();
             std::string const ImGuilabel = e.is_directory() ? "->" + label : label;
-            std::string filePath = "assets/" + label;
+            std::string filePath = path.generic_string();
 
             if (ImGui::Selectable(ImGuilabel.c_str())) {
                 if (e.is_directory()) {
@@ -904,7 +909,7 @@ namespace Framework {
                             // 3. FORCE Editor UI to stay ON (Safety override)
                             this->enabled = true;
 
-                            // 4. Reset Camera (Optional)
+                            // 4. Reset Camera 
                             if (graphicsSystem) graphicsSystem->SetCameraPosition(glm::vec3(0, 0, 0));
                         }
                         else {
