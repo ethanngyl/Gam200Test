@@ -47,6 +47,8 @@ Safety:
 #include "Debugger/Trace.h"
 #include "Input/Input.h"
 #include "imgui.h"
+#include "Core/Core.h"
+#include "LevelEditor/ImguiSystem.h"
 namespace Framework {
 
     // Check if a string looks like a file path (used to decide whether to load texture by name)
@@ -762,6 +764,15 @@ namespace Framework {
                 cmd.tint = mr.tint;
                 cmd.layer = mr.layer;
                 cmd.orderInLayer = mr.orderInLayer;
+
+                if (Framework::CORE && Framework::CORE->IsEditorMode())
+                {
+                    ImGuiSystem* imgui = Framework::CORE->GetImGuiSystem();
+                    if (imgui && !imgui->IsRenderLayerVisible(cmd.layer))
+                    {
+                        continue;
+                    }
+                }
             }
 
              //---------- SPRITE ----------
@@ -781,6 +792,15 @@ namespace Framework {
 
                 cmd.tint = sp.tint;  // Use Sprite's tint instead of hardcoded white
                 cmd.layer = sp.layer;
+
+                if (Framework::CORE && Framework::CORE->IsEditorMode())
+                {
+                    ImGuiSystem* imgui = Framework::CORE->GetImGuiSystem();
+                    if (imgui && !imgui->IsRenderLayerVisible(cmd.layer))
+                    {
+                        continue;
+                    }
+                }
             }
 
             // ============================================================================
@@ -884,9 +904,11 @@ namespace Framework {
             // Prefer the configured column count if available
             const int cols = (anim.columns > 0) ? anim.columns : (texW / anim.frameWidth);
 
-            const int frame = anim.currentFrame % max(1, anim.frameCount);
-            const int x = frame % cols;
-            const int y = frame / cols;
+            // Calculate actual frame index: startFrame + (currentFrame within range)
+            const int frameInRange = anim.currentFrame % max(1, anim.frameCount);
+            const int actualFrame = anim.startFrame + frameInRange;
+            const int x = actualFrame % cols;
+            const int y = actualFrame / cols;
 
             // Treat uvShrinkPx as pixels trimmed from each side of the frame
             float shrink = anim.uvShrinkPx;
@@ -956,13 +978,24 @@ namespace Framework {
                 if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
                 // 3. Bind Texture (CRITICAL FIX for switching between Wood and Button)
-                if (batchBase->texture.IsValid()) {
-                    glBindTextureUnit(0, batchBase->texture.GetID());
-                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                if (batchBase->texture.IsValid())
+                {
+                    Texture* tex = resourceManager.GetTexture(batchBase->texture);
+                    if (tex)
+                    {
+                        glBindTextureUnit(0, tex->GetID()); // <-- bind the REAL OpenGL texture ID
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                    }
+                    else
+                    {
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
+                    }
                 }
-                else {
+                else
+                {
                     glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
                 }
+
 
                 // 4. Draw
                 Mesh* mesh = resourceManager.GetMesh(batchBase->mesh);
@@ -1187,6 +1220,19 @@ namespace Framework {
                 texture->Bind(0);
                 hasTexture = true;
             }
+        }
+
+        // Set grayscale amount if provided by material parameters
+        float grayAmount = 0.0f;
+        auto grayIt = material->parameters.find("grayAmount");
+        if (grayIt != material->parameters.end()) {
+            if (auto value = std::get_if<float>(&grayIt->second)) {
+                grayAmount = std::clamp(*value, 0.0f, 1.0f);
+            }
+        }
+        GLint grayLoc = glGetUniformLocation(shader->GetID(), "uGrayAmount");
+        if (grayLoc != -1) {
+            glUniform1f(grayLoc, grayAmount);
         }
 
         // Set color tint (combine material tint with instance tint)

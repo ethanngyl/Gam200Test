@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          LevelLoader.h
  Author:        GE YONGQI
@@ -139,6 +139,7 @@ namespace Framework {
         // Camera control
         static int Lua_SetCameraPosition(lua_State* L);
         static int Lua_SetCameraZoom(lua_State* L);
+        static int Lua_SetCameraFollowTarget(lua_State* L);  // Set which entity camera follows
         static int Lua_GetFramebufferSize(lua_State* L);
 
         // Engine control
@@ -177,7 +178,10 @@ namespace Framework {
 
         // AP Indicator / Entity Management API
         static int Lua_SpawnSprite(lua_State* L);
+        static int Lua_SpawnAnimatedSprite(lua_State* L);  // Spawn sprite with animation sheet
+        static int Lua_SetSpriteAnimationSheet(lua_State* L);  // Add animation to existing sprite
         static int Lua_SetSpriteColor(lua_State* L);
+        static int Lua_SetSpriteGray(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);
         static int Lua_SetSpriteVisibility(lua_State* L);
@@ -201,6 +205,7 @@ namespace Framework {
         static int Lua_SetAnimationFlipX(lua_State* L);
         static int Lua_SetAnimationPlaying(lua_State* L);
         static int Lua_SetAnimationLoop(lua_State* L);
+        static int Lua_SetAnimationFrameRange(lua_State* L);  // Set animation frame range (startFrame, frameCount)
         static int Lua_GetAnimationGroup(lua_State* L);
         static int Lua_GetEntityMovementDirection(lua_State* L);
 
@@ -210,6 +215,7 @@ namespace Framework {
         static int Lua_RefillEntityAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);
+        static int Lua_SetActiveCharacter(lua_State* L);
         static int Lua_IsActiveCharacter(lua_State* L);
 
         static int Lua_GetPlayerAttackAP(lua_State* L);
@@ -227,6 +233,9 @@ namespace Framework {
         static int Lua_GetTurnIndex(lua_State* L);
         static int Lua_EndPlayerTurn(lua_State* L);
         static int Lua_EndEnemyTurn(lua_State* L);
+        static int Lua_EndCharacterTurn(lua_State* L);  // Party turn system - bridge to level Lua state
+        static int Lua_IsUIAnimating(lua_State* L);     // Check if UI is animating - bridge to level Lua state
+        static int Lua_IsInTurnTransition(lua_State* L); // Check if in turn transition cooldown - bridge to level Lua state
         static int Lua_SetPlayerFlipX(lua_State* L);
         static int Lua_SetGridMovementEnabled(lua_State* L);
         static int Lua_HasChestAtTile(lua_State* L);
@@ -237,6 +246,7 @@ namespace Framework {
         static int Lua_GetEnemyAP(lua_State* L);
         static int Lua_RefillEnemyAP(lua_State* L);
         static int Lua_GetEntityGridPosition(lua_State* L);
+        static int Lua_GetEntityWorldPosition(lua_State* L);  // Get world coords from Transform
         static int Lua_MoveEntityToTile(lua_State* L);
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);

@@ -10,6 +10,7 @@ local UIManager = {}
 
 -- Import UI components
 local APIndicatorUI = require("UI/APIndicatorUI")
+local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 
@@ -24,6 +25,18 @@ UIManager.cameraMoveThreshold = 0.01
 -- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
+
+-- Helper function to get active character's movement AP (for party system)
+local function GetActiveCharacterAP()
+    if GetActiveCharacter then
+        local activeEntityID = GetActiveCharacter()
+        if activeEntityID and activeEntityID > 0 then
+            return GetEntityAP(activeEntityID)
+        end
+    end
+    -- Fallback to old single-player API
+    return GetPlayerAP()
+end
 
 function UIManager.Init(config)
     config = config or {}
@@ -41,12 +54,20 @@ function UIManager.Init(config)
         offsetX = -0.64,
         offsetY = -0.42,
         layer = 4,
-        emptyTexture = "assets/UI/MovP_Black.png",
-        filledTexture = "assets/UI/MovP.png"
+        filledTexture = "assets/UI/MovP.png",
+        useTint = true,
+        useGray = true,
+        emptyGrayAmount = 1.0,
+        filledGrayAmount = 0.0,
+        emptyTint = { r = 0.45, g = 0.45, b = 0.45 },
+        getAPFunc = GetActiveCharacterAP  -- Use active character's AP
     })
 
     -- Create Attack AP Indicator
-    UIManager.components.attackAP = APIndicatorUI:New()
+    -- AP_Crystal.png is a 4x4 sprite sheet with two animation sequences:
+    --   Rows 1-2 (frames 0-7): Idle/filled animation (loops)
+    --   Rows 3-4 (frames 8-15): Consume animation (plays once when AP spent)
+    UIManager.components.attackAP = AttackAPIndicatorUI:New()
     UIManager.components.attackAP:Init({
         maxAP = 3,
         size = 0.06,
@@ -54,30 +75,27 @@ function UIManager.Init(config)
         offsetX = -0.64,
         offsetY = -0.32,
         layer = 4,
-        emptyTexture = "assets/UI/AP_Empty.png",
-        filledTexture = "assets/UI/AP_Crystal.png"
+        filledTexture = "assets/UI/AP_Crystal.png",
+        useTint = true,
+        useGray = true,
+        emptyGrayAmount = 1.0,
+        filledGrayAmount = 0.0,
+        emptyTint = { r = 0.45, g = 0.45, b = 0.45 },
+        filledTint = { r = 0.75, g = 0.85, b = 1.0 },
+        -- Sprite sheet config (4 columns x 5 rows, but only 4 rows have content)
+        -- Image is 1280x1600, with 320x320 frames. Bottom row (row 5) is empty.
+        useAnimatedSprite = true,
+        spriteRows = 5,  -- 1600 / 320 = 5 rows (last row is empty)
+        spriteCols = 4,  -- 1280 / 320 = 4 columns
+        -- Filled animation: frames 0-7 (rows 1-2), loops
+        filledStartFrame = 0,
+        filledFrameCount = 8,
+        -- Consume animation: frames 8-19 (rows 3-5), plays once
+        consumeStartFrame = 8,
+        consumeFrameCount = 12,  -- 3 rows × 4 columns = 12 frames
+        frameTime = 0.1,     -- 100ms per frame
+        animationLoop = true
     })
-
-    -- Override GetPlayerAP to use GetPlayerAttackAP for attack component
-    local originalUpdate = UIManager.components.attackAP.Update
-    UIManager.components.attackAP.Update = function(self, dt, cameraPos)
-        if not self.enabled then return end
-
-        -- Get attack AP instead of movement AP
-        local currentAP, maxPlayerAP = GetPlayerAttackAP()
-        if not currentAP then return end
-
-        -- Update sprite positions if camera moved
-        if self:ShouldUpdatePosition(cameraPos) then
-            self:UpdatePositions(cameraPos)
-        end
-
-        -- Handle AP changes
-        if currentAP ~= self.lastKnownAP then
-            self:HandleAPChange(currentAP, cameraPos)
-            self.lastKnownAP = currentAP
-        end
-    end
 
     -- Create Health UI
     UIManager.components.health = HealthUI:New()
@@ -134,6 +152,23 @@ function UIManager.Update(dt)
             component:Update(dt, cameraPos)
         end
     end
+end
+
+-- ============================================================================
+-- ANIMATION STATE QUERIES
+-- ============================================================================
+
+function UIManager.IsAPAnimating()
+    if not UIManager.initialized then
+        return false
+    end
+
+    -- Check if movement AP is animating
+    if UIManager.components.movementAP and UIManager.components.movementAP.IsAnimating then
+        return UIManager.components.movementAP:IsAnimating()
+    end
+
+    return false
 end
 
 -- ============================================================================

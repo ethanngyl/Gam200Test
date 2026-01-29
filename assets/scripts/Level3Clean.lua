@@ -8,11 +8,24 @@
 -- Party system: 3 characters act sequentially before enemy turn
 -- ============================================================================
 
+-- CRITICAL: Verify script is loading
+print("============================================================")
+print("========== Level3Clean.lua SCRIPT LOADING STARTED ==========")
+print("============================================================")
+
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
+local PopupManager = require("UI/PopupManager")
+
+-- Export UIManager globally so entity scripts can access it
+-- (Entity scripts run in separate Lua states and need global access)
+_G.UIManager = UIManager
+_G.PopupManager = PopupManager
 
 -- Load Party Turn Manager (REQUIRED for party system)
+print("[Level3Clean] Loading PartyTurnManager.lua...")
 dofile("assets/scripts/PartyTurnManager.lua")
+print("[Level3Clean] PartyTurnManager.lua loaded successfully")
 
 -- ============================================================================
 -- LEVEL STATE
@@ -42,9 +55,15 @@ local audioConfig = nil
 -- ============================================================================
 
 function OnInit()
+    print("============================================================")
+    print("========== Level3Clean.lua OnInit() CALLED ==========")
+    print("============================================================")
+
     Log("========================================")
     Log("LEVEL 3: Tactical Grid Level (REFACTORED)")
     Log("========================================")
+
+    print("[Level3Clean] After Log() calls - Log system working")
 
     -- Initialize pause menu
     PauseMenu.Init()
@@ -85,6 +104,9 @@ function OnInit()
 
     -- Initialize UI system (replaces 500+ lines of UI code!)
     UIManager.Init()
+
+    -- Initialize popup system for one-time animations
+    PopupManager.Init()
 
     -- Setup Party UI (shows all 3 characters)
     SetupPartyUI()
@@ -163,8 +185,14 @@ function OnUpdate(dt)
     -- Update previous turn tracker
     previousTurn = currentTurn
 
+    -- Update party turn manager (handles turn transition cooldown)
+    UpdatePartyTurnManager(dt)
+
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
+
+    -- Update popup animations (damage numbers, status effects, etc.)
+    PopupManager.Update(dt)
 end
 
 -- ============================================================================
@@ -174,6 +202,9 @@ end
 function OnDraw()
     -- Render pause menu
     PauseMenu.Draw()
+
+    -- Render popup animations (damage numbers, status effects, etc.)
+    PopupManager.Draw()
 
     -- Show editor mode indicator
     if IsEditorMode() then
@@ -203,6 +234,9 @@ function OnDestroy()
 
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
     UIManager.Destroy()
+
+    -- Clear all popup animations
+    PopupManager.Clear()
 
     -- Reset state
     audioConfig = nil
@@ -277,38 +311,41 @@ end
 -- ============================================================================
 
 function SetupParty()
+    print("============================================================")
+    print("========== SetupParty() CALLED ==========")
+    print("============================================================")
+
     Log("========================================")
     Log("Setting up 3-character party...")
     Log("========================================")
 
-    -- TileMap.json now spawns 3 players: P, Q, R at Row24 positions 8, 9, 10
-    -- All 3 are created by C++ with full ECS components (AP, Health, Movement, CircleCollider)
+    print("[SetupParty] After Log() calls")
 
     -- Disable C++ grid movement (Lua script will handle movement instead)
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    Log("!!! CALLING SetGridMovementEnabled(false) !!!")
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    print("[SetupParty] Step 1: Calling SetGridMovementEnabled(false)...")
     SetGridMovementEnabled(false)
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    Log("!!! SetGridMovementEnabled(false) COMPLETED !!!")
-    Log("!!! C++ grid movement should now be DISABLED !!!")
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    print("[SetupParty] Step 1: DONE")
 
     -- Find all player entities from tilemap
-    -- TileMap.json Row24: "W1010W01QPR10W010101W" spawns 3 players (Q, P, R)
+    print("[SetupParty] Step 2: Calling GetAllPlayers()...")
     local allPlayers = GetAllPlayers()
+    print("[SetupParty] Step 2: GetAllPlayers() returned")
 
-    if not allPlayers or #allPlayers == 0 then
-        Log("ERROR: No players found in tilemap!")
+    if not allPlayers then
+        print("[SetupParty] ERROR: GetAllPlayers() returned nil!")
         return false
     end
 
-    Log(" Found " .. #allPlayers .. " player(s) in tilemap:")
+    print("[SetupParty] Step 3: Found " .. #allPlayers .. " players")
+
+    if #allPlayers == 0 then
+        print("[SetupParty] ERROR: No players in table!")
+        return false
+    end
 
     -- Verify we have exactly 3 players
     if #allPlayers < 3 then
-        Log("WARNING: Expected 3 players but found " .. #allPlayers)
-        Log("Make sure TileMap.json Row24 has P, Q, and R symbols")
+        print("[SetupParty] ERROR: Expected 3 players but found " .. #allPlayers)
         return false
     end
 
@@ -317,53 +354,61 @@ function SetupParty()
     local player2 = allPlayers[2]
     local player3 = allPlayers[3]
 
-    Log("  Player 1 (Warrior): Entity " .. player1)
-    Log("  Player 2 (Mage):    Entity " .. player2)
-    Log("  Player 3 (Rogue):   Entity " .. player3)
+    print("[SetupParty] Step 4: Player entities:")
+    print("  Player 1: " .. tostring(player1))
+    print("  Player 2: " .. tostring(player2))
+    print("  Player 3: " .. tostring(player3))
 
     -- Attach scripts to all 3 players
+    print("[SetupParty] Step 5: Attaching PlayerScript.lua to all 3 players...")
     for i = 1, 3 do
         local playerID = allPlayers[i]
+        print("[SetupParty]   Attaching to Player " .. i .. " (Entity " .. playerID .. ")...")
         local scriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
 
         if scriptSuccess then
-            Log("  [Player " .. i .. "] Script attached successfully")
+            print("[SetupParty]   SUCCESS: Player " .. i .. " script attached")
         else
-            Log("  [Player " .. i .. "] ERROR: Failed to attach script")
+            print("[SetupParty]   ERROR: Failed to attach script to Player " .. i)
             SetGridMovementEnabled(true)
             return false
         end
 
         -- Debug: Check components
+        print("[SetupParty]   Checking AP/HP for Player " .. i .. "...")
         local ap, maxap = GetEntityAP(playerID)
         local hp, maxhp = GetEntityHP(playerID)
-        Log("  [Player " .. i .. "] AP: " .. ap .. "/" .. maxap .. ", HP: " .. hp .. "/" .. maxhp)
+        print("[SetupParty]   Player " .. i .. " - AP: " .. tostring(ap) .. "/" .. tostring(maxap) .. ", HP: " .. tostring(hp) .. "/" .. tostring(maxhp))
     end
+
+    print("[SetupParty] Step 6: All scripts attached successfully")
 
     -- Initialize party system with all 3 real players
     partyMembers = {player1, player2, player3}
 
+    print("[SetupParty] Step 7: Calling InitializeParty()...")
     local partyInitialized = InitializeParty(partyMembers)
+    print("[SetupParty] Step 7: InitializeParty() returned: " .. tostring(partyInitialized))
 
     if partyInitialized then
-        Log("========================================")
-        Log("Party system initialized!")
-        Log("  - Character 1: Warrior (Entity " .. player1 .. ") - FUNCTIONAL")
-        Log("  - Character 2: Mage (Entity " .. player2 .. ") - PLACEHOLDER")
-        Log("  - Character 3: Rogue (Entity " .. player3 .. ") - PLACEHOLDER")
-        Log("========================================")
+        print("[SetupParty] Step 8: Party system initialized successfully!")
+        print("[SetupParty]   Character 1: Warrior (Entity " .. player1 .. ")")
+        print("[SetupParty]   Character 2: Mage (Entity " .. player2 .. ")")
+        print("[SetupParty]   Character 3: Rogue (Entity " .. player3 .. ")")
 
-        -- DEBUG: Verify GetPartyMembers() returns correct data immediately after initialization
+        -- DEBUG: Verify GetPartyMembers() returns correct data
+        print("[SetupParty] Step 9: Verifying party members...")
         local verifyMembers = GetPartyMembers()
-        Log("[DEBUG SetupParty] After InitializeParty, GetPartyMembers() returns " .. #verifyMembers .. " members")
+        print("[SetupParty]   GetPartyMembers() returned " .. #verifyMembers .. " members")
         for i = 1, #verifyMembers do
-            Log("[DEBUG SetupParty]   Member " .. i .. ": Entity " .. verifyMembers[i])
+            print("[SetupParty]     Member " .. i .. ": Entity " .. verifyMembers[i])
         end
     else
-        Log("FAILED to initialize party")
+        print("[SetupParty] ERROR: InitializeParty() FAILED!")
         return false
     end
 
+    print("[SetupParty] Step 10: SetupParty() COMPLETED SUCCESSFULLY")
     return true
 end
 
@@ -389,42 +434,64 @@ function SetupPlayer()
 end
 
 function SetupEnemies()
-    Log("========================================")
-    Log("Configuring enemies...")
-    Log("========================================")
+    print("============================================================")
+    print("========== SetupEnemies() CALLED ==========")
+    print("============================================================")
 
+    print("[SetupEnemies] Step 1: Finding player for enemy targeting...")
     local playerID = FindPlayer()
+
     if not playerID or playerID == 0 then
-        Log("ERROR: Cannot configure enemies without player")
+        print("[SetupEnemies] ERROR: Cannot configure enemies without player")
         return false
     end
 
+    print("[SetupEnemies] Found player: Entity " .. playerID)
+
+    print("[SetupEnemies] Step 2: Calling GetAllEnemies()...")
     local enemies = GetAllEnemies() or {}
     local enemyCount = #enemies
 
+    print("[SetupEnemies] GetAllEnemies() returned " .. enemyCount .. " enemies")
+
     if enemyCount == 0 then
-        Log("WARNING: No enemies found in level")
+        print("[SetupEnemies] WARNING: No enemies found in level")
         return true
     end
 
-    Log("Found " .. enemyCount .. " enemies")
+    print("[SetupEnemies] Step 3: Configuring " .. enemyCount .. " enemies...")
 
     -- Configure each enemy
     for i, enemyID in ipairs(enemies) do
+        print("[SetupEnemies]   === Configuring Enemy " .. i .. " (Entity " .. enemyID .. ") ===")
+
         -- Set target
+        print("[SetupEnemies]     Calling SetEnemyTarget(" .. enemyID .. ", " .. playerID .. ")...")
         local targetSuccess = SetEnemyTarget(enemyID, playerID)
+        print("[SetupEnemies]     SetEnemyTarget result: " .. tostring(targetSuccess))
 
         -- Attach enemy script
+        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", 'EnemyScript.lua')...")
         local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+        print("[SetupEnemies]     AddScriptComponentToEntity result: " .. tostring(scriptSuccess))
 
         if targetSuccess and scriptSuccess then
-            Log("   Enemy " .. enemyID .. " configured successfully")
+            print("[SetupEnemies]   ✓ Enemy " .. enemyID .. " configured successfully")
         else
-            Log("  Enemy " .. enemyID .. " configuration failed")
+            print("[SetupEnemies]   ✗ Enemy " .. enemyID .. " configuration FAILED")
+            print("[SetupEnemies]     targetSuccess: " .. tostring(targetSuccess))
+            print("[SetupEnemies]     scriptSuccess: " .. tostring(scriptSuccess))
         end
+
+        -- Check enemy's AP and position
+        local enemyX, enemyY = GetEntityGridPosition(enemyID)
+        local currentAP, maxAP = GetEntityAP(enemyID)
+        print("[SetupEnemies]     Enemy position: (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
+        print("[SetupEnemies]     Enemy AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
     end
 
-    Log("========================================")
+    print("[SetupEnemies] Step 4: All enemies configured")
+    print("============================================================")
     return true
 end
 

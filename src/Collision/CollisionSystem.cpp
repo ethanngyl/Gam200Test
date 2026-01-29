@@ -39,7 +39,8 @@ Safety:
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "ECSEntityManager.h"
-
+#include "Collision/Quadtree.h"
+#include "Grid/Grid.h"
 namespace Framework {
 
 void CollisionSystem::Initialize()
@@ -249,53 +250,135 @@ void CollisionSystem::CheckECSCollisions()
     }
 
     
+    //for (Entity rectEnt : rects)
+    //{
+
+    //    for (Entity circEnt : circles)
+    //    {
+    //        auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
+    //        auto& rectColl = entityManager->GetComponent<BoxCollider>(rectEnt);
+    //        auto& circTransform = entityManager->GetComponent<Transform>(circEnt);
+    //        auto& circColl = entityManager->GetComponent<CircleCollider>(circEnt);
+
+    //        // Convert to collision system format
+    //        Collider ecsRect = Collider::create_rect(
+    //            rectColl.size.x,
+    //            rectColl.size.y,
+    //            rectTransform.position
+    //        );
+
+    //        Collider ecsCircle = Collider::create_circle(
+    //            circColl.radius /** circTransform.scale.x*/,  // Scale the radius
+    //            circTransform.position + circColl.offset
+    //        );
+
+    //        // Use your existing check_collision function
+    //        if (check_collision(ecsCircle, ecsRect))
+    //        {
+    //            // PERFORMANCE FIX: Removed console output (was causing 2-5ms lag per collision)
+    //            // std::cout << "Collision: Rect entity " << rectEnt.GetID()
+    //            //     << " hit Circle entity " << circEnt.GetID() << "\n";
+
+    //            if (entityManager->HasComponent<Movement>(rectEnt)) {
+    //                auto& mv = entityManager->GetComponent<Movement>(rectEnt);
+    //                mv.blocked = true;
+    //            }
+    //        }
+    //    }
+
+    //    for (Entity circEnt : circles)
+    //    {
+    //        // Build circle collider (radius is truth; no /2 hack)
+    //        auto& cT = entityManager->GetComponent<Transform>(circEnt);
+    //        auto& cC = entityManager->GetComponent<CircleCollider>(circEnt);
+    //        Collider ecsCircle = Collider::create_circle(
+    //            cC.radius,
+    //            cT.position + cC.offset
+    //        );
+    //    }
+    //}
+
+
+    // Build quadtree bounds from grid world bounds.
+    // If grid bounds are not initialized yet, fall back to a safe default.
+    AABB worldBounds;
+    {
+        const Grid& g = GetGrid();
+        worldBounds.min = g.worldbound_min;
+        worldBounds.max = g.worldbound_max;
+
+        if (worldBounds.min.x == 0.0f && worldBounds.min.y == 0.0f &&
+            worldBounds.max.x == 0.0f && worldBounds.max.y == 0.0f)
+        {
+            worldBounds.min = Vector2D(-100.0f, -100.0f);
+            worldBounds.max = Vector2D(100.0f, 100.0f);
+        }
+    }
+
+    Quadtree qt(worldBounds, 6, 8);
+
+    // Insert all circles into quadtree as AABBs (conservative bounds).
+    for (Entity circEnt : circles)
+    {
+        auto& cT = entityManager->GetComponent<Transform>(circEnt);
+        auto& cC = entityManager->GetComponent<CircleCollider>(circEnt);
+
+        // Match your current narrowphase: center = position + offset.
+        const Vector2D cCenter = cT.position + cC.offset;
+        const AABB cAABB = MakeAABBFromCircle(cCenter, cC.radius);
+
+        qt.Insert(circEnt, cAABB);
+    }
+
+    // Query circles near each rect, then narrowphase-test only candidates.
+    std::vector<Entity> candidates;
+    candidates.reserve(32);
+
     for (Entity rectEnt : rects)
     {
+        auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
+        auto& rectColl = entityManager->GetComponent<BoxCollider>(rectEnt);
 
-        for (Entity circEnt : circles)
+        // Match your current narrowphase: rect center = transform.position (offset ignored).
+        const AABB rectAABB = MakeAABBFromCenterSize(rectTransform.position, rectColl.size);
+
+        candidates.clear();
+        qt.Query(rectAABB, candidates);
+
+        // Build rect collider once per rect.
+        Collider ecsRect = Collider::create_rect(
+            rectColl.size.x,
+            rectColl.size.y,
+            rectTransform.position
+        );
+
+        for (Entity circEnt : candidates)
         {
-            auto& rectTransform = entityManager->GetComponent<Transform>(rectEnt);
-            auto& rectColl = entityManager->GetComponent<BoxCollider>(rectEnt);
+            if (!entityManager->HasComponent<Transform>(circEnt) ||
+                !entityManager->HasComponent<CircleCollider>(circEnt))
+            {
+                continue;
+            }
+
             auto& circTransform = entityManager->GetComponent<Transform>(circEnt);
             auto& circColl = entityManager->GetComponent<CircleCollider>(circEnt);
 
-            // Convert to collision system format
-            Collider ecsRect = Collider::create_rect(
-                rectColl.size.x,
-                rectColl.size.y,
-                rectTransform.position
-            );
-
             Collider ecsCircle = Collider::create_circle(
-                circColl.radius /** circTransform.scale.x*/,  // Scale the radius
+                circColl.radius,
                 circTransform.position + circColl.offset
             );
 
-            // Use your existing check_collision function
             if (check_collision(ecsCircle, ecsRect))
             {
-                // PERFORMANCE FIX: Removed console output (was causing 2-5ms lag per collision)
-                // std::cout << "Collision: Rect entity " << rectEnt.GetID()
-                //     << " hit Circle entity " << circEnt.GetID() << "\n";
-
-                if (entityManager->HasComponent<Movement>(rectEnt)) {
+                if (entityManager->HasComponent<Movement>(rectEnt))
+                {
                     auto& mv = entityManager->GetComponent<Movement>(rectEnt);
                     mv.blocked = true;
                 }
             }
         }
-
-        for (Entity circEnt : circles)
-        {
-            // Build circle collider (radius is truth; no /2 hack)
-            auto& cT = entityManager->GetComponent<Transform>(circEnt);
-            auto& cC = entityManager->GetComponent<CircleCollider>(circEnt);
-            Collider ecsCircle = Collider::create_circle(
-                cC.radius,
-                cT.position + cC.offset
-            );
-        }
     }
+
 }
 
 // Clear current test and unlock mode selection
