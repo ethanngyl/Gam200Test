@@ -343,6 +343,7 @@ namespace Framework {
         bool showAudioNamePopup = false;
         char newAudioKeyBuffer[256] = "";
         std::filesystem::path pendingAudioPath;
+        std::filesystem::path pendingAudioDestDir = "assets/Audio/";
 
         void ShowLayersWindow();
 		bool showLayersWindow = false;
