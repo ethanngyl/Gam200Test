@@ -38,6 +38,7 @@
 #include "Grid/GridECS.h" // Grid system functions
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
+#include "MapGenerator/ProceduralMapLoader.h"    
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -2962,6 +2963,278 @@ namespace Framework {
         bool success = SaveLoadSystem::ClearAutoSave(levelName);
         lua_pushboolean(L, success);
         return 1;
+    }
+
+// ============================================================================
+// PROCEDURAL MAP API
+// ============================================================================
+
+    int LevelLoader::Lua_LoadProceduralMap(lua_State* L) {
+        std::cout << "[Lua_LoadProceduralMap] Called!\n";
+
+        int width = static_cast<int>(luaL_checknumber(L, 1));
+        int height = static_cast<int>(luaL_checknumber(L, 2));
+        const char* algorithm = luaL_checkstring(L, 3);
+
+        LevelLoader* loader = GetLevelLoader(L);
+        CoreEngine* core = loader->coreEngine;
+
+        EntitySpawner* spawner = core->GetSpawner();
+        EntityManager* em = core->GetEntityManager();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "EntitySpawner or EntityManager not available");
+        }
+
+        // Configure generation
+        MapGen::Config config;
+        config.width = width;
+        config.height = height;
+        config.algorithm = algorithm;
+
+        // Grid parameters - MATCH YOUR TileMap.json
+        const float TILE_SIZE = 128.0f;
+        Vector2D startPos(-0.6f, -0.4f);
+        Vector2D spacing(0.1f, 0.1f);
+        Vector2D tileSize(TILE_SIZE, TILE_SIZE);
+
+        // Generate and load
+        MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
+            config, spawner, em, startPos, spacing, tileSize
+        );
+
+        // ========================================
+        // NEW: RETURN SPAWN POSITIONS AS LUA TABLE
+        // ========================================
+
+        std::cout << "[Lua_LoadProceduralMap] Creating return table...\n";
+
+        lua_newtable(L);  // Main table
+
+        // Player spawn
+        lua_pushstring(L, "playerX");
+        lua_pushnumber(L, map.playerSpawn.x);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "playerY");
+        lua_pushnumber(L, map.playerSpawn.y);
+        lua_settable(L, -3);
+
+        // Goal spawn
+        lua_pushstring(L, "goalX");
+        lua_pushnumber(L, map.goalSpawn.x);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "goalY");
+        lua_pushnumber(L, map.goalSpawn.y);
+        lua_settable(L, -3);
+
+        // Calculate exact world position using same math as tile spawning
+        float playerWorldX = startPos.x + (map.playerSpawn.x * spacing.x);
+        float playerWorldY = startPos.y + (map.playerSpawn.y * spacing.y);
+
+        lua_pushstring(L, "playerWorldX");
+        lua_pushnumber(L, playerWorldX);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "playerWorldY");
+        lua_pushnumber(L, playerWorldY);
+        lua_settable(L, -3);
+
+        // Goal world coords
+        float goalWorldX = startPos.x + (map.goalSpawn.x * spacing.x);
+        float goalWorldY = startPos.y + (map.goalSpawn.y * spacing.y);
+
+        lua_pushstring(L, "goalWorldX");
+        lua_pushnumber(L, goalWorldX);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "goalWorldY");
+        lua_pushnumber(L, goalWorldY);
+        lua_settable(L, -3);
+
+        // Enemies with world coords
+        lua_pushstring(L, "enemies");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.enemySpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, map.enemySpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, map.enemySpawns[i].y);
+            lua_settable(L, -3);
+
+            // World coords
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (map.enemySpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (map.enemySpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Chests with world coords
+        lua_pushstring(L, "chests");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.chestSpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, map.chestSpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, map.chestSpawns[i].y);
+            lua_settable(L, -3);
+
+            // World coords
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (map.chestSpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (map.chestSpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        return 1;
+    }
+
+    // ============================================================================
+// ENTITY SPAWNING API
+// ============================================================================
+
+    int LevelLoader::Lua_SpawnPlayerAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        EntitySpawner* spawner = loader->coreEngine->GetSpawner();
+        EntityManager* em = loader->coreEngine->GetEntityManager();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "Spawner or EM not available");
+        }
+
+        // Spawn player
+        Entity player = spawner->SpawnPlayer(Vector2D(worldX, worldY));
+
+        // ADD INVENTORY COMPONENT (like TileMapLoader does!)
+        if (!em->HasComponent<Inventory>(player)) {
+            em->AddComponent<Inventory>(player);
+        }
+
+        lua_pushnumber(L, player.GetID());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnEnemyAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        CoreEngine* core = loader->coreEngine;
+        EntitySpawner* spawner = core->GetSpawner();
+
+        if (!spawner) {
+            return luaL_error(L, "EntitySpawner not available");
+        }
+
+        Entity enemy = spawner->SpawnEnemy(Vector2D(worldX, worldY));
+
+        lua_pushnumber(L, enemy.GetID());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnChestAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        EntitySpawner* spawner = loader->coreEngine->GetSpawner();
+        EntityManager* em = loader->coreEngine->GetEntityManager();
+        Grid& grid = GetGrid();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "Spawner or EM not available");
+        }
+
+        // Spawn chest sprite
+        Entity chest = spawner->SpawnSprite(
+            "assets/TileMap/Chest_1.png",
+            Vector2D(worldX, worldY),
+            Vector2D(grid.spacing.x * 0.8f, grid.spacing.y * 0.8f)  // 80% size like TileMapLoader
+        );
+
+        // ADD CHEST COMPONENT (like TileMapLoader does!)
+        static int nextChestID = 0;
+        em->AddComponent<Chest>(chest, nextChestID++);
+
+        lua_pushnumber(L, chest.GetID());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnGoalAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        EntitySpawner* spawner = loader->coreEngine->GetSpawner();
+        EntityManager* em = loader->coreEngine->GetEntityManager();
+        Grid& grid = GetGrid();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "Spawner or EM not available");
+        }
+
+        // Spawn goal sprite
+        Entity goal = spawner->SpawnSprite(
+            "assets/TileMap/Portal.png",
+            Vector2D(worldX, worldY),
+            Vector2D(grid.spacing.x * 0.9f, grid.spacing.y * 0.9f)  // 90% size like TileMapLoader
+        );
+
+        // ADD GOAL COMPONENT (like TileMapLoader does!)
+        // Need to know total chests - pass as parameter or get from mapData
+        int totalChests = 0;  // TODO: Pass this from Lua or calculate
+        em->AddComponent<Goal>(goal, totalChests);
+
+        lua_pushnumber(L, goal.GetID());
+        return 1;
+    }
+
+
+    int LevelLoader::Lua_TileToWorld(lua_State* L) {
+        int gridX = static_cast<int>(luaL_checknumber(L, 1));
+        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Grid& grid = GetGrid();
+
+        if (!grid.InBounds(gridX, gridY)) {
+            lua_pushnumber(L, 0.0);
+            lua_pushnumber(L, 0.0);
+            return 2;
+        }
+
+        // Use EXACT Grid math
+        float worldX = grid.startPos.x + (static_cast<float>(gridX) * grid.spacing.x);
+        float worldY = grid.startPos.y + (static_cast<float>(gridY) * grid.spacing.y);
+
+        lua_pushnumber(L, worldX);
+        lua_pushnumber(L, worldY);
+        return 2;
     }
 
     /**

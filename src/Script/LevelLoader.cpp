@@ -573,6 +573,16 @@ namespace Framework {
         lua_register(L, "HasAutoSave", Lua_HasAutoSave);
         lua_register(L, "ClearAutoSave", Lua_ClearAutoSave);
 
+        // Procedural Map API
+        lua_register(L, "LoadProceduralMap", Lua_LoadProceduralMap);
+
+        // Entity Spawning API
+        lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
+        lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);
+        lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
+        lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
+        lua_register(L, "TileToWorld", Lua_TileToWorld);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 
