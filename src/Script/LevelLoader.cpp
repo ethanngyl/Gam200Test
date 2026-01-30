@@ -899,48 +899,6 @@ namespace Framework {
         return 0;
     }
 
-    /**
-     * @brief Set animation frame range (startFrame and frameCount)
-     * Lua usage: SetAnimationFrameRange(entityID, startFrame, frameCount, resetToStart)
-     * @param entityID Entity ID
-     * @param startFrame First frame index in the animation range
-     * @param frameCount Number of frames in the animation
-     * @param resetToStart (optional) If true, reset currentFrame to 0 (default: true)
-     */
-    int LevelLoader::Lua_SetAnimationFrameRange(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-        int startFrame = static_cast<int>(luaL_checkinteger(L, 2));
-        int frameCount = static_cast<int>(luaL_checkinteger(L, 3));
-        bool resetToStart = true;
-        if (lua_gettop(L) >= 4) {
-            resetToStart = lua_toboolean(L, 4);
-        }
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) return 0;
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<SpriteAnimation>(e)) {
-            LOG_WARN("LUA_ANIM", "SetAnimationFrameRange: Entity %lld has no SpriteAnimation component", entityID);
-            return 0;
-        }
-
-        auto& anim = em->GetComponent<SpriteAnimation>(e);
-        anim.startFrame = startFrame;
-        anim.frameCount = frameCount;
-        
-        if (resetToStart) {
-            anim.currentFrame = 0;
-            anim.elapsedTime = 0.0f;
-        }
-
-        LOG_INFO("LUA_ANIM", "SetAnimationFrameRange: Entity %lld -> startFrame=%d, frameCount=%d", 
-                 entityID, startFrame, frameCount);
-
-        return 0;
-    }
-
-
     int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
         const char* presetName = luaL_checkstring(L, 1);
         float x = luaL_checknumber(L, 2);
