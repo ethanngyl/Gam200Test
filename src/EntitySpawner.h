@@ -423,19 +423,17 @@ namespace Framework {
             entityManager->AddComponent<Health>(enemy, 5);
 
             // *** CRITICAL: Add EnemyAI component so GetAllEnemies() can find this enemy ***
-            entityManager->AddComponent<Framework::EnemyAI>(enemy);
+            // This matches what TileMapLoader.cpp does when spawning enemies (lines 286-291)
+            entityManager->AddComponent<EnemyAI>(enemy);
 
             // *** Add AP component for turn-based combat ***
-            entityManager->AddComponent<AP>(enemy, 3);  // 3 AP by default
-
-            // *** Add GridMovement for grid-based pathfinding ***
-            entityManager->AddComponent<GridMovement>(enemy);
+            entityManager->AddComponent<AP>(enemy, 3);  // 3 AP by default (matches TileMapLoader)
 
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
             collider.size = size*5;
 
-            std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << " with EnemyAI, AP, and GridMovement components\n";
+            std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << " with EnemyAI and AP components\n";
             return enemy;
         }
 
