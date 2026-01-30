@@ -64,6 +64,11 @@ local hasActedThisTurn = false  -- Track if this enemy has acted this turn
 local lastEnemyTurn = nil       -- Track which turn we last acted on
 local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to act
 
+-- Global flag to track if any enemy has panned camera this turn
+if not _G.EnemyCameraPannedThisTurn then
+    _G.EnemyCameraPannedThisTurn = false
+end
+
 -- ============================================================================
 -- LIFECYCLE CALLBACKS
 -- ============================================================================
@@ -108,6 +113,7 @@ function OnUpdate(dt)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
+            _G.EnemyCameraPannedThisTurn = false  -- Reset camera flag for new enemy turn
             print("[EnemyScript] Entity " .. entityID .. " - Resetting acted flag (new turn)")
         end
         lastEnemyTurn = currentTurn
@@ -123,21 +129,32 @@ function OnUpdate(dt)
         return
     end
 
-    -- Pan camera to this enemy when starting to act (only first time)
+    -- Pan camera to this enemy when starting to act (only first enemy)
     if not isMyTurnToAct then
         isMyTurnToAct = true
-        print("[EnemyScript] Entity " .. entityID .. " - MY TURN! Panning camera...")
-        SetCameraFollowTarget(entityID)
+
+        -- Only pan camera if no other enemy has panned it yet this turn
+        if not _G.EnemyCameraPannedThisTurn then
+            _G.EnemyCameraPannedThisTurn = true
+            print("[EnemyScript] Entity " .. entityID .. " - MY TURN! Panning camera to first acting enemy...")
+            SetCameraFollowTarget(entityID)
+        else
+            print("[EnemyScript] Entity " .. entityID .. " - Acting (camera already panned to another enemy)")
+        end
     end
 
     print("[EnemyScript] Entity " .. entityID .. " - ENEMY TURN! Processing AI...")
 
     -- CRITICAL: Find closest player dynamically each turn
     -- This allows enemies to switch targets as players move
+    print("[EnemyScript] Entity " .. entityID .. " - Current target: " .. tostring(targetPlayerID))
     local closestPlayer, closestDistance = FindClosestPlayer()
+
     if closestPlayer and closestPlayer > 0 then
         if closestPlayer ~= targetPlayerID then
-            print("[EnemyScript] Entity " .. entityID .. " - Switching target from " .. tostring(targetPlayerID) .. " to " .. closestPlayer)
+            print("[EnemyScript] Entity " .. entityID .. " - *** SWITCHING TARGET *** from Player " .. tostring(targetPlayerID) .. " to Player " .. closestPlayer .. " (distance: " .. tostring(closestDistance) .. ")")
+        else
+            print("[EnemyScript] Entity " .. entityID .. " - Keeping target Player " .. closestPlayer .. " (distance: " .. tostring(closestDistance) .. ")")
         end
         targetPlayerID = closestPlayer
     else
@@ -341,7 +358,11 @@ function ExecuteChase()
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
+    print("[EnemyScript] Entity " .. entityID .. " - ExecuteChase: Chasing Player " .. tostring(targetPlayerID) .. " at (" .. tostring(playerX) .. ", " .. tostring(playerY) .. ")")
+    print("[EnemyScript] Entity " .. entityID .. " - My position: (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
+
     if not enemyX or not playerX then
+        print("[EnemyScript] Entity " .. entityID .. " - ERROR: Cannot get positions (enemyX=" .. tostring(enemyX) .. ", playerX=" .. tostring(playerX) .. ")")
         FinishEnemyAction()
         return
     end
