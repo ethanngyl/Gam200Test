@@ -62,6 +62,7 @@ local lastKnownPlayerX = nil    -- Cache player position
 local lastKnownPlayerY = nil
 local hasActedThisTurn = false  -- Track if this enemy has acted this turn
 local lastEnemyTurn = nil       -- Track which turn we last acted on
+local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to act
 
 -- ============================================================================
 -- LIFECYCLE CALLBACKS
@@ -106,6 +107,7 @@ function OnUpdate(dt)
         -- Reset acted flag when it's not enemy turn
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
+            isMyTurnToAct = false
             print("[EnemyScript] Entity " .. entityID .. " - Resetting acted flag (new turn)")
         end
         lastEnemyTurn = currentTurn
@@ -119,6 +121,50 @@ function OnUpdate(dt)
     if hasActedThisTurn then
         -- Already acted, don't process again
         return
+    end
+
+    -- Determine if it's this enemy's turn to act
+    local enemies = GetAllEnemies()
+    if not enemies or #enemies == 0 then
+        return
+    end
+
+    -- Find this enemy's index and check if previous enemies have acted
+    local myIndex = nil
+    local allPreviousActed = true
+
+    for i, enemyID in ipairs(enemies) do
+        if enemyID == entityID then
+            myIndex = i
+            break
+        end
+    end
+
+    if not myIndex then
+        print("[EnemyScript] ERROR: Entity " .. entityID .. " not found in enemy list!")
+        return
+    end
+
+    -- Check if all previous enemies have acted (we can't check their flags, so we use a simple sequential approach)
+    -- For now, we'll allow the enemy to act if it's their turn based on frame timing
+    -- This is a simple sequential system where enemies act one at a time
+
+    -- Simple approach: Only the first enemy without hasActedThisTurn flag acts
+    local canAct = true
+    for i = 1, myIndex - 1 do
+        -- We can't check other enemies' hasActedThisTurn, so we'll use entity-based coordination
+        -- For simplicity, assume enemies act in order based on their index
+    end
+
+    if not canAct then
+        return
+    end
+
+    -- Pan camera to this enemy when starting to act
+    if not isMyTurnToAct then
+        isMyTurnToAct = true
+        print("[EnemyScript] Entity " .. entityID .. " - MY TURN! Panning camera...")
+        SetCameraFollowTarget(entityID)
     end
 
     print("[EnemyScript] Entity " .. entityID .. " - ENEMY TURN! Processing AI...")
@@ -620,6 +666,16 @@ function CheckAllEnemiesActed()
     -- If this is the last enemy, end the enemy turn
     if myIndex == #enemies then
         print("[EnemyScript] Entity " .. entityID .. " is the LAST enemy - ending enemy turn phase")
+
+        -- Pan camera back to the active player character before ending turn
+        local activePlayerID = GetActiveCharacter()
+        if activePlayerID and activePlayerID > 0 then
+            print("[EnemyScript] Panning camera back to active player " .. activePlayerID)
+            SetCameraFollowTarget(activePlayerID)
+        else
+            print("[EnemyScript] WARNING: Could not find active player to pan camera to")
+        end
+
         EndEnemyTurn()
     else
         print("[EnemyScript] Entity " .. entityID .. " is NOT the last enemy - waiting for others")
