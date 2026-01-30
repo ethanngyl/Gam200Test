@@ -123,44 +123,7 @@ function OnUpdate(dt)
         return
     end
 
-    -- Determine if it's this enemy's turn to act
-    local enemies = GetAllEnemies()
-    if not enemies or #enemies == 0 then
-        return
-    end
-
-    -- Find this enemy's index and check if previous enemies have acted
-    local myIndex = nil
-    local allPreviousActed = true
-
-    for i, enemyID in ipairs(enemies) do
-        if enemyID == entityID then
-            myIndex = i
-            break
-        end
-    end
-
-    if not myIndex then
-        print("[EnemyScript] ERROR: Entity " .. entityID .. " not found in enemy list!")
-        return
-    end
-
-    -- Check if all previous enemies have acted (we can't check their flags, so we use a simple sequential approach)
-    -- For now, we'll allow the enemy to act if it's their turn based on frame timing
-    -- This is a simple sequential system where enemies act one at a time
-
-    -- Simple approach: Only the first enemy without hasActedThisTurn flag acts
-    local canAct = true
-    for i = 1, myIndex - 1 do
-        -- We can't check other enemies' hasActedThisTurn, so we'll use entity-based coordination
-        -- For simplicity, assume enemies act in order based on their index
-    end
-
-    if not canAct then
-        return
-    end
-
-    -- Pan camera to this enemy when starting to act
+    -- Pan camera to this enemy when starting to act (only first time)
     if not isMyTurnToAct then
         isMyTurnToAct = true
         print("[EnemyScript] Entity " .. entityID .. " - MY TURN! Panning camera...")
