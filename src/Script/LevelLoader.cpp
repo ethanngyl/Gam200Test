@@ -557,6 +557,9 @@ namespace Framework {
         lua_register(L, "DamageEntity", Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
+        // Grid Conversion API
+        lua_register(L, "TileToWorld", Lua_TileToWorld);
+
         // Entity-specific APIs (proper naming)
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
@@ -577,6 +580,15 @@ namespace Framework {
         lua_register(L, "LoadAutoSave", Lua_LoadAutoSave);
         lua_register(L, "HasAutoSave", Lua_HasAutoSave);
         lua_register(L, "ClearAutoSave", Lua_ClearAutoSave);
+
+        // Procedural Map API
+        lua_register(L, "LoadProceduralMap", Lua_LoadProceduralMap);
+
+        // Entity Spawning API
+        lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
+        lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);
+        lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
+        lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
 
         LOG_INFO("LevelLoader", "API registered");
     }
@@ -837,83 +849,6 @@ namespace Framework {
         return 0;
     }
 
-    // --- Animation Control API ---
-
-    /**
-     * @brief Set animation group for an entity
-     * Lua usage: SetAnimationGroup(entityID, group)
-     * @param entityID Entity ID
-     * @param group Animation group (0=Idle, 1=Walk, 2=Attack, 3=Injured, 4=Death)
-     */
-    int LevelLoader::Lua_SetAnimationGroup(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-        lua_Integer group = luaL_checkinteger(L, 2);
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) return 0;
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<SpriteAnimation>(e)) {
-            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
-            return 0;
-        }
-
-        auto& anim = em->GetComponent<SpriteAnimation>(e);
-        anim.group = static_cast<AnimGroup>(group);
-
-        return 0;
-    }
-
-    /**
-     * @brief Set animation direction for an entity
-     * Lua usage: SetAnimationDirection(entityID, direction)
-     * @param entityID Entity ID
-     * @param direction Animation direction (0=Front, 1=Back, 2=Side, 3=None)
-     */
-    int LevelLoader::Lua_SetAnimationDirection(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-        lua_Integer direction = luaL_checkinteger(L, 2);
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) return 0;
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<SpriteAnimation>(e)) {
-            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
-            return 0;
-        }
-
-        auto& anim = em->GetComponent<SpriteAnimation>(e);
-        anim.direction = static_cast<AnimDirection>(direction);
-
-        return 0;
-    }
-
-    /**
-     * @brief Set horizontal flip for an entity's sprite
-     * Lua usage: SetAnimationFlipX(entityID, flipX)
-     * @param entityID Entity ID
-     * @param flipX true to flip horizontally, false for normal
-     */
-    int LevelLoader::Lua_SetAnimationFlipX(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-        bool flipX = lua_toboolean(L, 2);
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) return 0;
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<SpriteAnimation>(e)) {
-            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
-            return 0;
-        }
-
-        auto& anim = em->GetComponent<SpriteAnimation>(e);
-        anim.flipX = flipX;
-
-        return 0;
-    }
-
     /**
      * @brief Set whether animation is playing
      * Lua usage: SetAnimationPlaying(entityID, playing)
@@ -1005,31 +940,6 @@ namespace Framework {
         return 0;
     }
 
-    /**
-     * @brief Get current animation group for an entity
-     * Lua usage: group = GetAnimationGroup(entityID)
-     * @param entityID Entity ID
-     * @return Animation group (0=Idle, 1=Walk, 2=Attack, 3=Injured, 4=Death)
-     */
-    int LevelLoader::Lua_GetAnimationGroup(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) {
-            lua_pushinteger(L, 0);  // Default to Idle
-            return 1;
-        }
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<SpriteAnimation>(e)) {
-            lua_pushinteger(L, 0);  // Default to Idle
-            return 1;
-        }
-
-        auto& anim = em->GetComponent<SpriteAnimation>(e);
-        lua_pushinteger(L, static_cast<int>(anim.group));
-        return 1;
-    }
 
     int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
         const char* presetName = luaL_checkstring(L, 1);

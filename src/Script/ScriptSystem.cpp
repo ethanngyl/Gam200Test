@@ -516,6 +516,9 @@ namespace Framework {
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
 
+        // Grid Conversion API
+        lua_register(L, "TileToWorld", LevelLoader::Lua_TileToWorld);
+
         // Game API - Audio
         lua_register(L, "PlaySound", LevelLoader::Lua_PlaySound);
 
@@ -530,6 +533,8 @@ namespace Framework {
         lua_register(L, "GetEntityMovementDirection", LevelLoader::Lua_GetEntityMovementDirection);
         
         // Game API - Sprite Control
+        lua_register(L, "SpawnSprite", LevelLoader::Lua_SpawnSprite);
+        lua_register(L, "SpawnAnimatedSprite", LevelLoader::Lua_SpawnAnimatedSprite);
         lua_register(L, "SetSpriteVisibility", LevelLoader::Lua_SetSpriteVisibility);
         lua_register(L, "SetSpritePosition", LevelLoader::Lua_SetSpritePosition);
         lua_register(L, "SetSpriteColor", LevelLoader::Lua_SetSpriteColor);
