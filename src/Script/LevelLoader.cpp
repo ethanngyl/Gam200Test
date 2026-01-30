@@ -849,56 +849,6 @@ namespace Framework {
         return 0;
     }
 
-    /**
-     * @brief Set whether animation is playing
-     * Lua usage: SetAnimationPlaying(entityID, playing)
-     * @param entityID Entity ID
-     * @param playing true to play, false to pause
-     */
-    int LevelLoader::Lua_SetAnimationPlaying(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-        bool playing = lua_toboolean(L, 2);
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) return 0;
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<SpriteAnimation>(e)) {
-            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
-            return 0;
-        }
-
-        auto& anim = em->GetComponent<SpriteAnimation>(e);
-        anim.playing = playing;
-
-        return 0;
-    }
-
-    /**
-     * @brief Set whether animation should loop
-     * Lua usage: SetAnimationLoop(entityID, loop)
-     * @param entityID Entity ID
-     * @param loop true to loop, false for one-shot
-     */
-    int LevelLoader::Lua_SetAnimationLoop(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-        bool loop = lua_toboolean(L, 2);
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) return 0;
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<SpriteAnimation>(e)) {
-            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
-            return 0;
-        }
-
-        auto& anim = em->GetComponent<SpriteAnimation>(e);
-        anim.loop = loop;
-
-        return 0;
-    }
-
     int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
         const char* presetName = luaL_checkstring(L, 1);
         float x = luaL_checknumber(L, 2);
@@ -979,34 +929,4 @@ namespace Framework {
         lua_pushinteger(L, emitterId);
         return 1;
     }
-
-    /**
-     * @brief Get movement direction for an entity
-     * Lua usage: dirX, dirY = GetEntityMovementDirection(entityID)
-     * @param entityID Entity ID
-     * @return dirX, dirY Movement vector components (0, 0 if no Movement component)
-     */
-    int LevelLoader::Lua_GetEntityMovementDirection(lua_State* L) {
-        lua_Integer entityID = luaL_checkinteger(L, 1);
-
-        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
-        if (!em) {
-            lua_pushnumber(L, 0.0);
-            lua_pushnumber(L, 0.0);
-            return 2;
-        }
-
-        Entity e(static_cast<EntityID>(entityID));
-        if (!em->HasComponent<Movement>(e)) {
-            lua_pushnumber(L, 0.0);
-            lua_pushnumber(L, 0.0);
-            return 2;
-        }
-
-        auto& movement = em->GetComponent<Movement>(e);
-        lua_pushnumber(L, movement.direction.x);
-        lua_pushnumber(L, movement.direction.y);
-        return 2;
-    }
-
 } // namespace Framework
