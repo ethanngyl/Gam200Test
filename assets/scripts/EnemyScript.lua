@@ -60,6 +60,8 @@ local pathIndex = 1             -- Current position in path
 local turnsSincePathUpdate = 0  -- Track when to recalculate path
 local lastKnownPlayerX = nil    -- Cache player position
 local lastKnownPlayerY = nil
+local hasActedThisTurn = false  -- Track if this enemy has acted this turn
+local lastEnemyTurn = nil       -- Track which turn we last acted on
 
 -- ============================================================================
 -- LIFECYCLE CALLBACKS
@@ -101,6 +103,21 @@ function OnUpdate(dt)
     end
 
     if currentTurn ~= "Enemy" then
+        -- Reset acted flag when it's not enemy turn
+        if lastEnemyTurn == "Enemy" then
+            hasActedThisTurn = false
+            print("[EnemyScript] Entity " .. entityID .. " - Resetting acted flag (new turn)")
+        end
+        lastEnemyTurn = currentTurn
+        return
+    end
+
+    -- Track that this is enemy turn
+    lastEnemyTurn = "Enemy"
+
+    -- Check if this enemy has already acted this turn
+    if hasActedThisTurn then
+        -- Already acted, don't process again
         return
     end
 
@@ -116,6 +133,8 @@ function OnUpdate(dt)
         targetPlayerID = closestPlayer
     else
         print("[EnemyScript] Entity " .. entityID .. " - No player target found!")
+        hasActedThisTurn = true  -- Mark as acted even if no target
+        CheckAllEnemiesActed()
         return  -- No player to target
     end
 
@@ -139,15 +158,16 @@ function ProcessAITurn()
     print("[EnemyScript] Entity " .. entityID .. " - AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
 
     if not currentAP or currentAP == 0 then
-        print("[EnemyScript] Entity " .. entityID .. " - No AP, ending turn")
+        print("[EnemyScript] Entity " .. entityID .. " - No AP, finishing action")
+        FinishEnemyAction()
         return
     end
 
     -- Check if we have enough AP to act
     if currentAP < config.apCostPerMove then
-        print("[EnemyScript] Entity " .. entityID .. " - Not enough AP to move (" .. currentAP .. " < " .. config.apCostPerMove .. "), ending turn")
-        -- Not enough AP, end turn
-        EndEnemyTurn(entityID)
+        print("[EnemyScript] Entity " .. entityID .. " - Not enough AP to move (" .. currentAP .. " < " .. config.apCostPerMove .. "), finishing action")
+        -- Not enough AP, finish action
+        FinishEnemyAction()
         return
     end
 
@@ -172,7 +192,7 @@ function ProcessAITurn()
     else
         -- IDLE or unknown state
         print("[EnemyScript] Entity " .. entityID .. " - State is IDLE, ending turn")
-        EndEnemyTurn(entityID)
+        FinishEnemyAction()
     end
 end
 
@@ -301,7 +321,7 @@ function ExecuteAttack()
         ExecuteChase()
     else
         -- End turn
-        EndEnemyTurn(entityID)
+        FinishEnemyAction()
     end
 end
 
@@ -313,7 +333,7 @@ function ExecuteChase()
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
     if not enemyX or not playerX then
-        EndEnemyTurn(entityID)
+        FinishEnemyAction()
         return
     end
 
@@ -338,7 +358,7 @@ function ExecuteChase()
 
         if not currentPath or #currentPath == 0 then
             Log("[EnemyScript] Enemy " .. entityID .. " could not find path to player")
-            EndEnemyTurn(entityID)
+            FinishEnemyAction()
             return
         end
     end
@@ -383,7 +403,7 @@ function ExecuteChase()
         ExecuteAttack()
     else
         -- End turn
-        EndEnemyTurn(entityID)
+        FinishEnemyAction()
     end
 end
 
@@ -394,7 +414,7 @@ function ExecuteFlee()
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
     if not enemyX or not playerX then
-        EndEnemyTurn(entityID)
+        FinishEnemyAction()
         return
     end
 
@@ -423,7 +443,7 @@ function ExecuteFlee()
         end
     end
 
-    EndEnemyTurn(entityID)
+    FinishEnemyAction()
 end
 
 function ExecutePatrol()
@@ -432,7 +452,7 @@ function ExecutePatrol()
     local enemyX, enemyY = GetEntityGridPosition(entityID)
 
     if currentAP < config.apCostPerMove then
-        EndEnemyTurn(entityID)
+        FinishEnemyAction()
         return
     end
 
@@ -456,7 +476,7 @@ function ExecutePatrol()
         end
     end
 
-    EndEnemyTurn(entityID)
+    FinishEnemyAction()
 end
 
 -- ============================================================================
@@ -554,6 +574,56 @@ end
 
 function SetMovementSpeed(tilesPerTurn)
     config.maxMovesPerTurn = tilesPerTurn
+end
+
+-- ============================================================================
+-- ENEMY TURN COORDINATION
+-- ============================================================================
+
+-- Mark this enemy as having completed its turn and check if all enemies are done
+function FinishEnemyAction()
+    hasActedThisTurn = true
+    print("[EnemyScript] Entity " .. entityID .. " - Finished acting this turn")
+    CheckAllEnemiesActed()
+end
+
+-- Check if all enemies have acted, and if so, end the enemy turn
+function CheckAllEnemiesActed()
+    local enemies = GetAllEnemies()
+    if not enemies or #enemies == 0 then
+        print("[EnemyScript] CheckAllEnemiesActed - No enemies found")
+        return
+    end
+
+    print("[EnemyScript] CheckAllEnemiesActed - Checking if all " .. #enemies .. " enemies have acted...")
+
+    -- NOTE: We can't check other enemies' hasActedThisTurn flags because each script instance
+    -- is separate. Instead, we'll use a simple approach: if this is the last enemy in the list,
+    -- end the turn. This assumes enemies act in order of their entity IDs.
+
+    -- Find this enemy's index in the enemy list
+    local myIndex = nil
+    for i, enemyID in ipairs(enemies) do
+        if enemyID == entityID then
+            myIndex = i
+            break
+        end
+    end
+
+    if not myIndex then
+        print("[EnemyScript] ERROR: Entity " .. entityID .. " not found in enemy list!")
+        return
+    end
+
+    print("[EnemyScript] Entity " .. entityID .. " is enemy " .. myIndex .. " of " .. #enemies)
+
+    -- If this is the last enemy, end the enemy turn
+    if myIndex == #enemies then
+        print("[EnemyScript] Entity " .. entityID .. " is the LAST enemy - ending enemy turn phase")
+        EndEnemyTurn()
+    else
+        print("[EnemyScript] Entity " .. entityID .. " is NOT the last enemy - waiting for others")
+    end
 end
 
 -- ============================================================================
