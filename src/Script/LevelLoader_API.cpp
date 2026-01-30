@@ -3216,26 +3216,26 @@ namespace Framework {
     }
 
 
-    int LevelLoader::Lua_TileToWorld(lua_State* L) {
-        int gridX = static_cast<int>(luaL_checknumber(L, 1));
-        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+    //int LevelLoader::Lua_TileToWorld(lua_State* L) {
+    //    int gridX = static_cast<int>(luaL_checknumber(L, 1));
+    //    int gridY = static_cast<int>(luaL_checknumber(L, 2));
 
-        Grid& grid = GetGrid();
+    //    Grid& grid = GetGrid();
 
-        if (!grid.InBounds(gridX, gridY)) {
-            lua_pushnumber(L, 0.0);
-            lua_pushnumber(L, 0.0);
-            return 2;
-        }
+    //    if (!grid.InBounds(gridX, gridY)) {
+    //        lua_pushnumber(L, 0.0);
+    //        lua_pushnumber(L, 0.0);
+    //        return 2;
+    //    }
 
-        // Use EXACT Grid math
-        float worldX = grid.startPos.x + (static_cast<float>(gridX) * grid.spacing.x);
-        float worldY = grid.startPos.y + (static_cast<float>(gridY) * grid.spacing.y);
+    //    // Use EXACT Grid math
+    //    float worldX = grid.startPos.x + (static_cast<float>(gridX) * grid.spacing.x);
+    //    float worldY = grid.startPos.y + (static_cast<float>(gridY) * grid.spacing.y);
 
-        lua_pushnumber(L, worldX);
-        lua_pushnumber(L, worldY);
-        return 2;
-    }
+    //    lua_pushnumber(L, worldX);
+    //    lua_pushnumber(L, worldY);
+    //    return 2;
+    //}
 
     /**
      * @brief End the current character's turn and advance to next party member

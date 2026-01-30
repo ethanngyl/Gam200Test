@@ -279,7 +279,7 @@ namespace Framework {
         static int Lua_SpawnEnemyAt(lua_State* L);
         static int Lua_SpawnChestAt(lua_State* L);
         static int Lua_SpawnGoalAt(lua_State* L);
-		static int Lua_TileToWorld(lua_State* L);
+
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

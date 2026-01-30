@@ -581,7 +581,6 @@ namespace Framework {
         lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);
         lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
         lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
-        lua_register(L, "TileToWorld", Lua_TileToWorld);
 
         LOG_INFO("LevelLoader", "API registered");
     }
