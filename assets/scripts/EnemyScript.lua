@@ -583,38 +583,39 @@ function FindClosestPlayer()
     end
     print("[EnemyScript] Entity " .. entityID .. " - Enemy position: (" .. enemyX .. ", " .. enemyY .. ")")
 
-    -- Get all party members - EXTENSIVE DEBUGGING
-    print("[EnemyScript] Entity " .. entityID .. " - Calling GetPartyMembers()...")
-    local partyMembers = GetPartyMembers()
+    -- CRITICAL FIX: Use GetAllPlayers() (C++ function available in all Lua states)
+    -- instead of GetPartyMembers() (Lua function only in level script's state)
+    print("[EnemyScript] Entity " .. entityID .. " - Calling GetAllPlayers() (C++ function)...")
+    local players = GetAllPlayers()
 
-    -- DEBUG: Check what GetPartyMembers() returned
-    print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() return type: " .. type(partyMembers))
+    -- DEBUG: Check what GetAllPlayers() returned
+    print("[EnemyScript] Entity " .. entityID .. " - GetAllPlayers() return type: " .. type(players))
 
-    if partyMembers == nil then
-        print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() returned NIL!")
+    if players == nil then
+        print("[EnemyScript] Entity " .. entityID .. " - GetAllPlayers() returned NIL!")
         print("[EnemyScript] Entity " .. entityID .. " - Falling back to FindPlayer()")
         return FindPlayer()
     end
 
-    if type(partyMembers) ~= "table" then
-        print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() returned NON-TABLE: " .. tostring(partyMembers))
+    if type(players) ~= "table" then
+        print("[EnemyScript] Entity " .. entityID .. " - GetAllPlayers() returned NON-TABLE: " .. tostring(players))
         print("[EnemyScript] Entity " .. entityID .. " - Falling back to FindPlayer()")
         return FindPlayer()
     end
 
-    -- Count party members
-    local count = #partyMembers
-    print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() returned table with " .. count .. " members")
+    -- Count players
+    local count = #players
+    print("[EnemyScript] Entity " .. entityID .. " - GetAllPlayers() returned table with " .. count .. " players")
 
     if count == 0 then
-        print("[EnemyScript] Entity " .. entityID .. " - Party members table is EMPTY!")
+        print("[EnemyScript] Entity " .. entityID .. " - Players table is EMPTY!")
         print("[EnemyScript] Entity " .. entityID .. " - Falling back to FindPlayer()")
         return FindPlayer()
     end
 
-    -- DEBUG: Print each party member ID
-    print("[EnemyScript] Entity " .. entityID .. " - Party member IDs:")
-    for i, playerID in ipairs(partyMembers) do
+    -- DEBUG: Print each player ID
+    print("[EnemyScript] Entity " .. entityID .. " - Player IDs:")
+    for i, playerID in ipairs(players) do
         print("[EnemyScript] Entity " .. entityID .. " -   [" .. i .. "] = " .. tostring(playerID) .. " (type: " .. type(playerID) .. ")")
     end
 
@@ -623,7 +624,7 @@ function FindClosestPlayer()
     local closestDistance = 999999
 
     print("[EnemyScript] Entity " .. entityID .. " - Calculating distances:")
-    for i, playerID in ipairs(partyMembers) do
+    for i, playerID in ipairs(players) do
         local playerX, playerY = GetEntityGridPosition(playerID)
         if playerX then
             local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
