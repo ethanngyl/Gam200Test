@@ -1281,39 +1281,18 @@ namespace Framework {
         lua_newtable(L);
         int index = 1;
 
-        std::cout << "[GetAllPlayers DEBUG] ========== Checking all entities ==========" << std::endl;
-
         // Find all entities with Movement component (indicates player/controllable entity)
         // Players have: Movement, CircleCollider, AP, Health components
         // Enemies have: EnemyAI component instead
         for (Entity e : em->GetAllEntities()) {
-            // Check if this looks like it might be a player (entity IDs 547, 548, 549)
-            bool isPossiblePlayer = (e.GetID() >= 547 && e.GetID() <= 549);
-
-            bool hasMovement = em->HasComponent<Movement>(e);
-            bool hasCircleCollider = em->HasComponent<CircleCollider>(e);
-            bool hasEnemyAI = em->HasComponent<EnemyAI>(e);
-
-            if (isPossiblePlayer) {
-                std::cout << "[GetAllPlayers DEBUG] Entity " << e.GetID() << ":" << std::endl;
-                std::cout << "[GetAllPlayers DEBUG]   - HasComponent<Movement>: " << (hasMovement ? "YES" : "NO") << std::endl;
-                std::cout << "[GetAllPlayers DEBUG]   - HasComponent<CircleCollider>: " << (hasCircleCollider ? "YES" : "NO") << std::endl;
-                std::cout << "[GetAllPlayers DEBUG]   - HasComponent<EnemyAI>: " << (hasEnemyAI ? "YES" : "NO") << std::endl;
-            }
-
-            if (hasMovement && hasCircleCollider && !hasEnemyAI) {
-                if (isPossiblePlayer) {
-                    std::cout << "[GetAllPlayers DEBUG]   --> ACCEPTED as player!" << std::endl;
-                }
+            if (em->HasComponent<Movement>(e) &&
+                em->HasComponent<CircleCollider>(e) &&
+                !em->HasComponent<EnemyAI>(e)) {
                 lua_pushinteger(L, index++);
                 lua_pushinteger(L, e.GetID());
                 lua_settable(L, -3);
-            } else if (isPossiblePlayer) {
-                std::cout << "[GetAllPlayers DEBUG]   --> REJECTED (failed component check)" << std::endl;
             }
         }
-
-        std::cout << "[GetAllPlayers DEBUG] ========== Found " << (index - 1) << " players ==========" << std::endl;
 
         // All players retrieved
         return 1;
