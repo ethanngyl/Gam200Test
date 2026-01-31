@@ -3152,6 +3152,17 @@ namespace Framework {
         // Spawn player
         Entity player = spawner->SpawnPlayer(Vector2D(worldX, worldY));
 
+        // CRITICAL: Ensure Movement component is present (required for GetAllPlayers())
+        // Sometimes this component gets removed by camera/active character systems
+        if (!em->HasComponent<Movement>(player)) {
+            std::cout << "[SpawnPlayerAt] WARNING: Entity " << player.GetID() << " missing Movement component - adding it now" << std::endl;
+            em->AddComponent<Movement>(player);
+            auto& movement = em->GetComponent<Movement>(player);
+            movement.moveSpeed = 0.2f;
+        } else {
+            std::cout << "[SpawnPlayerAt] Entity " << player.GetID() << " already has Movement component" << std::endl;
+        }
+
         // ADD INVENTORY COMPONENT (like TileMapLoader does!)
         if (!em->HasComponent<Inventory>(player)) {
             em->AddComponent<Inventory>(player);
