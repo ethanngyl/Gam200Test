@@ -474,6 +474,9 @@ namespace Framework {
 
         // Game API - Input
         lua_register(L, "IsKeyDown", LevelLoader::Lua_IsKeyDown);
+        lua_register(L, "IsMouseButtonDown", LevelLoader::Lua_IsMouseButtonDown);
+        lua_register(L, "IsMouseButtonPressed", LevelLoader::Lua_IsMouseButtonPressed);
+        lua_register(L, "GetMousePosition", LevelLoader::Lua_GetMousePosition);
 
         // Game API - Turn System
         lua_register(L, "GetCurrentTurn", LevelLoader::Lua_GetCurrentTurn);

@@ -169,6 +169,9 @@ namespace Framework {
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
+        static int Lua_IsMouseButtonDown(lua_State* L);
+        static int Lua_IsMouseButtonPressed(lua_State* L);
+        static int Lua_GetMousePosition(lua_State* L);
 
         // JSON API
         static int Lua_LoadJSON(lua_State* L);

@@ -463,6 +463,9 @@ namespace Framework {
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
+        lua_register(L, "IsMouseButtonDown", Lua_IsMouseButtonDown);
+        lua_register(L, "IsMouseButtonPressed", Lua_IsMouseButtonPressed);
+        lua_register(L, "GetMousePosition", Lua_GetMousePosition);
 
         // JSON and Level Loading
         lua_register(L, "LoadJSON", Lua_LoadJSON);

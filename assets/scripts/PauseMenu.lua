@@ -100,7 +100,8 @@ local state = {
     wasLeftPressed = false,
     wasRightPressed = false,
     wasEnterPressed = false,
-    wasEscapePressed = false
+    wasEscapePressed = false,
+    wasMousePressed = false
 }
 
 -- ============================================================================
@@ -116,6 +117,7 @@ function PauseMenu.Init()
     state.wasRightPressed = false
     state.wasEnterPressed = false
     state.wasEscapePressed = false
+    state.wasMousePressed = false
     
     Log("[PauseMenu] Initialized")
 end
@@ -263,6 +265,52 @@ function PauseMenu.Update(dt)
         PauseMenu.ExecuteAction()
     end
     state.wasEnterPressed = isEnterPressed
+    
+    -- ========================================================================
+    -- MOUSE INPUT
+    -- ========================================================================
+    local mouseX, mouseY = GetMousePosition()
+    local fbWidth, fbHeight = GetFramebufferSize()
+    local centerX = fbWidth * 0.5
+    local centerY = fbHeight * 0.5
+    
+    -- Screen scale factor (based on 1920x1080 reference resolution)
+    local scaleFactorX = fbWidth / 1920
+    local scaleFactorY = fbHeight / 1080
+    
+    -- Check mouse hover over buttons
+    local hoveredIndex = nil
+    local btnConfig = config.buttons
+    
+    -- Button hit box size in pixels (adjust these values as needed)
+    local buttonHalfWidth = 120 * scaleFactorX
+    local buttonHalfHeight = 40 * scaleFactorY
+    
+    for i, btn in ipairs(state.buttonIDs) do
+        -- Calculate button center in screen coordinates
+        local btnCenterX = centerX + (btn.textX * scaleFactorX) + 30  -- +30 to center on text
+        local btnCenterY = centerY + (btn.textY * scaleFactorY)
+        
+        -- Check if mouse is within button bounds
+        if mouseX >= btnCenterX - buttonHalfWidth and mouseX <= btnCenterX + buttonHalfWidth and
+           mouseY >= btnCenterY - buttonHalfHeight and mouseY <= btnCenterY + buttonHalfHeight then
+            hoveredIndex = i
+            break
+        end
+    end
+    
+    -- Update selection on hover
+    if hoveredIndex and hoveredIndex ~= state.selectedIndex then
+        state.selectedIndex = hoveredIndex
+        PlaySound("button", false, 0.3)
+    end
+    
+    -- Mouse click to select
+    local isMousePressed = IsMouseButtonDown("Left")
+    if isMousePressed and not state.wasMousePressed and hoveredIndex then
+        PauseMenu.ExecuteAction()
+    end
+    state.wasMousePressed = isMousePressed
 end
 
 -- ============================================================================

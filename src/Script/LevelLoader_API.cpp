@@ -491,6 +491,69 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Checks if a mouse button is currently held down
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonDown(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyDown(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Checks if a mouse button was just pressed this frame (edge detection)
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonPressed(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyPressed(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Gets the current mouse position in screen coordinates
+     * @return x, y (two numbers)
+     */
+    int LevelLoader::Lua_GetMousePosition(lua_State* L) {
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        float x = 0, y = 0;
+        input->GetMousePosition(x, y);
+        lua_pushnumber(L, x);
+        lua_pushnumber(L, y);
+        return 2;
+    }
+
     int LevelLoader::Lua_LoadJSON(lua_State* L) {
         const char* filepath = luaL_checkstring(L, 1);
 
