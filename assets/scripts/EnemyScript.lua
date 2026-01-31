@@ -223,12 +223,28 @@ function ProcessAITurn()
 end
 
 function UpdateAIState()
+    -- CRITICAL: Recalculate closest player BEFORE making state decisions
+    -- This ensures enemy always targets the closest player, even if it moved closer to a different one
+    print("[EnemyScript] Entity " .. entityID .. " - UpdateAIState: Recalculating closest player...")
+    local closestPlayer, closestDistance = FindClosestPlayer()
+
+    if closestPlayer and closestPlayer > 0 then
+        if closestPlayer ~= targetPlayerID then
+            print("[EnemyScript] Entity " .. entityID .. " - UpdateAIState: *** RETARGETING *** from Player " .. tostring(targetPlayerID) .. " to Player " .. closestPlayer)
+        end
+        targetPlayerID = closestPlayer
+    else
+        print("[EnemyScript] Entity " .. entityID .. " - UpdateAIState: ERROR - No valid player found!")
+        currentState = STATE.IDLE
+        return
+    end
+
     -- Get enemy and player positions
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
     print("[EnemyScript] Entity " .. entityID .. " - Enemy position: (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
-    print("[EnemyScript] Entity " .. entityID .. " - Player " .. targetPlayerID .. " position: (" .. tostring(playerX) .. ", " .. tostring(playerY) .. ")")
+    print("[EnemyScript] Entity " .. entityID .. " - Target Player " .. targetPlayerID .. " position: (" .. tostring(playerX) .. ", " .. tostring(playerY) .. ")")
 
     if not enemyX or not playerX then
         print("[EnemyScript] Entity " .. entityID .. " - ERROR: Invalid positions, setting state to IDLE")
@@ -238,7 +254,7 @@ function UpdateAIState()
 
     -- Calculate distance to player
     local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
-    print("[EnemyScript] Entity " .. entityID .. " - Distance to player: " .. distance)
+    print("[EnemyScript] Entity " .. entityID .. " - Distance to target player: " .. distance)
 
     -- Check health for flee condition
     local hp, maxHP = GetEntityHP(entityID)
@@ -308,10 +324,28 @@ function ExecuteAttack()
         return
     end
 
+    -- CRITICAL: Recalculate closest player BEFORE attacking
+    -- This ensures we attack the closest player in range, not a stale target
+    print("[EnemyScript] Entity " .. entityID .. " - ExecuteAttack: Recalculating closest player...")
+    local closestPlayer, closestDistance = FindClosestPlayer()
+
+    if closestPlayer and closestPlayer > 0 then
+        if closestPlayer ~= targetPlayerID then
+            print("[EnemyScript] Entity " .. entityID .. " - ExecuteAttack: *** RETARGETING *** from Player " .. tostring(targetPlayerID) .. " to Player " .. closestPlayer)
+        end
+        targetPlayerID = closestPlayer
+    else
+        print("[EnemyScript] Entity " .. entityID .. " - ExecuteAttack: ERROR - No valid player to attack!")
+        FinishEnemyAction()
+        return
+    end
+
     -- Verify player is still in range
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
     local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
+
+    print("[EnemyScript] Entity " .. entityID .. " - ExecuteAttack: Target Player " .. targetPlayerID .. " is at distance " .. distance .. " (attack range: " .. config.attackRange .. ")")
 
     if distance > config.attackRange then
         -- Player moved out of range, chase instead
@@ -353,6 +387,25 @@ end
 
 function ExecuteChase()
     local currentAP, maxAP = GetEntityAP(entityID)
+
+    -- CRITICAL: Recalculate closest player BEFORE pathfinding
+    -- This ensures we're always chasing the closest player, not a stale target
+    print("[EnemyScript] Entity " .. entityID .. " - ExecuteChase: Recalculating closest player before pathfinding...")
+    local closestPlayer, closestDistance = FindClosestPlayer()
+
+    if closestPlayer and closestPlayer > 0 then
+        if closestPlayer ~= targetPlayerID then
+            print("[EnemyScript] Entity " .. entityID .. " - ExecuteChase: *** RETARGETING *** from Player " .. tostring(targetPlayerID) .. " to Player " .. closestPlayer)
+            -- Clear old path since we're changing targets
+            currentPath = {}
+            pathIndex = 1
+        end
+        targetPlayerID = closestPlayer
+    else
+        print("[EnemyScript] Entity " .. entityID .. " - ExecuteChase: ERROR - No valid player to chase!")
+        FinishEnemyAction()
+        return
+    end
 
     -- Get positions
     local enemyX, enemyY = GetEntityGridPosition(entityID)
