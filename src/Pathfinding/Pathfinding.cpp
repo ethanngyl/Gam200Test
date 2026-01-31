@@ -351,12 +351,14 @@ namespace Framework {
     * @brief Gets all valid walkable neighboring tiles
     * @param coord Center coordinate to find neighbors of
     * @param grid Grid reference for bounds and walkability checking
+    * @param goal Goal coordinate (allowed even if occupied, as it's the destination)
     * @return Vector of walkable neighbor coordinates (up to 4)
     *
     * Checks tiles in 4 directions (up, down, left, right).
     * Only returns neighbors that are within bounds and walkable.
+    * The goal tile is allowed even if occupied (it's the target destination).
     */
-    std::vector<GridCoord> PathfindingSystem::GetNeighbors(const GridCoord& coord, const Grid& grid) {
+    std::vector<GridCoord> PathfindingSystem::GetNeighbors(const GridCoord& coord, const Grid& grid, const GridCoord& goal) {
         std::vector<GridCoord> neighbors;
         neighbors.reserve(4);
 
@@ -383,9 +385,12 @@ namespace Framework {
 
             const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
 
+            // Check if this is the goal tile - allow it even if occupied
+            bool isGoal = (neighbor.x == goal.x && neighbor.y == goal.y);
+
             // Check both physical blocking AND occupancy
-            // This prevents enemies from trying to move onto player tiles
-            if (!gridTile.blocked && gridTile.occupant.GetID() == INVALID_ENTITY) {
+            // Allow the goal tile even if occupied (it's the target destination)
+            if (!gridTile.blocked && (gridTile.occupant.GetID() == INVALID_ENTITY || isGoal)) {
                 neighbors.push_back(neighbor);
             }
         }
@@ -488,7 +493,7 @@ namespace Framework {
                 return ReconstructPath(nodes, start, goal);
             }
 
-            for (const GridCoord& neighbor : GetNeighbors(current, grid)) {
+            for (const GridCoord& neighbor : GetNeighbors(current, grid, goal)) {
                 if (closedList[neighbor.y][neighbor.x]) continue;
 
                 int tentativeGCost = nodes[current.y][current.x].gCost + 1;
