@@ -592,20 +592,9 @@ function FindClosestPlayer()
     return closestPlayerID, closestDistance
 end
 
-function GetEntityHP(entity)
-    -- TODO: Add GetEntityHP(entityID) API to LevelLoader
-    -- For now, check if it's the player
-    if entity == targetPlayerID then
-        local hp, maxHP = GetPlayerHP()
-        if hp and maxHP then
-            return hp, maxHP
-        end
-    end
-
-    -- Return default HP for enemies (assume full health for now)
-    -- This means flee behavior won't trigger until API is added
-    return 5, 5
-end
+-- GetEntityHP(entityID) C++ function already exists in LevelLoader API
+-- No wrapper needed - just call it directly from anywhere in this script
+-- Removed old Lua wrapper that was using the broken GetPlayerHP()
 
 -- ============================================================================
 -- CONFIGURATION API (Called from Level Scripts)
