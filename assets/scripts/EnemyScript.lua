@@ -122,6 +122,8 @@ function OnUpdate(dt)
         return
     end
 
+    Log("[Enemy " .. entityID .. "] Starting turn - Finding closest player...")
+
     -- Pan camera to this enemy when starting to act (only first enemy)
     if not isMyTurnToAct then
         isMyTurnToAct = true
@@ -136,8 +138,10 @@ function OnUpdate(dt)
     local closestPlayer, closestDistance = FindClosestPlayer()
 
     if closestPlayer and closestPlayer > 0 then
+        Log("[Enemy " .. entityID .. "] Targeting Player " .. closestPlayer .. " at distance " .. closestDistance)
         targetPlayerID = closestPlayer
     else
+        Log("[Enemy " .. entityID .. "] No player found! Ending turn.")
         hasActedThisTurn = true  -- Mark as acted even if no target
         CheckAllEnemiesActed()
         return  -- No player to target
@@ -507,6 +511,18 @@ function FindClosestPlayer()
     -- Use GetAllPlayers() (C++ function available in all Lua states)
     local players = GetAllPlayers()
 
+    -- DEBUG: Log what GetAllPlayers() returned
+    if players and type(players) == "table" then
+        local playerList = ""
+        for i, pid in ipairs(players) do
+            playerList = playerList .. pid
+            if i < #players then playerList = playerList .. ", " end
+        end
+        Log("[Enemy " .. entityID .. "] GetAllPlayers() returned " .. #players .. " players: [" .. playerList .. "]")
+    else
+        Log("[Enemy " .. entityID .. "] GetAllPlayers() failed - using fallback")
+    end
+
     -- Fallback to FindPlayer() if no players found
     if not players or type(players) ~= "table" or #players == 0 then
         return FindPlayer()
@@ -577,6 +593,7 @@ end
 -- Mark this enemy as having completed its turn and check if all enemies are done
 function FinishEnemyAction()
     hasActedThisTurn = true
+    Log("[Enemy " .. entityID .. "] Finished turn")
     CheckAllEnemiesActed()
 end
 
