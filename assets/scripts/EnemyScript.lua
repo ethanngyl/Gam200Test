@@ -163,7 +163,10 @@ function ProcessAITurn()
     -- Get enemy AP
     local currentAP, maxAP = GetEntityAP(entityID)
 
+    print("[Enemy " .. entityID .. "] ProcessAITurn - AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
+
     if not currentAP or currentAP == 0 or currentAP < config.apCostPerMove then
+        print("[Enemy " .. entityID .. "] Not enough AP to act (need " .. config.apCostPerMove .. "), finishing turn")
         FinishEnemyAction()
         return
     end
@@ -182,6 +185,7 @@ function ProcessAITurn()
         ExecutePatrol()
     else
         -- IDLE or unknown state
+        print("[Enemy " .. entityID .. "] State is IDLE, ending turn")
         FinishEnemyAction()
     end
 end
