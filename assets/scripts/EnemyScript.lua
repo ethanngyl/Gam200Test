@@ -361,12 +361,12 @@ function ExecuteChase()
     local needsNewPath = false
     if #currentPath == 0 or pathIndex > #currentPath then
         needsNewPath = true
+        print("[Enemy " .. entityID .. "] Need new path: path empty or completed")
     elseif lastKnownPlayerX ~= playerX or lastKnownPlayerY ~= playerY then
-        turnsSincePathUpdate = turnsSincePathUpdate + 1
-        if turnsSincePathUpdate >= config.recalculatePathEveryNTurns then
-            needsNewPath = true
-            turnsSincePathUpdate = 0
-        end
+        -- Player moved - recalculate path immediately instead of waiting
+        needsNewPath = true
+        turnsSincePathUpdate = 0
+        print("[Enemy " .. entityID .. "] Need new path: player moved from (" .. tostring(lastKnownPlayerX) .. ", " .. tostring(lastKnownPlayerY) .. ") to (" .. playerX .. ", " .. playerY .. ")")
     end
 
     -- Calculate path to player
@@ -403,8 +403,14 @@ function ExecuteChase()
         -- We might reach attack range this turn, reserve AP for attacking
         local apNeededForAttack = config.attackAPCost
         local apAvailableForMovement = currentAP - apNeededForAttack
-        maxMoves = math.min(maxMoves, apAvailableForMovement / config.apCostPerMove)
-        print("[Enemy " .. entityID .. "] Close to player - reserving " .. apNeededForAttack .. " AP for attack (can move " .. math.floor(maxMoves) .. " times)")
+
+        -- Only reserve if we have enough AP, otherwise just use all available AP for movement
+        if apAvailableForMovement >= config.apCostPerMove then
+            maxMoves = math.min(maxMoves, math.floor(apAvailableForMovement / config.apCostPerMove))
+            print("[Enemy " .. entityID .. "] Close to player - reserving " .. apNeededForAttack .. " AP for attack (can move " .. maxMoves .. " times)")
+        else
+            print("[Enemy " .. entityID .. "] Close to player but not enough AP to reserve for attack - using all AP for movement")
+        end
     end
 
     while currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesMade < maxMoves do
