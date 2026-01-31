@@ -89,10 +89,13 @@ function OnInit()
     currentPath = {}
     pathIndex = 1
 
-    -- Try to find player automatically
+    -- CRITICAL FIX: Use FindClosestPlayer() instead of FindPlayer()
+    -- FindPlayer() returns the FIRST player (usually 547), not the closest
+    -- We'll find the actual closest player on first update
+    -- For now, just use FindPlayer() as a fallback
     targetPlayerID = FindPlayer()
     if targetPlayerID and targetPlayerID > 0 then
-        Log("[EnemyScript] Enemy " .. entityID .. " locked onto Player " .. targetPlayerID)
+        Log("[EnemyScript] Enemy " .. entityID .. " initialized with fallback player " .. targetPlayerID)
     else
         Log("[EnemyScript] WARNING: Enemy " .. entityID .. " could not find player")
     end

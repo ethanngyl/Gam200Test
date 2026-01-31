@@ -366,16 +366,12 @@ namespace Framework {
         for (int i = 0; i < 4; ++i) {
             GridCoord neighbor{ coord.x + dx[i], coord.y + dy[i] };
 
-            /*if (grid.InBounds(neighbor.x, neighbor.y) && IsWalkable(neighbor)) {
-                neighbors.push_back(neighbor);
-            }*/
-
             if (!grid.InBounds(neighbor.x, neighbor.y)) {
                 continue;
             }
 
-            // *** KEY FIX: Just check if tile is blocked, ignore occupancy ***
-            // We need to allow pathing to occupied tiles (like the player's position)
+            // CRITICAL FIX: Check BOTH blocked AND occupied status
+            // Enemies should NOT path onto tiles occupied by players or other entities
             Entity tileEntity = grid.TileAt(neighbor.x, neighbor.y);
             if (tileEntity.GetID() == INVALID_ENTITY) {
                 continue;
@@ -387,8 +383,9 @@ namespace Framework {
 
             const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
 
-            // Only check if physically blocked, NOT if occupied
-            if (!gridTile.blocked) {
+            // Check both physical blocking AND occupancy
+            // This prevents enemies from trying to move onto player tiles
+            if (!gridTile.blocked && gridTile.occupant.GetID() == INVALID_ENTITY) {
                 neighbors.push_back(neighbor);
             }
         }
