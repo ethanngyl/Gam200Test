@@ -573,7 +573,7 @@ end
 
 -- Find the closest player from all party members
 function FindClosestPlayer()
-    print("[EnemyScript] Entity " .. entityID .. " - Finding closest player from party...")
+    print("[EnemyScript] Entity " .. entityID .. " - ========== FINDING CLOSEST PLAYER ==========")
 
     -- Get enemy position
     local enemyX, enemyY = GetEntityGridPosition(entityID)
@@ -581,39 +581,70 @@ function FindClosestPlayer()
         print("[EnemyScript] Entity " .. entityID .. " - ERROR: Cannot get enemy position")
         return nil
     end
+    print("[EnemyScript] Entity " .. entityID .. " - Enemy position: (" .. enemyX .. ", " .. enemyY .. ")")
 
-    -- Get all party members
+    -- Get all party members - EXTENSIVE DEBUGGING
+    print("[EnemyScript] Entity " .. entityID .. " - Calling GetPartyMembers()...")
     local partyMembers = GetPartyMembers()
-    if not partyMembers or #partyMembers == 0 then
-        print("[EnemyScript] Entity " .. entityID .. " - No party members found, falling back to FindPlayer()")
+
+    -- DEBUG: Check what GetPartyMembers() returned
+    print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() return type: " .. type(partyMembers))
+
+    if partyMembers == nil then
+        print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() returned NIL!")
+        print("[EnemyScript] Entity " .. entityID .. " - Falling back to FindPlayer()")
         return FindPlayer()
     end
 
-    print("[EnemyScript] Entity " .. entityID .. " - Found " .. #partyMembers .. " party members")
+    if type(partyMembers) ~= "table" then
+        print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() returned NON-TABLE: " .. tostring(partyMembers))
+        print("[EnemyScript] Entity " .. entityID .. " - Falling back to FindPlayer()")
+        return FindPlayer()
+    end
+
+    -- Count party members
+    local count = #partyMembers
+    print("[EnemyScript] Entity " .. entityID .. " - GetPartyMembers() returned table with " .. count .. " members")
+
+    if count == 0 then
+        print("[EnemyScript] Entity " .. entityID .. " - Party members table is EMPTY!")
+        print("[EnemyScript] Entity " .. entityID .. " - Falling back to FindPlayer()")
+        return FindPlayer()
+    end
+
+    -- DEBUG: Print each party member ID
+    print("[EnemyScript] Entity " .. entityID .. " - Party member IDs:")
+    for i, playerID in ipairs(partyMembers) do
+        print("[EnemyScript] Entity " .. entityID .. " -   [" .. i .. "] = " .. tostring(playerID) .. " (type: " .. type(playerID) .. ")")
+    end
 
     -- Find closest player
     local closestPlayerID = nil
     local closestDistance = 999999
 
+    print("[EnemyScript] Entity " .. entityID .. " - Calculating distances:")
     for i, playerID in ipairs(partyMembers) do
         local playerX, playerY = GetEntityGridPosition(playerID)
         if playerX then
             local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
-            print("[EnemyScript] Entity " .. entityID .. " - Distance to Player " .. playerID .. ": " .. distance)
+            print("[EnemyScript] Entity " .. entityID .. " -   Player " .. playerID .. " at (" .. playerX .. ", " .. playerY .. ") - Distance: " .. distance)
 
             if distance < closestDistance then
+                print("[EnemyScript] Entity " .. entityID .. " -     ^^^ NEW CLOSEST! (was " .. closestDistance .. ", now " .. distance .. ")")
                 closestDistance = distance
                 closestPlayerID = playerID
+            else
+                print("[EnemyScript] Entity " .. entityID .. " -     (not closer than current best: " .. closestDistance .. ")")
             end
         else
-            print("[EnemyScript] Entity " .. entityID .. " - WARNING: Could not get position for Player " .. playerID)
+            print("[EnemyScript] Entity " .. entityID .. " -   Player " .. playerID .. " - ERROR: Could not get position!")
         end
     end
 
     if closestPlayerID then
-        print("[EnemyScript] Entity " .. entityID .. " - Closest player: " .. closestPlayerID .. " (distance: " .. closestDistance .. ")")
+        print("[EnemyScript] Entity " .. entityID .. " - ========== RESULT: Closest player is " .. closestPlayerID .. " at distance " .. closestDistance .. " ==========")
     else
-        print("[EnemyScript] Entity " .. entityID .. " - ERROR: No valid closest player found")
+        print("[EnemyScript] Entity " .. entityID .. " - ========== ERROR: No valid closest player found! ==========")
     end
 
     return closestPlayerID, closestDistance
