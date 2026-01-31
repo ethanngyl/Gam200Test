@@ -58,7 +58,7 @@ local config = {
         items = {
             { 
                 id = "quit", 
-                label = "Quit",
+                label = "MainMenu",
                 imageX = -0.5,    -- World X offset from camera
                 imageY = 0.0,     -- World Y offset from camera
                 textX = -570,     -- Screen X offset from center (pixels)
@@ -358,8 +358,8 @@ function PauseMenu.OnQuit()
     DestroyPauseUI()
     TogglePause()
     SetMasterVolume(1.0)
-    SetNextGameState("GS_QUIT")
-    Log("[PauseMenu] Quitting game")
+    SetNextGameState("mainMenu")
+    Log("[PauseMenu] Returning to main menu")
 end
 
 -- ============================================================================
