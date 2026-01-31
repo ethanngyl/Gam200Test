@@ -388,7 +388,20 @@ function ExecuteChase()
 
     -- Move along path
     local movesMade = 0
-    while currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesMade < config.maxMovesPerTurn do
+    local maxMoves = config.maxMovesPerTurn
+
+    -- CRITICAL: Reserve AP for attacking if we're getting close to the player
+    -- Check if we'll be in attack range after moving
+    local distanceToPlayer = CalculateDistance(enemyX, enemyY, playerX, playerY)
+    if distanceToPlayer <= config.maxMovesPerTurn + config.attackRange then
+        -- We might reach attack range this turn, reserve AP for attacking
+        local apNeededForAttack = config.attackAPCost
+        local apAvailableForMovement = currentAP - apNeededForAttack
+        maxMoves = math.min(maxMoves, apAvailableForMovement / config.apCostPerMove)
+        print("[Enemy " .. entityID .. "] Close to player - reserving " .. apNeededForAttack .. " AP for attack (can move " .. math.floor(maxMoves) .. " times)")
+    end
+
+    while currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesMade < maxMoves do
         local nextTile = currentPath[pathIndex]
 
         -- Validate tile is still walkable
