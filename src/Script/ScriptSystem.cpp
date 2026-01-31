@@ -516,6 +516,9 @@ namespace Framework {
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
 
+        // Grid Conversion API
+        lua_register(L, "TileToWorld", LevelLoader::Lua_TileToWorld);
+
         // Game API - Audio
         lua_register(L, "PlaySound", LevelLoader::Lua_PlaySound);
 
