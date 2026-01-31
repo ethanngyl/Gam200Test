@@ -59,7 +59,7 @@ local config = {
             { 
                 id = "quit", 
                 label = "MainMenu",
-                imageX = -0.5,    -- World X offset from camera
+                imageX = -0.45,    -- World X offset from camera
                 imageY = 0.0,     -- World Y offset from camera
                 textX = -570,     -- Screen X offset from center (pixels)
                 textY = -10       -- Screen Y offset from center (pixels)
@@ -67,7 +67,7 @@ local config = {
             { 
                 id = "settings", 
                 label = "Settings",
-                imageX = 0.02,
+                imageX = 0.00,
                 imageY = 0.0,
                 textX = -50,
                 textY = -10
@@ -75,9 +75,9 @@ local config = {
             { 
                 id = "resume", 
                 label = "Resume",
-                imageX = 0.55,
+                imageX = 0.45,
                 imageY = 0.0,
-                textX = 480,
+                textX = 400,
                 textY = -10
             }
         }
@@ -310,7 +310,7 @@ function PauseMenu.Draw()
     local titleY = centerY - (titleCfg.offsetY * fbHeight)
     local titleScale = titleCfg.scale * scaleFactor
     
-    DrawText("Sans48", titleCfg.text, titleX, titleY, titleScale,
+    DrawText("Playfair48", titleCfg.text, titleX, titleY, titleScale,
              titleCfg.color.r, titleCfg.color.g, titleCfg.color.b)
     
     -- ========================================================================
@@ -334,7 +334,7 @@ function PauseMenu.Draw()
             textX = textX - (20 * scaleFactorX)
         end
         
-        DrawText("Sans48", label, textX, textY, scale, color.r, color.g, color.b)
+        DrawText("Playfair48", label, textX, textY, scale, color.r, color.g, color.b)
     end
 end
 

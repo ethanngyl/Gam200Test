@@ -197,7 +197,7 @@ function ButtonManager.DrawAll()
 
     -- Display editor mode indicator (show when in editor mode, regardless of playing state)
     if IsEditorMode() then
-        DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
+        DrawText("Playfair48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
 end
 
