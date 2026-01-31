@@ -1344,11 +1344,12 @@ namespace Framework {
         lua_newtable(L);
         int index = 1;
 
-        // Find all entities with Movement component (indicates player/controllable entity)
-        // Players have: Movement, CircleCollider, AP, Health components
-        // Enemies have: EnemyAI component instead
+        // Find all entities with AP component (indicates player in turn-based system)
+        // Players have: AP, CircleCollider, Health components
+        // Enemies have: EnemyAI component (we exclude those)
+        // NOTE: Changed from Movement to AP because Movement was unreliable for entity 547
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Movement>(e) &&
+            if (em->HasComponent<AP>(e) &&
                 em->HasComponent<CircleCollider>(e) &&
                 !em->HasComponent<EnemyAI>(e)) {
                 lua_pushinteger(L, index++);
