@@ -222,8 +222,10 @@ function UpdateAIState()
     if behaviorType == BEHAVIOR.AGGRESSIVE then
         -- AGGRESSIVE enemies ALWAYS chase players regardless of distance
         if distance <= config.attackRange then
+            print("[Enemy " .. entityID .. "] Within attack range (" .. distance .. " <= " .. config.attackRange .. ") - ATTACKING Player " .. targetPlayerID)
             currentState = STATE.ATTACKING
         else
+            print("[Enemy " .. entityID .. "] Outside attack range (" .. distance .. " > " .. config.attackRange .. ") - CHASING Player " .. targetPlayerID)
             currentState = STATE.CHASING
         end
 
@@ -292,9 +294,11 @@ function ExecuteAttack()
     end
 
     -- Execute attack
-    Log("[EnemyScript] Enemy " .. entityID .. " attacks Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage!")
+    print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage at distance " .. distance)
 
     local success = DamageEntity(targetPlayerID, config.attackDamage)
+    print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
+
     if success then
         -- Consume attack AP
         ConsumeEnemyAP(entityID, config.attackAPCost)
@@ -363,15 +367,18 @@ function ExecuteChase()
 
     -- Calculate path to player
     if needsNewPath then
+        print("[Enemy " .. entityID .. "] Finding path to Player " .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
         currentPath = FindPathToTarget(entityID, playerX, playerY)
         pathIndex = 1
         lastKnownPlayerX = playerX
         lastKnownPlayerY = playerY
 
         if not currentPath or #currentPath == 0 then
-            Log("[EnemyScript] Enemy " .. entityID .. " could not find path to player")
+            print("[Enemy " .. entityID .. "] NO PATH FOUND to player at (" .. playerX .. ", " .. playerY .. ") - stuck!")
             FinishEnemyAction()
             return
+        else
+            print("[Enemy " .. entityID .. "] Path found with " .. #currentPath .. " steps")
         end
     end
 
