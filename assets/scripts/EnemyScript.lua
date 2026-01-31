@@ -384,7 +384,11 @@ function ExecuteChase()
             FinishEnemyAction()
             return
         else
-            print("[Enemy " .. entityID .. "] Path found with " .. #currentPath .. " steps")
+            print("[Enemy " .. entityID .. "] Path found with " .. #currentPath .. " steps:")
+            -- Print first few steps of the path
+            for i = 1, math.min(3, #currentPath) do
+                print("  Step " .. i .. ": (" .. currentPath[i].x .. ", " .. currentPath[i].y .. ")")
+            end
         end
     end
 
@@ -561,11 +565,19 @@ function FindClosestPlayer()
         local playerX, playerY = GetEntityGridPosition(playerID)
         if playerX then
             local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
+            print("[Enemy " .. entityID .. "]   Player " .. playerID .. " at (" .. playerX .. ", " .. playerY .. ") - distance: " .. distance)
             if distance < closestDistance then
                 closestDistance = distance
                 closestPlayerID = playerID
+                print("[Enemy " .. entityID .. "]     ^^ NEW CLOSEST!")
             end
+        else
+            print("[Enemy " .. entityID .. "]   Player " .. playerID .. " - ERROR: GetEntityGridPosition returned nil!")
         end
+    end
+
+    if closestPlayerID then
+        print("[Enemy " .. entityID .. "] === CLOSEST: Player " .. closestPlayerID .. " at distance " .. closestDistance .. " ===")
     end
 
     return closestPlayerID, closestDistance
