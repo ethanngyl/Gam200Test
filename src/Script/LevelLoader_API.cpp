@@ -2729,12 +2729,14 @@ namespace Framework {
     int LevelLoader::Lua_DamageEntity(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
@@ -2743,7 +2745,8 @@ namespace Framework {
         Entity entity(static_cast<uint32_t>(entityID));
 
         if (!em->HasComponent<Health>(entity)) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false - entity has no health
+            return 1;
         }
 
         auto& health = em->GetComponent<Health>(entity);
@@ -2753,7 +2756,8 @@ namespace Framework {
             health.isDead = true;
         }
 
-        return 0;
+        lua_pushboolean(L, 1);  // Return true - damage successful
+        return 1;
     }
 
     /**
