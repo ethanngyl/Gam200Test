@@ -371,14 +371,16 @@ function ExecuteChase()
 
     -- Calculate path to player
     if needsNewPath then
-        print("[Enemy " .. entityID .. "] Finding path to Player " .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
-        currentPath = FindPathToTarget(entityID, playerX, playerY)
+        print("[Enemy " .. entityID .. "] Finding path from (" .. enemyX .. ", " .. enemyY .. ") to Player " .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
+
+        -- CRITICAL FIX: Pass grid coordinates, not entity ID!
+        currentPath = FindPathToTarget(enemyX, enemyY, playerX, playerY)
         pathIndex = 1
         lastKnownPlayerX = playerX
         lastKnownPlayerY = playerY
 
         if not currentPath or #currentPath == 0 then
-            print("[Enemy " .. entityID .. "] NO PATH FOUND to player at (" .. playerX .. ", " .. playerY .. ") - stuck!")
+            print("[Enemy " .. entityID .. "] NO PATH FOUND from (" .. enemyX .. ", " .. enemyY .. ") to player at (" .. playerX .. ", " .. playerY .. ") - stuck!")
             FinishEnemyAction()
             return
         else
@@ -404,11 +406,14 @@ function ExecuteChase()
     while currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesMade < maxMoves do
         local nextTile = currentPath[pathIndex]
 
+        print("[Enemy " .. entityID .. "] Attempting to move to tile (" .. nextTile.x .. ", " .. nextTile.y .. ") - move " .. (movesMade + 1) .. " of " .. math.floor(maxMoves))
+
         -- Validate tile is still walkable
         if IsWalkableTile(nextTile.x, nextTile.y) then
             local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
+                print("[Enemy " .. entityID .. "] Successfully moved to (" .. nextTile.x .. ", " .. nextTile.y .. ")")
                 ConsumeEnemyAP(entityID, config.apCostPerMove)
                 currentAP = currentAP - config.apCostPerMove
                 movesMade = movesMade + 1
