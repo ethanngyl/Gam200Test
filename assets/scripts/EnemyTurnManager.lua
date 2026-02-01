@@ -59,7 +59,12 @@ function InitializeEnemyTurn()
     EnemyTurnActive = true
     EnemyActionTimer = 0.0  -- Start immediately
 
-    print("[EnemyTurnManager] Starting with enemy " .. enemies[1])
+    local firstEnemy = enemies[1]
+    print("[EnemyTurnManager] Starting with enemy " .. firstEnemy)
+
+    -- CRITICAL: Pan camera to first enemy
+    SetCameraFollowTarget(firstEnemy)
+    print("[EnemyTurnManager] Camera now following Enemy " .. firstEnemy)
 
     return true
 end

@@ -607,11 +607,11 @@ function ShowAttackPreview()
                 if worldX and worldY then
                     -- Spawn attack indicator sprite at this tile
                     -- Note: SpawnSprite returns entity ID
-                    -- Use 0.95 size to leave a small gap between tiles for visibility
+                    -- Tile size is 0.1, so use 0.095 (95% of tile) to leave small gap
                     local indicatorID = SpawnSprite(
                         "assets/TileMap/Attack_Indicator.png",
                         worldX, worldY,
-                        0.95, 0.95,  -- Slightly smaller than tile (0.95 x 0.95)
+                        0.095, 0.095,  -- Slightly smaller than tile (95% of 0.1)
                         2  -- layer 2 (above tiles, below characters)
                     )
 
