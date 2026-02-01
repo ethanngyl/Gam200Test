@@ -1,6 +1,7 @@
 -- ============================================================================
 -- TurnScrollUI.lua (uses ScrollOpen.lua filename)
--- Player turn popup: open -> show text for 2.5s -> close
+-- Player turn popup: plays ScrollOpen.png animation once (open -> close)
+-- The sprite contains the full animation: frames 0-35 = open then close
 -- ============================================================================
 
 local UIComponent = require("UI/UIComponent")
@@ -36,18 +37,14 @@ function TurnScrollUI:Init(config)
     self.layer = self.config.layer or 6
 
     -- Animation config
-    self.openAnim = self.config.openAnim or "ScrollOpen"
-    self.openFrameTime = self.config.openFrameTime or 0.03
-    self.closeFrameTime = self.config.closeFrameTime or self.openFrameTime
-    self.closeFallback = self.config.closeFallback or 1.2
+    self.animName = self.config.animName or "ScrollOpen"
+    self.frameTime = self.config.frameTime or 0.03  -- Time per frame (36 frames × 0.03s ≈ 1 second)
     self.texture = self.config.texture or "assets/UI/ScrollOpen.png"
     self.animationConfigPath = self.config.animationConfigPath or "assets/JSON/animations.json"
 
-    -- Hold (fully-open) section
-    self.holdDuration = self.config.holdDuration or 2.5
-    -- Defaults assume 9x4 (36) frames: last frame = 35
-    self.openEndFrame = 35
-    self.closeStartFrame = 35
+    -- Frame count (36 frames: 0-35)
+    self.totalFrames = 36
+    self.lastFrame = self.totalFrames - 1  -- 35
 
     -- Text config
     self.text = self.config.text or "Your Turn"
@@ -58,24 +55,24 @@ function TurnScrollUI:Init(config)
     self.textOffsetY = self.config.textOffsetY or 0
     self.textAnchorX = self.config.textAnchorX
     self.textAnchorY = self.config.textAnchorY
-    self.textStartRatio = self.config.textStartRatio or 0.4
-    self.textEndRatio = self.config.textEndRatio or 0.6
     self.textBaseSize = self.config.textBaseSize or 48
     self.textWidthFactor = self.config.textWidthFactor or 0.6
     self.textAlign = self.config.textAlign or "center"
+    
+    -- Text visibility range (show text during middle frames when scroll is open)
+    -- Frames 8-28: scroll is mostly open
+    self.textStartFrame = self.config.textStartFrame or 8
+    self.textEndFrame = self.config.textEndFrame or 28
 
-    -- State
+    -- State: just idle or playing
     self.scrollID = 0
-    self.state = "idle" -- idle -> opening -> holding -> closing
-    self.timer = 0.0
-    self.openFrameTimer = 0.0
-    self.openFrameIndex = 0
-    self.holdTimer = 0.0
-    self.closeFrameTimer = 0.0
-    self.closeFrameIndex = 0
-    self.textStartFrame = 0
-    self.textEndFrame = 0
+    self.state = "idle"  -- "idle" or "playing"
+    self.currentFrame = 0
+    self.frameTimer = 0.0
+    
+    -- Track turn phase for triggering
     self.lastTurnPhase = GetCurrentTurn() or "Player"
+    self.hasTriggeredOnce = false
 
     if LoadAnimationConfig then
         LoadAnimationConfig(self.animationConfigPath)
@@ -98,13 +95,13 @@ function TurnScrollUI:Init(config)
     if self.scrollID and self.scrollID > 0 then
         SetSpriteVisibility(self.scrollID, false)
         if PlayAnimationByName then
-            PlayAnimationByName(self.scrollID, self.openAnim, false)
+            PlayAnimationByName(self.scrollID, self.animName, false)
         end
         if SetAnimationGroup then
-            SetAnimationGroup(self.scrollID, 0) -- Idle
+            SetAnimationGroup(self.scrollID, 0)
         end
         if SetAnimationDirection then
-            SetAnimationDirection(self.scrollID, 3) -- None (prevents player idle swap)
+            SetAnimationDirection(self.scrollID, 3)
         end
         if SetAnimationPlaying then
             SetAnimationPlaying(self.scrollID, false)
@@ -112,84 +109,35 @@ function TurnScrollUI:Init(config)
         if SetAnimationFrame then
             SetAnimationFrame(self.scrollID, 0)
         end
+        
+        -- Get actual frame count from animation system
         if GetAnimationFrameCount then
             local frameCount = GetAnimationFrameCount(self.scrollID)
             if frameCount and frameCount > 0 then
-                local lastFrame = frameCount - 1
-                self.openEndFrame = lastFrame
-                self.closeStartFrame = lastFrame
+                self.totalFrames = frameCount
+                self.lastFrame = frameCount - 1
             end
         end
-
-        local startRatio = math.max(0.0, math.min(1.0, self.textStartRatio))
-        local endRatio = math.max(0.0, math.min(1.0, self.textEndRatio))
-        if endRatio < startRatio then
-            local tmp = endRatio
-            endRatio = startRatio
-            startRatio = tmp
-        end
-        self.textStartFrame = math.floor(self.openEndFrame * startRatio)
-        self.textEndFrame = math.floor(self.openEndFrame * endRatio)
     end
 end
 
 -- ============================================================================
--- STATE HELPERS
+-- START ANIMATION
 -- ============================================================================
 
-function TurnScrollUI:StartOpen()
-    self.state = "opening"
-    self.timer = 0.0
-    self.openFrameTimer = 0.0
-    self.openFrameIndex = 0
-    self.holdTimer = 0.0
+function TurnScrollUI:StartAnimation()
+    Log("[ScrollOpen] Starting animation")
+    self.state = "playing"
+    self.currentFrame = 0
+    self.frameTimer = 0.0
 
     if self.scrollID and self.scrollID > 0 then
         SetSpriteVisibility(self.scrollID, true)
-        if PlayAnimationByName then
-            PlayAnimationByName(self.scrollID, self.openAnim, false)
-        end
-        if SetAnimationGroup then
-            SetAnimationGroup(self.scrollID, 0) -- Idle
-        end
-        if SetAnimationDirection then
-            SetAnimationDirection(self.scrollID, 3) -- None
-        end
-        if SetAnimationPlaying then
-            SetAnimationPlaying(self.scrollID, false)
-        end
         if SetAnimationFrame then
             SetAnimationFrame(self.scrollID, 0)
         end
-    end
-end
-
-function TurnScrollUI:StartHold()
-    self.state = "holding"
-    self.holdTimer = 0.0
-
-    if self.scrollID and self.scrollID > 0 then
         if SetAnimationPlaying then
-            SetAnimationPlaying(self.scrollID, false)
-        end
-        if SetAnimationFrame then
-            SetAnimationFrame(self.scrollID, self.openEndFrame)
-        end
-    end
-end
-
-function TurnScrollUI:StartClose()
-    self.state = "closing"
-    self.timer = 0.0
-    self.closeFrameTimer = 0.0
-    self.closeFrameIndex = self.closeStartFrame
-
-    if self.scrollID and self.scrollID > 0 then
-        if SetAnimationFrame then
-            SetAnimationFrame(self.scrollID, self.closeStartFrame)
-        end
-        if SetAnimationPlaying then
-            SetAnimationPlaying(self.scrollID, false)
+            SetAnimationPlaying(self.scrollID, false)  -- We control frames manually
         end
     end
 end
@@ -201,14 +149,16 @@ end
 function TurnScrollUI:Update(dt, cameraPos)
     if not self.enabled then return end
     if not self.scrollID or self.scrollID == 0 then return end
+    
+    -- Prevent C++ animation system from auto-playing
     if SetAnimationPlaying then
         SetAnimationPlaying(self.scrollID, false)
     end
     if SetAnimationGroup then
-        SetAnimationGroup(self.scrollID, 0) -- Idle
+        SetAnimationGroup(self.scrollID, 0)
     end
     if SetAnimationDirection then
-        SetAnimationDirection(self.scrollID, 3) -- None
+        SetAnimationDirection(self.scrollID, 3)
     end
 
     -- Keep scroll anchored to camera
@@ -223,52 +173,49 @@ function TurnScrollUI:Update(dt, cameraPos)
     local phase = GetCurrentTurn() or "Player"
 
     if self.state == "idle" then
-        if self.lastTurnPhase ~= "Player" and phase == "Player" then
-            self:StartOpen()
+        -- Check if we should trigger the animation
+        local shouldTrigger = false
+        
+        if not self.hasTriggeredOnce and phase == "Player" then
+            shouldTrigger = true
+            self.hasTriggeredOnce = true
+            Log("[ScrollOpen] First trigger")
+        elseif self.lastTurnPhase == "Enemy" and phase == "Player" then
+            shouldTrigger = true
+            Log("[ScrollOpen] Turn change: Enemy -> Player")
         end
-    elseif self.state == "opening" then
-        self.openFrameTimer = self.openFrameTimer + dt
-        while self.openFrameTimer >= self.openFrameTime do
-            self.openFrameTimer = self.openFrameTimer - self.openFrameTime
-            self.openFrameIndex = self.openFrameIndex + 1
-            if self.openFrameIndex >= self.openEndFrame then
-                self:StartHold()
-                break
-            end
-            if SetAnimationFrame then
-                SetAnimationFrame(self.scrollID, self.openFrameIndex)
-            end
+        
+        if shouldTrigger then
+            self:StartAnimation()
         end
-
-    elseif self.state == "holding" then
-        self.holdTimer = self.holdTimer + dt
-
-        if self.holdTimer >= self.holdDuration then
-            self:StartClose()
-        end
-    elseif self.state == "closing" then
-        self.timer = self.timer + dt
-        self.closeFrameTimer = self.closeFrameTimer + dt
-        while self.closeFrameTimer >= self.closeFrameTime do
-            self.closeFrameTimer = self.closeFrameTimer - self.closeFrameTime
-            self.closeFrameIndex = self.closeFrameIndex - 1
-            if self.closeFrameIndex <= 0 then
-                self.closeFrameIndex = 0
+        
+        self.lastTurnPhase = phase
+        
+    elseif self.state == "playing" then
+        -- Advance animation
+        self.frameTimer = self.frameTimer + dt
+        
+        while self.frameTimer >= self.frameTime do
+            self.frameTimer = self.frameTimer - self.frameTime
+            self.currentFrame = self.currentFrame + 1
+            
+            if self.currentFrame > self.lastFrame then
+                -- Animation complete
+                self.state = "idle"
+                self.currentFrame = 0
+                SetSpriteVisibility(self.scrollID, false)
                 if SetAnimationFrame then
                     SetAnimationFrame(self.scrollID, 0)
                 end
-                self.state = "idle"
-                SetSpriteVisibility(self.scrollID, false)
+                Log("[ScrollOpen] Animation complete")
                 break
             end
+            
             if SetAnimationFrame then
-                SetAnimationFrame(self.scrollID, self.closeFrameIndex)
+                SetAnimationFrame(self.scrollID, self.currentFrame)
             end
         end
-
     end
-
-    self.lastTurnPhase = phase
 end
 
 -- ============================================================================
@@ -277,31 +224,28 @@ end
 
 function TurnScrollUI:Draw()
     if not self.enabled then return end
-    if self.state ~= "opening" then return end
-    if self.openFrameIndex < self.textStartFrame or self.openFrameIndex > self.textEndFrame then
+    
+    -- Only show text when playing and within the text visibility range
+    if self.state ~= "playing" then
+        return
+    end
+    
+    if self.currentFrame < self.textStartFrame or self.currentFrame > self.textEndFrame then
         return
     end
 
     local fbW, fbH = GetFramebufferSize()
     if not fbW or not fbH then return end
 
-    local textX = nil
-    local textY = nil
+    local textX, textY
 
     if WorldToScreen and self.scrollWorldX and self.scrollWorldY then
         local sx, sy = WorldToScreen(self.scrollWorldX, self.scrollWorldY)
         textX = sx + self.textOffsetX
         textY = sy + self.textOffsetY
     else
-        local anchorX = self.textAnchorX
-        local anchorY = self.textAnchorY
-        if anchorX == nil then
-            anchorX = 0.5 + self.offsetX
-        end
-        if anchorY == nil then
-            anchorY = 0.5 + self.offsetY
-        end
-
+        local anchorX = self.textAnchorX or (0.5 + self.offsetX)
+        local anchorY = self.textAnchorY or (0.5 + self.offsetY)
         textX = (fbW * anchorX) + self.textOffsetX
         textY = (fbH * anchorY) + self.textOffsetY
     end

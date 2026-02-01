@@ -46,6 +46,20 @@ local currentAnimDirection = AnimDirection.Front
 local isFlippedX = false
 
 -- ============================================================================
+-- KEY PRESSED HELPER (simulates IsKeyPressed using IsKeyDown)
+-- Tracks key state to detect the frame when a key is first pressed
+-- ============================================================================
+local previousKeyStates = {}
+
+local function IsKeyPressedOnce(keyName)
+    local currentDown = IsKeyDown(keyName)
+    local wasDown = previousKeyStates[keyName] or false
+    previousKeyStates[keyName] = currentDown
+    -- Return true only on the frame the key transitions from up to down
+    return currentDown and not wasDown
+end
+
+-- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
 
@@ -84,22 +98,24 @@ function OnUpdate(dt)
     -- ANIMATION STATE MANAGEMENT
     -- ========================================================================
 
-    -- Check for manual animation triggers (debug keys)
-    if IsKeyPressed(75) then  -- KEY_K = Attack
+    -- Debug animation triggers disabled (J/K/L keys not mapped in engine)
+    -- To re-enable, add J/K/L key mappings to LevelLoader_API.cpp Lua_IsKeyDown()
+    --[[
+    if IsKeyPressedOnce("K") then  -- Attack
         currentAnimGroup = AnimGroup.Attack
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Attack animation triggered")
     end
 
-    if IsKeyPressed(74) then  -- KEY_J = Injured
+    if IsKeyPressedOnce("J") then  -- Injured
         currentAnimGroup = AnimGroup.Injured
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
         Log("[PlayerScript] Injured animation triggered")
     end
 
-    if IsKeyPressed(76) then  -- KEY_L = Death
+    if IsKeyPressedOnce("L") then  -- Death
         currentAnimGroup = AnimGroup.Death
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)
@@ -107,6 +123,7 @@ function OnUpdate(dt)
         -- Death animation blocks all movement
         return
     end
+    --]]
 
     -- Block movement during Death animation
     local currentAnim = GetAnimationGroup(entityID)

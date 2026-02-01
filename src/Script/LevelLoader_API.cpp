@@ -397,7 +397,7 @@ namespace Framework {
 
     int LevelLoader::Lua_DrawText(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->graphicsSystem) return 0;
+        if (!loader || !loader->graphicsSystem || !loader->coreEngine) return 0;
 
         // Parse parameters: DrawText(font, text, x, y, scale, r, g, b)
         const char* font = luaL_checkstring(L, 1);
@@ -410,7 +410,30 @@ namespace Framework {
         float b = luaL_checknumber(L, 8);
 
         glm::vec3 color(r, g, b);
+
+        // CRITICAL FIX: Bind viewport FBO if editor is enabled
+        // This ensures text renders to the game viewport, not the main window
+        // Without this, text would persist on the main window and not be cleared
+        auto* imgui = loader->coreEngine->GetImGuiSystem();
+        GLuint previousFBO = 0;
+        bool needsRestore = false;
+
+        if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport()) {
+            GLuint viewportFBO = imgui->GetViewportFBO();
+            if (viewportFBO != 0) {
+                // Save current FBO and bind viewport FBO
+                glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&previousFBO));
+                glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
+                needsRestore = true;
+            }
+        }
+
         loader->graphicsSystem->DrawText4(font, text, x, y, scale, color);
+
+        // Restore previous framebuffer
+        if (needsRestore) {
+            glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
+        }
 
         return 0;
     }
