@@ -64,6 +64,11 @@ local hasActedThisTurn = false  -- Track if this enemy has acted this turn
 local lastEnemyTurn = nil       -- Track which turn we last acted on
 local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to act
 
+-- Movement timing (for visible, sequential moves)
+local moveTimer = 0.0           -- Timer for next move
+local moveDelay = 0.3           -- Delay between moves in seconds (0.3s = visible movement)
+local movesThisTurn = 0         -- Track how many moves made this turn
+
 -- Global flag to track if any enemy has panned camera this turn
 if not _G.EnemyCameraPannedThisTurn then
     _G.EnemyCameraPannedThisTurn = false
@@ -110,6 +115,8 @@ function OnUpdate(dt)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
+            moveTimer = 0.0
+            movesThisTurn = 0
         end
         lastEnemyTurn = currentTurn
         return
@@ -136,27 +143,37 @@ function OnUpdate(dt)
         return
     end
 
-    print("[Enemy " .. entityID .. "] Starting turn")
+    -- Update move timer
+    if moveTimer > 0 then
+        moveTimer = moveTimer - dt
+        if moveTimer < 0 then
+            moveTimer = 0
+        end
+        -- Still waiting for move delay
+        return
+    end
 
-    -- Mark that we're taking our turn
+    -- First time acting - set up turn
     if not isMyTurnToAct then
         isMyTurnToAct = true
+        movesThisTurn = 0
+        print("[Enemy " .. entityID .. "] Starting turn")
+
+        -- CRITICAL: Find closest player dynamically each turn
+        local closestPlayer, closestDistance = FindClosestPlayer()
+
+        if closestPlayer and closestPlayer > 0 then
+            print("[Enemy " .. entityID .. "] Targeting Player " .. closestPlayer .. " (distance: " .. closestDistance .. ")")
+            targetPlayerID = closestPlayer
+        else
+            print("[Enemy " .. entityID .. "] No player found!")
+            hasActedThisTurn = true  -- Mark as acted even if no target
+            MarkEnemyActionComplete()  -- Advance to next enemy
+            return  -- No player to target
+        end
     end
 
-    -- CRITICAL: Find closest player dynamically each turn
-    local closestPlayer, closestDistance = FindClosestPlayer()
-
-    if closestPlayer and closestPlayer > 0 then
-        print("[Enemy " .. entityID .. "] Targeting Player " .. closestPlayer .. " (distance: " .. closestDistance .. ")")
-        targetPlayerID = closestPlayer
-    else
-        print("[Enemy " .. entityID .. "] No player found!")
-        hasActedThisTurn = true  -- Mark as acted even if no target
-        MarkEnemyActionComplete()  -- Advance to next enemy
-        return  -- No player to target
-    end
-
-    -- Execute AI decision making
+    -- Execute AI decision making (will make ONE move per frame)
     ProcessAITurn()
 end
 
@@ -401,8 +418,7 @@ function ExecuteChase()
         end
     end
 
-    -- Move along path
-    local movesMade = 0
+    -- Calculate maximum moves we can make this turn
     local maxMoves = config.maxMovesPerTurn
 
     -- CRITICAL: Reserve AP for attacking if we're getting close to the player
@@ -422,10 +438,11 @@ function ExecuteChase()
         end
     end
 
-    while currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesMade < maxMoves do
+    -- Move ONE tile per frame (not all at once!)
+    if currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesThisTurn < maxMoves then
         local nextTile = currentPath[pathIndex]
 
-        print("[Enemy " .. entityID .. "] Attempting to move to tile (" .. nextTile.x .. ", " .. nextTile.y .. ") - move " .. (movesMade + 1) .. " of " .. math.floor(maxMoves))
+        print("[Enemy " .. entityID .. "] Attempting to move to tile (" .. nextTile.x .. ", " .. nextTile.y .. ") - move " .. (movesThisTurn + 1) .. " of " .. maxMoves)
 
         -- Validate tile is still walkable
         if IsWalkableTile(nextTile.x, nextTile.y) then
@@ -435,25 +452,34 @@ function ExecuteChase()
                 print("[Enemy " .. entityID .. "] Successfully moved to (" .. nextTile.x .. ", " .. nextTile.y .. ")")
                 ConsumeEnemyAP(entityID, config.apCostPerMove)
                 currentAP = currentAP - config.apCostPerMove
-                movesMade = movesMade + 1
+                movesThisTurn = movesThisTurn + 1
                 pathIndex = pathIndex + 1
 
                 -- Visual feedback
                 ShowTileBorder(nextTile.x, nextTile.y, 0.3)
                 PulseTile(nextTile.x, nextTile.y, 0.2, 1.0, 0.5, 0.0)  -- Orange pulse
+
+                -- Set timer for next move (creates visible delay)
+                moveTimer = moveDelay
+
+                -- Return to let next frame handle the next move
+                return
             else
                 -- Movement failed, recalculate path next turn
                 currentPath = {}
-                break
+                FinishEnemyAction()
+                return
             end
         else
             -- Tile became unwalkable, recalculate path
             currentPath = {}
-            break
+            FinishEnemyAction()
+            return
         end
     end
 
-    -- Check if we're now in attack range after moving
+    -- If we get here, we can't move anymore (out of AP, path, or maxMoves)
+    -- Check if we're now in attack range
     local newEnemyX, newEnemyY = GetEntityGridPosition(entityID)
     local distance = CalculateDistance(newEnemyX, newEnemyY, playerX, playerY)
 
@@ -634,6 +660,8 @@ end
 -- Mark this enemy as having completed its turn and advance to next enemy
 function FinishEnemyAction()
     hasActedThisTurn = true
+    movesThisTurn = 0  -- Reset for next turn
+    moveTimer = 0.0    -- Reset timer
     Log("[Enemy " .. entityID .. "] Finished turn")
     MarkEnemyActionComplete()  -- Advance to next enemy in sequence
 end
