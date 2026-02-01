@@ -57,6 +57,13 @@ local blockedKeys = {}          -- Keys that were held when we became active (mu
 -- P key state tracking (for single-press detection)
 local lastPKeyDown = false      -- Track if P was down last frame
 
+-- Attack state tracking
+local lastSpaceKeyDown = false  -- Track if SPACE was down last frame
+local attackPreviewActive = false  -- Track if attack preview is showing
+local attackPreviewTiles = {}   -- List of preview tile entity IDs
+local attackRange = 1           -- Attack range in tiles (Manhattan distance)
+local attackAPCost = 1          -- AP cost to attack
+
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
@@ -114,6 +121,8 @@ function OnUpdate(dt)
             hasLoggedActive = false
             blockedKeys = {}  -- Clear blocked keys
             lastPKeyDown = false  -- Reset P key state
+            lastSpaceKeyDown = false  -- Reset SPACE key state
+            ClearAttackPreview()  -- Clear any active attack preview
 
             -- Set animation to Idle when no longer active
             if currentAnimGroup ~= AnimGroup.Idle then
@@ -173,7 +182,15 @@ function OnUpdate(dt)
             lastPKeyDown = false
         end
 
-        if next(blockedKeys) == nil and not lastPKeyDown then
+        -- Check SPACE key for attacking
+        if IsKeyDown("Space") then
+            lastSpaceKeyDown = true
+            print("[PlayerScript]   SPACE is held - will ignore until released")
+        else
+            lastSpaceKeyDown = false
+        end
+
+        if next(blockedKeys) == nil and not lastPKeyDown and not lastSpaceKeyDown then
             print("[PlayerScript]   No keys held - input ready!")
         end
     end
@@ -303,12 +320,52 @@ function OnUpdate(dt)
     end
     lastPKeyDown = pKeyDown  -- Update P key state for next frame
 
-    -- Get THIS entity's current grid position (not just "the player")
+    -- ========================================================================
+    -- ATTACK SYSTEM (SPACE KEY)
+    -- ========================================================================
+
+    -- Get THIS entity's current grid position (needed for attack preview check)
     local currentX, currentY = GetEntityGridPosition(entityID)
     if currentX == nil or currentY == nil then
         print("[PlayerScript] ERROR: Entity " .. entityID .. " position is nil! (currentX=" .. tostring(currentX) .. ", currentY=" .. tostring(currentY) .. ")")
         return  -- Entity position not available
     end
+
+    -- Allow player to attack enemies with SPACE key
+    -- First press: Show attack preview
+    -- Second press: Execute attack
+    local spaceKeyDown = IsKeyDown("Space")
+    if spaceKeyDown and not lastSpaceKeyDown then
+        -- SPACE key was just pressed
+        print("[PlayerScript] SPACE key pressed")
+
+        if not attackPreviewActive then
+            -- First press: Show attack preview
+            local currentAP, maxAP = GetEntityAP(entityID)
+            if currentAP >= attackAPCost then
+                -- Check if there's an enemy in range before showing preview
+                local testEnemy = FindEnemyInRange()
+                if testEnemy then
+                    ShowAttackPreview()
+                    print("[PlayerScript] Attack preview shown - enemy in range")
+                else
+                    print("[PlayerScript] No enemy in attack range!")
+                    PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse (no target)
+                end
+            else
+                print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
+                PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse (not enough AP)
+            end
+        else
+            -- Second press: Execute attack
+            ExecuteAttack()
+        end
+    end
+    lastSpaceKeyDown = spaceKeyDown  -- Update SPACE key state for next frame
+
+    -- ========================================================================
+    -- MOVEMENT INPUT
+    -- ========================================================================
 
     -- Check for movement input
     local targetX, targetY = currentX, currentY
@@ -349,6 +406,12 @@ function OnUpdate(dt)
     end
 
     print("[PlayerScript] Movement attempted! Target: (" .. targetX .. ", " .. targetY .. ")")
+
+    -- Clear attack preview if player moves
+    if attackPreviewActive then
+        print("[PlayerScript] Clearing attack preview due to movement")
+        ClearAttackPreview()
+    end
 
     -- ========================================================================
     -- MOVEMENT VALIDATION
@@ -508,6 +571,196 @@ function OnUpdate(dt)
     else
         Log("[PlayerScript] Failed to move to (" .. targetX .. ", " .. targetY .. ")")
     end
+end
+
+-- ============================================================================
+-- ATTACK HELPER FUNCTIONS
+-- ============================================================================
+
+function ShowAttackPreview()
+    -- Clear any existing preview
+    ClearAttackPreview()
+
+    -- Get this entity's current position
+    local currentX, currentY = GetEntityGridPosition(entityID)
+    if not currentX or not currentY then
+        print("[PlayerScript] ERROR: Cannot get position for attack preview")
+        return
+    end
+
+    print("[PlayerScript] Showing attack preview at (" .. currentX .. ", " .. currentY .. ") with range " .. attackRange)
+
+    -- Show attack preview tiles in a range pattern (Manhattan distance)
+    for r = 1, attackRange do
+        local candidates = {
+            {x = currentX + r, y = currentY},      -- Right
+            {x = currentX - r, y = currentY},      -- Left
+            {x = currentX, y = currentY + r},      -- Up
+            {x = currentX, y = currentY - r}       -- Down
+        }
+
+        for _, tile in ipairs(candidates) do
+            if IsValidGridPosition(tile.x, tile.y) and IsWalkableTile(tile.x, tile.y) then
+                -- Convert grid coords to world coords
+                local worldX, worldY = TileToWorld(tile.x, tile.y)
+
+                if worldX and worldY then
+                    -- Spawn attack indicator sprite at this tile
+                    -- Note: SpawnSprite returns entity ID
+                    -- Use 0.95 size to leave a small gap between tiles for visibility
+                    local indicatorID = SpawnSprite(
+                        "assets/TileMap/Attack_Indicator.png",
+                        worldX, worldY,
+                        0.95, 0.95,  -- Slightly smaller than tile (0.95 x 0.95)
+                        2  -- layer 2 (above tiles, below characters)
+                    )
+
+                    if indicatorID and indicatorID > 0 then
+                        -- Make the indicator semi-transparent red
+                        SetSpriteColor(indicatorID, 1.0, 0.0, 0.0, 0.5)  -- Red with 50% opacity
+
+                        -- Store the indicator entity ID so we can destroy it later
+                        table.insert(attackPreviewTiles, indicatorID)
+                        print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at grid(" .. tile.x .. ", " .. tile.y .. ") world(" .. worldX .. ", " .. worldY .. ")")
+                    else
+                        print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
+                    end
+                else
+                    print("[PlayerScript]   WARNING: TileToWorld failed for (" .. tile.x .. ", " .. tile.y .. ")")
+                end
+            end
+        end
+    end
+
+    if #attackPreviewTiles > 0 then
+        attackPreviewActive = true
+        print("[PlayerScript] Attack preview active with " .. #attackPreviewTiles .. " indicator entities")
+    else
+        print("[PlayerScript] WARNING: No valid attack preview tiles found")
+    end
+end
+
+function ClearAttackPreview()
+    -- Destroy all attack indicator entities
+    if #attackPreviewTiles > 0 then
+        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack indicator entities")
+        for _, indicatorID in ipairs(attackPreviewTiles) do
+            if indicatorID and indicatorID > 0 then
+                DestroyEntity(indicatorID)
+                print("[PlayerScript]   Destroyed attack indicator " .. indicatorID)
+            end
+        end
+    end
+
+    -- Clear attack preview state
+    attackPreviewTiles = {}
+    attackPreviewActive = false
+    print("[PlayerScript] Attack preview cleared")
+end
+
+function FindEnemyInRange()
+    -- Get this entity's current position
+    local currentX, currentY = GetEntityGridPosition(entityID)
+    if not currentX or not currentY then
+        return nil
+    end
+
+    -- Get all enemies
+    local enemies = GetAllEnemies()
+    if not enemies or #enemies == 0 then
+        print("[PlayerScript] No enemies found")
+        return nil
+    end
+
+    print("[PlayerScript] Searching for enemies in range " .. attackRange .. " from (" .. currentX .. ", " .. currentY .. ")")
+
+    -- Find the closest enemy within attack range
+    local closestEnemy = nil
+    local closestEnemyX, closestEnemyY = nil, nil
+    local closestDistance = 999999
+
+    for _, enemyID in ipairs(enemies) do
+        local enemyX, enemyY = GetEntityGridPosition(enemyID)
+        if enemyX and enemyY then
+            -- Calculate Manhattan distance
+            local distance = math.abs(enemyX - currentX) + math.abs(enemyY - currentY)
+            print("[PlayerScript]   Enemy " .. enemyID .. " at (" .. enemyX .. ", " .. enemyY .. ") - distance: " .. distance)
+
+            if distance <= attackRange and distance < closestDistance then
+                closestEnemy = enemyID
+                closestEnemyX = enemyX
+                closestEnemyY = enemyY
+                closestDistance = distance
+            end
+        end
+    end
+
+    if closestEnemy then
+        print("[PlayerScript] Found closest enemy " .. closestEnemy .. " at (" .. closestEnemyX .. ", " .. closestEnemyY .. ") - distance: " .. closestDistance)
+        return closestEnemy, closestEnemyX, closestEnemyY
+    end
+
+    print("[PlayerScript] No enemy in attack range")
+    return nil
+end
+
+function ExecuteAttack()
+    print("============================================================")
+    print("[PlayerScript] ===== EXECUTING ATTACK =====")
+    print("============================================================")
+
+    -- Check AP
+    local currentAP, maxAP = GetEntityAP(entityID)
+    print("[PlayerScript] Current AP: " .. currentAP .. "/" .. maxAP .. " (need " .. attackAPCost .. ")")
+
+    if currentAP < attackAPCost then
+        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. currentAP .. " < " .. attackAPCost .. ")")
+        ClearAttackPreview()
+        return
+    end
+
+    -- Find enemy in range
+    print("[PlayerScript] Searching for enemy in range...")
+    local enemyID, enemyX, enemyY = FindEnemyInRange()
+
+    if not enemyID then
+        print("[PlayerScript] ATTACK BLOCKED: No enemy in attack range!")
+        print("============================================================")
+        ClearAttackPreview()
+        return
+    end
+
+    print("[PlayerScript] Target found: Enemy " .. enemyID .. " at (" .. enemyX .. ", " .. enemyY .. ")")
+    print("[PlayerScript] Attacking enemy " .. enemyID .. " for " .. 1 .. " damage...")
+
+    -- Deal damage
+    local attackDamage = 1  -- Base damage
+    local success = DamageEntity(enemyID, attackDamage)
+
+    if success then
+        print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
+
+        -- Consume attack AP
+        ConsumeEntityAP(entityID, attackAPCost)
+        local newAP = GetEntityAP(entityID)
+        print("[PlayerScript] AP consumed. New AP: " .. newAP .. "/" .. maxAP)
+
+        -- Visual feedback
+        PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
+
+        -- Play attack animation
+        currentAnimGroup = AnimGroup.Attack
+        SetAnimationGroup(entityID, currentAnimGroup)
+        SetAnimationLoop(entityID, false)  -- Play once
+        print("[PlayerScript] Playing attack animation")
+    else
+        print("[PlayerScript] ✗ Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
+    end
+
+    print("============================================================")
+
+    -- Clear attack preview
+    ClearAttackPreview()
 end
 
 -- ============================================================================

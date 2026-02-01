@@ -122,7 +122,7 @@ namespace Framework {
         /**
         * @brief Get valid neighboring tiles (4-directional)
         */
-        static std::vector<GridCoord> GetNeighbors(const GridCoord& coord, const Grid& grid);
+        static std::vector<GridCoord> GetNeighbors(const GridCoord& coord, const Grid& grid, const GridCoord& goal);
 
         /**
         * @brief Reconstruct path from A* search

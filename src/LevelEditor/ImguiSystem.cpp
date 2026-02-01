@@ -57,6 +57,11 @@ Safety:
 #include <regex> 
 #include "Graphics/RenderLayers.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#include <commdlg.h>
+#endif
+
 namespace Framework {
 
     static bool wantOpenModal = false;
@@ -156,7 +161,43 @@ namespace Framework {
         imguiInitialized = true;  // Mark as successfully initialized
     }
 
-	
+#ifdef _WIN32
+    static bool OpenFilePicker(std::string& outPath)
+    {
+        char fileName[MAX_PATH] = { 0 };
+
+        OPENFILENAMEA ofn;
+        ZeroMemory(&ofn, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = nullptr;
+        ofn.lpstrFile = fileName;
+        ofn.nMaxFile = MAX_PATH;
+
+        // "All Files (*.*)" filter
+        ofn.lpstrFilter = "All Files\0*.*\0\0";
+        ofn.nFilterIndex = 1;
+
+        // Do not change working directory
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+        if (GetOpenFileNameA(&ofn))
+        {
+            outPath = fileName;
+            return true;
+        }
+
+        return false;
+    }
+#else
+    static bool OpenFilePicker(std::string& outPath)
+    {
+        (void)outPath;
+        return false;
+    }
+#endif
+
+
+
     // ============================================================================
     // This is the function that able to open level from a txt file
     // author: jiahao.zhou@digipen
@@ -590,11 +631,91 @@ namespace Framework {
             }
         }
 
+        ImGui::Spacing();
+
+        static bool forceRescan = false;
+
+        if (ImGui::Button("Import Asset..."))
+        {
+            std::string pickedPath;
+            if (OpenFilePicker(pickedPath))
+            {
+                std::filesystem::path srcPath(pickedPath);
+
+                // If it's an audio file, reuse your existing audio popup flow
+                std::string audioErr;
+                if (IsAudioFileSupported(srcPath, audioErr))
+                {
+                    pendingAudioPath = srcPath;
+                    pendingAudioDestDir = std::filesystem::path("assets/Audio");
+
+                    std::string defaultName = srcPath.stem().string();
+                    strncpy_s(newAudioKeyBuffer, sizeof(newAudioKeyBuffer), defaultName.c_str(), _TRUNCATE);
+                    newAudioKeyBuffer[sizeof(newAudioKeyBuffer) - 1] = '\0';
+
+                    showAudioNamePopup = true;
+                }
+                else
+                {
+                    // Copy into the currently opened assets folder
+                    std::filesystem::path destDir = currentpath;
+
+                    // Ensure it's a directory
+                    if (!std::filesystem::exists(destDir))
+                    {
+                        std::filesystem::create_directories(destDir);
+                    }
+
+                    std::filesystem::path destPath = destDir / srcPath.filename();
+
+                    // Auto-rename if file already exists
+                    if (std::filesystem::exists(destPath))
+                    {
+                        std::string stem = destPath.stem().string();
+                        std::string ext = destPath.extension().string();
+                        int idx = 1;
+
+                        while (std::filesystem::exists(destPath))
+                        {
+                            destPath = destDir / (stem + "_" + std::to_string(idx) + ext);
+                            idx++;
+                        }
+                    }
+
+                    try
+                    {
+                        std::filesystem::copy_file(srcPath, destPath);
+                        forceRescan = true;
+
+                        if (graphicsSystem && IsTextureFile(destPath))
+                        {
+                            graphicsSystem->GetResourceManager().LoadTexture(destPath.generic_string());
+                        }
+                    }
+                    catch (const std::exception& e)
+                    {
+                        std::cerr << "[Assets] Import copy failed: " << e.what() << "\n";
+                    }
+                }
+            }
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Refresh##Assets"))
+        {
+            forceRescan = true;
+        }
+
+        ImGui::Separator();
+
+
         // Cache directory contents (only scan when path changes)
         static std::filesystem::path cachedPath;
         static std::vector<std::filesystem::directory_entry> cachedEntries;
 
-        if (cachedPath != currentpath) {
+        if (forceRescan || cachedPath != currentpath) {
+            forceRescan = false;
             cachedPath = currentpath;
             cachedEntries.clear();
             for (auto const& e : std::filesystem::directory_iterator(currentpath)) {
@@ -602,12 +723,15 @@ namespace Framework {
             }
         }
 
+        static bool wantDeletePopup = false;
+        static std::filesystem::path deleteTarget;
+
         // Loop through cached directory entries
         for (auto const& e : cachedEntries) {
             auto const path = e.path();
             std::string const label = path.filename().string();
             std::string const ImGuilabel = e.is_directory() ? "->" + label : label;
-            std::string filePath = "assets/" + label;
+            std::string filePath = path.generic_string();
 
             if (ImGui::Selectable(ImGuilabel.c_str())) {
                 if (e.is_directory()) {
@@ -618,6 +742,29 @@ namespace Framework {
                     OpenLevelFromTxt(filePath, true);
                 }
             }
+
+
+
+            if (ImGui::BeginPopupContextItem(path.string().c_str()))
+            {
+                if (!e.is_directory())
+                {
+                    if (ImGui::MenuItem("Delete..."))
+                    {
+                        deleteTarget = path;
+                        wantDeletePopup = true;
+                    }
+                }
+
+                ImGui::EndPopup();
+            }
+
+            if (wantDeletePopup)
+            {
+                ImGui::OpenPopup("Delete Asset?");
+                wantDeletePopup = false;
+            }
+
 
             // Texture drag-drop
             if (IsTextureFile(path))
@@ -762,7 +909,7 @@ namespace Framework {
                             // 3. FORCE Editor UI to stay ON (Safety override)
                             this->enabled = true;
 
-                            // 4. Reset Camera (Optional)
+                            // 4. Reset Camera 
                             if (graphicsSystem) graphicsSystem->SetCameraPosition(glm::vec3(0, 0, 0));
                         }
                         else {
@@ -772,6 +919,49 @@ namespace Framework {
                 }
             }
         }
+
+        if (ImGui::BeginPopupModal("Delete Asset?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Delete this file from disk?");
+            ImGui::Spacing();
+            ImGui::TextWrapped("%s", deleteTarget.string().c_str());
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (ImGui::Button("Delete", ImVec2(120, 0)))
+            {
+                try
+                {
+                    // If audio, remove file + reload audio library (JSON cleanup optional)
+                    // Minimal version: delete file + reload library (should not crash if missing)
+                    std::filesystem::remove(deleteTarget);
+
+                    if (audioSystem)
+                    {
+                        audioSystem->ReloadAudioLibrary();
+                    }
+
+                    forceRescan = true;
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr << "[Assets] Delete failed: " << e.what() << "\n";
+                }
+
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
+
 
         ImGui::End();  // Only one End() call at the very end
     }
@@ -1298,7 +1488,7 @@ namespace Framework {
 					std::string fileName = keyName + ext;
 
                     // 1. Copy file to assets folder
-                    std::filesystem::path destPath = std::filesystem::path("assets") / fileName;
+                    std::filesystem::path destPath = pendingAudioDestDir / fileName;
                     bool copySuccess = true;
 
                     if (!std::filesystem::exists(destPath)) {
@@ -1316,7 +1506,8 @@ namespace Framework {
                     if (copySuccess) {
                         // Use the user-entered KEY (newAudioKeyBuffer) instead of just the filename
                         // Adding audio to JSON
-                        bool added = AddAudioToJSON(keyName, fileName);
+                        std::string relToAssets = std::filesystem::relative(destPath, std::filesystem::path("assets")).generic_string();
+                        bool added = AddAudioToJSON(keyName, relToAssets);
 
                         if (added) {
                             // 3. Reload Audio System
@@ -3499,7 +3690,7 @@ namespace Framework {
 
                     // 1. Store the source path
                     pendingAudioPath = path;
-
+                    pendingAudioDestDir = std::filesystem::path("assets/Audio");
                     // 2. Pre-fill the buffer with the filename (as a default key)
                     std::string defaultName = path.stem().string();
                     //strncpy(newAudioKeyBuffer, defaultName.c_str(), sizeof(newAudioKeyBuffer));

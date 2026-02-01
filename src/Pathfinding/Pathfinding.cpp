@@ -351,12 +351,14 @@ namespace Framework {
     * @brief Gets all valid walkable neighboring tiles
     * @param coord Center coordinate to find neighbors of
     * @param grid Grid reference for bounds and walkability checking
+    * @param goal Goal coordinate (allowed even if occupied, as it's the destination)
     * @return Vector of walkable neighbor coordinates (up to 4)
     *
     * Checks tiles in 4 directions (up, down, left, right).
     * Only returns neighbors that are within bounds and walkable.
+    * The goal tile is allowed even if occupied (it's the target destination).
     */
-    std::vector<GridCoord> PathfindingSystem::GetNeighbors(const GridCoord& coord, const Grid& grid) {
+    std::vector<GridCoord> PathfindingSystem::GetNeighbors(const GridCoord& coord, const Grid& grid, const GridCoord& goal) {
         std::vector<GridCoord> neighbors;
         neighbors.reserve(4);
 
@@ -366,16 +368,12 @@ namespace Framework {
         for (int i = 0; i < 4; ++i) {
             GridCoord neighbor{ coord.x + dx[i], coord.y + dy[i] };
 
-            /*if (grid.InBounds(neighbor.x, neighbor.y) && IsWalkable(neighbor)) {
-                neighbors.push_back(neighbor);
-            }*/
-
             if (!grid.InBounds(neighbor.x, neighbor.y)) {
                 continue;
             }
 
-            // *** KEY FIX: Just check if tile is blocked, ignore occupancy ***
-            // We need to allow pathing to occupied tiles (like the player's position)
+            // CRITICAL FIX: Check BOTH blocked AND occupied status
+            // Enemies should NOT path onto tiles occupied by players or other entities
             Entity tileEntity = grid.TileAt(neighbor.x, neighbor.y);
             if (tileEntity.GetID() == INVALID_ENTITY) {
                 continue;
@@ -387,8 +385,12 @@ namespace Framework {
 
             const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
 
-            // Only check if physically blocked, NOT if occupied
-            if (!gridTile.blocked) {
+            // Check if this is the goal tile - allow it even if occupied
+            bool isGoal = (neighbor.x == goal.x && neighbor.y == goal.y);
+
+            // Check both physical blocking AND occupancy
+            // Allow the goal tile even if occupied (it's the target destination)
+            if (!gridTile.blocked && (gridTile.occupant.GetID() == INVALID_ENTITY || isGoal)) {
                 neighbors.push_back(neighbor);
             }
         }
@@ -491,7 +493,7 @@ namespace Framework {
                 return ReconstructPath(nodes, start, goal);
             }
 
-            for (const GridCoord& neighbor : GetNeighbors(current, grid)) {
+            for (const GridCoord& neighbor : GetNeighbors(current, grid, goal)) {
                 if (closedList[neighbor.y][neighbor.x]) continue;
 
                 int tentativeGCost = nodes[current.y][current.x].gCost + 1;

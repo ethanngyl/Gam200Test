@@ -169,6 +169,9 @@ namespace Framework {
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
+        static int Lua_IsMouseButtonDown(lua_State* L);
+        static int Lua_IsMouseButtonPressed(lua_State* L);
+        static int Lua_GetMousePosition(lua_State* L);
 
         // JSON API
         static int Lua_LoadJSON(lua_State* L);
@@ -252,6 +255,9 @@ namespace Framework {
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
 
+        // Grid Conversion API
+        static int Lua_TileToWorld(lua_State* L);
+
         // Script Component Management API
         static int Lua_AddScriptComponentToEntity(lua_State* L);
         static int Lua_RemoveScriptComponentFromEntity(lua_State* L);
@@ -267,6 +273,16 @@ namespace Framework {
         static int Lua_LoadAutoSave(lua_State* L);
         static int Lua_HasAutoSave(lua_State* L);
         static int Lua_ClearAutoSave(lua_State* L);
+
+        // Procedural Map API
+        static int Lua_LoadProceduralMap(lua_State* L);
+
+        // Entity Spawning API
+        static int Lua_SpawnPlayerAt(lua_State* L);
+        static int Lua_SpawnEnemyAt(lua_State* L);
+        static int Lua_SpawnChestAt(lua_State* L);
+        static int Lua_SpawnGoalAt(lua_State* L);
+
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

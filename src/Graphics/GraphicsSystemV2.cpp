@@ -137,6 +137,7 @@ namespace Framework {
         text_.loadFont("Sans48", "assets/Font/Orbitron-VariableFont_wght.ttf", 48);
         text_.loadFont("Serif32", "assets/Font/Roboto-VariableFont_wdth,wght.ttf", 32);
         text_.loadFont("Serif32", "assets/Font/EBGaramond_Italic_VariableFont_wght.ttf", 48);
+        text_.loadFont("Playfair48", "assets/Font/PlayfairDisplay-Regular.otf", 48);
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
@@ -978,13 +979,24 @@ namespace Framework {
                 if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
                 // 3. Bind Texture (CRITICAL FIX for switching between Wood and Button)
-                if (batchBase->texture.IsValid()) {
-                    glBindTextureUnit(0, batchBase->texture.GetID());
-                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                if (batchBase->texture.IsValid())
+                {
+                    Texture* tex = resourceManager.GetTexture(batchBase->texture);
+                    if (tex)
+                    {
+                        glBindTextureUnit(0, tex->GetID()); // <-- bind the REAL OpenGL texture ID
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                    }
+                    else
+                    {
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
+                    }
                 }
-                else {
+                else
+                {
                     glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
                 }
+
 
                 // 4. Draw
                 Mesh* mesh = resourceManager.GetMesh(batchBase->mesh);

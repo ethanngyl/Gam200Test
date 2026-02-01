@@ -44,6 +44,7 @@
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
 #include "PrefabInstanceRegistry.h"
+#include "MapGenerator/MapGenerator.h"
 
 #include "StateMachine.h"
 #include "FSMSystem.h"
@@ -302,6 +303,19 @@ namespace Framework
     void CoreEngine::Initialize()
     {
         LOG_INFO("CORE", "[5/5] Initializing remaining systems...");
+
+        using namespace Framework::MapGen;
+
+        Config config;
+        config.width = 20;
+        config.height = 15;
+        config.algorithm = "rooms";  // Try "rooms", "cellular", "open"
+
+        Generator gen;
+        GeneratedMap map = gen.generate(config);
+        Generator::printMap(map);
+
+        LOG_INFO("CORE", "MapGenerator test complete!");
 
         // WindowSystem and GraphicsSystem already initialized
         // Just initialize the others

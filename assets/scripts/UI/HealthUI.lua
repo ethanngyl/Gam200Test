@@ -45,8 +45,12 @@ function HealthUI:Init(config)
     -- Get camera position
     local camX, camY, camZ = GetCameraPosition()
 
-    -- Get current HP
-    local curHP, maxHP = GetPlayerHP()
+    -- FIXED: Get current HP for the ACTIVE character, not always entity 547
+    local activeCharID = GetActiveCharacter()
+    local curHP, maxHP = 5, 5  -- Default
+    if activeCharID and activeCharID > 0 then
+        curHP, maxHP = GetEntityHP(activeCharID)
+    end
     if maxHP and maxHP > 0 then
         self.maxHP = maxHP
     end
@@ -78,8 +82,11 @@ end
 function HealthUI:Update(dt, cameraPos)
     if not self.enabled then return end
 
-    -- Get current HP
-    local curHP, maxHP = GetPlayerHP()
+    -- Get current HP for the ACTIVE character
+    local activeCharID = GetActiveCharacter()
+    if not activeCharID or activeCharID <= 0 then return end
+
+    local curHP, maxHP = GetEntityHP(activeCharID)
     if not curHP then return end
 
     -- Update sprite positions if camera moved

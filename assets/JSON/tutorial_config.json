@@ -58,7 +58,7 @@
         "layer": 10,
         "text": {
           "content": "Next",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": -115.0,
             "y": -16.0
@@ -86,7 +86,7 @@
         "layer": 10,
         "text": {
           "content": "Chest",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": -70,
             "y": 50
@@ -114,7 +114,7 @@
         "layer": 10,
         "text": {
           "content": "Main Objective",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": -150,
             "y": 50
@@ -142,7 +142,7 @@
         "layer": 10,
         "text": {
           "content": "Enemy",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": -100,
             "y": 70
@@ -170,7 +170,7 @@
         "layer": 10,
         "text": {
           "content": "Objective:",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": 0.0,
             "y": 70
@@ -198,7 +198,7 @@
         "layer": 10,
         "text": {
           "content": "Collect the items in all 3 chests",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": 0.0,
             "y": 70
@@ -226,7 +226,7 @@
         "layer": 10,
         "text": {
           "content": "and reach the main objective to",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": 0.0,
             "y": 110
@@ -254,7 +254,7 @@
         "layer": 10,
         "text": {
           "content": "win the game",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": 0.0,
             "y": 150
@@ -282,7 +282,7 @@
         "layer": 10,
         "text": {
           "content": "There will be enemies who will be",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": 0.0,
             "y": 100
@@ -310,7 +310,7 @@
         "layer": 10,
         "text": {
           "content": "patrolling that will stand in your",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": 0.0,
             "y": 140
@@ -338,7 +338,7 @@
         "layer": 10,
         "text": {
           "content": "way",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": 0.0,
             "y": 180
