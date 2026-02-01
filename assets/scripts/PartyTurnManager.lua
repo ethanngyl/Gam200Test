@@ -408,6 +408,14 @@ function EndPartyTurn()
         else
             print("[PartyTurnManager] WARNING: No enemies found to refill AP")
         end
+
+        -- Initialize sequential enemy turn system
+        print("[PartyTurnManager] Initializing sequential enemy turn system...")
+        if InitializeEnemyTurn then
+            InitializeEnemyTurn()
+        else
+            print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
+        end
     end
 
     -- Reset party state for next turn

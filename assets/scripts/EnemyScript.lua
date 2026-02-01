@@ -110,7 +110,6 @@ function OnUpdate(dt)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
-            _G.EnemyCameraPannedThisTurn = false  -- Reset camera flag for new enemy turn
         end
         lastEnemyTurn = currentTurn
         return
@@ -118,6 +117,18 @@ function OnUpdate(dt)
 
     -- Track that this is enemy turn
     lastEnemyTurn = "Enemy"
+
+    -- SEQUENTIAL TURN SYSTEM: Only act if this enemy is the active one
+    if not IsActiveEnemy(entityID) then
+        -- Not my turn yet, wait
+        return
+    end
+
+    -- Check if action timer is ready (for visual delay between enemies)
+    if not IsEnemyActionReady() then
+        -- Still in delay, wait
+        return
+    end
 
     -- Check if this enemy has already acted this turn
     if hasActedThisTurn then
@@ -127,14 +138,9 @@ function OnUpdate(dt)
 
     print("[Enemy " .. entityID .. "] Starting turn")
 
-    -- Pan camera to this enemy when starting to act (only first enemy)
+    -- Mark that we're taking our turn
     if not isMyTurnToAct then
         isMyTurnToAct = true
-        -- Only pan camera if no other enemy has panned it yet this turn
-        if not _G.EnemyCameraPannedThisTurn then
-            _G.EnemyCameraPannedThisTurn = true
-            SetCameraFollowTarget(entityID)
-        end
     end
 
     -- CRITICAL: Find closest player dynamically each turn
@@ -146,7 +152,7 @@ function OnUpdate(dt)
     else
         print("[Enemy " .. entityID .. "] No player found!")
         hasActedThisTurn = true  -- Mark as acted even if no target
-        CheckAllEnemiesActed()
+        MarkEnemyActionComplete()  -- Advance to next enemy
         return  -- No player to target
     end
 
@@ -625,44 +631,15 @@ end
 -- ENEMY TURN COORDINATION
 -- ============================================================================
 
--- Mark this enemy as having completed its turn and check if all enemies are done
+-- Mark this enemy as having completed its turn and advance to next enemy
 function FinishEnemyAction()
     hasActedThisTurn = true
     Log("[Enemy " .. entityID .. "] Finished turn")
-    CheckAllEnemiesActed()
+    MarkEnemyActionComplete()  -- Advance to next enemy in sequence
 end
 
--- Check if all enemies have acted, and if so, end the enemy turn
-function CheckAllEnemiesActed()
-    local enemies = GetAllEnemies()
-    if not enemies or #enemies == 0 then
-        return
-    end
-
-    -- Find this enemy's index in the enemy list
-    local myIndex = nil
-    for i, enemyID in ipairs(enemies) do
-        if enemyID == entityID then
-            myIndex = i
-            break
-        end
-    end
-
-    if not myIndex then
-        return
-    end
-
-    -- If this is the last enemy, end the enemy turn
-    if myIndex == #enemies then
-        -- Pan camera back to the active player character before ending turn
-        local activePlayerID = GetActiveCharacter()
-        if activePlayerID and activePlayerID > 0 then
-            SetCameraFollowTarget(activePlayerID)
-        end
-
-        EndEnemyTurn()
-    end
-end
+-- REMOVED: CheckAllEnemiesActed() - replaced by EnemyTurnManager
+-- Sequential turn system now handles enemy turn advancement and camera panning
 
 -- ============================================================================
 -- Export behavior types for level scripts

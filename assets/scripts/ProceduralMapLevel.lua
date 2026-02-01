@@ -9,6 +9,9 @@ local UIManager = require("UIManager")
 -- Load Party Turn Manager (REQUIRED for party system)
 dofile("assets/scripts/PartyTurnManager.lua")
 
+-- Load Enemy Turn Manager (REQUIRED for sequential enemy turns)
+dofile("assets/scripts/EnemyTurnManager.lua")
+
 -- ============================================================================
 -- LEVEL STATE
 -- ============================================================================
@@ -403,6 +406,11 @@ function OnUpdate(dt)
                 EndPartyTurn()
             end
         end
+    end
+
+    -- Update enemy turn manager (for sequential enemy turns with delays)
+    if UpdateEnemyTurnManager then
+        UpdateEnemyTurnManager(dt)
     end
 
     previousTurn = currentTurn
