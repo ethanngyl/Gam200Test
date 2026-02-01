@@ -13,6 +13,7 @@ local APIndicatorUI = require("UI/APIndicatorUI")
 local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
+local TurnScrollUI = require("ScrollOpen")
 
 -- ============================================================================
 -- STATE
@@ -120,6 +121,25 @@ function UIManager.Init(config)
         playerTexture = "assets/UI/Player_Turn_Icon.png"
     })
 
+    -- Create Turn Scroll UI (Your Turn animation)
+    UIManager.components.turnScroll = TurnScrollUI:New()
+    UIManager.components.turnScroll:Init({
+        offsetX = 0.0,
+        offsetY = 0.05,
+        scaleX = 0.9,
+        scaleY = 0.35,
+        layer = 6,
+        texture = "assets/UI/ScrollOpen.png",
+        animName = "ScrollOpen",
+        frameTime = 0.03,
+        text = "Your Turn",
+        textFont = "Sans48",
+        textScale = 0.9,
+        textColor = {0.0, 0.0, 0.0},
+        textStartFrame = 8,
+        textEndFrame = 28
+    })
+
     -- TODO: Add more components as needed:
     -- - ChestProgressUI
     -- - PlayerIconsUI (boots, sword)
@@ -150,6 +170,23 @@ function UIManager.Update(dt)
     for name, component in pairs(UIManager.components) do
         if component and component.Update then
             component:Update(dt, cameraPos)
+        end
+    end
+end
+
+-- ============================================================================
+-- DRAW
+-- ============================================================================
+
+function UIManager.Draw()
+    if not UIManager.initialized then
+        return
+    end
+
+    -- Draw all components that have a Draw method
+    for name, component in pairs(UIManager.components) do
+        if component and component.Draw then
+            component:Draw()
         end
     end
 end

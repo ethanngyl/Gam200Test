@@ -201,6 +201,12 @@ namespace Framework {
         static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
+        
+        // Scroll Animation API (for TurnScrollUI)
+        static int Lua_PlayAnimationByName(lua_State* L);
+        static int Lua_SetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrameCount(lua_State* L);
 
         // Animation Control API
         static int Lua_SetAnimationGroup(lua_State* L);

@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- Level3Procedural.lua
 -- PROCEDURAL VERSION - Works with 3-character party system
 -- ============================================================================
@@ -417,6 +417,9 @@ end
 
 function OnDraw()
     PauseMenu.Draw()
+
+    -- Render UI components (including scroll animation text)
+    UIManager.Draw()
 
     -- Check if IsEditorMode exists
     if IsEditorMode and IsEditorMode() then
