@@ -525,10 +525,13 @@ end
 -- ============================================================================
 
 function OnEnemyTurnEnded()
-    -- This is called by PartyTurnManager when enemy turn ends
-    -- Reset all party member states for new player turn
-    Log("[Level3Procedural] Resetting party for new turn")
-    
-    -- Party turn manager handles the reset
-    -- Camera following is handled by C++ - no Lua function for this
+    -- Call PartyTurnManager's ResetPartyTurn to reset party state
+    Log("[Level3Procedural] Enemy turn ended - calling ResetPartyTurn()")
+
+    -- Call the global ResetPartyTurn function from PartyTurnManager
+    if ResetPartyTurn then
+        ResetPartyTurn()
+    else
+        Log("[Level3Procedural] ERROR: ResetPartyTurn not found!")
+    end
 end

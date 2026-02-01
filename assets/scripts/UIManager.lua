@@ -166,6 +166,21 @@ function UIManager.Update(dt)
     local camX, camY, camZ = GetCameraPosition()
     local cameraPos = {x = camX, y = camY, z = camZ}
 
+    -- Check current turn to hide player UI during enemy turn
+    local currentTurn = GetCurrentTurn and GetCurrentTurn() or "Player"
+    local isEnemyTurn = (currentTurn == "Enemy")
+
+    -- Hide player-specific UI during enemy turn
+    if UIManager.components.ap then
+        UIManager.components.ap:SetEnabled(not isEnemyTurn)
+    end
+    if UIManager.components.attackAP then
+        UIManager.components.attackAP:SetEnabled(not isEnemyTurn)
+    end
+    if UIManager.components.health then
+        UIManager.components.health:SetEnabled(not isEnemyTurn)
+    end
+
     -- Update all components
     for name, component in pairs(UIManager.components) do
         if component and component.Update then
