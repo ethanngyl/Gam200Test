@@ -3075,6 +3075,109 @@ namespace Framework {
         }
         lua_settable(L, -3);
 
+        // ========================================
+        // PARTY SPAWNS - 3 guaranteed floor tiles
+        // ========================================
+        std::cout << "[Lua_LoadProceduralMap] Finding party spawn positions...\n";
+
+        std::vector<MapGen::Position> partySpawns;
+        partySpawns.push_back(map.playerSpawn);  // First is always valid
+
+        // Search pattern for adjacent floor tiles
+        const int searchOffsets[][2] = {
+            // Distance 1 (cardinal directions)
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+            // Distance 1 (diagonal)
+            {1, 1}, {-1, 1}, {1, -1}, {-1, -1},
+            // Distance 2 (cardinal)
+            {2, 0}, {-2, 0}, {0, 2}, {0, -2},
+            // Distance 2 (knight-move pattern)
+            {2, 1}, {2, -1}, {-2, 1}, {-2, -1},
+            {1, 2}, {-1, 2}, {1, -2}, {-1, -2},
+            // Distance 2 (diagonal)
+            {2, 2}, {-2, 2}, {2, -2}, {-2, -2},
+            // Distance 3 (cardinal)
+            {3, 0}, {-3, 0}, {0, 3}, {0, -3},
+        };
+
+        const int numOffsets = sizeof(searchOffsets) / sizeof(searchOffsets[0]);
+
+        for (int i = 0; i < numOffsets && partySpawns.size() < 3; i++) {
+            int testX = map.playerSpawn.x + searchOffsets[i][0];
+            int testY = map.playerSpawn.y + searchOffsets[i][1];
+
+            // Check bounds
+            if (testX < 0 || testX >= map.width || testY < 0 || testY >= map.height) {
+                continue;
+            }
+
+            // Check if it's a FLOOR tile (not a wall) - THIS IS THE KEY CHECK!
+            if (map.getTile(testX, testY) != MapGen::TileType::FLOOR) {
+                continue;
+            }
+
+            // Check not already used
+            bool alreadyUsed = false;
+            for (const auto& pos : partySpawns) {
+                if (pos.x == testX && pos.y == testY) {
+                    alreadyUsed = true;
+                    break;
+                }
+            }
+
+            if (!alreadyUsed) {
+                partySpawns.push_back(MapGen::Position(testX, testY));
+                std::cout << "[Lua_LoadProceduralMap] Party spawn " << partySpawns.size()
+                    << ": (" << testX << ", " << testY << ")\n";
+            }
+        }
+
+        // If we still don't have 3, duplicate the player spawn (fallback)
+        while (partySpawns.size() < 3) {
+            std::cout << "[Lua_LoadProceduralMap] WARNING: Not enough floor tiles, duplicating\n";
+            partySpawns.push_back(map.playerSpawn);
+        }
+
+        // Add partySpawns array to the Lua table
+        lua_pushstring(L, "partySpawns");
+        lua_newtable(L);
+        for (size_t i = 0; i < partySpawns.size(); i++) {
+            lua_pushnumber(L, static_cast<lua_Number>(i + 1));  // Lua arrays are 1-indexed
+            lua_newtable(L);
+
+            // Grid coordinates
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, partySpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, partySpawns[i].y);
+            lua_settable(L, -3);
+
+            // Pre-calculated world coordinates
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (partySpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (partySpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);  // Add spawn to array
+        }
+        lua_settable(L, -3);  // Add partySpawns to main table
+
+        // Also add map dimensions
+        lua_pushstring(L, "width");
+        lua_pushnumber(L, map.width);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "height");
+        lua_pushnumber(L, map.height);
+        lua_settable(L, -3);
+
+        std::cout << "[Lua_LoadProceduralMap] Added " << partySpawns.size() << " party spawns\n";
+
         return 1;
     }
 
