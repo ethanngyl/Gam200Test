@@ -520,7 +520,9 @@ namespace Framework {
 
         // Party System - Entity-Based APIs
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
+        lua_register(L, "GetEntityAttackAP", Lua_GetEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
+        lua_register(L, "ConsumeEntityAttackAP", Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);

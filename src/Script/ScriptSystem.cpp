@@ -544,7 +544,9 @@ namespace Framework {
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
+        lua_register(L, "GetEntityAttackAP", LevelLoader::Lua_GetEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", LevelLoader::Lua_ConsumeEntityAP);
+        lua_register(L, "ConsumeEntityAttackAP", LevelLoader::Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", LevelLoader::Lua_RefillEntityAP);
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);

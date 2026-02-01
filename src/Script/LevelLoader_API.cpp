@@ -2399,6 +2399,40 @@ namespace Framework {
     }
 
     /**
+     * @brief Get entity's current Attack AP
+     * @param entityID The entity ID
+     * @return current AttackAP, max AttackAP (two numbers)
+     *
+     * Usage: local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+     */
+    int LevelLoader::Lua_GetEntityAttackAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "GetEntityAttackAP: No EntityManager");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "GetEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        LOG_INFO("LevelLoader", "GetEntityAttackAP: Entity %d has AttackAP=%d/%d",
+                 entityID, attackAP.points, attackAP.maxPoints);
+        lua_pushinteger(L, attackAP.points);
+        lua_pushinteger(L, attackAP.maxPoints);
+        return 2;
+    }
+
+    /**
      * @brief Get entity's current AP (Action Points) - legacy name
      * @param entityID The entity ID
      * @return AP value, or 0 if entity doesn't have AP component
@@ -2679,6 +2713,49 @@ namespace Framework {
 
         LOG_INFO("LevelLoader", "ConsumeEntityAP: Entity %d AP consumed %d -> %d (-%d)",
                  entityID, oldAP, ap.actionPoints, amount);
+
+        return 0;
+    }
+
+    /**
+     * @brief Consume entity's Attack AP
+     * @param entityID The entity ID
+     * @param amount Amount of Attack AP to consume
+     *
+     * Usage: ConsumeEntityAttackAP(entityID, 1)
+     */
+    int LevelLoader::Lua_ConsumeEntityAttackAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No core engine");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No entity manager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "ConsumeEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            return 0;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        int oldAP = attackAP.points;
+        attackAP.points -= amount;
+        if (attackAP.points < 0) {
+            attackAP.points = 0;
+        }
+
+        LOG_INFO("LevelLoader", "ConsumeEntityAttackAP: Entity %d AttackAP consumed %d -> %d (-%d)",
+                 entityID, oldAP, attackAP.points, amount);
 
         return 0;
     }

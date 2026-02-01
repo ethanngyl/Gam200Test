@@ -220,7 +220,9 @@ namespace Framework {
 
         // Party System - Entity-Based APIs
         static int Lua_GetEntityAP(lua_State* L);
+        static int Lua_GetEntityAttackAP(lua_State* L);
         static int Lua_ConsumeEntityAP(lua_State* L);
+        static int Lua_ConsumeEntityAttackAP(lua_State* L);
         static int Lua_RefillEntityAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);
