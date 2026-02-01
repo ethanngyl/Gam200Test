@@ -107,8 +107,12 @@ function OnInit()
 end
 
 function OnUpdate(dt)
+    -- DEBUG: Verify OnUpdate is being called
+    print("[Enemy " .. entityID .. "] OnUpdate called (dt=" .. string.format("%.3f", dt) .. ")")
+
     -- Enemy AI only runs during enemy turn
     local currentTurn = GetCurrentTurn()
+    print("[Enemy " .. entityID .. "]   Current turn: " .. tostring(currentTurn))
 
     if currentTurn ~= "Enemy" then
         -- Reset acted flag when it's not enemy turn
@@ -117,6 +121,7 @@ function OnUpdate(dt)
             isMyTurnToAct = false
             moveTimer = 0.0
             movesThisTurn = 0
+            print("[Enemy " .. entityID .. "]   Resetting turn flags (was enemy turn, now " .. tostring(currentTurn) .. ")")
         end
         lastEnemyTurn = currentTurn
         return
@@ -124,32 +129,40 @@ function OnUpdate(dt)
 
     -- Track that this is enemy turn
     lastEnemyTurn = "Enemy"
+    print("[Enemy " .. entityID .. "]   It IS enemy turn!")
 
     -- SEQUENTIAL TURN SYSTEM: Only act if this enemy is the active one
-    if not IsActiveEnemy(entityID) then
+    local isActive = IsActiveEnemy(entityID)
+    print("[Enemy " .. entityID .. "]   IsActiveEnemy(" .. entityID .. "): " .. tostring(isActive))
+    if not isActive then
         -- Not my turn yet, wait
         return
     end
 
     -- Check if action timer is ready (for visual delay between enemies)
-    if not IsEnemyActionReady() then
+    local actionReady = IsEnemyActionReady()
+    print("[Enemy " .. entityID .. "]   IsEnemyActionReady(): " .. tostring(actionReady))
+    if not actionReady then
         -- Still in delay, wait
         return
     end
 
     -- Check if this enemy has already acted this turn
+    print("[Enemy " .. entityID .. "]   hasActedThisTurn: " .. tostring(hasActedThisTurn))
     if hasActedThisTurn then
         -- Already acted, don't process again
         return
     end
 
     -- Update move timer
+    print("[Enemy " .. entityID .. "]   moveTimer: " .. moveTimer)
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
         if moveTimer < 0 then
             moveTimer = 0
         end
         -- Still waiting for move delay
+        print("[Enemy " .. entityID .. "]   Waiting for move delay (timer: " .. moveTimer .. ")")
         return
     end
 
@@ -157,7 +170,7 @@ function OnUpdate(dt)
     if not isMyTurnToAct then
         isMyTurnToAct = true
         movesThisTurn = 0
-        print("[Enemy " .. entityID .. "] Starting turn")
+        print("[Enemy " .. entityID .. "] ========== STARTING TURN ==========")
 
         -- CRITICAL: Find closest player dynamically each turn
         local closestPlayer, closestDistance = FindClosestPlayer()

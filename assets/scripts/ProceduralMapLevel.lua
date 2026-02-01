@@ -410,6 +410,9 @@ function OnUpdate(dt)
 
     -- Update enemy turn manager (for sequential enemy turns with delays)
     if UpdateEnemyTurnManager then
+        if currentTurn == "Enemy" then
+            Log("[Level3Procedural] Calling UpdateEnemyTurnManager(dt=" .. string.format("%.3f", dt) .. ")")
+        end
         UpdateEnemyTurnManager(dt)
     end
 
