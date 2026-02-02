@@ -1036,7 +1036,7 @@ namespace Framework {
         if (!em) return 0;
 
         // Get the grid
-        const auto& grid = Framework::PathfindingSystem::GetGrid();
+        const Framework::Grid& grid = Framework::GetGrid();
         if (!grid.InBounds(gridX, gridY)) {
             LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds", gridX, gridY);
             return 0;
