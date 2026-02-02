@@ -146,6 +146,16 @@ function OnUpdate(dt)
     end
 
     -- ========================================================================
+    -- ANIMATION BLOCKING: Disable input during scroll and AP refill animations
+    -- ========================================================================
+
+    -- Block input during animations (scroll and AP refill)
+    if UIManager and UIManager.IsAnyAnimationPlaying and UIManager.IsAnyAnimationPlaying() then
+        print("[PlayerScript] Blocking input - animation playing")
+        return
+    end
+
+    -- ========================================================================
     -- INPUT STATE TRACKING (prevents key carry-over from previous turn)
     -- ========================================================================
 
@@ -335,15 +345,23 @@ function OnUpdate(dt)
     local spaceKeyDown = IsKeyDown("Space")
     if spaceKeyDown and not lastSpaceKeyDown then
         -- SPACE key was just pressed
-        print("[PlayerScript] SPACE key pressed")
+        print("============================================================")
+        print("[PlayerScript] ===== SPACE KEY PRESSED =====")
+        print("[PlayerScript] attackPreviewActive: " .. tostring(attackPreviewActive))
 
         if not attackPreviewActive then
             -- First press: Show attack preview
             local currentAP, maxAP = GetEntityAP(entityID)
+            print("[PlayerScript] Current AP: " .. currentAP .. "/" .. maxAP .. " (attack cost: " .. attackAPCost .. ")")
+
             if currentAP >= attackAPCost then
+                print("[PlayerScript] Sufficient AP - checking for enemies in range...")
                 -- Check if there's an enemy in range before showing preview
                 local testEnemy = FindEnemyInRange()
+                print("[PlayerScript] FindEnemyInRange() returned: " .. tostring(testEnemy))
+
                 if testEnemy then
+                    print("[PlayerScript] Enemy found - calling ShowAttackPreview()...")
                     ShowAttackPreview()
                     print("[PlayerScript] Attack preview shown - enemy in range")
                 else
@@ -356,8 +374,10 @@ function OnUpdate(dt)
             end
         else
             -- Second press: Execute attack
+            print("[PlayerScript] Attack preview already active - executing attack...")
             ExecuteAttack()
         end
+        print("============================================================")
     end
     lastSpaceKeyDown = spaceKeyDown  -- Update SPACE key state for next frame
 
@@ -719,10 +739,10 @@ function ExecuteAttack()
     if success then
         print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
-        -- Consume attack AP
-        ConsumeEntityAP(entityID, attackAPCost)
+        -- Consume attack AP (NOT movement AP!)
+        ConsumeEntityAttackAP(entityID, attackAPCost)
         local newAP = GetEntityAP(entityID)
-        print("[PlayerScript] AP consumed. New AP: " .. newAP .. "/" .. maxAP)
+        print("[PlayerScript] Attack AP consumed. New AP: " .. newAP .. "/" .. maxAP)
 
         -- Visual feedback
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
