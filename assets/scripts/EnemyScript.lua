@@ -246,6 +246,12 @@ function UpdateAIState()
             currentPath = {}
             pathIndex = 1
             pathTargetPlayerID = 0
+
+            -- CRITICAL FIX: Update C++ EnemyAI target so pathfinding uses correct player
+            -- The C++ Pathfinding system (Pathfinding.cpp) uses ai.targetEntity for pathfinding
+            -- We must sync the Lua targetPlayerID with the C++ ai.targetEntity
+            print("[Enemy " .. entityID .. "] Updating C++ target via SetEnemyTarget(" .. entityID .. ", " .. closestPlayer .. ")")
+            SetEnemyTarget(entityID, closestPlayer)
         end
         targetPlayerID = closestPlayer
     else
@@ -334,6 +340,9 @@ function ExecuteAttack()
             currentPath = {}
             pathIndex = 1
             pathTargetPlayerID = 0
+
+            -- CRITICAL FIX: Update C++ EnemyAI target
+            SetEnemyTarget(entityID, closestPlayer)
         end
         targetPlayerID = closestPlayer
     else
