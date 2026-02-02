@@ -235,8 +235,9 @@ namespace Framework {
 
             LOG_INFO("EnemyAI", "Enemy %u ATTACKING Player %u", currentEnemy.GetID(), closestPlayer.GetID());
 
-            // ATTACK!
-            stats.actionPoints--;
+            // ATTACK! Consume 2 AP (attack cost)
+            const int attackAPCost = 2;
+            stats.actionPoints -= attackAPCost;
             ai.moveTimer = ai.moveDelay;
 
             // Deal damage to target

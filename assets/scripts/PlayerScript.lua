@@ -579,44 +579,43 @@ function ShowAttackPreview()
 
     print("[PlayerScript] Showing attack preview at (" .. currentX .. ", " .. currentY .. ") with range " .. attackRange)
 
-    -- Show attack preview tiles in a range pattern (Manhattan distance)
-    for r = 1, attackRange do
-        local candidates = {
-            {x = currentX + r, y = currentY},      -- Right
-            {x = currentX - r, y = currentY},      -- Left
-            {x = currentX, y = currentY + r},      -- Up
-            {x = currentX, y = currentY - r}       -- Down
-        }
+    -- Show attack preview tiles - only adjacent tiles (Manhattan distance = 1)
+    -- Only show tiles at exactly distance 1 (4 adjacent tiles: up, down, left, right)
+    local adjacentTiles = {
+        {x = currentX + 1, y = currentY},      -- Right
+        {x = currentX - 1, y = currentY},      -- Left
+        {x = currentX, y = currentY + 1},      -- Down
+        {x = currentX, y = currentY - 1}       -- Up
+    }
 
-        for _, tile in ipairs(candidates) do
-            if IsValidGridPosition(tile.x, tile.y) and IsWalkableTile(tile.x, tile.y) then
-                -- Convert grid coords to world coords
-                local worldX, worldY = TileToWorld(tile.x, tile.y)
+    for _, tile in ipairs(adjacentTiles) do
+        if IsValidGridPosition(tile.x, tile.y) then
+            -- Convert grid coords to world coords
+            local worldX, worldY = TileToWorld(tile.x, tile.y)
 
-                if worldX and worldY then
-                    -- Spawn attack indicator sprite at this tile
-                    -- Note: SpawnSprite returns entity ID
-                    -- Use 0.95 size to leave a small gap between tiles for visibility
-                    local indicatorID = SpawnSprite(
-                        "assets/TileMap/Attack_Indicator.png",
-                        worldX, worldY,
-                        0.95, 0.95,  -- Slightly smaller than tile (0.95 x 0.95)
-                        2  -- layer 2 (above tiles, below characters)
-                    )
+            if worldX and worldY then
+                -- Spawn attack indicator sprite at this tile
+                -- Note: SpawnSprite returns entity ID
+                -- Use 0.95 size to leave a small gap between tiles for visibility
+                local indicatorID = SpawnSprite(
+                    "assets/TileMap/Attack_Indicator.png",
+                    worldX, worldY,
+                    0.95, 0.95,  -- Slightly smaller than tile (0.95 x 0.95)
+                    2  -- layer 2 (above tiles, below characters)
+                )
 
-                    if indicatorID and indicatorID > 0 then
-                        -- Make the indicator semi-transparent red
-                        SetSpriteColor(indicatorID, 1.0, 0.0, 0.0, 0.5)  -- Red with 50% opacity
+                if indicatorID and indicatorID > 0 then
+                    -- Make the indicator semi-transparent red
+                    SetSpriteColor(indicatorID, 1.0, 0.0, 0.0, 0.5)  -- Red with 50% opacity
 
-                        -- Store the indicator entity ID so we can destroy it later
-                        table.insert(attackPreviewTiles, indicatorID)
-                        print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at grid(" .. tile.x .. ", " .. tile.y .. ") world(" .. worldX .. ", " .. worldY .. ")")
-                    else
-                        print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
-                    end
+                    -- Store the indicator entity ID so we can destroy it later
+                    table.insert(attackPreviewTiles, indicatorID)
+                    print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at grid(" .. tile.x .. ", " .. tile.y .. ") world(" .. worldX .. ", " .. worldY .. ")")
                 else
-                    print("[PlayerScript]   WARNING: TileToWorld failed for (" .. tile.x .. ", " .. tile.y .. ")")
+                    print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
                 end
+            else
+                print("[PlayerScript]   WARNING: TileToWorld failed for (" .. tile.x .. ", " .. tile.y .. ")")
             end
         end
     end
