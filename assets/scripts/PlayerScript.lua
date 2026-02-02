@@ -291,8 +291,6 @@ function OnUpdate(dt)
         return
     end
 
-    print("[PlayerScript] DEBUG: Passed all blocking checks, checking for input...")
-
     -- ========================================================================
     -- MANUAL TURN END (P KEY)
     -- ========================================================================
