@@ -615,18 +615,14 @@ function ShowAttackPreview()
         print("[PlayerScript]     IsValidGridPosition: " .. tostring(isValid))
 
         if isValid then
-            -- Tint the tile red (semi-transparent)
-            print("[PlayerScript]     Calling TintTile(" .. tile.x .. ", " .. tile.y .. ", 1.0, 0.3, 0.3, 1.0)")
-            local success, err = pcall(TintTile, tile.x, tile.y, 1.0, 0.3, 0.3, 1.0)
-            if not success then
-                print("[PlayerScript]     ERROR: TintTile failed: " .. tostring(err))
-            else
-                print("[PlayerScript]     TintTile succeeded")
-            end
+            -- Use PulseTile for attack preview (TintTile not available in current binary)
+            -- Red persistent pulse while preview is active
+            print("[PlayerScript]     Calling PulseTile(" .. tile.x .. ", " .. tile.y .. ") for attack preview")
+            PulseTile(tile.x, tile.y, 9999.0, 1.0, 0.3, 0.3)  -- Very long duration pulse (red)
 
-            -- Store the grid coordinates so we can restore them later
+            -- Store the grid coordinates so we can clear them later
             table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
-            print("[PlayerScript]   Tinted tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
+            print("[PlayerScript]   Pulsed tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
         else
             print("[PlayerScript]     Tile invalid, skipping")
         end
@@ -641,14 +637,10 @@ function ShowAttackPreview()
 end
 
 function ClearAttackPreview()
-    -- Restore all tinted tiles to their original color
+    -- Clear attack preview - no need to restore pulses, they'll fade naturally
     if #attackPreviewTiles > 0 then
-        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " tinted tiles")
-        for _, tileCoords in ipairs(attackPreviewTiles) do
-            -- Restore tile to white (no tint)
-            TintTile(tileCoords.x, tileCoords.y, 1.0, 1.0, 1.0, 1.0)
-            print("[PlayerScript]   Restored tile at grid(" .. tileCoords.x .. ", " .. tileCoords.y .. ")")
-        end
+        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack preview tiles")
+        -- Note: PulseTile effects fade on their own, no cleanup needed
     end
 
     -- Clear attack preview state
