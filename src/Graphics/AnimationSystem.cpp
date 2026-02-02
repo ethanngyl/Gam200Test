@@ -240,6 +240,13 @@ namespace Framework {
             }
 
             // ----------- NORMAL ANIMATION SELECTION -------------------
+            // Skip automatic animation switching for UI scroll animations
+            // These are manually controlled by Lua scripts
+            const bool isScrollAnim = anim.animName.rfind("Scroll", 0) == 0;
+            if (isScrollAnim) {
+                continue; // Skip automatic animation selection for scroll UI
+            }
+
             std::string selected =
                 groupMap[anim.group][anim.direction];
 

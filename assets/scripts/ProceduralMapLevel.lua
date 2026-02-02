@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- Level3Procedural.lua
 -- PROCEDURAL VERSION - Works with 3-character party system
 -- ============================================================================
@@ -8,6 +8,9 @@ local UIManager = require("UIManager")
 
 -- Load Party Turn Manager (REQUIRED for party system)
 dofile("assets/scripts/PartyTurnManager.lua")
+
+-- Load Enemy Turn Manager (REQUIRED for sequential enemy turns)
+dofile("assets/scripts/EnemyTurnManager.lua")
 
 -- ============================================================================
 -- LEVEL STATE
@@ -405,6 +408,14 @@ function OnUpdate(dt)
         end
     end
 
+    -- Update enemy turn manager (for sequential enemy turns with delays)
+    if UpdateEnemyTurnManager then
+        if currentTurn == "Enemy" then
+            Log("[Level3Procedural] Calling UpdateEnemyTurnManager(dt=" .. string.format("%.3f", dt) .. ")")
+        end
+        UpdateEnemyTurnManager(dt)
+    end
+
     previousTurn = currentTurn
 
     -- Update UI system
@@ -417,6 +428,9 @@ end
 
 function OnDraw()
     PauseMenu.Draw()
+
+    -- Render UI components (including scroll animation text)
+    UIManager.Draw()
 
     -- Check if IsEditorMode exists
     if IsEditorMode and IsEditorMode() then
@@ -514,10 +528,13 @@ end
 -- ============================================================================
 
 function OnEnemyTurnEnded()
-    -- This is called by PartyTurnManager when enemy turn ends
-    -- Reset all party member states for new player turn
-    Log("[Level3Procedural] Resetting party for new turn")
-    
-    -- Party turn manager handles the reset
-    -- Camera following is handled by C++ - no Lua function for this
+    -- Call PartyTurnManager's ResetPartyTurn to reset party state
+    Log("[Level3Procedural] Enemy turn ended - calling ResetPartyTurn()")
+
+    -- Call the global ResetPartyTurn function from PartyTurnManager
+    if ResetPartyTurn then
+        ResetPartyTurn()
+    else
+        Log("[Level3Procedural] ERROR: ResetPartyTurn not found!")
+    end
 end

@@ -205,12 +205,15 @@ end
 function AttackAPIndicatorUI:Update(dt, cameraPos)
     if not self.enabled then return end
 
-    -- TEST: Check for SPACE key to consume one AP
+    -- DISABLED TEST CODE: This was consuming AP on spacebar press
+    -- This feature is now handled properly in PlayerScript.lua attack system
+    --[[
     local spacePressed = IsKeyDown("Space")
     if spacePressed and not self.spaceWasPressed then
         self:ConsumeOneAP()
     end
     self.spaceWasPressed = spacePressed
+    ]]--
 
     -- Update consuming crystals (check if animation finished)
     self:UpdateConsumingCrystals(dt)

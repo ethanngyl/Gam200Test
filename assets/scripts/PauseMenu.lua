@@ -58,8 +58,8 @@ local config = {
         items = {
             { 
                 id = "quit", 
-                label = "Quit",
-                imageX = -0.5,    -- World X offset from camera
+                label = "MainMenu",
+                imageX = -0.45,    -- World X offset from camera
                 imageY = 0.0,     -- World Y offset from camera
                 textX = -570,     -- Screen X offset from center (pixels)
                 textY = -10       -- Screen Y offset from center (pixels)
@@ -67,7 +67,7 @@ local config = {
             { 
                 id = "settings", 
                 label = "Settings",
-                imageX = 0.02,
+                imageX = 0.00,
                 imageY = 0.0,
                 textX = -50,
                 textY = -10
@@ -75,9 +75,9 @@ local config = {
             { 
                 id = "resume", 
                 label = "Resume",
-                imageX = 0.55,
+                imageX = 0.45,
                 imageY = 0.0,
-                textX = 480,
+                textX = 400,
                 textY = -10
             }
         }
@@ -100,7 +100,8 @@ local state = {
     wasLeftPressed = false,
     wasRightPressed = false,
     wasEnterPressed = false,
-    wasEscapePressed = false
+    wasEscapePressed = false,
+    wasMousePressed = false
 }
 
 -- ============================================================================
@@ -116,6 +117,7 @@ function PauseMenu.Init()
     state.wasRightPressed = false
     state.wasEnterPressed = false
     state.wasEscapePressed = false
+    state.wasMousePressed = false
     
     Log("[PauseMenu] Initialized")
 end
@@ -263,6 +265,52 @@ function PauseMenu.Update(dt)
         PauseMenu.ExecuteAction()
     end
     state.wasEnterPressed = isEnterPressed
+    
+    -- ========================================================================
+    -- MOUSE INPUT
+    -- ========================================================================
+    local mouseX, mouseY = GetMousePosition()
+    local fbWidth, fbHeight = GetFramebufferSize()
+    local centerX = fbWidth * 0.5
+    local centerY = fbHeight * 0.5
+    
+    -- Screen scale factor (based on 1920x1080 reference resolution)
+    local scaleFactorX = fbWidth / 1920
+    local scaleFactorY = fbHeight / 1080
+    
+    -- Check mouse hover over buttons
+    local hoveredIndex = nil
+    local btnConfig = config.buttons
+    
+    -- Button hit box size in pixels (adjust these values as needed)
+    local buttonHalfWidth = 120 * scaleFactorX
+    local buttonHalfHeight = 40 * scaleFactorY
+    
+    for i, btn in ipairs(state.buttonIDs) do
+        -- Calculate button center in screen coordinates
+        local btnCenterX = centerX + (btn.textX * scaleFactorX) + 30  -- +30 to center on text
+        local btnCenterY = centerY + (btn.textY * scaleFactorY)
+        
+        -- Check if mouse is within button bounds
+        if mouseX >= btnCenterX - buttonHalfWidth and mouseX <= btnCenterX + buttonHalfWidth and
+           mouseY >= btnCenterY - buttonHalfHeight and mouseY <= btnCenterY + buttonHalfHeight then
+            hoveredIndex = i
+            break
+        end
+    end
+    
+    -- Update selection on hover
+    if hoveredIndex and hoveredIndex ~= state.selectedIndex then
+        state.selectedIndex = hoveredIndex
+        PlaySound("button", false, 0.3)
+    end
+    
+    -- Mouse click to select
+    local isMousePressed = IsMouseButtonDown("Left")
+    if isMousePressed and not state.wasMousePressed and hoveredIndex then
+        PauseMenu.ExecuteAction()
+    end
+    state.wasMousePressed = isMousePressed
 end
 
 -- ============================================================================
@@ -310,7 +358,7 @@ function PauseMenu.Draw()
     local titleY = centerY - (titleCfg.offsetY * fbHeight)
     local titleScale = titleCfg.scale * scaleFactor
     
-    DrawText("Sans48", titleCfg.text, titleX, titleY, titleScale,
+    DrawText("Playfair48", titleCfg.text, titleX, titleY, titleScale,
              titleCfg.color.r, titleCfg.color.g, titleCfg.color.b)
     
     -- ========================================================================
@@ -334,7 +382,7 @@ function PauseMenu.Draw()
             textX = textX - (20 * scaleFactorX)
         end
         
-        DrawText("Sans48", label, textX, textY, scale, color.r, color.g, color.b)
+        DrawText("Playfair48", label, textX, textY, scale, color.r, color.g, color.b)
     end
 end
 
@@ -358,8 +406,8 @@ function PauseMenu.OnQuit()
     DestroyPauseUI()
     TogglePause()
     SetMasterVolume(1.0)
-    SetNextGameState("GS_QUIT")
-    Log("[PauseMenu] Quitting game")
+    SetNextGameState("mainMenu")
+    Log("[PauseMenu] Returning to main menu")
 end
 
 -- ============================================================================

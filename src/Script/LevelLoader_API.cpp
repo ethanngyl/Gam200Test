@@ -491,6 +491,69 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Checks if a mouse button is currently held down
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonDown(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyDown(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Checks if a mouse button was just pressed this frame (edge detection)
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonPressed(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyPressed(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Gets the current mouse position in screen coordinates
+     * @return x, y (two numbers)
+     */
+    int LevelLoader::Lua_GetMousePosition(lua_State* L) {
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        float x = 0, y = 0;
+        input->GetMousePosition(x, y);
+        lua_pushnumber(L, x);
+        lua_pushnumber(L, y);
+        return 2;
+    }
+
     int LevelLoader::Lua_LoadJSON(lua_State* L) {
         const char* filepath = luaL_checkstring(L, 1);
 
@@ -1281,11 +1344,12 @@ namespace Framework {
         lua_newtable(L);
         int index = 1;
 
-        // Find all entities with Movement component (indicates player/controllable entity)
-        // Players have: Movement, CircleCollider, AP, Health components
-        // Enemies have: EnemyAI component instead
+        // Find all entities with AP component (indicates player in turn-based system)
+        // Players have: AP, CircleCollider, Health components
+        // Enemies have: EnemyAI component (we exclude those)
+        // NOTE: Changed from Movement to AP because Movement was unreliable for entity 547
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Movement>(e) &&
+            if (em->HasComponent<AP>(e) &&
                 em->HasComponent<CircleCollider>(e) &&
                 !em->HasComponent<EnemyAI>(e)) {
                 lua_pushinteger(L, index++);
@@ -2335,6 +2399,40 @@ namespace Framework {
     }
 
     /**
+     * @brief Get entity's current Attack AP
+     * @param entityID The entity ID
+     * @return current AttackAP, max AttackAP (two numbers)
+     *
+     * Usage: local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+     */
+    int LevelLoader::Lua_GetEntityAttackAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "GetEntityAttackAP: No EntityManager");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "GetEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        LOG_INFO("LevelLoader", "GetEntityAttackAP: Entity %d has AttackAP=%d/%d",
+                 entityID, attackAP.points, attackAP.maxPoints);
+        lua_pushinteger(L, attackAP.points);
+        lua_pushinteger(L, attackAP.maxPoints);
+        return 2;
+    }
+
+    /**
      * @brief Get entity's current AP (Action Points) - legacy name
      * @param entityID The entity ID
      * @return AP value, or 0 if entity doesn't have AP component
@@ -2620,6 +2718,49 @@ namespace Framework {
     }
 
     /**
+     * @brief Consume entity's Attack AP
+     * @param entityID The entity ID
+     * @param amount Amount of Attack AP to consume
+     *
+     * Usage: ConsumeEntityAttackAP(entityID, 1)
+     */
+    int LevelLoader::Lua_ConsumeEntityAttackAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No core engine");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No entity manager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "ConsumeEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            return 0;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        int oldAP = attackAP.points;
+        attackAP.points -= amount;
+        if (attackAP.points < 0) {
+            attackAP.points = 0;
+        }
+
+        LOG_INFO("LevelLoader", "ConsumeEntityAttackAP: Entity %d AttackAP consumed %d -> %d (-%d)",
+                 entityID, oldAP, attackAP.points, amount);
+
+        return 0;
+    }
+
+    /**
      * @brief Consume entity's AP - legacy name
      * @param entityID The entity ID
      * @param amount Amount of AP to consume
@@ -2665,12 +2806,14 @@ namespace Framework {
     int LevelLoader::Lua_DamageEntity(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
@@ -2679,7 +2822,8 @@ namespace Framework {
         Entity entity(static_cast<uint32_t>(entityID));
 
         if (!em->HasComponent<Health>(entity)) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false - entity has no health
+            return 1;
         }
 
         auto& health = em->GetComponent<Health>(entity);
@@ -2689,7 +2833,8 @@ namespace Framework {
             health.isDead = true;
         }
 
-        return 0;
+        lua_pushboolean(L, 1);  // Return true - damage successful
+        return 1;
     }
 
     /**
@@ -3130,6 +3275,17 @@ namespace Framework {
 
         // Spawn player
         Entity player = spawner->SpawnPlayer(Vector2D(worldX, worldY));
+
+        // CRITICAL: Ensure Movement component is present (required for GetAllPlayers())
+        // Sometimes this component gets removed by camera/active character systems
+        if (!em->HasComponent<Movement>(player)) {
+            std::cout << "[SpawnPlayerAt] WARNING: Entity " << player.GetID() << " missing Movement component - adding it now" << std::endl;
+            em->AddComponent<Movement>(player);
+            auto& movement = em->GetComponent<Movement>(player);
+            movement.moveSpeed = 0.2f;
+        } else {
+            std::cout << "[SpawnPlayerAt] Entity " << player.GetID() << " already has Movement component" << std::endl;
+        }
 
         // ADD INVENTORY COMPONENT (like TileMapLoader does!)
         if (!em->HasComponent<Inventory>(player)) {

@@ -474,6 +474,9 @@ namespace Framework {
 
         // Game API - Input
         lua_register(L, "IsKeyDown", LevelLoader::Lua_IsKeyDown);
+        lua_register(L, "IsMouseButtonDown", LevelLoader::Lua_IsMouseButtonDown);
+        lua_register(L, "IsMouseButtonPressed", LevelLoader::Lua_IsMouseButtonPressed);
+        lua_register(L, "GetMousePosition", LevelLoader::Lua_GetMousePosition);
 
         // Game API - Turn System
         lua_register(L, "GetCurrentTurn", LevelLoader::Lua_GetCurrentTurn);
@@ -541,7 +544,9 @@ namespace Framework {
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
+        lua_register(L, "GetEntityAttackAP", LevelLoader::Lua_GetEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", LevelLoader::Lua_ConsumeEntityAP);
+        lua_register(L, "ConsumeEntityAttackAP", LevelLoader::Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", LevelLoader::Lua_RefillEntityAP);
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);

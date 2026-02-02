@@ -169,6 +169,9 @@ namespace Framework {
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
+        static int Lua_IsMouseButtonDown(lua_State* L);
+        static int Lua_IsMouseButtonPressed(lua_State* L);
+        static int Lua_GetMousePosition(lua_State* L);
 
         // JSON API
         static int Lua_LoadJSON(lua_State* L);
@@ -198,6 +201,12 @@ namespace Framework {
         static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
+        
+        // Scroll Animation API (for TurnScrollUI)
+        static int Lua_PlayAnimationByName(lua_State* L);
+        static int Lua_SetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrameCount(lua_State* L);
 
         // Animation Control API
         static int Lua_SetAnimationGroup(lua_State* L);
@@ -218,7 +227,9 @@ namespace Framework {
 
         // Party System - Entity-Based APIs
         static int Lua_GetEntityAP(lua_State* L);
+        static int Lua_GetEntityAttackAP(lua_State* L);
         static int Lua_ConsumeEntityAP(lua_State* L);
+        static int Lua_ConsumeEntityAttackAP(lua_State* L);
         static int Lua_RefillEntityAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);

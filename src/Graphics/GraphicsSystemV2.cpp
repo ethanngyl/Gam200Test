@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
@@ -137,6 +137,7 @@ namespace Framework {
         text_.loadFont("Sans48", "assets/Font/Orbitron-VariableFont_wght.ttf", 48);
         text_.loadFont("Serif32", "assets/Font/Roboto-VariableFont_wdth,wght.ttf", 32);
         text_.loadFont("Serif32", "assets/Font/EBGaramond_Italic_VariableFont_wght.ttf", 48);
+        text_.loadFont("Playfair48", "assets/Font/PlayfairDisplay-Regular.otf", 48);
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";

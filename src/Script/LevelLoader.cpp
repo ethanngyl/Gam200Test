@@ -463,6 +463,9 @@ namespace Framework {
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
+        lua_register(L, "IsMouseButtonDown", Lua_IsMouseButtonDown);
+        lua_register(L, "IsMouseButtonPressed", Lua_IsMouseButtonPressed);
+        lua_register(L, "GetMousePosition", Lua_GetMousePosition);
 
         // JSON and Level Loading
         lua_register(L, "LoadJSON", Lua_LoadJSON);
@@ -498,6 +501,12 @@ namespace Framework {
         // Animation
         lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
+        
+        // Scroll Animation API (for TurnScrollUI)
+        lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
+        lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
+        lua_register(L, "GetAnimationFrame", Lua_GetAnimationFrame);
+        lua_register(L, "GetAnimationFrameCount", Lua_GetAnimationFrameCount);
 
         // Animation Control API
         lua_register(L, "SetAnimationGroup", Lua_SetAnimationGroup);
@@ -519,7 +528,9 @@ namespace Framework {
 
         // Party System - Entity-Based APIs
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
+        lua_register(L, "GetEntityAttackAP", Lua_GetEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
+        lua_register(L, "ConsumeEntityAttackAP", Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);

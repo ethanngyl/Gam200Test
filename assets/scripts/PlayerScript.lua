@@ -341,8 +341,9 @@ function OnUpdate(dt)
 
         if not attackPreviewActive then
             -- First press: Show attack preview
-            local currentAP, maxAP = GetEntityAP(entityID)
-            if currentAP >= attackAPCost then
+            -- CRITICAL: Use GetEntityAttackAP for attacks, not GetEntityAP (movement AP)
+            local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+            if currentAttackAP >= attackAPCost then
                 -- Check if there's an enemy in range before showing preview
                 local testEnemy = FindEnemyInRange()
                 if testEnemy then
@@ -353,7 +354,7 @@ function OnUpdate(dt)
                     PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse (no target)
                 end
             else
-                print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
+                print("[PlayerScript] Not enough AttackAP to attack (" .. currentAttackAP .. " < " .. attackAPCost .. ")")
                 PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse (not enough AP)
             end
         else
@@ -607,11 +608,11 @@ function ShowAttackPreview()
                 if worldX and worldY then
                     -- Spawn attack indicator sprite at this tile
                     -- Note: SpawnSprite returns entity ID
-                    -- Use 0.95 size to leave a small gap between tiles for visibility
+                    -- Tile size is 0.1, so use 0.095 (95% of tile) to leave small gap
                     local indicatorID = SpawnSprite(
                         "assets/TileMap/Attack_Indicator.png",
                         worldX, worldY,
-                        0.95, 0.95,  -- Slightly smaller than tile (0.95 x 0.95)
+                        0.095, 0.095,  -- Slightly smaller than tile (95% of 0.1)
                         2  -- layer 2 (above tiles, below characters)
                     )
 
@@ -709,12 +710,12 @@ function ExecuteAttack()
     print("[PlayerScript] ===== EXECUTING ATTACK =====")
     print("============================================================")
 
-    -- Check AP
-    local currentAP, maxAP = GetEntityAP(entityID)
-    print("[PlayerScript] Current AP: " .. currentAP .. "/" .. maxAP .. " (need " .. attackAPCost .. ")")
+    -- Check AttackAP (separate from movement AP)
+    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+    print("[PlayerScript] Current AttackAP: " .. currentAttackAP .. "/" .. maxAttackAP .. " (need " .. attackAPCost .. ")")
 
-    if currentAP < attackAPCost then
-        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. currentAP .. " < " .. attackAPCost .. ")")
+    if currentAttackAP < attackAPCost then
+        print("[PlayerScript] ATTACK BLOCKED: Not enough AttackAP (" .. currentAttackAP .. " < " .. attackAPCost .. ")")
         ClearAttackPreview()
         return
     end
@@ -740,10 +741,10 @@ function ExecuteAttack()
     if success then
         print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
-        -- Consume attack AP
-        ConsumeEntityAP(entityID, attackAPCost)
-        local newAP = GetEntityAP(entityID)
-        print("[PlayerScript] AP consumed. New AP: " .. newAP .. "/" .. maxAP)
+        -- CRITICAL: Consume AttackAP, NOT movement AP
+        ConsumeEntityAttackAP(entityID, attackAPCost)
+        local newAttackAP = GetEntityAttackAP(entityID)
+        print("[PlayerScript] AttackAP consumed. New AttackAP: " .. newAttackAP .. "/" .. maxAttackAP)
 
         -- Visual feedback
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
