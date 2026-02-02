@@ -1010,6 +1010,56 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Tint a tile at specific grid coordinates
+     * Lua usage: TintTile(x, y, r, g, b, a)
+     * @param x Grid x coordinate
+     * @param y Grid y coordinate
+     * @param r Red component (0.0-1.0)
+     * @param g Green component (0.0-1.0)
+     * @param b Blue component (0.0-1.0)
+     * @param a Alpha component (0.0-1.0, optional, default 1.0)
+     */
+    int LevelLoader::Lua_TintTile(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: TintTile(x, y, r, g, b, a)
+        int gridX = static_cast<int>(luaL_checkinteger(L, 1));
+        int gridY = static_cast<int>(luaL_checkinteger(L, 2));
+        float r = luaL_checknumber(L, 3);
+        float g = luaL_checknumber(L, 4);
+        float b = luaL_checknumber(L, 5);
+        float a = luaL_optnumber(L, 6, 1.0f);  // Default alpha = 1.0
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        // Get the grid
+        const auto& grid = Framework::PathfindingSystem::GetGrid();
+        if (!grid.InBounds(gridX, gridY)) {
+            LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds", gridX, gridY);
+            return 0;
+        }
+
+        // Get the tile entity at these coordinates
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+        if (tileEntity.GetID() == Framework::INVALID_ENTITY) {
+            LOG_WARN("LevelLoader", "TintTile: No tile entity at (%d, %d)", gridX, gridY);
+            return 0;
+        }
+
+        // Apply tint to the tile's sprite
+        if (em->HasComponent<MeshRenderer>(tileEntity)) {
+            auto& mr = em->GetComponent<MeshRenderer>(tileEntity);
+            mr.tint = glm::vec4(r, g, b, a);
+        } else {
+            LOG_WARN("LevelLoader", "TintTile: Tile at (%d, %d) has no MeshRenderer", gridX, gridY);
+        }
+
+        return 0;
+    }
+
     int LevelLoader::Lua_SetSpriteGray(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;

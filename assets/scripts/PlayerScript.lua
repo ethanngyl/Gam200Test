@@ -590,53 +590,31 @@ function ShowAttackPreview()
 
     for _, tile in ipairs(adjacentTiles) do
         if IsValidGridPosition(tile.x, tile.y) then
-            -- Convert grid coords to world coords
-            local worldX, worldY = TileToWorld(tile.x, tile.y)
+            -- Tint the tile red (semi-transparent)
+            TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 1.0)  -- Light red tint
 
-            if worldX and worldY then
-                -- Spawn attack indicator sprite at this tile
-                -- Note: SpawnSprite returns entity ID
-                -- Use 0.09 size to match tile dimensions (slightly smaller for visual gap)
-                local indicatorID = SpawnSprite(
-                    "assets/TileMap/Attack_Indicator.png",
-                    worldX, worldY,
-                    0.09, 0.09,  -- Tile-sized indicator (0.09 x 0.09)
-                    2  -- layer 2 (above tiles, below characters)
-                )
-
-                if indicatorID and indicatorID > 0 then
-                    -- Make the indicator semi-transparent red
-                    SetSpriteColor(indicatorID, 1.0, 0.0, 0.0, 0.5)  -- Red with 50% opacity
-
-                    -- Store the indicator entity ID so we can destroy it later
-                    table.insert(attackPreviewTiles, indicatorID)
-                    print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at grid(" .. tile.x .. ", " .. tile.y .. ") world(" .. worldX .. ", " .. worldY .. ")")
-                else
-                    print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
-                end
-            else
-                print("[PlayerScript]   WARNING: TileToWorld failed for (" .. tile.x .. ", " .. tile.y .. ")")
-            end
+            -- Store the grid coordinates so we can restore them later
+            table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
+            print("[PlayerScript]   Tinted tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
         end
     end
 
     if #attackPreviewTiles > 0 then
         attackPreviewActive = true
-        print("[PlayerScript] Attack preview active with " .. #attackPreviewTiles .. " indicator entities")
+        print("[PlayerScript] Attack preview active with " .. #attackPreviewTiles .. " tinted tiles")
     else
         print("[PlayerScript] WARNING: No valid attack preview tiles found")
     end
 end
 
 function ClearAttackPreview()
-    -- Destroy all attack indicator entities
+    -- Restore all tinted tiles to their original color
     if #attackPreviewTiles > 0 then
-        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack indicator entities")
-        for _, indicatorID in ipairs(attackPreviewTiles) do
-            if indicatorID and indicatorID > 0 then
-                DestroyEntity(indicatorID)
-                print("[PlayerScript]   Destroyed attack indicator " .. indicatorID)
-            end
+        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " tinted tiles")
+        for _, tileCoords in ipairs(attackPreviewTiles) do
+            -- Restore tile to white (no tint)
+            TintTile(tileCoords.x, tileCoords.y, 1.0, 1.0, 1.0, 1.0)
+            print("[PlayerScript]   Restored tile at grid(" .. tileCoords.x .. ", " .. tileCoords.y .. ")")
         end
     end
 

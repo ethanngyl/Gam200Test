@@ -476,6 +476,7 @@ namespace Framework {
         lua_register(L, "SpawnAnimatedSprite", Lua_SpawnAnimatedSprite);
         lua_register(L, "SetSpriteAnimationSheet", Lua_SetSpriteAnimationSheet);
         lua_register(L, "SetSpriteColor", Lua_SetSpriteColor);
+        lua_register(L, "TintTile", Lua_TintTile);
         lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
