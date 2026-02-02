@@ -57,6 +57,7 @@ local config = {
 -- Internal state
 local currentPath = {}          -- List of tiles to move through
 local pathIndex = 1             -- Current position in path
+local pathTargetPlayerID = 0    -- Which player the current path is targeting (for invalidation)
 local turnsSincePathUpdate = 0  -- Track when to recalculate path
 local lastKnownPlayerX = nil    -- Cache player position
 local lastKnownPlayerY = nil
@@ -239,6 +240,13 @@ function UpdateAIState()
     local closestPlayer, closestDistance = FindClosestPlayer()
 
     if closestPlayer and closestPlayer > 0 then
+        -- Clear path if target changed
+        if closestPlayer ~= targetPlayerID and targetPlayerID ~= 0 then
+            print("[Enemy " .. entityID .. "] Target changed P" .. targetPlayerID .. " -> P" .. closestPlayer .. ", clearing path")
+            currentPath = {}
+            pathIndex = 1
+            pathTargetPlayerID = 0
+        end
         targetPlayerID = closestPlayer
     else
         currentState = STATE.IDLE
@@ -321,6 +329,12 @@ function ExecuteAttack()
     local closestPlayer, closestDistance = FindClosestPlayer()
 
     if closestPlayer and closestPlayer > 0 then
+        -- Clear path if target changed
+        if closestPlayer ~= targetPlayerID and targetPlayerID ~= 0 then
+            currentPath = {}
+            pathIndex = 1
+            pathTargetPlayerID = 0
+        end
         targetPlayerID = closestPlayer
     else
         FinishEnemyAction()
@@ -374,21 +388,6 @@ end
 function ExecuteChase()
     local currentAP, maxAP = GetEntityAP(entityID)
 
-    -- Recalculate closest player BEFORE pathfinding
-    local closestPlayer, closestDistance = FindClosestPlayer()
-
-    if closestPlayer and closestPlayer > 0 then
-        if closestPlayer ~= targetPlayerID then
-            -- Clear old path since we're changing targets
-            currentPath = {}
-            pathIndex = 1
-        end
-        targetPlayerID = closestPlayer
-    else
-        FinishEnemyAction()
-        return
-    end
-
     -- Get positions
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
@@ -402,6 +401,9 @@ function ExecuteChase()
     local needsNewPath = false
     if #currentPath == 0 or pathIndex > #currentPath then
         needsNewPath = true
+    elseif pathTargetPlayerID ~= targetPlayerID then
+        -- Target changed, need new path
+        needsNewPath = true
     elseif lastKnownPlayerX ~= playerX or lastKnownPlayerY ~= playerY then
         -- Player moved - recalculate path immediately instead of waiting
         needsNewPath = true
@@ -410,14 +412,16 @@ function ExecuteChase()
 
     -- Calculate path to player
     if needsNewPath then
+        print("[Enemy " .. entityID .. "] Calculating path to P" .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
         -- CRITICAL FIX: Pass grid coordinates, not entity ID!
         currentPath = FindPathToTarget(enemyX, enemyY, playerX, playerY)
         pathIndex = 1
+        pathTargetPlayerID = targetPlayerID
         lastKnownPlayerX = playerX
         lastKnownPlayerY = playerY
 
         if not currentPath or #currentPath == 0 then
-            print("[Enemy " .. entityID .. "] NO PATH to player at (" .. playerX .. ", " .. playerY .. ")")
+            print("[Enemy " .. entityID .. "] NO PATH to P" .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
             FinishEnemyAction()
             return
         end
