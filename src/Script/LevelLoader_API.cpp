@@ -1022,7 +1022,10 @@ namespace Framework {
      */
     int LevelLoader::Lua_TintTile(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) return 0;
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "TintTile: No loader or core engine");
+            return 0;
+        }
 
         // Parse parameters: TintTile(x, y, r, g, b, a)
         int gridX = static_cast<int>(luaL_checkinteger(L, 1));
@@ -1033,12 +1036,19 @@ namespace Framework {
         float a = luaL_optnumber(L, 6, 1.0f);  // Default alpha = 1.0
 
         auto* em = loader->coreEngine->GetEntityManager();
-        if (!em) return 0;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "TintTile: No entity manager");
+            return 0;
+        }
 
         // Get the grid
         const Framework::Grid& grid = Framework::GetGrid();
+        LOG_INFO("LevelLoader", "TintTile: Attempting to tint tile at (%d, %d) with color (%.2f, %.2f, %.2f, %.2f)",
+            gridX, gridY, r, g, b, a);
+
         if (!grid.InBounds(gridX, gridY)) {
-            LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds", gridX, gridY);
+            LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds (grid size: %dx%d)",
+                gridX, gridY, grid.GetCols(), grid.GetRows());
             return 0;
         }
 
@@ -1049,12 +1059,20 @@ namespace Framework {
             return 0;
         }
 
+        LOG_INFO("LevelLoader", "TintTile: Found tile entity %u at (%d, %d)", tileEntity.GetID(), gridX, gridY);
+
         // Apply tint to the tile's sprite
         if (em->HasComponent<MeshRenderer>(tileEntity)) {
             auto& mr = em->GetComponent<MeshRenderer>(tileEntity);
+            glm::vec4 oldTint = mr.tint;
             mr.tint = glm::vec4(r, g, b, a);
+            LOG_INFO("LevelLoader", "TintTile: Applied tint to tile %u at (%d, %d) - Old: (%.2f,%.2f,%.2f,%.2f) New: (%.2f,%.2f,%.2f,%.2f)",
+                tileEntity.GetID(), gridX, gridY,
+                oldTint.r, oldTint.g, oldTint.b, oldTint.a,
+                r, g, b, a);
         } else {
-            LOG_WARN("LevelLoader", "TintTile: Tile at (%d, %d) has no MeshRenderer", gridX, gridY);
+            LOG_WARN("LevelLoader", "TintTile: Tile entity %u at (%d, %d) has no MeshRenderer component",
+                tileEntity.GetID(), gridX, gridY);
         }
 
         return 0;

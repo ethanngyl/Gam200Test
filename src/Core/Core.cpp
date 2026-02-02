@@ -225,6 +225,9 @@ namespace Framework
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
+        // Wire GraphicsSystem
+        pathfindingSystem->SetGraphicsSystem(graphicsSystem);  // Enemy camera control
+
         // Load master volume from audio config JSON and apply it
         float masterVolume = AudioLoader::GetSettings().masterVolume;
         audioSystem->SetMasterVolume(masterVolume);

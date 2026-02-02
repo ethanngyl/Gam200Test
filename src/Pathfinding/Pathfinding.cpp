@@ -154,6 +154,25 @@ namespace Framework {
         auto& stats = entityManager->GetComponent<AP>(currentEnemy);
 		//auto& hp = entityManager->GetComponent<Health>(currentEnemy);
 
+        // CRITICAL FIX: Initialize delay when switching to a new enemy
+        // This prevents all enemies from moving simultaneously on the first frame
+        static int lastActiveEnemyIndex = -1;
+        if (currentEnemyIndex != lastActiveEnemyIndex) {
+            // Just switched to a new enemy - set initial delay
+            ai.moveTimer = ai.moveDelay;
+            lastActiveEnemyIndex = currentEnemyIndex;
+            LOG_INFO("EnemyAI", "Now acting: Enemy %u (index %d/%zu)",
+                currentEnemy.GetID(), currentEnemyIndex, livingEnemies.size() - 1);
+
+            // Pan camera to this enemy
+            if (graphicsSystem) {
+                graphicsSystem->SetFollowTarget(currentEnemy);
+                LOG_INFO("EnemyAI", "Camera now following Enemy %u", currentEnemy.GetID());
+            }
+
+            return;  // Wait one frame before acting
+        }
+
         // Check if this enemy has AP left
         if (stats.actionPoints <= 0) {
             currentEnemyIndex++;  // Move to next enemy
@@ -264,11 +283,30 @@ namespace Framework {
 
                 // Target hit
 
-                if (targetHp.currentHealth <= 0) {                                              
-                    targetHp.currentHealth = 0;                                                 
-                    targetHp.isDead = true;     
-                    GSM_SetNextState(LEVEL_END);
-                    LOG_ERROR("Combat", "TARGET DEFEATED!");
+                if (targetHp.currentHealth <= 0) {
+                    targetHp.currentHealth = 0;
+                    targetHp.isDead = true;
+                    LOG_ERROR("Combat", "Player %u DEFEATED!", ai.targetEntity.GetID());
+
+                    // Check if ALL players are dead before triggering game over
+                    bool allPlayersDead = true;
+                    for (Entity entity : entityManager->GetAllEntities()) {
+                        if (!entityManager->HasComponent<AP>(entity)) continue;
+                        if (!entityManager->HasComponent<CircleCollider>(entity)) continue;
+                        if (entityManager->HasComponent<EnemyAI>(entity)) continue;  // Skip enemies
+                        if (!entityManager->HasComponent<Health>(entity)) continue;
+
+                        auto& playerHp = entityManager->GetComponent<Health>(entity);
+                        if (playerHp.currentHealth > 0 && !playerHp.isDead) {
+                            allPlayersDead = false;
+                            break;
+                        }
+                    }
+
+                    if (allPlayersDead) {
+                        GSM_SetNextState(LEVEL_END);
+                        LOG_ERROR("Combat", "ALL PLAYERS DEFEATED - GAME OVER!");
+                    }
                 }
             }
 
