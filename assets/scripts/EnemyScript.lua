@@ -589,25 +589,38 @@ end
 
 -- Find the closest player from all party members
 function FindClosestPlayer()
+    print("[Enemy " .. entityID .. "] ===== FindClosestPlayer() CALLED =====")
+
     -- Get enemy position
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     if not enemyX then
+        print("[Enemy " .. entityID .. "] ERROR: GetEntityGridPosition returned nil!")
         return nil
     end
+    print("[Enemy " .. entityID .. "] Enemy position: (" .. enemyX .. ", " .. enemyY .. ")")
 
     -- Use GetAllPlayers() (C++ function available in all Lua states)
+    print("[Enemy " .. entityID .. "] Calling GetAllPlayers() from C++...")
     local players = GetAllPlayers()
+    print("[Enemy " .. entityID .. "] GetAllPlayers() returned type: " .. type(players))
 
     -- DEBUG: Show what GetAllPlayers() returned
-    if players and type(players) == "table" and #players > 0 then
-        local playerList = ""
-        for i, pid in ipairs(players) do
-            playerList = playerList .. pid
-            if i < #players then playerList = playerList .. ", " end
+    if players and type(players) == "table" then
+        print("[Enemy " .. entityID .. "] GetAllPlayers() returned table with " .. #players .. " entries")
+
+        if #players > 0 then
+            local playerList = ""
+            for i, pid in ipairs(players) do
+                playerList = playerList .. pid
+                if i < #players then playerList = playerList .. ", " end
+            end
+            print("[Enemy " .. entityID .. "] GetAllPlayers() found: [" .. playerList .. "]")
+        else
+            print("[Enemy " .. entityID .. "] GetAllPlayers() returned EMPTY table - using fallback FindPlayer()")
+            return FindPlayer()
         end
-        print("[Enemy " .. entityID .. "] GetAllPlayers() found: [" .. playerList .. "]")
     else
-        print("[Enemy " .. entityID .. "] GetAllPlayers() returned no players - using fallback")
+        print("[Enemy " .. entityID .. "] GetAllPlayers() returned nil or non-table - using fallback")
         return FindPlayer()
     end
 
