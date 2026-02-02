@@ -1048,7 +1048,7 @@ namespace Framework {
 
         if (!grid.InBounds(gridX, gridY)) {
             LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds (grid size: %dx%d)",
-                gridX, gridY, grid.GetCols(), grid.GetRows());
+                gridX, gridY, grid.cols, grid.rows);
             return 0;
         }
 
