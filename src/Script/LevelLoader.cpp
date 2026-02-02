@@ -503,10 +503,10 @@ namespace Framework {
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
         
         // Scroll Animation API (for TurnScrollUI)
-        //lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
-        //lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
-        //lua_register(L, "GetAnimationFrame", Lua_GetAnimationFrame);
-        //lua_register(L, "GetAnimationFrameCount", Lua_GetAnimationFrameCount);
+        lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
+        lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
+        lua_register(L, "GetAnimationFrame", Lua_GetAnimationFrame);
+        lua_register(L, "GetAnimationFrameCount", Lua_GetAnimationFrameCount);
 
         // Animation Control API
         lua_register(L, "SetAnimationGroup", Lua_SetAnimationGroup);
@@ -859,6 +859,161 @@ namespace Framework {
 
         return 0;
     }
+
+   // ========================================================================
+   // SCROLL ANIMATION API (for TurnScrollUI)
+   // ========================================================================
+
+   /**
+    * @brief Play animation by name on an entity
+    * Lua usage: PlayAnimationByName(entityID, animName, loop)
+    */
+    int LevelLoader::Lua_PlayAnimationByName(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+        if (!em || !animSys || !gfx) {
+            return 0;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* animName = luaL_checkstring(L, 2);
+        const std::string animNameStr = animName ? std::string(animName) : std::string();
+        const bool isScrollAnim = animNameStr.rfind("Scroll", 0) == 0;
+        const bool hasLoopArg = (lua_gettop(L) >= 3) && !lua_isnil(L, 3);
+        const bool loop = hasLoopArg ? lua_toboolean(L, 3) != 0 : false;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid()) {
+            return 0;
+        }
+
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            em->AddComponent<SpriteAnimation>(e);
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.animName = animName;
+        anim.playing = true;
+
+        animSys->LoadAnimation(e, anim, gfx, animName);
+
+        if (hasLoopArg) {
+            anim.loop = loop;
+        }
+
+        anim.currentFrame = 0;
+        anim.elapsedTime = 0.0f;
+
+        // Special handling for scroll animations - keep manual control
+        if (isScrollAnim) {
+            anim.group = AnimGroup::Idle;
+            anim.direction = AnimDirection::None;
+            anim.playing = false;
+            anim.loop = false;
+            anim.currentFrame = 0;
+            anim.elapsedTime = 0.0f;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Set current animation frame
+     * Lua usage: SetAnimationFrame(entityID, frame)
+     */
+    int LevelLoader::Lua_SetAnimationFrame(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer frame = luaL_checkinteger(L, 2);
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid() || !em->HasComponent<SpriteAnimation>(e)) {
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        int maxFrame = anim.frameCount > 0 ? (anim.frameCount - 1) : 0;
+        int clamped = static_cast<int>(frame);
+        if (clamped < 0) clamped = 0;
+        if (clamped > maxFrame) clamped = maxFrame;
+
+        anim.currentFrame = clamped;
+        anim.elapsedTime = 0.0f;
+        return 0;
+    }
+
+    /**
+     * @brief Get current animation frame
+     * Lua usage: frame = GetAnimationFrame(entityID)
+     */
+    int LevelLoader::Lua_GetAnimationFrame(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid() || !em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, anim.currentFrame);
+        return 1;
+    }
+
+    /**
+     * @brief Get total frame count for animation
+     * Lua usage: count = GetAnimationFrameCount(entityID)
+     */
+    int LevelLoader::Lua_GetAnimationFrameCount(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        Entity e(static_cast<EntityID>(entityID));
+        if (!e.IsValid() || !em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, anim.frameCount);
+        return 1;
+    }
+
+    // Particles
 
     int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
         const char* presetName = luaL_checkstring(L, 1);
