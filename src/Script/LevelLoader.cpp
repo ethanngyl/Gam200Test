@@ -503,10 +503,10 @@ namespace Framework {
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
         
         // Scroll Animation API (for TurnScrollUI)
-        lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
-        lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
-        lua_register(L, "GetAnimationFrame", Lua_GetAnimationFrame);
-        lua_register(L, "GetAnimationFrameCount", Lua_GetAnimationFrameCount);
+        //lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
+        //lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
+        //lua_register(L, "GetAnimationFrame", Lua_GetAnimationFrame);
+        //lua_register(L, "GetAnimationFrameCount", Lua_GetAnimationFrameCount);
 
         // Animation Control API
         lua_register(L, "SetAnimationGroup", Lua_SetAnimationGroup);
