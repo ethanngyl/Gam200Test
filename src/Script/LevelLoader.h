@@ -201,6 +201,12 @@ namespace Framework {
         static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
+        
+        // Scroll Animation API (for TurnScrollUI)
+        static int Lua_PlayAnimationByName(lua_State* L);
+        static int Lua_SetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrameCount(lua_State* L);
 
         // Animation Control API
         static int Lua_SetAnimationGroup(lua_State* L);
@@ -214,7 +220,9 @@ namespace Framework {
 
         // Party System - Entity-Based APIs
         static int Lua_GetEntityAP(lua_State* L);
+        static int Lua_GetEntityAttackAP(lua_State* L);
         static int Lua_ConsumeEntityAP(lua_State* L);
+        static int Lua_ConsumeEntityAttackAP(lua_State* L);
         static int Lua_RefillEntityAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);
@@ -254,6 +262,13 @@ namespace Framework {
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
+
+        // Enemy Turn Management System (C++ Implementation)
+        static int Lua_InitializeEnemyTurn(lua_State* L);
+        static int Lua_IsActiveEnemy(lua_State* L);
+        static int Lua_IsEnemyActionReady(lua_State* L);
+        static int Lua_MarkEnemyActionComplete(lua_State* L);
+        static int Lua_UpdateEnemyTurnManager(lua_State* L);
 
         // Grid Conversion API
         static int Lua_TileToWorld(lua_State* L);

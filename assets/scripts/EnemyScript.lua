@@ -57,12 +57,18 @@ local config = {
 -- Internal state
 local currentPath = {}          -- List of tiles to move through
 local pathIndex = 1             -- Current position in path
+local pathTargetPlayerID = 0    -- Which player the current path is targeting (for invalidation)
 local turnsSincePathUpdate = 0  -- Track when to recalculate path
 local lastKnownPlayerX = nil    -- Cache player position
 local lastKnownPlayerY = nil
 local hasActedThisTurn = false  -- Track if this enemy has acted this turn
 local lastEnemyTurn = nil       -- Track which turn we last acted on
 local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to act
+
+-- Movement timing (for visible, sequential moves)
+local moveTimer = 0.0           -- Timer for next move
+local moveDelay = 0.3           -- Delay between moves in seconds (0.3s = visible movement)
+local movesThisTurn = 0         -- Track how many moves made this turn
 
 -- Global flag to track if any enemy has panned camera this turn
 if not _G.EnemyCameraPannedThisTurn then
@@ -110,7 +116,8 @@ function OnUpdate(dt)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
-            _G.EnemyCameraPannedThisTurn = false  -- Reset camera flag for new enemy turn
+            moveTimer = 0.0
+            movesThisTurn = 0
         end
         lastEnemyTurn = currentTurn
         return
@@ -119,38 +126,76 @@ function OnUpdate(dt)
     -- Track that this is enemy turn
     lastEnemyTurn = "Enemy"
 
+    -- SEQUENTIAL TURN SYSTEM: Only act if this enemy is the active one
+    if not IsActiveEnemy then
+        print("[Enemy " .. entityID .. "] ERROR: IsActiveEnemy is nil!")
+        return
+    end
+
+    local success, isActive = pcall(IsActiveEnemy, entityID)
+    if not success then
+        print("[Enemy " .. entityID .. "] ERROR: IsActiveEnemy() threw error: " .. tostring(isActive))
+        return
+    end
+
+    if not isActive then
+        -- Not my turn yet, wait
+        return
+    end
+
+    -- Check if action timer is ready (for visual delay between enemies)
+    if not IsEnemyActionReady then
+        print("[Enemy " .. entityID .. "] ERROR: IsEnemyActionReady is nil!")
+        return
+    end
+
+    local success, actionReady = pcall(IsEnemyActionReady)
+    if not success then
+        print("[Enemy " .. entityID .. "] ERROR: IsEnemyActionReady() threw error: " .. tostring(actionReady))
+        return
+    end
+
+    if not actionReady then
+        -- Still in delay, wait
+        return
+    end
+
     -- Check if this enemy has already acted this turn
     if hasActedThisTurn then
         -- Already acted, don't process again
         return
     end
 
-    print("[Enemy " .. entityID .. "] Starting turn")
+    -- Update move timer
+    if moveTimer > 0 then
+        moveTimer = moveTimer - dt
+        if moveTimer < 0 then
+            moveTimer = 0
+        end
+        -- Still waiting for move delay
+        return
+    end
 
-    -- Pan camera to this enemy when starting to act (only first enemy)
+    -- First time acting - set up turn
     if not isMyTurnToAct then
         isMyTurnToAct = true
-        -- Only pan camera if no other enemy has panned it yet this turn
-        if not _G.EnemyCameraPannedThisTurn then
-            _G.EnemyCameraPannedThisTurn = true
-            SetCameraFollowTarget(entityID)
+        movesThisTurn = 0
+        print("[Enemy " .. entityID .. "] ========== STARTING TURN ==========")
+
+        -- CRITICAL: Find closest player dynamically each turn
+        local closestPlayer, closestDistance = FindClosestPlayer()
+
+        if closestPlayer and closestPlayer > 0 then
+            targetPlayerID = closestPlayer
+        else
+            print("[Enemy " .. entityID .. "] No player found!")
+            hasActedThisTurn = true  -- Mark as acted even if no target
+            MarkEnemyActionComplete()  -- Advance to next enemy
+            return  -- No player to target
         end
     end
 
-    -- CRITICAL: Find closest player dynamically each turn
-    local closestPlayer, closestDistance = FindClosestPlayer()
-
-    if closestPlayer and closestPlayer > 0 then
-        print("[Enemy " .. entityID .. "] Targeting Player " .. closestPlayer .. " (distance: " .. closestDistance .. ")")
-        targetPlayerID = closestPlayer
-    else
-        print("[Enemy " .. entityID .. "] No player found!")
-        hasActedThisTurn = true  -- Mark as acted even if no target
-        CheckAllEnemiesActed()
-        return  -- No player to target
-    end
-
-    -- Execute AI decision making
+    -- Execute AI decision making (will make ONE move per frame)
     ProcessAITurn()
 end
 
@@ -166,10 +211,8 @@ function ProcessAITurn()
     -- Get enemy AP
     local currentAP, maxAP = GetEntityAP(entityID)
 
-    print("[Enemy " .. entityID .. "] ProcessAITurn - AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
-
     if not currentAP or currentAP == 0 or currentAP < config.apCostPerMove then
-        print("[Enemy " .. entityID .. "] Not enough AP to act (need " .. config.apCostPerMove .. "), finishing turn")
+        print("[Enemy " .. entityID .. "] Not enough AP, finishing turn")
         FinishEnemyAction()
         return
     end
@@ -188,7 +231,6 @@ function ProcessAITurn()
         ExecutePatrol()
     else
         -- IDLE or unknown state
-        print("[Enemy " .. entityID .. "] State is IDLE, ending turn")
         FinishEnemyAction()
     end
 end
@@ -198,6 +240,19 @@ function UpdateAIState()
     local closestPlayer, closestDistance = FindClosestPlayer()
 
     if closestPlayer and closestPlayer > 0 then
+        -- Clear path if target changed
+        if closestPlayer ~= targetPlayerID and targetPlayerID ~= 0 then
+            print("[Enemy " .. entityID .. "] Target changed P" .. targetPlayerID .. " -> P" .. closestPlayer .. ", clearing path")
+            currentPath = {}
+            pathIndex = 1
+            pathTargetPlayerID = 0
+
+            -- CRITICAL FIX: Update C++ EnemyAI target so pathfinding uses correct player
+            -- The C++ Pathfinding system (Pathfinding.cpp) uses ai.targetEntity for pathfinding
+            -- We must sync the Lua targetPlayerID with the C++ ai.targetEntity
+            print("[Enemy " .. entityID .. "] Updating C++ target via SetEnemyTarget(" .. entityID .. ", " .. closestPlayer .. ")")
+            SetEnemyTarget(entityID, closestPlayer)
+        end
         targetPlayerID = closestPlayer
     else
         currentState = STATE.IDLE
@@ -229,10 +284,8 @@ function UpdateAIState()
     if behaviorType == BEHAVIOR.AGGRESSIVE then
         -- AGGRESSIVE enemies ALWAYS chase players regardless of distance
         if distance <= config.attackRange then
-            print("[Enemy " .. entityID .. "] Within attack range (" .. distance .. " <= " .. config.attackRange .. ") - ATTACKING Player " .. targetPlayerID)
             currentState = STATE.ATTACKING
         else
-            print("[Enemy " .. entityID .. "] Outside attack range (" .. distance .. " > " .. config.attackRange .. ") - CHASING Player " .. targetPlayerID)
             currentState = STATE.CHASING
         end
 
@@ -282,6 +335,15 @@ function ExecuteAttack()
     local closestPlayer, closestDistance = FindClosestPlayer()
 
     if closestPlayer and closestPlayer > 0 then
+        -- Clear path if target changed
+        if closestPlayer ~= targetPlayerID and targetPlayerID ~= 0 then
+            currentPath = {}
+            pathIndex = 1
+            pathTargetPlayerID = 0
+
+            -- CRITICAL FIX: Update C++ EnemyAI target
+            SetEnemyTarget(entityID, closestPlayer)
+        end
         targetPlayerID = closestPlayer
     else
         FinishEnemyAction()
@@ -301,10 +363,9 @@ function ExecuteAttack()
     end
 
     -- Execute attack
-    print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage at distance " .. distance)
+    print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage")
 
     local success = DamageEntity(targetPlayerID, config.attackDamage)
-    print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
 
     if success then
         -- Consume attack AP
@@ -336,21 +397,6 @@ end
 function ExecuteChase()
     local currentAP, maxAP = GetEntityAP(entityID)
 
-    -- Recalculate closest player BEFORE pathfinding
-    local closestPlayer, closestDistance = FindClosestPlayer()
-
-    if closestPlayer and closestPlayer > 0 then
-        if closestPlayer ~= targetPlayerID then
-            -- Clear old path since we're changing targets
-            currentPath = {}
-            pathIndex = 1
-        end
-        targetPlayerID = closestPlayer
-    else
-        FinishEnemyAction()
-        return
-    end
-
     -- Get positions
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
@@ -364,39 +410,33 @@ function ExecuteChase()
     local needsNewPath = false
     if #currentPath == 0 or pathIndex > #currentPath then
         needsNewPath = true
-        print("[Enemy " .. entityID .. "] Need new path: path empty or completed")
+    elseif pathTargetPlayerID ~= targetPlayerID then
+        -- Target changed, need new path
+        needsNewPath = true
     elseif lastKnownPlayerX ~= playerX or lastKnownPlayerY ~= playerY then
         -- Player moved - recalculate path immediately instead of waiting
         needsNewPath = true
         turnsSincePathUpdate = 0
-        print("[Enemy " .. entityID .. "] Need new path: player moved from (" .. tostring(lastKnownPlayerX) .. ", " .. tostring(lastKnownPlayerY) .. ") to (" .. playerX .. ", " .. playerY .. ")")
     end
 
     -- Calculate path to player
     if needsNewPath then
-        print("[Enemy " .. entityID .. "] Finding path from (" .. enemyX .. ", " .. enemyY .. ") to Player " .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
-
+        print("[Enemy " .. entityID .. "] Calculating path to P" .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
         -- CRITICAL FIX: Pass grid coordinates, not entity ID!
         currentPath = FindPathToTarget(enemyX, enemyY, playerX, playerY)
         pathIndex = 1
+        pathTargetPlayerID = targetPlayerID
         lastKnownPlayerX = playerX
         lastKnownPlayerY = playerY
 
         if not currentPath or #currentPath == 0 then
-            print("[Enemy " .. entityID .. "] NO PATH FOUND from (" .. enemyX .. ", " .. enemyY .. ") to player at (" .. playerX .. ", " .. playerY .. ") - stuck!")
+            print("[Enemy " .. entityID .. "] NO PATH to P" .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
             FinishEnemyAction()
             return
-        else
-            print("[Enemy " .. entityID .. "] Path found with " .. #currentPath .. " steps:")
-            -- Print first few steps of the path
-            for i = 1, math.min(3, #currentPath) do
-                print("  Step " .. i .. ": (" .. currentPath[i].x .. ", " .. currentPath[i].y .. ")")
-            end
         end
     end
 
-    -- Move along path
-    local movesMade = 0
+    -- Calculate maximum moves we can make this turn
     local maxMoves = config.maxMovesPerTurn
 
     -- CRITICAL: Reserve AP for attacking if we're getting close to the player
@@ -410,44 +450,48 @@ function ExecuteChase()
         -- Only reserve if we have enough AP, otherwise just use all available AP for movement
         if apAvailableForMovement >= config.apCostPerMove then
             maxMoves = math.min(maxMoves, math.floor(apAvailableForMovement / config.apCostPerMove))
-            print("[Enemy " .. entityID .. "] Close to player - reserving " .. apNeededForAttack .. " AP for attack (can move " .. maxMoves .. " times)")
-        else
-            print("[Enemy " .. entityID .. "] Close to player but not enough AP to reserve for attack - using all AP for movement")
         end
     end
 
-    while currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesMade < maxMoves do
+    -- Move ONE tile per frame (not all at once!)
+    if currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesThisTurn < maxMoves then
         local nextTile = currentPath[pathIndex]
-
-        print("[Enemy " .. entityID .. "] Attempting to move to tile (" .. nextTile.x .. ", " .. nextTile.y .. ") - move " .. (movesMade + 1) .. " of " .. math.floor(maxMoves))
 
         -- Validate tile is still walkable
         if IsWalkableTile(nextTile.x, nextTile.y) then
             local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
-                print("[Enemy " .. entityID .. "] Successfully moved to (" .. nextTile.x .. ", " .. nextTile.y .. ")")
                 ConsumeEnemyAP(entityID, config.apCostPerMove)
                 currentAP = currentAP - config.apCostPerMove
-                movesMade = movesMade + 1
+                movesThisTurn = movesThisTurn + 1
                 pathIndex = pathIndex + 1
 
                 -- Visual feedback
                 ShowTileBorder(nextTile.x, nextTile.y, 0.3)
                 PulseTile(nextTile.x, nextTile.y, 0.2, 1.0, 0.5, 0.0)  -- Orange pulse
+
+                -- Set timer for next move (creates visible delay)
+                moveTimer = moveDelay
+
+                -- Return to let next frame handle the next move
+                return
             else
                 -- Movement failed, recalculate path next turn
                 currentPath = {}
-                break
+                FinishEnemyAction()
+                return
             end
         else
             -- Tile became unwalkable, recalculate path
             currentPath = {}
-            break
+            FinishEnemyAction()
+            return
         end
     end
 
-    -- Check if we're now in attack range after moving
+    -- If we get here, we can't move anymore (out of AP, path, or maxMoves)
+    -- Check if we're now in attack range
     local newEnemyX, newEnemyY = GetEntityGridPosition(entityID)
     local distance = CalculateDistance(newEnemyX, newEnemyY, playerX, playerY)
 
@@ -547,46 +591,40 @@ function FindClosestPlayer()
     -- Get enemy position
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     if not enemyX then
+        print("[Enemy " .. entityID .. "] ERROR: GetEntityGridPosition returned nil!")
         return nil
     end
 
     -- Use GetAllPlayers() (C++ function available in all Lua states)
     local players = GetAllPlayers()
 
-    -- DEBUG: Show what GetAllPlayers() returned
-    if players and type(players) == "table" and #players > 0 then
-        local playerList = ""
-        for i, pid in ipairs(players) do
-            playerList = playerList .. pid
-            if i < #players then playerList = playerList .. ", " end
-        end
-        print("[Enemy " .. entityID .. "] GetAllPlayers() found: [" .. playerList .. "]")
-    else
-        print("[Enemy " .. entityID .. "] GetAllPlayers() returned no players - using fallback")
+    -- Validate player list
+    if not players or type(players) ~= "table" or #players == 0 then
+        print("[Enemy " .. entityID .. "] WARNING: GetAllPlayers() returned no players, using fallback")
         return FindPlayer()
     end
 
-    -- Find closest player
+    -- Find closest player and build detailed distance report
     local closestPlayerID = nil
     local closestDistance = 999999
+    local distanceReport = {}
 
     for i, playerID in ipairs(players) do
         local playerX, playerY = GetEntityGridPosition(playerID)
         if playerX then
             local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
-            print("[Enemy " .. entityID .. "]   Player " .. playerID .. " at (" .. playerX .. ", " .. playerY .. ") - distance: " .. distance)
+            table.insert(distanceReport, "P" .. playerID .. "=" .. distance)
             if distance < closestDistance then
                 closestDistance = distance
                 closestPlayerID = playerID
-                print("[Enemy " .. entityID .. "]     ^^ NEW CLOSEST!")
             end
-        else
-            print("[Enemy " .. entityID .. "]   Player " .. playerID .. " - ERROR: GetEntityGridPosition returned nil!")
         end
     end
 
     if closestPlayerID then
-        print("[Enemy " .. entityID .. "] === CLOSEST: Player " .. closestPlayerID .. " at distance " .. closestDistance .. " ===")
+        print("[Enemy " .. entityID .. "] Target: P" .. closestPlayerID .. " [" .. table.concat(distanceReport, ", ") .. "]")
+    else
+        print("[Enemy " .. entityID .. "] WARNING: No valid player found from " .. #players .. " candidates")
     end
 
     return closestPlayerID, closestDistance
@@ -625,44 +663,17 @@ end
 -- ENEMY TURN COORDINATION
 -- ============================================================================
 
--- Mark this enemy as having completed its turn and check if all enemies are done
+-- Mark this enemy as having completed its turn and advance to next enemy
 function FinishEnemyAction()
     hasActedThisTurn = true
+    movesThisTurn = 0  -- Reset for next turn
+    moveTimer = 0.0    -- Reset timer
     Log("[Enemy " .. entityID .. "] Finished turn")
-    CheckAllEnemiesActed()
+    MarkEnemyActionComplete()  -- Advance to next enemy in sequence
 end
 
--- Check if all enemies have acted, and if so, end the enemy turn
-function CheckAllEnemiesActed()
-    local enemies = GetAllEnemies()
-    if not enemies or #enemies == 0 then
-        return
-    end
-
-    -- Find this enemy's index in the enemy list
-    local myIndex = nil
-    for i, enemyID in ipairs(enemies) do
-        if enemyID == entityID then
-            myIndex = i
-            break
-        end
-    end
-
-    if not myIndex then
-        return
-    end
-
-    -- If this is the last enemy, end the enemy turn
-    if myIndex == #enemies then
-        -- Pan camera back to the active player character before ending turn
-        local activePlayerID = GetActiveCharacter()
-        if activePlayerID and activePlayerID > 0 then
-            SetCameraFollowTarget(activePlayerID)
-        end
-
-        EndEnemyTurn()
-    end
-end
+-- REMOVED: CheckAllEnemiesActed() - replaced by EnemyTurnManager
+-- Sequential turn system now handles enemy turn advancement and camera panning
 
 -- ============================================================================
 -- Export behavior types for level scripts

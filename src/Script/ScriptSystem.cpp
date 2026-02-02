@@ -519,6 +519,13 @@ namespace Framework {
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
 
+        // Enemy Turn Management System
+        lua_register(L, "InitializeEnemyTurn", LevelLoader::Lua_InitializeEnemyTurn);
+        lua_register(L, "IsActiveEnemy", LevelLoader::Lua_IsActiveEnemy);
+        lua_register(L, "IsEnemyActionReady", LevelLoader::Lua_IsEnemyActionReady);
+        lua_register(L, "MarkEnemyActionComplete", LevelLoader::Lua_MarkEnemyActionComplete);
+        lua_register(L, "UpdateEnemyTurnManager", LevelLoader::Lua_UpdateEnemyTurnManager);
+
         // Grid Conversion API
         lua_register(L, "TileToWorld", LevelLoader::Lua_TileToWorld);
 
@@ -544,7 +551,9 @@ namespace Framework {
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
+        lua_register(L, "GetEntityAttackAP", LevelLoader::Lua_GetEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", LevelLoader::Lua_ConsumeEntityAP);
+        lua_register(L, "ConsumeEntityAttackAP", LevelLoader::Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", LevelLoader::Lua_RefillEntityAP);
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);

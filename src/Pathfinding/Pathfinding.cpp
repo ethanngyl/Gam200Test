@@ -170,22 +170,8 @@ namespace Framework {
             return; // Still waiting for movement delay
         }
 
-        // Validate target
-        if (ai.targetEntity.GetID() == INVALID_ENTITY) {
-            LOG_WARN("EnemyAI", "Enemy %u has no target", currentEnemy.GetID());
-            stats.actionPoints = 0;
-            currentEnemyIndex++;
-            return;
-        }
-
-        if (!entityManager->HasComponent<Transform>(ai.targetEntity)) {
-            LOG_WARN("EnemyAI", "Enemy %u target has no Transform", currentEnemy.GetID());
-            stats.actionPoints = 0;
-            currentEnemyIndex++;
-            return;
-        }
-
-        // Get current and target positions
+        // CRITICAL FIX: Find closest player dynamically instead of using hardcoded target
+        // This ensures enemies always chase the actually closest player
         auto enemyTileOpt = WorldToTile(transform.position);
         if (!enemyTileOpt.has_value()) {
             currentEnemyIndex++;
@@ -193,13 +179,49 @@ namespace Framework {
         }
         GridCoord enemyTile = *enemyTileOpt;
 
-        auto& targetTransform = entityManager->GetComponent<Transform>(ai.targetEntity);
-        auto targetTileOpt = WorldToTile(targetTransform.position);
-        if (!targetTileOpt.has_value()) {
+        // Find all players (entities with AP + CircleCollider, but NOT EnemyAI)
+        Entity closestPlayer{ INVALID_ENTITY };
+        int closestDistance = 999999;
+        GridCoord closestPlayerTile{ 0, 0 };
+
+        for (Entity entity : entityManager->GetAllEntities()) {
+            if (!entityManager->HasComponent<AP>(entity)) continue;
+            if (!entityManager->HasComponent<CircleCollider>(entity)) continue;
+            if (entityManager->HasComponent<EnemyAI>(entity)) continue;  // Skip enemies
+            if (!entityManager->HasComponent<Transform>(entity)) continue;
+
+            // This is a player - check distance
+            auto& playerTransform = entityManager->GetComponent<Transform>(entity);
+            auto playerTileOpt = WorldToTile(playerTransform.position);
+            if (!playerTileOpt.has_value()) continue;
+
+            GridCoord playerTile = *playerTileOpt;
+            int distance = Heuristic(enemyTile, playerTile);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestPlayer = entity;
+                closestPlayerTile = playerTile;
+            }
+        }
+
+        // Validate we found a player
+        if (closestPlayer.GetID() == INVALID_ENTITY) {
+            LOG_WARN("EnemyAI", "Enemy %u: No players found", currentEnemy.GetID());
+            stats.actionPoints = 0;
             currentEnemyIndex++;
             return;
         }
-        GridCoord targetTile = *targetTileOpt;
+
+        // Update target if it changed
+        if (ai.targetEntity.GetID() != closestPlayer.GetID()) {
+            LOG_INFO("EnemyAI", "Enemy %u retargeting: %u -> %u (distance: %d)",
+                currentEnemy.GetID(), ai.targetEntity.GetID(), closestPlayer.GetID(), closestDistance);
+            ai.targetEntity = closestPlayer;
+            ai.currentPath.clear();  // Clear old path when target changes
+        }
+
+        GridCoord targetTile = closestPlayerTile;
 
         // Check if adjacent to target (can attack)
         int distance = Heuristic(enemyTile, targetTile);
@@ -210,6 +232,8 @@ namespace Framework {
             if (audioSystem) {
                 audioSystem->PlaySound("dmgb", false);  // Play damage sound
             }
+
+            LOG_INFO("EnemyAI", "Enemy %u ATTACKING Player %u", currentEnemy.GetID(), closestPlayer.GetID());
 
             // ATTACK!
             stats.actionPoints--;
