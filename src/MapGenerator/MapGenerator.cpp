@@ -332,24 +332,36 @@ namespace Framework {
         // ENTITY PLACEMENT - Validation Functions
         // ============================================================================
 
-        bool Generator::isValidPlayerSpawn(
-            const GeneratedMap& map,
-            const Position& pos,
-            const std::vector<Position>& enemies,
-            const Config& config) {
+        bool Generator::isValidPlayerSpawn(const GeneratedMap& map, const Position& pos,
+            const std::vector<Position>& enemies, const Config& config) {
 
             // Must be floor tile
             if (map.getTile(pos.x, pos.y) != TileType::FLOOR) return false;
 
-            // Check distance from enemies
-            for (const auto& enemy : enemies) {
-                if (isTooClose(pos, enemy, config.minPlayerEnemyDistance)) {
-                    return false;
+            // Must have walkable neighbors for pathfinding
+            if (!hasWalkableNeighbors(map, pos)) return false;
+
+            // Not in enemy safe zone
+            for (const auto& e : enemies) {
+                if (isTooClose(pos, e, config.minPlayerEnemyDistance)) return false;
+            }
+
+            // NEW: Must have at least 2 adjacent floor tiles for party members
+            int adjacentFloors = 0;
+            const int offsets[][2] = { {1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {-1,1}, {1,-1}, {-1,-1} };
+
+            for (const auto& offset : offsets) {
+                int nx = pos.x + offset[0];
+                int ny = pos.y + offset[1];
+                if (map.isValid(nx, ny) && map.getTile(nx, ny) == TileType::FLOOR) {
+                    adjacentFloors++;
+                    if (adjacentFloors >= 2) break;  // Need at least 2 for 3-member party
                 }
             }
 
-            // Need walkable neighbors
-            if (!hasWalkableNeighbors(map, pos, 1)) return false;
+            if (adjacentFloors < 2) {
+                return false;  // Not enough space for party
+            }
 
             return true;
         }

@@ -3267,6 +3267,149 @@ namespace Framework {
         }
         lua_settable(L, -3);
 
+        // ========================================
+        // PARTY SPAWNS - 3 floor tiles with spacing
+        // Ensures players don't spawn adjacent and block each other
+        // ========================================
+        std::cout << "[Lua_LoadProceduralMap] Finding spaced party spawn positions...\n";
+
+        std::vector<MapGen::Position> partySpawns;
+        partySpawns.push_back(map.playerSpawn);  // First is always valid
+
+        // Search pattern - prioritize positions that are NOT directly adjacent
+        // We want at least 2 tiles apart so players can move around each other
+        const int searchOffsets[][2] = {
+            // Distance 2 (preferred - gives room to move)
+            {2, 0}, {-2, 0}, {0, 2}, {0, -2},
+            {2, 1}, {2, -1}, {-2, 1}, {-2, -1},
+            {1, 2}, {-1, 2}, {1, -2}, {-1, -2},
+            {2, 2}, {-2, 2}, {2, -2}, {-2, -2},
+            // Distance 3 (also good)
+            {3, 0}, {-3, 0}, {0, 3}, {0, -3},
+            {3, 1}, {3, -1}, {-3, 1}, {-3, -1},
+            {1, 3}, {-1, 3}, {1, -3}, {-1, -3},
+            // Distance 1 (fallback only - adjacent)
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+            {1, 1}, {-1, 1}, {1, -1}, {-1, -1},
+        };
+
+        const int numOffsets = sizeof(searchOffsets) / sizeof(searchOffsets[0]);
+
+        // Minimum distance between party members (Manhattan distance)
+        const int MIN_PARTY_DISTANCE = 2;
+
+        for (int i = 0; i < numOffsets && partySpawns.size() < 3; i++) {
+            int testX = map.playerSpawn.x + searchOffsets[i][0];
+            int testY = map.playerSpawn.y + searchOffsets[i][1];
+
+            // Check bounds
+            if (testX < 0 || testX >= map.width || testY < 0 || testY >= map.height) {
+                continue;
+            }
+
+            // Check if it's a FLOOR tile (not a wall)
+            if (map.getTile(testX, testY) != MapGen::TileType::FLOOR) {
+                continue;
+            }
+
+            // Check distance from ALL existing party spawns
+            bool tooClose = false;
+            for (const auto& existingSpawn : partySpawns) {
+                int manhattanDist = std::abs(testX - existingSpawn.x) + std::abs(testY - existingSpawn.y);
+                if (manhattanDist < MIN_PARTY_DISTANCE) {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (tooClose) {
+                continue;  // Skip positions too close to existing party members
+            }
+
+            // Valid position found!
+            partySpawns.push_back(MapGen::Position(testX, testY));
+            std::cout << "[Lua_LoadProceduralMap] Party spawn " << partySpawns.size()
+                << ": (" << testX << ", " << testY << ")\n";
+        }
+
+        // If we couldn't find 3 spaced positions, fall back to adjacent (with warning)
+        if (partySpawns.size() < 3) {
+            std::cout << "[Lua_LoadProceduralMap] WARNING: Couldn't find 3 spaced spawns, using fallback\n";
+
+            // Try again without distance restriction
+            for (int i = 0; i < numOffsets && partySpawns.size() < 3; i++) {
+                int testX = map.playerSpawn.x + searchOffsets[i][0];
+                int testY = map.playerSpawn.y + searchOffsets[i][1];
+
+                if (testX < 0 || testX >= map.width || testY < 0 || testY >= map.height) {
+                    continue;
+                }
+
+                if (map.getTile(testX, testY) != MapGen::TileType::FLOOR) {
+                    continue;
+                }
+
+                // Check not already used (but ignore distance)
+                bool alreadyUsed = false;
+                for (const auto& pos : partySpawns) {
+                    if (pos.x == testX && pos.y == testY) {
+                        alreadyUsed = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyUsed) {
+                    partySpawns.push_back(MapGen::Position(testX, testY));
+                    std::cout << "[Lua_LoadProceduralMap] Fallback spawn " << partySpawns.size()
+                        << ": (" << testX << ", " << testY << ")\n";
+                }
+            }
+        }
+
+        // Last resort: duplicate player spawn
+        while (partySpawns.size() < 3) {
+            std::cout << "[Lua_LoadProceduralMap] WARNING: Duplicating player spawn\n";
+            partySpawns.push_back(map.playerSpawn);
+        }
+
+        // Add partySpawns array to the Lua table
+        lua_pushstring(L, "partySpawns");
+        lua_newtable(L);
+        for (size_t i = 0; i < partySpawns.size(); i++) {
+            lua_pushnumber(L, static_cast<lua_Number>(i + 1));
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, partySpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, partySpawns[i].y);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (partySpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (partySpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Add map dimensions
+        lua_pushstring(L, "width");
+        lua_pushnumber(L, map.width);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "height");
+        lua_pushnumber(L, map.height);
+        lua_settable(L, -3);
+
+        std::cout << "[Lua_LoadProceduralMap] Added " << partySpawns.size() << " spaced party spawns\n";
+
         return 1;
     }
 
