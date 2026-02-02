@@ -1344,19 +1344,32 @@ namespace Framework {
         lua_newtable(L);
         int index = 1;
 
+        LOG_INFO("LevelLoader", "[DEBUG] GetAllPlayers() - Scanning all entities...");
+
         // Find all entities with AP component (indicates player in turn-based system)
         // Players have: AP, CircleCollider, Health components
         // Enemies have: EnemyAI component (we exclude those)
         // NOTE: Changed from Movement to AP because Movement was unreliable for entity 547
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<AP>(e) &&
-                em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
+            bool hasAP = em->HasComponent<AP>(e);
+            bool hasCircleCollider = em->HasComponent<CircleCollider>(e);
+            bool hasEnemyAI = em->HasComponent<EnemyAI>(e);
+
+            // Log each entity with relevant components
+            if (hasAP || hasCircleCollider) {
+                LOG_INFO("LevelLoader", "  Entity %d: AP=%d, CircleCollider=%d, EnemyAI=%d",
+                    e.GetID(), hasAP, hasCircleCollider, hasEnemyAI);
+            }
+
+            if (hasAP && hasCircleCollider && !hasEnemyAI) {
+                LOG_INFO("LevelLoader", "    -> PLAYER FOUND: Entity %d (index %d in table)", e.GetID(), index);
                 lua_pushinteger(L, index++);
                 lua_pushinteger(L, e.GetID());
                 lua_settable(L, -3);
             }
         }
+
+        LOG_INFO("LevelLoader", "[DEBUG] GetAllPlayers() returning %d players", index - 1);
 
         // All players retrieved
         return 1;
