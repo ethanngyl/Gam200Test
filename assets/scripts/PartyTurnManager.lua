@@ -408,10 +408,19 @@ function EndPartyTurn()
         else
             print("[PartyTurnManager] WARNING: No enemies found to refill AP")
         end
+
+        -- Initialize sequential enemy turn system
+        print("[PartyTurnManager] Initializing sequential enemy turn system...")
+        if InitializeEnemyTurn then
+            InitializeEnemyTurn()
+        else
+            print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
+        end
     end
 
-    -- Reset party state for next turn
-    ResetPartyTurn()
+    -- NOTE: Do NOT call ResetPartyTurn() here!
+    -- It will be called in OnEnemyTurnEnded() when the enemy turn actually ends
+    -- Calling it here would override the enemy camera we just set
 
     print("[PartyTurnManager] EndPartyTurn() COMPLETE")
     print("============================================================")

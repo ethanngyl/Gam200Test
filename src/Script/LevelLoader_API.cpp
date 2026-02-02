@@ -491,6 +491,69 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Checks if a mouse button is currently held down
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonDown(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyDown(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Checks if a mouse button was just pressed this frame (edge detection)
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonPressed(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyPressed(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Gets the current mouse position in screen coordinates
+     * @return x, y (two numbers)
+     */
+    int LevelLoader::Lua_GetMousePosition(lua_State* L) {
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        float x = 0, y = 0;
+        input->GetMousePosition(x, y);
+        lua_pushnumber(L, x);
+        lua_pushnumber(L, y);
+        return 2;
+    }
+
     int LevelLoader::Lua_LoadJSON(lua_State* L) {
         const char* filepath = luaL_checkstring(L, 1);
 
@@ -1281,11 +1344,12 @@ namespace Framework {
         lua_newtable(L);
         int index = 1;
 
-        // Find all entities with Movement component (indicates player/controllable entity)
-        // Players have: Movement, CircleCollider, AP, Health components
-        // Enemies have: EnemyAI component instead
+        // Find all entities with AP component (indicates player in turn-based system)
+        // Players have: AP, CircleCollider, Health components
+        // Enemies have: EnemyAI component (we exclude those)
+        // NOTE: Changed from Movement to AP because Movement was unreliable for entity 547
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Movement>(e) &&
+            if (em->HasComponent<AP>(e) &&
                 em->HasComponent<CircleCollider>(e) &&
                 !em->HasComponent<EnemyAI>(e)) {
                 lua_pushinteger(L, index++);
@@ -2335,6 +2399,40 @@ namespace Framework {
     }
 
     /**
+     * @brief Get entity's current Attack AP
+     * @param entityID The entity ID
+     * @return current AttackAP, max AttackAP (two numbers)
+     *
+     * Usage: local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+     */
+    int LevelLoader::Lua_GetEntityAttackAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "GetEntityAttackAP: No EntityManager");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "GetEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        LOG_INFO("LevelLoader", "GetEntityAttackAP: Entity %d has AttackAP=%d/%d",
+                 entityID, attackAP.points, attackAP.maxPoints);
+        lua_pushinteger(L, attackAP.points);
+        lua_pushinteger(L, attackAP.maxPoints);
+        return 2;
+    }
+
+    /**
      * @brief Get entity's current AP (Action Points) - legacy name
      * @param entityID The entity ID
      * @return AP value, or 0 if entity doesn't have AP component
@@ -2620,6 +2718,49 @@ namespace Framework {
     }
 
     /**
+     * @brief Consume entity's Attack AP
+     * @param entityID The entity ID
+     * @param amount Amount of Attack AP to consume
+     *
+     * Usage: ConsumeEntityAttackAP(entityID, 1)
+     */
+    int LevelLoader::Lua_ConsumeEntityAttackAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No core engine");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No entity manager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "ConsumeEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            return 0;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        int oldAP = attackAP.points;
+        attackAP.points -= amount;
+        if (attackAP.points < 0) {
+            attackAP.points = 0;
+        }
+
+        LOG_INFO("LevelLoader", "ConsumeEntityAttackAP: Entity %d AttackAP consumed %d -> %d (-%d)",
+                 entityID, oldAP, attackAP.points, amount);
+
+        return 0;
+    }
+
+    /**
      * @brief Consume entity's AP - legacy name
      * @param entityID The entity ID
      * @param amount Amount of AP to consume
@@ -2665,12 +2806,14 @@ namespace Framework {
     int LevelLoader::Lua_DamageEntity(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
@@ -2679,7 +2822,8 @@ namespace Framework {
         Entity entity(static_cast<uint32_t>(entityID));
 
         if (!em->HasComponent<Health>(entity)) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false - entity has no health
+            return 1;
         }
 
         auto& health = em->GetComponent<Health>(entity);
@@ -2689,7 +2833,8 @@ namespace Framework {
             health.isDead = true;
         }
 
-        return 0;
+        lua_pushboolean(L, 1);  // Return true - damage successful
+        return 1;
     }
 
     /**
@@ -2748,6 +2893,40 @@ namespace Framework {
         }
 
         return 1;
+    }
+
+    // ========================================================================
+    // GRID CONVERSION API
+    // ========================================================================
+
+    /**
+     * @brief Convert grid tile coordinates to world position
+     * @param tileX Grid X coordinate
+     * @param tileY Grid Y coordinate
+     * @return worldX, worldY (two return values, or nil if invalid)
+     *
+     * Usage: local worldX, worldY = TileToWorld(5, 10)
+     */
+    int LevelLoader::Lua_TileToWorld(lua_State* L) {
+        int tileX = static_cast<int>(luaL_checknumber(L, 1));
+        int tileY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ tileX, tileY };
+
+        // Validate coordinates
+        if (!Framework::InBounds(coord)) {
+            LOG_WARN("LevelLoader", "TileToWorld: Coordinates (%d, %d) out of bounds", tileX, tileY);
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        // Convert to world position
+        Framework::Vector2D worldPos = Framework::TileToWorld(coord);
+
+        lua_pushnumber(L, worldPos.x);
+        lua_pushnumber(L, worldPos.y);
+        return 2;
     }
 
     // ========================================================================
@@ -3240,6 +3419,17 @@ namespace Framework {
         // Spawn player
         Entity player = spawner->SpawnPlayer(Vector2D(worldX, worldY));
 
+        // CRITICAL: Ensure Movement component is present (required for GetAllPlayers())
+        // Sometimes this component gets removed by camera/active character systems
+        if (!em->HasComponent<Movement>(player)) {
+            std::cout << "[SpawnPlayerAt] WARNING: Entity " << player.GetID() << " missing Movement component - adding it now" << std::endl;
+            em->AddComponent<Movement>(player);
+            auto& movement = em->GetComponent<Movement>(player);
+            movement.moveSpeed = 0.2f;
+        } else {
+            std::cout << "[SpawnPlayerAt] Entity " << player.GetID() << " already has Movement component" << std::endl;
+        }
+
         // ADD INVENTORY COMPONENT (like TileMapLoader does!)
         if (!em->HasComponent<Inventory>(player)) {
             em->AddComponent<Inventory>(player);
@@ -3325,26 +3515,26 @@ namespace Framework {
     }
 
 
-    int LevelLoader::Lua_TileToWorld(lua_State* L) {
-        int gridX = static_cast<int>(luaL_checknumber(L, 1));
-        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+    //int LevelLoader::Lua_TileToWorld(lua_State* L) {
+    //    int gridX = static_cast<int>(luaL_checknumber(L, 1));
+    //    int gridY = static_cast<int>(luaL_checknumber(L, 2));
 
-        Grid& grid = GetGrid();
+    //    Grid& grid = GetGrid();
 
-        if (!grid.InBounds(gridX, gridY)) {
-            lua_pushnumber(L, 0.0);
-            lua_pushnumber(L, 0.0);
-            return 2;
-        }
+    //    if (!grid.InBounds(gridX, gridY)) {
+    //        lua_pushnumber(L, 0.0);
+    //        lua_pushnumber(L, 0.0);
+    //        return 2;
+    //    }
 
-        // Use EXACT Grid math
-        float worldX = grid.startPos.x + (static_cast<float>(gridX) * grid.spacing.x);
-        float worldY = grid.startPos.y + (static_cast<float>(gridY) * grid.spacing.y);
+    //    // Use EXACT Grid math
+    //    float worldX = grid.startPos.x + (static_cast<float>(gridX) * grid.spacing.x);
+    //    float worldY = grid.startPos.y + (static_cast<float>(gridY) * grid.spacing.y);
 
-        lua_pushnumber(L, worldX);
-        lua_pushnumber(L, worldY);
-        return 2;
-    }
+    //    lua_pushnumber(L, worldX);
+    //    lua_pushnumber(L, worldY);
+    //    return 2;
+    //}
 
     /**
      * @brief End the current character's turn and advance to next party member
@@ -3498,6 +3688,231 @@ namespace Framework {
         // Return the result in the entity's Lua state
         lua_pushboolean(L, inTransition);
         return 1;
+    }
+
+    // ========================================================================
+    // ANIMATION CONTROL API
+    // ========================================================================
+
+    /**
+     * @brief Set animation group for an entity
+     * Lua usage: SetAnimationGroup(entityID, group)
+     * @param entityID Entity ID
+     * @param group Animation group (0=Idle, 1=Walk, 2=Attack, 3=Injured, 4=Death)
+     */
+    int LevelLoader::Lua_SetAnimationGroup(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer group = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.group = static_cast<AnimGroup>(group);
+
+        return 0;
+    }
+
+    /**
+     * @brief Set animation direction for an entity
+     * Lua usage: SetAnimationDirection(entityID, direction)
+     * @param entityID Entity ID
+     * @param direction Animation direction (0=Front, 1=Back, 2=Side, 3=None)
+     */
+    int LevelLoader::Lua_SetAnimationDirection(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer direction = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.direction = static_cast<AnimDirection>(direction);
+
+        return 0;
+    }
+
+    /**
+     * @brief Set horizontal flip for an entity's sprite
+     * Lua usage: SetAnimationFlipX(entityID, flipX)
+     * @param entityID Entity ID
+     * @param flipX true to flip horizontally, false for normal
+     */
+    int LevelLoader::Lua_SetAnimationFlipX(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool flipX = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.flipX = flipX;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set whether animation is playing
+     * Lua usage: SetAnimationPlaying(entityID, playing)
+     * @param entityID Entity ID
+     * @param playing true to play, false to pause
+     */
+    int LevelLoader::Lua_SetAnimationPlaying(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool playing = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.playing = playing;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set whether animation should loop
+     * Lua usage: SetAnimationLoop(entityID, loop)
+     * @param entityID Entity ID
+     * @param loop true to loop, false for one-shot
+     */
+    int LevelLoader::Lua_SetAnimationLoop(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool loop = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.loop = loop;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set animation frame range (startFrame and frameCount)
+     * Lua usage: SetAnimationFrameRange(entityID, startFrame, frameCount, resetToStart)
+     * @param entityID Entity ID
+     * @param startFrame First frame index in the animation range
+     * @param frameCount Number of frames in the animation
+     * @param resetToStart (optional) If true, reset currentFrame to 0 (default: true)
+     */
+    int LevelLoader::Lua_SetAnimationFrameRange(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        int startFrame = static_cast<int>(luaL_checkinteger(L, 2));
+        int frameCount = static_cast<int>(luaL_checkinteger(L, 3));
+        bool resetToStart = true;
+        if (lua_gettop(L) >= 4) {
+            resetToStart = lua_toboolean(L, 4);
+        }
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "SetAnimationFrameRange: Entity %lld has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.startFrame = startFrame;
+        anim.frameCount = frameCount;
+
+        if (resetToStart) {
+            anim.currentFrame = 0;
+            anim.elapsedTime = 0.0f;
+        }
+
+        LOG_INFO("LUA_ANIM", "SetAnimationFrameRange: Entity %lld -> startFrame=%d, frameCount=%d",
+                 entityID, startFrame, frameCount);
+
+        return 0;
+    }
+
+    /**
+     * @brief Get current animation group for an entity
+     * Lua usage: group = GetAnimationGroup(entityID)
+     * @param entityID Entity ID
+     * @return Animation group (0=Idle, 1=Walk, 2=Attack, 3=Injured, 4=Death)
+     */
+    int LevelLoader::Lua_GetAnimationGroup(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushinteger(L, 0);  // Default to Idle
+            return 1;
+        }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);  // Default to Idle
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, static_cast<int>(anim.group));
+        return 1;
+    }
+
+    /**
+     * @brief Get movement direction for an entity
+     * Lua usage: dirX, dirY = GetEntityMovementDirection(entityID)
+     * @param entityID Entity ID
+     * @return dirX, dirY Movement vector components (0, 0 if no Movement component)
+     */
+    int LevelLoader::Lua_GetEntityMovementDirection(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushnumber(L, 0.0);
+            lua_pushnumber(L, 0.0);
+            return 2;
+        }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<Movement>(e)) {
+            lua_pushnumber(L, 0.0);
+            lua_pushnumber(L, 0.0);
+            return 2;
+        }
+
+        auto& movement = em->GetComponent<Movement>(e);
+        lua_pushnumber(L, movement.direction.x);
+        lua_pushnumber(L, movement.direction.y);
+        return 2;
     }
 
 } // namespace Framework

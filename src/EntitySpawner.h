@@ -23,6 +23,7 @@
 #include "ECSEntityManager.h"   // if not already pulled in through Precompiled.h
 #include "Grid\GridTile.h"
 #include "Graphics/RenderLayers.h"  // for standard layer constants
+#include "Pathfinding/Pathfinding.h"  // for EnemyAI component
 
 extern Framework::CoreEngine* engine;
 
@@ -421,11 +422,18 @@ namespace Framework {
             // *** NEW: Add Health component ***
             entityManager->AddComponent<Health>(enemy, 5);
 
+            // *** CRITICAL: Add EnemyAI component so GetAllEnemies() can find this enemy ***
+            // This matches what TileMapLoader.cpp does when spawning enemies (lines 286-291)
+            entityManager->AddComponent<EnemyAI>(enemy);
+
+            // *** Add AP component for turn-based combat ***
+            entityManager->AddComponent<AP>(enemy, 3);  // 3 AP by default (matches TileMapLoader)
+
             entityManager->AddComponent<BoxCollider>(enemy);
             auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
             collider.size = size*5;
 
-            std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << "\n";
+            std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << " with EnemyAI and AP components\n";
             return enemy;
         }
 
