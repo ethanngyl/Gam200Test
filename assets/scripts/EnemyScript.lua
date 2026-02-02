@@ -107,12 +107,8 @@ function OnInit()
 end
 
 function OnUpdate(dt)
-    -- DEBUG: Verify OnUpdate is being called
-    print("[Enemy " .. entityID .. "] OnUpdate called (dt=" .. string.format("%.3f", dt) .. ")")
-
     -- Enemy AI only runs during enemy turn
     local currentTurn = GetCurrentTurn()
-    print("[Enemy " .. entityID .. "]   Current turn: " .. tostring(currentTurn))
 
     if currentTurn ~= "Enemy" then
         -- Reset acted flag when it's not enemy turn
@@ -121,7 +117,6 @@ function OnUpdate(dt)
             isMyTurnToAct = false
             moveTimer = 0.0
             movesThisTurn = 0
-            print("[Enemy " .. entityID .. "]   Resetting turn flags (was enemy turn, now " .. tostring(currentTurn) .. ")")
         end
         lastEnemyTurn = currentTurn
         return
@@ -129,66 +124,54 @@ function OnUpdate(dt)
 
     -- Track that this is enemy turn
     lastEnemyTurn = "Enemy"
-    print("[Enemy " .. entityID .. "]   It IS enemy turn!")
 
     -- SEQUENTIAL TURN SYSTEM: Only act if this enemy is the active one
-    print("[Enemy " .. entityID .. "]   About to call IsActiveEnemy()...")
-    print("[Enemy " .. entityID .. "]   IsActiveEnemy function exists: " .. tostring(IsActiveEnemy ~= nil))
-
     if not IsActiveEnemy then
-        print("[Enemy " .. entityID .. "]   ERROR: IsActiveEnemy is nil!")
+        print("[Enemy " .. entityID .. "] ERROR: IsActiveEnemy is nil!")
         return
     end
 
     local success, isActive = pcall(IsActiveEnemy, entityID)
     if not success then
-        print("[Enemy " .. entityID .. "]   ERROR: IsActiveEnemy() threw error: " .. tostring(isActive))
+        print("[Enemy " .. entityID .. "] ERROR: IsActiveEnemy() threw error: " .. tostring(isActive))
         return
     end
 
-    print("[Enemy " .. entityID .. "]   IsActiveEnemy(" .. entityID .. "): " .. tostring(isActive))
     if not isActive then
         -- Not my turn yet, wait
         return
     end
 
     -- Check if action timer is ready (for visual delay between enemies)
-    print("[Enemy " .. entityID .. "]   About to call IsEnemyActionReady()...")
-    print("[Enemy " .. entityID .. "]   IsEnemyActionReady function exists: " .. tostring(IsEnemyActionReady ~= nil))
-
     if not IsEnemyActionReady then
-        print("[Enemy " .. entityID .. "]   ERROR: IsEnemyActionReady is nil!")
+        print("[Enemy " .. entityID .. "] ERROR: IsEnemyActionReady is nil!")
         return
     end
 
     local success, actionReady = pcall(IsEnemyActionReady)
     if not success then
-        print("[Enemy " .. entityID .. "]   ERROR: IsEnemyActionReady() threw error: " .. tostring(actionReady))
+        print("[Enemy " .. entityID .. "] ERROR: IsEnemyActionReady() threw error: " .. tostring(actionReady))
         return
     end
 
-    print("[Enemy " .. entityID .. "]   IsEnemyActionReady(): " .. tostring(actionReady))
     if not actionReady then
         -- Still in delay, wait
         return
     end
 
     -- Check if this enemy has already acted this turn
-    print("[Enemy " .. entityID .. "]   hasActedThisTurn: " .. tostring(hasActedThisTurn))
     if hasActedThisTurn then
         -- Already acted, don't process again
         return
     end
 
     -- Update move timer
-    print("[Enemy " .. entityID .. "]   moveTimer: " .. moveTimer)
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
         if moveTimer < 0 then
             moveTimer = 0
         end
         -- Still waiting for move delay
-        print("[Enemy " .. entityID .. "]   Waiting for move delay (timer: " .. moveTimer .. ")")
         return
     end
 
@@ -202,7 +185,6 @@ function OnUpdate(dt)
         local closestPlayer, closestDistance = FindClosestPlayer()
 
         if closestPlayer and closestPlayer > 0 then
-            print("[Enemy " .. entityID .. "] Targeting Player " .. closestPlayer .. " (distance: " .. closestDistance .. ")")
             targetPlayerID = closestPlayer
         else
             print("[Enemy " .. entityID .. "] No player found!")
@@ -228,10 +210,8 @@ function ProcessAITurn()
     -- Get enemy AP
     local currentAP, maxAP = GetEntityAP(entityID)
 
-    print("[Enemy " .. entityID .. "] ProcessAITurn - AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
-
     if not currentAP or currentAP == 0 or currentAP < config.apCostPerMove then
-        print("[Enemy " .. entityID .. "] Not enough AP to act (need " .. config.apCostPerMove .. "), finishing turn")
+        print("[Enemy " .. entityID .. "] Not enough AP, finishing turn")
         FinishEnemyAction()
         return
     end
@@ -250,7 +230,6 @@ function ProcessAITurn()
         ExecutePatrol()
     else
         -- IDLE or unknown state
-        print("[Enemy " .. entityID .. "] State is IDLE, ending turn")
         FinishEnemyAction()
     end
 end
@@ -291,10 +270,8 @@ function UpdateAIState()
     if behaviorType == BEHAVIOR.AGGRESSIVE then
         -- AGGRESSIVE enemies ALWAYS chase players regardless of distance
         if distance <= config.attackRange then
-            print("[Enemy " .. entityID .. "] Within attack range (" .. distance .. " <= " .. config.attackRange .. ") - ATTACKING Player " .. targetPlayerID)
             currentState = STATE.ATTACKING
         else
-            print("[Enemy " .. entityID .. "] Outside attack range (" .. distance .. " > " .. config.attackRange .. ") - CHASING Player " .. targetPlayerID)
             currentState = STATE.CHASING
         end
 
@@ -363,10 +340,9 @@ function ExecuteAttack()
     end
 
     -- Execute attack
-    print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage at distance " .. distance)
+    print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage")
 
     local success = DamageEntity(targetPlayerID, config.attackDamage)
-    print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
 
     if success then
         -- Consume attack AP
@@ -426,18 +402,14 @@ function ExecuteChase()
     local needsNewPath = false
     if #currentPath == 0 or pathIndex > #currentPath then
         needsNewPath = true
-        print("[Enemy " .. entityID .. "] Need new path: path empty or completed")
     elseif lastKnownPlayerX ~= playerX or lastKnownPlayerY ~= playerY then
         -- Player moved - recalculate path immediately instead of waiting
         needsNewPath = true
         turnsSincePathUpdate = 0
-        print("[Enemy " .. entityID .. "] Need new path: player moved from (" .. tostring(lastKnownPlayerX) .. ", " .. tostring(lastKnownPlayerY) .. ") to (" .. playerX .. ", " .. playerY .. ")")
     end
 
     -- Calculate path to player
     if needsNewPath then
-        print("[Enemy " .. entityID .. "] Finding path from (" .. enemyX .. ", " .. enemyY .. ") to Player " .. targetPlayerID .. " at (" .. playerX .. ", " .. playerY .. ")")
-
         -- CRITICAL FIX: Pass grid coordinates, not entity ID!
         currentPath = FindPathToTarget(enemyX, enemyY, playerX, playerY)
         pathIndex = 1
@@ -445,15 +417,9 @@ function ExecuteChase()
         lastKnownPlayerY = playerY
 
         if not currentPath or #currentPath == 0 then
-            print("[Enemy " .. entityID .. "] NO PATH FOUND from (" .. enemyX .. ", " .. enemyY .. ") to player at (" .. playerX .. ", " .. playerY .. ") - stuck!")
+            print("[Enemy " .. entityID .. "] NO PATH to player at (" .. playerX .. ", " .. playerY .. ")")
             FinishEnemyAction()
             return
-        else
-            print("[Enemy " .. entityID .. "] Path found with " .. #currentPath .. " steps:")
-            -- Print first few steps of the path
-            for i = 1, math.min(3, #currentPath) do
-                print("  Step " .. i .. ": (" .. currentPath[i].x .. ", " .. currentPath[i].y .. ")")
-            end
         end
     end
 
@@ -471,9 +437,6 @@ function ExecuteChase()
         -- Only reserve if we have enough AP, otherwise just use all available AP for movement
         if apAvailableForMovement >= config.apCostPerMove then
             maxMoves = math.min(maxMoves, math.floor(apAvailableForMovement / config.apCostPerMove))
-            print("[Enemy " .. entityID .. "] Close to player - reserving " .. apNeededForAttack .. " AP for attack (can move " .. maxMoves .. " times)")
-        else
-            print("[Enemy " .. entityID .. "] Close to player but not enough AP to reserve for attack - using all AP for movement")
         end
     end
 
@@ -481,14 +444,11 @@ function ExecuteChase()
     if currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesThisTurn < maxMoves then
         local nextTile = currentPath[pathIndex]
 
-        print("[Enemy " .. entityID .. "] Attempting to move to tile (" .. nextTile.x .. ", " .. nextTile.y .. ") - move " .. (movesThisTurn + 1) .. " of " .. maxMoves)
-
         -- Validate tile is still walkable
         if IsWalkableTile(nextTile.x, nextTile.y) then
             local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
-                print("[Enemy " .. entityID .. "] Successfully moved to (" .. nextTile.x .. ", " .. nextTile.y .. ")")
                 ConsumeEnemyAP(entityID, config.apCostPerMove)
                 currentAP = currentAP - config.apCostPerMove
                 movesThisTurn = movesThisTurn + 1
@@ -615,62 +575,43 @@ end
 
 -- Find the closest player from all party members
 function FindClosestPlayer()
-    print("[Enemy " .. entityID .. "] ===== FindClosestPlayer() CALLED =====")
-
     -- Get enemy position
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     if not enemyX then
         print("[Enemy " .. entityID .. "] ERROR: GetEntityGridPosition returned nil!")
         return nil
     end
-    print("[Enemy " .. entityID .. "] Enemy position: (" .. enemyX .. ", " .. enemyY .. ")")
 
     -- Use GetAllPlayers() (C++ function available in all Lua states)
-    print("[Enemy " .. entityID .. "] Calling GetAllPlayers() from C++...")
     local players = GetAllPlayers()
-    print("[Enemy " .. entityID .. "] GetAllPlayers() returned type: " .. type(players))
 
-    -- DEBUG: Show what GetAllPlayers() returned
-    if players and type(players) == "table" then
-        print("[Enemy " .. entityID .. "] GetAllPlayers() returned table with " .. #players .. " entries")
-
-        if #players > 0 then
-            local playerList = ""
-            for i, pid in ipairs(players) do
-                playerList = playerList .. pid
-                if i < #players then playerList = playerList .. ", " end
-            end
-            print("[Enemy " .. entityID .. "] GetAllPlayers() found: [" .. playerList .. "]")
-        else
-            print("[Enemy " .. entityID .. "] GetAllPlayers() returned EMPTY table - using fallback FindPlayer()")
-            return FindPlayer()
-        end
-    else
-        print("[Enemy " .. entityID .. "] GetAllPlayers() returned nil or non-table - using fallback")
+    -- Validate player list
+    if not players or type(players) ~= "table" or #players == 0 then
+        print("[Enemy " .. entityID .. "] WARNING: GetAllPlayers() returned no players, using fallback")
         return FindPlayer()
     end
 
-    -- Find closest player
+    -- Find closest player and build detailed distance report
     local closestPlayerID = nil
     local closestDistance = 999999
+    local distanceReport = {}
 
     for i, playerID in ipairs(players) do
         local playerX, playerY = GetEntityGridPosition(playerID)
         if playerX then
             local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
-            print("[Enemy " .. entityID .. "]   Player " .. playerID .. " at (" .. playerX .. ", " .. playerY .. ") - distance: " .. distance)
+            table.insert(distanceReport, "P" .. playerID .. "=" .. distance)
             if distance < closestDistance then
                 closestDistance = distance
                 closestPlayerID = playerID
-                print("[Enemy " .. entityID .. "]     ^^ NEW CLOSEST!")
             end
-        else
-            print("[Enemy " .. entityID .. "]   Player " .. playerID .. " - ERROR: GetEntityGridPosition returned nil!")
         end
     end
 
     if closestPlayerID then
-        print("[Enemy " .. entityID .. "] === CLOSEST: Player " .. closestPlayerID .. " at distance " .. closestDistance .. " ===")
+        print("[Enemy " .. entityID .. "] Target: P" .. closestPlayerID .. " [" .. table.concat(distanceReport, ", ") .. "]")
+    else
+        print("[Enemy " .. entityID .. "] WARNING: No valid player found from " .. #players .. " candidates")
     end
 
     return closestPlayerID, closestDistance
