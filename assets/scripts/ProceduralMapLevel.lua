@@ -92,10 +92,6 @@ function OnInit()
     end
     
     Log("Map generated successfully!")
-    
-    -- Load animations
-    LoadAnimationConfig("assets/JSON/animations.json")
-    LoadPlayerAnimation("Idle_front")
 
     -- ========================================
     -- SPAWN 3 PARTY MEMBERS
@@ -104,6 +100,10 @@ function OnInit()
         Log("ERROR: Failed to setup party!")
         return
     end
+
+    -- Load animations
+    LoadAnimationConfig("assets/JSON/animations.json")
+    LoadPlayerAnimation("Idle_front")
 
     -- Setup enemies
     SetupProceduralEnemies(mapData)
