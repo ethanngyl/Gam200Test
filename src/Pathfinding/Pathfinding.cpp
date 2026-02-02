@@ -226,6 +226,17 @@ namespace Framework {
         // Check if adjacent to target (can attack)
         int distance = Heuristic(enemyTile, targetTile);
         if (distance == 1) {
+            // Check if we have enough AP to attack
+            const int attackAPCost = 2;
+            if (stats.actionPoints < attackAPCost) {
+                // Not enough AP to attack, move to next enemy
+                LOG_INFO("EnemyAI", "Enemy %u adjacent but only has %d AP (need %d to attack)",
+                    currentEnemy.GetID(), stats.actionPoints, attackAPCost);
+                stats.actionPoints = 0;
+                currentEnemyIndex++;
+                return;
+            }
+
             // ========================================================================
             // PLAY ENEMY ATTACK SOUND EFFECT
             // ========================================================================
@@ -236,7 +247,6 @@ namespace Framework {
             LOG_INFO("EnemyAI", "Enemy %u ATTACKING Player %u", currentEnemy.GetID(), closestPlayer.GetID());
 
             // ATTACK! Consume 2 AP (attack cost)
-            const int attackAPCost = 2;
             stats.actionPoints -= attackAPCost;
             ai.moveTimer = ai.moveDelay;
 
