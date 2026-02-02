@@ -589,13 +589,26 @@ function ShowAttackPreview()
     }
 
     for _, tile in ipairs(adjacentTiles) do
-        if IsValidGridPosition(tile.x, tile.y) then
+        print("[PlayerScript]   Checking tile at (" .. tile.x .. ", " .. tile.y .. ")")
+
+        local isValid = IsValidGridPosition and IsValidGridPosition(tile.x, tile.y) or true
+        print("[PlayerScript]     IsValidGridPosition: " .. tostring(isValid))
+
+        if isValid then
             -- Tint the tile red (semi-transparent)
-            TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 1.0)  -- Light red tint
+            print("[PlayerScript]     Calling TintTile(" .. tile.x .. ", " .. tile.y .. ", 1.0, 0.3, 0.3, 1.0)")
+            local success, err = pcall(TintTile, tile.x, tile.y, 1.0, 0.3, 0.3, 1.0)
+            if not success then
+                print("[PlayerScript]     ERROR: TintTile failed: " .. tostring(err))
+            else
+                print("[PlayerScript]     TintTile succeeded")
+            end
 
             -- Store the grid coordinates so we can restore them later
             table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
             print("[PlayerScript]   Tinted tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
+        else
+            print("[PlayerScript]     Tile invalid, skipping")
         end
     end
 

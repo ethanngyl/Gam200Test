@@ -171,8 +171,8 @@ function UIManager.Update(dt)
     local isEnemyTurn = (currentTurn == "Enemy")
 
     -- Hide player-specific UI during enemy turn
-    if UIManager.components.ap then
-        UIManager.components.ap:SetEnabled(not isEnemyTurn)
+    if UIManager.components.movementAP then
+        UIManager.components.movementAP:SetEnabled(not isEnemyTurn)
     end
     if UIManager.components.attackAP then
         UIManager.components.attackAP:SetEnabled(not isEnemyTurn)
