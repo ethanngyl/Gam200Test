@@ -263,6 +263,13 @@ namespace Framework {
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
 
+        // Enemy Turn Management System (C++ Implementation)
+        static int Lua_InitializeEnemyTurn(lua_State* L);
+        static int Lua_IsActiveEnemy(lua_State* L);
+        static int Lua_IsEnemyActionReady(lua_State* L);
+        static int Lua_MarkEnemyActionComplete(lua_State* L);
+        static int Lua_UpdateEnemyTurnManager(lua_State* L);
+
         // Grid Conversion API
         static int Lua_TileToWorld(lua_State* L);
 

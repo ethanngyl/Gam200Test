@@ -3928,4 +3928,174 @@ namespace Framework {
         return 2;
     }
 
+    // ============================================================================
+    // ENEMY TURN MANAGEMENT SYSTEM (C++ Implementation for Entity Scripts)
+    // ============================================================================
+
+    // Static state for enemy turn management
+    namespace EnemyTurnState {
+        static bool turnActive = false;
+        static int activeEnemyIndex = 0;
+        static float actionTimer = 0.0f;
+        static float actionDelay = 0.5f;  // 0.5 seconds between enemies
+        static std::vector<int> enemyList;
+        static bool needsReinitialize = true;
+    }
+
+    /**
+     * @brief Initialize enemy turn system
+     * Lua usage: InitializeEnemyTurn()
+     * Call this when enemy turn starts
+     */
+    int LevelLoader::Lua_InitializeEnemyTurn(lua_State* L) {
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] InitializeEnemyTurn() called");
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "[EnemyTurnSystem] No EntityManager");
+            return 0;
+        }
+
+        // Get all enemies
+        EnemyTurnState::enemyList.clear();
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<EnemyAI>(e)) {
+                EnemyTurnState::enemyList.push_back(e.GetID());
+                LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found enemy: %d", e.GetID());
+            }
+        }
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found %d enemies total", (int)EnemyTurnState::enemyList.size());
+
+        if (EnemyTurnState::enemyList.empty()) {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] No enemies found!");
+            EnemyTurnState::turnActive = false;
+            return 0;
+        }
+
+        // Start with first enemy
+        EnemyTurnState::turnActive = true;
+        EnemyTurnState::activeEnemyIndex = 1;  // 1-indexed like Lua
+        EnemyTurnState::actionTimer = 0.0f;  // First enemy acts immediately
+        EnemyTurnState::needsReinitialize = false;
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Starting with enemy %d (index 1/%d)",
+            EnemyTurnState::enemyList[0], (int)EnemyTurnState::enemyList.size());
+
+        return 0;
+    }
+
+    /**
+     * @brief Check if specific enemy is the active one
+     * Lua usage: local isActive = IsActiveEnemy(entityID)
+     * @param entityID Entity ID to check
+     * @return true if this enemy should act, false otherwise
+     */
+    int LevelLoader::Lua_IsActiveEnemy(lua_State* L) {
+        int entityID = (int)luaL_checkinteger(L, 1);
+
+        // Reinitialize if needed
+        if (EnemyTurnState::needsReinitialize) {
+            Lua_InitializeEnemyTurn(L);
+        }
+
+        if (!EnemyTurnState::turnActive || EnemyTurnState::activeEnemyIndex == 0) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        int activeID = EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1];
+        bool isActive = (entityID == activeID);
+
+        lua_pushboolean(L, isActive);
+        return 1;
+    }
+
+    /**
+     * @brief Check if enemy action timer is ready
+     * Lua usage: local ready = IsEnemyActionReady()
+     * @return true if enemy can act (timer expired), false if still in delay
+     */
+    int LevelLoader::Lua_IsEnemyActionReady(lua_State* L) {
+        bool ready = EnemyTurnState::turnActive && (EnemyTurnState::actionTimer <= 0.0f);
+        lua_pushboolean(L, ready);
+        return 1;
+    }
+
+    /**
+     * @brief Mark current enemy as done and advance to next
+     * Lua usage: MarkEnemyActionComplete()
+     * Call this when enemy finishes its turn
+     */
+    int LevelLoader::Lua_MarkEnemyActionComplete(lua_State* L) {
+        if (!EnemyTurnState::turnActive) {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] MarkEnemyActionComplete called but turn not active");
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Enemy %d completed action",
+            EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1]);
+
+        // Move to next enemy
+        EnemyTurnState::activeEnemyIndex++;
+
+        // Check if all enemies have acted
+        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+            LOG_INFO("LevelLoader", "[EnemyTurnSystem] All enemies have acted - ending enemy turn");
+            EnemyTurnState::turnActive = false;
+            EnemyTurnState::activeEnemyIndex = 0;
+            EnemyTurnState::needsReinitialize = true;
+
+            // Call Lua OnEnemyTurnEnded() if it exists
+            lua_getglobal(L, "OnEnemyTurnEnded");
+            if (lua_isfunction(L, -1)) {
+                if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                    const char* err = lua_tostring(L, -1);
+                    LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling OnEnemyTurnEnded: %s", err);
+                    lua_pop(L, 1);
+                }
+            } else {
+                lua_pop(L, 1);
+            }
+        } else {
+            LOG_INFO("LevelLoader", "[EnemyTurnSystem] Moving to enemy %d (index %d/%d)",
+                EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1],
+                EnemyTurnState::activeEnemyIndex,
+                (int)EnemyTurnState::enemyList.size());
+
+            // Reset action timer for next enemy
+            EnemyTurnState::actionTimer = EnemyTurnState::actionDelay;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Update enemy turn manager (call every frame)
+     * Lua usage: UpdateEnemyTurnManager(dt)
+     * @param dt Delta time in seconds
+     */
+    int LevelLoader::Lua_UpdateEnemyTurnManager(lua_State* L) {
+        float dt = (float)luaL_checknumber(L, 1);
+
+        if (!EnemyTurnState::turnActive) {
+            return 0;
+        }
+
+        // Update action timer
+        if (EnemyTurnState::actionTimer > 0.0f) {
+            EnemyTurnState::actionTimer -= dt;
+            if (EnemyTurnState::actionTimer < 0.0f) {
+                EnemyTurnState::actionTimer = 0.0f;
+            }
+        }
+
+        return 0;
+    }
+
 } // namespace Framework

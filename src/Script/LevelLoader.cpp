@@ -498,6 +498,13 @@ namespace Framework {
         lua_register(L, "GetCurrentTurn", Lua_GetCurrentTurn);
         lua_register(L, "GetChestProgress", Lua_GetChestProgress);
 
+        // Enemy Turn Management System
+        lua_register(L, "InitializeEnemyTurn", Lua_InitializeEnemyTurn);
+        lua_register(L, "IsActiveEnemy", Lua_IsActiveEnemy);
+        lua_register(L, "IsEnemyActionReady", Lua_IsEnemyActionReady);
+        lua_register(L, "MarkEnemyActionComplete", Lua_MarkEnemyActionComplete);
+        lua_register(L, "UpdateEnemyTurnManager", Lua_UpdateEnemyTurnManager);
+
         // Animation
         lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
