@@ -341,9 +341,8 @@ function OnUpdate(dt)
 
         if not attackPreviewActive then
             -- First press: Show attack preview
-            -- CRITICAL: Use GetEntityAttackAP for attacks, not GetEntityAP (movement AP)
-            local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
-            if currentAttackAP >= attackAPCost then
+            local currentAP, maxAP = GetEntityAP(entityID)
+            if currentAP >= attackAPCost then
                 -- Check if there's an enemy in range before showing preview
                 local testEnemy = FindEnemyInRange()
                 if testEnemy then
@@ -354,7 +353,7 @@ function OnUpdate(dt)
                     PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse (no target)
                 end
             else
-                print("[PlayerScript] Not enough AttackAP to attack (" .. currentAttackAP .. " < " .. attackAPCost .. ")")
+                print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
                 PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse (not enough AP)
             end
         else
@@ -479,99 +478,90 @@ function OnUpdate(dt)
     print("[PlayerScript] Step 3: MoveEntityToTile returned: " .. tostring(success))
 
     if success then
-        print("[PlayerScript] Step 4: Movement SUCCESS! Consuming AP...")
-        -- Consume AP (use entity-based API for party system)
-        ConsumeEntityAP(entityID, apCostPerMove)
+    print("[PlayerScript] Step 4: Movement SUCCESS! Consuming AP...")
 
-        -- Check if AP depleted after movement
-        local newAP, maxAP = GetEntityAP(entityID)
-        print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
+    -- ====================================================================
+    -- UPDATE ANIMATION STATE BASED ON MOVEMENT (DO THIS BEFORE END TURN)
+    -- ====================================================================
 
-        if newAP == 0 then
-            print("[PlayerScript] AP depleted after movement - ending turn!")
+    local newDirection = currentAnimDirection
+    local newFlipX = isFlippedX
 
-            -- Set animation back to Idle before ending turn
-            currentAnimGroup = AnimGroup.Idle
-            SetAnimationGroup(entityID, currentAnimGroup)
-
-            EndCharacterTurn()
-            hasLoggedActive = false  -- Reset for next character
-            lastActiveCheck = false  -- Reset active tracking
-            blockedKeys = {}  -- Clear blocked keys
-
-            -- IMPORTANT: Return early - don't continue updating animations
-            -- The character is no longer active, so we shouldn't modify its state
-            return
-        end
-
-        -- Visual feedback
-        ShowTileBorder(targetX, targetY, 0.5)  -- Show border for 0.5 seconds
-        PulseTile(targetX, targetY, 0.3, 0.3, 1.0, 0.3)  -- Green pulse
-
-        -- ====================================================================
-        -- UPDATE ANIMATION STATE BASED ON MOVEMENT
-        -- ====================================================================
-
-        -- Determine animation direction and flip state
-        local newDirection = currentAnimDirection
-        local newFlipX = isFlippedX
-
-        if moveDirY > 0 then
-            -- Moving up
-            newDirection = AnimDirection.Back
-        elseif moveDirY < 0 then
-            -- Moving down
-            newDirection = AnimDirection.Front
-        elseif moveDirX > 0 then
-            -- Moving right
-            newDirection = AnimDirection.Side
-            newFlipX = false
-        elseif moveDirX < 0 then
-            -- Moving left
-            newDirection = AnimDirection.Side
-            newFlipX = true
-        end
-
-        -- Update direction if changed
-        if newDirection ~= currentAnimDirection then
-            currentAnimDirection = newDirection
-            SetAnimationDirection(entityID, currentAnimDirection)
-        end
-
-        -- Update flip state if changed
-        if newFlipX ~= isFlippedX then
-            isFlippedX = newFlipX
-            SetAnimationFlipX(entityID, isFlippedX)
-        end
-
-        -- Switch to Walk animation (unless in special state)
-        if currentAnimGroup ~= AnimGroup.Attack and
-           currentAnimGroup ~= AnimGroup.Injured and
-           currentAnimGroup ~= AnimGroup.Death then
-            currentAnimGroup = AnimGroup.Walk
-            SetAnimationGroup(entityID, currentAnimGroup)
-            SetAnimationPlaying(entityID, true)
-        end
-
-        -- Check for chest collection
-        if HasChestAtTile(targetX, targetY) then
-            CollectChest(targetX, targetY)
-            Log("[PlayerScript] Collected chest at (" .. targetX .. ", " .. targetY .. ")")
-        end
-
-        -- Check for goal completion
-        if HasGoalAtTile(targetX, targetY) then
-            Log("[PlayerScript] Reached goal! Level complete!")
-            -- Goal completion is handled by C++ TurnSystem
-        end
-
-        -- Set movement cooldown
-        moveCooldown = moveCooldownTime
-
-        Log("[PlayerScript] Moved to (" .. targetX .. ", " .. targetY .. ") - AP remaining: " .. (currentAP - apCostPerMove))
-    else
-        Log("[PlayerScript] Failed to move to (" .. targetX .. ", " .. targetY .. ")")
+    if moveDirY > 0 then
+        newDirection = AnimDirection.Back
+    elseif moveDirY < 0 then
+        newDirection = AnimDirection.Front
+    elseif moveDirX > 0 then
+        newDirection = AnimDirection.Side
+        newFlipX = false
+    elseif moveDirX < 0 then
+        newDirection = AnimDirection.Side
+        newFlipX = true
     end
+
+    if newDirection ~= currentAnimDirection then
+        currentAnimDirection = newDirection
+        SetAnimationDirection(entityID, currentAnimDirection)
+    end
+
+    if newFlipX ~= isFlippedX then
+        isFlippedX = newFlipX
+        SetAnimationFlipX(entityID, isFlippedX)
+    end
+
+    -- Switch to Walk animation (unless in special state)
+    if currentAnimGroup ~= AnimGroup.Attack and
+       currentAnimGroup ~= AnimGroup.Injured and
+       currentAnimGroup ~= AnimGroup.Death then
+        currentAnimGroup = AnimGroup.Walk
+        SetAnimationGroup(entityID, currentAnimGroup)
+        SetAnimationPlaying(entityID, true)
+    end
+
+    -- NOW consume AP
+    ConsumeEntityAP(entityID, apCostPerMove)
+
+    local newAP, maxAP = GetEntityAP(entityID)
+    print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
+
+    -- If AP depleted, end turn AFTER direction/flip has been applied
+    if newAP == 0 then
+        print("[PlayerScript] AP depleted after movement - ending turn!")
+
+        -- Optional: go Idle, but KEEP direction/flip as just set
+        currentAnimGroup = AnimGroup.Idle
+        SetAnimationGroup(entityID, currentAnimGroup)
+
+        EndCharacterTurn()
+        hasLoggedActive = false
+        lastActiveCheck = false
+        blockedKeys = {}
+
+        return
+    end
+
+    -- Visual feedback
+    ShowTileBorder(targetX, targetY, 0.5)
+    PulseTile(targetX, targetY, 0.3, 0.3, 1.0, 0.3)
+
+    -- Check for chest collection
+    if HasChestAtTile(targetX, targetY) then
+        CollectChest(targetX, targetY)
+        Log("[PlayerScript] Collected chest at (" .. targetX .. ", " .. targetY .. ")")
+    end
+
+    -- Check for goal completion
+    if HasGoalAtTile(targetX, targetY) then
+        Log("[PlayerScript] Reached goal! Level complete!")
+    end
+
+    moveCooldown = moveCooldownTime
+
+    Log("[PlayerScript] Moved to (" .. targetX .. ", " .. targetY .. ") - AP remaining: " .. (currentAP - apCostPerMove))
+else
+    Log("[PlayerScript] Failed to move to (" .. targetX .. ", " .. targetY .. ")")
+end
+
 end
 
 -- ============================================================================
@@ -608,11 +598,11 @@ function ShowAttackPreview()
                 if worldX and worldY then
                     -- Spawn attack indicator sprite at this tile
                     -- Note: SpawnSprite returns entity ID
-                    -- Tile size is 0.1, so use 0.095 (95% of tile) to leave small gap
+                    -- Use 0.95 size to leave a small gap between tiles for visibility
                     local indicatorID = SpawnSprite(
                         "assets/TileMap/Attack_Indicator.png",
                         worldX, worldY,
-                        0.095, 0.095,  -- Slightly smaller than tile (95% of 0.1)
+                        0.95, 0.95,  -- Slightly smaller than tile (0.95 x 0.95)
                         2  -- layer 2 (above tiles, below characters)
                     )
 
@@ -710,12 +700,12 @@ function ExecuteAttack()
     print("[PlayerScript] ===== EXECUTING ATTACK =====")
     print("============================================================")
 
-    -- Check AttackAP (separate from movement AP)
-    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
-    print("[PlayerScript] Current AttackAP: " .. currentAttackAP .. "/" .. maxAttackAP .. " (need " .. attackAPCost .. ")")
+    -- Check AP
+    local currentAP, maxAP = GetEntityAP(entityID)
+    print("[PlayerScript] Current AP: " .. currentAP .. "/" .. maxAP .. " (need " .. attackAPCost .. ")")
 
-    if currentAttackAP < attackAPCost then
-        print("[PlayerScript] ATTACK BLOCKED: Not enough AttackAP (" .. currentAttackAP .. " < " .. attackAPCost .. ")")
+    if currentAP < attackAPCost then
+        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. currentAP .. " < " .. attackAPCost .. ")")
         ClearAttackPreview()
         return
     end
@@ -741,10 +731,10 @@ function ExecuteAttack()
     if success then
         print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
-        -- CRITICAL: Consume AttackAP, NOT movement AP
-        ConsumeEntityAttackAP(entityID, attackAPCost)
-        local newAttackAP = GetEntityAttackAP(entityID)
-        print("[PlayerScript] AttackAP consumed. New AttackAP: " .. newAttackAP .. "/" .. maxAttackAP)
+        -- Consume attack AP
+        ConsumeEntityAP(entityID, attackAPCost)
+        local newAP = GetEntityAP(entityID)
+        print("[PlayerScript] AP consumed. New AP: " .. newAP .. "/" .. maxAP)
 
         -- Visual feedback
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
