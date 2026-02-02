@@ -132,7 +132,20 @@ function OnUpdate(dt)
     print("[Enemy " .. entityID .. "]   It IS enemy turn!")
 
     -- SEQUENTIAL TURN SYSTEM: Only act if this enemy is the active one
-    local isActive = IsActiveEnemy(entityID)
+    print("[Enemy " .. entityID .. "]   About to call IsActiveEnemy()...")
+    print("[Enemy " .. entityID .. "]   IsActiveEnemy function exists: " .. tostring(IsActiveEnemy ~= nil))
+
+    if not IsActiveEnemy then
+        print("[Enemy " .. entityID .. "]   ERROR: IsActiveEnemy is nil!")
+        return
+    end
+
+    local success, isActive = pcall(IsActiveEnemy, entityID)
+    if not success then
+        print("[Enemy " .. entityID .. "]   ERROR: IsActiveEnemy() threw error: " .. tostring(isActive))
+        return
+    end
+
     print("[Enemy " .. entityID .. "]   IsActiveEnemy(" .. entityID .. "): " .. tostring(isActive))
     if not isActive then
         -- Not my turn yet, wait
@@ -140,7 +153,20 @@ function OnUpdate(dt)
     end
 
     -- Check if action timer is ready (for visual delay between enemies)
-    local actionReady = IsEnemyActionReady()
+    print("[Enemy " .. entityID .. "]   About to call IsEnemyActionReady()...")
+    print("[Enemy " .. entityID .. "]   IsEnemyActionReady function exists: " .. tostring(IsEnemyActionReady ~= nil))
+
+    if not IsEnemyActionReady then
+        print("[Enemy " .. entityID .. "]   ERROR: IsEnemyActionReady is nil!")
+        return
+    end
+
+    local success, actionReady = pcall(IsEnemyActionReady)
+    if not success then
+        print("[Enemy " .. entityID .. "]   ERROR: IsEnemyActionReady() threw error: " .. tostring(actionReady))
+        return
+    end
+
     print("[Enemy " .. entityID .. "]   IsEnemyActionReady(): " .. tostring(actionReady))
     if not actionReady then
         -- Still in delay, wait
