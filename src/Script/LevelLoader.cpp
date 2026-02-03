@@ -534,6 +534,7 @@ namespace Framework {
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
         lua_register(L, "ConsumeEntityAttackAP", Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
+        lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
         lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
@@ -578,6 +579,7 @@ namespace Framework {
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
+        lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
         lua_register(L, "SetActiveCharacter", Lua_SetActiveCharacter);
         lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);

@@ -298,20 +298,10 @@ function ShowAttackPreview()
                 local worldX, worldY = TileToWorld(tile.x, tile.y)
 
                 if worldX and worldY then
-                    local indicatorID = SpawnSprite(
-                        "assets/TileMap/Attack_Indicator.png",
-                        worldX, worldY,
-                        0.95, 0.95,
-                        2
-                    )
-
-                    if indicatorID and indicatorID > 0 then
-                        SetSpriteColor(indicatorID, 1.0, 0.0, 0.0, 0.5)
-                        table.insert(attackPreviewTiles, indicatorID)
-                        print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at grid(" .. tile.x .. ", " .. tile.y .. ") world(" .. worldX .. ", " .. worldY .. ")")
-                    else
-                        print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
-                    end
+                    -- Tint the tile red for attack preview
+                    TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.7)  -- Red tint with 70% opacity
+                    table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})  -- Store tile coords
+                    print("[PlayerScript]   Tinted attack preview tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
                 else
                     print("[PlayerScript]   WARNING: TileToWorld failed for (" .. tile.x .. ", " .. tile.y .. ")")
                 end
@@ -329,11 +319,12 @@ end
 
 function ClearAttackPreview()
     if #attackPreviewTiles > 0 then
-        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack indicator entities")
-        for _, indicatorID in ipairs(attackPreviewTiles) do
-            if indicatorID and indicatorID > 0 then
-                DestroyEntity(indicatorID)
-                print("[PlayerScript]   Destroyed attack indicator " .. indicatorID)
+        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack preview tiles")
+        for _, tile in ipairs(attackPreviewTiles) do
+            if tile and tile.x and tile.y then
+                -- Reset tile tint to white (no tint)
+                TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
+                print("[PlayerScript]   Cleared tint on tile (" .. tile.x .. ", " .. tile.y .. ")")
             end
         end
     end
@@ -1385,13 +1376,9 @@ function ExecuteAttack()
         print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAP) .. "/" .. tostring(newMaxAP))
 
         -- Trigger attack AP crystal shattering animation
-        if UIManager and UIManager.GetComponent then
-            local attackAPIndicator = UIManager.GetComponent("attackAP")
-            if attackAPIndicator and attackAPIndicator.ConsumeOneAP then
-                attackAPIndicator:ConsumeOneAP()
-                print("[PlayerScript] Triggered attack AP crystal shatter animation")
-            end
-        end
+        -- Use C++ bridge to call UIManager (which is in a different Lua state)
+        TriggerAttackAPAnimation()
+        print("[PlayerScript] Triggered attack AP crystal shatter animation")
 
         -- Visual feedback
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage

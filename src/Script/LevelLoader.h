@@ -227,6 +227,7 @@ namespace Framework {
         static int Lua_ConsumeEntityAP(lua_State* L);
         static int Lua_ConsumeEntityAttackAP(lua_State* L);
         static int Lua_RefillEntityAP(lua_State* L);
+        static int Lua_RefillEntityAttackAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);
         static int Lua_SetActiveCharacter(lua_State* L);
@@ -250,6 +251,8 @@ namespace Framework {
         static int Lua_EndCharacterTurn(lua_State* L);  // Party turn system - bridge to level Lua state
         static int Lua_IsUIAnimating(lua_State* L);     // Check if UI is animating - bridge to level Lua state
         static int Lua_IsInTurnTransition(lua_State* L); // Check if in turn transition cooldown - bridge to level Lua state
+        static int Lua_TriggerAttackAPAnimation(lua_State* L); // Trigger attack AP consume animation - bridge to UIManager
+        static int Lua_RestoreAllAttackAPCrystals(lua_State* L); // Restore all attack AP crystals - bridge to UIManager
         static int Lua_SetPlayerFlipX(lua_State* L);
         static int Lua_SetGridMovementEnabled(lua_State* L);
         static int Lua_HasChestAtTile(lua_State* L);
