@@ -245,7 +245,7 @@ namespace Framework {
         ImGui::Begin("##GamePopup", nullptr, flags);
 
         // =====================================================================
-        // ADD YOUR CONTENT HERE
+        // Add any content here for future implementation
         // =====================================================================
         //
         // Example:

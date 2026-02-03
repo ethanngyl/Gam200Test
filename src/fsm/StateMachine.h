@@ -9,7 +9,7 @@
 
  FINITE STATE MACHINE - StateMachine Class
 
- Design notes:
+ Brief notes:
    The StateMachine is the core controller that manages states and transitions.
    It maintains the current active state and delegates Update() calls to it.
    States can request transitions via GetStateMachine()->ChangeState().
