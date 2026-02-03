@@ -8,7 +8,7 @@
 
       "spawnRate": 8,
       "size": 0.6,
-      "endSize": 2.2,
+      "endSize": 0.9,
 
       "minLifetime": 1.2,
       "maxLifetime": 2.8,
@@ -21,7 +21,7 @@
       "gravity": [0.0, 0.06],
 
       "fadeOut": true,
-      "shrinkOverTime": false,
+      "shrinkOverTime": true,
       "burstCount": 0
     },
 

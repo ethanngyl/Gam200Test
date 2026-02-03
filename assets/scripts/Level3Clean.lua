@@ -47,6 +47,11 @@ local kStartY = -0.4
 local kSpacingX = 0.1
 local kSpacingY = 0.1
 
+-- Particle System State
+local particleEmitters = {}
+local playerAttackedThisFrame = false
+local lastAttackingEntity = 0
+
 -- Audio configuration
 local audioConfig = nil
 
@@ -148,11 +153,16 @@ function OnUpdate(dt)
     -- Update audio
     UpdateAudio(dt)
 
-     -- Spawn particles when player attacks
-    if playerAttackedThisFrame then
-        local x, y = GetPlayerGridPosition(playerID)
-        local worldX, worldY = GetEntityWorldPosition(playerID)
-        CreateParticleEffect("Sparks", worldX, worldY, 1.0)
+    -- Spawn particles when player attacks
+    if playerAttackedThisFrame and lastAttackingEntity ~= 0 then
+        SpawnAttackParticles(lastAttackingEntity)
+        playerAttackedThisFrame = false
+        lastAttackingEntity = 0
+    end
+
+    -- Press T to test particles (TEMPORARY - REMOVE AFTER TESTING)
+    if IsKeyDown("T") then
+        TestParticles()
     end
 
     -- Handle pause menu (always runs)
@@ -237,10 +247,8 @@ function OnDestroy()
     Log("Level 3 cleanup...")
     Log("========================================")
 
-     -- Cleanup particle emitters
-    if rainEmitter and rainEmitter > 0 then
-        DestroyParticleEmitter(rainEmitter)
-    end
+    -- Cleanup particles
+    CleanupParticles()
 
     -- Cleanup party UI
     if partyUI then
@@ -303,27 +311,6 @@ function InitializeAudio()
 end
 
 -- ============================================================================
--- HELPER FUNCTIONS - Initialize Particles
--- ============================================================================
-function InitializeParticles()
-    Log("========================================")
-    Log("Initializing particle effects...")
-    Log("========================================")
-    
-    -- Create ambient particles
-    rainEmitter = CreateParticleEmitter("Rain", 0, 3)
-    if rainEmitter > 0 then
-        Log("  Rain emitter created (ID: " .. rainEmitter .. ")")
-    end
-    
-    -- Create smoke effects at torches
-    torchSmoke1 = CreateParticleEmitter("Smoke", -3, 0.5)
-    torchSmoke2 = CreateParticleEmitter("Smoke", 3, 0.5)
-    
-    Log("Particle effects initialized")
-end
-
--- ============================================================================
 -- HELPER FUNCTIONS - Map Loading
 -- ============================================================================
 
@@ -346,6 +333,103 @@ function LoadTileMapData()
     end
 
     return success
+end
+
+-- ============================================================================
+-- HELPER FUNCTIONS - PARTICLE SYSTEM INITIALIZATION
+-- ============================================================================
+
+function InitializeParticles()
+    Log("========================================")
+    Log("Initializing Particle System...")
+    Log("========================================")
+    
+    -- The ParticleSystemManager automatically loads particles.json in Initialize()
+    -- This creates the 4 default emitters: Smoke, Explosion, Sparks, Rain
+    
+    -- Optional: Create additional runtime emitters
+    -- Example: Create a rain emitter at the top of the screen
+    local rainEmitterId = CreateParticleEmitter("Rain", 0.0, 5.0)
+    if rainEmitterId > 0 then
+        particleEmitters.rain = rainEmitterId
+        Log("Created rain particle emitter (ID: " .. rainEmitterId .. ")")
+    else
+        Log("WARNING: Failed to create rain emitter")
+    end
+    
+    Log("Particle system initialized from particles.json")
+end
+
+-- ============================================================================
+-- HELPER FUNCTIONS- PARTICLE EFFECT
+-- ============================================================================
+
+function SpawnAttackParticles(attackerEntityID)
+    if not attackerEntityID or attackerEntityID == 0 then
+        return
+    end
+    
+    local worldX, worldY = GetEntityWorldPosition(attackerEntityID)
+    local effectId = CreateParticleEffect("Sparks", worldX, worldY, 0.5)
+    Log("[Particles] Attack particles spawned at (" .. worldX .. ", " .. worldY .. ")")
+    
+    return effectId
+end
+
+function SpawnDamageParticles(targetEntityID, damageAmount)
+    if not targetEntityID or targetEntityID == 0 then
+        return
+    end
+    
+    local worldX, worldY = GetEntityWorldPosition(targetEntityID)
+    local effectName = "Explosion"
+    local duration = 0.8
+    
+    if damageAmount and damageAmount > 10 then
+        duration = 1.2
+    end
+    
+    local effectId = CreateParticleEffect(effectName, worldX, worldY, duration)
+    Log("[Particles] Damage particles spawned at (" .. worldX .. ", " .. worldY .. ")")
+    
+    return effectId
+end
+
+function SpawnDeathParticles(entityID)
+    if not entityID or entityID == 0 then
+        return
+    end
+    
+    local worldX, worldY = GetEntityWorldPosition(entityID)
+    CreateParticleEffect("Explosion", worldX, worldY, 2.0)
+    Log("[Particles] Death particles spawned at (" .. worldX .. ", " .. worldY .. ")")
+end
+
+-- ============================================================================
+-- HELPER FUNCTIONS - PARTICLE CLEANUP
+-- ============================================================================
+
+function CleanupParticles()
+    Log("[Particles] Cleaning up runtime emitters...")
+    
+    local count = 0
+    for name, emitterId in pairs(particleEmitters) do
+        if emitterId and emitterId > 0 then
+            DestroyParticleEmitter(emitterId)
+            count = count + 1
+            Log("[Particles] Destroyed emitter: " .. name)
+        end
+    end
+    
+    particleEmitters = {}
+    Log("[Particles] Cleanup complete - destroyed " .. count .. " emitters")
+end
+
+-- Add this to your existing OnDestroy() function if you have one
+-- Or create it if you don't:
+function OnDestroy()
+    CleanupParticles()
+    -- Add any other cleanup code here
 end
 
 -- ============================================================================
@@ -561,4 +645,26 @@ function HandleEditorToggle(dt)
 
         editorToggleCooldown = 0.3
     end
+end
+
+-- ============================================================================
+-- PARTICLE TESTING (Add at end of file)
+-- ============================================================================
+
+function TestParticles()
+    Log("[TEST] ====== TESTING PARTICLES ======")
+    
+    -- Test 1: Explosion at center
+    local effect1 = CreateParticleEffect("Explosion", 0.0, 0.0, 2.0)
+    Log("[TEST] Explosion: " .. (effect1 > 0 and "SUCCESS" or "FAILED"))
+    
+    -- Test 2: Sparks
+    local effect2 = CreateParticleEffect("Sparks", -1.0, 0.0, 1.5)
+    Log("[TEST] Sparks: " .. (effect2 > 0 and "SUCCESS" or "FAILED"))
+    
+    -- Test 3: Smoke emitter
+    local effect3 = CreateParticleEmitter("Smoke", 1.0, 0.0)
+    Log("[TEST] Smoke: " .. (effect3 > 0 and "SUCCESS" or "FAILED"))
+    
+    Log("[TEST] ====== TEST COMPLETE ======")
 end
