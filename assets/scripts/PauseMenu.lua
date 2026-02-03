@@ -8,9 +8,9 @@
 |
 |  Features:
 |  - Wood background with semi-transparent overlay
-|  - Button images with text labels
+|  - Button images with hover highlight (like MainMenu)
 |  - Horizontal layout: Quit | Settings | Resume
-|  - Keyboard and visual feedback
+|  - Settings sub-menu with volume control
 |
 |  Usage:
 |    local PauseMenu = require("PauseMenu")
@@ -21,6 +21,7 @@
 --]]
 
 local PauseMenu = {}
+local SettingsMenu = require("SettingsMenu")
 
 -- ============================================================================
 -- CONFIGURATION
@@ -34,51 +35,59 @@ local config = {
         layer = 50
     },
     
-    -- Title (adjust these values)
+    -- Title
     title = {
         text = "Paused",
-        offsetX = -150,       -- X offset from center (negative = left)
-        offsetY = -0.2,       -- Y offset from center (positive = up, in screen ratio)
         scale = 2.0,
         color = { r = 0.2, g = 0.15, b = 0.1 }
     },
     
-    -- Buttons (adjust these values)
+    -- Buttons (using CreateButton for hover effect)
     buttons = {
         texture = "assets/Menu/Ui_btn.png",
         scale = { x = 0.35, y = 0.10 },
         layer = 51,
-        textScale = 0.8,
-        textColor = { r = 0.95, g = 0.85, b = 0.6 },
-        selectedColor = { r = 1.0, g = 0.9, b = 0.3 },
         
-        -- Each button has its own position (adjust individually)
-        --  /imageY = world coordinates for button image (relative to camera)
-        -- textX/textY = screen coordinates for text (relative to screen center)
+        -- Each button config
         items = {
             { 
                 id = "quit", 
                 label = "MainMenu",
-                imageX = -0.45,    -- World X offset from camera
-                imageY = 0.0,     -- World Y offset from camera
-                textX = -570,     -- Screen X offset from center (pixels)
-                textY = -10       -- Screen Y offset from center (pixels)
+                offsetX = -0.45,    -- World X offset from camera
+                offsetY = 0.0,      -- World Y offset from camera
+                callback = "OnPauseQuitClicked",
+                text = {
+                    offsetX = -80,
+                    offsetY = -10,
+                    scale = 0.8,
+                    color = { r = 255, g = 255, b = 255 }
+                }
             },
             { 
                 id = "settings", 
                 label = "Settings",
-                imageX = 0.00,
-                imageY = 0.0,
-                textX = -50,
-                textY = -10
+                offsetX = 0.00,
+                offsetY = 0.0,
+                callback = "OnPauseSettingsClicked",
+                text = {
+                    offsetX = -50,
+                    offsetY = -10,
+                    scale = 0.8,
+                    color = { r = 255, g = 255, b = 255 }
+                }
             },
             { 
                 id = "resume", 
                 label = "Resume",
-                imageX = 0.45,
-                imageY = 0.0,
-                textX = 400,
-                textY = -10
+                offsetX = 0.45,
+                offsetY = 0.0,
+                callback = "OnPauseResumeClicked",
+                text = {
+                    offsetX = -50,
+                    offsetY = -10,
+                    scale = 0.8,
+                    color = { r = 255, g = 255, b = 255 }
+                }
             }
         }
     }
@@ -90,34 +99,46 @@ local config = {
 
 local state = {
     initialized = false,
-    selectedIndex = 3,       -- Default to "Resume" (rightmost)
     
     -- Entity IDs
     backgroundID = 0,
-    buttonIDs = {},
+    buttonIDs = {},  -- Array of {id = buttonID, config = buttonConfig}
     
     -- Input tracking
-    wasLeftPressed = false,
-    wasRightPressed = false,
-    wasEnterPressed = false,
-    wasEscapePressed = false,
-    wasMousePressed = false
+    wasEscapePressed = false
 }
+
+-- ============================================================================
+-- GLOBAL BUTTON CALLBACKS (called by CreateButton system)
+-- ============================================================================
+
+function OnPauseQuitClicked()
+    PlaySound("button2", false, 0.7)
+    PauseMenu.OnQuit()
+end
+
+function OnPauseSettingsClicked()
+    PlaySound("button2", false, 0.7)
+    PauseMenu.OnSettings()
+end
+
+function OnPauseResumeClicked()
+    PlaySound("button2", false, 0.7)
+    PauseMenu.OnResume()
+end
 
 -- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
 function PauseMenu.Init()
-    state.selectedIndex = 3  -- Default to Resume
     state.initialized = true
     
     -- Reset input states
-    state.wasLeftPressed = false
-    state.wasRightPressed = false
-    state.wasEnterPressed = false
     state.wasEscapePressed = false
-    state.wasMousePressed = false
+    
+    -- Initialize settings menu
+    SettingsMenu.Init()
     
     Log("[PauseMenu] Initialized")
 end
@@ -139,30 +160,31 @@ local function CreatePauseUI()
         config.background.layer
     )
     
-    -- Create button sprites using individual positions
+    -- Create buttons using CreateButton (with hover highlight)
     state.buttonIDs = {}
     local btnConfig = config.buttons
     
     for i, btn in ipairs(btnConfig.items) do
-        -- Use individual button position (world coordinates, relative to camera)
-        local btnX = camX + btn.imageX
-        local btnY = camY + btn.imageY
+        local btnX = camX + btn.offsetX
+        local btnY = camY + btn.offsetY
         
-        local btnID = SpawnSprite(
+        local buttonID = CreateButton(
             btnConfig.texture,
             btnX, btnY,
             btnConfig.scale.x, btnConfig.scale.y,
+            btn.callback,
             btnConfig.layer
         )
         
         state.buttonIDs[i] = {
-            id = btnID,
-            label = btn.label,
-            textX = btn.textX,   -- Store text position
-            textY = btn.textY,
-            action = btn.id
+            id = buttonID,
+            config = btn
         }
+        
+        Log("[PauseMenu] Created button: " .. btn.id .. " (ID: " .. buttonID .. ")")
     end
+    
+    Log("[PauseMenu] UI created")
 end
 
 -- ============================================================================
@@ -176,12 +198,8 @@ local function DestroyPauseUI()
         state.backgroundID = 0
     end
     
-    -- Destroy buttons
-    for i, btn in ipairs(state.buttonIDs) do
-        if btn.id and btn.id > 0 then
-            DestroyEntity(btn.id)
-        end
-    end
+    -- Clear all buttons (created with CreateButton)
+    ClearAllButtons()
     state.buttonIDs = {}
     
     Log("[PauseMenu] UI destroyed")
@@ -192,6 +210,12 @@ end
 -- ============================================================================
 
 function PauseMenu.Update(dt)
+    -- If settings menu is active, let it handle input
+    if SettingsMenu.IsActive() then
+        SettingsMenu.Update(dt)
+        return
+    end
+    
     -- Toggle pause with Escape key
     local isEscapePressed = IsKeyDown("Escape")
     
@@ -200,135 +224,18 @@ function PauseMenu.Update(dt)
         
         if IsPaused() then
             Log("[PauseMenu] Game PAUSED")
-            SetMasterVolume(0.3)  -- Lower volume instead of muting
-            state.selectedIndex = 3  -- Reset to Resume
+            -- Lower volume to 30% of the saved volume setting
+            local savedVolume = SettingsMenu.GetSavedVolume()
+            SetMasterVolume(savedVolume * 0.3)
             CreatePauseUI()
         else
             Log("[PauseMenu] Game RESUMED")
-            SetMasterVolume(1.0)
+            -- Restore to saved volume setting
+            SetMasterVolume(SettingsMenu.GetSavedVolume())
             DestroyPauseUI()
         end
     end
     state.wasEscapePressed = isEscapePressed
-    
-    -- If not paused, don't handle menu input
-    if not IsPaused() then
-        return
-    end
-    
-    -- ========================================================================
-    -- PAUSE MENU INPUT (horizontal navigation)
-    -- ========================================================================
-    
-    local isLeftPressed = IsKeyDown("Left") or IsKeyDown("A")
-    local isRightPressed = IsKeyDown("Right") or IsKeyDown("D")
-    local isEnterPressed = IsKeyDown("Enter") or IsKeyDown("Space")
-    
-    -- Navigate left
-    if isLeftPressed and not state.wasLeftPressed then
-        state.selectedIndex = state.selectedIndex - 1
-        if state.selectedIndex < 1 then
-            state.selectedIndex = #config.buttons.items
-        end
-        PlaySound("button", false, 0.5)
-    end
-    
-    -- Navigate right
-    if isRightPressed and not state.wasRightPressed then
-        state.selectedIndex = state.selectedIndex + 1
-        if state.selectedIndex > #config.buttons.items then
-            state.selectedIndex = 1
-        end
-        PlaySound("button", false, 0.5)
-    end
-    
-    state.wasLeftPressed = isLeftPressed
-    state.wasRightPressed = isRightPressed
-    
-    -- Quick select with number keys
-    if IsKeyDown("1") then
-        state.selectedIndex = 1
-        PauseMenu.ExecuteAction()
-        return
-    elseif IsKeyDown("2") then
-        state.selectedIndex = 2
-        PauseMenu.ExecuteAction()
-        return
-    elseif IsKeyDown("3") then
-        state.selectedIndex = 3
-        PauseMenu.ExecuteAction()
-        return
-    end
-    
-    -- Enter/Space to select
-    if isEnterPressed and not state.wasEnterPressed then
-        PauseMenu.ExecuteAction()
-    end
-    state.wasEnterPressed = isEnterPressed
-    
-    -- ========================================================================
-    -- MOUSE INPUT
-    -- ========================================================================
-    local mouseX, mouseY = GetMousePosition()
-    local fbWidth, fbHeight = GetFramebufferSize()
-    local centerX = fbWidth * 0.5
-    local centerY = fbHeight * 0.5
-    
-    -- Screen scale factor (based on 1920x1080 reference resolution)
-    local scaleFactorX = fbWidth / 1920
-    local scaleFactorY = fbHeight / 1080
-    
-    -- Check mouse hover over buttons
-    local hoveredIndex = nil
-    local btnConfig = config.buttons
-    
-    -- Button hit box size in pixels (adjust these values as needed)
-    local buttonHalfWidth = 120 * scaleFactorX
-    local buttonHalfHeight = 40 * scaleFactorY
-    
-    for i, btn in ipairs(state.buttonIDs) do
-        -- Calculate button center in screen coordinates
-        local btnCenterX = centerX + (btn.textX * scaleFactorX) + 30  -- +30 to center on text
-        local btnCenterY = centerY + (btn.textY * scaleFactorY)
-        
-        -- Check if mouse is within button bounds
-        if mouseX >= btnCenterX - buttonHalfWidth and mouseX <= btnCenterX + buttonHalfWidth and
-           mouseY >= btnCenterY - buttonHalfHeight and mouseY <= btnCenterY + buttonHalfHeight then
-            hoveredIndex = i
-            break
-        end
-    end
-    
-    -- Update selection on hover
-    if hoveredIndex and hoveredIndex ~= state.selectedIndex then
-        state.selectedIndex = hoveredIndex
-        PlaySound("button", false, 0.3)
-    end
-    
-    -- Mouse click to select
-    local isMousePressed = IsMouseButtonDown("Left")
-    if isMousePressed and not state.wasMousePressed and hoveredIndex then
-        PauseMenu.ExecuteAction()
-    end
-    state.wasMousePressed = isMousePressed
-end
-
--- ============================================================================
--- EXECUTE SELECTED ACTION
--- ============================================================================
-
-function PauseMenu.ExecuteAction()
-    local action = config.buttons.items[state.selectedIndex].id
-    
-    PlaySound("button2", false, 0.7)
-    
-    if action == "resume" then
-        PauseMenu.OnResume()
-    elseif action == "settings" then
-        PauseMenu.OnSettings()
-    elseif action == "quit" then
-        PauseMenu.OnQuit()
-    end
 end
 
 -- ============================================================================
@@ -340,7 +247,12 @@ function PauseMenu.Draw()
         return
     end
     
-    local camX, camY, camZ = GetCameraPosition()
+    -- If settings menu is active, draw it instead
+    if SettingsMenu.IsActive() then
+        SettingsMenu.Draw()
+        return
+    end
+    
     local fbWidth, fbHeight = GetFramebufferSize()
     local centerX = fbWidth * 0.5
     local centerY = fbHeight * 0.5
@@ -348,41 +260,41 @@ function PauseMenu.Draw()
     -- Screen scale factor (based on 1920x1080 reference resolution)
     local scaleFactorX = fbWidth / 1920
     local scaleFactorY = fbHeight / 1080
-    local scaleFactor = math.min(scaleFactorX, scaleFactorY)  -- Use smaller to maintain aspect ratio
+    local scaleFactor = math.min(scaleFactorX, scaleFactorY)
     
     -- ========================================================================
     -- DRAW TITLE
     -- ========================================================================
     local titleCfg = config.title
-    local titleX = centerX + (titleCfg.offsetX * scaleFactorX)
-    local titleY = centerY - (titleCfg.offsetY * fbHeight)
+    local titleText = titleCfg.text
     local titleScale = titleCfg.scale * scaleFactor
     
-    DrawText("Playfair48", titleCfg.text, titleX, titleY, titleScale,
+    -- Center the title
+    local approxTitleWidth = #titleText * 30 * titleScale
+    local titleX = centerX - (approxTitleWidth * 0.5)
+    local titleY = centerY + 150 * scaleFactorY  -- Above the buttons
+    
+    DrawText("Playfair48", titleText, titleX, titleY, titleScale,
              titleCfg.color.r, titleCfg.color.g, titleCfg.color.b)
     
     -- ========================================================================
-    -- DRAW BUTTON LABELS
+    -- DRAW BUTTON TEXT (using DrawButtonText for proper positioning)
     -- ========================================================================
-    local btnConfig = config.buttons
-    
-    for i, btn in ipairs(state.buttonIDs) do
-        local isSelected = (i == state.selectedIndex)
-        
-        -- Use individual text position (scaled by screen size)
-        local textX = centerX + (btn.textX * scaleFactorX)
-        local textY = centerY + (btn.textY * scaleFactorY)
-        
-        local scale = btnConfig.textScale * scaleFactor
-        local color = isSelected and btnConfig.selectedColor or btnConfig.textColor
-        
-        local label = btn.label
-        if isSelected then
-            label = "> " .. label .. " <"
-            textX = textX - (20 * scaleFactorX)
+    for i, btnData in ipairs(state.buttonIDs) do
+        if btnData.id and btnData.id > 0 then
+            local textCfg = btnData.config.text
+            DrawButtonText(
+                btnData.id,
+                "Playfair48",
+                btnData.config.label,
+                textCfg.offsetX,
+                textCfg.offsetY,
+                textCfg.scale,
+                textCfg.color.r,
+                textCfg.color.g,
+                textCfg.color.b
+            )
         end
-        
-        DrawText("Playfair48", label, textX, textY, scale, color.r, color.g, color.b)
     end
 end
 
@@ -392,20 +304,30 @@ end
 
 function PauseMenu.OnResume()
     TogglePause()
-    SetMasterVolume(1.0)
+    -- Restore to saved volume setting
+    SetMasterVolume(SettingsMenu.GetSavedVolume())
     DestroyPauseUI()
     Log("[PauseMenu] Resumed")
 end
 
 function PauseMenu.OnSettings()
-    -- TODO: Open settings menu
-    Log("[PauseMenu] Settings - Not implemented yet")
+    -- Hide pause menu UI elements
+    DestroyPauseUI()
+    
+    -- Open settings menu with callback to restore pause menu when closed
+    SettingsMenu.Open(function()
+        -- When settings closes, recreate pause menu UI
+        CreatePauseUI()
+    end)
+    
+    Log("[PauseMenu] Opening Settings")
 end
 
 function PauseMenu.OnQuit()
     DestroyPauseUI()
     TogglePause()
-    SetMasterVolume(1.0)
+    -- Restore to saved volume setting
+    SetMasterVolume(SettingsMenu.GetSavedVolume())
     SetNextGameState("mainMenu")
     Log("[PauseMenu] Returning to main menu")
 end
@@ -415,6 +337,7 @@ end
 -- ============================================================================
 
 function PauseMenu.Destroy()
+    SettingsMenu.Destroy()
     DestroyPauseUI()
     state.initialized = false
     Log("[PauseMenu] Destroyed")

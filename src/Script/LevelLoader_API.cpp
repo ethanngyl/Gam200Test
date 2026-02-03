@@ -26,6 +26,7 @@
 #include "LevelLoader.h"
 #include "UISystem.h"
 #include "Audio/AudioSystem.h"
+#include "Audio/AudioLoader.h"
 #include "GraphicsSystemV2.h"
 #include "Input.h"
 #include "LevelLoader_JSON.h"
@@ -147,6 +148,28 @@ namespace Framework {
         float volume = luaL_checknumber(L, 1);
         loader->audioSystem->SetMasterVolume(volume);
         return 0;
+    }
+
+    /**
+     * @brief Gets the saved master volume from audio config
+     * @return number - The saved master volume (0.0 to 1.0)
+     */
+    int LevelLoader::Lua_GetMasterVolume(lua_State* L) {
+        float volume = AudioLoader::GetSettings().masterVolume;
+        lua_pushnumber(L, volume);
+        return 1;
+    }
+
+    /**
+     * @brief Saves the master volume to audio config JSON file
+     * @params volume (number) - 0.0 to 1.0
+     * @return boolean - True if save succeeded
+     */
+    int LevelLoader::Lua_SaveMasterVolume(lua_State* L) {
+        float volume = luaL_checknumber(L, 1);
+        bool success = AudioLoader::SetMasterVolume(volume);
+        lua_pushboolean(L, success);
+        return 1;
     }
 
     // ========================================================================
