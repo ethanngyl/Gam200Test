@@ -1,22 +1,37 @@
--- ============================================================================
--- PlayerScript.lua (FSM Version)
--- Grid-based player movement and animation component script
--- ============================================================================
--- This script handles player movement on a grid using arrow keys or WASD
--- Features:
--- - FSM-based state management (WaitingForInput, Moving, Attacking)
--- - Grid-based movement (one tile at a time)
--- - Input handling for arrow keys and WASD
--- - Action Point (AP) consumption
--- - Turn-based movement with cooldown
--- - Visual feedback (tile borders and pulses)
--- - Automatic animation state management (Idle/Walk/Attack/Injured/Death)
--- - Attack preview and execution
--- ============================================================================
+--[[
+===============================================================================
+ File:          PlayerScript.lua
+ Authors:       ETHAN NG YONG LE
+ Co-Authors:    Padilla Carl Jameson Z. 
+ Date:          2026-02-03
+ Contribution:  Ethan (70%), Carl (30%)
+ ------------------------------------------------------------------------------
 
--- ============================================================================
--- FSM CLASS (Built-in for reuse)
--- ============================================================================
+ PLAYER CONTROLLER (FSM & Grid)
+
+ Brief:
+    Handles all player logic on the grid.
+    Uses an internal FSM to switch between Waiting, Moving, and Attacking.
+    Automatically handles Action Points (AP) and animation syncing.
+
+ Usage:
+    1. Attach this script to the Player Entity.
+    2. Ensure a "GridSystem" is present in the scene for tile calculation.
+    3. Controls:
+       - WASD / Arrows: Select direction
+       - Space: Confirm Move / Attack
+
+ States:
+    [Waiting] -> Input -> [Moving] -> Arrive -> [Waiting]
+    [Waiting] -> Input -> [Attacking] -> End -> [Waiting]
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 local FSM = {}
 FSM.__index = FSM

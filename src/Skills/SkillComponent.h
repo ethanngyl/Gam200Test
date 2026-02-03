@@ -1,8 +1,10 @@
 /**
 ===============================================================================
- File:           SkillComponent.h
- Author:
- Date:           2025-01-12
+ File:           SkillComponent.h        
+ Author:         Padilla Carl Jameson Z.
+ Email:          c.padilla@digipen.edu
+ Date:           2026-01-26
+ Contribution:   100%
  ------------------------------------------------------------------------------
 
  SKILL SYSTEM FOUNDATION
@@ -23,6 +25,10 @@
  - SkillDatabase      : Singleton that stores all skill definitions
  - SkillComponent     : ECS component attached to player entity
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 
@@ -147,8 +153,6 @@ namespace Framework {
 
     /**
      * @brief Singleton that holds all skill definitions
-     *
-     * YOUR TEAM ADDS SKILLS IN: InitializeSkills()
      */
     class SkillDatabase {
     public:

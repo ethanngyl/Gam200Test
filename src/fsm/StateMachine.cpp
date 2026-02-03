@@ -1,17 +1,22 @@
 /**
 ===============================================================================
  File:           StateMachine.cpp
- Author:
- Date:           2025-01-26
+ Author:         Padilla carl Jameson Z.    
+ Email:          c.padilla@digipen.edu
+ Date:           2026-01-26
  Contribution:   100%
  ------------------------------------------------------------------------------
 
  FINITE STATE MACHINE - StateMachine Implementation
 
- Design notes:
+ Brief Notes:
    Implements state management, transitions, and update delegation.
    Uses your engine's logging and follows your coding conventions.
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

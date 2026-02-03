@@ -1,13 +1,31 @@
 /**
 ===============================================================================
  File:           PopUp.cpp
- Date:           2025-01-26
+ Author:         Padilla Carl Jameson Z.
+ Email:          c.padilla@digipen.edu
+ Date:           2026-01-26
+ Contribution:   100%
  ------------------------------------------------------------------------------
 
- IN-GAME POPUP SYSTEM - Implementation
+  Brief:
+  - Implements a configurable in-game popup window system using ImGui. The popup
+    provides a customizable overlay that can be toggled during gameplay for
+    displaying information or interactive UI elements.
 
+  Key features:
+  - Supports customizable size (width/height) and position (absolute or centered).
+  - Configurable background and border colors with adjustable transparency.
+  - Adjustable border thickness and internal padding.
+  - Keyboard toggle functionality with configurable key binding (default: F3).
+  - Automatic hiding when the editor ImGui system is active.
+  - Static interface allowing global access without instance management.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
-*/
+ */
 
 #include "PopUp.h"
 #include "imgui.h"
