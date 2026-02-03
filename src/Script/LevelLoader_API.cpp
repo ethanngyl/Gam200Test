@@ -2901,6 +2901,25 @@ namespace Framework {
         if (health.currentHealth <= 0) {
             health.currentHealth = 0;
             health.isDead = true;
+
+            // Clear dead entity from the map
+            // 1. Remove from tile occupancy
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                    LOG_INFO("LevelLoader", "Cleared tile occupancy for dead entity %u at (%d, %d)",
+                        entity.GetID(), tileOpt.value().x, tileOpt.value().y);
+                }
+            }
+
+            // 2. Hide the sprite visually
+            if (em->HasComponent<MeshRenderer>(entity)) {
+                auto& meshRenderer = em->GetComponent<MeshRenderer>(entity);
+                meshRenderer.enabled = false;
+                LOG_INFO("LevelLoader", "Disabled MeshRenderer for dead entity %u", entity.GetID());
+            }
         }
 
         lua_pushboolean(L, 1);  // Return true - damage successful
