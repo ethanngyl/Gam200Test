@@ -610,13 +610,20 @@ function FindClosestPlayer()
     local distanceReport = {}
 
     for i, playerID in ipairs(players) do
-        local playerX, playerY = GetEntityGridPosition(playerID)
-        if playerX then
-            local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
-            table.insert(distanceReport, "P" .. playerID .. "=" .. distance)
-            if distance < closestDistance then
-                closestDistance = distance
-                closestPlayerID = playerID
+        -- Skip dead players
+        local currentHP, maxHP = GetEntityHP(playerID)
+        if not currentHP or currentHP <= 0 then
+            table.insert(distanceReport, "P" .. playerID .. "=DEAD")
+            -- Skip dead players - don't target them
+        else
+            local playerX, playerY = GetEntityGridPosition(playerID)
+            if playerX then
+                local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
+                table.insert(distanceReport, "P" .. playerID .. "=" .. distance)
+                if distance < closestDistance then
+                    closestDistance = distance
+                    closestPlayerID = playerID
+                end
             end
         end
     end

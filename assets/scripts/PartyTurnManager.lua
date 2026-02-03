@@ -283,7 +283,7 @@ function NextCharacterTurn()
     print(string.format("[PartyTurnManager] %s marked as ACTED",
         PartyMembers[ActiveCharacterIndex].name))
 
-    -- Move to next character
+    -- Move to next character, skipping dead ones
     print(string.format("[PartyTurnManager DEBUG] BEFORE increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
 
@@ -291,21 +291,45 @@ function NextCharacterTurn()
 
     print(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
+
+    -- Skip dead characters
+    local skippedDead = 0
+    while ActiveCharacterIndex <= #PartyMembers do
+        local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
+        local currentHP, maxHP = GetEntityHP(checkEntity)
+
+        if currentHP and currentHP > 0 then
+            -- This character is alive, use them
+            break
+        else
+            -- This character is dead, skip to next
+            print(string.format("[PartyTurnManager] %s is DEAD (HP: %s), skipping...",
+                PartyMembers[ActiveCharacterIndex].name, tostring(currentHP)))
+            PartyMembers[ActiveCharacterIndex].hasActed = true  -- Mark as acted so they don't block
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+            skippedDead = skippedDead + 1
+        end
+    end
+
+    if skippedDead > 0 then
+        print(string.format("[PartyTurnManager] Skipped %d dead character(s)", skippedDead))
+    end
+
     print(string.format("[PartyTurnManager DEBUG] Check: %d > %d = %s",
         ActiveCharacterIndex, #PartyMembers, tostring(ActiveCharacterIndex > #PartyMembers)))
 
-    -- Check if all characters have acted
+    -- Check if all characters have acted (or are dead)
     if ActiveCharacterIndex > #PartyMembers then
         PartyTurnComplete = true
         print("[PartyTurnManager] ======================================")
-        print("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED!")
+        print("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED (or are dead)!")
         print("[PartyTurnManager] PartyTurnComplete = true")
         print("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
         print("[PartyTurnManager] ======================================")
         return
     end
 
-    -- Switch to new active character
+    -- Switch to new active character (guaranteed to be alive at this point)
     local newActiveEntity = PartyMembers[ActiveCharacterIndex].entityID
 
     print(string.format("[PartyTurnManager] Switching to: %s (Entity %d, Index %d)",
@@ -441,16 +465,40 @@ function ResetPartyTurn()
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
 
-    -- Notify C++ about active character reset
-    SetActiveCharacter(PartyMembers[1].entityID)
-
     -- Reset hasActed flags and refill AP for all party members
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
         RefillEntityAP(PartyMembers[i].entityID)
     end
 
-    Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[1].name)
+    -- Skip dead characters when resetting turn
+    while ActiveCharacterIndex <= #PartyMembers do
+        local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
+        local currentHP, maxHP = GetEntityHP(checkEntity)
+
+        if currentHP and currentHP > 0 then
+            -- This character is alive, use them
+            break
+        else
+            -- This character is dead, skip to next
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s is DEAD (HP: %s), skipping...",
+                PartyMembers[ActiveCharacterIndex].name, tostring(currentHP)))
+            PartyMembers[ActiveCharacterIndex].hasActed = true  -- Mark as acted
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+        end
+    end
+
+    -- Check if all characters are dead
+    if ActiveCharacterIndex > #PartyMembers then
+        Log("[PartyTurnManager] ERROR: All party members are dead in ResetPartyTurn!")
+        PartyTurnComplete = true
+        return
+    end
+
+    -- Notify C++ about active character reset (now guaranteed to be alive)
+    SetActiveCharacter(PartyMembers[ActiveCharacterIndex].entityID)
+
+    Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[ActiveCharacterIndex].name)
 
     -- Log AP status for all characters
     for i = 1, #PartyMembers do
@@ -461,9 +509,9 @@ function ResetPartyTurn()
             maxAP))
     end
 
-    -- Optional: Trigger camera switch to first character
-    if #PartyMembers > 0 then
-        OnCharacterSwitched(PartyMembers[1].entityID)
+    -- Optional: Trigger camera switch to active character (guaranteed to be alive)
+    if ActiveCharacterIndex <= #PartyMembers then
+        OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
     end
 end
 

@@ -184,6 +184,7 @@ namespace Framework {
         static int Lua_SpawnAnimatedSprite(lua_State* L);  // Spawn sprite with animation sheet
         static int Lua_SetSpriteAnimationSheet(lua_State* L);  // Add animation to existing sprite
         static int Lua_SetSpriteColor(lua_State* L);
+        static int Lua_TintTile(lua_State* L);  // Tint tile at grid coordinates
         static int Lua_SetSpriteGray(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);

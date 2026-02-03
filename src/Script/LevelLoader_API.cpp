@@ -32,6 +32,7 @@
 #include "ImguiSystem.h"
 #include "TileMapLoader.h"
 #include "Component.h"    // Movement, CircleCollider, AP components
+#include "Graphics/RenderComponents.h"  // Renderable component
 #include "Pathfinding.h"  // EnemyAI component
 #include "Turn.h"         // Turn system
 #include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
@@ -1006,6 +1007,74 @@ namespace Framework {
         // Debug: Log tint changes
         static int logThrottle = 0;
         // Sprite color set
+
+        return 0;
+    }
+
+    /**
+     * @brief Tint a tile at specific grid coordinates
+     * Lua usage: TintTile(x, y, r, g, b, a)
+     * @param x Grid x coordinate
+     * @param y Grid y coordinate
+     * @param r Red component (0.0-1.0)
+     * @param g Green component (0.0-1.0)
+     * @param b Blue component (0.0-1.0)
+     * @param a Alpha component (0.0-1.0, optional, default 1.0)
+     */
+    int LevelLoader::Lua_TintTile(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "TintTile: No loader or core engine");
+            return 0;
+        }
+
+        // Parse parameters: TintTile(x, y, r, g, b, a)
+        int gridX = static_cast<int>(luaL_checkinteger(L, 1));
+        int gridY = static_cast<int>(luaL_checkinteger(L, 2));
+        float r = luaL_checknumber(L, 3);
+        float g = luaL_checknumber(L, 4);
+        float b = luaL_checknumber(L, 5);
+        float a = luaL_optnumber(L, 6, 1.0f);  // Default alpha = 1.0
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "TintTile: No entity manager");
+            return 0;
+        }
+
+        // Get the grid
+        const Framework::Grid& grid = Framework::GetGrid();
+        LOG_INFO("LevelLoader", "TintTile: Attempting to tint tile at (%d, %d) with color (%.2f, %.2f, %.2f, %.2f)",
+            gridX, gridY, r, g, b, a);
+
+        if (!grid.InBounds(gridX, gridY)) {
+            LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds (grid size: %dx%d)",
+                gridX, gridY, grid.cols, grid.rows);
+            return 0;
+        }
+
+        // Get the tile entity at these coordinates
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+        if (tileEntity.GetID() == Framework::INVALID_ENTITY) {
+            LOG_WARN("LevelLoader", "TintTile: No tile entity at (%d, %d)", gridX, gridY);
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "TintTile: Found tile entity %u at (%d, %d)", tileEntity.GetID(), gridX, gridY);
+
+        // Apply tint to the tile's sprite
+        if (em->HasComponent<MeshRenderer>(tileEntity)) {
+            auto& mr = em->GetComponent<MeshRenderer>(tileEntity);
+            glm::vec4 oldTint = mr.tint;
+            mr.tint = glm::vec4(r, g, b, a);
+            LOG_INFO("LevelLoader", "TintTile: Applied tint to tile %u at (%d, %d) - Old: (%.2f,%.2f,%.2f,%.2f) New: (%.2f,%.2f,%.2f,%.2f)",
+                tileEntity.GetID(), gridX, gridY,
+                oldTint.r, oldTint.g, oldTint.b, oldTint.a,
+                r, g, b, a);
+        } else {
+            LOG_WARN("LevelLoader", "TintTile: Tile entity %u at (%d, %d) has no MeshRenderer component",
+                tileEntity.GetID(), gridX, gridY);
+        }
 
         return 0;
     }
@@ -2830,9 +2899,39 @@ namespace Framework {
 
         auto& health = em->GetComponent<Health>(entity);
         health.currentHealth -= amount;
+
+        LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
+            entity.GetID(), amount, health.currentHealth + amount, health.currentHealth);
+
         if (health.currentHealth <= 0) {
             health.currentHealth = 0;
             health.isDead = true;
+
+            LOG_WARN("LevelLoader", "!!! Entity %u DIED - Beginning cleanup !!!", entity.GetID());
+
+            // Clear tile occupancy before destroying entity
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                    LOG_INFO("LevelLoader", "  -> Cleared tile occupancy at (%d, %d)",
+                        tileOpt.value().x, tileOpt.value().y);
+                }
+            }
+
+            // Log what components this entity has before destruction
+            LOG_INFO("LevelLoader", "  -> Entity components before destruction:");
+            if (em->HasComponent<Transform>(entity)) LOG_INFO("LevelLoader", "     - Transform");
+            if (em->HasComponent<Renderable>(entity)) LOG_INFO("LevelLoader", "     - Renderable");
+            if (em->HasComponent<AP>(entity)) LOG_INFO("LevelLoader", "     - AP");
+            if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
+
+            // Delete the entity completely
+            LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
+            em->DestroyEntity(entity);
+            LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
+            LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
         }
 
         lua_pushboolean(L, 1);  // Return true - damage successful
