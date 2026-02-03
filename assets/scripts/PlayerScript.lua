@@ -471,11 +471,16 @@ local function createPlayerStates(fsm)
             -- Check P key for manual turn end
             local pKeyDown = IsKeyDown("P")
             if pKeyDown and not lastPKeyDown then
-                print("[PlayerScript] P key pressed - manually ending turn for Entity " .. entityID)
+                print("[PlayerScript] FSM: P key pressed - manually ending turn for Entity " .. entityID)
+                -- Don't reset lastPKeyDown here - keep it true while P is held
+                lastPKeyDown = true
                 endTurn()
                 return
             end
-            lastPKeyDown = pKeyDown
+            -- Only update lastPKeyDown if P was released
+            if not pKeyDown then
+                lastPKeyDown = false
+            end
 
             -- Get current position
             local currentX, currentY = GetEntityGridPosition(entityID)
@@ -928,7 +933,8 @@ function OnUpdate(dt)
         hasLoggedActive = false  -- Reset for next character
         lastActiveCheck = false  -- Reset active tracking
         blockedKeys = {}  -- Clear blocked keys
-        lastPKeyDown = false  -- Reset P key state
+        -- Don't reset lastPKeyDown here - let it stay true while P is held
+        -- It will be reset when P is released or when character becomes inactive
 
         -- Return early - turn is over
         return
