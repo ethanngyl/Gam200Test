@@ -249,7 +249,8 @@ local function endTurn()
     hasLoggedActive = false
     lastActiveCheck = false
     blockedKeys = {}
-    lastPKeyDown = false
+    -- Don't reset lastPKeyDown here - keep it true if P is held
+    -- lastPKeyDown = false
     lastSpaceKeyDown = false
     ClearAttackPreview()
 end
