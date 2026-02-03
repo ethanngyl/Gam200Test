@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
@@ -785,8 +785,8 @@ namespace Framework {
                 }
             }
 
-             //---------- SPRITE ----------
-             else if (hasSprite) {
+            //---------- SPRITE ----------
+            else if (hasSprite) {
                 auto& sp = entityManager->GetComponent<Sprite>(e);
 
                 cmd.mesh = quadMesh;
@@ -896,8 +896,13 @@ namespace Framework {
             // If still failed for some reason, skip this entity
             if (!mat)
                 continue;
-            mat->u0 = mat->v0;
-            mat->u1 = mat->v1 = 1.f;
+            // FIX: Reset UV to full-texture defaults before computing frame UVs.
+            // Previously was: mat->u0 = mat->v0; (BUG - copied stale v0 into u0)
+            // This caused garbage UV rects on early-exit paths during animation switches.
+            mat->u0 = 0.0f;
+            mat->v0 = 0.0f;
+            mat->u1 = 1.0f;
+            mat->v1 = 1.0f;
 
             // Ensure the material is bound to this sprite sheet
             mat->albedoTexture = anim.spriteSheet;

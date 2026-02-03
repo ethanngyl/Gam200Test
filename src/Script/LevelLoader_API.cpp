@@ -1010,6 +1010,74 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Tint a tile at specific grid coordinates
+     * Lua usage: TintTile(x, y, r, g, b, a)
+     * @param x Grid x coordinate
+     * @param y Grid y coordinate
+     * @param r Red component (0.0-1.0)
+     * @param g Green component (0.0-1.0)
+     * @param b Blue component (0.0-1.0)
+     * @param a Alpha component (0.0-1.0, optional, default 1.0)
+     */
+    int LevelLoader::Lua_TintTile(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "TintTile: No loader or core engine");
+            return 0;
+        }
+
+        // Parse parameters: TintTile(x, y, r, g, b, a)
+        int gridX = static_cast<int>(luaL_checkinteger(L, 1));
+        int gridY = static_cast<int>(luaL_checkinteger(L, 2));
+        float r = luaL_checknumber(L, 3);
+        float g = luaL_checknumber(L, 4);
+        float b = luaL_checknumber(L, 5);
+        float a = luaL_optnumber(L, 6, 1.0f);  // Default alpha = 1.0
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "TintTile: No entity manager");
+            return 0;
+        }
+
+        // Get the grid
+        const Framework::Grid& grid = Framework::GetGrid();
+        LOG_INFO("LevelLoader", "TintTile: Attempting to tint tile at (%d, %d) with color (%.2f, %.2f, %.2f, %.2f)",
+            gridX, gridY, r, g, b, a);
+
+        if (!grid.InBounds(gridX, gridY)) {
+            LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds (grid size: %dx%d)",
+                gridX, gridY, grid.cols, grid.rows);
+            return 0;
+        }
+
+        // Get the tile entity at these coordinates
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+        if (tileEntity.GetID() == Framework::INVALID_ENTITY) {
+            LOG_WARN("LevelLoader", "TintTile: No tile entity at (%d, %d)", gridX, gridY);
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "TintTile: Found tile entity %u at (%d, %d)", tileEntity.GetID(), gridX, gridY);
+
+        // Apply tint to the tile's sprite
+        if (em->HasComponent<MeshRenderer>(tileEntity)) {
+            auto& mr = em->GetComponent<MeshRenderer>(tileEntity);
+            glm::vec4 oldTint = mr.tint;
+            mr.tint = glm::vec4(r, g, b, a);
+            LOG_INFO("LevelLoader", "TintTile: Applied tint to tile %u at (%d, %d) - Old: (%.2f,%.2f,%.2f,%.2f) New: (%.2f,%.2f,%.2f,%.2f)",
+                tileEntity.GetID(), gridX, gridY,
+                oldTint.r, oldTint.g, oldTint.b, oldTint.a,
+                r, g, b, a);
+        } else {
+            LOG_WARN("LevelLoader", "TintTile: Tile entity %u at (%d, %d) has no MeshRenderer component",
+                tileEntity.GetID(), gridX, gridY);
+        }
+
+        return 0;
+    }
+
     int LevelLoader::Lua_SetSpriteGray(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;
@@ -1349,9 +1417,11 @@ namespace Framework {
         // Enemies have: EnemyAI component (we exclude those)
         // NOTE: Changed from Movement to AP because Movement was unreliable for entity 547
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<AP>(e) &&
-                em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
+            bool hasAP = em->HasComponent<AP>(e);
+            bool hasCircleCollider = em->HasComponent<CircleCollider>(e);
+            bool hasEnemyAI = em->HasComponent<EnemyAI>(e);
+
+            if (hasAP && hasCircleCollider && !hasEnemyAI) {
                 lua_pushinteger(L, index++);
                 lua_pushinteger(L, e.GetID());
                 lua_settable(L, -3);
@@ -2831,6 +2901,25 @@ namespace Framework {
         if (health.currentHealth <= 0) {
             health.currentHealth = 0;
             health.isDead = true;
+
+            // Clear dead entity from the map
+            // 1. Remove from tile occupancy
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                    LOG_INFO("LevelLoader", "Cleared tile occupancy for dead entity %u at (%d, %d)",
+                        entity.GetID(), tileOpt.value().x, tileOpt.value().y);
+                }
+            }
+
+            // 2. Hide the sprite visually
+            if (em->HasComponent<MeshRenderer>(entity)) {
+                auto& meshRenderer = em->GetComponent<MeshRenderer>(entity);
+                meshRenderer.enabled = false;
+                LOG_INFO("LevelLoader", "Disabled MeshRenderer for dead entity %u", entity.GetID());
+            }
         }
 
         lua_pushboolean(L, 1);  // Return true - damage successful
@@ -3253,6 +3342,149 @@ namespace Framework {
             lua_settable(L, -3);
         }
         lua_settable(L, -3);
+
+        // ========================================
+        // PARTY SPAWNS - 3 floor tiles with spacing
+        // Ensures players don't spawn adjacent and block each other
+        // ========================================
+        std::cout << "[Lua_LoadProceduralMap] Finding spaced party spawn positions...\n";
+
+        std::vector<MapGen::Position> partySpawns;
+        partySpawns.push_back(map.playerSpawn);  // First is always valid
+
+        // Search pattern - prioritize positions that are NOT directly adjacent
+        // We want at least 2 tiles apart so players can move around each other
+        const int searchOffsets[][2] = {
+            // Distance 2 (preferred - gives room to move)
+            {2, 0}, {-2, 0}, {0, 2}, {0, -2},
+            {2, 1}, {2, -1}, {-2, 1}, {-2, -1},
+            {1, 2}, {-1, 2}, {1, -2}, {-1, -2},
+            {2, 2}, {-2, 2}, {2, -2}, {-2, -2},
+            // Distance 3 (also good)
+            {3, 0}, {-3, 0}, {0, 3}, {0, -3},
+            {3, 1}, {3, -1}, {-3, 1}, {-3, -1},
+            {1, 3}, {-1, 3}, {1, -3}, {-1, -3},
+            // Distance 1 (fallback only - adjacent)
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+            {1, 1}, {-1, 1}, {1, -1}, {-1, -1},
+        };
+
+        const int numOffsets = sizeof(searchOffsets) / sizeof(searchOffsets[0]);
+
+        // Minimum distance between party members (Manhattan distance)
+        const int MIN_PARTY_DISTANCE = 2;
+
+        for (int i = 0; i < numOffsets && partySpawns.size() < 3; i++) {
+            int testX = map.playerSpawn.x + searchOffsets[i][0];
+            int testY = map.playerSpawn.y + searchOffsets[i][1];
+
+            // Check bounds
+            if (testX < 0 || testX >= map.width || testY < 0 || testY >= map.height) {
+                continue;
+            }
+
+            // Check if it's a FLOOR tile (not a wall)
+            if (map.getTile(testX, testY) != MapGen::TileType::FLOOR) {
+                continue;
+            }
+
+            // Check distance from ALL existing party spawns
+            bool tooClose = false;
+            for (const auto& existingSpawn : partySpawns) {
+                int manhattanDist = std::abs(testX - existingSpawn.x) + std::abs(testY - existingSpawn.y);
+                if (manhattanDist < MIN_PARTY_DISTANCE) {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (tooClose) {
+                continue;  // Skip positions too close to existing party members
+            }
+
+            // Valid position found!
+            partySpawns.push_back(MapGen::Position(testX, testY));
+            std::cout << "[Lua_LoadProceduralMap] Party spawn " << partySpawns.size()
+                << ": (" << testX << ", " << testY << ")\n";
+        }
+
+        // If we couldn't find 3 spaced positions, fall back to adjacent (with warning)
+        if (partySpawns.size() < 3) {
+            std::cout << "[Lua_LoadProceduralMap] WARNING: Couldn't find 3 spaced spawns, using fallback\n";
+
+            // Try again without distance restriction
+            for (int i = 0; i < numOffsets && partySpawns.size() < 3; i++) {
+                int testX = map.playerSpawn.x + searchOffsets[i][0];
+                int testY = map.playerSpawn.y + searchOffsets[i][1];
+
+                if (testX < 0 || testX >= map.width || testY < 0 || testY >= map.height) {
+                    continue;
+                }
+
+                if (map.getTile(testX, testY) != MapGen::TileType::FLOOR) {
+                    continue;
+                }
+
+                // Check not already used (but ignore distance)
+                bool alreadyUsed = false;
+                for (const auto& pos : partySpawns) {
+                    if (pos.x == testX && pos.y == testY) {
+                        alreadyUsed = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyUsed) {
+                    partySpawns.push_back(MapGen::Position(testX, testY));
+                    std::cout << "[Lua_LoadProceduralMap] Fallback spawn " << partySpawns.size()
+                        << ": (" << testX << ", " << testY << ")\n";
+                }
+            }
+        }
+
+        // Last resort: duplicate player spawn
+        while (partySpawns.size() < 3) {
+            std::cout << "[Lua_LoadProceduralMap] WARNING: Duplicating player spawn\n";
+            partySpawns.push_back(map.playerSpawn);
+        }
+
+        // Add partySpawns array to the Lua table
+        lua_pushstring(L, "partySpawns");
+        lua_newtable(L);
+        for (size_t i = 0; i < partySpawns.size(); i++) {
+            lua_pushnumber(L, static_cast<lua_Number>(i + 1));
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, partySpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, partySpawns[i].y);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (partySpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (partySpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Add map dimensions
+        lua_pushstring(L, "width");
+        lua_pushnumber(L, map.width);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "height");
+        lua_pushnumber(L, map.height);
+        lua_settable(L, -3);
+
+        std::cout << "[Lua_LoadProceduralMap] Added " << partySpawns.size() << " spaced party spawns\n";
 
         return 1;
     }
@@ -3770,6 +4002,176 @@ namespace Framework {
         lua_pushnumber(L, movement.direction.x);
         lua_pushnumber(L, movement.direction.y);
         return 2;
+    }
+
+    // ============================================================================
+    // ENEMY TURN MANAGEMENT SYSTEM (C++ Implementation for Entity Scripts)
+    // ============================================================================
+
+    // Static state for enemy turn management
+    namespace EnemyTurnState {
+        static bool turnActive = false;
+        static int activeEnemyIndex = 0;
+        static float actionTimer = 0.0f;
+        static float actionDelay = 0.5f;  // 0.5 seconds between enemies
+        static std::vector<int> enemyList;
+        static bool needsReinitialize = true;
+    }
+
+    /**
+     * @brief Initialize enemy turn system
+     * Lua usage: InitializeEnemyTurn()
+     * Call this when enemy turn starts
+     */
+    int LevelLoader::Lua_InitializeEnemyTurn(lua_State* L) {
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] InitializeEnemyTurn() called");
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "[EnemyTurnSystem] No EntityManager");
+            return 0;
+        }
+
+        // Get all enemies
+        EnemyTurnState::enemyList.clear();
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<EnemyAI>(e)) {
+                EnemyTurnState::enemyList.push_back(e.GetID());
+                LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found enemy: %d", e.GetID());
+            }
+        }
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found %d enemies total", (int)EnemyTurnState::enemyList.size());
+
+        if (EnemyTurnState::enemyList.empty()) {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] No enemies found!");
+            EnemyTurnState::turnActive = false;
+            return 0;
+        }
+
+        // Start with first enemy
+        EnemyTurnState::turnActive = true;
+        EnemyTurnState::activeEnemyIndex = 1;  // 1-indexed like Lua
+        EnemyTurnState::actionTimer = 0.0f;  // First enemy acts immediately
+        EnemyTurnState::needsReinitialize = false;
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Starting with enemy %d (index 1/%d)",
+            EnemyTurnState::enemyList[0], (int)EnemyTurnState::enemyList.size());
+
+        return 0;
+    }
+
+    /**
+     * @brief Check if specific enemy is the active one
+     * Lua usage: local isActive = IsActiveEnemy(entityID)
+     * @param entityID Entity ID to check
+     * @return true if this enemy should act, false otherwise
+     */
+    int LevelLoader::Lua_IsActiveEnemy(lua_State* L) {
+        int entityID = (int)luaL_checkinteger(L, 1);
+
+        // Reinitialize if needed
+        if (EnemyTurnState::needsReinitialize) {
+            Lua_InitializeEnemyTurn(L);
+        }
+
+        if (!EnemyTurnState::turnActive || EnemyTurnState::activeEnemyIndex == 0) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        int activeID = EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1];
+        bool isActive = (entityID == activeID);
+
+        lua_pushboolean(L, isActive);
+        return 1;
+    }
+
+    /**
+     * @brief Check if enemy action timer is ready
+     * Lua usage: local ready = IsEnemyActionReady()
+     * @return true if enemy can act (timer expired), false if still in delay
+     */
+    int LevelLoader::Lua_IsEnemyActionReady(lua_State* L) {
+        bool ready = EnemyTurnState::turnActive && (EnemyTurnState::actionTimer <= 0.0f);
+        lua_pushboolean(L, ready);
+        return 1;
+    }
+
+    /**
+     * @brief Mark current enemy as done and advance to next
+     * Lua usage: MarkEnemyActionComplete()
+     * Call this when enemy finishes its turn
+     */
+    int LevelLoader::Lua_MarkEnemyActionComplete(lua_State* L) {
+        if (!EnemyTurnState::turnActive) {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] MarkEnemyActionComplete called but turn not active");
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Enemy %d completed action",
+            EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1]);
+
+        // Move to next enemy
+        EnemyTurnState::activeEnemyIndex++;
+
+        // Check if all enemies have acted
+        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+            LOG_INFO("LevelLoader", "[EnemyTurnSystem] All enemies have acted - ending enemy turn");
+            EnemyTurnState::turnActive = false;
+            EnemyTurnState::activeEnemyIndex = 0;
+            EnemyTurnState::needsReinitialize = true;
+
+            // Call Lua OnEnemyTurnEnded() if it exists
+            lua_getglobal(L, "OnEnemyTurnEnded");
+            if (lua_isfunction(L, -1)) {
+                if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                    const char* err = lua_tostring(L, -1);
+                    LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling OnEnemyTurnEnded: %s", err);
+                    lua_pop(L, 1);
+                }
+            } else {
+                lua_pop(L, 1);
+            }
+        } else {
+            LOG_INFO("LevelLoader", "[EnemyTurnSystem] Moving to enemy %d (index %d/%d)",
+                EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1],
+                EnemyTurnState::activeEnemyIndex,
+                (int)EnemyTurnState::enemyList.size());
+
+            // Reset action timer for next enemy
+            EnemyTurnState::actionTimer = EnemyTurnState::actionDelay;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Update enemy turn manager (call every frame)
+     * Lua usage: UpdateEnemyTurnManager(dt)
+     * @param dt Delta time in seconds
+     */
+    int LevelLoader::Lua_UpdateEnemyTurnManager(lua_State* L) {
+        float dt = (float)luaL_checknumber(L, 1);
+
+        if (!EnemyTurnState::turnActive) {
+            return 0;
+        }
+
+        // Update action timer
+        if (EnemyTurnState::actionTimer > 0.0f) {
+            EnemyTurnState::actionTimer -= dt;
+            if (EnemyTurnState::actionTimer < 0.0f) {
+                EnemyTurnState::actionTimer = 0.0f;
+            }
+        }
+
+        return 0;
     }
 
 } // namespace Framework

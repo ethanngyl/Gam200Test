@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           AnimationSystem.cpp
  Author:         TAN WEI LEONG
@@ -101,7 +101,8 @@ namespace Framework {
         , anim_frame_mod(0)
         , frameDurations()
         , animationFrames()
-    {}
+    {
+    }
 
     /**
     ===============================================================================
@@ -109,7 +110,7 @@ namespace Framework {
      *
      * Currently handles basic cleanup. Can be extended for
      * resource deallocation if needed in the future.
-     * 
+     *
     ===============================================================================
      */
     AnimationSystem::~AnimationSystem() {
@@ -338,7 +339,7 @@ namespace Framework {
         }
 
         for (auto& [key, animObj] : j["animations"].items()) {
-            
+
             AnimEntry entry;
             entry.name = key;
             entry.file = key;  // you can change this if needed for editor use
@@ -495,6 +496,18 @@ namespace Framework {
             // The entity already has its material set up from spawning.
             // Just update the sprite name so the animation texture is referenced.
             // gfx->AssignMeshAndMaterial(mr, spritePath);  // COMMENTED OUT - preserves unique materials
+
+            // FIX: Also update the material's texture handle immediately so it's
+            // consistent with the new sprite sheet before the next render pass.
+            // Without this, there's a 1-frame window where the material still references
+            // the old texture while anim.spriteSheet already points to the new one.
+            if (mr.material.IsValid()) {
+                auto& resourceManager = gfx->GetResourceManager();
+                Material* mat = resourceManager.GetMaterial(mr.material);
+                if (mat) {
+                    mat->albedoTexture = anim.spriteSheet;
+                }
+            }
 
             LOG_INFO("ANIM", "Updated MeshRenderer spriteName to '%s' (preserved existing material)", spritePath.c_str());
         }

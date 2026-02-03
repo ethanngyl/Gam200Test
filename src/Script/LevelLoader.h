@@ -184,6 +184,7 @@ namespace Framework {
         static int Lua_SpawnAnimatedSprite(lua_State* L);  // Spawn sprite with animation sheet
         static int Lua_SetSpriteAnimationSheet(lua_State* L);  // Add animation to existing sprite
         static int Lua_SetSpriteColor(lua_State* L);
+        static int Lua_TintTile(lua_State* L);  // Tint tile at grid coordinates
         static int Lua_SetSpriteGray(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);
@@ -269,6 +270,13 @@ namespace Framework {
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
+
+        // Enemy Turn Management System (C++ Implementation)
+        static int Lua_InitializeEnemyTurn(lua_State* L);
+        static int Lua_IsActiveEnemy(lua_State* L);
+        static int Lua_IsEnemyActionReady(lua_State* L);
+        static int Lua_MarkEnemyActionComplete(lua_State* L);
+        static int Lua_UpdateEnemyTurnManager(lua_State* L);
 
         // Grid Conversion API
         static int Lua_TileToWorld(lua_State* L);

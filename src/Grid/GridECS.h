@@ -32,6 +32,7 @@
 #include "ECSEntityManager.h"
 #include "GridTile.h"
 #include "Grid.h"
+#include "Component.h"  // For Health component
 
 
 namespace Framework {
@@ -62,7 +63,25 @@ namespace Framework {
 			}
 			const auto& gridTile = grid.em->GetComponent<GridTiles>(e);
 
-			return !gridTile.blocked && gridTile.occupant.GetID() == INVALID_ENTITY;
+			// Tile is blocked - not walkable
+			if (gridTile.blocked) {
+				return false;
+			}
+
+			// No occupant - walkable
+			if (gridTile.occupant.GetID() == INVALID_ENTITY) {
+				return true;
+			}
+
+			// Has occupant - check if dead (dead entities don't block movement)
+			if (grid.em->HasComponent<Health>(gridTile.occupant)) {
+				const auto& health = grid.em->GetComponent<Health>(gridTile.occupant);
+				// Dead entities don't block movement
+				return health.isDead;
+			}
+
+			// Has occupant but no health component - blocks movement
+			return false;
 		}
 
 		inline bool SetBlocked(GridCoord c, bool blocked) {

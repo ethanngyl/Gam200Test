@@ -92,10 +92,6 @@ function OnInit()
     end
     
     Log("Map generated successfully!")
-    
-    -- Load animations
-    LoadAnimationConfig("assets/JSON/animations.json")
-    LoadPlayerAnimation("Idle_front")
 
     -- ========================================
     -- SPAWN 3 PARTY MEMBERS
@@ -104,6 +100,10 @@ function OnInit()
         Log("ERROR: Failed to setup party!")
         return
     end
+
+    -- Load animations
+    LoadAnimationConfig("assets/JSON/animations.json")
+    LoadPlayerAnimation("Idle_front")
 
     -- Setup enemies
     SetupProceduralEnemies(mapData)
@@ -160,61 +160,55 @@ function SetupProceduralParty(mapData)
     Log("Setting up 3-character party...")
     Log("========================================")
 
-    -- Disable C++ grid movement
-    SetGridMovementEnabled(false)
-
-    -- Safety check
-    if not mapData or not mapData.playerX or not mapData.playerY then
-        Log("ERROR: Invalid mapData in SetupProceduralParty!")
+    if not mapData then
+        Log("ERROR: mapData is nil!")
         return false
     end
 
-    -- Get world positions using TileToWorld (which uses Grid data)
-    local p1x, p1y = TileToWorld(mapData.playerX, mapData.playerY)
-    local p2x, p2y = TileToWorld(mapData.playerX + 1, mapData.playerY)
-    local p3x, p3y = TileToWorld(mapData.playerX + 2, mapData.playerY)
-    
-    -- Fallback if TileToWorld returns 0,0 (grid not ready)
-    if p1x == 0 and p1y == 0 then
-        Log("WARNING: TileToWorld returned 0,0 - using fallback gridToWorld")
-        p1x, p1y = gridToWorld(mapData.playerX, mapData.playerY)
-        p2x, p2y = gridToWorld(mapData.playerX + 1, mapData.playerY)
-        p3x, p3y = gridToWorld(mapData.playerX + 2, mapData.playerY)
+    -- Disable C++ grid movement
+    SetGridMovementEnabled(false)
+
+    -- ========================================
+    -- USE THE PRE-VALIDATED PARTY SPAWNS FROM C++
+    -- ========================================
+    if not mapData.partySpawns or #mapData.partySpawns < 3 then
+        Log("ERROR: mapData.partySpawns missing or incomplete!")
+        Log("Make sure you applied the C++ fix to Lua_LoadProceduralMap")
+        return false
     end
-    
-    Log("Spawning 3 party members:")
-    Log("  Player 1 (Warrior) at grid (" .. mapData.playerX .. ", " .. mapData.playerY .. ") -> world (" .. p1x .. ", " .. p1y .. ")")
-    Log("  Player 2 (Mage) at grid (" .. (mapData.playerX + 1) .. ", " .. mapData.playerY .. ") -> world (" .. p2x .. ", " .. p2y .. ")")
-    Log("  Player 3 (Rogue) at grid (" .. (mapData.playerX + 2) .. ", " .. mapData.playerY .. ") -> world (" .. p3x .. ", " .. p3y .. ")")
-    
-    -- Spawn the 3 players
-    local player1 = SpawnPlayerAt(p1x, p1y)
-    local player2 = SpawnPlayerAt(p2x, p2y)
-    local player3 = SpawnPlayerAt(p3x, p3y)
-    
+
+    Log("Using C++ validated party spawns:")
+    for i, spawn in ipairs(mapData.partySpawns) do
+        Log("  Spawn " .. i .. ": grid(" .. spawn.x .. ", " .. spawn.y .. 
+            ") -> world(" .. spawn.worldX .. ", " .. spawn.worldY .. ")")
+    end
+
+    -- Spawn the 3 players at validated positions
+    local player1 = SpawnPlayerAt(mapData.partySpawns[1].worldX, mapData.partySpawns[1].worldY)
+    local player2 = SpawnPlayerAt(mapData.partySpawns[2].worldX, mapData.partySpawns[2].worldY)
+    local player3 = SpawnPlayerAt(mapData.partySpawns[3].worldX, mapData.partySpawns[3].worldY)
+
     if not player1 or player1 == 0 then
         Log("ERROR: Failed to spawn Player 1!")
         return false
     end
-    
     if not player2 or player2 == 0 then
         Log("ERROR: Failed to spawn Player 2!")
         return false
     end
-    
     if not player3 or player3 == 0 then
         Log("ERROR: Failed to spawn Player 3!")
         return false
     end
-    
+
     Log("  Player 1 (Warrior): Entity " .. player1)
     Log("  Player 2 (Mage):    Entity " .. player2)
     Log("  Player 3 (Rogue):   Entity " .. player3)
 
-    -- Move to grid tiles (this registers them in spatial partition)
-    local success1 = MoveEntityToTile(player1, mapData.playerX, mapData.playerY)
-    local success2 = MoveEntityToTile(player2, mapData.playerX + 1, mapData.playerY)
-    local success3 = MoveEntityToTile(player3, mapData.playerX + 2, mapData.playerY)
+    -- Move to grid tiles (registers in spatial partition)
+    MoveEntityToTile(player1, mapData.partySpawns[1].x, mapData.partySpawns[1].y)
+    MoveEntityToTile(player2, mapData.partySpawns[2].x, mapData.partySpawns[2].y)
+    MoveEntityToTile(player3, mapData.partySpawns[3].x, mapData.partySpawns[3].y)
 
     -- Attach scripts to all 3 players
     for i, playerID in ipairs({player1, player2, player3}) do
@@ -224,7 +218,6 @@ function SetupProceduralParty(mapData)
             Log("  [Player " .. i .. "] Script attached successfully")
         else
             Log("  [Player " .. i .. "] ERROR: Failed to attach script")
-            return false
         end
 
         -- Debug: Check components
@@ -233,26 +226,21 @@ function SetupProceduralParty(mapData)
         Log("  [Player " .. i .. "] AP: " .. ap .. "/" .. maxap .. ", HP: " .. hp .. "/" .. maxhp)
     end
 
-    -- Initialize party system with all 3 real players
+    -- Initialize party system
     partyMembers = {player1, player2, player3}
 
-    -- Check if InitializeParty exists (from PartyTurnManager.lua)
-    if InitializeParty then
-        local partyInitialized = InitializeParty(partyMembers)
+    local partyInitialized = InitializeParty(partyMembers)
 
-        if partyInitialized then
-            Log("========================================")
-            Log("Party system initialized!")
-            Log("  - Character 1: Warrior (Entity " .. player1 .. ")")
-            Log("  - Character 2: Mage (Entity " .. player2 .. ")")
-            Log("  - Character 3: Rogue (Entity " .. player3 .. ")")
-            Log("========================================")
-        else
-            Log("FAILED to initialize party")
-            return false
-        end
+    if partyInitialized then
+        Log("========================================")
+        Log("Party system initialized!")
+        Log("  - Character 1: Warrior (Entity " .. player1 .. ")")
+        Log("  - Character 2: Mage (Entity " .. player2 .. ")")
+        Log("  - Character 3: Rogue (Entity " .. player3 .. ")")
+        Log("========================================")
     else
-        Log("WARNING: InitializeParty function not found - PartyTurnManager.lua may not be loaded")
+        Log("FAILED to initialize party")
+        return false
     end
 
     return true
