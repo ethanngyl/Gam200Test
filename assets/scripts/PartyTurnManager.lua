@@ -272,6 +272,19 @@ function NextCharacterTurn()
         return
     end
 
+    -- Guard against double-call when turn is already complete
+    if PartyTurnComplete then
+        print("[PartyTurnManager] WARNING: NextCharacterTurn() called but PartyTurnComplete=true, ignoring")
+        return
+    end
+
+    -- Guard against out-of-bounds index
+    if ActiveCharacterIndex < 1 or ActiveCharacterIndex > #PartyMembers then
+        print(string.format("[PartyTurnManager] ERROR: Invalid ActiveCharacterIndex=%d (must be 1-%d), ignoring",
+            ActiveCharacterIndex, #PartyMembers))
+        return
+    end
+
     print("[PartyTurnManager] ========== TURN ADVANCEMENT ==========")
     print(string.format("[PartyTurnManager] Current: %s (Entity %d, Index %d)",
         PartyMembers[ActiveCharacterIndex].name,

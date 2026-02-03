@@ -1002,9 +1002,13 @@ function OnUpdate(dt)
     lastSpaceKeyDown = spaceKeyDown  -- Update SPACE key state for next frame
 
     -- ========================================================================
-    -- MOVEMENT INPUT
+    -- MOVEMENT INPUT (DISABLED - FSM handles movement now)
     -- ========================================================================
+    -- NOTE: This duplicate movement code is disabled because the FSM already
+    --       handles all movement input. Keeping this active causes double
+    --       EndCharacterTurn() calls and turn skipping bugs.
 
+    --[[ DISABLED DUPLICATE MOVEMENT CODE
     -- Check for movement input
     local targetX, targetY = currentX, currentY
     local moveAttempted = false
@@ -1199,6 +1203,7 @@ function OnUpdate(dt)
 else
     Log("[PlayerScript] Failed to move to (" .. targetX .. ", " .. targetY .. ")")
 end
+--]] -- END DISABLED DUPLICATE MOVEMENT CODE
 
 end
 
@@ -1235,14 +1240,13 @@ function ShowAttackPreview()
         print("[PlayerScript]     IsValidGridPosition: " .. tostring(isValid))
 
         if isValid then
-            -- Use PulseTile for attack preview (TintTile not available in current binary)
-            -- Red persistent pulse while preview is active
-            print("[PlayerScript]     Calling PulseTile(" .. tile.x .. ", " .. tile.y .. ") for attack preview")
-            PulseTile(tile.x, tile.y, 9999.0, 1.0, 0.3, 0.3)  -- Very long duration pulse (red)
+            -- Tint the tile red for attack preview
+            print("[PlayerScript]     Calling TintTile(" .. tile.x .. ", " .. tile.y .. ") for attack preview")
+            TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.7)  -- Red tint with 70% opacity
 
             -- Store the grid coordinates so we can clear them later
             table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
-            print("[PlayerScript]   Pulsed tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
+            print("[PlayerScript]   Tinted tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
         else
             print("[PlayerScript]     Tile invalid, skipping")
         end
@@ -1257,10 +1261,15 @@ function ShowAttackPreview()
 end
 
 function ClearAttackPreview()
-    -- Clear attack preview - no need to restore pulses, they'll fade naturally
     if #attackPreviewTiles > 0 then
         print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack preview tiles")
-        -- Note: PulseTile effects fade on their own, no cleanup needed
+        for _, tile in ipairs(attackPreviewTiles) do
+            if tile and tile.x and tile.y then
+                -- Reset tile tint to white (no tint)
+                TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
+                print("[PlayerScript]   Cleared tint on tile (" .. tile.x .. ", " .. tile.y .. ")")
+            end
+        end
     end
 
     -- Clear attack preview state
