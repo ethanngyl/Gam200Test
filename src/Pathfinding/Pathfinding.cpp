@@ -209,6 +209,14 @@ namespace Framework {
             if (entityManager->HasComponent<EnemyAI>(entity)) continue;  // Skip enemies
             if (!entityManager->HasComponent<Transform>(entity)) continue;
 
+            // Skip dead players - they are no longer valid targets
+            if (entityManager->HasComponent<Health>(entity)) {
+                const auto& health = entityManager->GetComponent<Health>(entity);
+                if (health.isDead) {
+                    continue;  // Dead player - don't target
+                }
+            }
+
             // This is a player - check distance
             auto& playerTransform = entityManager->GetComponent<Transform>(entity);
             auto playerTileOpt = WorldToTile(playerTransform.position);
