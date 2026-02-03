@@ -44,6 +44,7 @@
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
 #include "PrefabInstanceRegistry.h"
+#include "MapGenerator/MapGenerator.h"
 
 namespace Framework
 {
@@ -224,6 +225,9 @@ namespace Framework
         imguiSystem->SetAudioSystem(audioSystem);
         imguiSystem->SetGraphicsSystem(graphicsSystem);
 
+        // Wire GraphicsSystem
+        pathfindingSystem->SetGraphicsSystem(graphicsSystem);  // Enemy camera control
+
         // Load master volume from audio config JSON and apply it
         float masterVolume = AudioLoader::GetSettings().masterVolume;
         audioSystem->SetMasterVolume(masterVolume);
@@ -292,6 +296,19 @@ namespace Framework
     void CoreEngine::Initialize()
     {
         LOG_INFO("CORE", "[5/5] Initializing remaining systems...");
+
+        using namespace Framework::MapGen;
+
+        Config config;
+        config.width = 20;
+        config.height = 15;
+        config.algorithm = "rooms";  // Try "rooms", "cellular", "open"
+
+        Generator gen;
+        GeneratedMap map = gen.generate(config);
+        Generator::printMap(map);
+
+        LOG_INFO("CORE", "MapGenerator test complete!");
 
         // WindowSystem and GraphicsSystem already initialized
         // Just initialize the others
@@ -451,6 +468,16 @@ namespace Framework
             inputSystem->Update(dt);
         }
 
+        // Animation - update BEFORE graphics so sprite sheet, frame dimensions,
+        // and UV data are fully consistent before the render pass.
+        // (FIX: previously animation ran AFTER graphics, causing 1-2 frame tearing
+        //  when switching animation states like idle->walk direction changes)
+        if (isPlaying1 && !isPaused && !isEditorMode1) {
+            if (animationSystem) {
+                animationSystem->Update(dt);
+            }
+        }
+
         // Graphics - always update to render current state
         if (graphicsSystem) {
             graphicsSystem->Update(dt);
@@ -508,10 +535,8 @@ namespace Framework
                 pathfindingSystem->Update(dt);
             }
 
-            // Animation
-            if (animationSystem) {
-                animationSystem->Update(dt);
-            }
+            // Animation - NOW RUNS BEFORE GRAPHICS (moved to ALWAYS UPDATE section)
+            // (kept as comment for reference)
 
             // Events & Indicators
             if (eventSystem) {

@@ -111,7 +111,7 @@
         "layer": 10,
         "text": {
           "content": "Return to Main Menu",
-          "font": "Sans48",
+          "font": "Playfair48",
           "offset": {
             "x": -200.0,
             "y": -13.0

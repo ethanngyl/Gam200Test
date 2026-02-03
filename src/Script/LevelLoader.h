@@ -169,6 +169,9 @@ namespace Framework {
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
+        static int Lua_IsMouseButtonDown(lua_State* L);
+        static int Lua_IsMouseButtonPressed(lua_State* L);
+        static int Lua_GetMousePosition(lua_State* L);
 
         // JSON API
         static int Lua_LoadJSON(lua_State* L);
@@ -181,6 +184,7 @@ namespace Framework {
         static int Lua_SpawnAnimatedSprite(lua_State* L);  // Spawn sprite with animation sheet
         static int Lua_SetSpriteAnimationSheet(lua_State* L);  // Add animation to existing sprite
         static int Lua_SetSpriteColor(lua_State* L);
+        static int Lua_TintTile(lua_State* L);  // Tint tile at grid coordinates
         static int Lua_SetSpriteGray(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);
@@ -198,6 +202,12 @@ namespace Framework {
         static int Lua_GetChestProgress(lua_State* L);
         static int Lua_LoadAnimationConfig(lua_State* L);
         static int Lua_LoadPlayerAnimation(lua_State* L);
+        
+        // Scroll Animation API (for TurnScrollUI)
+        static int Lua_PlayAnimationByName(lua_State* L);
+        static int Lua_SetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrame(lua_State* L);
+        static int Lua_GetAnimationFrameCount(lua_State* L);
 
         // Animation Control API
         static int Lua_SetAnimationGroup(lua_State* L);
@@ -211,7 +221,9 @@ namespace Framework {
 
         // Party System - Entity-Based APIs
         static int Lua_GetEntityAP(lua_State* L);
+        static int Lua_GetEntityAttackAP(lua_State* L);
         static int Lua_ConsumeEntityAP(lua_State* L);
+        static int Lua_ConsumeEntityAttackAP(lua_State* L);
         static int Lua_RefillEntityAP(lua_State* L);
         static int Lua_GetEntityHP(lua_State* L);
         static int Lua_SetEntityHP(lua_State* L);
@@ -252,6 +264,16 @@ namespace Framework {
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
 
+        // Enemy Turn Management System (C++ Implementation)
+        static int Lua_InitializeEnemyTurn(lua_State* L);
+        static int Lua_IsActiveEnemy(lua_State* L);
+        static int Lua_IsEnemyActionReady(lua_State* L);
+        static int Lua_MarkEnemyActionComplete(lua_State* L);
+        static int Lua_UpdateEnemyTurnManager(lua_State* L);
+
+        // Grid Conversion API
+        static int Lua_TileToWorld(lua_State* L);
+
         // Script Component Management API
         static int Lua_AddScriptComponentToEntity(lua_State* L);
         static int Lua_RemoveScriptComponentFromEntity(lua_State* L);
@@ -267,6 +289,16 @@ namespace Framework {
         static int Lua_LoadAutoSave(lua_State* L);
         static int Lua_HasAutoSave(lua_State* L);
         static int Lua_ClearAutoSave(lua_State* L);
+
+        // Procedural Map API
+        static int Lua_LoadProceduralMap(lua_State* L);
+
+        // Entity Spawning API
+        static int Lua_SpawnPlayerAt(lua_State* L);
+        static int Lua_SpawnEnemyAt(lua_State* L);
+        static int Lua_SpawnChestAt(lua_State* L);
+        static int Lua_SpawnGoalAt(lua_State* L);
+
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

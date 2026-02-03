@@ -146,6 +146,16 @@ function OnUpdate(dt)
     end
 
     -- ========================================================================
+    -- ANIMATION BLOCKING: Disable input during scroll and AP refill animations
+    -- ========================================================================
+
+    -- Block input during animations (scroll and AP refill)
+    if UIManager and UIManager.IsAnyAnimationPlaying and UIManager.IsAnyAnimationPlaying() then
+        print("[PlayerScript] Blocking input - animation playing")
+        return
+    end
+
+    -- ========================================================================
     -- INPUT STATE TRACKING (prevents key carry-over from previous turn)
     -- ========================================================================
 
@@ -291,8 +301,6 @@ function OnUpdate(dt)
         return
     end
 
-    print("[PlayerScript] DEBUG: Passed all blocking checks, checking for input...")
-
     -- ========================================================================
     -- MANUAL TURN END (P KEY)
     -- ========================================================================
@@ -324,37 +332,58 @@ function OnUpdate(dt)
     -- ATTACK SYSTEM (SPACE KEY)
     -- ========================================================================
 
+    -- Get THIS entity's current grid position (needed for attack preview check)
+    local currentX, currentY = GetEntityGridPosition(entityID)
+    if currentX == nil or currentY == nil then
+        print("[PlayerScript] ERROR: Entity " .. entityID .. " position is nil! (currentX=" .. tostring(currentX) .. ", currentY=" .. tostring(currentY) .. ")")
+        return  -- Entity position not available
+    end
+
     -- Allow player to attack enemies with SPACE key
     -- First press: Show attack preview
     -- Second press: Execute attack
     local spaceKeyDown = IsKeyDown("Space")
     if spaceKeyDown and not lastSpaceKeyDown then
         -- SPACE key was just pressed
-        print("[PlayerScript] SPACE key pressed")
+        print("============================================================")
+        print("[PlayerScript] ===== SPACE KEY PRESSED =====")
+        print("[PlayerScript] attackPreviewActive: " .. tostring(attackPreviewActive))
 
         if not attackPreviewActive then
             -- First press: Show attack preview
-            local currentAP, maxAP = GetEntityAP(entityID)
+            local currentAP, maxAP = GetEntityAttackAP(entityID)
+            print("[PlayerScript] Current Attack AP: " .. currentAP .. "/" .. maxAP .. " (attack cost: " .. attackAPCost .. ")")
+
             if currentAP >= attackAPCost then
-                ShowAttackPreview()
-                print("[PlayerScript] Attack preview shown")
+                print("[PlayerScript] Sufficient AP - checking for enemies in range...")
+                -- Check if there's an enemy in range before showing preview
+                local testEnemy = FindEnemyInRange()
+                print("[PlayerScript] FindEnemyInRange() returned: " .. tostring(testEnemy))
+
+                if testEnemy then
+                    print("[PlayerScript] Enemy found - calling ShowAttackPreview()...")
+                    ShowAttackPreview()
+                    print("[PlayerScript] Attack preview shown - enemy in range")
+                else
+                    print("[PlayerScript] No enemy in attack range!")
+                    PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse (no target)
+                end
             else
                 print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
                 PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse (not enough AP)
             end
         else
             -- Second press: Execute attack
+            print("[PlayerScript] Attack preview already active - executing attack...")
             ExecuteAttack()
         end
+        print("============================================================")
     end
     lastSpaceKeyDown = spaceKeyDown  -- Update SPACE key state for next frame
 
-    -- Get THIS entity's current grid position (not just "the player")
-    local currentX, currentY = GetEntityGridPosition(entityID)
-    if currentX == nil or currentY == nil then
-        print("[PlayerScript] ERROR: Entity " .. entityID .. " position is nil! (currentX=" .. tostring(currentX) .. ", currentY=" .. tostring(currentY) .. ")")
-        return  -- Entity position not available
-    end
+    -- ========================================================================
+    -- MOVEMENT INPUT
+    -- ========================================================================
 
     -- Check for movement input
     local targetX, targetY = currentX, currentY
@@ -395,6 +424,12 @@ function OnUpdate(dt)
     end
 
     print("[PlayerScript] Movement attempted! Target: (" .. targetX .. ", " .. targetY .. ")")
+
+    -- Clear attack preview if player moves
+    if attackPreviewActive then
+        print("[PlayerScript] Clearing attack preview due to movement")
+        ClearAttackPreview()
+    end
 
     -- ========================================================================
     -- MOVEMENT VALIDATION
@@ -461,99 +496,90 @@ function OnUpdate(dt)
     print("[PlayerScript] Step 3: MoveEntityToTile returned: " .. tostring(success))
 
     if success then
-        print("[PlayerScript] Step 4: Movement SUCCESS! Consuming AP...")
-        -- Consume AP (use entity-based API for party system)
-        ConsumeEntityAP(entityID, apCostPerMove)
+    print("[PlayerScript] Step 4: Movement SUCCESS! Consuming AP...")
 
-        -- Check if AP depleted after movement
-        local newAP, maxAP = GetEntityAP(entityID)
-        print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
+    -- ====================================================================
+    -- UPDATE ANIMATION STATE BASED ON MOVEMENT (DO THIS BEFORE END TURN)
+    -- ====================================================================
 
-        if newAP == 0 then
-            print("[PlayerScript] AP depleted after movement - ending turn!")
+    local newDirection = currentAnimDirection
+    local newFlipX = isFlippedX
 
-            -- Set animation back to Idle before ending turn
-            currentAnimGroup = AnimGroup.Idle
-            SetAnimationGroup(entityID, currentAnimGroup)
-
-            EndCharacterTurn()
-            hasLoggedActive = false  -- Reset for next character
-            lastActiveCheck = false  -- Reset active tracking
-            blockedKeys = {}  -- Clear blocked keys
-
-            -- IMPORTANT: Return early - don't continue updating animations
-            -- The character is no longer active, so we shouldn't modify its state
-            return
-        end
-
-        -- Visual feedback
-        ShowTileBorder(targetX, targetY, 0.5)  -- Show border for 0.5 seconds
-        PulseTile(targetX, targetY, 0.3, 0.3, 1.0, 0.3)  -- Green pulse
-
-        -- ====================================================================
-        -- UPDATE ANIMATION STATE BASED ON MOVEMENT
-        -- ====================================================================
-
-        -- Determine animation direction and flip state
-        local newDirection = currentAnimDirection
-        local newFlipX = isFlippedX
-
-        if moveDirY > 0 then
-            -- Moving up
-            newDirection = AnimDirection.Back
-        elseif moveDirY < 0 then
-            -- Moving down
-            newDirection = AnimDirection.Front
-        elseif moveDirX > 0 then
-            -- Moving right
-            newDirection = AnimDirection.Side
-            newFlipX = false
-        elseif moveDirX < 0 then
-            -- Moving left
-            newDirection = AnimDirection.Side
-            newFlipX = true
-        end
-
-        -- Update direction if changed
-        if newDirection ~= currentAnimDirection then
-            currentAnimDirection = newDirection
-            SetAnimationDirection(entityID, currentAnimDirection)
-        end
-
-        -- Update flip state if changed
-        if newFlipX ~= isFlippedX then
-            isFlippedX = newFlipX
-            SetAnimationFlipX(entityID, isFlippedX)
-        end
-
-        -- Switch to Walk animation (unless in special state)
-        if currentAnimGroup ~= AnimGroup.Attack and
-           currentAnimGroup ~= AnimGroup.Injured and
-           currentAnimGroup ~= AnimGroup.Death then
-            currentAnimGroup = AnimGroup.Walk
-            SetAnimationGroup(entityID, currentAnimGroup)
-            SetAnimationPlaying(entityID, true)
-        end
-
-        -- Check for chest collection
-        if HasChestAtTile(targetX, targetY) then
-            CollectChest(targetX, targetY)
-            Log("[PlayerScript] Collected chest at (" .. targetX .. ", " .. targetY .. ")")
-        end
-
-        -- Check for goal completion
-        if HasGoalAtTile(targetX, targetY) then
-            Log("[PlayerScript] Reached goal! Level complete!")
-            -- Goal completion is handled by C++ TurnSystem
-        end
-
-        -- Set movement cooldown
-        moveCooldown = moveCooldownTime
-
-        Log("[PlayerScript] Moved to (" .. targetX .. ", " .. targetY .. ") - AP remaining: " .. (currentAP - apCostPerMove))
-    else
-        Log("[PlayerScript] Failed to move to (" .. targetX .. ", " .. targetY .. ")")
+    if moveDirY > 0 then
+        newDirection = AnimDirection.Back
+    elseif moveDirY < 0 then
+        newDirection = AnimDirection.Front
+    elseif moveDirX > 0 then
+        newDirection = AnimDirection.Side
+        newFlipX = false
+    elseif moveDirX < 0 then
+        newDirection = AnimDirection.Side
+        newFlipX = true
     end
+
+    if newDirection ~= currentAnimDirection then
+        currentAnimDirection = newDirection
+        SetAnimationDirection(entityID, currentAnimDirection)
+    end
+
+    if newFlipX ~= isFlippedX then
+        isFlippedX = newFlipX
+        SetAnimationFlipX(entityID, isFlippedX)
+    end
+
+    -- Switch to Walk animation (unless in special state)
+    if currentAnimGroup ~= AnimGroup.Attack and
+       currentAnimGroup ~= AnimGroup.Injured and
+       currentAnimGroup ~= AnimGroup.Death then
+        currentAnimGroup = AnimGroup.Walk
+        SetAnimationGroup(entityID, currentAnimGroup)
+        SetAnimationPlaying(entityID, true)
+    end
+
+    -- NOW consume AP
+    ConsumeEntityAP(entityID, apCostPerMove)
+
+    local newAP, maxAP = GetEntityAP(entityID)
+    print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
+
+    -- If AP depleted, end turn AFTER direction/flip has been applied
+    if newAP == 0 then
+        print("[PlayerScript] AP depleted after movement - ending turn!")
+
+        -- Optional: go Idle, but KEEP direction/flip as just set
+        currentAnimGroup = AnimGroup.Idle
+        SetAnimationGroup(entityID, currentAnimGroup)
+
+        EndCharacterTurn()
+        hasLoggedActive = false
+        lastActiveCheck = false
+        blockedKeys = {}
+
+        return
+    end
+
+    -- Visual feedback
+    ShowTileBorder(targetX, targetY, 0.5)
+    PulseTile(targetX, targetY, 0.3, 0.3, 1.0, 0.3)
+
+    -- Check for chest collection
+    if HasChestAtTile(targetX, targetY) then
+        CollectChest(targetX, targetY)
+        Log("[PlayerScript] Collected chest at (" .. targetX .. ", " .. targetY .. ")")
+    end
+
+    -- Check for goal completion
+    if HasGoalAtTile(targetX, targetY) then
+        Log("[PlayerScript] Reached goal! Level complete!")
+    end
+
+    moveCooldown = moveCooldownTime
+
+    Log("[PlayerScript] Moved to (" .. targetX .. ", " .. targetY .. ") - AP remaining: " .. (currentAP - apCostPerMove))
+else
+    Log("[PlayerScript] Failed to move to (" .. targetX .. ", " .. targetY .. ")")
+end
+
 end
 
 -- ============================================================================
@@ -573,31 +599,50 @@ function ShowAttackPreview()
 
     print("[PlayerScript] Showing attack preview at (" .. currentX .. ", " .. currentY .. ") with range " .. attackRange)
 
-    -- Show attack preview tiles in a range pattern (Manhattan distance)
-    for r = 1, attackRange do
-        local candidates = {
-            {x = currentX + r, y = currentY},      -- Right
-            {x = currentX - r, y = currentY},      -- Left
-            {x = currentX, y = currentY + r},      -- Up
-            {x = currentX, y = currentY - r}       -- Down
-        }
+    -- Show attack preview tiles - only adjacent tiles (Manhattan distance = 1)
+    -- Only show tiles at exactly distance 1 (4 adjacent tiles: up, down, left, right)
+    local adjacentTiles = {
+        {x = currentX + 1, y = currentY},      -- Right
+        {x = currentX - 1, y = currentY},      -- Left
+        {x = currentX, y = currentY + 1},      -- Down
+        {x = currentX, y = currentY - 1}       -- Up
+    }
 
-        for _, tile in ipairs(candidates) do
-            if IsValidGridPosition(tile.x, tile.y) then
-                -- Show red pulse for attack preview
-                PulseTile(tile.x, tile.y, 0.5, 1.0, 0.0, 0.0)  -- Red pulse
-                ShowTileBorder(tile.x, tile.y, 1.0)  -- Show border
+    for _, tile in ipairs(adjacentTiles) do
+        print("[PlayerScript]   Checking tile at (" .. tile.x .. ", " .. tile.y .. ")")
 
-                -- Track preview tiles (note: we don't have entity IDs for these visual effects)
-                table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
-            end
+        local isValid = IsValidGridPosition and IsValidGridPosition(tile.x, tile.y) or true
+        print("[PlayerScript]     IsValidGridPosition: " .. tostring(isValid))
+
+        if isValid then
+            -- Use PulseTile for attack preview (TintTile not available in current binary)
+            -- Red persistent pulse while preview is active
+            print("[PlayerScript]     Calling PulseTile(" .. tile.x .. ", " .. tile.y .. ") for attack preview")
+            PulseTile(tile.x, tile.y, 9999.0, 1.0, 0.3, 0.3)  -- Very long duration pulse (red)
+
+            -- Store the grid coordinates so we can clear them later
+            table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
+            print("[PlayerScript]   Pulsed tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
+        else
+            print("[PlayerScript]     Tile invalid, skipping")
         end
     end
 
-    attackPreviewActive = true
+    if #attackPreviewTiles > 0 then
+        attackPreviewActive = true
+        print("[PlayerScript] Attack preview active with " .. #attackPreviewTiles .. " tinted tiles")
+    else
+        print("[PlayerScript] WARNING: No valid attack preview tiles found")
+    end
 end
 
 function ClearAttackPreview()
+    -- Clear attack preview - no need to restore pulses, they'll fade naturally
+    if #attackPreviewTiles > 0 then
+        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack preview tiles")
+        -- Note: PulseTile effects fade on their own, no cleanup needed
+    end
+
     -- Clear attack preview state
     attackPreviewTiles = {}
     attackPreviewActive = false
@@ -651,46 +696,59 @@ function FindEnemyInRange()
 end
 
 function ExecuteAttack()
-    print("[PlayerScript] Executing attack")
+    print("============================================================")
+    print("[PlayerScript] ===== EXECUTING ATTACK =====")
+    print("============================================================")
 
     -- Check AP
-    local currentAP, maxAP = GetEntityAP(entityID)
+    local currentAP, maxAP = GetEntityAttackAP(entityID)
+    print("[PlayerScript] Current Attack AP: " .. currentAP .. "/" .. maxAP .. " (need " .. attackAPCost .. ")")
+
     if currentAP < attackAPCost then
-        print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
+        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. currentAP .. " < " .. attackAPCost .. ")")
         ClearAttackPreview()
         return
     end
 
     -- Find enemy in range
+    print("[PlayerScript] Searching for enemy in range...")
     local enemyID, enemyX, enemyY = FindEnemyInRange()
+
     if not enemyID then
-        print("[PlayerScript] No enemy in attack range")
+        print("[PlayerScript] ATTACK BLOCKED: No enemy in attack range!")
+        print("============================================================")
         ClearAttackPreview()
         return
     end
 
-    print("[PlayerScript] Attacking enemy " .. enemyID .. " at (" .. enemyX .. ", " .. enemyY .. ")")
+    print("[PlayerScript] Target found: Enemy " .. enemyID .. " at (" .. enemyX .. ", " .. enemyY .. ")")
+    print("[PlayerScript] Attacking enemy " .. enemyID .. " for " .. 1 .. " damage...")
 
     -- Deal damage
     local attackDamage = 1  -- Base damage
     local success = DamageEntity(enemyID, attackDamage)
 
     if success then
-        print("[PlayerScript] Successfully damaged enemy " .. enemyID .. " for " .. attackDamage .. " damage")
+        print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
-        -- Consume attack AP
-        ConsumeEntityAP(entityID, attackAPCost)
+        -- Consume attack AP (NOT movement AP!)
+        ConsumeEntityAttackAP(entityID, attackAPCost)
+        local newAP = GetEntityAttackAP(entityID)
+        print("[PlayerScript] Attack AP consumed. New Attack AP: " .. newAP .. "/" .. maxAP)
 
         -- Visual feedback
-        PulseTile(enemyX, enemyY, 0.3, 1.0, 0.0, 0.0)  -- Red pulse for damage
+        PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
 
         -- Play attack animation
         currentAnimGroup = AnimGroup.Attack
         SetAnimationGroup(entityID, currentAnimGroup)
         SetAnimationLoop(entityID, false)  -- Play once
+        print("[PlayerScript] Playing attack animation")
     else
-        print("[PlayerScript] Failed to damage enemy " .. enemyID)
+        print("[PlayerScript] ✗ Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
     end
+
+    print("============================================================")
 
     -- Clear attack preview
     ClearAttackPreview()

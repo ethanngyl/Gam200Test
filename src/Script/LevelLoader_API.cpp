@@ -38,6 +38,7 @@
 #include "Grid/GridECS.h" // Grid system functions
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
+#include "MapGenerator/ProceduralMapLoader.h"    
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -488,6 +489,69 @@ namespace Framework {
         bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyDown(keyCode);
         lua_pushboolean(L, pressed);
         return 1;
+    }
+
+    /**
+     * @brief Checks if a mouse button is currently held down
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonDown(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyDown(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Checks if a mouse button was just pressed this frame (edge detection)
+     * @params button (string) - "Left" or "Right"
+     * @return boolean
+     */
+    int LevelLoader::Lua_IsMouseButtonPressed(lua_State* L) {
+        const char* buttonName = luaL_checkstring(L, 1);
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        KeyCode buttonCode = KEY_UNKNOWN;
+        if (strcmp(buttonName, "Left") == 0) buttonCode = MOUSE_LEFT;
+        else if (strcmp(buttonName, "Right") == 0) buttonCode = MOUSE_RIGHT;
+
+        bool pressed = (buttonCode != KEY_UNKNOWN) && input->IsKeyPressed(buttonCode);
+        lua_pushboolean(L, pressed);
+        return 1;
+    }
+
+    /**
+     * @brief Gets the current mouse position in screen coordinates
+     * @return x, y (two numbers)
+     */
+    int LevelLoader::Lua_GetMousePosition(lua_State* L) {
+        auto* input = CORE ? CORE->GetInputSystem() : nullptr;
+        if (!input) {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        float x = 0, y = 0;
+        input->GetMousePosition(x, y);
+        lua_pushnumber(L, x);
+        lua_pushnumber(L, y);
+        return 2;
     }
 
     int LevelLoader::Lua_LoadJSON(lua_State* L) {
@@ -946,6 +1010,74 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Tint a tile at specific grid coordinates
+     * Lua usage: TintTile(x, y, r, g, b, a)
+     * @param x Grid x coordinate
+     * @param y Grid y coordinate
+     * @param r Red component (0.0-1.0)
+     * @param g Green component (0.0-1.0)
+     * @param b Blue component (0.0-1.0)
+     * @param a Alpha component (0.0-1.0, optional, default 1.0)
+     */
+    int LevelLoader::Lua_TintTile(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "TintTile: No loader or core engine");
+            return 0;
+        }
+
+        // Parse parameters: TintTile(x, y, r, g, b, a)
+        int gridX = static_cast<int>(luaL_checkinteger(L, 1));
+        int gridY = static_cast<int>(luaL_checkinteger(L, 2));
+        float r = luaL_checknumber(L, 3);
+        float g = luaL_checknumber(L, 4);
+        float b = luaL_checknumber(L, 5);
+        float a = luaL_optnumber(L, 6, 1.0f);  // Default alpha = 1.0
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "TintTile: No entity manager");
+            return 0;
+        }
+
+        // Get the grid
+        const Framework::Grid& grid = Framework::GetGrid();
+        LOG_INFO("LevelLoader", "TintTile: Attempting to tint tile at (%d, %d) with color (%.2f, %.2f, %.2f, %.2f)",
+            gridX, gridY, r, g, b, a);
+
+        if (!grid.InBounds(gridX, gridY)) {
+            LOG_WARN("LevelLoader", "TintTile: Grid position (%d, %d) out of bounds (grid size: %dx%d)",
+                gridX, gridY, grid.cols, grid.rows);
+            return 0;
+        }
+
+        // Get the tile entity at these coordinates
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+        if (tileEntity.GetID() == Framework::INVALID_ENTITY) {
+            LOG_WARN("LevelLoader", "TintTile: No tile entity at (%d, %d)", gridX, gridY);
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "TintTile: Found tile entity %u at (%d, %d)", tileEntity.GetID(), gridX, gridY);
+
+        // Apply tint to the tile's sprite
+        if (em->HasComponent<MeshRenderer>(tileEntity)) {
+            auto& mr = em->GetComponent<MeshRenderer>(tileEntity);
+            glm::vec4 oldTint = mr.tint;
+            mr.tint = glm::vec4(r, g, b, a);
+            LOG_INFO("LevelLoader", "TintTile: Applied tint to tile %u at (%d, %d) - Old: (%.2f,%.2f,%.2f,%.2f) New: (%.2f,%.2f,%.2f,%.2f)",
+                tileEntity.GetID(), gridX, gridY,
+                oldTint.r, oldTint.g, oldTint.b, oldTint.a,
+                r, g, b, a);
+        } else {
+            LOG_WARN("LevelLoader", "TintTile: Tile entity %u at (%d, %d) has no MeshRenderer component",
+                tileEntity.GetID(), gridX, gridY);
+        }
+
+        return 0;
+    }
+
     int LevelLoader::Lua_SetSpriteGray(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;
@@ -1280,13 +1412,16 @@ namespace Framework {
         lua_newtable(L);
         int index = 1;
 
-        // Find all entities with Movement component (indicates player/controllable entity)
-        // Players have: Movement, CircleCollider, AP, Health components
-        // Enemies have: EnemyAI component instead
+        // Find all entities with AP component (indicates player in turn-based system)
+        // Players have: AP, CircleCollider, Health components
+        // Enemies have: EnemyAI component (we exclude those)
+        // NOTE: Changed from Movement to AP because Movement was unreliable for entity 547
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Movement>(e) &&
-                em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
+            bool hasAP = em->HasComponent<AP>(e);
+            bool hasCircleCollider = em->HasComponent<CircleCollider>(e);
+            bool hasEnemyAI = em->HasComponent<EnemyAI>(e);
+
+            if (hasAP && hasCircleCollider && !hasEnemyAI) {
                 lua_pushinteger(L, index++);
                 lua_pushinteger(L, e.GetID());
                 lua_settable(L, -3);
@@ -2334,6 +2469,40 @@ namespace Framework {
     }
 
     /**
+     * @brief Get entity's current Attack AP
+     * @param entityID The entity ID
+     * @return current AttackAP, max AttackAP (two numbers)
+     *
+     * Usage: local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+     */
+    int LevelLoader::Lua_GetEntityAttackAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "GetEntityAttackAP: No EntityManager");
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "GetEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        LOG_INFO("LevelLoader", "GetEntityAttackAP: Entity %d has AttackAP=%d/%d",
+                 entityID, attackAP.points, attackAP.maxPoints);
+        lua_pushinteger(L, attackAP.points);
+        lua_pushinteger(L, attackAP.maxPoints);
+        return 2;
+    }
+
+    /**
      * @brief Get entity's current AP (Action Points) - legacy name
      * @param entityID The entity ID
      * @return AP value, or 0 if entity doesn't have AP component
@@ -2619,6 +2788,49 @@ namespace Framework {
     }
 
     /**
+     * @brief Consume entity's Attack AP
+     * @param entityID The entity ID
+     * @param amount Amount of Attack AP to consume
+     *
+     * Usage: ConsumeEntityAttackAP(entityID, 1)
+     */
+    int LevelLoader::Lua_ConsumeEntityAttackAP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No core engine");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "ConsumeEntityAttackAP: No entity manager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "ConsumeEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            return 0;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        int oldAP = attackAP.points;
+        attackAP.points -= amount;
+        if (attackAP.points < 0) {
+            attackAP.points = 0;
+        }
+
+        LOG_INFO("LevelLoader", "ConsumeEntityAttackAP: Entity %d AttackAP consumed %d -> %d (-%d)",
+                 entityID, oldAP, attackAP.points, amount);
+
+        return 0;
+    }
+
+    /**
      * @brief Consume entity's AP - legacy name
      * @param entityID The entity ID
      * @param amount Amount of AP to consume
@@ -2664,12 +2876,14 @@ namespace Framework {
     int LevelLoader::Lua_DamageEntity(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false
+            return 1;
         }
 
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
@@ -2678,7 +2892,8 @@ namespace Framework {
         Entity entity(static_cast<uint32_t>(entityID));
 
         if (!em->HasComponent<Health>(entity)) {
-            return 0;
+            lua_pushboolean(L, 0);  // Return false - entity has no health
+            return 1;
         }
 
         auto& health = em->GetComponent<Health>(entity);
@@ -2688,7 +2903,8 @@ namespace Framework {
             health.isDead = true;
         }
 
-        return 0;
+        lua_pushboolean(L, 1);  // Return true - damage successful
+        return 1;
     }
 
     /**
@@ -2747,6 +2963,40 @@ namespace Framework {
         }
 
         return 1;
+    }
+
+    // ========================================================================
+    // GRID CONVERSION API
+    // ========================================================================
+
+    /**
+     * @brief Convert grid tile coordinates to world position
+     * @param tileX Grid X coordinate
+     * @param tileY Grid Y coordinate
+     * @return worldX, worldY (two return values, or nil if invalid)
+     *
+     * Usage: local worldX, worldY = TileToWorld(5, 10)
+     */
+    int LevelLoader::Lua_TileToWorld(lua_State* L) {
+        int tileX = static_cast<int>(luaL_checknumber(L, 1));
+        int tileY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ tileX, tileY };
+
+        // Validate coordinates
+        if (!Framework::InBounds(coord)) {
+            LOG_WARN("LevelLoader", "TileToWorld: Coordinates (%d, %d) out of bounds", tileX, tileY);
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        // Convert to world position
+        Framework::Vector2D worldPos = Framework::TileToWorld(coord);
+
+        lua_pushnumber(L, worldPos.x);
+        lua_pushnumber(L, worldPos.y);
+        return 2;
     }
 
     // ========================================================================
@@ -2930,6 +3180,432 @@ namespace Framework {
         return 1;
     }
 
+// ============================================================================
+// PROCEDURAL MAP API
+// ============================================================================
+
+    int LevelLoader::Lua_LoadProceduralMap(lua_State* L) {
+        std::cout << "[Lua_LoadProceduralMap] Called!\n";
+
+        int width = static_cast<int>(luaL_checknumber(L, 1));
+        int height = static_cast<int>(luaL_checknumber(L, 2));
+        const char* algorithm = luaL_checkstring(L, 3);
+
+        LevelLoader* loader = GetLevelLoader(L);
+        CoreEngine* core = loader->coreEngine;
+
+        EntitySpawner* spawner = core->GetSpawner();
+        EntityManager* em = core->GetEntityManager();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "EntitySpawner or EntityManager not available");
+        }
+
+        // Configure generation
+        MapGen::Config config;
+        config.width = width;
+        config.height = height;
+        config.algorithm = algorithm;
+
+        // Grid parameters - MATCH YOUR TileMap.json
+        const float TILE_SIZE = 128.0f;
+        Vector2D startPos(-0.6f, -0.4f);
+        Vector2D spacing(0.1f, 0.1f);
+        Vector2D tileSize(TILE_SIZE, TILE_SIZE);
+
+        // Generate and load
+        MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
+            config, spawner, em, startPos, spacing, tileSize
+        );
+
+        // ========================================
+        // NEW: RETURN SPAWN POSITIONS AS LUA TABLE
+        // ========================================
+
+        std::cout << "[Lua_LoadProceduralMap] Creating return table...\n";
+
+        lua_newtable(L);  // Main table
+
+        // Player spawn
+        lua_pushstring(L, "playerX");
+        lua_pushnumber(L, map.playerSpawn.x);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "playerY");
+        lua_pushnumber(L, map.playerSpawn.y);
+        lua_settable(L, -3);
+
+        // Goal spawn
+        lua_pushstring(L, "goalX");
+        lua_pushnumber(L, map.goalSpawn.x);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "goalY");
+        lua_pushnumber(L, map.goalSpawn.y);
+        lua_settable(L, -3);
+
+        // Calculate exact world position using same math as tile spawning
+        float playerWorldX = startPos.x + (map.playerSpawn.x * spacing.x);
+        float playerWorldY = startPos.y + (map.playerSpawn.y * spacing.y);
+
+        lua_pushstring(L, "playerWorldX");
+        lua_pushnumber(L, playerWorldX);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "playerWorldY");
+        lua_pushnumber(L, playerWorldY);
+        lua_settable(L, -3);
+
+        // Goal world coords
+        float goalWorldX = startPos.x + (map.goalSpawn.x * spacing.x);
+        float goalWorldY = startPos.y + (map.goalSpawn.y * spacing.y);
+
+        lua_pushstring(L, "goalWorldX");
+        lua_pushnumber(L, goalWorldX);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "goalWorldY");
+        lua_pushnumber(L, goalWorldY);
+        lua_settable(L, -3);
+
+        // Enemies with world coords
+        lua_pushstring(L, "enemies");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.enemySpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, map.enemySpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, map.enemySpawns[i].y);
+            lua_settable(L, -3);
+
+            // World coords
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (map.enemySpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (map.enemySpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Chests with world coords
+        lua_pushstring(L, "chests");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.chestSpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, map.chestSpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, map.chestSpawns[i].y);
+            lua_settable(L, -3);
+
+            // World coords
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (map.chestSpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (map.chestSpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // ========================================
+        // PARTY SPAWNS - 3 floor tiles with spacing
+        // Ensures players don't spawn adjacent and block each other
+        // ========================================
+        std::cout << "[Lua_LoadProceduralMap] Finding spaced party spawn positions...\n";
+
+        std::vector<MapGen::Position> partySpawns;
+        partySpawns.push_back(map.playerSpawn);  // First is always valid
+
+        // Search pattern - prioritize positions that are NOT directly adjacent
+        // We want at least 2 tiles apart so players can move around each other
+        const int searchOffsets[][2] = {
+            // Distance 2 (preferred - gives room to move)
+            {2, 0}, {-2, 0}, {0, 2}, {0, -2},
+            {2, 1}, {2, -1}, {-2, 1}, {-2, -1},
+            {1, 2}, {-1, 2}, {1, -2}, {-1, -2},
+            {2, 2}, {-2, 2}, {2, -2}, {-2, -2},
+            // Distance 3 (also good)
+            {3, 0}, {-3, 0}, {0, 3}, {0, -3},
+            {3, 1}, {3, -1}, {-3, 1}, {-3, -1},
+            {1, 3}, {-1, 3}, {1, -3}, {-1, -3},
+            // Distance 1 (fallback only - adjacent)
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+            {1, 1}, {-1, 1}, {1, -1}, {-1, -1},
+        };
+
+        const int numOffsets = sizeof(searchOffsets) / sizeof(searchOffsets[0]);
+
+        // Minimum distance between party members (Manhattan distance)
+        const int MIN_PARTY_DISTANCE = 2;
+
+        for (int i = 0; i < numOffsets && partySpawns.size() < 3; i++) {
+            int testX = map.playerSpawn.x + searchOffsets[i][0];
+            int testY = map.playerSpawn.y + searchOffsets[i][1];
+
+            // Check bounds
+            if (testX < 0 || testX >= map.width || testY < 0 || testY >= map.height) {
+                continue;
+            }
+
+            // Check if it's a FLOOR tile (not a wall)
+            if (map.getTile(testX, testY) != MapGen::TileType::FLOOR) {
+                continue;
+            }
+
+            // Check distance from ALL existing party spawns
+            bool tooClose = false;
+            for (const auto& existingSpawn : partySpawns) {
+                int manhattanDist = std::abs(testX - existingSpawn.x) + std::abs(testY - existingSpawn.y);
+                if (manhattanDist < MIN_PARTY_DISTANCE) {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (tooClose) {
+                continue;  // Skip positions too close to existing party members
+            }
+
+            // Valid position found!
+            partySpawns.push_back(MapGen::Position(testX, testY));
+            std::cout << "[Lua_LoadProceduralMap] Party spawn " << partySpawns.size()
+                << ": (" << testX << ", " << testY << ")\n";
+        }
+
+        // If we couldn't find 3 spaced positions, fall back to adjacent (with warning)
+        if (partySpawns.size() < 3) {
+            std::cout << "[Lua_LoadProceduralMap] WARNING: Couldn't find 3 spaced spawns, using fallback\n";
+
+            // Try again without distance restriction
+            for (int i = 0; i < numOffsets && partySpawns.size() < 3; i++) {
+                int testX = map.playerSpawn.x + searchOffsets[i][0];
+                int testY = map.playerSpawn.y + searchOffsets[i][1];
+
+                if (testX < 0 || testX >= map.width || testY < 0 || testY >= map.height) {
+                    continue;
+                }
+
+                if (map.getTile(testX, testY) != MapGen::TileType::FLOOR) {
+                    continue;
+                }
+
+                // Check not already used (but ignore distance)
+                bool alreadyUsed = false;
+                for (const auto& pos : partySpawns) {
+                    if (pos.x == testX && pos.y == testY) {
+                        alreadyUsed = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyUsed) {
+                    partySpawns.push_back(MapGen::Position(testX, testY));
+                    std::cout << "[Lua_LoadProceduralMap] Fallback spawn " << partySpawns.size()
+                        << ": (" << testX << ", " << testY << ")\n";
+                }
+            }
+        }
+
+        // Last resort: duplicate player spawn
+        while (partySpawns.size() < 3) {
+            std::cout << "[Lua_LoadProceduralMap] WARNING: Duplicating player spawn\n";
+            partySpawns.push_back(map.playerSpawn);
+        }
+
+        // Add partySpawns array to the Lua table
+        lua_pushstring(L, "partySpawns");
+        lua_newtable(L);
+        for (size_t i = 0; i < partySpawns.size(); i++) {
+            lua_pushnumber(L, static_cast<lua_Number>(i + 1));
+            lua_newtable(L);
+
+            lua_pushstring(L, "x");
+            lua_pushnumber(L, partySpawns[i].x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "y");
+            lua_pushnumber(L, partySpawns[i].y);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldX");
+            lua_pushnumber(L, startPos.x + (partySpawns[i].x * spacing.x));
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "worldY");
+            lua_pushnumber(L, startPos.y + (partySpawns[i].y * spacing.y));
+            lua_settable(L, -3);
+
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Add map dimensions
+        lua_pushstring(L, "width");
+        lua_pushnumber(L, map.width);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "height");
+        lua_pushnumber(L, map.height);
+        lua_settable(L, -3);
+
+        std::cout << "[Lua_LoadProceduralMap] Added " << partySpawns.size() << " spaced party spawns\n";
+
+        return 1;
+    }
+
+    // ============================================================================
+// ENTITY SPAWNING API
+// ============================================================================
+
+    int LevelLoader::Lua_SpawnPlayerAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        EntitySpawner* spawner = loader->coreEngine->GetSpawner();
+        EntityManager* em = loader->coreEngine->GetEntityManager();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "Spawner or EM not available");
+        }
+
+        // Spawn player
+        Entity player = spawner->SpawnPlayer(Vector2D(worldX, worldY));
+
+        // CRITICAL: Ensure Movement component is present (required for GetAllPlayers())
+        // Sometimes this component gets removed by camera/active character systems
+        if (!em->HasComponent<Movement>(player)) {
+            std::cout << "[SpawnPlayerAt] WARNING: Entity " << player.GetID() << " missing Movement component - adding it now" << std::endl;
+            em->AddComponent<Movement>(player);
+            auto& movement = em->GetComponent<Movement>(player);
+            movement.moveSpeed = 0.2f;
+        } else {
+            std::cout << "[SpawnPlayerAt] Entity " << player.GetID() << " already has Movement component" << std::endl;
+        }
+
+        // ADD INVENTORY COMPONENT (like TileMapLoader does!)
+        if (!em->HasComponent<Inventory>(player)) {
+            em->AddComponent<Inventory>(player);
+        }
+
+        lua_pushnumber(L, player.GetID());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnEnemyAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        CoreEngine* core = loader->coreEngine;
+        EntitySpawner* spawner = core->GetSpawner();
+
+        if (!spawner) {
+            return luaL_error(L, "EntitySpawner not available");
+        }
+
+        Entity enemy = spawner->SpawnEnemy(Vector2D(worldX, worldY));
+
+        lua_pushnumber(L, enemy.GetID());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnChestAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        EntitySpawner* spawner = loader->coreEngine->GetSpawner();
+        EntityManager* em = loader->coreEngine->GetEntityManager();
+        Grid& grid = GetGrid();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "Spawner or EM not available");
+        }
+
+        // Spawn chest sprite
+        Entity chest = spawner->SpawnSprite(
+            "assets/TileMap/Chest_1.png",
+            Vector2D(worldX, worldY),
+            Vector2D(grid.spacing.x * 0.8f, grid.spacing.y * 0.8f)  // 80% size like TileMapLoader
+        );
+
+        // ADD CHEST COMPONENT (like TileMapLoader does!)
+        static int nextChestID = 0;
+        em->AddComponent<Chest>(chest, nextChestID++);
+
+        lua_pushnumber(L, chest.GetID());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnGoalAt(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+
+        LevelLoader* loader = GetLevelLoader(L);
+        EntitySpawner* spawner = loader->coreEngine->GetSpawner();
+        EntityManager* em = loader->coreEngine->GetEntityManager();
+        Grid& grid = GetGrid();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "Spawner or EM not available");
+        }
+
+        // Spawn goal sprite
+        Entity goal = spawner->SpawnSprite(
+            "assets/TileMap/Portal.png",
+            Vector2D(worldX, worldY),
+            Vector2D(grid.spacing.x * 0.9f, grid.spacing.y * 0.9f)  // 90% size like TileMapLoader
+        );
+
+        // ADD GOAL COMPONENT (like TileMapLoader does!)
+        // Need to know total chests - pass as parameter or get from mapData
+        int totalChests = 0;  // TODO: Pass this from Lua or calculate
+        em->AddComponent<Goal>(goal, totalChests);
+
+        lua_pushnumber(L, goal.GetID());
+        return 1;
+    }
+
+
+    //int LevelLoader::Lua_TileToWorld(lua_State* L) {
+    //    int gridX = static_cast<int>(luaL_checknumber(L, 1));
+    //    int gridY = static_cast<int>(luaL_checknumber(L, 2));
+
+    //    Grid& grid = GetGrid();
+
+    //    if (!grid.InBounds(gridX, gridY)) {
+    //        lua_pushnumber(L, 0.0);
+    //        lua_pushnumber(L, 0.0);
+    //        return 2;
+    //    }
+
+    //    // Use EXACT Grid math
+    //    float worldX = grid.startPos.x + (static_cast<float>(gridX) * grid.spacing.x);
+    //    float worldY = grid.startPos.y + (static_cast<float>(gridY) * grid.spacing.y);
+
+    //    lua_pushnumber(L, worldX);
+    //    lua_pushnumber(L, worldY);
+    //    return 2;
+    //}
+
     /**
      * @brief End the current character's turn and advance to next party member
      * @return none
@@ -3082,6 +3758,401 @@ namespace Framework {
         // Return the result in the entity's Lua state
         lua_pushboolean(L, inTransition);
         return 1;
+    }
+
+    // ========================================================================
+    // ANIMATION CONTROL API
+    // ========================================================================
+
+    /**
+     * @brief Set animation group for an entity
+     * Lua usage: SetAnimationGroup(entityID, group)
+     * @param entityID Entity ID
+     * @param group Animation group (0=Idle, 1=Walk, 2=Attack, 3=Injured, 4=Death)
+     */
+    int LevelLoader::Lua_SetAnimationGroup(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer group = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.group = static_cast<AnimGroup>(group);
+
+        return 0;
+    }
+
+    /**
+     * @brief Set animation direction for an entity
+     * Lua usage: SetAnimationDirection(entityID, direction)
+     * @param entityID Entity ID
+     * @param direction Animation direction (0=Front, 1=Back, 2=Side, 3=None)
+     */
+    int LevelLoader::Lua_SetAnimationDirection(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        lua_Integer direction = luaL_checkinteger(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.direction = static_cast<AnimDirection>(direction);
+
+        return 0;
+    }
+
+    /**
+     * @brief Set horizontal flip for an entity's sprite
+     * Lua usage: SetAnimationFlipX(entityID, flipX)
+     * @param entityID Entity ID
+     * @param flipX true to flip horizontally, false for normal
+     */
+    int LevelLoader::Lua_SetAnimationFlipX(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool flipX = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.flipX = flipX;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set whether animation is playing
+     * Lua usage: SetAnimationPlaying(entityID, playing)
+     * @param entityID Entity ID
+     * @param playing true to play, false to pause
+     */
+    int LevelLoader::Lua_SetAnimationPlaying(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool playing = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.playing = playing;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set whether animation should loop
+     * Lua usage: SetAnimationLoop(entityID, loop)
+     * @param entityID Entity ID
+     * @param loop true to loop, false for one-shot
+     */
+    int LevelLoader::Lua_SetAnimationLoop(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool loop = lua_toboolean(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "Entity %u has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.loop = loop;
+
+        return 0;
+    }
+
+    /**
+     * @brief Set animation frame range (startFrame and frameCount)
+     * Lua usage: SetAnimationFrameRange(entityID, startFrame, frameCount, resetToStart)
+     * @param entityID Entity ID
+     * @param startFrame First frame index in the animation range
+     * @param frameCount Number of frames in the animation
+     * @param resetToStart (optional) If true, reset currentFrame to 0 (default: true)
+     */
+    int LevelLoader::Lua_SetAnimationFrameRange(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        int startFrame = static_cast<int>(luaL_checkinteger(L, 2));
+        int frameCount = static_cast<int>(luaL_checkinteger(L, 3));
+        bool resetToStart = true;
+        if (lua_gettop(L) >= 4) {
+            resetToStart = lua_toboolean(L, 4);
+        }
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            LOG_WARN("LUA_ANIM", "SetAnimationFrameRange: Entity %lld has no SpriteAnimation component", entityID);
+            return 0;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.startFrame = startFrame;
+        anim.frameCount = frameCount;
+
+        if (resetToStart) {
+            anim.currentFrame = 0;
+            anim.elapsedTime = 0.0f;
+        }
+
+        LOG_INFO("LUA_ANIM", "SetAnimationFrameRange: Entity %lld -> startFrame=%d, frameCount=%d",
+                 entityID, startFrame, frameCount);
+
+        return 0;
+    }
+
+    /**
+     * @brief Get current animation group for an entity
+     * Lua usage: group = GetAnimationGroup(entityID)
+     * @param entityID Entity ID
+     * @return Animation group (0=Idle, 1=Walk, 2=Attack, 3=Injured, 4=Death)
+     */
+    int LevelLoader::Lua_GetAnimationGroup(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushinteger(L, 0);  // Default to Idle
+            return 1;
+        }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);  // Default to Idle
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, static_cast<int>(anim.group));
+        return 1;
+    }
+
+    /**
+     * @brief Get movement direction for an entity
+     * Lua usage: dirX, dirY = GetEntityMovementDirection(entityID)
+     * @param entityID Entity ID
+     * @return dirX, dirY Movement vector components (0, 0 if no Movement component)
+     */
+    int LevelLoader::Lua_GetEntityMovementDirection(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            lua_pushnumber(L, 0.0);
+            lua_pushnumber(L, 0.0);
+            return 2;
+        }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<Movement>(e)) {
+            lua_pushnumber(L, 0.0);
+            lua_pushnumber(L, 0.0);
+            return 2;
+        }
+
+        auto& movement = em->GetComponent<Movement>(e);
+        lua_pushnumber(L, movement.direction.x);
+        lua_pushnumber(L, movement.direction.y);
+        return 2;
+    }
+
+    // ============================================================================
+    // ENEMY TURN MANAGEMENT SYSTEM (C++ Implementation for Entity Scripts)
+    // ============================================================================
+
+    // Static state for enemy turn management
+    namespace EnemyTurnState {
+        static bool turnActive = false;
+        static int activeEnemyIndex = 0;
+        static float actionTimer = 0.0f;
+        static float actionDelay = 0.5f;  // 0.5 seconds between enemies
+        static std::vector<int> enemyList;
+        static bool needsReinitialize = true;
+    }
+
+    /**
+     * @brief Initialize enemy turn system
+     * Lua usage: InitializeEnemyTurn()
+     * Call this when enemy turn starts
+     */
+    int LevelLoader::Lua_InitializeEnemyTurn(lua_State* L) {
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] InitializeEnemyTurn() called");
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "[EnemyTurnSystem] No EntityManager");
+            return 0;
+        }
+
+        // Get all enemies
+        EnemyTurnState::enemyList.clear();
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<EnemyAI>(e)) {
+                EnemyTurnState::enemyList.push_back(e.GetID());
+                LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found enemy: %d", e.GetID());
+            }
+        }
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found %d enemies total", (int)EnemyTurnState::enemyList.size());
+
+        if (EnemyTurnState::enemyList.empty()) {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] No enemies found!");
+            EnemyTurnState::turnActive = false;
+            return 0;
+        }
+
+        // Start with first enemy
+        EnemyTurnState::turnActive = true;
+        EnemyTurnState::activeEnemyIndex = 1;  // 1-indexed like Lua
+        EnemyTurnState::actionTimer = 0.0f;  // First enemy acts immediately
+        EnemyTurnState::needsReinitialize = false;
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Starting with enemy %d (index 1/%d)",
+            EnemyTurnState::enemyList[0], (int)EnemyTurnState::enemyList.size());
+
+        return 0;
+    }
+
+    /**
+     * @brief Check if specific enemy is the active one
+     * Lua usage: local isActive = IsActiveEnemy(entityID)
+     * @param entityID Entity ID to check
+     * @return true if this enemy should act, false otherwise
+     */
+    int LevelLoader::Lua_IsActiveEnemy(lua_State* L) {
+        int entityID = (int)luaL_checkinteger(L, 1);
+
+        // Reinitialize if needed
+        if (EnemyTurnState::needsReinitialize) {
+            Lua_InitializeEnemyTurn(L);
+        }
+
+        if (!EnemyTurnState::turnActive || EnemyTurnState::activeEnemyIndex == 0) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        int activeID = EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1];
+        bool isActive = (entityID == activeID);
+
+        lua_pushboolean(L, isActive);
+        return 1;
+    }
+
+    /**
+     * @brief Check if enemy action timer is ready
+     * Lua usage: local ready = IsEnemyActionReady()
+     * @return true if enemy can act (timer expired), false if still in delay
+     */
+    int LevelLoader::Lua_IsEnemyActionReady(lua_State* L) {
+        bool ready = EnemyTurnState::turnActive && (EnemyTurnState::actionTimer <= 0.0f);
+        lua_pushboolean(L, ready);
+        return 1;
+    }
+
+    /**
+     * @brief Mark current enemy as done and advance to next
+     * Lua usage: MarkEnemyActionComplete()
+     * Call this when enemy finishes its turn
+     */
+    int LevelLoader::Lua_MarkEnemyActionComplete(lua_State* L) {
+        if (!EnemyTurnState::turnActive) {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] MarkEnemyActionComplete called but turn not active");
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Enemy %d completed action",
+            EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1]);
+
+        // Move to next enemy
+        EnemyTurnState::activeEnemyIndex++;
+
+        // Check if all enemies have acted
+        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+            LOG_INFO("LevelLoader", "[EnemyTurnSystem] All enemies have acted - ending enemy turn");
+            EnemyTurnState::turnActive = false;
+            EnemyTurnState::activeEnemyIndex = 0;
+            EnemyTurnState::needsReinitialize = true;
+
+            // Call Lua OnEnemyTurnEnded() if it exists
+            lua_getglobal(L, "OnEnemyTurnEnded");
+            if (lua_isfunction(L, -1)) {
+                if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+                    const char* err = lua_tostring(L, -1);
+                    LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling OnEnemyTurnEnded: %s", err);
+                    lua_pop(L, 1);
+                }
+            } else {
+                lua_pop(L, 1);
+            }
+        } else {
+            LOG_INFO("LevelLoader", "[EnemyTurnSystem] Moving to enemy %d (index %d/%d)",
+                EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1],
+                EnemyTurnState::activeEnemyIndex,
+                (int)EnemyTurnState::enemyList.size());
+
+            // Reset action timer for next enemy
+            EnemyTurnState::actionTimer = EnemyTurnState::actionDelay;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Update enemy turn manager (call every frame)
+     * Lua usage: UpdateEnemyTurnManager(dt)
+     * @param dt Delta time in seconds
+     */
+    int LevelLoader::Lua_UpdateEnemyTurnManager(lua_State* L) {
+        float dt = (float)luaL_checknumber(L, 1);
+
+        if (!EnemyTurnState::turnActive) {
+            return 0;
+        }
+
+        // Update action timer
+        if (EnemyTurnState::actionTimer > 0.0f) {
+            EnemyTurnState::actionTimer -= dt;
+            if (EnemyTurnState::actionTimer < 0.0f) {
+                EnemyTurnState::actionTimer = 0.0f;
+            }
+        }
+
+        return 0;
     }
 
 } // namespace Framework

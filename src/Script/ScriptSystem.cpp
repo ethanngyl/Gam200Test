@@ -474,6 +474,9 @@ namespace Framework {
 
         // Game API - Input
         lua_register(L, "IsKeyDown", LevelLoader::Lua_IsKeyDown);
+        lua_register(L, "IsMouseButtonDown", LevelLoader::Lua_IsMouseButtonDown);
+        lua_register(L, "IsMouseButtonPressed", LevelLoader::Lua_IsMouseButtonPressed);
+        lua_register(L, "GetMousePosition", LevelLoader::Lua_GetMousePosition);
 
         // Game API - Turn System
         lua_register(L, "GetCurrentTurn", LevelLoader::Lua_GetCurrentTurn);
@@ -516,6 +519,16 @@ namespace Framework {
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
 
+        // Enemy Turn Management System
+        lua_register(L, "InitializeEnemyTurn", LevelLoader::Lua_InitializeEnemyTurn);
+        lua_register(L, "IsActiveEnemy", LevelLoader::Lua_IsActiveEnemy);
+        lua_register(L, "IsEnemyActionReady", LevelLoader::Lua_IsEnemyActionReady);
+        lua_register(L, "MarkEnemyActionComplete", LevelLoader::Lua_MarkEnemyActionComplete);
+        lua_register(L, "UpdateEnemyTurnManager", LevelLoader::Lua_UpdateEnemyTurnManager);
+
+        // Grid Conversion API
+        lua_register(L, "TileToWorld", LevelLoader::Lua_TileToWorld);
+
         // Game API - Audio
         lua_register(L, "PlaySound", LevelLoader::Lua_PlaySound);
 
@@ -530,13 +543,17 @@ namespace Framework {
         lua_register(L, "GetEntityMovementDirection", LevelLoader::Lua_GetEntityMovementDirection);
         
         // Game API - Sprite Control
+        lua_register(L, "SpawnSprite", LevelLoader::Lua_SpawnSprite);
+        lua_register(L, "SpawnAnimatedSprite", LevelLoader::Lua_SpawnAnimatedSprite);
         lua_register(L, "SetSpriteVisibility", LevelLoader::Lua_SetSpriteVisibility);
         lua_register(L, "SetSpritePosition", LevelLoader::Lua_SetSpritePosition);
         lua_register(L, "SetSpriteColor", LevelLoader::Lua_SetSpriteColor);
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
+        lua_register(L, "GetEntityAttackAP", LevelLoader::Lua_GetEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", LevelLoader::Lua_ConsumeEntityAP);
+        lua_register(L, "ConsumeEntityAttackAP", LevelLoader::Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", LevelLoader::Lua_RefillEntityAP);
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);

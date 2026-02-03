@@ -82,7 +82,7 @@ namespace Framework {
     */
     class PathfindingSystem : public EngineSystem {
     public:
-        PathfindingSystem() : entityManager(nullptr), audioSystem(nullptr) {}
+        PathfindingSystem() : entityManager(nullptr), audioSystem(nullptr), graphicsSystem(nullptr) {}
         ~PathfindingSystem() = default;
 
         void Initialize() override;
@@ -91,6 +91,7 @@ namespace Framework {
 
         void SetEntityManager(EntityManager* em) { entityManager = em; }
         void SetAudioSystem(AudioSystem* audio) { audioSystem = audio; }
+        void SetGraphicsSystem(GraphicsSystemV2* graphics) { graphicsSystem = graphics; }
 
         /**
         * @brief Spawn an enemy at the furthest walkable tile from player
@@ -114,6 +115,7 @@ namespace Framework {
     private:
         EntityManager* entityManager;
         AudioSystem* audioSystem;  // Audio system for enemy walking sounds
+        GraphicsSystemV2* graphicsSystem;  // Graphics system for camera control
         /**
         * @brief Calculate Manhattan distance heuristic
         */
@@ -122,7 +124,7 @@ namespace Framework {
         /**
         * @brief Get valid neighboring tiles (4-directional)
         */
-        static std::vector<GridCoord> GetNeighbors(const GridCoord& coord, const Grid& grid);
+        static std::vector<GridCoord> GetNeighbors(const GridCoord& coord, const Grid& grid, const GridCoord& goal);
 
         /**
         * @brief Reconstruct path from A* search

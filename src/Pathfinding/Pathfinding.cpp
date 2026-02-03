@@ -154,6 +154,25 @@ namespace Framework {
         auto& stats = entityManager->GetComponent<AP>(currentEnemy);
 		//auto& hp = entityManager->GetComponent<Health>(currentEnemy);
 
+        // CRITICAL FIX: Initialize delay when switching to a new enemy
+        // This prevents all enemies from moving simultaneously on the first frame
+        static int lastActiveEnemyIndex = -1;
+        if (currentEnemyIndex != lastActiveEnemyIndex) {
+            // Just switched to a new enemy - set initial delay
+            ai.moveTimer = ai.moveDelay;
+            lastActiveEnemyIndex = currentEnemyIndex;
+            LOG_INFO("EnemyAI", "Now acting: Enemy %u (index %d/%zu)",
+                currentEnemy.GetID(), currentEnemyIndex, livingEnemies.size() - 1);
+
+            // Pan camera to this enemy
+            if (graphicsSystem) {
+                graphicsSystem->SetFollowTarget(currentEnemy);
+                LOG_INFO("EnemyAI", "Camera now following Enemy %u", currentEnemy.GetID());
+            }
+
+            return;  // Wait one frame before acting
+        }
+
         // Check if this enemy has AP left
         if (stats.actionPoints <= 0) {
             currentEnemyIndex++;  // Move to next enemy
@@ -170,22 +189,8 @@ namespace Framework {
             return; // Still waiting for movement delay
         }
 
-        // Validate target
-        if (ai.targetEntity.GetID() == INVALID_ENTITY) {
-            LOG_WARN("EnemyAI", "Enemy %u has no target", currentEnemy.GetID());
-            stats.actionPoints = 0;
-            currentEnemyIndex++;
-            return;
-        }
-
-        if (!entityManager->HasComponent<Transform>(ai.targetEntity)) {
-            LOG_WARN("EnemyAI", "Enemy %u target has no Transform", currentEnemy.GetID());
-            stats.actionPoints = 0;
-            currentEnemyIndex++;
-            return;
-        }
-
-        // Get current and target positions
+        // CRITICAL FIX: Find closest player dynamically instead of using hardcoded target
+        // This ensures enemies always chase the actually closest player
         auto enemyTileOpt = WorldToTile(transform.position);
         if (!enemyTileOpt.has_value()) {
             currentEnemyIndex++;
@@ -193,17 +198,64 @@ namespace Framework {
         }
         GridCoord enemyTile = *enemyTileOpt;
 
-        auto& targetTransform = entityManager->GetComponent<Transform>(ai.targetEntity);
-        auto targetTileOpt = WorldToTile(targetTransform.position);
-        if (!targetTileOpt.has_value()) {
+        // Find all players (entities with AP + CircleCollider, but NOT EnemyAI)
+        Entity closestPlayer{ INVALID_ENTITY };
+        int closestDistance = 999999;
+        GridCoord closestPlayerTile{ 0, 0 };
+
+        for (Entity entity : entityManager->GetAllEntities()) {
+            if (!entityManager->HasComponent<AP>(entity)) continue;
+            if (!entityManager->HasComponent<CircleCollider>(entity)) continue;
+            if (entityManager->HasComponent<EnemyAI>(entity)) continue;  // Skip enemies
+            if (!entityManager->HasComponent<Transform>(entity)) continue;
+
+            // This is a player - check distance
+            auto& playerTransform = entityManager->GetComponent<Transform>(entity);
+            auto playerTileOpt = WorldToTile(playerTransform.position);
+            if (!playerTileOpt.has_value()) continue;
+
+            GridCoord playerTile = *playerTileOpt;
+            int distance = Heuristic(enemyTile, playerTile);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestPlayer = entity;
+                closestPlayerTile = playerTile;
+            }
+        }
+
+        // Validate we found a player
+        if (closestPlayer.GetID() == INVALID_ENTITY) {
+            LOG_WARN("EnemyAI", "Enemy %u: No players found", currentEnemy.GetID());
+            stats.actionPoints = 0;
             currentEnemyIndex++;
             return;
         }
-        GridCoord targetTile = *targetTileOpt;
+
+        // Update target if it changed
+        if (ai.targetEntity.GetID() != closestPlayer.GetID()) {
+            LOG_INFO("EnemyAI", "Enemy %u retargeting: %u -> %u (distance: %d)",
+                currentEnemy.GetID(), ai.targetEntity.GetID(), closestPlayer.GetID(), closestDistance);
+            ai.targetEntity = closestPlayer;
+            ai.currentPath.clear();  // Clear old path when target changes
+        }
+
+        GridCoord targetTile = closestPlayerTile;
 
         // Check if adjacent to target (can attack)
         int distance = Heuristic(enemyTile, targetTile);
         if (distance == 1) {
+            // Check if we have enough AP to attack
+            const int attackAPCost = 2;
+            if (stats.actionPoints < attackAPCost) {
+                // Not enough AP to attack, move to next enemy
+                LOG_INFO("EnemyAI", "Enemy %u adjacent but only has %d AP (need %d to attack)",
+                    currentEnemy.GetID(), stats.actionPoints, attackAPCost);
+                stats.actionPoints = 0;
+                currentEnemyIndex++;
+                return;
+            }
+
             // ========================================================================
             // PLAY ENEMY ATTACK SOUND EFFECT
             // ========================================================================
@@ -211,8 +263,10 @@ namespace Framework {
                 audioSystem->PlaySound("dmgb", false);  // Play damage sound
             }
 
-            // ATTACK!
-            stats.actionPoints--;
+            LOG_INFO("EnemyAI", "Enemy %u ATTACKING Player %u", currentEnemy.GetID(), closestPlayer.GetID());
+
+            // ATTACK! Consume 2 AP (attack cost)
+            stats.actionPoints -= attackAPCost;
             ai.moveTimer = ai.moveDelay;
 
             // Deal damage to target
@@ -229,11 +283,30 @@ namespace Framework {
 
                 // Target hit
 
-                if (targetHp.currentHealth <= 0) {                                              
-                    targetHp.currentHealth = 0;                                                 
-                    targetHp.isDead = true;     
-                    GSM_SetNextState(LEVEL_END);
-                    LOG_ERROR("Combat", "TARGET DEFEATED!");
+                if (targetHp.currentHealth <= 0) {
+                    targetHp.currentHealth = 0;
+                    targetHp.isDead = true;
+                    LOG_ERROR("Combat", "Player %u DEFEATED!", ai.targetEntity.GetID());
+
+                    // Check if ALL players are dead before triggering game over
+                    bool allPlayersDead = true;
+                    for (Entity entity : entityManager->GetAllEntities()) {
+                        if (!entityManager->HasComponent<AP>(entity)) continue;
+                        if (!entityManager->HasComponent<CircleCollider>(entity)) continue;
+                        if (entityManager->HasComponent<EnemyAI>(entity)) continue;  // Skip enemies
+                        if (!entityManager->HasComponent<Health>(entity)) continue;
+
+                        auto& playerHp = entityManager->GetComponent<Health>(entity);
+                        if (playerHp.currentHealth > 0 && !playerHp.isDead) {
+                            allPlayersDead = false;
+                            break;
+                        }
+                    }
+
+                    if (allPlayersDead) {
+                        GSM_SetNextState(LEVEL_END);
+                        LOG_ERROR("Combat", "ALL PLAYERS DEFEATED - GAME OVER!");
+                    }
                 }
             }
 
@@ -351,12 +424,14 @@ namespace Framework {
     * @brief Gets all valid walkable neighboring tiles
     * @param coord Center coordinate to find neighbors of
     * @param grid Grid reference for bounds and walkability checking
+    * @param goal Goal coordinate (allowed even if occupied, as it's the destination)
     * @return Vector of walkable neighbor coordinates (up to 4)
     *
     * Checks tiles in 4 directions (up, down, left, right).
     * Only returns neighbors that are within bounds and walkable.
+    * The goal tile is allowed even if occupied (it's the target destination).
     */
-    std::vector<GridCoord> PathfindingSystem::GetNeighbors(const GridCoord& coord, const Grid& grid) {
+    std::vector<GridCoord> PathfindingSystem::GetNeighbors(const GridCoord& coord, const Grid& grid, const GridCoord& goal) {
         std::vector<GridCoord> neighbors;
         neighbors.reserve(4);
 
@@ -366,16 +441,12 @@ namespace Framework {
         for (int i = 0; i < 4; ++i) {
             GridCoord neighbor{ coord.x + dx[i], coord.y + dy[i] };
 
-            /*if (grid.InBounds(neighbor.x, neighbor.y) && IsWalkable(neighbor)) {
-                neighbors.push_back(neighbor);
-            }*/
-
             if (!grid.InBounds(neighbor.x, neighbor.y)) {
                 continue;
             }
 
-            // *** KEY FIX: Just check if tile is blocked, ignore occupancy ***
-            // We need to allow pathing to occupied tiles (like the player's position)
+            // CRITICAL FIX: Check BOTH blocked AND occupied status
+            // Enemies should NOT path onto tiles occupied by players or other entities
             Entity tileEntity = grid.TileAt(neighbor.x, neighbor.y);
             if (tileEntity.GetID() == INVALID_ENTITY) {
                 continue;
@@ -387,8 +458,12 @@ namespace Framework {
 
             const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
 
-            // Only check if physically blocked, NOT if occupied
-            if (!gridTile.blocked) {
+            // Check if this is the goal tile - allow it even if occupied
+            bool isGoal = (neighbor.x == goal.x && neighbor.y == goal.y);
+
+            // Check both physical blocking AND occupancy
+            // Allow the goal tile even if occupied (it's the target destination)
+            if (!gridTile.blocked && (gridTile.occupant.GetID() == INVALID_ENTITY || isGoal)) {
                 neighbors.push_back(neighbor);
             }
         }
@@ -491,7 +566,7 @@ namespace Framework {
                 return ReconstructPath(nodes, start, goal);
             }
 
-            for (const GridCoord& neighbor : GetNeighbors(current, grid)) {
+            for (const GridCoord& neighbor : GetNeighbors(current, grid, goal)) {
                 if (closedList[neighbor.y][neighbor.x]) continue;
 
                 int tentativeGCost = nodes[current.y][current.x].gCost + 1;

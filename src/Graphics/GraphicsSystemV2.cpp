@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
@@ -137,6 +137,7 @@ namespace Framework {
         text_.loadFont("Sans48", "assets/Font/Orbitron-VariableFont_wght.ttf", 48);
         text_.loadFont("Serif32", "assets/Font/Roboto-VariableFont_wdth,wght.ttf", 32);
         text_.loadFont("Serif32", "assets/Font/EBGaramond_Italic_VariableFont_wght.ttf", 48);
+        text_.loadFont("Playfair48", "assets/Font/PlayfairDisplay-Regular.otf", 48);
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
@@ -775,8 +776,8 @@ namespace Framework {
                 }
             }
 
-             //---------- SPRITE ----------
-             else if (hasSprite) {
+            //---------- SPRITE ----------
+            else if (hasSprite) {
                 auto& sp = entityManager->GetComponent<Sprite>(e);
 
                 cmd.mesh = quadMesh;
@@ -886,8 +887,13 @@ namespace Framework {
             // If still failed for some reason, skip this entity
             if (!mat)
                 continue;
-            mat->u0 = mat->v0;
-            mat->u1 = mat->v1 = 1.f;
+            // FIX: Reset UV to full-texture defaults before computing frame UVs.
+            // Previously was: mat->u0 = mat->v0; (BUG - copied stale v0 into u0)
+            // This caused garbage UV rects on early-exit paths during animation switches.
+            mat->u0 = 0.0f;
+            mat->v0 = 0.0f;
+            mat->u1 = 1.0f;
+            mat->v1 = 1.0f;
 
             // Ensure the material is bound to this sprite sheet
             mat->albedoTexture = anim.spriteSheet;
@@ -978,13 +984,24 @@ namespace Framework {
                 if (viewLoc != -1) glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
                 // 3. Bind Texture (CRITICAL FIX for switching between Wood and Button)
-                if (batchBase->texture.IsValid()) {
-                    glBindTextureUnit(0, batchBase->texture.GetID());
-                    glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                if (batchBase->texture.IsValid())
+                {
+                    Texture* tex = resourceManager.GetTexture(batchBase->texture);
+                    if (tex)
+                    {
+                        glBindTextureUnit(0, tex->GetID()); // <-- bind the REAL OpenGL texture ID
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 1);
+                    }
+                    else
+                    {
+                        glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
+                    }
                 }
-                else {
+                else
+                {
                     glUniform1i(glGetUniformLocation(shader->GetID(), "uUseTexture"), 0);
                 }
+
 
                 // 4. Draw
                 Mesh* mesh = resourceManager.GetMesh(batchBase->mesh);

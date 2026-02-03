@@ -206,6 +206,12 @@ function OnDraw()
     -- Render popup animations (damage numbers, status effects, etc.)
     PopupManager.Draw()
 
+    -- Render UI components (including scroll animation text)
+    UIManager.Draw()
+
+    -- DEBUG: Always draw test text (no conditions)
+    DrawText("Sans48", "SCROLL TEST", 400, 300, 1.0, 1.0, 1.0, 1.0)
+
     -- Show editor mode indicator
     if IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
