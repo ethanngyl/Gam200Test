@@ -2917,7 +2917,7 @@ namespace Framework {
             // 2. Hide the sprite visually
             if (em->HasComponent<MeshRenderer>(entity)) {
                 auto& meshRenderer = em->GetComponent<MeshRenderer>(entity);
-                meshRenderer.enabled = false;
+                meshRenderer.visible = false;
                 LOG_INFO("LevelLoader", "Disabled MeshRenderer for dead entity %u", entity.GetID());
             }
         }
