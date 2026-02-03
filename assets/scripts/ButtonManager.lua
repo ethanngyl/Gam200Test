@@ -2,7 +2,8 @@
 -- ButtonManager.lua
 -- Reusable button management system for menu levels
 -- ============================================================================
--- Author:        AI Assistant (Claude)
+-- Author:        Ethan Ng Yong Le 
+-- Email:         n.ethanyongle@digipen.edu
 -- Date:          2025-12-21
 --
 -- Purpose:

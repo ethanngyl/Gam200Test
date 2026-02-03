@@ -1,28 +1,34 @@
 /**
 ===============================================================================
- File:           FSMComponent.h
- Author:
- Date:           2025-01-26
- Contribution:   100%
+ File:          FSMComponent.h
+ Author:        Padilla Carl Jameson Z.
+ Email:         c.padilla@digipen.edu
+ Date:          2026-01-26
+ Contribution:  100%
  ------------------------------------------------------------------------------
 
  FINITE STATE MACHINE - ECS Component
 
- Design notes:
-   This component attaches a StateMachine to an entity, allowing entity
-   behavior to be controlled by states. Follows your ECS component pattern.
+ Brief:
+    Gives an entity a "brain" by attaching a State Machine.
+    Use this to manage specific behaviors (e.g., switching from Idle to Chase).
 
  Usage:
-   // Add FSM component to entity
-   Entity enemy = entityManager->CreateEntity();
-   entityManager->AddComponent<FSMComponent>(enemy);
+    1. Add FSM component to an entity
+        entityManager->AddComponent<FSMComponent>(entity);
 
-   // Get component and set up states
-   auto& fsm = entityManager->GetComponent<FSMComponent>(enemy);
-   fsm.stateMachine.AddState("Idle", std::make_unique<EnemyIdleState>());
-   fsm.stateMachine.AddState("Chase", std::make_unique<EnemyChaseState>());
-   fsm.stateMachine.Start("Idle");
+    2. Define states and start the machine
+        auto& fsm = entityManager->GetComponent<FSMComponent>(entity);
+        fsm.stateMachine.AddState("Idle", std::make_unique<EnemyIdleState>());
+        fsm.stateMachine.AddState("Chase", std::make_unique<EnemyChaseState>());
+    
+    fsm.stateMachine.Start("Idle");
 
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

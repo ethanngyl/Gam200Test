@@ -1,14 +1,15 @@
 /**
 ===============================================================================
  File:           StateMachine.h
- Author:
- Date:           2025-01-26
+ Author:         Padilla Carl Jameson Z.
+ Email:          c.padilla@digipen.edu
+ Date:           2026-01-26
  Contribution:   100%
  ------------------------------------------------------------------------------
 
  FINITE STATE MACHINE - StateMachine Class
 
- Design notes:
+ Brief notes:
    The StateMachine is the core controller that manages states and transitions.
    It maintains the current active state and delegates Update() calls to it.
    States can request transitions via GetStateMachine()->ChangeState().
@@ -25,6 +26,10 @@
    // To change state (from anywhere):
    fsm.ChangeState("Walk");
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

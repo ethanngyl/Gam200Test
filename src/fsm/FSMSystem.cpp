@@ -1,17 +1,22 @@
 /**
 ===============================================================================
- File:           FSMSystem.cpp
- Author:
- Date:           2025-01-26
- Contribution:   100%
+ File:          FSMSystem.cpp
+ Author:        Padilla Carl Jameson Z.
+ Email:         c.padilla@digipen.edu
+ Date:          2026-01-26
+ Contribution:  100%
  ------------------------------------------------------------------------------
 
  FINITE STATE MACHINE - Engine System Implementation
 
- Design notes:
+ Brief notes:
    Updates all entities with FSMComponent each frame.
    Follows your engine's system implementation pattern.
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

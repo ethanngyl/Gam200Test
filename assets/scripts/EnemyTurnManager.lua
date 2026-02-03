@@ -1,33 +1,29 @@
-print("============================================================")
-print("========== EnemyTurnManager.lua LOADING START ==========")
-print("============================================================")
+-- ===============================================================================
+-- File:          EnemyTurnManager.lua
+-- Author:        Ethan Ng Yong Le 
+-- Email:         n.ethanyongle@digipen.edu
+-- Date:          2026-02-01
+-- ------------------------------------------------------------------------------
+-- Enemy Turn Manager
 
---[[
-===============================================================================
- File:           EnemyTurnManager.lua
- Author:         Auto-generated for sequential enemy turn system
- Date:           2026-02-01
- ------------------------------------------------------------------------------
- Enemy Turn Manager
+-- Purpose:
+--    Manages sequential enemy turns so enemies act one at a time instead of
+--    all simultaneously. This allows for:
+--    - Camera panning to each enemy as they act
+--    - Visual feedback of each enemy's movement
+--    - Better game flow and readability
 
- Purpose:
-    Manages sequential enemy turns so enemies act one at a time instead of
-    all simultaneously. This allows for:
-    - Camera panning to each enemy as they act
-    - Visual feedback of each enemy's movement
-    - Better game flow and readability
+-- Turn Flow:
+--    Enemy 1 -> Enemy 2 -> Enemy 3 -> ... -> Back to Player
 
- Turn Flow:
-    Enemy 1 -> Enemy 2 -> Enemy 3 -> ... -> Back to Player
+-- Features:
+--    - Sequential enemy turns (one at a time)
+--    - Camera panning to active enemy
+--    - Delay between enemy actions for visibility
+--    - Tracks which enemy is currently acting
 
- Features:
-    - Sequential enemy turns (one at a time)
-    - Camera panning to active enemy
-    - Delay between enemy actions for visibility
-    - Tracks which enemy is currently acting
+--===============================================================================
 
-===============================================================================
-]]--
 
 -- ============================================================================
 -- ENEMY TURN STATE

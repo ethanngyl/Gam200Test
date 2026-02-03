@@ -1,7 +1,10 @@
 /**
 ===============================================================================
  File:           PopUp.h
- Date:           2025-01-26
+ Author:         Padilla Carl Jameson Z.
+ Email:          c.padilla@digipen.edu
+ Date:           2026-01-26
+ Contribution:   100%
  ------------------------------------------------------------------------------
 
  IN-GAME POPUP SYSTEM
@@ -16,7 +19,7 @@
  Edit those values to change the defaults without touching any logic.
 
  ============================================================================
- API USAGE:
+ USAGE:
  ============================================================================
 
  Visibility:
@@ -47,15 +50,19 @@
      PopUp::SetPadding(padding);
 
  Toggle Key:
-     PopUp::SetToggleKey(KEY_F3);
+     Press F3 (Just used for testing)
 
  ============================================================================
- ADDING CONTENT:
+ HOW TO ADD CONTENT:
  ============================================================================
 
  In PopUp.cpp, find "ADD YOUR CONTENT HERE" section.
  Use ImGui functions there.
 
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
 */
 

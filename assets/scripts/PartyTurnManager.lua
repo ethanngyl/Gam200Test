@@ -133,6 +133,7 @@ function InitializeParty(entityIDs)
     for i = 1, 3 do
         print("[InitializeParty]   Refilling AP for character " .. i .. " (Entity " .. PartyMembers[i].entityID .. ")...")
         RefillEntityAP(PartyMembers[i].entityID)
+        RefillEntityAttackAP(PartyMembers[i].entityID)
         print("[InitializeParty]   Done")
     end
     print("[InitializeParty] Step 5: DONE")
@@ -342,11 +343,24 @@ function NextCharacterTurn()
 
     -- Refill AP for the new active character
     RefillEntityAP(newActiveEntity)
+    RefillEntityAttackAP(newActiveEntity)
     local currentAP, maxAP = GetEntityAP(newActiveEntity)
-    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d",
+    local currentAttackAP, maxAttackAP = GetEntityAttackAP(newActiveEntity)
+    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d, AttackAP refilled to %d/%d",
         PartyMembers[ActiveCharacterIndex].name,
         currentAP,
-        maxAP))
+        maxAP,
+        currentAttackAP,
+        maxAttackAP))
+
+    -- Restore attack AP crystal visuals
+    if UIManager and UIManager.GetComponent then
+        local attackAPIndicator = UIManager.GetComponent("attackAP")
+        if attackAPIndicator and attackAPIndicator.RestoreAllAP then
+            attackAPIndicator:RestoreAllAP()
+            print("[PartyTurnManager] Restored all attack AP crystals")
+        end
+    end
 
     -- Start turn transition cooldown to prevent input carry-over
     TurnTransitionCooldown = TurnTransitionCooldownTime
@@ -469,6 +483,7 @@ function ResetPartyTurn()
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
         RefillEntityAP(PartyMembers[i].entityID)
+        RefillEntityAttackAP(PartyMembers[i].entityID)
     end
 
     -- Skip dead characters when resetting turn
@@ -497,6 +512,15 @@ function ResetPartyTurn()
 
     -- Notify C++ about active character reset (now guaranteed to be alive)
     SetActiveCharacter(PartyMembers[ActiveCharacterIndex].entityID)
+
+    -- Restore attack AP crystal visuals for the active character
+    if UIManager and UIManager.GetComponent then
+        local attackAPIndicator = UIManager.GetComponent("attackAP")
+        if attackAPIndicator and attackAPIndicator.RestoreAllAP then
+            attackAPIndicator:RestoreAllAP()
+            Log("[PartyTurnManager] Restored all attack AP crystals for " .. PartyMembers[ActiveCharacterIndex].name)
+        end
+    end
 
     Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[ActiveCharacterIndex].name)
 

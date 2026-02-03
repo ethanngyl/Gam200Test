@@ -1,35 +1,38 @@
 /**
 ===============================================================================
- File:           FSMSystem.h
- Author:
- Date:           2025-01-26
- Contribution:   100%
+ File:          FSMSystem.h
+ Author:        Padilla Carl Jameson Z.
+ Email:         c.padilla@digipen.edu
+ Date:          2026-01-26
+ Contribution:  100%
  ------------------------------------------------------------------------------
 
  FINITE STATE MACHINE - Engine System
 
- Design notes:
-   FSMSystem is an EngineSystem that updates all entities with FSMComponent.
-   Follows your engine's system pattern (like SkillSystem, MovementSystem).
+ Brief:
+    System that manages the logic updates for all FSMComponents.
+    It iterates through entities and ticks their active states every frame.
 
- Integration:
-   1. Add to Core.h:
-      - Forward declare: class FSMSystem;
-      - Member: FSMSystem* fsmSystem;
-      - Getter: FSMSystem* GetFSMSystem() const { return fsmSystem; }
+ Integration Guide:
+    To enable this system, add the following to Core/Engine:
 
-   2. Add to Core.cpp CreateAllSystems():
-      fsmSystem = new FSMSystem();
+    1. Core.h
+       class FSMSystem;                 (Forward declare)
+       FSMSystem* fsmSystem;            (Member variable)
 
-   3. Add to Core.cpp WireSystemDependencies():
-      fsmSystem->SetEntityManager(entityManager);
+    2. Core.cpp (Initialize)
+       fsmSystem = new FSMSystem();
+       fsmSystem->SetEntityManager(entityManager);
+       AddSystem(fsmSystem);
 
-   4. Add to Core.cpp AddSystemsToEngine():
-      AddSystem(fsmSystem);
+    3. Core.cpp (Cleanup)
+       delete fsmSystem;
 
-   5. Add to Core.cpp Cleanup():
-      delete fsmSystem;
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

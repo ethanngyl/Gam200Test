@@ -2876,6 +2876,36 @@ namespace Framework {
     }
 
     /**
+     * @brief Refill entity's Attack AP to maximum
+     * @param entityID The entity ID
+     *
+     * Usage: RefillEntityAttackAP(entityID)
+     */
+    int LevelLoader::Lua_RefillEntityAttackAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "RefillEntityAttackAP: No EntityManager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "RefillEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            return 0;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        int oldAP = attackAP.points;
+        attackAP.points = attackAP.maxPoints;
+        LOG_INFO("LevelLoader", "RefillEntityAttackAP: Entity %d AttackAP refilled %d -> %d",
+                 entityID, oldAP, attackAP.points);
+
+        return 0;
+    }
+
+    /**
      * @brief Consume entity's AP - legacy name
      * @param entityID The entity ID
      * @param amount Amount of AP to consume
@@ -3833,6 +3863,153 @@ namespace Framework {
         // Return the result in the entity's Lua state
         lua_pushboolean(L, inTransition);
         return 1;
+    }
+
+    /**
+     * @brief Trigger attack AP crystal consume animation
+     *
+     * Usage: TriggerAttackAPAnimation()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to trigger the attack AP crystal shatter animation in UIManager
+     * (which runs in the LevelLoader's Lua state).
+     */
+    int LevelLoader::Lua_TriggerAttackAPAnimation(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            return 0;
+        }
+
+        // Get the LevelLoader's Lua state (where UIManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            return 0;
+        }
+
+        // Get UIManager table
+        lua_getglobal(levelL, "UIManager");
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        // Get UIManager.GetComponent function
+        lua_getfield(levelL, -1, "GetComponent");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop function and UIManager table
+            return 0;
+        }
+
+        // Push "attackAP" as the argument
+        lua_pushstring(levelL, "attackAP");
+
+        // Call UIManager.GetComponent("attackAP") -> 1 argument, 1 return value
+        int result = lua_pcall(levelL, 1, 1, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 2);  // Pop error and UIManager table
+            return 0;
+        }
+
+        // Now we have the attackAP component on the stack
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop component and UIManager table
+            return 0;
+        }
+
+        // Get the ConsumeOneAP method from the component
+        lua_getfield(levelL, -1, "ConsumeOneAP");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 3);  // Pop function, component, and UIManager table
+            return 0;
+        }
+
+        // Push the component table as 'self' for the method call
+        lua_pushvalue(levelL, -2);  // Duplicate the component table
+
+        // Call attackAPComponent:ConsumeOneAP() -> 1 argument (self), 0 return values
+        result = lua_pcall(levelL, 1, 0, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 3);  // Pop error, component, and UIManager table
+            return 0;
+        }
+
+        // Clean up the stack
+        lua_pop(levelL, 2);  // Pop component and UIManager table
+
+        return 0;
+    }
+
+    /**
+     * @brief Restore all attack AP crystals (visual only)
+     *
+     * Usage: RestoreAllAttackAPCrystals()
+     *
+     * This is a bridge function that allows entity scripts to restore all attack AP
+     * crystal visuals when AP is refilled.
+     */
+    int LevelLoader::Lua_RestoreAllAttackAPCrystals(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            return 0;
+        }
+
+        // Get the LevelLoader's Lua state (where UIManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            return 0;
+        }
+
+        // Get UIManager table
+        lua_getglobal(levelL, "UIManager");
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        // Get UIManager.GetComponent function
+        lua_getfield(levelL, -1, "GetComponent");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop function and UIManager table
+            return 0;
+        }
+
+        // Push "attackAP" as the argument
+        lua_pushstring(levelL, "attackAP");
+
+        // Call UIManager.GetComponent("attackAP") -> 1 argument, 1 return value
+        int result = lua_pcall(levelL, 1, 1, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 2);  // Pop error and UIManager table
+            return 0;
+        }
+
+        // Now we have the attackAP component on the stack
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop component and UIManager table
+            return 0;
+        }
+
+        // Get the RestoreAllAP method from the component
+        lua_getfield(levelL, -1, "RestoreAllAP");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 3);  // Pop function, component, and UIManager table
+            return 0;
+        }
+
+        // Push the component table as 'self' for the method call
+        lua_pushvalue(levelL, -2);  // Duplicate the component table
+
+        // Call attackAPComponent:RestoreAllAP() -> 1 argument (self), 0 return values
+        result = lua_pcall(levelL, 1, 0, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 3);  // Pop error, component, and UIManager table
+            return 0;
+        }
+
+        // Clean up the stack
+        lua_pop(levelL, 2);  // Pop component and UIManager table
+
+        return 0;
     }
 
     // ========================================================================
