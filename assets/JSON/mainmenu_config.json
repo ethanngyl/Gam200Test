@@ -111,7 +111,7 @@
         "layer": 2,
         "text": {
           "content": "PLAY",
-          "font": "Playfair48",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -70.0,
             "y": -16.0
@@ -139,8 +139,8 @@
         },
         "layer": 2,
         "text": {
-          "content": "Quit Game",
-          "font": "Playfair48",
+          "content": "QUIT GAME",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -120.0,
             "y": -16.0

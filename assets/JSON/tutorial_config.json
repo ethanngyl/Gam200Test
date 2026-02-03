@@ -57,8 +57,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "Next",
-          "font": "Playfair48",
+          "content": "NEXT",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -115.0,
             "y": -16.0
@@ -71,34 +71,6 @@
           }
         },
         "callback": "OnNextButtonClicked"
-      },
-      {
-        "id": "label_chestLabel",
-        "texture": "assets/Menu/Chest_1.png",
-        "position": {
-          "x": 0.64,
-          "y": 0.5
-        },
-        "scale": {
-          "x": 0.25,
-          "y": 0.25
-        },
-        "layer": 10,
-        "text": {
-          "content": "Chest",
-          "font": "Playfair48",
-          "offset": {
-            "x": -70,
-            "y": 50
-          },
-          "scale": 0.5,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
       },
       {
         "id": "label_goalLabel",
@@ -114,7 +86,7 @@
         "layer": 10,
         "text": {
           "content": "Main Objective",
-          "font": "Playfair48",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -150,
             "y": 50
@@ -142,7 +114,7 @@
         "layer": 10,
         "text": {
           "content": "Enemy",
-          "font": "Playfair48",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -100,
             "y": 70
@@ -169,8 +141,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "Objective:",
-          "font": "Playfair48",
+          "content": "OBJECTIVE:",
+          "font": "Jersey20Regular",
           "offset": {
             "x": 0.0,
             "y": 70
@@ -197,8 +169,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "Collect the items in all 3 chests",
-          "font": "Playfair48",
+          "content": "Reach the end goal while fighting",
+          "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
             "y": 70
@@ -225,8 +197,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "and reach the main objective to",
-          "font": "Playfair48",
+          "content": "off or defeating enemies to",
+          "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
             "y": 110
@@ -253,8 +225,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "win the game",
-          "font": "Playfair48",
+          "content": "win the game.",
+          "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
             "y": 150
@@ -281,8 +253,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "There will be enemies who will be",
-          "font": "Playfair48",
+          "content": "",
+          "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
             "y": 100
@@ -309,8 +281,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "patrolling that will stand in your",
-          "font": "Playfair48",
+          "content": "",
+          "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
             "y": 140
@@ -337,8 +309,8 @@
         },
         "layer": 10,
         "text": {
-          "content": "way",
-          "font": "Playfair48",
+          "content": "",
+          "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
             "y": 180
