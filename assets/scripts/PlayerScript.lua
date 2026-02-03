@@ -105,7 +105,14 @@ function OnUpdate(dt)
 
     local currentHP, maxHP = GetEntityHP(entityID)
     if not currentHP or currentHP <= 0 then
-        -- Entity is dead - stop all processing
+        -- Entity is dead - check if it's the active player
+        local isActive = IsActiveCharacter(entityID)
+        if isActive then
+            -- Active player died - automatically advance turn to prevent softlock
+            print("[PlayerScript] Active player " .. entityID .. " is dead - auto-advancing turn")
+            NextCharacterTurn()  -- Call global function to advance turn
+        end
+        -- Stop all processing
         return
     end
 

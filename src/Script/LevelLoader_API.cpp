@@ -32,6 +32,7 @@
 #include "ImguiSystem.h"
 #include "TileMapLoader.h"
 #include "Component.h"    // Movement, CircleCollider, AP components
+#include "Graphics/RenderComponents.h"  // Renderable component
 #include "Pathfinding.h"  // EnemyAI component
 #include "Turn.h"         // Turn system
 #include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
@@ -2898,9 +2899,15 @@ namespace Framework {
 
         auto& health = em->GetComponent<Health>(entity);
         health.currentHealth -= amount;
+
+        LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
+            entity.GetID(), amount, health.currentHealth + amount, health.currentHealth);
+
         if (health.currentHealth <= 0) {
             health.currentHealth = 0;
             health.isDead = true;
+
+            LOG_WARN("LevelLoader", "!!! Entity %u DIED - Beginning cleanup !!!", entity.GetID());
 
             // Clear tile occupancy before destroying entity
             if (em->HasComponent<Transform>(entity)) {
@@ -2908,14 +2915,23 @@ namespace Framework {
                 auto tileOpt = Framework::WorldToTile(transform.position);
                 if (tileOpt.has_value()) {
                     Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                    LOG_INFO("LevelLoader", "Cleared tile occupancy for dead entity %u at (%d, %d)",
-                        entity.GetID(), tileOpt.value().x, tileOpt.value().y);
+                    LOG_INFO("LevelLoader", "  -> Cleared tile occupancy at (%d, %d)",
+                        tileOpt.value().x, tileOpt.value().y);
                 }
             }
 
+            // Log what components this entity has before destruction
+            LOG_INFO("LevelLoader", "  -> Entity components before destruction:");
+            if (em->HasComponent<Transform>(entity)) LOG_INFO("LevelLoader", "     - Transform");
+            if (em->HasComponent<Renderable>(entity)) LOG_INFO("LevelLoader", "     - Renderable");
+            if (em->HasComponent<AP>(entity)) LOG_INFO("LevelLoader", "     - AP");
+            if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
+
             // Delete the entity completely
-            LOG_INFO("LevelLoader", "Destroying dead entity %u", entity.GetID());
+            LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
             em->DestroyEntity(entity);
+            LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
+            LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
         }
 
         lua_pushboolean(L, 1);  // Return true - damage successful
