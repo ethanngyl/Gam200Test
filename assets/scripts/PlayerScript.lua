@@ -64,6 +64,9 @@ local attackPreviewTiles = {}   -- List of preview tile entity IDs
 local attackRange = 1           -- Attack range in tiles (Manhattan distance)
 local attackAPCost = 1          -- AP cost to attack
 
+-- Death state tracking
+local hasAdvancedTurnOnDeath = false  -- Prevent infinite turn advance loop
+
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
@@ -107,14 +110,19 @@ function OnUpdate(dt)
     if not currentHP or currentHP <= 0 then
         -- Entity is dead - check if it's the active player
         local isActive = IsActiveCharacter(entityID)
-        if isActive then
-            -- Active player died - automatically advance turn to prevent softlock
-            print("[PlayerScript] Active player " .. entityID .. " is dead - auto-advancing turn")
+        if isActive and not hasAdvancedTurnOnDeath then
+            -- Active player died - automatically advance turn to prevent softlock (ONCE only)
+            print("[PlayerScript] !!! DEAD ACTIVE PLAYER " .. entityID .. " - AUTO-ADVANCING TURN (ONCE) !!!")
+            hasAdvancedTurnOnDeath = true  -- Prevent infinite loop
             NextCharacterTurn()  -- Call global function to advance turn
+            print("[PlayerScript] !!! Turn advanced - hasAdvancedTurnOnDeath = true !!!")
         end
         -- Stop all processing
         return
     end
+
+    -- Reset death flag when alive (for resurrection or turn switch)
+    hasAdvancedTurnOnDeath = false
 
     -- ========================================================================
     -- PARTY SYSTEM: INPUT ROUTING
