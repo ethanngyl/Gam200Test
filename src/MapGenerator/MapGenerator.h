@@ -122,6 +122,10 @@ namespace Framework {
             bool placeEntities(GeneratedMap& map, const Config& config);
             void makeBordersWalls(GeneratedMap& map);
 
+			//reachability
+			bool isReachable(const GeneratedMap& map, const Position& start, const Position& goal) const;
+            std::vector<Position> getReachableTiles(const GeneratedMap& map, const Position& from) const;
+
             // Constraints
             int manhattanDistance(const Position& a, const Position& b) const;
             bool isTooClose(const Position& a, const Position& b, int minDistance) const;
