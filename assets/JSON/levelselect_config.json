@@ -99,7 +99,7 @@
         "layer": 10,
         "text": {
           "content": "Level Editor",
-          "font": "Playfair48",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -150.0,
             "y": -16.0
@@ -127,7 +127,7 @@
         "layer": 10,
         "text": {
           "content": "DEMO",
-          "font": "Playfair48",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -80.0,
             "y": -16.0
@@ -155,7 +155,7 @@
         "layer": 10,
         "text": {
           "content": "BACK",
-          "font": "Playfair48",
+          "font": "Jersey20Regular",
           "offset": {
             "x": -80.0,
             "y": -16.0

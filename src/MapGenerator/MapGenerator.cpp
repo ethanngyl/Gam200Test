@@ -328,6 +328,104 @@ namespace Framework {
             return totalTiles > 0 && walkableCount >= totalTiles / 2;
         }
 
+
+        /**
+         * @brief Check if a position is reachable from another using flood fill
+         * @param map The generated map
+         * @param from Starting position
+         * @param to Target position
+         * @return true if 'to' is reachable from 'from'
+         */
+        bool Generator::isReachable(const GeneratedMap& map, const Position& from, const Position& to) const {
+            if (map.getTile(from.x, from.y) != TileType::FLOOR) return false;
+            if (map.getTile(to.x, to.y) != TileType::FLOOR) return false;
+
+            // Quick check: if same position
+            if (from == to) return true;
+
+            // BFS flood fill
+            std::vector<std::vector<bool>> visited(map.height, std::vector<bool>(map.width, false));
+            std::queue<Position> queue;
+
+            queue.push(from);
+            visited[from.y][from.x] = true;
+
+            const int dx[] = { 0, 0, 1, -1 };
+            const int dy[] = { 1, -1, 0, 0 };
+
+            while (!queue.empty()) {
+                Position current = queue.front();
+                queue.pop();
+
+                // Found target!
+                if (current == to) {
+                    return true;
+                }
+
+                // Check all 4 neighbors
+                for (int i = 0; i < 4; i++) {
+                    int nx = current.x + dx[i];
+                    int ny = current.y + dy[i];
+
+                    if (map.isValid(nx, ny) &&
+                        !visited[ny][nx] &&
+                        map.getTile(nx, ny) == TileType::FLOOR) {
+
+                        visited[ny][nx] = true;
+                        queue.push(Position(nx, ny));
+                    }
+                }
+            }
+
+            // Could not reach target
+            return false;
+        }
+
+        /**
+         * @brief Get all tiles reachable from a position
+         * @param map The generated map
+         * @param from Starting position
+         * @return Vector of all reachable floor positions
+         */
+        std::vector<Position> Generator::getReachableTiles(const GeneratedMap& map, const Position& from) const {
+            std::vector<Position> reachable;
+
+            if (map.getTile(from.x, from.y) != TileType::FLOOR) {
+                return reachable;
+            }
+
+            std::vector<std::vector<bool>> visited(map.height, std::vector<bool>(map.width, false));
+            std::queue<Position> queue;
+
+            queue.push(from);
+            visited[from.y][from.x] = true;
+            reachable.push_back(from);
+
+            const int dx[] = { 0, 0, 1, -1 };
+            const int dy[] = { 1, -1, 0, 0 };
+
+            while (!queue.empty()) {
+                Position current = queue.front();
+                queue.pop();
+
+                for (int i = 0; i < 4; i++) {
+                    int nx = current.x + dx[i];
+                    int ny = current.y + dy[i];
+
+                    if (map.isValid(nx, ny) &&
+                        !visited[ny][nx] &&
+                        map.getTile(nx, ny) == TileType::FLOOR) {
+
+                        visited[ny][nx] = true;
+                        queue.push(Position(nx, ny));
+                        reachable.push_back(Position(nx, ny));
+                    }
+                }
+            }
+
+            return reachable;
+        }
+
         // ============================================================================
         // ENTITY PLACEMENT - Validation Functions
         // ============================================================================
@@ -389,6 +487,9 @@ namespace Framework {
                 }
             }
 
+            // Must be reachable from player
+            if (!isReachable(map, playerPos, pos)) return false;
+
             return true;
         }
 
@@ -426,6 +527,9 @@ namespace Framework {
                     return false;
                 }
             }
+
+            // CRITICAL: Must be reachable from player
+            if (!isReachable(map, playerPos, pos)) return false;
 
             return true;
         }
@@ -534,13 +638,25 @@ namespace Framework {
             }
 
             // ========================================
-            // PLACE GOAL (Pick farthest valid position)
+            // PLACE GOAL (farthest REACHABLE position)
             // ========================================
+            std::cout << "[MapGen] Placing goal (far from player, must be reachable):\n";
+
             bool goalPlaced = false;
 
-            // Sort walkable tiles by distance from player (farthest first)
+            // Get all tiles reachable from player spawn
+            std::vector<Position> reachable = getReachableTiles(map, map.playerSpawn);
+            std::cout << "[MapGen]   Reachable tiles from player: " << reachable.size() << "\n";
+
+            if (reachable.empty()) {
+                std::cout << "[MapGen] ERROR: No reachable tiles from player!\n";
+                map.goalSpawn = map.playerSpawn;
+                return false;
+            }
+
+            // Sort reachable tiles by distance from player (farthest first)
             std::vector<std::pair<int, Position>> candidateGoals;
-            for (const auto& pos : walkable) {
+            for (const auto& pos : reachable) {
                 int dist = manhattanDistance(map.playerSpawn, pos);
                 candidateGoals.push_back({ dist, pos });
             }
@@ -548,19 +664,62 @@ namespace Framework {
             std::sort(candidateGoals.begin(), candidateGoals.end(),
                 [](const auto& a, const auto& b) { return a.first > b.first; });
 
-            std::cout << "[MapGen] Placing goal (far from player):\n";
-
+            // Try to find a valid goal position
             for (const auto& [dist, candidate] : candidateGoals) {
-                if (isValidGoalSpawn(map, candidate, map.playerSpawn, config)) {
+                // Skip player spawn position
+                if (candidate == map.playerSpawn) continue;
+
+                // Skip positions too close (if configured)
+                if (config.ensureGoalIsFar && dist < config.minPlayerGoalDistance) {
+                    continue;
+                }
+
+                // Skip enemy positions
+                bool isEnemyPos = false;
+                for (const auto& enemy : map.enemySpawns) {
+                    if (enemy == candidate) {
+                        isEnemyPos = true;
+                        break;
+                    }
+                }
+                if (isEnemyPos) continue;
+
+                // Skip chest positions
+                bool isChestPos = false;
+                for (const auto& chest : map.chestSpawns) {
+                    if (chest == candidate) {
+                        isChestPos = true;
+                        break;
+                    }
+                }
+                if (isChestPos) continue;
+
+                // Valid goal position found!
+                map.goalSpawn = candidate;
+                goalPlaced = true;
+                std::cout << "[MapGen]   Goal placed at: (" << candidate.x << ", " << candidate.y
+                    << ") [distance: " << dist << "]\n";
+                break;
+            }
+
+            // Fallback: if no position meets distance requirement, use farthest reachable tile
+            if (!goalPlaced && !candidateGoals.empty()) {
+                std::cout << "[MapGen]   WARNING: No position meets distance requirement, using farthest reachable\n";
+
+                for (const auto& [dist, candidate] : candidateGoals) {
+                    if (candidate == map.playerSpawn) continue;
+
                     map.goalSpawn = candidate;
                     goalPlaced = true;
-                    std::cout << "[MapGen] Goal: (" << candidate.x << ", " << candidate.y << ") [distance: " << dist << "]\n";
+                    std::cout << "[MapGen]   Goal placed at: (" << candidate.x << ", " << candidate.y
+                        << ") [distance: " << dist << "] (fallback)\n";
                     break;
                 }
             }
 
             if (!goalPlaced) {
-                std::cout << "[MapGen] WARNING: Failed to place goal!\n";
+                std::cout << "[MapGen] CRITICAL: Failed to place goal! Using player spawn as fallback.\n";
+                map.goalSpawn = map.playerSpawn;
             }
 
             std::cout << "[MapGen] Entity placement complete!\n";

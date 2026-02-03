@@ -454,6 +454,8 @@ namespace Framework {
         lua_register(L, "StopAllSounds", Lua_StopAllSounds);
         lua_register(L, "UpdateAudio", Lua_UpdateAudio);
         lua_register(L, "SetMasterVolume", Lua_SetMasterVolume);
+        lua_register(L, "GetMasterVolume", Lua_GetMasterVolume);
+        lua_register(L, "SaveMasterVolume", Lua_SaveMasterVolume);
 
         // UI Buttons
         lua_register(L, "CreateButton", Lua_CreateButton);

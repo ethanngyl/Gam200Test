@@ -26,12 +26,14 @@
 #include "LevelLoader.h"
 #include "UISystem.h"
 #include "Audio/AudioSystem.h"
+#include "Audio/AudioLoader.h"
 #include "GraphicsSystemV2.h"
 #include "Input.h"
 #include "LevelLoader_JSON.h"
 #include "ImguiSystem.h"
 #include "TileMapLoader.h"
 #include "Component.h"    // Movement, CircleCollider, AP components
+#include "Graphics/RenderComponents.h"  // Renderable component
 #include "Pathfinding.h"  // EnemyAI component
 #include "Turn.h"         // Turn system
 #include "Pause/GlobalPauseManager.h"  // GlobalPause namespace
@@ -146,6 +148,28 @@ namespace Framework {
         float volume = luaL_checknumber(L, 1);
         loader->audioSystem->SetMasterVolume(volume);
         return 0;
+    }
+
+    /**
+     * @brief Gets the saved master volume from audio config
+     * @return number - The saved master volume (0.0 to 1.0)
+     */
+    int LevelLoader::Lua_GetMasterVolume(lua_State* L) {
+        float volume = AudioLoader::GetSettings().masterVolume;
+        lua_pushnumber(L, volume);
+        return 1;
+    }
+
+    /**
+     * @brief Saves the master volume to audio config JSON file
+     * @params volume (number) - 0.0 to 1.0
+     * @return boolean - True if save succeeded
+     */
+    int LevelLoader::Lua_SaveMasterVolume(lua_State* L) {
+        float volume = luaL_checknumber(L, 1);
+        bool success = AudioLoader::SetMasterVolume(volume);
+        lua_pushboolean(L, success);
+        return 1;
     }
 
     // ========================================================================
@@ -1711,6 +1735,27 @@ namespace Framework {
 
         LOG_INFO("LevelLoader", "SetEntityHP: Entity %d HP set to %d/%d (dead=%d)",
                  entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
+
+        // If entity died, destroy it
+        if (hp.isDead) {
+            LOG_WARN("LevelLoader", "SetEntityHP: Entity %d died - beginning cleanup", entityID);
+
+            // Clear tile occupancy
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                    LOG_INFO("LevelLoader", "  -> Cleared tile occupancy at (%d, %d)",
+                        tileOpt.value().x, tileOpt.value().y);
+                }
+            }
+
+            // Destroy entity
+            LOG_WARN("LevelLoader", "  -> Destroying entity %d", entityID);
+            em->DestroyEntity(entity);
+        }
+
         return 0;
     }
 
@@ -2898,19 +2943,24 @@ namespace Framework {
 
         auto& health = em->GetComponent<Health>(entity);
         health.currentHealth -= amount;
+
+        LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
+            entity.GetID(), amount, health.currentHealth + amount, health.currentHealth);
+
         if (health.currentHealth <= 0) {
             health.currentHealth = 0;
             health.isDead = true;
 
-            // Clear dead entity from the map
-            // 1. Remove from tile occupancy
+            LOG_WARN("LevelLoader", "!!! Entity %u DIED - Beginning cleanup !!!", entity.GetID());
+
+            // Clear tile occupancy before destroying entity
             if (em->HasComponent<Transform>(entity)) {
                 auto& transform = em->GetComponent<Transform>(entity);
                 auto tileOpt = Framework::WorldToTile(transform.position);
                 if (tileOpt.has_value()) {
                     Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                    LOG_INFO("LevelLoader", "Cleared tile occupancy for dead entity %u at (%d, %d)",
-                        entity.GetID(), tileOpt.value().x, tileOpt.value().y);
+                    LOG_INFO("LevelLoader", "  -> Cleared tile occupancy at (%d, %d)",
+                        tileOpt.value().x, tileOpt.value().y);
                 }
             }
 
@@ -2920,6 +2970,18 @@ namespace Framework {
                 meshRenderer.visible = false;
                 LOG_INFO("LevelLoader", "Disabled MeshRenderer for dead entity %u", entity.GetID());
             }
+            // Log what components this entity has before destruction
+            LOG_INFO("LevelLoader", "  -> Entity components before destruction:");
+            if (em->HasComponent<Transform>(entity)) LOG_INFO("LevelLoader", "     - Transform");
+            if (em->HasComponent<Renderable>(entity)) LOG_INFO("LevelLoader", "     - Renderable");
+            if (em->HasComponent<AP>(entity)) LOG_INFO("LevelLoader", "     - AP");
+            if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
+
+            // Delete the entity completely
+            LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
+            em->DestroyEntity(entity);
+            LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
+            LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
         }
 
         lua_pushboolean(L, 1);  // Return true - damage successful

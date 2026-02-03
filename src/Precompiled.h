@@ -126,6 +126,12 @@
 //Skills
 #include "Skills/SkillComponent.h"
 #include "Skills/SkillSystem.h"
+#include "Skills/PopUp.h"
+
+//#include "fsm/Istate.h"
+//#include "fsm/StateMachine.h"
+//#include "fsm/FSMComponent.h"
+//#include "fsm/FSMSystem.h"
 
 // Windows-specific headers (for timing and input)
 #ifdef _WIN32

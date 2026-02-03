@@ -237,6 +237,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
                 fpDraw();  // level1_Draw() - draws UI + pause menu if paused
             }
 
+            Framework::PopUp::Render();
+
             // ===============================================================================
             // END FRAME
             // ===============================================================================

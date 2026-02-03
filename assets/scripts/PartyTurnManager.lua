@@ -465,16 +465,40 @@ function ResetPartyTurn()
     ActiveCharacterIndex = 1
     PartyTurnComplete = false
 
-    -- Notify C++ about active character reset
-    SetActiveCharacter(PartyMembers[1].entityID)
-
     -- Reset hasActed flags and refill AP for all party members
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
         RefillEntityAP(PartyMembers[i].entityID)
     end
 
-    Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[1].name)
+    -- Skip dead characters when resetting turn
+    while ActiveCharacterIndex <= #PartyMembers do
+        local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
+        local currentHP, maxHP = GetEntityHP(checkEntity)
+
+        if currentHP and currentHP > 0 then
+            -- This character is alive, use them
+            break
+        else
+            -- This character is dead, skip to next
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s is DEAD (HP: %s), skipping...",
+                PartyMembers[ActiveCharacterIndex].name, tostring(currentHP)))
+            PartyMembers[ActiveCharacterIndex].hasActed = true  -- Mark as acted
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+        end
+    end
+
+    -- Check if all characters are dead
+    if ActiveCharacterIndex > #PartyMembers then
+        Log("[PartyTurnManager] ERROR: All party members are dead in ResetPartyTurn!")
+        PartyTurnComplete = true
+        return
+    end
+
+    -- Notify C++ about active character reset (now guaranteed to be alive)
+    SetActiveCharacter(PartyMembers[ActiveCharacterIndex].entityID)
+
+    Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[ActiveCharacterIndex].name)
 
     -- Log AP status for all characters
     for i = 1, #PartyMembers do
@@ -485,9 +509,9 @@ function ResetPartyTurn()
             maxAP))
     end
 
-    -- Optional: Trigger camera switch to first character
-    if #PartyMembers > 0 then
-        OnCharacterSwitched(PartyMembers[1].entityID)
+    -- Optional: Trigger camera switch to active character (guaranteed to be alive)
+    if ActiveCharacterIndex <= #PartyMembers then
+        OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
     end
 end
 
