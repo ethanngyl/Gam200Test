@@ -296,6 +296,21 @@ namespace Framework {
                     targetHp.isDead = true;
                     LOG_ERROR("Combat", "Player %u DEFEATED!", ai.targetEntity.GetID());
 
+                    // Clear tile occupancy and destroy dead player entity
+                    if (entityManager->HasComponent<Transform>(ai.targetEntity)) {
+                        auto& deadTransform = entityManager->GetComponent<Transform>(ai.targetEntity);
+                        auto deadTileOpt = WorldToTile(deadTransform.position);
+                        if (deadTileOpt.has_value()) {
+                            SetOccupant(deadTileOpt.value(), Entity{ INVALID_ENTITY });
+                            LOG_INFO("Combat", "  -> Cleared tile occupancy for dead player at (%d, %d)",
+                                deadTileOpt.value().x, deadTileOpt.value().y);
+                        }
+                    }
+
+                    // Destroy the dead player entity
+                    LOG_WARN("Combat", "  -> Destroying dead player entity %u", ai.targetEntity.GetID());
+                    entityManager->DestroyEntity(ai.targetEntity);
+
                     // Check if ALL players are dead before triggering game over
                     bool allPlayersDead = true;
                     for (Entity entity : entityManager->GetAllEntities()) {

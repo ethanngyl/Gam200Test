@@ -1735,6 +1735,27 @@ namespace Framework {
 
         LOG_INFO("LevelLoader", "SetEntityHP: Entity %d HP set to %d/%d (dead=%d)",
                  entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
+
+        // If entity died, destroy it
+        if (hp.isDead) {
+            LOG_WARN("LevelLoader", "SetEntityHP: Entity %d died - beginning cleanup", entityID);
+
+            // Clear tile occupancy
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                    LOG_INFO("LevelLoader", "  -> Cleared tile occupancy at (%d, %d)",
+                        tileOpt.value().x, tileOpt.value().y);
+                }
+            }
+
+            // Destroy entity
+            LOG_WARN("LevelLoader", "  -> Destroying entity %d", entityID);
+            em->DestroyEntity(entity);
+        }
+
         return 0;
     }
 
