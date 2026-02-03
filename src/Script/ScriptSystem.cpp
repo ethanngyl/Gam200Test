@@ -504,6 +504,7 @@ namespace Framework {
         lua_register(L, "SetGridMovementEnabled", LevelLoader::Lua_SetGridMovementEnabled);
         lua_register(L, "ShowTileBorder", LevelLoader::Lua_ShowTileBorder);
         lua_register(L, "PulseTile", LevelLoader::Lua_PulseTile);
+        lua_register(L, "TintTile", LevelLoader::Lua_TintTile);  // Tile tinting for attack preview
         lua_register(L, "HasChestAtTile", LevelLoader::Lua_HasChestAtTile);
         lua_register(L, "CollectChest", LevelLoader::Lua_CollectChest);
         lua_register(L, "HasGoalAtTile", LevelLoader::Lua_HasGoalAtTile);

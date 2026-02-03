@@ -3900,30 +3900,42 @@ namespace Framework {
      * (which runs in the LevelLoader's Lua state).
      */
     int LevelLoader::Lua_TriggerAttackAPAnimation(lua_State* L) {
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Called from entity script");
+
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: No loader");
             return 0;
         }
 
         // Get the LevelLoader's Lua state (where UIManager is running)
         lua_State* levelL = loader->L;
         if (!levelL) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: No LevelLoader Lua state");
             return 0;
         }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Getting UIManager...");
 
         // Get UIManager table
         lua_getglobal(levelL, "UIManager");
         if (!lua_istable(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: UIManager is not a table");
             lua_pop(levelL, 1);
             return 0;
         }
 
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Getting UIManager.GetComponent...");
+
         // Get UIManager.GetComponent function
         lua_getfield(levelL, -1, "GetComponent");
         if (!lua_isfunction(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: GetComponent is not a function");
             lua_pop(levelL, 2);  // Pop function and UIManager table
             return 0;
         }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Calling GetComponent('attackAP')...");
 
         // Push "attackAP" as the argument
         lua_pushstring(levelL, "attackAP");
@@ -3931,22 +3943,30 @@ namespace Framework {
         // Call UIManager.GetComponent("attackAP") -> 1 argument, 1 return value
         int result = lua_pcall(levelL, 1, 1, 0);
         if (result != LUA_OK) {
+            const char* error = lua_tostring(levelL, -1);
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed to call GetComponent: %s", error);
             lua_pop(levelL, 2);  // Pop error and UIManager table
             return 0;
         }
 
         // Now we have the attackAP component on the stack
         if (!lua_istable(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: attackAP component is not a table");
             lua_pop(levelL, 2);  // Pop component and UIManager table
             return 0;
         }
 
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Getting ConsumeOneAP method...");
+
         // Get the ConsumeOneAP method from the component
         lua_getfield(levelL, -1, "ConsumeOneAP");
         if (!lua_isfunction(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: ConsumeOneAP is not a function");
             lua_pop(levelL, 3);  // Pop function, component, and UIManager table
             return 0;
         }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Calling ConsumeOneAP()...");
 
         // Push the component table as 'self' for the method call
         lua_pushvalue(levelL, -2);  // Duplicate the component table
@@ -3954,9 +3974,13 @@ namespace Framework {
         // Call attackAPComponent:ConsumeOneAP() -> 1 argument (self), 0 return values
         result = lua_pcall(levelL, 1, 0, 0);
         if (result != LUA_OK) {
+            const char* error = lua_tostring(levelL, -1);
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed to call ConsumeOneAP: %s", error);
             lua_pop(levelL, 3);  // Pop error, component, and UIManager table
             return 0;
         }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] SUCCESS! Animation triggered");
 
         // Clean up the stack
         lua_pop(levelL, 2);  // Pop component and UIManager table
