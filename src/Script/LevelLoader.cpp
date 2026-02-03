@@ -570,6 +570,11 @@ namespace Framework {
         lua_register(L, "DamageEntity", Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
+        // Tile Occupancy API
+        lua_register(L, "SetTileOccupant", Lua_SetTileOccupant);
+        lua_register(L, "GetTileOccupant", Lua_GetTileOccupant);
+        lua_register(L, "IsTileOccupied", Lua_IsTileOccupied);
+
         // Grid Conversion API
         lua_register(L, "TileToWorld", Lua_TileToWorld);
 

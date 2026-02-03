@@ -265,6 +265,11 @@ namespace Framework {
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
+        
+        // Tile Occupancy API
+        static int Lua_SetTileOccupant(lua_State* L);  // Set entity occupying a tile
+        static int Lua_GetTileOccupant(lua_State* L);  // Get entity at tile (or 0 if empty)
+        static int Lua_IsTileOccupied(lua_State* L);   // Check if tile has an occupant
 
         // Enemy Turn Management System (C++ Implementation)
         static int Lua_InitializeEnemyTurn(lua_State* L);

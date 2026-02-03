@@ -3546,8 +3546,8 @@ namespace Framework {
     }
 
     // ============================================================================
-// ENTITY SPAWNING API
-// ============================================================================
+    // ENTITY SPAWNING API
+    // ============================================================================
 
     int LevelLoader::Lua_SpawnPlayerAt(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
@@ -4228,6 +4228,138 @@ namespace Framework {
         }
 
         return 0;
+    }
+
+    // ========================================================================
+    // TILE OCCUPANCY API
+    // ========================================================================
+
+    /**
+     * @brief Set the entity occupying a tile
+     * @param gridX Grid X coordinate
+     * @param gridY Grid Y coordinate
+     * @param entityID Entity ID to set as occupant (0 to clear)
+     * @return boolean success
+     *
+     * Usage: SetTileOccupant(x, y, entityID) or SetTileOccupant(x, y, 0) to clear
+     */
+    int LevelLoader::Lua_SetTileOccupant(lua_State* L) {
+        int gridX = static_cast<int>(luaL_checknumber(L, 1));
+        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+        int entityID = static_cast<int>(luaL_checknumber(L, 3));
+
+        Framework::GridCoord coord{ gridX, gridY };
+
+        if (!Framework::InBounds(coord)) {
+            LOG_WARN("LevelLoader", "SetTileOccupant: Grid position (%d, %d) out of bounds", gridX, gridY);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        Entity occupant = (entityID > 0) ? Entity(static_cast<uint32_t>(entityID)) : Entity{ INVALID_ENTITY };
+        bool success = Framework::SetOccupant(coord, occupant);
+
+        if (success) {
+            LOG_INFO("LevelLoader", "SetTileOccupant: Tile (%d, %d) occupant set to entity %d",
+                     gridX, gridY, entityID);
+        } else {
+            LOG_WARN("LevelLoader", "SetTileOccupant: Failed to set occupant at (%d, %d)", gridX, gridY);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Get the entity occupying a tile
+     * @param gridX Grid X coordinate
+     * @param gridY Grid Y coordinate
+     * @return entityID (0 if no occupant or invalid tile)
+     *
+     * Usage: local entityID = GetTileOccupant(x, y)
+     */
+    int LevelLoader::Lua_GetTileOccupant(lua_State* L) {
+        int gridX = static_cast<int>(luaL_checknumber(L, 1));
+        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ gridX, gridY };
+
+        if (!Framework::InBounds(coord)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        const auto& grid = Framework::GetGrid();
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+
+        if (tileEntity.GetID() == INVALID_ENTITY || !grid.em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        if (!grid.em->HasComponent<GridTiles>(tileEntity)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
+        uint32_t occupantID = gridTile.occupant.GetID();
+
+        lua_pushinteger(L, (occupantID == INVALID_ENTITY) ? 0 : static_cast<lua_Integer>(occupantID));
+        return 1;
+    }
+
+    /**
+     * @brief Check if a tile is occupied by any entity
+     * @param gridX Grid X coordinate
+     * @param gridY Grid Y coordinate
+     * @return boolean true if occupied, false otherwise
+     *
+     * Usage: local isOccupied = IsTileOccupied(x, y)
+     */
+    int LevelLoader::Lua_IsTileOccupied(lua_State* L) {
+        int gridX = static_cast<int>(luaL_checknumber(L, 1));
+        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ gridX, gridY };
+
+        if (!Framework::InBounds(coord)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const auto& grid = Framework::GetGrid();
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+
+        if (tileEntity.GetID() == INVALID_ENTITY || !grid.em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        if (!grid.em->HasComponent<GridTiles>(tileEntity)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
+
+        // Check if there's an occupant
+        if (gridTile.occupant.GetID() == INVALID_ENTITY) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Check if occupant is dead (dead entities don't count as occupants)
+        if (grid.em->HasComponent<Health>(gridTile.occupant)) {
+            const auto& health = grid.em->GetComponent<Health>(gridTile.occupant);
+            if (health.isDead) {
+                lua_pushboolean(L, false);
+                return 1;
+            }
+        }
+
+        lua_pushboolean(L, true);
+        return 1;
     }
 
 } // namespace Framework
