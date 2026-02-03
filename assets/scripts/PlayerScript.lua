@@ -1384,6 +1384,18 @@ function ExecuteAttack()
         local newAP, newMaxAP = GetEntityAttackAP(entityID)
         print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAP) .. "/" .. tostring(newMaxAP))
 
+        -- Trigger attack AP crystal shattering animation
+        if UIManager and UIManager.GetComponent then
+            local attackAPIndicator = UIManager.GetComponent("attackAP")
+            if attackAPIndicator and attackAPIndicator.ConsumeOneAP then
+                attackAPIndicator:ConsumeOneAP()
+                print("[PlayerScript] Triggered attack AP crystal shatter animation")
+            end
+        end
+
+        -- Visual feedback
+        PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
+
         -- Play attack animation
         currentAnimGroup = AnimGroup.Attack
         SetAnimationGroup(entityID, currentAnimGroup)
