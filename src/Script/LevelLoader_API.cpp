@@ -1,24 +1,49 @@
 /*
 ===============================================================================
- File:          LevelLoader_API.cpp (Compatible with InputSystem)
- Author:        ETHAN NG
- Email:         n.ethanyongle@digipen.edu
- Date:          2025-10-31
- Contribution:  100%
- ------------------------------------------------------------------------------
-  Level Loader Lua API Implementation
+File:        LevelLoader_API.cpp
+Author:      ETHAN NG, Sim Kah Yan
+Email:       n.ethanyongle@digipen.edu; kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: ETHAN NG (remaining); Sim Kah Yan 2% (82 lines of 4233 total)
+-------------------------------------------------------------------------------
+Brief:
+Level Loader Lua API implementation: C++ bridge to Lua. Static functions
+registered to Lua for Audio, UI, Input, Entities, TileMap, Player/Enemy,
+Animation, Party, Grid movement, Save/Load, Editor mode, and more.
 
- Overview:
-    The LevelLoader_API file serves as the bridge between the C++ engine core
-    and the Lua scripting layer. It defines a suite of static functions
-    registered to Lua, allowing scripts to control Audio, UI, Input, Entities,
-    and Grid-based gameplay logic.
+Overview (ETHAN NG):
+  Bridge between C++ engine core and Lua scripting layer. Suite of static
+  functions registered to Lua so scripts control Audio, UI, Input, Entities,
+  and grid-based gameplay. Uses standard Lua C API (lua_State*); validates
+  engine system pointers (Audio, UI, Graphics) before execution; handles
+  coordinate conversions (World to Screen, World to Grid); integrates with
+  ECS (AP, Transform, Health, etc.).
 
-  Design notes:
-     - Uses standard Lua C API (lua_State*) for all function bindings
-     - Validates engine system pointers (Audio, UI, Graphics) before execution
-     - Handles coordinate space conversions (World to Screen, World to Grid)
-     - Integrates deeply with ECS to manipulate components (AP, Transform, Health)
+Details:
+  Implements LevelLoader::Lua_* declared in LevelLoader.h. Categories: Audio
+  (PlaySound, StopSound, StopAllSounds, UpdateAudio, volume); Camera; Engine;
+  ImGui; Pause; UI/Buttons/Text; Input; JSON; TileMap; SpawnSprite,
+  SpawnAnimatedSprite, SetSprite*, DestroyEntity, ClearAllEntities; Player/Enemy
+  (FindPlayer, GetAllEnemies, SetEnemyTarget, GetCurrentTurn, GetChestProgress,
+  enemy turn manager); Animation (config, player load, frame control); Party
+  (GetEntityAP, ConsumeEntityAP, SetActiveCharacter, etc.); Script component;
+  Grid movement; Save/Load; Procedural map; Entity spawning; Editor mode.
+  g_activeCharacterID shared for party system. All callbacks get LevelLoader
+  via GetLevelLoader(L) and null-check subsystems.
+
+Notes:
+  Compatible with InputSystem. Windows min/max undefined before algorithm.
+  Many functions push booleans/integers or return 0/1/2 Lua return values.
+
+Safety:
+  Loader and subsystem pointers null-checked before use. Lua args validated
+  with luaL_checkstring/luaL_checknumber/luaL_checkinteger where required.
+  Errors logged; stack cleaned on failure.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
 */
 

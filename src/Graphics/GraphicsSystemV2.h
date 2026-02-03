@@ -1,37 +1,37 @@
-﻿/*
+/*
 ===============================================================================
 File:        GraphicsSystemV2.h
 Author:      Sim Kah Yan
 Email:       kahyan.sim@digipen.edu
-Date:        2025-11-07
-Contribution: 75%
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: 100%
 -------------------------------------------------------------------------------
 Brief:
-Declaration of GraphicsSystemV2, a modern rendering system that manages the full
-2D/3D draw pipeline: resource loading, camera control, render queue population,
-sorting/batching, material binding, mesh drawing, debug visualization, and text.
+Declaration of GraphicsSystemV2: modern 2D rendering system managing resources,
+camera (main/editor, follow target), render queue, batching, materials/meshes,
+debug overlay, and text rendering.
 
 Details:
-- Owns a ResourceManager for shaders, textures, meshes, and materials.
-- Maintains a Camera for view/projection and optional follow-target logic.
-- Collects MeshRenderer data from the ECS, builds a RenderQueue each frame,
-  sorts/batches, and executes Draw calls with minimal state switches.
-- Provides a DebugRenderQueue for overlays (lines, circles, helpers).
-- Integrates a FreeType-based TextRenderer for UI/HUD text.
-- Supports a configurable background pass (mesh+texture+material).
-- Exposes editor camera helpers (pan/zoom reset) and grid toggles.
+- Owns ResourceManager (shaders, textures, meshes, materials) and Camera(s).
+- Builds RenderQueue from ECS (MeshRenderer, Sprite, SpriteAnimation, Transform),
+  sorts by layer/depth, batches by mesh+material+texture, executes instanced draws.
+- DebugRenderQueue for lines/circles/boxes; TextRenderer for UI/HUD.
+- Background pass, editor camera (pan/zoom/reset), follow-target, optional FBO target.
+- Grid and grid-blocked toggles for editor visualization.
 
 Notes:
-- Requires GLFW, GLEW/GL, GLM; assumes a valid context on Initialize().
-- Must call SetWindow(...) before Initialize().
-- Uses y-up convention and orthographic camera by default (configurable).
-- Viewport size should be kept in sync via SetViewportSize() on resize.
+- Requires GLFW, GLEW, GLM; valid GL context assumed on Initialize().
+- SetWindow(...) must be called before Initialize(); SetEntityManager/SetInputSystem for ECS/input.
+- Y-up, orthographic camera; viewport synced via SetViewportSize().
 
 Safety:
-- All external pointers (GLFWwindow*, EntityManager*) are null-checked before use.
-- Materials/shaders are bound through handles with current-bound caching.
-- No ownership of EntityManager or GLFWwindow; they are provided by the engine.
+- External pointers (GLFWwindow*, EntityManager*, InputSystem*) null-checked before use.
+- Handles used for all GPU resources; no ownership of window or ECS.
 
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
 */
 #pragma once
