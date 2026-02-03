@@ -264,7 +264,8 @@ local function endTurn()
     hasLoggedActive = false
     lastActiveCheck = false
     blockedKeys = {}
-    lastPKeyDown = false
+    -- Don't reset lastPKeyDown here - keep it true if P is held
+    -- lastPKeyDown = false
     lastSpaceKeyDown = false
     ClearAttackPreview()
 end
@@ -486,11 +487,16 @@ local function createPlayerStates(fsm)
             -- Check P key for manual turn end
             local pKeyDown = IsKeyDown("P")
             if pKeyDown and not lastPKeyDown then
-                print("[PlayerScript] P key pressed - manually ending turn for Entity " .. entityID)
+                print("[PlayerScript] FSM: P key pressed - manually ending turn for Entity " .. entityID)
+                -- Don't reset lastPKeyDown here - keep it true while P is held
+                lastPKeyDown = true
                 endTurn()
                 return
             end
-            lastPKeyDown = pKeyDown
+            -- Only update lastPKeyDown if P was released
+            if not pKeyDown then
+                lastPKeyDown = false
+            end
 
             -- Get current position
             local currentX, currentY = GetEntityGridPosition(entityID)
@@ -943,7 +949,8 @@ function OnUpdate(dt)
         hasLoggedActive = false  -- Reset for next character
         lastActiveCheck = false  -- Reset active tracking
         blockedKeys = {}  -- Clear blocked keys
-        lastPKeyDown = false  -- Reset P key state
+        -- Don't reset lastPKeyDown here - let it stay true while P is held
+        -- It will be reset when P is released or when character becomes inactive
 
         -- Return early - turn is over
         return
@@ -1324,10 +1331,10 @@ function ExecuteAttack()
 
     -- Check AP
     local currentAP, maxAP = GetEntityAttackAP(entityID)
-    print("[PlayerScript] Current Attack AP: " .. currentAP .. "/" .. maxAP .. " (need " .. attackAPCost .. ")")
+    print("[PlayerScript] Current Attack AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP) .. " (need " .. attackAPCost .. ")")
 
     if currentAP < attackAPCost then
-        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. currentAP .. " < " .. attackAPCost .. ")")
+        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. tostring(currentAP) .. " < " .. attackAPCost .. ")")
         ClearAttackPreview()
         return
     end
@@ -1343,23 +1350,39 @@ function ExecuteAttack()
         return
     end
 
-    print("[PlayerScript] Target found: Enemy " .. enemyID .. " at (" .. enemyX .. ", " .. enemyY .. ")")
-    print("[PlayerScript] Attacking enemy " .. enemyID .. " for " .. 1 .. " damage...")
+    print("[PlayerScript] Target found: Enemy " .. enemyID .. " at (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
+
+    -- Check enemy HP BEFORE attack
+    local enemyHPBefore, enemyMaxHP = GetEntityHP(enemyID)
+    print("[PlayerScript] Enemy " .. enemyID .. " HP BEFORE attack: " .. tostring(enemyHPBefore) .. "/" .. tostring(enemyMaxHP))
 
     -- Deal damage
     local attackDamage = 1  -- Base damage
+    print("[PlayerScript] Calling DamageEntity(" .. enemyID .. ", " .. attackDamage .. ")...")
     local success = DamageEntity(enemyID, attackDamage)
+
+    print("[PlayerScript] DamageEntity returned: " .. tostring(success))
 
     if success then
         print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
+        -- Check enemy HP AFTER attack
+        local enemyHPAfter, _ = GetEntityHP(enemyID)
+        print("[PlayerScript] Enemy " .. enemyID .. " HP AFTER attack: " .. tostring(enemyHPAfter))
+
+        -- Check if enemy should be dead
+        if enemyHPAfter and enemyHPAfter <= 0 then
+            print("[PlayerScript] !!! ENEMY " .. enemyID .. " HP <= 0 - SHOULD BE DESTROYED BY C++ !!!")
+        elseif not enemyHPAfter then
+            print("[PlayerScript] !!! ENEMY " .. enemyID .. " HP is nil - ENTITY MAY HAVE BEEN DESTROYED !!!")
+        else
+            print("[PlayerScript] Enemy " .. enemyID .. " still alive with " .. tostring(enemyHPAfter) .. " HP")
+        end
+
         -- Consume attack AP (NOT movement AP!)
         ConsumeEntityAttackAP(entityID, attackAPCost)
-        local newAP = GetEntityAttackAP(entityID)
-        print("[PlayerScript] Attack AP consumed. New Attack AP: " .. newAP .. "/" .. maxAP)
-
-        -- Visual feedback
-        PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
+        local newAP, newMaxAP = GetEntityAttackAP(entityID)
+        print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAP) .. "/" .. tostring(newMaxAP))
 
         -- Play attack animation
         currentAnimGroup = AnimGroup.Attack
@@ -1368,6 +1391,10 @@ function ExecuteAttack()
         print("[PlayerScript] Playing attack animation")
     else
         print("[PlayerScript] ✗ Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
+        print("[PlayerScript] Possible causes:")
+        print("[PlayerScript]   - Enemy has no Health component")
+        print("[PlayerScript]   - Entity ID is invalid")
+        print("[PlayerScript]   - Enemy was already destroyed")
     end
 
     print("============================================================")

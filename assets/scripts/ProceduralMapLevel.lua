@@ -36,6 +36,14 @@ local kSpacingY = 0.1
 local audioConfig = nil
 
 -- ============================================================================
+-- GOAL STATE
+-- ============================================================================
+local goalPosition = nil  -- {gridX, gridY, worldX, worldY}
+local goalReached = false
+local goalTransitionDelay = 0
+--local GOAL_TRANSITION_TIME = 0.5  -- Seconds before transitioning to menu
+
+-- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
 
@@ -305,21 +313,31 @@ function SpawnProceduralChestsAndGoal(mapData)
     Log("========================================")
 
     -- Spawn chests
-    if mapData.chests and #mapData.chests > 0 then
-        Log("Spawning " .. #mapData.chests .. " chests:")
-        for i, chest in ipairs(mapData.chests) do
-            local cx = chest.worldX  -- From C++!
-            local cy = chest.worldY
-            local chestID = SpawnChestAt(cx, cy)
-            Log("  Chest " .. i .. " at grid (" .. chest.x .. ", " .. chest.y .. ") -> Entity " .. chestID)
-        end
-    end
+    --if mapData.chests and #mapData.chests > 0 then
+      --  Log("Spawning " .. #mapData.chests .. " chests:")
+        --for i, chest in ipairs(mapData.chests) do
+          --  local cx = chest.worldX  -- From C++!
+            --local cy = chest.worldY
+            --local chestID = SpawnChestAt(cx, cy)
+            --Log("  Chest " .. i .. " at grid (" .. chest.x .. ", " .. chest.y .. ") -> Entity " .. chestID)
+        --end
+    --end
 
     -- Spawn goal
     if mapData.goalX and mapData.goalY then
         local gx = mapData.goalWorldX  -- From C++!
         local gy = mapData.goalWorldY
         local goalID = SpawnGoalAt(gx, gy)
+
+        -- Store goal position for collision checking
+        goalPosition = {
+            gridX = mapData.goalX,
+            gridY = mapData.goalY,
+            worldX = gx,
+            worldY = gy,
+            entityID = goalID
+        }
+
         Log("Goal spawned at grid (" .. mapData.goalX .. ", " .. mapData.goalY .. ") -> Entity " .. goalID)
     end
 
@@ -344,6 +362,69 @@ function SetupPartyUI()
 
     Log("Party status UI created")
     Log("========================================")
+end
+
+-- ============================================================================
+-- CHECK GOAL REACHED (NEW)
+-- ============================================================================
+
+function CheckGoalReached()
+    if not goalPosition then
+        return false
+    end
+    
+    -- Check each party member's position against the goal
+    for i, playerID in ipairs(partyMembers) do
+        if playerID and playerID ~= 0 then
+            -- Get player's current world position
+            local playerGridX, playerGridY = GetEntityGridPosition(playerID)
+            
+            if playerGridX and playerGridY then
+                -- Convert to grid position
+                --local playerGridX, playerGridY = worldToGrid(playerWorldX, playerWorldY)
+                
+                -- Check if player is on the goal tile
+                if playerGridX == goalPosition.gridX and playerGridY == goalPosition.gridY then
+                    Log("========================================")
+                    Log("GOAL REACHED!")
+                    Log("Player " .. i .. " (Entity " .. playerID .. ") reached the goal!")
+                    Log("========================================")
+                    return true
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+-- ============================================================================
+-- HANDLE GOAL TRANSITION (NEW)
+-- ============================================================================
+
+function HandleGoalTransition(dt)
+    if not goalReached then
+        -- Check if any player reached the goal
+        if CheckGoalReached() then
+            goalReached = true
+            
+            -- Play victory sound if available
+            if PlaySound then
+                pcall(function()
+                    PlaySound("victory", false, 1.0)
+                end)
+            end
+            
+            Log("GOAL REACHED - Transitioning to Main Menu immediately...")
+            
+            -- Transition to main menu immediately
+            if SetNextGameState then
+                SetNextGameState("mainMenu")
+            else
+                Log("ERROR: No game state transition function available!")
+            end
+        end
+    end
 end
 
 -- ============================================================================
@@ -375,6 +456,28 @@ function OnUpdate(dt)
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues
     -- HandleMapRegeneration()
+
+    -- ========================================
+    -- CHECK FOR GOAL INTERACTION (NEW)
+    -- ========================================
+    HandleGoalTransition(dt)
+    
+    -- If goal is reached, skip normal game logic
+    if goalReached then
+        return
+    end
+
+    -- Debug: Log positions every few frames
+if not goalReached and goalPosition then
+    for i, playerID in ipairs(partyMembers) do
+        if playerID and playerID ~= 0 then
+            local gx, gy = GetEntityGridPosition(playerID)
+            if gx and gy then
+                print("Player " .. i .. " at grid (" .. gx .. ", " .. gy .. ") | Goal at (" .. goalPosition.gridX .. ", " .. goalPosition.gridY .. ")")
+            end
+        end
+    end
+end
 
     -- Party system turn management
     local currentTurn = GetCurrentTurn()
