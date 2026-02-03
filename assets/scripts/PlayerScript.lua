@@ -100,6 +100,16 @@ end
 
 function OnUpdate(dt)
     -- ========================================================================
+    -- DEATH CHECK: Stop processing if entity is dead
+    -- ========================================================================
+
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or currentHP <= 0 then
+        -- Entity is dead - stop all processing
+        return
+    end
+
+    -- ========================================================================
     -- PARTY SYSTEM: INPUT ROUTING
     -- ========================================================================
 
