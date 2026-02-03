@@ -46,6 +46,9 @@
 #include "PrefabInstanceRegistry.h"
 #include "MapGenerator/MapGenerator.h"
 
+#include "StateMachine.h"
+#include "FSMSystem.h"
+
 namespace Framework
 {
     CoreEngine* CORE = nullptr;
@@ -70,6 +73,7 @@ namespace Framework
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
         , skillSystem(nullptr)
+        , fsmSystem(nullptr)
     {
         CORE = this;
     }
@@ -154,13 +158,14 @@ namespace Framework
         pathfindingSystem = new PathfindingSystem();
         skillSystem = new SkillSystem();
         scriptSystem = new ScriptSystem();
+        fsmSystem = new FSMSystem();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !skillSystem) {
+            !scriptSystem || !skillSystem || !fsmSystem) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -183,6 +188,7 @@ namespace Framework
             delete pathfindingSystem;
             delete skillSystem;
             delete scriptSystem;
+            delete fsmSystem;
 
             throw std::runtime_error("System allocation failure");
         }
@@ -210,6 +216,7 @@ namespace Framework
         animationSystem->SetEntityManager(entityManager);
         pathfindingSystem->SetEntityManager(entityManager);
         skillSystem->SetEntityManager(entityManager);
+        fsmSystem->SetEntityManager(entityManager);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -284,6 +291,7 @@ namespace Framework
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
         AddSystem(skillSystem);
+        AddSystem(fsmSystem);
 
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());

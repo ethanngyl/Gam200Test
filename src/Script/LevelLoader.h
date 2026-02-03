@@ -160,6 +160,8 @@ namespace Framework {
         static int Lua_StopAllSounds(lua_State* L);
         static int Lua_UpdateAudio(lua_State* L);
         static int Lua_SetMasterVolume(lua_State* L);
+        static int Lua_GetMasterVolume(lua_State* L);
+        static int Lua_SaveMasterVolume(lua_State* L);
 
         // UI Button API
         static int Lua_CreateButton(lua_State* L);

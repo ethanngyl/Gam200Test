@@ -138,6 +138,9 @@ namespace Framework {
         text_.loadFont("Serif32", "assets/Font/Roboto-VariableFont_wdth,wght.ttf", 32);
         text_.loadFont("Serif32", "assets/Font/EBGaramond_Italic_VariableFont_wght.ttf", 48);
         text_.loadFont("Playfair48", "assets/Font/PlayfairDisplay-Regular.otf", 48);
+        text_.loadFont("JaquardaBastarda9", "assets/Font/JacquardaBastarda9-Regular.ttf", 48);
+        text_.loadFont("Jacquard12Regular", "assets/Font/Jacquard12-Regular.ttf", 48);
+        text_.loadFont("Jersey20Regular", "assets/Font/Jersey20-Regular.ttf", 48);
         std::cout << "\n========================================\n";
         std::cout << "  GraphicsSystemV2: Initialization Complete\n";
         std::cout << "========================================\n\n";
