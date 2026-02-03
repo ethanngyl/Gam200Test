@@ -1,49 +1,49 @@
 /*
 ===============================================================================
- File:          LevelLoader.h
- Author:        GE YONGQI
- Email:         yongqi.ge@digipen.edu
- Date:          2025-11-13
- Contribution:  100%
- ------------------------------------------------------------------------------
-  Lua-based Level Loading System with Editor Mode Support
+File:        LevelLoader.h
+Author:      GE YONGQI, Sim Kah Yan
+Email:       yongqi.ge@digipen.edu; kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: GE YONGQI (remaining); Sim Kah Yan 3% (8 lines of 309 total)
+-------------------------------------------------------------------------------
+Brief:
+Declaration of LevelLoader: singleton for loading game levels from Lua scripts
+(OnInit/OnUpdate/OnDraw/OnDestroy), hot-reload, and F1 editor mode support.
 
-  Purpose:
-  Provides a unified system for loading entire game levels/states from Lua
-  scripts instead of hardcoding level logic in C++. This enables:
-  - Hot-reloadable level configurations
-  - Designer-friendly level creation (no C++ compilation needed)
-  - Centralized level management
-  - Easy A/B testing of different level layouts
-  - F1 editor mode toggle functionality
+Purpose (GE YONGQI):
+  Unified system for loading entire game levels/states from Lua instead of
+  hardcoding in C++. Enables: hot-reloadable level configs, designer-friendly
+  level creation (no C++ compile), centralized level management, A/B testing
+  of layouts, F1 editor mode toggle.
 
-  Design:
-  Each level is represented by a single Lua script with lifecycle functions:
-  - OnInit()     - Setup level (spawn entities, UI, audio)
-  - OnUpdate(dt) - Per-frame logic
-  - OnDraw()     - Custom rendering (UI text, etc.)
-  - OnDestroy()  - Cleanup
+Design:
+  Each level = one Lua script with lifecycle: OnInit() (setup entities, UI,
+  audio), OnUpdate(dt), OnDraw(), OnDestroy() (cleanup). Singleton GetInstance();
+  Initialize(engine), Shutdown; LoadLevel(scriptPath, isEditorMode),
+  UnloadCurrentLevel, ReloadCurrentLevel, ResetLuaState; UpdateCurrentLevel(dt),
+  DrawCurrentLevel; IsLevelLoaded, GetCurrentLevelPath. Lua state, RegisterLevelAPI,
+  60+ static C API declarations (Log, Camera, Engine, ImGui, Pause, Audio, UI,
+  Input, JSON, TileMap, Sprites, Player/Enemy, Animation, Party, Grid, Save/Load,
+  Entity spawning, Editor). GetLevelLoader(L) helper.
 
-  Editor Mode Features:
-  - F1 key toggles between game mode and editor mode
-  - In editor mode, buttons are visually grayed out and disabled
-  - ImGui overlay is enabled in editor mode for debugging
-  - Game state can be paused/unpaused independently
+Editor Mode:
+  F1 toggles game/editor; in editor, buttons grayed out/disabled, ImGui overlay
+  enabled for debugging; game state can be paused/unpaused independently.
 
-  Usage:
-  Instead of:
-    mainMenu_Load()
-    mainMenu_Initialize()
-    mainMenu_Update()
-    mainMenu_Draw()
-    mainMenu_Free()
-    mainMenu_Unload()
+Usage:
+  Instead of: mainMenu_Load(), mainMenu_Initialize(), mainMenu_Update(),
+  mainMenu_Draw(), mainMenu_Free(), mainMenu_Unload()
+  Use: LevelLoader::LoadLevel("assets/scripts/MainMenuLevel.lua"),
+  UpdateCurrentLevel(dt), DrawCurrentLevel(), UnloadCurrentLevel()
 
-  Use:
-    LevelLoader::LoadLevel("assets/scripts/MainMenuLevel.lua")
-    LevelLoader::UpdateCurrentLevel(dt)
-    LevelLoader::DrawCurrentLevel()
-    LevelLoader::UnloadCurrentLevel()
+Safety:
+  No ownership of engine/subsystems; pointers cached for API callbacks.
+  Lua state created/destroyed in Initialize/Shutdown.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
 */
 

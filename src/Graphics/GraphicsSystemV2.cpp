@@ -1,37 +1,41 @@
-﻿/*
+/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
 Email:       kahyan.sim@digipen.edu
-Date:        2025-11-07
-Contribution: 100% (remaining of the code)
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: 100%
 -------------------------------------------------------------------------------
 Brief:
-Implementation of GraphicsSystemV2, the modern rendering system that manages
-resource loading, camera control (including editor utilities and follow target),
-render queue gathering/sorting, batched and instancing draw execution, debug primitives, and
-text rendering.
+Implementation of GraphicsSystemV2: modern 2D rendering pipeline managing
+resource loading, camera control (main/editor, follow target), render queue
+gather/sort, batched instanced draws, debug primitives, and FreeType text.
 
 Details:
-- Initializes OpenGL, loads default shaders/materials/meshes, and sets baseline
-  render state (blend/cull/depth).
-- Every frame: updates viewport/resolution, manages camera, gathers renderables
-  from ECS (MeshRenderer/Sprite/SpriteAnimation), sorts/batches, binds material
-  once per batch, and draws meshes efficiently.
-- Provides debug overlay drawing (lines/circles/boxes) and simple background pass.
-- Integrates a FreeType-based TextRenderer for HUD/UI text.
+- Initializes OpenGL (GLEW), loads default shaders/materials/meshes, sets
+  render state (blend, cull, depth disabled for 2D).
+- Each frame: updates viewport/resolution, runs camera logic (editor or
+  follow-player), gathers renderables from ECS (MeshRenderer/Sprite/SpriteAnimation),
+  sorts by layer/depth, batches by mesh+material+texture, executes instanced draws.
+- Background pass (quad + texture), sprite-sheet UV animation, and optional
+  render-to-FBO (e.g. ImGui viewport) supported.
+- Debug overlay: lines, circles, boxes via DebugRenderQueue. Text via TextRenderer.
 
 Notes:
-- Expects SetWindow(...) to be called before Initialize().
-- EntityManager is injected; this system does not own or create ECS data.
-- Uses y-up, orthographic camera by default; view/projection are kept in sync
-  with viewport size via SetViewportSize().
+- SetWindow(...) must be called before Initialize().
+- EntityManager and InputSystem are injected; this system does not own ECS data.
+- Y-up, orthographic camera; view/projection synced with viewport via SetViewportSize().
+- Editor camera: pan (arrow keys), zoom (1/2), reset (0); play mode uses main camera + follow.
 
 Safety:
-- All external pointers are checked before use.
-- ResourceManager handles lifetime for GPU resources via handles.
-- Minimal per-frame allocations; debug rendering uses temporary meshes only
-  for clarity (can be batched later for performance).
+- External pointers (window, entityManager, inputManager) null-checked before use.
+- ResourceManager owns GPU resources; handles are validated before bind/draw.
+- Minimal per-frame allocations; debug primitives use temporary meshes (batchable later).
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
 */
 #include "Precompiled.h"
