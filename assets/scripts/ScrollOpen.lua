@@ -88,6 +88,11 @@ function TurnScrollUI:Init(config)
     self.totalFrames = 36
     self.lastFrame = self.totalFrames - 1  -- 35
 
+    -- Hold/pause duration (pauses animation at holdFrame for this many seconds)
+    self.holdDuration = self.config.holdDuration or 0.0  -- 0 = no pause, 1.0 = 1 second pause
+    self.holdFrame = self.config.holdFrame or 10  -- Which frame to pause at (middle of open scroll)
+    self.holdTimer = 0.0  -- Tracks time spent holding
+
     -- Text config
     self.text = self.config.text or "Your Turn"
     self.textFont = self.config.textFont or "Sans48"
@@ -236,17 +241,26 @@ function TurnScrollUI:Update(dt, cameraPos)
         self.lastTurnPhase = phase
         
     elseif self.state == "playing" then
+        -- Check if we're at the hold frame and should pause
+        if self.currentFrame == self.holdFrame and self.holdTimer < self.holdDuration then
+            -- Hold at this frame
+            self.holdTimer = self.holdTimer + dt
+            -- Don't advance frame yet
+            return
+        end
+
         -- Advance animation
         self.frameTimer = self.frameTimer + dt
-        
+
         while self.frameTimer >= self.frameTime do
             self.frameTimer = self.frameTimer - self.frameTime
             self.currentFrame = self.currentFrame + 1
-            
+
             if self.currentFrame > self.lastFrame then
                 -- Animation complete
                 self.state = "idle"
                 self.currentFrame = 0
+                self.holdTimer = 0.0  -- Reset hold timer for next animation
                 SetSpriteVisibility(self.scrollID, false)
                 if SetAnimationFrame then
                     SetAnimationFrame(self.scrollID, 0)
@@ -254,9 +268,14 @@ function TurnScrollUI:Update(dt, cameraPos)
                 Log("[ScrollOpen] Animation complete")
                 break
             end
-            
+
             if SetAnimationFrame then
                 SetAnimationFrame(self.scrollID, self.currentFrame)
+            end
+
+            -- If we just reached the hold frame, break out so we can start holding next update
+            if self.currentFrame == self.holdFrame and self.holdDuration > 0 then
+                break
             end
         end
     end
