@@ -84,10 +84,16 @@ function HealthUI:Update(dt, cameraPos)
 
     -- Get current HP for the ACTIVE character
     local activeCharID = GetActiveCharacter()
-    if not activeCharID or activeCharID <= 0 then return end
+    if not activeCharID or activeCharID <= 0 then
+        print("[HealthUI] No active character found!")
+        return
+    end
 
     local curHP, maxHP = GetEntityHP(activeCharID)
-    if not curHP then return end
+    if not curHP then
+        print("[HealthUI] Could not get HP for active character " .. activeCharID)
+        return
+    end
 
     -- Update sprite positions if camera moved (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
@@ -96,6 +102,7 @@ function HealthUI:Update(dt, cameraPos)
 
     -- Handle HP changes
     if curHP ~= self.lastHP then
+        print("[HealthUI] HP changed for entity " .. activeCharID .. ": " .. self.lastHP .. " -> " .. curHP)
         self:HandleHPChange(curHP)
         self.lastHP = curHP
     end
