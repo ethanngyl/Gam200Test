@@ -174,7 +174,7 @@ function TurnScrollUI:StartAnimation()
     self.state = "playing"
     self.currentFrame = 0
     self.frameTimer = 0.0
-
+    PlaySound("scroll", false, 0.7)
     if self.scrollID and self.scrollID > 0 then
         SetSpriteVisibility(self.scrollID, true)
         if SetAnimationFrame then
