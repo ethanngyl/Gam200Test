@@ -91,11 +91,10 @@ function TurnIndicatorUI:Update(dt, cameraPos)
     -- Get current turn phase
     local phase = GetCurrentTurn() or "Player"
 
-    -- DISABLED: Update sprite positions if camera moved
-    -- Commenting this out makes the UI stay fixed on screen
-    -- if self:ShouldUpdatePosition(cameraPos) then
-    --     self:UpdatePositions(cameraPos)
-    -- end
+    -- Update sprite positions if camera moved (keeps UI fixed on screen)
+    if self:ShouldUpdatePosition(cameraPos) then
+        self:UpdatePositions(cameraPos)
+    end
 
     -- Handle turn phase changes
     if phase ~= self.lastTurnPhase then
