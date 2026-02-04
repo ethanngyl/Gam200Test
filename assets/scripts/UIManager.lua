@@ -96,7 +96,7 @@ function UIManager.Init(config)
         maxAP = 5,
         size = 0.06,
         spacing = 0.1,
-        offsetX = -0.64,
+        offsetX = -0.82,
         offsetY = -0.42,
         layer = 4,
         filledTexture = "assets/UI/MovP.png",
@@ -147,8 +147,8 @@ function UIManager.Init(config)
     UIManager.components.health:Init({
         maxHP = 5,
         scale = 0.10,
-        offsetX = -0.72,
-        offsetY = -0.22,
+        offsetX = -0.82,
+        offsetY = -0.32,
         layer = 4,
         textureBasePath = "assets/UI/Health_"
     })
@@ -156,8 +156,8 @@ function UIManager.Init(config)
     -- Create Turn Indicator
     UIManager.components.turnIndicator = TurnIndicatorUI:New()
     UIManager.components.turnIndicator:Init({
-        offsetX = 0.65,
-        offsetY = 0.38,
+        offsetX = -0.72,
+        offsetY = -0.19,
         scaleX = 0.28,
         scaleY = 0.28,
         layer = 4,

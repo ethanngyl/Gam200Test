@@ -9,14 +9,14 @@
     {
       "name": "mmbgm",
       "filepath": "assets/Audio/Menu_Bgm/Main_Menu_Bgm.wav",
-      "volume": 0.8,
+      "volume": 0.5,
       "preload": true,
       "loop": true
     },
     {
       "name": "igbgm",
       "filepath": "assets/Audio/Menu_Bgm/In_Game_Bgm.wav",
-      "volume": 0.8,
+      "volume": 0.5,
       "preload": true,
       "loop": true
     },
@@ -47,6 +47,24 @@
     {
       "name": "death",
       "filepath": "assets/Audio/Death_Sfx/Death.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "turnstart",
+      "filepath": "assets/Audio/Turn_Sfx/YourTurn.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "turnend",
+      "filepath": "assets/Audio/Turn_Sfx/TurnEnd.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "scroll",
+      "filepath": "assets/Audio/Turn_Sfx/Scroll_sfx.wav",
       "volume": 1,
       "preload": true
     }
