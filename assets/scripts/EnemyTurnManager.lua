@@ -32,7 +32,7 @@
 -- Enemy turn configuration
 ActiveEnemyIndex = 0        -- Index in enemy list (0 = none)
 EnemyTurnActive = false     -- True when in enemy turn phase
-EnemyActionDelay = 0.5      -- Delay in seconds between enemy actions
+EnemyActionDelay = 1.5      -- Delay in seconds between enemy actions (increased from 0.5)
 EnemyActionTimer = 0.0      -- Current action timer
 
 -- ============================================================================
