@@ -522,13 +522,30 @@ function ExecuteChase()
     if currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesThisTurn < maxMoves then
         local nextTile = currentPath[pathIndex]
 
-        -- Validate tile is still walkable
-        if IsWalkableTile(nextTile.x, nextTile.y) then
-            -- NOTE: MoveEntityToTile in C++ already handles:
-            -- 1. Clearing occupancy at old position
-            -- 2. Setting occupancy at new position
-            -- No need to manually call SetTileOccupant here
-            local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
+        -- Validate tile is walkable (terrain check)
+        if not IsWalkableTile(nextTile.x, nextTile.y) then
+            -- Tile became unwalkable, recalculate path
+            currentPath = {}
+            FinishEnemyAction()
+            return
+        end
+
+        -- Validate tile is not occupied by another entity
+        local isOccupied = IsTileOccupied(nextTile.x, nextTile.y)
+        if isOccupied then
+            print("[Enemy " .. entityID .. "] Path blocked at (" .. nextTile.x .. ", " .. nextTile.y .. ") - tile occupied!")
+            -- Tile is blocked, recalculate path next turn
+            currentPath = {}
+            FinishEnemyAction()
+            return
+        end
+
+        -- Tile is valid and empty, move to it
+        -- NOTE: MoveEntityToTile in C++ already handles:
+        -- 1. Clearing occupancy at old position
+        -- 2. Setting occupancy at new position
+        -- No need to manually call SetTileOccupant here
+        local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
                 ConsumeEnemyAP(entityID, config.apCostPerMove)
@@ -560,12 +577,6 @@ function ExecuteChase()
                 FinishEnemyAction()
                 return
             end
-        else
-            -- Tile became unwalkable, recalculate path
-            currentPath = {}
-            FinishEnemyAction()
-            return
-        end
     end
 
     -- If we get here, we can't move anymore (out of AP, path, or maxMoves)
@@ -611,11 +622,16 @@ function ExecuteFlee()
     end
 
     -- Attempt flee movement
-    if IsWalkableTile(fleeX, fleeY) and currentAP >= config.apCostPerMove then
-        local success = MoveEntityToTile(entityID, fleeX, fleeY)
-        if success then
-            ConsumeEnemyAP(entityID, config.apCostPerMove)
-            PulseTile(fleeX, fleeY, 0.2, 1.0, 1.0, 0.0)  -- Yellow pulse (fleeing)
+    if currentAP >= config.apCostPerMove then
+        -- Check if flee tile is walkable and not occupied
+        if IsWalkableTile(fleeX, fleeY) and not IsTileOccupied(fleeX, fleeY) then
+            local success = MoveEntityToTile(entityID, fleeX, fleeY)
+            if success then
+                ConsumeEnemyAP(entityID, config.apCostPerMove)
+                PulseTile(fleeX, fleeY, 0.2, 1.0, 1.0, 0.0)  -- Yellow pulse (fleeing)
+            end
+        else
+            print("[Enemy " .. entityID .. "] Cannot flee - tile (" .. fleeX .. ", " .. fleeY .. ") blocked!")
         end
     end
 
@@ -644,7 +660,8 @@ function ExecutePatrol()
     local newX = enemyX + dir.x
     local newY = enemyY + dir.y
 
-    if IsWalkableTile(newX, newY) then
+    -- Check if patrol tile is walkable and not occupied
+    if IsWalkableTile(newX, newY) and not IsTileOccupied(newX, newY) then
         local success = MoveEntityToTile(entityID, newX, newY)
         if success then
             ConsumeEnemyAP(entityID, config.apCostPerMove)
