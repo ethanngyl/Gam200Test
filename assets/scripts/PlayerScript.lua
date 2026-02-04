@@ -171,6 +171,12 @@ local attackPreviewTiles = {}
 local attackRange = 1
 local attackAPCost = 1
 
+-- Movement key state tracking (for press-only movement)
+local lastWKeyDown = false
+local lastSKeyDown = false
+local lastAKeyDown = false
+local lastDKeyDown = false
+
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
@@ -179,19 +185,31 @@ local function blockHeldKeys()
     blockedKeys = {}
     if IsKeyDown("W") then
         blockedKeys["W"] = true
+        lastWKeyDown = true  -- Track as held so first release allows movement
         print("[PlayerScript]   W is held - blocking until released")
+    else
+        lastWKeyDown = false
     end
     if IsKeyDown("S") then
         blockedKeys["S"] = true
+        lastSKeyDown = true
         print("[PlayerScript]   S is held - blocking until released")
+    else
+        lastSKeyDown = false
     end
     if IsKeyDown("A") then
         blockedKeys["A"] = true
+        lastAKeyDown = true
         print("[PlayerScript]   A is held - blocking until released")
+    else
+        lastAKeyDown = false
     end
     if IsKeyDown("D") then
         blockedKeys["D"] = true
+        lastDKeyDown = true
         print("[PlayerScript]   D is held - blocking until released")
+    else
+        lastDKeyDown = false
     end
     if IsKeyDown("P") then
         lastPKeyDown = true
@@ -267,6 +285,11 @@ local function endTurn()
     -- Don't reset lastPKeyDown here - keep it true if P is held
     -- lastPKeyDown = false
     lastSpaceKeyDown = false
+    -- Reset movement key states
+    lastWKeyDown = false
+    lastSKeyDown = false
+    lastAKeyDown = false
+    lastDKeyDown = false
     ClearAttackPreview()
 end
 
@@ -521,18 +544,30 @@ local function createPlayerStates(fsm)
             end
             lastSpaceKeyDown = spaceKeyDown
 
-            -- Check movement input
+            -- Check movement input (PRESS-ONLY - not hold)
             local wDown = IsKeyDown("W") and not blockedKeys["W"]
             local sDown = IsKeyDown("S") and not blockedKeys["S"]
             local aDown = IsKeyDown("A") and not blockedKeys["A"]
             local dDown = IsKeyDown("D") and not blockedKeys["D"]
 
-            if wDown or sDown or aDown or dDown then
-                -- Store movement direction
-                fsm:setData("moveW", wDown)
-                fsm:setData("moveS", sDown)
-                fsm:setData("moveA", aDown)
-                fsm:setData("moveD", dDown)
+            -- Only trigger movement on key PRESS (transition from released to pressed)
+            local wPressed = wDown and not lastWKeyDown
+            local sPressed = sDown and not lastSKeyDown
+            local aPressed = aDown and not lastAKeyDown
+            local dPressed = dDown and not lastDKeyDown
+
+            -- Update last key states
+            lastWKeyDown = wDown
+            lastSKeyDown = sDown
+            lastAKeyDown = aDown
+            lastDKeyDown = dDown
+
+            if wPressed or sPressed or aPressed or dPressed then
+                -- Store movement direction (only the pressed key)
+                fsm:setData("moveW", wPressed)
+                fsm:setData("moveS", sPressed)
+                fsm:setData("moveA", aPressed)
+                fsm:setData("moveD", dPressed)
                 fsm:changeState("Moving")
                 return
             end
@@ -783,6 +818,11 @@ function OnUpdate(dt)
             blockedKeys = {}
             lastPKeyDown = false
             lastSpaceKeyDown = false
+            -- Reset movement key states
+            lastWKeyDown = false
+            lastSKeyDown = false
+            lastAKeyDown = false
+            lastDKeyDown = false
             ClearAttackPreview()
 
             if currentAnimGroup ~= AnimGroup.Idle then
