@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -550,6 +550,7 @@ namespace Framework {
         lua_register(L, "SetAnimationFrameRange", LevelLoader::Lua_SetAnimationFrameRange);  // Set startFrame and frameCount for sprite sheet animations
         lua_register(L, "GetAnimationGroup", LevelLoader::Lua_GetAnimationGroup);
         lua_register(L, "GetEntityMovementDirection", LevelLoader::Lua_GetEntityMovementDirection);
+        lua_register(L, "SetSpriteAnimationSheet", LevelLoader::Lua_SetSpriteAnimationSheet);
         
         // Game API - Sprite Control
         lua_register(L, "SpawnSprite", LevelLoader::Lua_SpawnSprite);
