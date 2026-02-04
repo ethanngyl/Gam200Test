@@ -41,15 +41,24 @@ function HealthUI:Init(config)
     -- State
     self.healthSpriteID = 0  -- Single sprite that we'll change texture on
     self.lastHP = -1
+    self.trackedCharID = 0   -- Currently tracked character ID
 
     -- Get camera position
     local camX, camY, camZ = GetCameraPosition()
 
-    -- FIXED: Get current HP for the ACTIVE character, not always entity 547
-    local activeCharID = GetActiveCharacter()
+    -- Get character to track: try party system first, fallback to FindPlayer
+    local charID = nil
+    if GetActiveCharacter then
+        charID = GetActiveCharacter()
+    end
+    if (not charID or charID <= 0) and FindPlayer then
+        charID = FindPlayer()
+    end
+    
+    self.trackedCharID = charID or 0
     local curHP, maxHP = 5, 5  -- Default
-    if activeCharID and activeCharID > 0 then
-        curHP, maxHP = GetEntityHP(activeCharID)
+    if charID and charID > 0 then
+        curHP, maxHP = GetEntityHP(charID)
     end
     if maxHP and maxHP > 0 then
         self.maxHP = maxHP
@@ -76,16 +85,55 @@ end
 function HealthUI:Update(dt, cameraPos)
     if not self.enabled then return end
 
-    -- Get current HP for the ACTIVE character
-    local activeCharID = GetActiveCharacter()
-    if not activeCharID or activeCharID <= 0 then
-        print("[HealthUI] No active character found!")
+    -- Get character to display HP for
+    -- Priority: 1) Active character from party system, 2) Keep last tracked character during enemy turn
+    local charID = nil
+    local currentTurn = GetCurrentTurn and GetCurrentTurn() or "Player"
+    
+    if GetActiveCharacter then
+        charID = GetActiveCharacter()
+    end
+    
+    -- During enemy turn, keep tracking the last active character (don't switch)
+    -- This prevents the UI from jumping to a different character during enemy attacks
+    if currentTurn == "Enemy" and self.trackedCharID and self.trackedCharID > 0 then
+        -- Keep the last tracked character during enemy turn
+        charID = self.trackedCharID
+    end
+    
+    -- Fallback to FindPlayer only if we have no tracked character at all
+    if (not charID or charID <= 0) and (not self.trackedCharID or self.trackedCharID <= 0) then
+        if FindPlayer then
+            charID = FindPlayer()
+        end
+    end
+    
+    -- Still no character? Use last tracked character if valid
+    if (not charID or charID <= 0) and self.trackedCharID and self.trackedCharID > 0 then
+        charID = self.trackedCharID
+    end
+    
+    if not charID or charID <= 0 then
         return
     end
 
-    local curHP, maxHP = GetEntityHP(activeCharID)
+    -- Check if tracked character changed (e.g., player switched characters)
+    -- Only update tracking during player turn to avoid confusion during enemy turn
+    if currentTurn == "Player" and self.trackedCharID ~= charID then
+        self.trackedCharID = charID
+        -- Force update when character changes
+        self.lastHP = -1
+    end
+
+    -- Always use the tracked character for HP display
+    local displayCharID = self.trackedCharID
+    if not displayCharID or displayCharID <= 0 then
+        displayCharID = charID
+    end
+
+    local curHP, maxHP = GetEntityHP(displayCharID)
     if not curHP then
-        print("[HealthUI] Could not get HP for active character " .. activeCharID)
+        -- Entity might have been destroyed or has no Health component
         return
     end
 
@@ -96,7 +144,6 @@ function HealthUI:Update(dt, cameraPos)
 
     -- Handle HP changes
     if curHP ~= self.lastHP then
-        print("[HealthUI] HP changed for entity " .. activeCharID .. ": " .. self.lastHP .. " -> " .. curHP)
         self:HandleHPChange(curHP)
         self.lastHP = curHP
     end
@@ -116,21 +163,15 @@ function HealthUI:UpdatePositions(cameraPos)
 end
 
 function HealthUI:HandleHPChange(newHP)
-    print("[HealthUI] HandleHPChange called with newHP: " .. tostring(newHP))
-
     -- Clamp HP to valid range
     if newHP < 0 then newHP = 0 end
     if newHP > self.maxHP then newHP = self.maxHP end
 
     -- Change the texture on our single sprite
     local newTexture = self.textureBasePath .. tostring(newHP) .. ".png"
-    print("[HealthUI] Setting texture to: " .. newTexture .. " for sprite ID " .. tostring(self.healthSpriteID))
 
-    if self.healthSpriteID and self.healthSpriteID > 0 then
+    if self.healthSpriteID and self.healthSpriteID > 0 and SetSpriteTexture then
         SetSpriteTexture(self.healthSpriteID, newTexture)
-        print("[HealthUI] Texture changed successfully!")
-    else
-        print("[HealthUI] ERROR: Invalid health sprite ID: " .. tostring(self.healthSpriteID))
     end
 
     Log("[HealthUI] HP changed: " .. self.lastHP .. " -> " .. newHP)
