@@ -33,12 +33,6 @@ dofile("assets/scripts/EnemyTurnManager.lua")
 print("[Level3Clean] EnemyTurnManager.lua loaded successfully")
 
 -- ============================================================================
--- ENEMY CONFIGURATION (Set BEFORE enemies spawn)
--- ============================================================================
-_G.ENEMY_MOVE_DELAY = 0.6  -- Delay between tile movements (0.6 = slower, 0.3 = faster)
-print("[Level3Clean] Enemy move delay configured: " .. _G.ENEMY_MOVE_DELAY .. " seconds")
-
--- ============================================================================
 -- LEVEL STATE
 -- ============================================================================
 
@@ -201,15 +195,7 @@ function OnUpdate(dt)
 
     -- Update enemy turn manager (handles sequential enemy turns with delays)
     if UpdateEnemyTurnManager then
-        -- Only print during enemy turn to avoid spam
-        if currentTurn == "Enemy" then
-            print("[Level3Clean] Calling UpdateEnemyTurnManager with dt=" .. string.format("%.4f", dt))
-        end
         UpdateEnemyTurnManager(dt)
-    else
-        if currentTurn == "Enemy" then
-            print("[Level3Clean] WARNING: UpdateEnemyTurnManager is nil!")
-        end
     end
 
     -- Update UI system (replaces 300+ lines of UI update code!)
