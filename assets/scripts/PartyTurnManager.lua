@@ -382,7 +382,7 @@ function NextCharacterTurn()
     print(string.format("[PartyTurnManager] Turn transition cooldown started: %.2fs", TurnTransitionCooldown))
 
     print("[PartyTurnManager] ======================================")
-
+    PlaySound("turnstart", false, 0.5)
     -- Optional: Trigger camera switch
     OnCharacterSwitched(newActiveEntity)
 end
@@ -435,7 +435,7 @@ function EndPartyTurn()
 
     -- Switch to enemy turn using existing API
     EndPlayerTurn()
-
+    PlaySound("turnend", false, 0.5)
     -- Check what turn it is now
     local currentTurn = GetCurrentTurn()
     print("[PartyTurnManager] After EndPlayerTurn(), GetCurrentTurn() = " .. tostring(currentTurn))
