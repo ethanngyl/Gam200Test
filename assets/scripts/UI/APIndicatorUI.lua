@@ -209,7 +209,7 @@ function APIndicatorUI:Update(dt, cameraPos)
     local currentAP, maxPlayerAP = self.getAPFunc()
     if not currentAP then return end
 
-    -- Update sprite positions if camera moved
+    -- Update sprite positions if camera moved (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
         self:UpdatePositions(cameraPos)
     end

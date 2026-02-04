@@ -340,6 +340,8 @@ function NextCharacterTurn()
         print("[PartyTurnManager] PartyTurnComplete = true")
         print("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
         print("[PartyTurnManager] ======================================")
+        print("[PartyTurnManager] AUTO-CALLING EndPartyTurn() to switch to enemy phase...")
+        EndPartyTurn()
         return
     end
 
@@ -463,7 +465,13 @@ function EndPartyTurn()
         -- Initialize sequential enemy turn system
         print("[PartyTurnManager] Initializing sequential enemy turn system...")
         if InitializeEnemyTurn then
-            InitializeEnemyTurn()
+            local enemyTurnStarted = InitializeEnemyTurn()
+            if not enemyTurnStarted then
+                -- No enemies found - immediately end enemy turn and return to player
+                print("[PartyTurnManager] No enemies to act - skipping enemy turn!")
+                print("[PartyTurnManager] Calling EndEnemyTurn() to return to player...")
+                EndEnemyTurn()
+            end
         else
             print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
         end

@@ -205,7 +205,7 @@ function TurnScrollUI:Update(dt, cameraPos)
         SetAnimationDirection(self.scrollID, 3)
     end
 
-    -- Keep scroll anchored to camera
+    -- Keep scroll anchored to camera (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
         local scrollX = cameraPos.x + self.offsetX
         local scrollY = cameraPos.y + self.offsetY
@@ -310,6 +310,14 @@ function TurnScrollUI:Draw()
         self.textScale,
         r, g, b
     )
+end
+
+-- ============================================================================
+-- QUERIES
+-- ============================================================================
+
+function TurnScrollUI:IsPlaying()
+    return self.state == "playing"
 end
 
 -- ============================================================================

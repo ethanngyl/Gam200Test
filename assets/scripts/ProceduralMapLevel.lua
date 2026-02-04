@@ -6,6 +6,10 @@
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 
+-- Export UIManager globally so entity scripts can access it via C++ bridge
+-- (Entity scripts run in separate Lua states and need global access)
+_G.UIManager = UIManager
+
 -- Load Party Turn Manager (REQUIRED for party system)
 dofile("assets/scripts/PartyTurnManager.lua")
 
