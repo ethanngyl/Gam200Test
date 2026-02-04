@@ -440,6 +440,10 @@ function EndPartyTurn()
         else
             print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
         end
+
+        -- Hide player particles during enemy turn
+        SetActivePlayerIndex(-1)
+        print("[PartyTurnManager] Player particles hidden for enemy turn")
     end
 
     -- NOTE: Do NOT call ResetPartyTurn() here!
@@ -511,6 +515,9 @@ function ResetPartyTurn()
 
     -- Optional: Trigger camera switch to active character (guaranteed to be alive)
     if ActiveCharacterIndex <= #PartyMembers then
+        -- Set active player for particle system
+        SetActivePlayerIndex(ActiveCharacterIndex - 1)  -- Convert 1-based to 0-based
+
         OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
     end
 end
@@ -538,6 +545,10 @@ function OnCharacterSwitched(newCharID)
 
     print("[PartyTurnManager] Camera now following Entity " .. newCharID)
     print("[PartyTurnManager] ==========================================")
+
+    -- Set active player for particle system
+    SetActivePlayerIndex(ActiveCharacterIndex - 1)  -- Convert 1-based to 0-based
+    print("[PartyTurnManager] Active player particles set to index: " .. (ActiveCharacterIndex - 1))
 
     -- Optional: Play sound effect for character switch
     -- PlaySound("character_switch.wav", false)

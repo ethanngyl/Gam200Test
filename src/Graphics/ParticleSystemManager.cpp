@@ -33,12 +33,76 @@ namespace Framework {
 		}
 		s.directionFuzz = j.value("directionFuzz", 0.0f);
 
+		if (j.contains("endTint")) s.endTint = ReadTint(j["endTint"]);
+		s.endSize = j.value("endSize", 0.0f);
+		if (j.contains("gravity")) {
+			s.gravity.x = j["gravity"][0].get<float>();
+			s.gravity.y = j["gravity"][1].get<float>();
+		}
+		s.fadeOut = j.value("fadeOut", true);
+		s.shrinkOverTime = j.value("shrinkOverTime", false);
+		s.growOverTime = j.value("growOverTime", false);
+		s.ownerPlayerID = j.value("ownerPlayerID", -1);
+
 		return s;
 	}
 
 	ParticleSystem& ParticleSystemManager::AddParticleSystem() {
 		particleSystems.emplace_back();   // create a new ParticleSystem
 		return particleSystems.back();    // return reference so caller can configure it
+	}
+
+	int Framework::ParticleSystemManager::ReloadFromJSON(const std::string& path) {
+		particleSystems.clear();
+		settings.clear();
+		emitterIdToIndex.clear();
+		temporaryEffects.clear();
+		nextEmitterId = 1;
+
+		std::ifstream file(path);
+		if (!file.is_open()) {
+			std::cout << "[PSM] " << path << " not found\n";
+			return 0;
+		}
+
+		json root;
+		file >> root;
+
+		// load settings
+		if (root.contains("settings")) {
+			for (auto& [name, val] : root["settings"].items()) {
+				ParticleSystem::Settings s = ReadSettings(val);
+				settings[name] = s;
+			}
+		}
+
+		int created = 0;
+
+		// spawn emitters from JSON (POSITIONS FROM JSON)
+		if (root.contains("emitters")) {
+			for (auto& emitter : root["emitters"]) {
+				std::string settingName = emitter.value("setting", "");
+				auto it = settings.find(settingName);
+				if (it == settings.end()) continue;
+
+				auto& ps = AddParticleSystem();
+				ps.SetSettings(it->second);
+
+				auto pos = emitter["emitter"];
+				ps.SetEmitter(pos[0].get<float>(), pos[1].get<float>());
+
+				int emitterId = nextEmitterId++;
+				emitterIdToIndex[emitterId] = particleSystems.size() - 1;
+
+				int burst = ps.GetSettings().burstCnt;
+				if (burst > 0) ps.SpawnBurst(burst);
+
+				created++;
+			}
+		}
+
+		controlled = 0;
+		return created;
 	}
 
 	// Lua-friendly emitter creation
@@ -114,67 +178,23 @@ namespace Framework {
 		return emitterId;
 	}
 
-	void ParticleSystemManager::Initialize() {
-		particleSystems.clear();
-		settings.clear();
-		emitterIdToIndex.clear();
-		temporaryEffects.clear();
-		nextEmitterId = 1;
-
-		std::ifstream file("assets/JSON/particles.json");
-		if (!file.is_open()) {
-			std::cout << "[PSM] particles.json not found, using defaults\n";
+	void ParticleSystemManager::SetEmitterOwner(int emitterId, int playerID) {
+		auto it = emitterIdToIndex.find(emitterId);
+		if (it == emitterIdToIndex.end()) {
+			std::cerr << "[ParticleSystemManager] Invalid emitter ID: " << emitterId << std::endl;
 			return;
 		}
 
-		json root;
-		file >> root;
-
-		// load settings with enhanced properties
-		if (root.contains("settings")) {
-			for (auto& [name, val] : root["settings"].items()) {
-				ParticleSystem::Settings s = ReadSettings(val);
-
-				// Read enhanced properties if they exist
-				if (val.contains("endTint")) s.endTint = ReadTint(val["endTint"]);
-				s.endSize = val.value("endSize", 0.0f);
-				if (val.contains("gravity")) {
-					s.gravity.x = val["gravity"][0].get<float>();
-					s.gravity.y = val["gravity"][1].get<float>();
-				}
-				s.fadeOut = val.value("fadeOut", true);
-				s.shrinkOverTime = val.value("shrinkOverTime", false);
-
-				settings[name] = s;
-			}
+		size_t index = it->second;
+		if (index < particleSystems.size()) {
+			particleSystems[index].SetOwnerPlayer(playerID);
+			std::cout << "[ParticleSystemManager] Set emitter " << emitterId
+				<< " owner to player " << playerID << std::endl;
 		}
+	}
 
-		// spawn emitters
-		if (root.contains("emitters")) {
-			for (auto& emitter : root["emitters"]) {
-				std::string settingName = emitter.value("setting", "");
-				auto settingIterator = settings.find(settingName);
-				if (settingIterator == settings.end()) continue;
-
-				auto& ps = AddParticleSystem();
-				ps.SetSettings(settingIterator->second);
-
-				auto position = emitter["emitter"];
-				ps.SetEmitter(position[0].get<float>(), position[1].get<float>());
-
-				// Store emitter ID
-				int emitterId = nextEmitterId++;
-				emitterIdToIndex[emitterId] = particleSystems.size() - 1;
-
-				// Burst emitter, spawn once
-				int burst = ps.GetSettings().burstCnt;
-				if (burst > 0) {
-					ps.SpawnBurst(burst);
-				}
-			}
-		}
-
-		controlled = 0; // smoke emitter
+	void ParticleSystemManager::Initialize() {
+		ReloadFromJSON("assets/JSON/particles.json");
 	}
 
 	void ParticleSystemManager::Update(float dt) {
@@ -194,24 +214,6 @@ namespace Framework {
 		for (auto& particleSystem : particleSystems) {
 			particleSystem.Update(dt);
 		}
-
-			// Move the controlled emitter
-			if (particleSystems.empty()) return;
-			if (controlled >= particleSystems.size()) controlled = 0;
-
-			auto* input = CORE->GetInputSystem();
-			if (!input) return;
-
-			float speed = 1.0f; // world units per second
-			float dx = 0.0f, dy = 0.0f;
-
-			// Movement for controlld emitter
-			if (input->IsKeyDown(KeyCode::KEY_W)) dy += speed * dt;
-			if (input->IsKeyDown(KeyCode::KEY_A)) dx -= speed * dt;
-			if (input->IsKeyDown(KeyCode::KEY_S)) dy -= speed * dt;
-			if (input->IsKeyDown(KeyCode::KEY_D)) dx += speed * dt;
-
-			particleSystems[controlled].MoveEmitter(dx, dy);
 	}
 
 	void ParticleSystemManager::SendEngineMessage(Message* msg) {

@@ -1,8 +1,26 @@
 ﻿#include "Precompiled.h"
 
+namespace {
+	// Get active player index from Lua
+	int GetCurrentActivePlayer() {
+		return Framework::GetActivePlayerIndexForParticles();
+	}
+
+	// Check if particle should be active based on current turn
+	bool ShouldBeActive(int ownerPlayerID) {
+		if (ownerPlayerID < 0) return true;  // Always active
+		int currentPlayer = GetCurrentActivePlayer();
+		if (currentPlayer < 0) return true;  // No active player = show all
+		return currentPlayer == ownerPlayerID;
+	}
+}
+
 namespace Framework {
+    // Access to active player index (defined in LevelLoader_API.cpp)
+	int GetActivePlayerIndexForParticles();  // Forward declaration
+
 	void ParticleSystem::CreateParticle() {
-		if (!active) return; // Inactive not create
+		if (!active || !ShouldBeActive(settings.ownerPlayerID)) return;
 		if (!CORE || !CORE->GetGraphicsSystem() || !CORE->GetEntityManager()) return; // safety check
 
 		// Query active graphics system to convert pixel size into world-space scale
@@ -28,6 +46,7 @@ namespace Framework {
 		particle.gravity = settings.gravity;
 		particle.fadeOut = settings.fadeOut;
 		particle.shrinkOverTime = settings.shrinkOverTime;
+		particle.growOverTime = settings.growOverTime;
 
 		// Sprite
 		CORE->GetEntityManager()->AddComponent<Sprite>(entity);
@@ -142,8 +161,8 @@ namespace Framework {
 				}
 				else if (particle.growOverTime) {
 					// Grow over time
-					float currentSize = particle.endSize +
-						(particle.startSize - particle.endSize) * (1.0f - lifeProgress);
+					float currentSize = particle.startSize +
+						(particle.endSize - particle.startSize) * lifeProgress;
 					transform.scale = { currentSize, currentSize };
 				}
 			}

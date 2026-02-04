@@ -51,6 +51,7 @@ local kSpacingY = 0.1
 local particleEmitters = {}
 local playerAttackedThisFrame = false
 local lastAttackingEntity = 0
+local playerParticleEmitters = {} 
 
 -- Audio configuration
 local audioConfig = nil
@@ -103,9 +104,6 @@ function OnInit()
     LoadAnimationConfig("assets/JSON/animations.json")
     LoadPlayerAnimation("Idle_front")
 
-    -- Initialization particle system
-    InitializeParticles()
-
     -- Setup entities
     SetupParty()  -- Changed from SetupPlayer() to SetupParty()
     SetupEnemies()
@@ -118,6 +116,9 @@ function OnInit()
 
     -- Setup Party UI (shows all 3 characters)
     SetupPartyUI()
+
+     -- Initialize player particle emitters
+    InitializePlayerParticles()
 
     -- CRITICAL: Re-disable grid movement AFTER all initialization
     -- Some systems (GameStateManager) may re-enable it during setup
@@ -208,6 +209,9 @@ function OnUpdate(dt)
     -- Update party turn manager (handles turn transition cooldown)
     UpdatePartyTurnManager(dt)
 
+    -- Update player particles
+    UpdatePlayerParticles(dt)
+
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
 
@@ -249,6 +253,16 @@ function OnDestroy()
 
     -- Cleanup particles
     CleanupParticles()
+
+     -- Cleanup player particles
+    if playerParticleEmitters then
+        for i = 1, #playerParticleEmitters do
+            if playerParticleEmitters[i] and playerParticleEmitters[i] > 0 then
+                DestroyParticleEmitter(playerParticleEmitters[i])
+            end
+        end
+        playerParticleEmitters = {}
+    end
 
     -- Cleanup party UI
     if partyUI then
@@ -336,28 +350,55 @@ function LoadTileMapData()
 end
 
 -- ============================================================================
--- HELPER FUNCTIONS - PARTICLE SYSTEM INITIALIZATION
+-- PLAYER PARTICLE EMITTERS
 -- ============================================================================
-
-function InitializeParticles()
+function InitializePlayerParticles()
     Log("========================================")
-    Log("Initializing Particle System...")
+    Log("Initializing PLAYER particle emitters...")
     Log("========================================")
     
-    -- The ParticleSystemManager automatically loads particles.json in Initialize()
-    -- This creates the 4 default emitters: Smoke, Explosion, Sparks, Rain
-    
-    -- Optional: Create additional runtime emitters
-    -- Example: Create a rain emitter at the top of the screen
-    local rainEmitterId = CreateParticleEmitter("Rain", 0.0, 5.0)
-    if rainEmitterId > 0 then
-        particleEmitters.rain = rainEmitterId
-        Log("Created rain particle emitter (ID: " .. rainEmitterId .. ")")
-    else
-        Log("WARNING: Failed to create rain emitter")
+    -- partyMembers is set in SetupParty() at line 513
+    for i = 1, #partyMembers do
+        local playerEntity = partyMembers[i]
+        
+        if playerEntity and playerEntity > 0 then
+            local x, y = GetEntityWorldPosition(playerEntity)
+            
+            -- Create emitter: Player1Aura, Player2Aura, or Player3Aura
+            local presetName = "Player" .. i .. "Aura"
+            local emitterId = CreateParticleEmitter(presetName, x, y)
+            
+            if emitterId > 0 then
+                SetParticleEmitterOwner(emitterId, i - 1)
+                playerParticleEmitters[i] = emitterId
+                Log("Created particle emitter for Player " .. i .. " (ID: " .. emitterId .. ")")
+            else
+                Log("ERROR: Failed to create emitter for Player " .. i)
+            end
+        end
     end
     
-    Log("Particle system initialized from particles.json")
+    Log("Player particle emitters created!")
+end
+
+-- ============================================================================
+-- PARTICLE SYSTEM: Set active player for particles
+-- ============================================================================
+function SetActivePlayerForParticles(playerIndex)
+    -- playerIndex: 0=Player1, 1=Player2, 2=Player3, -1=none
+    SetActivePlayerIndex(playerIndex)
+end
+
+function UpdatePlayerParticles(dt)
+    for i = 1, #playerParticleEmitters do
+        local emitterId = playerParticleEmitters[i]
+        local playerEntity = partyMembers[i]
+        
+        if emitterId and emitterId > 0 and playerEntity and playerEntity > 0 then
+            local x, y = GetEntityWorldPosition(playerEntity)
+            SetParticleEmitterPosition(emitterId, x, y)
+        end
+    end
 end
 
 -- ============================================================================
@@ -645,26 +686,4 @@ function HandleEditorToggle(dt)
 
         editorToggleCooldown = 0.3
     end
-end
-
--- ============================================================================
--- PARTICLE TESTING (Add at end of file)
--- ============================================================================
-
-function TestParticles()
-    Log("[TEST] ====== TESTING PARTICLES ======")
-    
-    -- Test 1: Explosion at center
-    local effect1 = CreateParticleEffect("Explosion", 0.0, 0.0, 2.0)
-    Log("[TEST] Explosion: " .. (effect1 > 0 and "SUCCESS" or "FAILED"))
-    
-    -- Test 2: Sparks
-    local effect2 = CreateParticleEffect("Sparks", -1.0, 0.0, 1.5)
-    Log("[TEST] Sparks: " .. (effect2 > 0 and "SUCCESS" or "FAILED"))
-    
-    -- Test 3: Smoke emitter
-    local effect3 = CreateParticleEmitter("Smoke", 1.0, 0.0)
-    Log("[TEST] Smoke: " .. (effect3 > 0 and "SUCCESS" or "FAILED"))
-    
-    Log("[TEST] ====== TEST COMPLETE ======")
 end

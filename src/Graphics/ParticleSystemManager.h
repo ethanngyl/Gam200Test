@@ -12,12 +12,15 @@ namespace Framework {
 
 		ParticleSystem& AddParticleSystem();
 
+		int ReloadFromJSON(const std::string& path);
+
 		// Lua-friendly interface
 		int CreateEmitter(const std::string& presetName, float x = 0.0f, float y = 0.0f);
 		void DestroyEmitter(int emitterId);
 		void SetEmitterPosition(int emitterId, float x, float y);
 		void SetEmitterActive(int emitterId, bool active);
 		void SpawnBurst(int emitterId, int count);
+		void SetEmitterOwner(int emitterId, int playerID);
 		int CreateTemporaryEffect(const std::string& presetName, float x, float y, float duration = 0.0f);
 
 		// Manadatory overrides

@@ -24,6 +24,9 @@ namespace Framework {
 			Vector2D	gravity{ 0.0f, 0.0f };
 			bool		fadeOut{ true };
 			bool		shrinkOverTime{ false };
+			bool		growOverTime{ false };
+
+			int         ownerPlayerID{ -1 };  // -1 = always active, 0-2 = specific player
 		};
 
 		void CreateParticle();
@@ -40,9 +43,10 @@ namespace Framework {
 
 		size_t GetParticle() const { return particles.size(); } // Get particle count
 
-		void MoveEmitter(float dx, float dy) { emitter.x += dx; emitter.y += dy; }
-
 		void SpawnBurst(int count) { for (int i{ 0 }; i < count; ++i) CreateParticle(); } // Burst spawning
+
+		void SetOwnerPlayer(int playerID) { settings.ownerPlayerID = playerID; }
+		int GetOwnerPlayer() const { return settings.ownerPlayerID; }
 
 	private:
 		std::vector<Entity> particles;
