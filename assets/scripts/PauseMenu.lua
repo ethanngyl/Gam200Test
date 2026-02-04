@@ -1,8 +1,8 @@
 --[[
 ===============================================================================
 | File:          PauseMenu.lua
-| Author:        Claude (AI Assistant)
-| Date:          2025-01-27
+| Author:        GE YONGQI
+| Date:          2026-01-27
 | ------------------------------------------------------------------------------
 |  Reusable Pause Menu System with Visual UI Elements
 |

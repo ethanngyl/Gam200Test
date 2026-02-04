@@ -1,7 +1,7 @@
 /**
 ===============================================================================
 File:        SaveLoadSystem.h
-Author:      AI Assistant
+Author:      GE YONGQI
 Date:        2026-01-14
 -------------------------------------------------------------------------------
 Universal Save/Load System for entity serialization to JSON format.

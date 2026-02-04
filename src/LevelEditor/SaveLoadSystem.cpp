@@ -1,7 +1,7 @@
 /**
 ===============================================================================
 File:        SaveLoadSystem.cpp
-Author:      AI Assistant
+Author:      GE YONGQI
 Date:        2026-01-14
 -------------------------------------------------------------------------------
 Implementation of the universal Save/Load System for entity serialization.

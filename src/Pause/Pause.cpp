@@ -4,7 +4,7 @@
  Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-27
- Contribution:  Original: Carl | Fix: Claude
+ Contribution:  100%
  ------------------------------------------------------------------------------
   Text-Based Pause Menu with Framebuffer-Aware Positioning
 

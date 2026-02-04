@@ -1,7 +1,7 @@
 --[[
 ===============================================================================
 | File:          SettingsMenu.lua
-| Author:        Claude (AI Assistant)
+| Author:        GE YONGQI
 | Date:          2026-02-01
 | ------------------------------------------------------------------------------
 |  Settings Menu System with Volume Slider
