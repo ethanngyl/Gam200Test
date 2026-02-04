@@ -302,10 +302,31 @@ namespace Framework {
                 continue; // Skip automatic animation selection for scroll UI
             }
 
-            std::string selected =
-                groupMap[anim.group][anim.direction];
 
-            if (anim.animName != selected)
+
+            // 
+            std::string selected;
+            auto itGroup = groupMap.find(anim.group);
+            if (itGroup != groupMap.end()) {
+                auto itDir = itGroup->second.find(anim.direction);
+                if (itDir != itGroup->second.end()) {
+                    selected = itDir->second;
+                }
+            }
+
+            // If no matching animation found, fall back to Idle_front
+            if (selected.empty()) {
+                selected = "Idle_front";  // Safe fallback
+            }
+
+            // CRITICAL FIX: Force LoadAnimation if:
+            // 1. Animation name changed
+            // 2. OR frameWidth/frameHeight are invalid (0 or negative)
+            // This ensures animation data is always properly initialized
+            bool needsReload = (anim.animName != selected);
+            bool frameDataInvalid = (anim.frameWidth <= 0 || anim.frameHeight <= 0);
+
+            if (needsReload || frameDataInvalid)
             {
                 anim.animName = selected;
                 auto* gfx = CORE->GetGraphicsSystem();
@@ -364,7 +385,17 @@ namespace Framework {
                             anim.elapsedTime = 0.0f;
 
                             // IMPORTANT: also swap sprite sheet immediately this frame
-                            std::string idleSelected = groupMap[AnimGroup::Idle][anim.direction];
+                            std::string idleSelected;
+                            auto itIdleGroup = groupMap.find(AnimGroup::Idle);
+                            if (itIdleGroup != groupMap.end()) {
+                                auto itIdleDir = itIdleGroup->second.find(anim.direction);
+                                if (itIdleDir != itIdleGroup->second.end()) {
+                                    idleSelected = itIdleDir->second;
+                                }
+                            }
+                            if (idleSelected.empty()) {
+                                idleSelected = "Idle_front";  // Safe fallback
+                            }
                             if (!idleSelected.empty())
                             {
                                 anim.animName = idleSelected;
@@ -525,7 +556,13 @@ namespace Framework {
         if (itAnim == j["animations"].end()) {
             LOG_ERROR("ANIM", "Animation '%s' not found in %s",
                 animationName.c_str(), g_animationConfigPath.c_str());
-            return;
+
+
+            itAnim = j["animations"].find("Idle_front");
+            if (itAnim == j["animations"].end()) {
+                return;  // Only fail if fallback also missing
+            }
+            anim.animName = "Idle_front";
         }
 
         const json& a = *itAnim;

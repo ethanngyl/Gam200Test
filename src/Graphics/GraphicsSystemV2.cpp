@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
@@ -742,17 +742,18 @@ namespace Framework {
                     MaterialHandle existing = resourceManager.GetMaterialHandle(matName);
                     if (existing.IsValid()) {
                         mr.material = existing;
-                        continue;
+                        // Don't continue here - we still need to set up the render command!
                     }
+                    else {
+                        MaterialHandle inst = resourceManager.CreateMaterial(matName, base->shader);
 
-                    MaterialHandle inst = resourceManager.CreateMaterial(matName, base->shader);
+                        Material* pm = resourceManager.GetMaterial(inst);
+                        if (!pm) continue;
 
-                    Material* pm = resourceManager.GetMaterial(inst);
-                    if (!pm) continue;
-
-                    *pm = *base; // shallow copy of defaults
-                    pm->tint = glm::vec4(1.0f); // Force material tint to white
-                    mr.material = inst;
+                        *pm = *base; // shallow copy of defaults
+                        pm->tint = glm::vec4(1.0f); // Force material tint to white
+                        mr.material = inst;
+                    }
                 }
 
                 cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
@@ -906,34 +907,89 @@ namespace Framework {
             mat->albedoTexture = anim.spriteSheet;
 
             Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
-            if (!tex)
+            if (!tex) {
+                // Still render with default UVs if texture is missing
+                renderQueue.Submit(cmd);
                 continue;
+            }
 
             const int texW = tex->GetWidth();
             const int texH = tex->GetHeight();
-            if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
+
+            // CRITICAL FIX: If frame dimensions are invalid, compute them from texture and animation settings
+            int safeFrameWidth = anim.frameWidth;
+            int safeFrameHeight = anim.frameHeight;
+            int safeCols = anim.columns;
+            int safeRows = anim.rows;
+
+            // If frame dimensions are 0 but we have valid columns/rows, compute from texture
+            if ((safeFrameWidth <= 0 || safeFrameHeight <= 0) && texW > 0 && texH > 0) {
+                if (safeCols <= 0) safeCols = 1;
+                if (safeRows <= 0) safeRows = 1;
+                safeFrameWidth = texW / safeCols;
+                safeFrameHeight = texH / safeRows;
+            }
+
+            // Final validation - if still invalid, use full texture as single frame
+            if (safeFrameWidth <= 0 || safeFrameHeight <= 0 || texW <= 0 || texH <= 0) {
+                // Can't compute valid UVs, render with defaults (full texture)
+                renderQueue.Submit(cmd);
                 continue;
+            }
 
-            // Prefer the configured column count if available
-            const int cols = (anim.columns > 0) ? anim.columns : (texW / anim.frameWidth);
+            // Use safe values computed above for cols/rows calculation
+            const int cols = (safeCols > 0) ? safeCols : 1;
+            const int rows = (safeRows > 0) ? safeRows : 1;
 
-            // Calculate actual frame index: startFrame + (currentFrame within range)
-            const int frameInRange = anim.currentFrame % max(1, anim.frameCount);
-            const int actualFrame = anim.startFrame + frameInRange;
+            const int totalCells = cols * rows;
+            if (cols <= 0 || rows <= 0 || totalCells <= 0) {
+                // Still render with default UVs
+                renderQueue.Submit(cmd);
+                continue;
+            }
+
+            // Clamp frameCount so we never walk past the sheet
+            int safeFrameCount = anim.frameCount;
+            if (safeFrameCount <= 0)
+                safeFrameCount = 1;
+
+            const int maxFramesAvailable = totalCells - anim.startFrame;
+            if (maxFramesAvailable <= 0)
+            {
+                safeFrameCount = 1;
+            }
+            else if (safeFrameCount > maxFramesAvailable)
+            {
+                safeFrameCount = maxFramesAvailable;
+            }
+
+            const int frameInRange = anim.currentFrame % safeFrameCount;
+            int actualFrame = anim.startFrame + frameInRange;
+
+            // Final absolute clamp (paranoia)
+            if (actualFrame < 0) actualFrame = 0;
+            if (actualFrame >= totalCells) actualFrame = totalCells - 1;
+
             const int x = actualFrame % cols;
             const int y = actualFrame / cols;
+            if (y < 0 || y >= rows) {
+                // Still render with default UVs
+                renderQueue.Submit(cmd);
+                continue;
+            }
+
 
             // Treat uvShrinkPx as pixels trimmed from each side of the frame
             float shrink = anim.uvShrinkPx;
             if (shrink < 0.0f) shrink = 0.0f;
-            if (shrink * 2.0f >= anim.frameWidth)  shrink = (anim.frameWidth - 1) * 0.5f;
-            if (shrink * 2.0f >= anim.frameHeight) shrink = (anim.frameHeight - 1) * 0.5f;
+            if (shrink * 2.0f >= safeFrameWidth)  shrink = (safeFrameWidth - 1) * 0.5f;
+            if (shrink * 2.0f >= safeFrameHeight) shrink = (safeFrameHeight - 1) * 0.5f;
 
             // Pixel coordinates inside the big texture
-            float leftPx = x * anim.frameWidth + shrink;
-            float rightPx = (x + 1) * anim.frameWidth - shrink;
-            float topPx = y * anim.frameHeight + shrink;
-            float bottomPx = (y + 1) * anim.frameHeight - shrink;
+            float leftPx = x * safeFrameWidth + shrink;
+            float rightPx = (x + 1) * safeFrameWidth - shrink;
+            float topPx = y * safeFrameHeight + shrink;
+            float bottomPx = (y + 1) * safeFrameHeight - shrink;
 
             // Convert to UV [0,1]
             float u0 = leftPx / float(texW);

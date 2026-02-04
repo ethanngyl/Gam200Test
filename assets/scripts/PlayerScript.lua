@@ -258,10 +258,10 @@ local function updateAnimationDirection(moveDirX, moveDirY)
         newDirection = AnimDirection.Front
     elseif moveDirX > 0 then
         newDirection = AnimDirection.Side
-        newFlipX = false
+        newFlipX = true
     elseif moveDirX < 0 then
         newDirection = AnimDirection.Side
-        newFlipX = true
+        newFlipX = false
     end
 
     if newDirection ~= currentAnimDirection then
