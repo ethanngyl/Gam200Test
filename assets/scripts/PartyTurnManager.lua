@@ -471,6 +471,12 @@ function EndPartyTurn()
                 print("[PartyTurnManager] No enemies to act - skipping enemy turn!")
                 print("[PartyTurnManager] Calling EndEnemyTurn() to return to player...")
                 EndEnemyTurn()
+
+                -- CRITICAL: Reset party turn immediately since we're skipping enemy turn
+                -- Normally this would be called by OnEnemyTurnEnded() on the next frame,
+                -- but we need it NOW to avoid the party being stuck in a stale state
+                print("[PartyTurnManager] Immediately resetting party turn (no enemies)...")
+                ResetPartyTurn()
             end
         else
             print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
