@@ -113,7 +113,7 @@
           "content": "PLAY",
           "font": "Jersey20Regular",
           "offset": {
-            "x": -70.0,
+            "x": -43.0,
             "y": -16.0
           },
           "scale": 1.0,
@@ -142,7 +142,7 @@
           "content": "QUIT GAME",
           "font": "Jersey20Regular",
           "offset": {
-            "x": -120.0,
+            "x": -93.0,
             "y": -16.0
           },
           "scale": 1.0,
