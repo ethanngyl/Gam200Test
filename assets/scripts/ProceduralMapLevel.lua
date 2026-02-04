@@ -470,7 +470,7 @@ function HandleGoalTransition(dt)
             
             -- Transition to main menu immediately
             if SetNextGameState then
-                SetNextGameState("mainMenu")
+                SetNextGameState("LEVEL_END")
             else
                 Log("ERROR: No game state transition function available!")
             end
