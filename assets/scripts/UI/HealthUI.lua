@@ -39,7 +39,7 @@ function HealthUI:Init(config)
     self.textureBasePath = self.config.textureBasePath or "assets/UI/Health_"
 
     -- State
-    self.heartSprites = {}  -- Map HP value to entity ID
+    self.healthSpriteID = 0  -- Single sprite that we'll change texture on
     self.lastHP = -1
 
     -- Get camera position
@@ -59,20 +59,14 @@ function HealthUI:Init(config)
     end
     self.lastHP = curHP
 
-    -- Create all heart sprites (one for each HP value)
-    for hpVal = 0, self.maxHP do
-        local texture = self.textureBasePath .. tostring(hpVal) .. ".png"
-        local x = camX + self.offsetX
-        local y = camY + self.offsetY
+    -- Create a SINGLE health sprite with the current HP texture
+    local texture = self.textureBasePath .. tostring(curHP) .. ".png"
+    local x = camX + self.offsetX
+    local y = camY + self.offsetY
 
-        local entityID = self:SpawnSprite(texture, x, y, self.scale, self.scale, self.layer)
-        self.heartSprites[hpVal] = entityID
+    self.healthSpriteID = self:SpawnSprite(texture, x, y, self.scale, self.scale, self.layer)
 
-        -- Initially hide all except current HP
-        SetSpriteVisibility(entityID, hpVal == curHP)
-    end
-
-    Log("[HealthUI] Initialized - " .. curHP .. "/" .. self.maxHP .. " HP")
+    Log("[HealthUI] Initialized - " .. curHP .. "/" .. self.maxHP .. " HP (single sprite approach)")
 end
 
 -- ============================================================================
@@ -116,52 +110,38 @@ function HealthUI:UpdatePositions(cameraPos)
     local x = cameraPos.x + self.offsetX
     local y = cameraPos.y + self.offsetY
 
-    for hpVal, entityID in pairs(self.heartSprites) do
-        if entityID and entityID > 0 then
-            SetSpritePosition(entityID, x, y)
-        end
+    if self.healthSpriteID and self.healthSpriteID > 0 then
+        SetSpritePosition(self.healthSpriteID, x, y)
     end
 end
 
 function HealthUI:HandleHPChange(newHP)
     print("[HealthUI] HandleHPChange called with newHP: " .. tostring(newHP))
-    print("[HealthUI] heartSprites table has " .. tostring(#self.heartSprites) .. " entries")
 
-    -- Hide all hearts
-    for hpVal, entityID in pairs(self.heartSprites) do
-        print("[HealthUI]   Hiding heart for HP=" .. tostring(hpVal) .. ", entityID=" .. tostring(entityID))
-        if entityID and entityID > 0 then
-            SetSpriteVisibility(entityID, false)
-        else
-            print("[HealthUI]   WARNING: Invalid entityID for HP=" .. tostring(hpVal))
-        end
-    end
+    -- Clamp HP to valid range
+    if newHP < 0 then newHP = 0 end
+    if newHP > self.maxHP then newHP = self.maxHP end
 
-    -- Show heart matching current HP
-    print("[HealthUI] Looking for heart sprite at heartSprites[" .. tostring(newHP) .. "]")
-    if self.heartSprites[newHP] then
-        print("[HealthUI] Found heart sprite! entityID=" .. tostring(self.heartSprites[newHP]))
-        SetSpriteVisibility(self.heartSprites[newHP], true)
-        print("[HealthUI] Set visibility to TRUE for HP=" .. tostring(newHP))
+    -- Change the texture on our single sprite
+    local newTexture = self.textureBasePath .. tostring(newHP) .. ".png"
+    print("[HealthUI] Setting texture to: " .. newTexture .. " for sprite ID " .. tostring(self.healthSpriteID))
+
+    if self.healthSpriteID and self.healthSpriteID > 0 then
+        SetSpriteTexture(self.healthSpriteID, newTexture)
+        print("[HealthUI] Texture changed successfully!")
     else
-        print("[HealthUI] ERROR: No heart sprite found for HP=" .. tostring(newHP))
-        print("[HealthUI] Available HP values in heartSprites:")
-        for hpVal, _ in pairs(self.heartSprites) do
-            print("[HealthUI]   - HP value: " .. tostring(hpVal) .. " (type: " .. type(hpVal) .. ")")
-        end
+        print("[HealthUI] ERROR: Invalid health sprite ID: " .. tostring(self.healthSpriteID))
     end
 
     Log("[HealthUI] HP changed: " .. self.lastHP .. " -> " .. newHP)
 end
 
 function HealthUI:Destroy()
-    for _, entityID in pairs(self.heartSprites) do
-        if entityID and entityID > 0 then
-            DestroyEntity(entityID)
-        end
+    if self.healthSpriteID and self.healthSpriteID > 0 then
+        DestroyEntity(self.healthSpriteID)
     end
 
-    self.heartSprites = {}
+    self.healthSpriteID = 0
     Log("[HealthUI] Destroyed")
 end
 

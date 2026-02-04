@@ -1410,6 +1410,51 @@ function ExecuteAttack()
 
     print("[PlayerScript] Target found: Enemy " .. enemyID .. " at (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
 
+        -- ============================================================
+    -- FIX: Face the enemy before playing Attack_side animation
+    -- (Knight side attack sheet is left-facing by default)
+    -- ============================================================
+    do
+        local px, py = GetEntityGridPosition(entityID)
+        if px and py and enemyX and enemyY then
+            local dx = enemyX - px
+            local dy = enemyY - py
+
+            local newDir = currentAnimDirection
+            local newFlip = isFlippedX
+
+            -- Decide facing axis (attack is usually 1-tile away, but keep robust)
+            if math.abs(dx) > math.abs(dy) then
+                newDir = AnimDirection.Side
+
+                -- IMPORTANT: for Knight_Attack_Left sheet,
+                -- flip when enemy is on the RIGHT.
+                if dx > 0 then
+                    newFlip = true   -- enemy right -> flip to face right
+                else
+                    newFlip = false  -- enemy left  -> keep left
+                end
+            elseif dy > 0 then
+                newDir = AnimDirection.Back
+                -- keep newFlip unchanged
+            elseif dy < 0 then
+                newDir = AnimDirection.Front
+                -- keep newFlip unchanged
+            end
+
+            if newDir ~= currentAnimDirection then
+                currentAnimDirection = newDir
+                SetAnimationDirection(entityID, currentAnimDirection)
+            end
+
+            if newFlip ~= isFlippedX then
+                isFlippedX = newFlip
+                SetAnimationFlipX(entityID, isFlippedX)
+            end
+        end
+    end
+
+
     -- Check enemy HP BEFORE attack
     local enemyHPBefore, enemyMaxHP = GetEntityHP(enemyID)
     print("[PlayerScript] Enemy " .. enemyID .. " HP BEFORE attack: " .. tostring(enemyHPBefore) .. "/" .. tostring(enemyMaxHP))
