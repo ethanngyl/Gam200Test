@@ -673,12 +673,12 @@ local function createPlayerStates(fsm)
 
             if currentAP < apCostPerMove then
                 print("[PlayerScript] FAILED: Not enough AP!")
-                PulseTile(self.targetX, self.targetY, 0.3, 1.0, 1.0, 0.3)
+                --PulseTile(self.targetX, self.targetY, 0.3, 1.0, 1.0, 0.3)
 
-                if currentAP == 0 then
-                    print("[PlayerScript] AP depleted - ending turn!")
-                    endTurn()
-                end
+                --if currentAP == 0 then
+                    --print("[PlayerScript] AP depleted - ending turn!")
+                    --endTurn()
+                --end
                 return
             end
 
@@ -709,11 +709,11 @@ local function createPlayerStates(fsm)
                 local newAP, maxAP = GetEntityAP(entityID)
                 print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
 
-                if newAP == 0 then
-                    print("[PlayerScript] AP depleted after movement - ending turn!")
-                    endTurn()
-                    return
-                end
+                --if newAP == 0 then
+                    --print("[PlayerScript] AP depleted after movement - ending turn!")
+                    --endTurn()
+                    --return
+                --end
 
                 -- Visual feedback
                 ShowTileBorder(self.targetX, self.targetY, 0.5)

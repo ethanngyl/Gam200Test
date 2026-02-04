@@ -98,10 +98,10 @@
         },
         "layer": 10,
         "text": {
-          "content": "Level Editor",
+          "content": "LEVEL EDITOR",
           "font": "Jersey20Regular",
           "offset": {
-            "x": -150.0,
+            "x": -115.0,
             "y": -16.0
           },
           "scale": 1.0,
@@ -129,7 +129,7 @@
           "content": "DEMO",
           "font": "Jersey20Regular",
           "offset": {
-            "x": -80.0,
+            "x": -55.0,
             "y": -16.0
           },
           "scale": 1.0,
@@ -157,7 +157,7 @@
           "content": "BACK",
           "font": "Jersey20Regular",
           "offset": {
-            "x": -80.0,
+            "x": -55.0,
             "y": -16.0
           },
           "scale": 1.0,
