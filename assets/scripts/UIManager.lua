@@ -267,6 +267,19 @@ function UIManager.IsAPAnimating()
     return false
 end
 
+-- Check if the turn scroll animation is currently playing
+function UIManager.IsTurnScrollPlaying()
+    if not UIManager.initialized then
+        return false
+    end
+
+    if UIManager.components.turnScroll and UIManager.components.turnScroll.IsPlaying then
+        return UIManager.components.turnScroll:IsPlaying()
+    end
+
+    return false
+end
+
 -- ============================================================================
 -- CLEANUP
 -- ============================================================================

@@ -340,6 +340,8 @@ function NextCharacterTurn()
         print("[PartyTurnManager] PartyTurnComplete = true")
         print("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
         print("[PartyTurnManager] ======================================")
+        print("[PartyTurnManager] AUTO-CALLING EndPartyTurn() to switch to enemy phase...")
+        EndPartyTurn()
         return
     end
 

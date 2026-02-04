@@ -171,6 +171,12 @@ local attackPreviewTiles = {}
 local attackRange = 1
 local attackAPCost = 1
 
+-- Movement key state tracking (for press-only movement)
+local lastWKeyDown = false
+local lastSKeyDown = false
+local lastAKeyDown = false
+local lastDKeyDown = false
+
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
@@ -179,19 +185,31 @@ local function blockHeldKeys()
     blockedKeys = {}
     if IsKeyDown("W") then
         blockedKeys["W"] = true
+        lastWKeyDown = true  -- Track as held so first release allows movement
         print("[PlayerScript]   W is held - blocking until released")
+    else
+        lastWKeyDown = false
     end
     if IsKeyDown("S") then
         blockedKeys["S"] = true
+        lastSKeyDown = true
         print("[PlayerScript]   S is held - blocking until released")
+    else
+        lastSKeyDown = false
     end
     if IsKeyDown("A") then
         blockedKeys["A"] = true
+        lastAKeyDown = true
         print("[PlayerScript]   A is held - blocking until released")
+    else
+        lastAKeyDown = false
     end
     if IsKeyDown("D") then
         blockedKeys["D"] = true
+        lastDKeyDown = true
         print("[PlayerScript]   D is held - blocking until released")
+    else
+        lastDKeyDown = false
     end
     if IsKeyDown("P") then
         lastPKeyDown = true
@@ -267,11 +285,16 @@ local function endTurn()
     -- Don't reset lastPKeyDown here - keep it true if P is held
     -- lastPKeyDown = false
     lastSpaceKeyDown = false
+    -- Reset movement key states
+    lastWKeyDown = false
+    lastSKeyDown = false
+    lastAKeyDown = false
+    lastDKeyDown = false
     ClearAttackPreview()
 end
 
 -- ============================================================================
--- ATTACK HELPER FUNCTIONS (unchanged from original)
+-- ATTACK HELPER FUNCTIONS 
 -- ============================================================================
 
 function ShowAttackPreview()
@@ -521,18 +544,30 @@ local function createPlayerStates(fsm)
             end
             lastSpaceKeyDown = spaceKeyDown
 
-            -- Check movement input
+            -- Check movement input (PRESS-ONLY - not hold)
             local wDown = IsKeyDown("W") and not blockedKeys["W"]
             local sDown = IsKeyDown("S") and not blockedKeys["S"]
             local aDown = IsKeyDown("A") and not blockedKeys["A"]
             local dDown = IsKeyDown("D") and not blockedKeys["D"]
 
-            if wDown or sDown or aDown or dDown then
-                -- Store movement direction
-                fsm:setData("moveW", wDown)
-                fsm:setData("moveS", sDown)
-                fsm:setData("moveA", aDown)
-                fsm:setData("moveD", dDown)
+            -- Only trigger movement on key PRESS (transition from released to pressed)
+            local wPressed = wDown and not lastWKeyDown
+            local sPressed = sDown and not lastSKeyDown
+            local aPressed = aDown and not lastAKeyDown
+            local dPressed = dDown and not lastDKeyDown
+
+            -- Update last key states
+            lastWKeyDown = wDown
+            lastSKeyDown = sDown
+            lastAKeyDown = aDown
+            lastDKeyDown = dDown
+
+            if wPressed or sPressed or aPressed or dPressed then
+                -- Store movement direction (only the pressed key)
+                fsm:setData("moveW", wPressed)
+                fsm:setData("moveS", sPressed)
+                fsm:setData("moveA", aPressed)
+                fsm:setData("moveD", dPressed)
                 fsm:changeState("Moving")
                 return
             end
@@ -741,6 +776,16 @@ end
 
 function OnUpdate(dt)
     -- ========================================================================
+    -- TURN SCROLL CHECK: Skip input during "Your Turn" animation
+    -- ========================================================================
+    
+    -- Use C++ bridge function to check if turn scroll is playing
+    -- This bridges from entity Lua state to level Lua state's UIManager
+    if IsTurnScrollPlaying and IsTurnScrollPlaying() then
+        return
+    end
+    
+    -- ========================================================================
     -- DEATH CHECK: Stop processing if entity is dead
     -- ========================================================================
 
@@ -783,6 +828,11 @@ function OnUpdate(dt)
             blockedKeys = {}
             lastPKeyDown = false
             lastSpaceKeyDown = false
+            -- Reset movement key states
+            lastWKeyDown = false
+            lastSKeyDown = false
+            lastAKeyDown = false
+            lastDKeyDown = false
             ClearAttackPreview()
 
             if currentAnimGroup ~= AnimGroup.Idle then
@@ -1237,7 +1287,7 @@ function ShowAttackPreview()
         print("[PlayerScript]   Checking tile at (" .. tile.x .. ", " .. tile.y .. ")")
 
         local isValid = IsValidGridPosition and IsValidGridPosition(tile.x, tile.y) or true
-        print("[PlayerScript]     IsValidGridPosition: " .. tostring(isValid))
+        print("[PlayerScript]   IsValidGridPosition: " .. tostring(isValid))
 
         if isValid then
             -- Tint the tile red for attack preview
@@ -1364,7 +1414,7 @@ function ExecuteAttack()
     print("[PlayerScript] DamageEntity returned: " .. tostring(success))
 
     if success then
-        print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
+        print("[PlayerScript] Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
         -- Check enemy HP AFTER attack
         local enemyHPAfter, _ = GetEntityHP(enemyID)
@@ -1391,11 +1441,11 @@ function ExecuteAttack()
         print("[PlayerScript] UIManager value: " .. tostring(UIManager))
 
         if UIManager then
-            print("[PlayerScript] ✓ UIManager exists in entity Lua state!")
+            print("[PlayerScript] UIManager exists in entity Lua state!")
             print("[PlayerScript] UIManager.GetComponent type: " .. tostring(type(UIManager.GetComponent)))
 
             if UIManager.GetComponent then
-                print("[PlayerScript] ✓ GetComponent method exists!")
+                print("[PlayerScript] GetComponent method exists!")
                 print("[PlayerScript] Calling UIManager.GetComponent('attackAP')...")
 
                 local attackAPComponent = UIManager.GetComponent("attackAP")
@@ -1403,11 +1453,11 @@ function ExecuteAttack()
                 print("[PlayerScript] attackAP component value: " .. tostring(attackAPComponent))
 
                 if attackAPComponent then
-                    print("[PlayerScript] ✓ attackAP component exists!")
+                    print("[PlayerScript] attackAP component exists!")
                     print("[PlayerScript] ConsumeOneAP type: " .. tostring(type(attackAPComponent.ConsumeOneAP)))
 
                     if attackAPComponent.ConsumeOneAP then
-                        print("[PlayerScript] ✓ ConsumeOneAP method exists!")
+                        print("[PlayerScript] ConsumeOneAP method exists!")
                         print("[PlayerScript] Calling attackAP:ConsumeOneAP()...")
 
                         local success, errorMsg = pcall(function()
@@ -1415,21 +1465,21 @@ function ExecuteAttack()
                         end)
 
                         if success then
-                            print("[PlayerScript] ✓✓✓ SUCCESS! Crystal animation triggered via direct UIManager access")
+                            print("[PlayerScript] SUCCESS! Crystal animation triggered via direct UIManager access")
                         else
-                            print("[PlayerScript] ✗ ERROR calling ConsumeOneAP(): " .. tostring(errorMsg))
+                            print("[PlayerScript] ERROR calling ConsumeOneAP(): " .. tostring(errorMsg))
                         end
                     else
-                        print("[PlayerScript] ✗ ConsumeOneAP method does not exist")
+                        print("[PlayerScript] ConsumeOneAP method does not exist")
                     end
                 else
-                    print("[PlayerScript] ✗ attackAP component is nil")
+                    print("[PlayerScript] attackAP component is nil")
                 end
             else
-                print("[PlayerScript] ✗ GetComponent method does not exist")
+                print("[PlayerScript] GetComponent method does not exist")
             end
         else
-            print("[PlayerScript] ✗ UIManager is nil in entity Lua state - trying C++ bridge...")
+            print("[PlayerScript] UIManager is nil in entity Lua state - trying C++ bridge...")
             print("[PlayerScript] Calling TriggerAttackAPAnimation() via C++ bridge...")
 
             local success, errorMsg = pcall(function()
@@ -1454,7 +1504,7 @@ function ExecuteAttack()
         SetAnimationLoop(entityID, false)  -- Play once
         print("[PlayerScript] Playing attack animation")
     else
-        print("[PlayerScript] ✗ Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
+        print("[PlayerScript] Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
         print("[PlayerScript] Possible causes:")
         print("[PlayerScript]   - Enemy has no Health component")
         print("[PlayerScript]   - Entity ID is invalid")
