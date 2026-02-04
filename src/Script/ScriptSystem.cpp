@@ -509,6 +509,7 @@ namespace Framework {
         lua_register(L, "HasChestAtTile", LevelLoader::Lua_HasChestAtTile);
         lua_register(L, "CollectChest", LevelLoader::Lua_CollectChest);
         lua_register(L, "HasGoalAtTile", LevelLoader::Lua_HasGoalAtTile);
+        lua_register(L, "IsTileOccupied", LevelLoader::Lua_IsTileOccupied);  // Check if tile has an entity
 
         // Game API - Enemy/Entity
         lua_register(L, "FindPlayer", LevelLoader::Lua_FindPlayer);

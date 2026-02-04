@@ -656,7 +656,15 @@ local function createPlayerStates(fsm)
                 return
             end
 
-            print("[PlayerScript] Step 1: PASSED - target is valid and walkable")
+            local isOccupied = IsTileOccupied(self.targetX, self.targetY)
+            print("[PlayerScript]   IsTileOccupied: " .. tostring(isOccupied))
+            if isOccupied then
+                print("[PlayerScript] FAILED: Tile occupied by another entity!")
+                PulseTile(self.targetX, self.targetY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse for occupied
+                return
+            end
+
+            print("[PlayerScript] Step 1: PASSED - target is valid, walkable, and unoccupied")
 
             print("[PlayerScript] Step 2: Checking AP...")
             local currentAP, maxAP = GetEntityAP(entityID)
