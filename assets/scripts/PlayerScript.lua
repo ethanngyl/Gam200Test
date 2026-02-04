@@ -1385,12 +1385,65 @@ function ExecuteAttack()
         print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAP) .. "/" .. tostring(newMaxAP))
 
         -- Trigger attack AP crystal shattering animation
-        if UIManager and UIManager.GetComponent then
-            local attackAPComponent = UIManager.GetComponent("attackAP")
-            if attackAPComponent and attackAPComponent.ConsumeOneAP then
-                attackAPComponent:ConsumeOneAP()
+        print("[PlayerScript] ========== ANIMATION DEBUG ==========")
+        print("[PlayerScript] Attempting to access UIManager directly from entity script...")
+        print("[PlayerScript] UIManager type: " .. tostring(type(UIManager)))
+        print("[PlayerScript] UIManager value: " .. tostring(UIManager))
+
+        if UIManager then
+            print("[PlayerScript] ✓ UIManager exists in entity Lua state!")
+            print("[PlayerScript] UIManager.GetComponent type: " .. tostring(type(UIManager.GetComponent)))
+
+            if UIManager.GetComponent then
+                print("[PlayerScript] ✓ GetComponent method exists!")
+                print("[PlayerScript] Calling UIManager.GetComponent('attackAP')...")
+
+                local attackAPComponent = UIManager.GetComponent("attackAP")
+                print("[PlayerScript] attackAP component type: " .. tostring(type(attackAPComponent)))
+                print("[PlayerScript] attackAP component value: " .. tostring(attackAPComponent))
+
+                if attackAPComponent then
+                    print("[PlayerScript] ✓ attackAP component exists!")
+                    print("[PlayerScript] ConsumeOneAP type: " .. tostring(type(attackAPComponent.ConsumeOneAP)))
+
+                    if attackAPComponent.ConsumeOneAP then
+                        print("[PlayerScript] ✓ ConsumeOneAP method exists!")
+                        print("[PlayerScript] Calling attackAP:ConsumeOneAP()...")
+
+                        local success, errorMsg = pcall(function()
+                            attackAPComponent:ConsumeOneAP()
+                        end)
+
+                        if success then
+                            print("[PlayerScript] ✓✓✓ SUCCESS! Crystal animation triggered via direct UIManager access")
+                        else
+                            print("[PlayerScript] ✗ ERROR calling ConsumeOneAP(): " .. tostring(errorMsg))
+                        end
+                    else
+                        print("[PlayerScript] ✗ ConsumeOneAP method does not exist")
+                    end
+                else
+                    print("[PlayerScript] ✗ attackAP component is nil")
+                end
+            else
+                print("[PlayerScript] ✗ GetComponent method does not exist")
+            end
+        else
+            print("[PlayerScript] ✗ UIManager is nil in entity Lua state - trying C++ bridge...")
+            print("[PlayerScript] Calling TriggerAttackAPAnimation() via C++ bridge...")
+
+            local success, errorMsg = pcall(function()
+                TriggerAttackAPAnimation()
+            end)
+
+            if success then
+                print("[PlayerScript] C++ bridge call completed successfully")
+            else
+                print("[PlayerScript] ERROR calling C++ bridge: " .. tostring(errorMsg))
             end
         end
+
+        print("[PlayerScript] ========== END ANIMATION DEBUG ==========")
 
         -- Visual feedback
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
