@@ -1169,7 +1169,6 @@ namespace Framework {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;
 
-        // Parse parameters: SetSpriteTexture(entityID, texturePath)
         lua_Integer entityID = luaL_checkinteger(L, 1);
         const char* texturePath = luaL_checkstring(L, 2);
 
@@ -1178,19 +1177,32 @@ namespace Framework {
         if (!em || !gfx) return 0;
 
         Entity entity(static_cast<uint32_t>(entityID));
-
-        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) {
-            LOG_WARN("LevelLoader", "SetSpriteTexture: Invalid entity or no MeshRenderer (ID=%lld)", entityID);
-            return 0;
-        }
+        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) return 0;
 
         auto& mr = em->GetComponent<MeshRenderer>(entity);
         mr.spriteName = texturePath;
 
-        // Request graphics system to update the mesh and material for this sprite
-        gfx->AssignMeshAndMaterial(mr, texturePath);
+        // Load the new texture
+        auto& resourceManager = gfx->GetResourceManager();
+        TextureHandle newTexture = resourceManager.LoadTexture(texturePath);
+        if (!newTexture.IsValid()) return 0;
+        
+        // CRITICAL: Update mr.texture - this is what the renderer actually uses!
+        mr.texture = newTexture;
+        
+        // If entity has SpriteAnimation, update the spriteSheet too
+        if (em->HasComponent<SpriteAnimation>(entity)) {
+            auto& anim = em->GetComponent<SpriteAnimation>(entity);
+            anim.spriteSheet = newTexture;
+        }
 
-        // Sprite texture set
+        // Update the material's texture
+        if (mr.material.IsValid()) {
+            Material* mat = resourceManager.GetMaterial(mr.material);
+            if (mat) {
+                mat->albedoTexture = newTexture;
+            }
+        }
 
         return 0;
     }

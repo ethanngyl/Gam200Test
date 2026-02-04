@@ -164,6 +164,7 @@ local blockedKeys = {}
 -- P key state tracking
 local lastPKeyDown = false
 
+
 -- Attack state tracking
 local lastSpaceKeyDown = false
 local attackPreviewActive = false
@@ -857,6 +858,7 @@ function OnUpdate(dt)
         print("========== PlayerScript: Entity " .. entityID .. " is now ACTIVE ==========")
         print("============================================================")
         local currentAP, maxAP = GetEntityAP(entityID)
+        local currentHP, maxHP = GetEntityHP(entityID)
         print("[PlayerScript] Entity " .. entityID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
         print("[PlayerScript] This entity will now respond to WASD input")
         print("============================================================")

@@ -214,15 +214,18 @@ function UIManager.Update(dt)
     local currentTurn = GetCurrentTurn and GetCurrentTurn() or "Player"
     local isEnemyTurn = (currentTurn == "Enemy")
 
-    -- Hide player-specific UI during enemy turn
+    -- Hide AP indicators during enemy turn (player can't use AP anyway)
     if UIManager.components.movementAP then
         UIManager.components.movementAP:SetEnabled(not isEnemyTurn)
     end
     if UIManager.components.attackAP then
         UIManager.components.attackAP:SetEnabled(not isEnemyTurn)
     end
+    -- IMPORTANT: Keep HealthUI enabled even during enemy turn!
+    -- This allows players to see their HP decrease when enemies attack
+    -- Health is ALWAYS visible (unlike AP which is only relevant during player turn)
     if UIManager.components.health then
-        UIManager.components.health:SetEnabled(not isEnemyTurn)
+        UIManager.components.health:SetEnabled(true)  -- Always enabled
     end
 
     -- Update all components

@@ -383,10 +383,20 @@ function ExecuteAttack()
 
     -- Execute attack
     print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage")
+    
+    -- Debug: Check player HP before attack
+    local hpBefore, maxHP = GetEntityHP(targetPlayerID)
+    print("[Enemy " .. entityID .. "] Player " .. targetPlayerID .. " HP BEFORE: " .. tostring(hpBefore) .. "/" .. tostring(maxHP))
 
     local success = DamageEntity(targetPlayerID, config.attackDamage)
+    
+    print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
 
     if success then
+        -- Debug: Check player HP after attack
+        local hpAfter, _ = GetEntityHP(targetPlayerID)
+        print("[Enemy " .. entityID .. "] Player " .. targetPlayerID .. " HP AFTER: " .. tostring(hpAfter))
+        
         -- Consume attack AP
         ConsumeEnemyAP(entityID, config.attackAPCost)
 
@@ -400,6 +410,8 @@ function ExecuteAttack()
                 PopupManager.ShowDamageNumber(worldX, worldY + 0.2, config.attackDamage)
             end
         end
+    else
+        print("[Enemy " .. entityID .. "] ATTACK FAILED! Player " .. targetPlayerID .. " may not have Health component")
     end
 
     -- Check if we can still act
