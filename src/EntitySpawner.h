@@ -14,7 +14,8 @@
      - Integrates with ECS (Entity-Component-System) architecture
      - Supports multiple spawn patterns (grid, circle, waves)
      - Handles component initialization for common entity types
- Copyright (C) 2025 DigiPen Institute of Technology.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
  Reproduction or disclosure of this file or its contents
  without the prior written consent of DigiPen Institute of
  Technology is prohibited.

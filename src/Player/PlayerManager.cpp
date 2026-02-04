@@ -20,6 +20,11 @@
   - TilePulse: start/extend, tracked by a countdown; restores scale on expiry
   - BorderOutline: show with configurable thickness; hides on timeout
   - Frame-friendly: effects update via lightweight per-frame timers only
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 ******************************************************************************/
 
