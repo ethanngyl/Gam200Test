@@ -463,7 +463,13 @@ function EndPartyTurn()
         -- Initialize sequential enemy turn system
         print("[PartyTurnManager] Initializing sequential enemy turn system...")
         if InitializeEnemyTurn then
-            InitializeEnemyTurn()
+            local enemyTurnStarted = InitializeEnemyTurn()
+            if not enemyTurnStarted then
+                -- No enemies found - immediately end enemy turn and return to player
+                print("[PartyTurnManager] No enemies to act - skipping enemy turn!")
+                print("[PartyTurnManager] Calling EndEnemyTurn() to return to player...")
+                EndEnemyTurn()
+            end
         else
             print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
         end
