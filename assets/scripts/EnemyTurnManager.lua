@@ -71,34 +71,27 @@ end
 
 function GetActiveEnemy()
     if not EnemyTurnActive or ActiveEnemyIndex == 0 then
-        print("[EnemyTurnManager] GetActiveEnemy(): 0 (EnemyTurnActive=" .. tostring(EnemyTurnActive) .. ", ActiveEnemyIndex=" .. ActiveEnemyIndex .. ")")
         return 0
     end
 
     local enemies = GetAllEnemies()
     if not enemies or ActiveEnemyIndex > #enemies then
-        print("[EnemyTurnManager] GetActiveEnemy(): 0 (invalid index " .. ActiveEnemyIndex .. ", enemies=" .. tostring(enemies and #enemies or "nil") .. ")")
         return 0
     end
 
-    local activeID = enemies[ActiveEnemyIndex]
-    print("[EnemyTurnManager] GetActiveEnemy(): " .. activeID .. " (index " .. ActiveEnemyIndex .. "/" .. #enemies .. ")")
-    return activeID
+    return enemies[ActiveEnemyIndex]
 end
 
 function IsActiveEnemy(entityID)
     -- If not in Enemy turn phase, no enemy is active
     local currentTurn = GetCurrentTurn()
     if currentTurn ~= "Enemy" then
-        print("[EnemyTurnManager] IsActiveEnemy(" .. entityID .. "): false (turn is " .. tostring(currentTurn) .. ")")
         return false
     end
 
     -- Check if this enemy is the currently active one
     local activeEnemyID = GetActiveEnemy()
-    local isActive = (entityID == activeEnemyID)
-    print("[EnemyTurnManager] IsActiveEnemy(" .. entityID .. "): " .. tostring(isActive) .. " (active=" .. tostring(activeEnemyID) .. ", index=" .. ActiveEnemyIndex .. ")")
-    return isActive
+    return (entityID == activeEnemyID)
 end
 
 function GetEnemyTurnProgress()
@@ -222,9 +215,7 @@ function UpdateEnemyTurnManager(dt)
 end
 
 function IsEnemyActionReady()
-    local ready = EnemyTurnActive and EnemyActionTimer <= 0
-    print("[EnemyTurnManager] IsEnemyActionReady(): " .. tostring(ready) .. " (active=" .. tostring(EnemyTurnActive) .. ", timer=" .. EnemyActionTimer .. ")")
-    return ready
+    return EnemyTurnActive and EnemyActionTimer <= 0
 end
 
 function MarkEnemyActionComplete()
