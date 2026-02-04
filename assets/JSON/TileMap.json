@@ -18,17 +18,17 @@
         "layer": 0
       },
       "P": {
-        "texture": "assets/Warrior/FrontView/WarriorTopDownView.png",
+        "texture": "assets/player.png",
         "solid": 0,
         "entityType": "Player"
       },
       "Q": {
-        "texture": "assets/Warrior/FrontView/WarriorTopDownView.png",
+        "texture": "assets/player.png",
         "solid": 0,
         "entityType": "Player"
       },
       "R": {
-        "texture": "assets/Warrior/FrontView/WarriorTopDownView.png",
+        "texture": "assets/player.png",
         "solid": 0,
         "entityType": "Player"
       },
