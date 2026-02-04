@@ -153,7 +153,7 @@ function UIManager.Init(config)
         textureBasePath = "assets/UI/Health_"
     })
 
-    -- Create Turn Indicator
+    -- Create Turn Indicator (Animated sprite sheet)
     UIManager.components.turnIndicator = TurnIndicatorUI:New()
     UIManager.components.turnIndicator:Init({
         offsetX = -0.72,
@@ -161,8 +161,10 @@ function UIManager.Init(config)
         scaleX = 0.28,
         scaleY = 0.28,
         layer = 4,
-        enemyTexture = "assets/UI/Enemy_Turn_Icon.png",
-        playerTexture = "assets/UI/Player_Turn_Icon.png"
+        texture = "assets/UI/End_Turn_Button.png",
+        rows = 2,           -- Row 0: Player turn, Row 1: Enemy turn
+        cols = 2,           -- 2 columns per row
+        frameTime = 0.3     -- Animation speed (seconds per frame)
     })
 
     -- Create Turn Scroll UI (Your Turn animation)
