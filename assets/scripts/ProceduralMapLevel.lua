@@ -1,8 +1,52 @@
--- ============================================================================
--- Level3Procedural.lua
--- PROCEDURAL VERSION - Works with 3-character party system
--- ============================================================================
+--[[
+===============================================================================
+ File:          ProceduralMapLevel.lua
+ Authors:       
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
 
+ PROCEDURAL MAP LEVEL - Level Script with Generated Maps
+
+ Brief:
+    Level script for procedurally generated tactical maps. Integrates with the
+    C++ ProceduralMapLoader to generate dungeon layouts at runtime. Supports
+    a 3-character party system with turn-based combat, sequential enemy turns,
+    and goal-based level completion.
+
+ Features:
+    - Procedural map generation via C++ bridge (LoadProceduralMap)
+    - 3-character party spawning at validated positions
+    - Party turn management (Warrior -> Mage -> Rogue -> Enemies)
+    - Sequential enemy turn system with visual delays
+    - Goal detection and level transition
+    - Pause menu integration
+    - UI system with health, AP, and turn indicators
+
+ Party System:
+    - Player 1 (Warrior): First to act each turn
+    - Player 2 (Mage): Second to act
+    - Player 3 (Rogue): Third to act
+    - After all party members act, enemy turn begins
+
+ Usage:
+    -- This script is loaded as a level script
+    -- Configure in your level loading system to use this file
+
+    -- Map generation is called automatically in OnInit:
+    local mapData = LoadProceduralMap(21, 26, "rooms")
+
+    -- Party setup uses pre-validated spawn positions from C++:
+    SetupProceduralParty(mapData)
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 

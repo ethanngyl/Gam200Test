@@ -21,6 +21,12 @@
      1) Call GSM_Initialize(startState) once at startup.
      2) Call GSM_Update() each frame to refresh function pointers
         according to the current active state.
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

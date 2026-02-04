@@ -1,10 +1,39 @@
--- ============================================================================
--- MapGeneratorDemo.lua
--- Demo script showing how to use the MapGenerator
--- ============================================================================
--- This script demonstrates different map generation algorithms
--- Run this level to see generated maps in action
--- ============================================================================
+--[[
+===============================================================================
+ File:          MapGeneratorDemo.lua
+ Authors:       
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
+
+ MAP GENERATOR DEMO - Interactive Map Generation Showcase
+
+ Brief:
+    Demo script demonstrating the MapGenerator system. Allows switching between
+    different generation algorithms in real-time, generating new random maps,
+    and saving maps to JSON files. Useful for testing and previewing procedural
+    map generation before integrating into gameplay levels.
+
+ Controls:
+    1 - Switch to Rooms & Corridors algorithm
+    2 - Switch to Cellular Automata algorithm
+    3 - Switch to Open Arena algorithm
+    G - Generate new random map with current algorithm
+    S - Save current map to JSON file
+    5 - Return to main menu
+
+ Usage:
+    -- Load this script as a level to test map generation
+    -- Generated maps are saved to assets/JSON/GeneratedMap_<algorithm>.json
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 local MapGenerator = require("MapGenerator")
 local ButtonManager = require("ButtonManager")

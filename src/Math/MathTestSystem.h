@@ -14,6 +14,13 @@ Design notes:
     a series of checks on the math library during engine initialization to ensure
     correctness.The main logic is contained within the Initialize() override.
     Other standard system functions like Update() are not required.
+
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ============================================================================== =
 */
 #pragma once

@@ -27,6 +27,11 @@ Notes:
 - Ensures floating-point values are written with fixed precision for clean output.
 - Provides simple, human-readable JSON formatting compatible with the engine�s
   editor tools.
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

@@ -1,15 +1,49 @@
--- ============================================================================
--- EnemyScript.lua
--- Enemy AI behavior component for grid-based turn-based combat
--- ============================================================================
--- Handles enemy turn logic, pathfinding, movement, and attacking
--- Attach to enemy entities via: AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
--- ============================================================================
+--[[
+===============================================================================
+ File:          EnemyScript.lua
+ Authors:       
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
 
--- ============================================================================
--- CONFIGURATION
--- ============================================================================
+ ENEMY SCRIPT - AI Behavior for Grid-Based Turn-Based Combat
 
+ Brief:
+    Handles enemy turn logic, pathfinding, movement, and attacking on a
+    grid-based tactical map. Uses a state machine to manage behavior modes
+    (Idle, Chasing, Attacking, Fleeing, Patrolling). Supports multiple
+    behavior types for different enemy archetypes. Integrates with the
+    sequential enemy turn system for coordinated multi-enemy turns.
+
+ Behavior Types:
+    AGGRESSIVE  - Always chase and attack the closest player
+    DEFENSIVE   - Only attack if player enters aggro range
+    PATROL      - Move randomly unless player is nearby
+    RANGED      - Maintain distance, attack from afar
+
+ States:
+    [IDLE] -> Player detected -> [CHASING] -> In range -> [ATTACKING]
+    [CHASING] -> Low health -> [FLEEING]
+    [IDLE] -> No player -> [PATROLLING]
+
+ Usage:
+    -- Attach to enemy entity
+    AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+
+    -- Configure behavior (optional, call from level script)
+    SetBehavior(ENEMY_BEHAVIOR.AGGRESSIVE)
+    SetAttackRange(2)
+    SetAttackDamage(1)
+    SetAggression(8)
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 -- Enemy behavior types
 local BEHAVIOR = {
     AGGRESSIVE = "aggressive",  -- Always chase and attack player

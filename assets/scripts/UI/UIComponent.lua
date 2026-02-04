@@ -1,11 +1,62 @@
--- ============================================================================
--- UIComponent.lua
--- Base class for UI components
--- ============================================================================
--- Provides common functionality for camera-relative UI elements
--- All UI components should inherit from this
--- ============================================================================
+--[[
+===============================================================================
+ File:          UIComponent.lua
+ Authors:       
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
 
+ UI COMPONENT - Base Class for UI Elements
+
+ Brief:
+    Base class providing common functionality for camera-relative UI elements.
+    All UI components should inherit from this class. Handles entity tracking,
+    camera-relative positioning with movement threshold optimization, and
+    provides helper methods for spawning static and animated sprites.
+
+ Features:
+    - Entity lifecycle management (tracking and cleanup)
+    - Camera movement detection with configurable threshold
+    - Sprite spawning with nearest-neighbor filtering (pixel art friendly)
+    - Animated sprite support with frame range control
+    - Enable/disable with visibility toggling
+
+ Usage:
+    -- Create a new UI component class
+    local MyUI = {}
+    setmetatable(MyUI, {__index = UIComponent})
+    MyUI.__index = MyUI
+
+    function MyUI:New()
+        local instance = UIComponent:New()
+        setmetatable(instance, self)
+        return instance
+    end
+
+    function MyUI:Init(config)
+        -- Initialize your UI elements
+        self.spriteID = self:SpawnSprite("texture.png", x, y, 1, 1, 4)
+    end
+
+    function MyUI:Update(dt, cameraPos)
+        if self:ShouldUpdatePosition(cameraPos) then
+            -- Update positions
+        end
+    end
+
+    function MyUI:Destroy()
+        -- Custom cleanup, then call parent
+        UIComponent.Destroy(self)
+    end
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 local UIComponent = {}
 UIComponent.__index = UIComponent
 

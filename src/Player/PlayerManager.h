@@ -17,6 +17,11 @@
   - Turn integration: movements can end the player�s turn
   - Non-blocking, timer-based UI feedback (start/stop pulse; show/hide outline)
   - Minimal surface area: effects are initiated here and updated per frame
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 ******************************************************************************/
 

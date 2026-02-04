@@ -24,6 +24,11 @@ Modified: 2026-01-08
 - Added GetLuaFilesInDirectory() for recursive .lua file search
 - Added ShowScriptBrowserPopup() for script selection UI
 
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 */
 
 

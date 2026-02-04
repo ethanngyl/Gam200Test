@@ -1,6 +1,24 @@
-/*
+/**
 ===============================================================================
- ProceduralMapLoader Implementation
+ File:          ProceduralMapLoader.cpp
+ Author:        Josh Ong
+ Email:         josh.o@digipen.edu
+ Date:          2-5-2026
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+
+ PROCEDURAL MAP LOADER - Implementation
+
+ Brief:
+    Implementation of the procedural map loading system. Configures Grid
+    dimensions, spawns tile entities with render layer assignments, and
+    adds decorative elements (grass variation, rocks) for visual variety.
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

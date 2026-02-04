@@ -12,6 +12,11 @@
   - Uses glfwGetFramebufferSize() instead of window size (fixes DPI scaling)
   - All layout values read from valueloader.txt (easy adjustment)
   - Consistent with Level1 UI style
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

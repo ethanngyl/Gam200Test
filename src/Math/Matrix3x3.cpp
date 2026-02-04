@@ -21,6 +21,12 @@
       component to handle potential non-affine transformations.
   -   Rotation functions handle both radians and degrees, with the degree
       version simply converting to radians before computation.
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 #include "Precompiled.h"

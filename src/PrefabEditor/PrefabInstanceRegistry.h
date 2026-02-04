@@ -18,6 +18,11 @@ Design notes:
     • PrefabSerializer::LoadPrefab() to RegisterInstance(...)
     • (Optional) EntityManager::DestroyEntity() to UnregisterInstance(...)
     • Editor/tools to query all instances when a prefab changes.
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

@@ -19,6 +19,11 @@
      - Implements a C++ <-> Lua bridge for Entity Component System management
      - Exposes engine functionality via static callback functions
      - Supports hot-reloading of scripts at runtime
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

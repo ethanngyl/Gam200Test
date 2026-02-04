@@ -1,7 +1,7 @@
 --[[
 ===============================================================================
  File:           AnimationController.lua
- Author:         Auto-generated from MovementSystem.cpp refactoring
+ Author:         
  Date:           2026-01-16
  ------------------------------------------------------------------------------
  Animation Controller Script
@@ -38,7 +38,11 @@
     - Attack: Triggered by KEY_K (one-shot)
     - Injured: Triggered by KEY_J (one-shot)
     - Death: Triggered by KEY_L (one-shot, blocks movement)
-
+    
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 ]]--
 

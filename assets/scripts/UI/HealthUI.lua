@@ -1,10 +1,53 @@
--- ============================================================================
--- HealthUI.lua
--- Player health display component
--- ============================================================================
--- Displays player HP as a single heart sprite with multiple textures
--- Swaps texture based on current HP (Health_0.png to Health_5.png)
--- ============================================================================
+--[[
+===============================================================================
+ File:          HealthUI.lua
+ Authors:       
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
+
+ HEALTH UI - Player Health Display Component
+
+ Brief:
+    Displays player HP as a single heart sprite with multiple textures.
+    Swaps texture based on current HP (Health_0.png to Health_5.png).
+    Tracks the active character from the party system and updates the
+    display when HP changes. Maintains UI position relative to camera.
+
+ Features:
+    - Single sprite approach with texture swapping
+    - Supports HP values 0-5 (configurable max)
+    - Camera-relative positioning
+    - Party system integration (tracks active character)
+    - Smooth handling during enemy turns
+
+ Usage:
+    local HealthUI = require("UI/HealthUI")
+    
+    local healthDisplay = HealthUI:New()
+    healthDisplay:Init({
+        maxHP = 5,
+        scale = 0.10,
+        offsetX = -0.72,
+        offsetY = -0.22,
+        layer = 4,
+        textureBasePath = "assets/UI/Health_"
+    })
+
+    -- In update loop
+    healthDisplay:Update(dt, cameraPos)
+
+    -- Cleanup
+    healthDisplay:Destroy()
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 local UIComponent = require("UI/UIComponent")
 local HealthUI = {}

@@ -1,7 +1,7 @@
 --[[
 ===============================================================================
  File:           PartyStatusUI.lua
- Author:         Auto-generated for party system implementation
+ Author:         
  Date:           2026-01-16
  ------------------------------------------------------------------------------
  Party Status UI Component

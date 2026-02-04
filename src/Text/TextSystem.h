@@ -26,6 +26,11 @@
    - Dialogue and font containers use STL types with safe bounds/optionals.
    - Assumes .ttf/.otf fonts exist in a Fonts/ directory; no runtime validation
      beyond registration success.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

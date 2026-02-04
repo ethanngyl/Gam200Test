@@ -20,6 +20,11 @@
 	  are provided for flexibility.
   -   Static functions for operations involving two vectors, like dot().
   -   Type aliases (Vec2, Point2D) for convenience.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 #pragma once

@@ -21,6 +21,11 @@
   Usage in Lua:
     config = LoadJSON("assets/JSON/mainmenu_config.json")
     buttonText = config.menu.buttons[1].text.content
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

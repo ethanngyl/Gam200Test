@@ -21,6 +21,11 @@
        1. Parse definitions and map layout strings
        2. Instantiate entities and configure the Grid system
      - Handles Z-layering automatically based on "solid" properties.
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

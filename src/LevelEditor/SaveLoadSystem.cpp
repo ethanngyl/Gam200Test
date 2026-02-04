@@ -1,10 +1,25 @@
 /**
 ===============================================================================
-File:        SaveLoadSystem.cpp
-Author:      GE YONGQI
-Date:        2026-01-14
--------------------------------------------------------------------------------
-Implementation of the universal Save/Load System for entity serialization.
+ File:          SaveLoadSystem.cpp
+ Author:        Ge Yongqi
+ Email:
+ Date:          2026-01-14
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+
+ SAVE/LOAD SYSTEM - Implementation
+
+ Brief:
+    Implementation of the universal Save/Load System for entity serialization.
+    Handles JSON file I/O, entity serialization/deserialization, and auto-save
+    management. Serializes all supported ECS components to a structured JSON
+    format and reconstructs entities with their full component state on load.
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

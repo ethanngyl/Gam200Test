@@ -18,6 +18,11 @@
      - DPI-aware coordinate transformation for consistent input detection
      - Integrated with engine systems (InputSystem, GraphicsSystem, EntityManager)
      - Configurable default visual properties via game_config.txt
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

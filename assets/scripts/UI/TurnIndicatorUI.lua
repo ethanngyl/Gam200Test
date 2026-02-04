@@ -1,11 +1,53 @@
--- ============================================================================
--- TurnIndicatorUI.lua
--- Turn phase indicator component (Animated Version)
--- ============================================================================
--- Displays current turn phase (Player/Enemy) using animated sprite sheet
--- Row 1: Player turn animation (loops)
--- Row 2: Enemy turn animation (loops)
--- ============================================================================
+--[[
+===============================================================================
+ File:          TurnIndicatorUI.lua
+ Authors:       
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
+
+ TURN INDICATOR UI - Turn Phase Display Component (Animated)
+
+ Brief:
+    Displays current turn phase (Player/Enemy) using an animated sprite sheet.
+    Automatically switches animation rows based on turn state. Row 1 shows
+    the Player turn animation (loops), Row 2 shows the Enemy turn animation
+    (loops). Maintains position relative to camera.
+
+ Sprite Sheet Layout:
+    Row 0: Player turn animation frames
+    Row 1: Enemy turn animation frames
+
+ Usage:
+    local TurnIndicatorUI = require("UI/TurnIndicatorUI")
+
+    local turnIndicator = TurnIndicatorUI:New()
+    turnIndicator:Init({
+        offsetX = 0.65,
+        offsetY = 0.38,
+        scaleX = 0.28,
+        scaleY = 0.28,
+        layer = 4,
+        texture = "assets/UI/End_Turn_Button.png",
+        rows = 2,
+        cols = 4,
+        frameTime = 0.15
+    })
+
+    -- In update loop
+    turnIndicator:Update(dt, cameraPos)
+
+    -- Cleanup
+    turnIndicator:Destroy()
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 local UIComponent = require("UI/UIComponent")
 local TurnIndicatorUI = {}

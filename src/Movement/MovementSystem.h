@@ -18,6 +18,11 @@
   externally via setter methods to keep the system decoupled. The Update()
   method takes a delta time (`dt`) parameter to ensure movement is smooth and
   independent of the frame rate.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
  */
 #pragma once

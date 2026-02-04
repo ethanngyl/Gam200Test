@@ -1,8 +1,25 @@
 /**
 ===============================================================================
- File:           MapGenerator.cpp
- Complete Professional Implementation
- Features: Overlap detection, corridors, smart entity placement
+ File:          MapGenerator.cpp
+ Author:        Josh Ong
+ Email:         josh.o@digipen.edu
+ Date:          2-5-2026
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+
+ MAP GENERATOR - Implementation
+
+ Brief:
+    Implementation of the procedural map generation system. Contains algorithms
+    for room-based dungeons, cellular automata caves, and open arenas. Includes
+    smart entity placement with distance constraints and reachability validation
+    using flood fill pathfinding.
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

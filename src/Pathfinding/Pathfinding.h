@@ -6,7 +6,7 @@
  Author:         PADILLA CARL JAMESON Z. 
  Email:          c.padilla@digipen.edu
  Date:           2025/11/02
- Contribution:   
+ Contribution:   100%
  ------------------------------------------------------------------------------
 
   Brief:
@@ -24,6 +24,11 @@
 
   The system operates on entities with both EnemyAI and Transform components,
   using a timer-based movement system for smooth, turn-based navigation.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
  */
 
