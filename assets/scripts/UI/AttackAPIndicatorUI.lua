@@ -266,7 +266,7 @@ function AttackAPIndicatorUI:Update(dt, cameraPos)
     -- Update consuming crystals (check if animation finished)
     self:UpdateConsumingCrystals(dt)
 
-    -- Update sprite positions if camera moved
+    -- Update sprite positions if camera moved (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
         self:UpdatePositions(cameraPos)
     end

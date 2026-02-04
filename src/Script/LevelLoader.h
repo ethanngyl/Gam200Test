@@ -251,6 +251,7 @@ namespace Framework {
         static int Lua_EndCharacterTurn(lua_State* L);  // Party turn system - bridge to level Lua state
         static int Lua_IsUIAnimating(lua_State* L);     // Check if UI is animating - bridge to level Lua state
         static int Lua_IsInTurnTransition(lua_State* L); // Check if in turn transition cooldown - bridge to level Lua state
+        static int Lua_IsTurnScrollPlaying(lua_State* L); // Check if turn scroll animation is playing - bridge to level Lua state
         static int Lua_TriggerAttackAPAnimation(lua_State* L); // Trigger attack AP consume animation - bridge to UIManager
         static int Lua_RestoreAllAttackAPCrystals(lua_State* L); // Restore all attack AP crystals - bridge to UIManager
         static int Lua_SetPlayerFlipX(lua_State* L);

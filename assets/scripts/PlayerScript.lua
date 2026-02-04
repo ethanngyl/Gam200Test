@@ -776,6 +776,16 @@ end
 
 function OnUpdate(dt)
     -- ========================================================================
+    -- TURN SCROLL CHECK: Skip input during "Your Turn" animation
+    -- ========================================================================
+    
+    -- Use C++ bridge function to check if turn scroll is playing
+    -- This bridges from entity Lua state to level Lua state's UIManager
+    if IsTurnScrollPlaying and IsTurnScrollPlaying() then
+        return
+    end
+    
+    -- ========================================================================
     -- DEATH CHECK: Stop processing if entity is dead
     -- ========================================================================
 

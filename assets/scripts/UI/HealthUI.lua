@@ -89,7 +89,7 @@ function HealthUI:Update(dt, cameraPos)
     local curHP, maxHP = GetEntityHP(activeCharID)
     if not curHP then return end
 
-    -- Update sprite positions if camera moved
+    -- Update sprite positions if camera moved (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
         self:UpdatePositions(cameraPos)
     end

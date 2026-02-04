@@ -486,6 +486,7 @@ namespace Framework {
         lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
         lua_register(L, "IsUIAnimating", LevelLoader::Lua_IsUIAnimating);  // Check UI animation state
         lua_register(L, "IsInTurnTransition", LevelLoader::Lua_IsInTurnTransition);  // Check turn transition cooldown
+        lua_register(L, "IsTurnScrollPlaying", LevelLoader::Lua_IsTurnScrollPlaying);  // Check turn scroll animation
         lua_register(L, "TriggerAttackAPAnimation", LevelLoader::Lua_TriggerAttackAPAnimation);  // Trigger attack AP consume animation
 
         // Game API - Player
