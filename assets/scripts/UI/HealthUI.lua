@@ -84,10 +84,16 @@ function HealthUI:Update(dt, cameraPos)
 
     -- Get current HP for the ACTIVE character
     local activeCharID = GetActiveCharacter()
-    if not activeCharID or activeCharID <= 0 then return end
+    if not activeCharID or activeCharID <= 0 then
+        print("[HealthUI] No active character found!")
+        return
+    end
 
     local curHP, maxHP = GetEntityHP(activeCharID)
-    if not curHP then return end
+    if not curHP then
+        print("[HealthUI] Could not get HP for active character " .. activeCharID)
+        return
+    end
 
     -- Update sprite positions if camera moved (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
@@ -96,6 +102,7 @@ function HealthUI:Update(dt, cameraPos)
 
     -- Handle HP changes
     if curHP ~= self.lastHP then
+        print("[HealthUI] HP changed for entity " .. activeCharID .. ": " .. self.lastHP .. " -> " .. curHP)
         self:HandleHPChange(curHP)
         self.lastHP = curHP
     end
@@ -117,16 +124,31 @@ function HealthUI:UpdatePositions(cameraPos)
 end
 
 function HealthUI:HandleHPChange(newHP)
+    print("[HealthUI] HandleHPChange called with newHP: " .. tostring(newHP))
+    print("[HealthUI] heartSprites table has " .. tostring(#self.heartSprites) .. " entries")
+
     -- Hide all hearts
-    for _, entityID in pairs(self.heartSprites) do
+    for hpVal, entityID in pairs(self.heartSprites) do
+        print("[HealthUI]   Hiding heart for HP=" .. tostring(hpVal) .. ", entityID=" .. tostring(entityID))
         if entityID and entityID > 0 then
             SetSpriteVisibility(entityID, false)
+        else
+            print("[HealthUI]   WARNING: Invalid entityID for HP=" .. tostring(hpVal))
         end
     end
 
     -- Show heart matching current HP
+    print("[HealthUI] Looking for heart sprite at heartSprites[" .. tostring(newHP) .. "]")
     if self.heartSprites[newHP] then
+        print("[HealthUI] Found heart sprite! entityID=" .. tostring(self.heartSprites[newHP]))
         SetSpriteVisibility(self.heartSprites[newHP], true)
+        print("[HealthUI] Set visibility to TRUE for HP=" .. tostring(newHP))
+    else
+        print("[HealthUI] ERROR: No heart sprite found for HP=" .. tostring(newHP))
+        print("[HealthUI] Available HP values in heartSprites:")
+        for hpVal, _ in pairs(self.heartSprites) do
+            print("[HealthUI]   - HP value: " .. tostring(hpVal) .. " (type: " .. type(hpVal) .. ")")
+        end
     end
 
     Log("[HealthUI] HP changed: " .. self.lastHP .. " -> " .. newHP)
