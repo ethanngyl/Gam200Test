@@ -156,10 +156,10 @@ function UIManager.Init(config)
     -- Create Turn Indicator (Animated sprite sheet)
     UIManager.components.turnIndicator = TurnIndicatorUI:New()
     UIManager.components.turnIndicator:Init({
-        offsetX = -0.72,
+        offsetX = -0.82,
         offsetY = -0.19,
-        scaleX = 0.28,
-        scaleY = 0.28,
+        scaleX = 0.18,
+        scaleY = 0.18,
         layer = 4,
         texture = "assets/UI/End_Turn_Button.png",
         rows = 2,           -- Row 0: Player turn, Row 1: Enemy turn
@@ -177,9 +177,7 @@ function UIManager.Init(config)
         layer = 6,
         texture = "assets/UI/ScrollOpen.png",
         animName = "ScrollOpen",
-        frameTime = 0.03,
-        holdDuration = 1.0,   -- Pause scroll for 1 second when fully open
-        holdFrame = 10,       -- Pause at frame 10 (middle of animation)
+        frameTime = 0.1,
         text = "Your Turn",
         textFont = "Sans48",
         textScale = 0.9,
@@ -228,8 +226,9 @@ function UIManager.Update(dt)
     -- IMPORTANT: Keep HealthUI enabled even during enemy turn!
     -- This allows players to see their HP decrease when enemies attack
     -- Health is ALWAYS visible (unlike AP which is only relevant during player turn)
+    -- Amended for now
     if UIManager.components.health then
-        UIManager.components.health:SetEnabled(true)  -- Always enabled
+        UIManager.components.health:SetEnabled(not isEnemyTurn)  -- Always enabled
     end
 
     -- Update all components

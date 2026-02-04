@@ -60,7 +60,7 @@
           "content": "NEXT",
           "font": "Jersey20Regular",
           "offset": {
-            "x": -115.0,
+            "x": -50.0,
             "y": -16.0
           },
           "scale": 1.0,
@@ -85,7 +85,7 @@
         },
         "layer": 10,
         "text": {
-          "content": "Main Objective",
+          "content": "End Goal",
           "font": "Jersey20Regular",
           "offset": {
             "x": -150,
@@ -197,7 +197,7 @@
         },
         "layer": 10,
         "text": {
-          "content": "off or defeating enemies to",
+          "content": "off or avoiding enemies to win.",
           "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
@@ -225,7 +225,7 @@
         },
         "layer": 10,
         "text": {
-          "content": "win the game.",
+          "content": "",
           "font": "Jacquard12Regular",
           "offset": {
             "x": 0.0,
