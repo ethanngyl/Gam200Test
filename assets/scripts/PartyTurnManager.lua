@@ -133,6 +133,7 @@ function InitializeParty(entityIDs)
     for i = 1, 3 do
         print("[InitializeParty]   Refilling AP for character " .. i .. " (Entity " .. PartyMembers[i].entityID .. ")...")
         RefillEntityAP(PartyMembers[i].entityID)
+        RefillEntityAttackAP(PartyMembers[i].entityID)
         print("[InitializeParty]   Done")
     end
     print("[InitializeParty] Step 5: DONE")
@@ -271,6 +272,19 @@ function NextCharacterTurn()
         return
     end
 
+    -- Guard against double-call when turn is already complete
+    if PartyTurnComplete then
+        print("[PartyTurnManager] WARNING: NextCharacterTurn() called but PartyTurnComplete=true, ignoring")
+        return
+    end
+
+    -- Guard against out-of-bounds index
+    if ActiveCharacterIndex < 1 or ActiveCharacterIndex > #PartyMembers then
+        print(string.format("[PartyTurnManager] ERROR: Invalid ActiveCharacterIndex=%d (must be 1-%d), ignoring",
+            ActiveCharacterIndex, #PartyMembers))
+        return
+    end
+
     print("[PartyTurnManager] ========== TURN ADVANCEMENT ==========")
     print(string.format("[PartyTurnManager] Current: %s (Entity %d, Index %d)",
         PartyMembers[ActiveCharacterIndex].name,
@@ -342,11 +356,24 @@ function NextCharacterTurn()
 
     -- Refill AP for the new active character
     RefillEntityAP(newActiveEntity)
+    RefillEntityAttackAP(newActiveEntity)
     local currentAP, maxAP = GetEntityAP(newActiveEntity)
-    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d",
+    local currentAttackAP, maxAttackAP = GetEntityAttackAP(newActiveEntity)
+    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d, AttackAP refilled to %d/%d",
         PartyMembers[ActiveCharacterIndex].name,
         currentAP,
-        maxAP))
+        maxAP,
+        currentAttackAP,
+        maxAttackAP))
+
+    -- Restore attack AP crystal visuals
+    if UIManager and UIManager.GetComponent then
+        local attackAPIndicator = UIManager.GetComponent("attackAP")
+        if attackAPIndicator and attackAPIndicator.RestoreAllAP then
+            attackAPIndicator:RestoreAllAP()
+            print("[PartyTurnManager] Restored all attack AP crystals")
+        end
+    end
 
     -- Start turn transition cooldown to prevent input carry-over
     TurnTransitionCooldown = TurnTransitionCooldownTime
@@ -436,7 +463,13 @@ function EndPartyTurn()
         -- Initialize sequential enemy turn system
         print("[PartyTurnManager] Initializing sequential enemy turn system...")
         if InitializeEnemyTurn then
-            InitializeEnemyTurn()
+            local enemyTurnStarted = InitializeEnemyTurn()
+            if not enemyTurnStarted then
+                -- No enemies found - immediately end enemy turn and return to player
+                print("[PartyTurnManager] No enemies to act - skipping enemy turn!")
+                print("[PartyTurnManager] Calling EndEnemyTurn() to return to player...")
+                EndEnemyTurn()
+            end
         else
             print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
         end
@@ -473,6 +506,7 @@ function ResetPartyTurn()
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
         RefillEntityAP(PartyMembers[i].entityID)
+        RefillEntityAttackAP(PartyMembers[i].entityID)
     end
 
     -- Skip dead characters when resetting turn
@@ -501,6 +535,15 @@ function ResetPartyTurn()
 
     -- Notify C++ about active character reset (now guaranteed to be alive)
     SetActiveCharacter(PartyMembers[ActiveCharacterIndex].entityID)
+
+    -- Restore attack AP crystal visuals for the active character
+    if UIManager and UIManager.GetComponent then
+        local attackAPIndicator = UIManager.GetComponent("attackAP")
+        if attackAPIndicator and attackAPIndicator.RestoreAllAP then
+            attackAPIndicator:RestoreAllAP()
+            Log("[PartyTurnManager] Restored all attack AP crystals for " .. PartyMembers[ActiveCharacterIndex].name)
+        end
+    end
 
     Log("[PartyTurnManager] Party turn reset - back to " .. PartyMembers[ActiveCharacterIndex].name)
 

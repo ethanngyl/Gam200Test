@@ -1,3 +1,45 @@
+--[[
+===============================================================================
+File:        ScrollOpen.lua
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: 100% (336 lines)
+-------------------------------------------------------------------------------
+Brief:
+TurnScrollUI (filename ScrollOpen.lua): UI component that shows a "Your Turn"
+popup when the turn switches to Player. Plays ScrollOpen.png animation once
+(open -> close); draws text only during the middle frames when the scroll is open.
+
+Details:
+- Inherits from UIComponent. Init(config): offset/scale/layer; animation
+  (animName, frameTime, texture, totalFrames 0..35); text (text, font, scale,
+  color, textStartFrame/textEndFrame for visibility range). Spawns scroll
+  sprite at camera+offset, loads animation via PlayAnimationByName, keeps
+  manual frame control (SetAnimationPlaying false). State: "idle" or "playing".
+- StartAnimation(): state=playing, frame=0, scroll visible. Update(dt, cameraPos):
+  anchors scroll to camera; in idle, triggers on first Player turn or Enemy->Player
+  transition; in playing, advances frame timer, steps currentFrame, hides at
+  last frame. Draw(): only when playing and currentFrame in [textStartFrame,
+  textEndFrame]; centers text on screen (GetFramebufferSize, DrawText). Destroy()
+  cleans up via UIComponent.Destroy.
+
+Notes:
+- Default text "Your Turn"; frames 8-12 (configurable) for text visibility.
+  hasTriggeredOnce prevents repeat on first load. C++ animation system is
+  told not to auto-play so this script drives frames manually.
+
+Safety:
+- scrollID and optional APIs (PlayAnimationByName, SetAnimationFrame, etc.)
+  checked before use. IsPaused guarded in Draw. GetFramebufferSize nil-checked.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
+===============================================================================
+]]
+
 -- ============================================================================
 -- TurnScrollUI.lua (uses ScrollOpen.lua filename)
 -- Player turn popup: plays ScrollOpen.png animation once (open -> close)
@@ -163,7 +205,7 @@ function TurnScrollUI:Update(dt, cameraPos)
         SetAnimationDirection(self.scrollID, 3)
     end
 
-    -- Keep scroll anchored to camera
+    -- Keep scroll anchored to camera (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
         local scrollX = cameraPos.x + self.offsetX
         local scrollY = cameraPos.y + self.offsetY

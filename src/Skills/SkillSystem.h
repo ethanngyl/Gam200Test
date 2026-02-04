@@ -1,8 +1,10 @@
 /**
 ===============================================================================
  File:           SkillSystem.h
- Author:
- Date:           2025-01-12
+ Author:         Padilla Carl Jameson Z.
+ Email:          c.padilla@digipen.edu
+ Date:           2026-01-26
+ Contribution:   100%
  ------------------------------------------------------------------------------
 
  SKILL SYSTEM - Manages player skill progression
@@ -19,6 +21,10 @@
  3. Player completes level -> call UnlockNextSkill()
  4. Player wants to change loadout -> call ReplaceSkillByID()
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

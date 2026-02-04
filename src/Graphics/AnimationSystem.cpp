@@ -199,9 +199,63 @@ namespace Framework {
                     anim.elapsedTime = 0.0f;
                     anim.currentFrame++;
 
-                    if (anim.currentFrame >= anim.frameCount) {
-                        anim.currentFrame = anim.loop ? 0 : anim.frameCount - 1;
+                    if (anim.currentFrame >= anim.frameCount)
+                    {
+                        if (anim.loop)
+                        {
+                            anim.currentFrame = 0;
+                        }
+                        else
+                        {
+                            // One-shot animation finished -> clamp to final frame first
+                            anim.currentFrame = anim.frameCount - 1;
+
+                            // Death should remain on last frame (already special-cased earlier),
+                            // but keep this guard anyway.
+                            if (anim.group != AnimGroup::Death)
+                            {
+                                // If this was an Attack one-shot, return to Idle immediately
+                                if (anim.group == AnimGroup::Attack)
+                                {
+                                    anim.group = AnimGroup::Idle;
+                                    anim.loop = true;
+                                    anim.playing = true;
+                                    anim.currentFrame = 0;
+                                    anim.elapsedTime = 0.0f;
+
+                                    // Force immediate swap to the Idle sprite sheet this frame
+                                    const auto itGroup = groupMap.find(AnimGroup::Idle);
+                                    if (itGroup != groupMap.end())
+                                    {
+                                        const auto itDir = itGroup->second.find(anim.direction);
+                                        if (itDir != itGroup->second.end())
+                                        {
+                                            const std::string& idleName = itDir->second;
+
+                                            anim.animName = idleName;
+                                            auto* gfx = CORE->GetGraphicsSystem();
+                                            LoadAnimation(e, anim, gfx, idleName);
+                                        }
+                                        else
+                                        {
+                                            // Fallback: let normal selection handle it next frame
+                                            anim.animName.clear();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        anim.animName.clear();
+                                    }
+                                }
+                                else
+                                {
+                                    // For other non-loop one-shots (if any), just freeze on last frame
+                                    anim.playing = false;
+                                }
+                            }
+                        }
                     }
+
                 }
                 continue;
             }
@@ -282,9 +336,50 @@ namespace Framework {
                 anim.elapsedTime = default_zero;
                 anim.currentFrame++;
 
-                if (anim.currentFrame >= anim.frameCount) {
-                    anim.currentFrame = anim.loop ? anim_current_frame : anim.frameCount - anim_frame_mod;
+                if (anim.currentFrame >= anim.frameCount)
+                {
+                    if (anim.loop)
+                    {
+                        anim.currentFrame = 0;
+                    }
+                    else
+                    {
+                        // Non-loop (one-shot) animations normally hit the end and would “freeze”
+                        // on the last frame forever (because the engine keeps rendering that frame).
+                        // That freeze is exactly what you see after Attack: it stays on the last
+                        // attack frame until something else (like movement) changes the anim group.
+                        // one-shot finished: clamp
+                        anim.currentFrame = anim.frameCount - 1;
+
+                        // Fix: when Attack one-shot finishes, automatically transition back to Idle.
+                        // This guarantees the player returns to a standing/facing sprite immediately
+                        // after the attack completes, without requiring another input.
+                        // return to Idle after Attack finishes (Death stays clamped by its own override)
+                        if (anim.group == AnimGroup::Attack)
+                        {
+                            anim.group = AnimGroup::Idle;
+                            anim.loop = true;
+                            anim.playing = true;
+                            anim.currentFrame = 0;
+                            anim.elapsedTime = 0.0f;
+
+                            // IMPORTANT: also swap sprite sheet immediately this frame
+                            std::string idleSelected = groupMap[AnimGroup::Idle][anim.direction];
+                            if (!idleSelected.empty())
+                            {
+                                anim.animName = idleSelected;
+                                auto* gfx = CORE->GetGraphicsSystem();
+                                LoadAnimation(e, anim, gfx, anim.animName);
+                            }
+                        }
+                        else
+                        {
+                            // other one-shots: freeze or stop (your call)
+                            anim.playing = false;
+                        }
+                    }
                 }
+
 
                 // PERFORMANCE FIX: Removed per-frame logging (was causing 1-3ms lag per frame)
                 // LOG_INFO("ANIM", "Entity %u Animation '%s' advanced to frame %d", (unsigned)e.id, anim.animName.c_str(), anim.currentFrame);

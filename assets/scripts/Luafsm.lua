@@ -1,39 +1,41 @@
 --[[
 ===============================================================================
- File:           LuaFSM.lua
- Date:           2025-01-27
+ File:          Luafsm.lua
+ Author:        Padilla Carl Jameson Z.
+ Email:         c.padilla@digipen.edu
+ Date:          2026-01-27
+ Contribution:  100%
  ------------------------------------------------------------------------------
 
  FINITE STATE MACHINE - Lua Implementation
  
- A simple, reusable FSM for Lua scripts.
- Load this BEFORE any script that uses it.
+ Brief:
+    A lightweight FSM for game logic scripts.
+    Allows you to define states (tables) with Enter, Update, and Exit functions.
 
- ============================================================================
- USAGE EXAMPLE:
- ============================================================================
+ Usage:
+    1. Create a new FSM instance
+    local fsm = FSM:new("BossLogic")
 
-    -- Create FSM
-    local myFSM = FSM:new("EnemyFSM")
-    myFSM:setDebugEnabled(true)
-
-    -- Add states
-    myFSM:addState("Idle", {
-        enter = function(self) end,
-        update = function(self, dt) end,
-        exit = function(self) end
+    2. Define a state
+    fsm:addState("Attack", {
+        enter  = function(self) print("Roar!") end,
+        update = function(self, dt) self:MoveTowardsPlayer(dt) end,
+        exit   = function(self) print("Tired now.") end
     })
 
-    -- Start and update
-    myFSM:start("Idle")
-    myFSM:update(dt)
+    3. Run it in your script's update loop
+    fsm:start("Attack")
+    
+    function ScriptUpdate(dt)
+        fsm:update(dt)
+        if PlayerIsFar() then fsm:changeState("Idle") end
+    end
 
-    -- Change state
-    myFSM:changeState("Chase")
-
-    -- Query state
-    if myFSM:isInState("Idle") then ... end
-
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 ]]--
 

@@ -1,3 +1,51 @@
+--[[
+===============================================================================
+File:        APIndicatorUI.lua
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: 46% 
+-------------------------------------------------------------------------------
+Brief:
+UI component that displays Action Points (AP) as a row of crystal-style
+indicators. Supports two display modes (tint-based or two-layer sprites),
+camera-relative positioning, and optional refill animation on full AP restore.
+
+Details:
+- Inherits from UIComponent; uses SpawnSprite, camera position, and
+  ShouldUpdatePosition/UpdatePositions for camera-relative layout.
+- Config: maxAP, size, spacing, offsetX/offsetY, layer; filled/empty textures
+  (or single texture with useTint); optional grayscale (filledGrayAmount/
+  emptyGrayAmount); getAPFunc (default GetPlayerAP); showEmpty, useMaxFromAP.
+- Two modes: (1) useTint=true — one sprite per slot, filled vs empty shown by
+  tint and optional grayscale. (2) useTint=false — background row of empty
+  sprites plus foreground row of filled sprites; AP changes spawn/destroy
+  filled sprites or update count.
+- On full refill (AP 0 -> maxAP), runs refill animation: crystals appear
+  one-by-one with refillAnimDelay; during animation, normal AP updates are
+  deferred. Consumption updates apply immediately (remove or tint empty).
+- Init uses current camera position to place indicators; Update(dt, cameraPos)
+  polls getAPFunc, updates positions when camera moves, and applies AP changes
+  or refill animation. Destroy() removes all spawned entities.
+
+Notes:
+- Default texture "assets/UI/MovP.png"; empty can share texture with
+  different tint/gray. Layer default 4.
+- useMaxFromAP=true uses max from getAPFunc() when available; otherwise
+  uses config maxAP. showEmpty=false only draws filled crystals (no back row).
+
+Safety:
+- Nil-checks on entityID and tint; getAPFunc() return used only when non-nil.
+- Destroy() iterates and destroys all indicators; tables cleared after.
+- Refill animation state (isAnimatingRefill) prevents overlapping animations.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
+===============================================================================
+]]
+
 -- ============================================================================
 -- APIndicatorUI.lua
 -- Movement Action Point (AP) indicator component
@@ -161,7 +209,7 @@ function APIndicatorUI:Update(dt, cameraPos)
     local currentAP, maxPlayerAP = self.getAPFunc()
     if not currentAP then return end
 
-    -- Update sprite positions if camera moved
+    -- Update sprite positions if camera moved (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
         self:UpdatePositions(cameraPos)
     end

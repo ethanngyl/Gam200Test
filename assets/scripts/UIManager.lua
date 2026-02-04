@@ -1,3 +1,47 @@
+--[[
+===============================================================================
+File:        UIManager.lua
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: 18% (53 lines of 291 total)
+-------------------------------------------------------------------------------
+Brief:
+Central UI coordinator that creates, updates, draws, and destroys all game UI
+components (movement AP, attack AP, health, turn indicator, turn scroll).
+Supports party/active-character AP and toggles player UI off during enemy turn.
+
+Details:
+- Requires UI/APIndicatorUI, AttackAPIndicatorUI, HealthUI, TurnIndicatorUI,
+  and ScrollOpen (TurnScrollUI). Holds components in UIManager.components.
+- Init(config): Creates movementAP (GetActiveCharacterAP for party), attackAP,
+  health, turnIndicator, turnScroll with fixed configs (paths, offsets, layers,
+  animation/sprite sheet settings). Sets UIManager.initialized = true.
+- Update(dt): Gets camera position; if GetCurrentTurn() == "Enemy", disables
+  movementAP, attackAP, health; then calls component:Update(dt, cameraPos) on all.
+- Draw(): Calls component:Draw() on any component that has it. IsAPAnimating()
+  returns movementAP:IsAnimating(). Destroy() destroys all components and clears state.
+- Access: GetComponent(name), GetComponentCount(), EnableComponent(name),
+  DisableComponent(name). PrintStatus() for debug logging.
+
+Notes:
+- GetActiveCharacterAP() uses GetActiveCharacter + GetEntityAP when available,
+  else falls back to GetPlayerAP. Camera position passed as {x,y,z} table.
+- Attack AP uses AP_Crystal.png 4x4 (or 5x4) sprite sheet; movement AP uses MovP.png
+  with tint/grayscale. Turn scroll uses ScrollOpen.png and text "Your Turn".
+
+Safety:
+- Update/Draw/Destroy check UIManager.initialized. Component existence and
+  Update/Draw/Destroy methods checked before calling. GetCurrentTurn guarded
+  with GetCurrentTurn and GetCurrentTurn() or "Player".
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
+===============================================================================
+]]
+
 -- ============================================================================
 -- UIManager.lua
 -- Central UI coordination system

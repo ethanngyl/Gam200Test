@@ -95,6 +95,16 @@ function OnInit()
     currentPath = {}
     pathIndex = 1
 
+    -- CRITICAL: Set initial tile occupancy so players can't walk through this enemy
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    if enemyX and enemyY then
+        -- Use SetTileOccupant if available, otherwise the C++ MoveEntityToTile handles it
+        if SetTileOccupant then
+            SetTileOccupant(enemyX, enemyY, entityID)
+            Log("[EnemyScript] Enemy " .. entityID .. " set occupancy at (" .. enemyX .. ", " .. enemyY .. ")")
+        end
+    end
+
     -- CRITICAL FIX: Use FindClosestPlayer() instead of FindPlayer()
     -- FindPlayer() returns the FIRST player (usually 547), not the closest
     -- We'll find the actual closest player on first update
@@ -200,6 +210,15 @@ function OnUpdate(dt)
 end
 
 function OnDestroy()
+    -- CRITICAL: Clear tile occupancy when enemy is destroyed
+    -- This ensures players can walk through tiles where enemies died
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    if enemyX and enemyY then
+        if SetTileOccupant then
+            SetTileOccupant(enemyX, enemyY, 0)  -- 0 clears the occupant
+            Log("[EnemyScript] Enemy " .. entityID .. " cleared occupancy at (" .. enemyX .. ", " .. enemyY .. ")")
+        end
+    end
     Log("[EnemyScript] Enemy " .. entityID .. " destroyed")
 end
 
@@ -459,6 +478,10 @@ function ExecuteChase()
 
         -- Validate tile is still walkable
         if IsWalkableTile(nextTile.x, nextTile.y) then
+            -- NOTE: MoveEntityToTile in C++ already handles:
+            -- 1. Clearing occupancy at old position
+            -- 2. Setting occupancy at new position
+            -- No need to manually call SetTileOccupant here
             local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
@@ -470,6 +493,15 @@ function ExecuteChase()
                 -- Visual feedback
                 ShowTileBorder(nextTile.x, nextTile.y, 0.3)
                 PulseTile(nextTile.x, nextTile.y, 0.2, 1.0, 0.5, 0.0)  -- Orange pulse
+
+                -- Manage tile occupancy
+                --local enemyX, enemyY = GetEntityGridPosition(entityID)
+                --if enemyX and enemyY then
+                    -- Only set occupancy if the enemy actually moved
+                  --  if not SetTileOccupant or SetTileOccupant(enemyX, enemyY, entityID) then
+                    --    Log("[EnemyScript] Enemy " .. entityID .. " set occupancy at (" .. enemyX .. ", " .. enemyY .. ")")
+                    --end
+                --end
 
                 -- Set timer for next move (creates visible delay)
                 moveTimer = moveDelay

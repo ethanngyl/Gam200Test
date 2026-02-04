@@ -1,24 +1,49 @@
 /*
 ===============================================================================
- File:          LevelLoader_API.cpp (Compatible with InputSystem)
- Author:        ETHAN NG
- Email:         n.ethanyongle@digipen.edu
- Date:          2025-10-31
- Contribution:  100%
- ------------------------------------------------------------------------------
-  Level Loader Lua API Implementation
+File:        LevelLoader_API.cpp
+Author:      ETHAN NG, Sim Kah Yan
+Email:       n.ethanyongle@digipen.edu; kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: ETHAN NG (remaining); Sim Kah Yan 2% (82 lines of 4233 total)
+-------------------------------------------------------------------------------
+Brief:
+Level Loader Lua API implementation: C++ bridge to Lua. Static functions
+registered to Lua for Audio, UI, Input, Entities, TileMap, Player/Enemy,
+Animation, Party, Grid movement, Save/Load, Editor mode, and more.
 
- Overview:
-    The LevelLoader_API file serves as the bridge between the C++ engine core
-    and the Lua scripting layer. It defines a suite of static functions
-    registered to Lua, allowing scripts to control Audio, UI, Input, Entities,
-    and Grid-based gameplay logic.
+Overview (ETHAN NG):
+  Bridge between C++ engine core and Lua scripting layer. Suite of static
+  functions registered to Lua so scripts control Audio, UI, Input, Entities,
+  and grid-based gameplay. Uses standard Lua C API (lua_State*); validates
+  engine system pointers (Audio, UI, Graphics) before execution; handles
+  coordinate conversions (World to Screen, World to Grid); integrates with
+  ECS (AP, Transform, Health, etc.).
 
-  Design notes:
-     - Uses standard Lua C API (lua_State*) for all function bindings
-     - Validates engine system pointers (Audio, UI, Graphics) before execution
-     - Handles coordinate space conversions (World to Screen, World to Grid)
-     - Integrates deeply with ECS to manipulate components (AP, Transform, Health)
+Details:
+  Implements LevelLoader::Lua_* declared in LevelLoader.h. Categories: Audio
+  (PlaySound, StopSound, StopAllSounds, UpdateAudio, volume); Camera; Engine;
+  ImGui; Pause; UI/Buttons/Text; Input; JSON; TileMap; SpawnSprite,
+  SpawnAnimatedSprite, SetSprite*, DestroyEntity, ClearAllEntities; Player/Enemy
+  (FindPlayer, GetAllEnemies, SetEnemyTarget, GetCurrentTurn, GetChestProgress,
+  enemy turn manager); Animation (config, player load, frame control); Party
+  (GetEntityAP, ConsumeEntityAP, SetActiveCharacter, etc.); Script component;
+  Grid movement; Save/Load; Procedural map; Entity spawning; Editor mode.
+  g_activeCharacterID shared for party system. All callbacks get LevelLoader
+  via GetLevelLoader(L) and null-check subsystems.
+
+Notes:
+  Compatible with InputSystem. Windows min/max undefined before algorithm.
+  Many functions push booleans/integers or return 0/1/2 Lua return values.
+
+Safety:
+  Loader and subsystem pointers null-checked before use. Lua args validated
+  with luaL_checkstring/luaL_checknumber/luaL_checkinteger where required.
+  Errors logged; stack cleaned on failure.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
 */
 
@@ -2885,6 +2910,36 @@ namespace Framework {
     }
 
     /**
+     * @brief Refill entity's Attack AP to maximum
+     * @param entityID The entity ID
+     *
+     * Usage: RefillEntityAttackAP(entityID)
+     */
+    int LevelLoader::Lua_RefillEntityAttackAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "RefillEntityAttackAP: No EntityManager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AttackAP>(entity)) {
+            LOG_WARN("LevelLoader", "RefillEntityAttackAP: Entity %d invalid or missing AttackAP component", entityID);
+            return 0;
+        }
+
+        auto& attackAP = em->GetComponent<AttackAP>(entity);
+        int oldAP = attackAP.points;
+        attackAP.points = attackAP.maxPoints;
+        LOG_INFO("LevelLoader", "RefillEntityAttackAP: Entity %d AttackAP refilled %d -> %d",
+                 entityID, oldAP, attackAP.points);
+
+        return 0;
+    }
+
+    /**
      * @brief Consume entity's AP - legacy name
      * @param entityID The entity ID
      * @param amount Amount of AP to consume
@@ -3561,8 +3616,8 @@ namespace Framework {
     }
 
     // ============================================================================
-// ENTITY SPAWNING API
-// ============================================================================
+    // ENTITY SPAWNING API
+    // ============================================================================
 
     int LevelLoader::Lua_SpawnPlayerAt(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
@@ -3848,6 +3903,177 @@ namespace Framework {
         // Return the result in the entity's Lua state
         lua_pushboolean(L, inTransition);
         return 1;
+    }
+
+    /**
+     * @brief Trigger attack AP crystal consume animation
+     *
+     * Usage: TriggerAttackAPAnimation()
+     *
+     * This is a bridge function that allows entity scripts (running in per-entity
+     * Lua states) to trigger the attack AP crystal shatter animation in UIManager
+     * (which runs in the LevelLoader's Lua state).
+     */
+    int LevelLoader::Lua_TriggerAttackAPAnimation(lua_State* L) {
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Called from entity script");
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: No loader");
+            return 0;
+        }
+
+        // Get the LevelLoader's Lua state (where UIManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: No LevelLoader Lua state");
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Getting UIManager...");
+
+        // Get UIManager table
+        lua_getglobal(levelL, "UIManager");
+        if (!lua_istable(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: UIManager is not a table");
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Getting UIManager.GetComponent...");
+
+        // Get UIManager.GetComponent function
+        lua_getfield(levelL, -1, "GetComponent");
+        if (!lua_isfunction(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: GetComponent is not a function");
+            lua_pop(levelL, 2);  // Pop function and UIManager table
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Calling GetComponent('attackAP')...");
+
+        // Push "attackAP" as the argument
+        lua_pushstring(levelL, "attackAP");
+
+        // Call UIManager.GetComponent("attackAP") -> 1 argument, 1 return value
+        int result = lua_pcall(levelL, 1, 1, 0);
+        if (result != LUA_OK) {
+            const char* error = lua_tostring(levelL, -1);
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed to call GetComponent: %s", error);
+            lua_pop(levelL, 2);  // Pop error and UIManager table
+            return 0;
+        }
+
+        // Now we have the attackAP component on the stack
+        if (!lua_istable(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: attackAP component is not a table");
+            lua_pop(levelL, 2);  // Pop component and UIManager table
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Getting ConsumeOneAP method...");
+
+        // Get the ConsumeOneAP method from the component
+        lua_getfield(levelL, -1, "ConsumeOneAP");
+        if (!lua_isfunction(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed: ConsumeOneAP is not a function");
+            lua_pop(levelL, 3);  // Pop function, component, and UIManager table
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] Calling ConsumeOneAP()...");
+
+        // Push the component table as 'self' for the method call
+        lua_pushvalue(levelL, -2);  // Duplicate the component table
+
+        // Call attackAPComponent:ConsumeOneAP() -> 1 argument (self), 0 return values
+        result = lua_pcall(levelL, 1, 0, 0);
+        if (result != LUA_OK) {
+            const char* error = lua_tostring(levelL, -1);
+            LOG_ERROR("LevelLoader", "[TriggerAttackAPAnimation] Failed to call ConsumeOneAP: %s", error);
+            lua_pop(levelL, 3);  // Pop error, component, and UIManager table
+            return 0;
+        }
+
+        LOG_INFO("LevelLoader", "[TriggerAttackAPAnimation] SUCCESS! Animation triggered");
+
+        // Clean up the stack
+        lua_pop(levelL, 2);  // Pop component and UIManager table
+
+        return 0;
+    }
+
+    /**
+     * @brief Restore all attack AP crystals (visual only)
+     *
+     * Usage: RestoreAllAttackAPCrystals()
+     *
+     * This is a bridge function that allows entity scripts to restore all attack AP
+     * crystal visuals when AP is refilled.
+     */
+    int LevelLoader::Lua_RestoreAllAttackAPCrystals(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            return 0;
+        }
+
+        // Get the LevelLoader's Lua state (where UIManager is running)
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            return 0;
+        }
+
+        // Get UIManager table
+        lua_getglobal(levelL, "UIManager");
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        // Get UIManager.GetComponent function
+        lua_getfield(levelL, -1, "GetComponent");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop function and UIManager table
+            return 0;
+        }
+
+        // Push "attackAP" as the argument
+        lua_pushstring(levelL, "attackAP");
+
+        // Call UIManager.GetComponent("attackAP") -> 1 argument, 1 return value
+        int result = lua_pcall(levelL, 1, 1, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 2);  // Pop error and UIManager table
+            return 0;
+        }
+
+        // Now we have the attackAP component on the stack
+        if (!lua_istable(levelL, -1)) {
+            lua_pop(levelL, 2);  // Pop component and UIManager table
+            return 0;
+        }
+
+        // Get the RestoreAllAP method from the component
+        lua_getfield(levelL, -1, "RestoreAllAP");
+        if (!lua_isfunction(levelL, -1)) {
+            lua_pop(levelL, 3);  // Pop function, component, and UIManager table
+            return 0;
+        }
+
+        // Push the component table as 'self' for the method call
+        lua_pushvalue(levelL, -2);  // Duplicate the component table
+
+        // Call attackAPComponent:RestoreAllAP() -> 1 argument (self), 0 return values
+        result = lua_pcall(levelL, 1, 0, 0);
+        if (result != LUA_OK) {
+            lua_pop(levelL, 3);  // Pop error, component, and UIManager table
+            return 0;
+        }
+
+        // Clean up the stack
+        lua_pop(levelL, 2);  // Pop component and UIManager table
+
+        return 0;
     }
 
     // ========================================================================
@@ -4243,6 +4469,138 @@ namespace Framework {
         }
 
         return 0;
+    }
+
+    // ========================================================================
+    // TILE OCCUPANCY API
+    // ========================================================================
+
+    /**
+     * @brief Set the entity occupying a tile
+     * @param gridX Grid X coordinate
+     * @param gridY Grid Y coordinate
+     * @param entityID Entity ID to set as occupant (0 to clear)
+     * @return boolean success
+     *
+     * Usage: SetTileOccupant(x, y, entityID) or SetTileOccupant(x, y, 0) to clear
+     */
+    int LevelLoader::Lua_SetTileOccupant(lua_State* L) {
+        int gridX = static_cast<int>(luaL_checknumber(L, 1));
+        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+        int entityID = static_cast<int>(luaL_checknumber(L, 3));
+
+        Framework::GridCoord coord{ gridX, gridY };
+
+        if (!Framework::InBounds(coord)) {
+            LOG_WARN("LevelLoader", "SetTileOccupant: Grid position (%d, %d) out of bounds", gridX, gridY);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        Entity occupant = (entityID > 0) ? Entity(static_cast<uint32_t>(entityID)) : Entity{ INVALID_ENTITY };
+        bool success = Framework::SetOccupant(coord, occupant);
+
+        if (success) {
+            LOG_INFO("LevelLoader", "SetTileOccupant: Tile (%d, %d) occupant set to entity %d",
+                     gridX, gridY, entityID);
+        } else {
+            LOG_WARN("LevelLoader", "SetTileOccupant: Failed to set occupant at (%d, %d)", gridX, gridY);
+        }
+
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Get the entity occupying a tile
+     * @param gridX Grid X coordinate
+     * @param gridY Grid Y coordinate
+     * @return entityID (0 if no occupant or invalid tile)
+     *
+     * Usage: local entityID = GetTileOccupant(x, y)
+     */
+    int LevelLoader::Lua_GetTileOccupant(lua_State* L) {
+        int gridX = static_cast<int>(luaL_checknumber(L, 1));
+        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ gridX, gridY };
+
+        if (!Framework::InBounds(coord)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        const auto& grid = Framework::GetGrid();
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+
+        if (tileEntity.GetID() == INVALID_ENTITY || !grid.em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        if (!grid.em->HasComponent<GridTiles>(tileEntity)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
+        uint32_t occupantID = gridTile.occupant.GetID();
+
+        lua_pushinteger(L, (occupantID == INVALID_ENTITY) ? 0 : static_cast<lua_Integer>(occupantID));
+        return 1;
+    }
+
+    /**
+     * @brief Check if a tile is occupied by any entity
+     * @param gridX Grid X coordinate
+     * @param gridY Grid Y coordinate
+     * @return boolean true if occupied, false otherwise
+     *
+     * Usage: local isOccupied = IsTileOccupied(x, y)
+     */
+    int LevelLoader::Lua_IsTileOccupied(lua_State* L) {
+        int gridX = static_cast<int>(luaL_checknumber(L, 1));
+        int gridY = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ gridX, gridY };
+
+        if (!Framework::InBounds(coord)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const auto& grid = Framework::GetGrid();
+        Entity tileEntity = grid.TileAt(gridX, gridY);
+
+        if (tileEntity.GetID() == INVALID_ENTITY || !grid.em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        if (!grid.em->HasComponent<GridTiles>(tileEntity)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const auto& gridTile = grid.em->GetComponent<GridTiles>(tileEntity);
+
+        // Check if there's an occupant
+        if (gridTile.occupant.GetID() == INVALID_ENTITY) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Check if occupant is dead (dead entities don't count as occupants)
+        if (grid.em->HasComponent<Health>(gridTile.occupant)) {
+            const auto& health = grid.em->GetComponent<Health>(gridTile.occupant);
+            if (health.isDead) {
+                lua_pushboolean(L, false);
+                return 1;
+            }
+        }
+
+        lua_pushboolean(L, true);
+        return 1;
     }
 
     // ============================================================================

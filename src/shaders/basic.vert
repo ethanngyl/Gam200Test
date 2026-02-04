@@ -1,3 +1,36 @@
+/*
+===============================================================================
+File:        basic.vert
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: 100%
+-------------------------------------------------------------------------------
+Brief:
+Vertex shader for basic 2D textured/colored quads. Per-vertex attributes
+(pos, color, texCoord); instance matrix passed as four vec4 attributes (AMD-
+compatible); outputs clip position and varyings for the fragment stage.
+
+Details:
+- In: aPos (vec3), aColor (vec3), aTexCoord (vec2); aInstanceModel0..3 (vec4)
+  for instanced model matrix (avoids SSBO for broad GPU compatibility).
+- Uniforms: uProjection, uView. Reconstructs mat4 from the four instance
+  columns; gl_Position = uProjection * uView * instanceModel * vec4(aPos, 1.0).
+  Out: vertexColor, TexCoord.
+
+Notes:
+- AMD fix: instance data via vertex attributes instead of SSBO. Used with
+  basic.frag by GraphicsSystemV2 for batched sprite/quad drawing.
+
+Safety:
+- No divergent control flow; attributes and uniforms used as provided.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
+===============================================================================
+*/
 #version 450 core
 layout(location=0) in vec3 aPos;
 layout(location=1) in vec3 aColor;

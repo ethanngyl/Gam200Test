@@ -6,6 +6,10 @@
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 
+-- Export UIManager globally so entity scripts can access it via C++ bridge
+-- (Entity scripts run in separate Lua states and need global access)
+_G.UIManager = UIManager
+
 -- Load Party Turn Manager (REQUIRED for party system)
 dofile("assets/scripts/PartyTurnManager.lua")
 
@@ -468,16 +472,16 @@ function OnUpdate(dt)
     end
 
     -- Debug: Log positions every few frames
-if not goalReached and goalPosition then
-    for i, playerID in ipairs(partyMembers) do
-        if playerID and playerID ~= 0 then
-            local gx, gy = GetEntityGridPosition(playerID)
-            if gx and gy then
-                print("Player " .. i .. " at grid (" .. gx .. ", " .. gy .. ") | Goal at (" .. goalPosition.gridX .. ", " .. goalPosition.gridY .. ")")
-            end
-        end
-    end
-end
+--if not goalReached and goalPosition then
+  --  for i, playerID in ipairs(partyMembers) do
+    --    if playerID and playerID ~= 0 then
+      --      local gx, gy = GetEntityGridPosition(playerID)
+        --    if gx and gy then
+          --      print("Player " .. i .. " at grid (" .. gx .. ", " .. gy .. ") | Goal at (" .. goalPosition.gridX .. ", " .. goalPosition.gridY .. ")")
+            --end
+        --end
+    --end
+--end
 
     -- Party system turn management
     local currentTurn = GetCurrentTurn()

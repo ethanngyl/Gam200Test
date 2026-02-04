@@ -1,45 +1,54 @@
 /*
 ===============================================================================
- File:          LevelLoader.cpp
- Author:        GE YONGQI
- Email:         yongqi.ge@digipen.edu
- Date:          2025-11-13
- Contribution:  100%
- ------------------------------------------------------------------------------
-  Lua-based Level Loading System Implementation
+File:        LevelLoader.cpp
+Author:      GE YONGQI, Sim Kah Yan
+Email:       yongqi.ge@digipen.edu; kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: GE YONGQI (remaining); Sim Kah Yan 26% (175 lines of 669 total)
+-------------------------------------------------------------------------------
+Brief:
+Lua-based level loading: singleton manages Lua state, level lifecycle
+(Load/Update/Draw/Unload), hot-reload, and C++ API bindings for level scripts.
+Editor mode (F1) and preserve-playing-state on level transition supported.
 
-  Purpose:
-  Core implementation of the LevelLoader system that manages Lua-scripted
-  game levels and provides C++ API bindings for Lua scripts.
+Details:
+- Initialize(engine) caches UISystem, AudioSystem, GraphicsSystem; CreateLuaState
+  adds assets/scripts/ to package.path, RegisterLevelAPI(), stores __level_loader_ptr.
+- LoadLevel(scriptPath, isEditorMode): UnloadCurrentLevel if needed; sets
+  IS_EDITOR_LOAD, g_preservePlayingState/g_loadAsEditorMode for editor/playing;
+  luaL_dofile; enforces editor/ImGui state; checks OnInit/OnUpdate/OnDraw/OnDestroy;
+  calls OnInit(); marks levelLoaded, currentLevelPath. UnloadCurrentLevel calls
+  OnDestroy, then EntityManager ClearAllEntities/ResetEntityIDCounter.
+- UpdateCurrentLevel(dt) / DrawCurrentLevel() call OnUpdate(dt) / OnDraw() when
+  present. ReloadCurrentLevel: path save, unload, load. ResetLuaState: unload,
+  destroy Lua state, create fresh.
+- RegisterLevelAPI() registers 60+ C APIs: Log; Camera; Engine; ImGui; Pause;
+  Audio; UI Buttons/Text; Input; JSON; TileMap; SpawnSprite/SpawnAnimatedSprite,
+  SetSprite*, DestroyEntity, ClearAllEntities; GetPlayerAP/GetCameraPosition/
+  GetPlayerAttackAP/GetPlayerHP; FindPlayer, GetAllEnemies, SetEnemyTarget,
+  GetCurrentTurn, GetChestProgress; Enemy turn manager; Animation config/player
+  load; PlayAnimationByName, Set/GetAnimationFrame(Count); Animation control;
+  Party (GetEntityAP, ConsumeEntityAP, SetActiveCharacter, etc.); Script component;
+  Grid movement; Save/Load/Procedural map; Entity spawning; ToggleEditorMode,
+  IsEditorMode, ShouldDisableGameplay.
+- Lua C implementations: camera, engine, ImGui, LoadAnimationConfig,
+  LoadPlayerAnimation (find player by CircleCollider, add SpriteAnimation, load);
+  Scroll animation API (PlayAnimationByName, SetAnimationFrame, GetAnimationFrame,
+  GetAnimationFrameCount) with special handling for "Scroll" animations.
 
-  Key Features:
-  - Singleton pattern for global access
-  - Lua state lifecycle management (create, reset, destroy)
-  - Level lifecycle (Load, Update, Draw, Unload)
-  - Hot-reload capability for rapid iteration
-  - Editor mode toggle (F1 key) with visual feedback
-  - Extensive C API for Lua (60+ functions)
+Notes:
+- CallLuaFunction/HasLuaFunction require valid L; errors logged and stack popped.
+- GetLevelLoader(L) reads __level_loader_ptr. Windows min/max undefined before
+  algorithm include. OnUpdate is always invoked (pause handled inside Lua).
 
-  API Categories:
-  - Logging: Log messages to console
-  - Camera: Position, zoom, framebuffer queries
-  - Engine: Play state, game state transitions
-  - ImGui: Enable/disable overlay
-  - Pause: Toggle pause, query pause state
-  - Audio: Play/stop sounds, volume control
-  - UI: Button creation, text rendering
-  - Input: Keyboard queries
-  - JSON: Configuration file loading
-  - Entities: Sprite spawning, manipulation, destruction
-  - TileMap: Grid-based level loading
-  - Player/Enemy: Grid movement, AP management, combat
-  - Scripts: Component management
+Safety:
+- L and loader/subsystem pointers null-checked in API callbacks. lua_pcall
+  errors logged; stack cleaned. Unload clears entities and resets ID counter.
 
-  Editor Mode:
-  - Lua_ToggleEditor(): Toggle editor mode on/off
-  - Lua_IsEditorEnabled(): Query current editor mode state
-  - Lua_SetEditorMode(): Directly set editor mode
-  - When enabled, buttons are grayed out and ImGui is shown
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
 ===============================================================================
 */
 
@@ -542,6 +551,7 @@ namespace Framework {
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
         lua_register(L, "ConsumeEntityAttackAP", Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
+        lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
         lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
@@ -578,6 +588,11 @@ namespace Framework {
         lua_register(L, "DamageEntity", Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
+        // Tile Occupancy API
+        lua_register(L, "SetTileOccupant", Lua_SetTileOccupant);
+        lua_register(L, "GetTileOccupant", Lua_GetTileOccupant);
+        lua_register(L, "IsTileOccupied", Lua_IsTileOccupied);
+
         // Grid Conversion API
         lua_register(L, "TileToWorld", Lua_TileToWorld);
 
@@ -586,6 +601,7 @@ namespace Framework {
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
+        lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
         lua_register(L, "SetActiveCharacter", Lua_SetActiveCharacter);
         lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);

@@ -1,22 +1,37 @@
--- ============================================================================
--- PlayerScript.lua (FSM Version)
--- Grid-based player movement and animation component script
--- ============================================================================
--- This script handles player movement on a grid using arrow keys or WASD
--- Features:
--- - FSM-based state management (WaitingForInput, Moving, Attacking)
--- - Grid-based movement (one tile at a time)
--- - Input handling for arrow keys and WASD
--- - Action Point (AP) consumption
--- - Turn-based movement with cooldown
--- - Visual feedback (tile borders and pulses)
--- - Automatic animation state management (Idle/Walk/Attack/Injured/Death)
--- - Attack preview and execution
--- ============================================================================
+--[[
+===============================================================================
+ File:          PlayerScript.lua
+ Authors:       ETHAN NG YONG LE
+ Co-Authors:    Padilla Carl Jameson Z. 
+ Date:          2026-02-03
+ Contribution:  Ethan (70%), Carl (30%)
+ ------------------------------------------------------------------------------
 
--- ============================================================================
--- FSM CLASS (Built-in for reuse)
--- ============================================================================
+ PLAYER CONTROLLER (FSM & Grid)
+
+ Brief:
+    Handles all player logic on the grid.
+    Uses an internal FSM to switch between Waiting, Moving, and Attacking.
+    Automatically handles Action Points (AP) and animation syncing.
+
+ Usage:
+    1. Attach this script to the Player Entity.
+    2. Ensure a "GridSystem" is present in the scene for tile calculation.
+    3. Controls:
+       - WASD / Arrows: Select direction
+       - Space: Confirm Move / Attack
+
+ States:
+    [Waiting] -> Input -> [Moving] -> Arrive -> [Waiting]
+    [Waiting] -> Input -> [Attacking] -> End -> [Waiting]
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 local FSM = {}
 FSM.__index = FSM
@@ -283,20 +298,10 @@ function ShowAttackPreview()
                 local worldX, worldY = TileToWorld(tile.x, tile.y)
 
                 if worldX and worldY then
-                    local indicatorID = SpawnSprite(
-                        "assets/TileMap/Attack_Indicator.png",
-                        worldX, worldY,
-                        0.95, 0.95,
-                        2
-                    )
-
-                    if indicatorID and indicatorID > 0 then
-                        SetSpriteColor(indicatorID, 1.0, 0.0, 0.0, 0.5)
-                        table.insert(attackPreviewTiles, indicatorID)
-                        print("[PlayerScript]   Spawned attack indicator " .. indicatorID .. " at grid(" .. tile.x .. ", " .. tile.y .. ") world(" .. worldX .. ", " .. worldY .. ")")
-                    else
-                        print("[PlayerScript]   WARNING: Failed to spawn attack indicator at (" .. tile.x .. ", " .. tile.y .. ")")
-                    end
+                    -- Tint the tile red for attack preview
+                    TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.7)  -- Red tint with 70% opacity
+                    table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})  -- Store tile coords
+                    print("[PlayerScript]   Tinted attack preview tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
                 else
                     print("[PlayerScript]   WARNING: TileToWorld failed for (" .. tile.x .. ", " .. tile.y .. ")")
                 end
@@ -314,11 +319,12 @@ end
 
 function ClearAttackPreview()
     if #attackPreviewTiles > 0 then
-        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack indicator entities")
-        for _, indicatorID in ipairs(attackPreviewTiles) do
-            if indicatorID and indicatorID > 0 then
-                DestroyEntity(indicatorID)
-                print("[PlayerScript]   Destroyed attack indicator " .. indicatorID)
+        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack preview tiles")
+        for _, tile in ipairs(attackPreviewTiles) do
+            if tile and tile.x and tile.y then
+                -- Reset tile tint to white (no tint)
+                TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
+                print("[PlayerScript]   Cleared tint on tile (" .. tile.x .. ", " .. tile.y .. ")")
             end
         end
     end
@@ -996,9 +1002,13 @@ function OnUpdate(dt)
     lastSpaceKeyDown = spaceKeyDown  -- Update SPACE key state for next frame
 
     -- ========================================================================
-    -- MOVEMENT INPUT
+    -- MOVEMENT INPUT (DISABLED - FSM handles movement now)
     -- ========================================================================
+    -- NOTE: This duplicate movement code is disabled because the FSM already
+    --       handles all movement input. Keeping this active causes double
+    --       EndCharacterTurn() calls and turn skipping bugs.
 
+    --[[ DISABLED DUPLICATE MOVEMENT CODE
     -- Check for movement input
     local targetX, targetY = currentX, currentY
     local moveAttempted = false
@@ -1193,6 +1203,7 @@ function OnUpdate(dt)
 else
     Log("[PlayerScript] Failed to move to (" .. targetX .. ", " .. targetY .. ")")
 end
+--]] -- END DISABLED DUPLICATE MOVEMENT CODE
 
 end
 
@@ -1229,14 +1240,13 @@ function ShowAttackPreview()
         print("[PlayerScript]     IsValidGridPosition: " .. tostring(isValid))
 
         if isValid then
-            -- Use PulseTile for attack preview (TintTile not available in current binary)
-            -- Red persistent pulse while preview is active
-            print("[PlayerScript]     Calling PulseTile(" .. tile.x .. ", " .. tile.y .. ") for attack preview")
-            PulseTile(tile.x, tile.y, 9999.0, 1.0, 0.3, 0.3)  -- Very long duration pulse (red)
+            -- Tint the tile red for attack preview
+            print("[PlayerScript]     Calling TintTile(" .. tile.x .. ", " .. tile.y .. ") for attack preview")
+            TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.7)  -- Red tint with 70% opacity
 
             -- Store the grid coordinates so we can clear them later
             table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
-            print("[PlayerScript]   Pulsed tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
+            print("[PlayerScript]   Tinted tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
         else
             print("[PlayerScript]     Tile invalid, skipping")
         end
@@ -1251,10 +1261,15 @@ function ShowAttackPreview()
 end
 
 function ClearAttackPreview()
-    -- Clear attack preview - no need to restore pulses, they'll fade naturally
     if #attackPreviewTiles > 0 then
         print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack preview tiles")
-        -- Note: PulseTile effects fade on their own, no cleanup needed
+        for _, tile in ipairs(attackPreviewTiles) do
+            if tile and tile.x and tile.y then
+                -- Reset tile tint to white (no tint)
+                TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
+                print("[PlayerScript]   Cleared tint on tile (" .. tile.x .. ", " .. tile.y .. ")")
+            end
+        end
     end
 
     -- Clear attack preview state
@@ -1368,6 +1383,70 @@ function ExecuteAttack()
         ConsumeEntityAttackAP(entityID, attackAPCost)
         local newAP, newMaxAP = GetEntityAttackAP(entityID)
         print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAP) .. "/" .. tostring(newMaxAP))
+
+        -- Trigger attack AP crystal shattering animation
+        print("[PlayerScript] ========== ANIMATION DEBUG ==========")
+        print("[PlayerScript] Attempting to access UIManager directly from entity script...")
+        print("[PlayerScript] UIManager type: " .. tostring(type(UIManager)))
+        print("[PlayerScript] UIManager value: " .. tostring(UIManager))
+
+        if UIManager then
+            print("[PlayerScript] ✓ UIManager exists in entity Lua state!")
+            print("[PlayerScript] UIManager.GetComponent type: " .. tostring(type(UIManager.GetComponent)))
+
+            if UIManager.GetComponent then
+                print("[PlayerScript] ✓ GetComponent method exists!")
+                print("[PlayerScript] Calling UIManager.GetComponent('attackAP')...")
+
+                local attackAPComponent = UIManager.GetComponent("attackAP")
+                print("[PlayerScript] attackAP component type: " .. tostring(type(attackAPComponent)))
+                print("[PlayerScript] attackAP component value: " .. tostring(attackAPComponent))
+
+                if attackAPComponent then
+                    print("[PlayerScript] ✓ attackAP component exists!")
+                    print("[PlayerScript] ConsumeOneAP type: " .. tostring(type(attackAPComponent.ConsumeOneAP)))
+
+                    if attackAPComponent.ConsumeOneAP then
+                        print("[PlayerScript] ✓ ConsumeOneAP method exists!")
+                        print("[PlayerScript] Calling attackAP:ConsumeOneAP()...")
+
+                        local success, errorMsg = pcall(function()
+                            attackAPComponent:ConsumeOneAP()
+                        end)
+
+                        if success then
+                            print("[PlayerScript] ✓✓✓ SUCCESS! Crystal animation triggered via direct UIManager access")
+                        else
+                            print("[PlayerScript] ✗ ERROR calling ConsumeOneAP(): " .. tostring(errorMsg))
+                        end
+                    else
+                        print("[PlayerScript] ✗ ConsumeOneAP method does not exist")
+                    end
+                else
+                    print("[PlayerScript] ✗ attackAP component is nil")
+                end
+            else
+                print("[PlayerScript] ✗ GetComponent method does not exist")
+            end
+        else
+            print("[PlayerScript] ✗ UIManager is nil in entity Lua state - trying C++ bridge...")
+            print("[PlayerScript] Calling TriggerAttackAPAnimation() via C++ bridge...")
+
+            local success, errorMsg = pcall(function()
+                TriggerAttackAPAnimation()
+            end)
+
+            if success then
+                print("[PlayerScript] C++ bridge call completed successfully")
+            else
+                print("[PlayerScript] ERROR calling C++ bridge: " .. tostring(errorMsg))
+            end
+        end
+
+        print("[PlayerScript] ========== END ANIMATION DEBUG ==========")
+
+        -- Visual feedback
+        PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
 
         -- Play attack animation
         currentAnimGroup = AnimGroup.Attack

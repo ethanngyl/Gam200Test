@@ -486,6 +486,7 @@ namespace Framework {
         lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
         lua_register(L, "IsUIAnimating", LevelLoader::Lua_IsUIAnimating);  // Check UI animation state
         lua_register(L, "IsInTurnTransition", LevelLoader::Lua_IsInTurnTransition);  // Check turn transition cooldown
+        lua_register(L, "TriggerAttackAPAnimation", LevelLoader::Lua_TriggerAttackAPAnimation);  // Trigger attack AP consume animation
 
         // Game API - Player
         lua_register(L, "GetPlayerAP", LevelLoader::Lua_GetPlayerAP);
@@ -503,6 +504,7 @@ namespace Framework {
         lua_register(L, "SetGridMovementEnabled", LevelLoader::Lua_SetGridMovementEnabled);
         lua_register(L, "ShowTileBorder", LevelLoader::Lua_ShowTileBorder);
         lua_register(L, "PulseTile", LevelLoader::Lua_PulseTile);
+        lua_register(L, "TintTile", LevelLoader::Lua_TintTile);  // Tile tinting for attack preview
         lua_register(L, "HasChestAtTile", LevelLoader::Lua_HasChestAtTile);
         lua_register(L, "CollectChest", LevelLoader::Lua_CollectChest);
         lua_register(L, "HasGoalAtTile", LevelLoader::Lua_HasGoalAtTile);
@@ -555,6 +557,7 @@ namespace Framework {
         lua_register(L, "ConsumeEntityAP", LevelLoader::Lua_ConsumeEntityAP);
         lua_register(L, "ConsumeEntityAttackAP", LevelLoader::Lua_ConsumeEntityAttackAP);
         lua_register(L, "RefillEntityAP", LevelLoader::Lua_RefillEntityAP);
+        lua_register(L, "RefillEntityAttackAP", LevelLoader::Lua_RefillEntityAttackAP);
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);
         lua_register(L, "IsActiveCharacter", LevelLoader::Lua_IsActiveCharacter);

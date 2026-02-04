@@ -1,34 +1,39 @@
 /**
 ===============================================================================
- File:           IState.h
- Author:
- Date:           2025-01-26
- Contribution:   100%
+ File:          IState.h
+ Author:        Padilla Carl Jameson Z.
+ Email:         c.padilla@digipen.edu
+ Date:          2026-01-26
+ Contribution:  100%
  ------------------------------------------------------------------------------
 
  FINITE STATE MACHINE - State Interface
 
- Design notes:
-   This is the base interface for all FSM states. All concrete states must
-   inherit from this class and implement the pure virtual methods.
+ Brief:
+    The blueprint for all States.
+    Any specific behavior (Idle, Attack, Jump) must inherit from this
+    and define what happens when it starts, updates, and ends.
 
  Usage:
-   1. Create a class that inherits from IState
-   2. Implement Enter(), Update(), Exit(), and GetName()
-   3. Add the state to a StateMachine using AddState()
+    1. Create a class inheriting from IState
+    2. Implement the required functions: Enter, Update, Exit, GetName
+    3. Register it with the StateMachine
 
  Example:
-   class PlayerIdleState : public Framework::IState {
-   public:
-       void Enter() override { }
-       void Update(float dt) override { }
-       void Exit() override { }
+    class PlayerIdle : public IState {
+    public:
+       void Enter() override { PlayAnimation("Idle"); }
+       void Update(float dt) override { if (Input) SwitchState("Run"); }
+       void Exit() override { StopAnimation(); }
        std::string GetName() const override { return "Idle"; }
-   };
+    };
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
-
 #pragma once
 
 #include "ECSEntity.h"

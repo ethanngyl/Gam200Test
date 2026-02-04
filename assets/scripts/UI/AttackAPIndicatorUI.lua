@@ -1,3 +1,51 @@
+--[[
+===============================================================================
+File:        AttackAPIndicatorUI.lua
+Author:      Sim Kah Yan
+Email:       kahyan.sim@digipen.edu
+Date:        2026-02-04 (yyyy-mm-dd)
+Contribution: 73% (287 lines of 392 total)
+-------------------------------------------------------------------------------
+Brief:
+UI component that displays Attack Action Points (AP) as a row of animated
+diamond/crystal indicators. Uses a 4x4 sprite sheet: filled/idle loop and
+consume-once animation; supports single-layer (tint) or two-layer (empty+filled) modes.
+
+Details:
+- Inherits from UIComponent; camera-relative layout via offsetX/offsetY, spacing, size.
+- AP source: GetPlayerAttackAP(). Config: maxAP (default 3), layer, empty/filled
+  textures (AP_Empty.png, AP_Crystal.png), optional layer offsets for two-layer mode.
+- Sprite sheet (e.g. AP_Crystal.png 4x4): filledStartFrame/filledFrameCount (frames 0-7,
+  rows 1-2) = idle loop; consumeStartFrame/consumeFrameCount (frames 8-15, rows 3-4) =
+  consume animation played once when AP is spent. frameTime, animationLoop configurable.
+- useTint=true (default): one sprite per slot; indicatorStates "filled"/"consuming"/
+  "empty". ConsumeOneAP() picks rightmost filled crystal, plays consume animation,
+  tracks in consumingCrystals; UpdateConsumingCrystals(dt) hides sprite and sets
+  "empty" when animation done. RestoreAP(index) / RestoreAllAP() show and reset to
+  filled animation. useTint=false: two-layer empty + filled (spawn/destroy on AP change).
+- Init: places crystals at camera; optional SpawnAnimatedSprite or static SpawnSprite.
+  Update(dt, cameraPos): UpdateConsumingCrystals, then UpdatePositions if camera moved.
+  Destroy() removes all entities. Optional tint/grayscale (ApplyVisual/ApplyTint).
+
+Notes:
+- Filled crystals are synced to same frame on init so they animate in phase.
+- Consume animation runs once; crystal is hidden (SetSpriteVisibility false) when done.
+- Two-layer mode uses HandleAPChange (spawn/destroy); tint mode uses state machine
+  (filled <-> consuming <-> empty). TEST comment: SPACE toggle was removed; consumption
+  is driven by PlayerScript.lua attack system.
+
+Safety:
+- Nil/validity checks on entityID and tint; GetCurrentAP() clamps with math.min/max.
+- consumingCrystals table cleaned when animations finish; RestoreAllAP clears it.
+- Destroy() iterates all indicator tables and destroys entities before clearing.
+
+Copyright (C) 2026 DigiPen Institute of Technology.
+Reproduction or disclosure of this file or its contents
+without the prior written consent of DigiPen Institute of
+Technology is prohibited.
+===============================================================================
+]]
+
 -- ============================================================================
 -- AttackAPIndicatorUI.lua
 -- Attack Action Point (AP) indicator component
@@ -218,7 +266,7 @@ function AttackAPIndicatorUI:Update(dt, cameraPos)
     -- Update consuming crystals (check if animation finished)
     self:UpdateConsumingCrystals(dt)
 
-    -- Update sprite positions if camera moved
+    -- Update sprite positions if camera moved (keeps UI fixed on screen)
     if self:ShouldUpdatePosition(cameraPos) then
         self:UpdatePositions(cameraPos)
     end

@@ -142,7 +142,36 @@ end
 
 function UIComponent:SetEnabled(enabled)
     self.enabled = enabled
+
+    -- Hide/show all UI entities so they stop rendering during enemy phase.
+    for _, entityID in ipairs(self.entities) do
+        if entityID and entityID > 0 then
+            if SetSpriteVisibility ~= nil then
+                SetSpriteVisibility(entityID, enabled)
+            elseif SetSpriteColor ~= nil then
+                -- Fallback: alpha to 0 to hide
+                if enabled then
+                    SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)
+                else
+                    SetSpriteColor(entityID, 1.0, 1.0, 1.0, 0.0)
+                end
+            elseif SetSpritePosition ~= nil then
+                -- Last resort: move offscreen
+                if not enabled then
+                    SetSpritePosition(entityID, 999999.0, 999999.0)
+                end
+            end
+        end
+    end
+
+    -- When re-enabled, force an immediate refresh (so UI snaps back correctly)
+    if enabled then
+        self.lastCamX = nil
+        self.lastCamY = nil
+        self.lastCamZ = nil
+    end
 end
+
 
 function UIComponent:IsEnabled()
     return self.enabled
