@@ -124,16 +124,31 @@ function HealthUI:UpdatePositions(cameraPos)
 end
 
 function HealthUI:HandleHPChange(newHP)
+    print("[HealthUI] HandleHPChange called with newHP: " .. tostring(newHP))
+    print("[HealthUI] heartSprites table has " .. tostring(#self.heartSprites) .. " entries")
+
     -- Hide all hearts
-    for _, entityID in pairs(self.heartSprites) do
+    for hpVal, entityID in pairs(self.heartSprites) do
+        print("[HealthUI]   Hiding heart for HP=" .. tostring(hpVal) .. ", entityID=" .. tostring(entityID))
         if entityID and entityID > 0 then
             SetSpriteVisibility(entityID, false)
+        else
+            print("[HealthUI]   WARNING: Invalid entityID for HP=" .. tostring(hpVal))
         end
     end
 
     -- Show heart matching current HP
+    print("[HealthUI] Looking for heart sprite at heartSprites[" .. tostring(newHP) .. "]")
     if self.heartSprites[newHP] then
+        print("[HealthUI] Found heart sprite! entityID=" .. tostring(self.heartSprites[newHP]))
         SetSpriteVisibility(self.heartSprites[newHP], true)
+        print("[HealthUI] Set visibility to TRUE for HP=" .. tostring(newHP))
+    else
+        print("[HealthUI] ERROR: No heart sprite found for HP=" .. tostring(newHP))
+        print("[HealthUI] Available HP values in heartSprites:")
+        for hpVal, _ in pairs(self.heartSprites) do
+            print("[HealthUI]   - HP value: " .. tostring(hpVal) .. " (type: " .. type(hpVal) .. ")")
+        end
     end
 
     Log("[HealthUI] HP changed: " .. self.lastHP .. " -> " .. newHP)
