@@ -178,6 +178,8 @@ function UIManager.Init(config)
         texture = "assets/UI/ScrollOpen.png",
         animName = "ScrollOpen",
         frameTime = 0.03,
+        holdDuration = 1.0,   -- Pause scroll for 1 second when fully open
+        holdFrame = 10,       -- Pause at frame 10 (middle of animation)
         text = "Your Turn",
         textFont = "Sans48",
         textScale = 0.9,
