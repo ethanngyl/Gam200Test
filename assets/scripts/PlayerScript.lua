@@ -271,7 +271,7 @@ local function endTurn()
 end
 
 -- ============================================================================
--- ATTACK HELPER FUNCTIONS (unchanged from original)
+-- ATTACK HELPER FUNCTIONS 
 -- ============================================================================
 
 function ShowAttackPreview()
@@ -1237,7 +1237,7 @@ function ShowAttackPreview()
         print("[PlayerScript]   Checking tile at (" .. tile.x .. ", " .. tile.y .. ")")
 
         local isValid = IsValidGridPosition and IsValidGridPosition(tile.x, tile.y) or true
-        print("[PlayerScript]     IsValidGridPosition: " .. tostring(isValid))
+        print("[PlayerScript]   IsValidGridPosition: " .. tostring(isValid))
 
         if isValid then
             -- Tint the tile red for attack preview
@@ -1364,7 +1364,7 @@ function ExecuteAttack()
     print("[PlayerScript] DamageEntity returned: " .. tostring(success))
 
     if success then
-        print("[PlayerScript] ✓ Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
+        print("[PlayerScript] Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
         -- Check enemy HP AFTER attack
         local enemyHPAfter, _ = GetEntityHP(enemyID)
@@ -1391,11 +1391,11 @@ function ExecuteAttack()
         print("[PlayerScript] UIManager value: " .. tostring(UIManager))
 
         if UIManager then
-            print("[PlayerScript] ✓ UIManager exists in entity Lua state!")
+            print("[PlayerScript] UIManager exists in entity Lua state!")
             print("[PlayerScript] UIManager.GetComponent type: " .. tostring(type(UIManager.GetComponent)))
 
             if UIManager.GetComponent then
-                print("[PlayerScript] ✓ GetComponent method exists!")
+                print("[PlayerScript] GetComponent method exists!")
                 print("[PlayerScript] Calling UIManager.GetComponent('attackAP')...")
 
                 local attackAPComponent = UIManager.GetComponent("attackAP")
@@ -1403,11 +1403,11 @@ function ExecuteAttack()
                 print("[PlayerScript] attackAP component value: " .. tostring(attackAPComponent))
 
                 if attackAPComponent then
-                    print("[PlayerScript] ✓ attackAP component exists!")
+                    print("[PlayerScript] attackAP component exists!")
                     print("[PlayerScript] ConsumeOneAP type: " .. tostring(type(attackAPComponent.ConsumeOneAP)))
 
                     if attackAPComponent.ConsumeOneAP then
-                        print("[PlayerScript] ✓ ConsumeOneAP method exists!")
+                        print("[PlayerScript] ConsumeOneAP method exists!")
                         print("[PlayerScript] Calling attackAP:ConsumeOneAP()...")
 
                         local success, errorMsg = pcall(function()
@@ -1415,21 +1415,21 @@ function ExecuteAttack()
                         end)
 
                         if success then
-                            print("[PlayerScript] ✓✓✓ SUCCESS! Crystal animation triggered via direct UIManager access")
+                            print("[PlayerScript] SUCCESS! Crystal animation triggered via direct UIManager access")
                         else
-                            print("[PlayerScript] ✗ ERROR calling ConsumeOneAP(): " .. tostring(errorMsg))
+                            print("[PlayerScript] ERROR calling ConsumeOneAP(): " .. tostring(errorMsg))
                         end
                     else
-                        print("[PlayerScript] ✗ ConsumeOneAP method does not exist")
+                        print("[PlayerScript] ConsumeOneAP method does not exist")
                     end
                 else
-                    print("[PlayerScript] ✗ attackAP component is nil")
+                    print("[PlayerScript] attackAP component is nil")
                 end
             else
-                print("[PlayerScript] ✗ GetComponent method does not exist")
+                print("[PlayerScript] GetComponent method does not exist")
             end
         else
-            print("[PlayerScript] ✗ UIManager is nil in entity Lua state - trying C++ bridge...")
+            print("[PlayerScript] UIManager is nil in entity Lua state - trying C++ bridge...")
             print("[PlayerScript] Calling TriggerAttackAPAnimation() via C++ bridge...")
 
             local success, errorMsg = pcall(function()
@@ -1454,7 +1454,7 @@ function ExecuteAttack()
         SetAnimationLoop(entityID, false)  -- Play once
         print("[PlayerScript] Playing attack animation")
     else
-        print("[PlayerScript] ✗ Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
+        print("[PlayerScript] Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
         print("[PlayerScript] Possible causes:")
         print("[PlayerScript]   - Enemy has no Health component")
         print("[PlayerScript]   - Entity ID is invalid")
