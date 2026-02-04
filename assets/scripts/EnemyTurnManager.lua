@@ -35,6 +35,11 @@ EnemyTurnActive = false     -- True when in enemy turn phase
 EnemyActionDelay = 1.5      -- Delay in seconds between enemy actions (increased from 0.5)
 EnemyActionTimer = 0.0      -- Current action timer
 
+-- DEBUG: Print delay value when script loads
+print("============================================================")
+print("[EnemyTurnManager] SCRIPT LOADED! EnemyActionDelay = " .. EnemyActionDelay)
+print("============================================================")
+
 -- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
@@ -204,6 +209,10 @@ end
 -- ============================================================================
 
 function UpdateEnemyTurnManager(dt)
+    -- DEBUG: Always print when this is called
+    print(string.format("[EnemyTurnManager] UpdateEnemyTurnManager called! dt=%.4f, EnemyTurnActive=%s, Timer=%.2f/%.2f",
+        dt, tostring(EnemyTurnActive), EnemyActionTimer, EnemyActionDelay))
+
     if not EnemyTurnActive then
         return
     end
@@ -225,9 +234,12 @@ function UpdateEnemyTurnManager(dt)
         if EnemyActionTimer < 0 then
             EnemyActionTimer = 0
         end
+        print(string.format("[EnemyTurnManager] Timer counting down: %.2f -> %.2f", oldTimer, EnemyActionTimer))
         if EnemyActionTimer == 0 then
             print("[EnemyTurnManager] Action timer ready! (was " .. string.format("%.3f", oldTimer) .. ", now 0.0)")
         end
+    else
+        print("[EnemyTurnManager] Timer is at 0, action ready!")
     end
 end
 
