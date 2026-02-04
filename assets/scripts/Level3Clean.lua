@@ -33,6 +33,12 @@ dofile("assets/scripts/EnemyTurnManager.lua")
 print("[Level3Clean] EnemyTurnManager.lua loaded successfully")
 
 -- ============================================================================
+-- ENEMY CONFIGURATION (Set BEFORE enemies spawn)
+-- ============================================================================
+_G.ENEMY_MOVE_DELAY = 0.6  -- Delay between tile movements (0.6 = slower, 0.3 = faster)
+print("[Level3Clean] Enemy move delay configured: " .. _G.ENEMY_MOVE_DELAY .. " seconds")
+
+-- ============================================================================
 -- LEVEL STATE
 -- ============================================================================
 

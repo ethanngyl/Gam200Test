@@ -67,7 +67,7 @@ local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to 
 
 -- Movement timing (for visible, sequential moves)
 local moveTimer = 0.0           -- Timer for next move
-local moveDelay = 0.6           -- Delay between moves in seconds (increased from 0.3 for slower movement)
+local moveDelay = _G.ENEMY_MOVE_DELAY or 0.6  -- Delay between moves, configurable via global
 local movesThisTurn = 0         -- Track how many moves made this turn
 
 -- DEBUG: Print delay value when enemy script loads
