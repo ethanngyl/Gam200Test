@@ -27,6 +27,11 @@ print("[Level3Clean] Loading PartyTurnManager.lua...")
 dofile("assets/scripts/PartyTurnManager.lua")
 print("[Level3Clean] PartyTurnManager.lua loaded successfully")
 
+-- Load Enemy Turn Manager (REQUIRED for sequential enemy turns with delays)
+print("[Level3Clean] Loading EnemyTurnManager.lua...")
+dofile("assets/scripts/EnemyTurnManager.lua")
+print("[Level3Clean] EnemyTurnManager.lua loaded successfully")
+
 -- ============================================================================
 -- LEVEL STATE
 -- ============================================================================
@@ -187,6 +192,11 @@ function OnUpdate(dt)
 
     -- Update party turn manager (handles turn transition cooldown)
     UpdatePartyTurnManager(dt)
+
+    -- Update enemy turn manager (handles sequential enemy turns with delays)
+    if UpdateEnemyTurnManager then
+        UpdateEnemyTurnManager(dt)
+    end
 
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
