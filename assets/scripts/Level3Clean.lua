@@ -195,15 +195,7 @@ function OnUpdate(dt)
 
     -- Update enemy turn manager (handles sequential enemy turns with delays)
     if UpdateEnemyTurnManager then
-        -- Only print during enemy turn to avoid spam
-        if currentTurn == "Enemy" then
-            print("[Level3Clean] Calling UpdateEnemyTurnManager with dt=" .. string.format("%.4f", dt))
-        end
         UpdateEnemyTurnManager(dt)
-    else
-        if currentTurn == "Enemy" then
-            print("[Level3Clean] WARNING: UpdateEnemyTurnManager is nil!")
-        end
     end
 
     -- Update UI system (replaces 300+ lines of UI update code!)

@@ -67,11 +67,8 @@ local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to 
 
 -- Movement timing (for visible, sequential moves)
 local moveTimer = 0.0           -- Timer for next move
-local moveDelay = 0.6           -- Delay between moves in seconds (increased from 0.3 for slower movement)
+local moveDelay = 0.3           -- Delay between moves in seconds (0.3s = visible movement)
 local movesThisTurn = 0         -- Track how many moves made this turn
-
--- DEBUG: Print delay value when enemy script loads
-print("[EnemyScript] Script loaded with moveDelay = " .. moveDelay)
 
 -- Global flag to track if any enemy has panned camera this turn
 if not _G.EnemyCameraPannedThisTurn then
@@ -181,12 +178,10 @@ function OnUpdate(dt)
 
     -- Update move timer
     if moveTimer > 0 then
-        local oldTimer = moveTimer
         moveTimer = moveTimer - dt
         if moveTimer < 0 then
             moveTimer = 0
         end
-        print(string.format("[Enemy %d] WAITING for moveTimer: %.2f -> %.2f (moveDelay=%.2f)", entityID, oldTimer, moveTimer, moveDelay))
         -- Still waiting for move delay
         return
     end
