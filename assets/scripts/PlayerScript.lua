@@ -1386,8 +1386,16 @@ function ExecuteAttack()
 
         -- Trigger attack AP crystal shattering animation
         -- Use C++ bridge to call UIManager (which is in a different Lua state)
-        TriggerAttackAPAnimation()
-        print("[PlayerScript] Triggered attack AP crystal shatter animation")
+        print("[PlayerScript] BEFORE calling TriggerAttackAPAnimation()...")
+        local success, errorMsg = pcall(function()
+            TriggerAttackAPAnimation()
+        end)
+        if success then
+            print("[PlayerScript] TriggerAttackAPAnimation() completed successfully")
+        else
+            print("[PlayerScript] ERROR calling TriggerAttackAPAnimation(): " .. tostring(errorMsg))
+        end
+        print("[PlayerScript] AFTER calling TriggerAttackAPAnimation()")
 
         -- Visual feedback
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
