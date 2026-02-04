@@ -80,26 +80,13 @@ function TurnScrollUI:Init(config)
 
     -- Animation config
     self.animName = self.config.animName or "ScrollOpen"
+    self.frameTime = self.config.frameTime or 0.03  -- Time per frame (36 frames × 0.03s ≈ 1 second)
     self.texture = self.config.texture or "assets/UI/ScrollOpen.png"
     self.animationConfigPath = self.config.animationConfigPath or "assets/JSON/animations.json"
 
     -- Frame count (36 frames: 0-35)
-    -- Assuming: frames 0-17 = opening, frames 18-35 = closing
     self.totalFrames = 36
     self.lastFrame = self.totalFrames - 1  -- 35
-    self.openEndFrame = 17   -- Last frame of opening animation
-    self.closeStartFrame = 18 -- First frame of closing animation
-    
-    -- Timing configuration
-    self.openDuration = self.config.openDuration or 0.75    -- Opening animation duration
-    self.holdDuration = self.config.holdDuration or 1.5     -- Time to stay open
-    self.closeDuration = self.config.closeDuration or 0.75  -- Closing animation duration
-    
-    -- Calculate frame times based on durations
-    local openFrameCount = self.openEndFrame + 1  -- 18 frames for opening
-    local closeFrameCount = self.totalFrames - self.closeStartFrame  -- 18 frames for closing
-    self.openFrameTime = self.openDuration / openFrameCount
-    self.closeFrameTime = self.closeDuration / closeFrameCount
 
     -- Text config
     self.text = self.config.text or "Your Turn"
@@ -114,16 +101,16 @@ function TurnScrollUI:Init(config)
     self.textWidthFactor = self.config.textWidthFactor or 0.6
     self.textAlign = self.config.textAlign or "center"
     
-    -- Text visibility: show when scroll is open (during hold phase and partially during open/close)
-    self.textStartFrame = self.config.textStartFrame or 10
-    self.textEndFrame = self.config.textEndFrame or 25
+    -- Text visibility range (show text during middle frames when scroll is open)
+    -- Frames 8-12: scroll is mostly open (shortened by ~0.5s)
+    self.textStartFrame = self.config.textStartFrame or 8
+    self.textEndFrame = self.config.textEndFrame or 12
 
-    -- State: "idle", "opening", "holding", "closing"
+    -- State: just idle or playing
     self.scrollID = 0
-    self.state = "idle"
+    self.state = "idle"  -- "idle" or "playing"
     self.currentFrame = 0
     self.frameTimer = 0.0
-    self.holdTimer = 0.0  -- Timer for hold phase
     
     -- Track turn phase for triggering
     self.lastTurnPhase = GetCurrentTurn() or "Player"
@@ -171,30 +158,11 @@ function TurnScrollUI:Init(config)
             if frameCount and frameCount > 0 then
                 self.totalFrames = frameCount
                 self.lastFrame = frameCount - 1
-                
-                -- Recalculate animation phases based on actual frame count
-                -- Assume first half is opening, second half is closing
-                self.openEndFrame = math.floor(self.totalFrames / 2) - 1
-                self.closeStartFrame = math.floor(self.totalFrames / 2)
-                
-                -- Recalculate frame times
-                local openFrameCount = self.openEndFrame + 1
-                local closeFrameCount = self.totalFrames - self.closeStartFrame
-                self.openFrameTime = self.openDuration / openFrameCount
-                self.closeFrameTime = self.closeDuration / closeFrameCount
-                
-                Log("[ScrollOpen] Recalculated: totalFrames=" .. self.totalFrames .. 
-                    ", openEndFrame=" .. self.openEndFrame .. 
-                    ", closeStartFrame=" .. self.closeStartFrame ..
-                    ", openFrameTime=" .. string.format("%.4f", self.openFrameTime) ..
-                    ", closeFrameTime=" .. string.format("%.4f", self.closeFrameTime))
             end
         end
     end
     
-    Log("[ScrollOpen] Initialized - scrollID=" .. tostring(self.scrollID) ..
-        ", totalFrames=" .. self.totalFrames ..
-        ", expected duration=" .. (self.openDuration + self.holdDuration + self.closeDuration) .. "s")
+    Log("[ScrollOpen] Initialized - scrollID=" .. tostring(self.scrollID))
 end
 
 -- ============================================================================
@@ -202,11 +170,10 @@ end
 -- ============================================================================
 
 function TurnScrollUI:StartAnimation()
-    Log("[ScrollOpen] Starting animation (open: " .. self.openDuration .. "s, hold: " .. self.holdDuration .. "s, close: " .. self.closeDuration .. "s)")
-    self.state = "opening"
+    Log("[ScrollOpen] Starting animation")
+    self.state = "playing"
     self.currentFrame = 0
     self.frameTimer = 0.0
-    self.holdTimer = 0.0
 
     if self.scrollID and self.scrollID > 0 then
         SetSpriteVisibility(self.scrollID, true)
@@ -268,50 +235,12 @@ function TurnScrollUI:Update(dt, cameraPos)
         
         self.lastTurnPhase = phase
         
-    elseif self.state == "opening" then
-        -- Opening animation phase (0.75s)
+    elseif self.state == "playing" then
+        -- Advance animation
         self.frameTimer = self.frameTimer + dt
         
-        while self.frameTimer >= self.openFrameTime do
-            self.frameTimer = self.frameTimer - self.openFrameTime
-            self.currentFrame = self.currentFrame + 1
-            
-            if self.currentFrame > self.openEndFrame then
-                -- Opening complete, transition to holding
-                self.currentFrame = self.openEndFrame
-                self.state = "holding"
-                self.holdTimer = 0.0
-                Log("[ScrollOpen] Opening complete, now holding for " .. self.holdDuration .. "s")
-                break
-            end
-            
-            if SetAnimationFrame then
-                SetAnimationFrame(self.scrollID, self.currentFrame)
-            end
-        end
-        
-    elseif self.state == "holding" then
-        -- Hold phase - scroll stays open (1.5s)
-        self.holdTimer = self.holdTimer + dt
-        
-        if self.holdTimer >= self.holdDuration then
-            -- Hold complete, start closing
-            self.state = "closing"
-            self.currentFrame = self.closeStartFrame
-            self.frameTimer = 0.0
-            Log("[ScrollOpen] Hold complete, now closing")
-            
-            if SetAnimationFrame then
-                SetAnimationFrame(self.scrollID, self.currentFrame)
-            end
-        end
-        
-    elseif self.state == "closing" then
-        -- Closing animation phase (0.75s)
-        self.frameTimer = self.frameTimer + dt
-        
-        while self.frameTimer >= self.closeFrameTime do
-            self.frameTimer = self.frameTimer - self.closeFrameTime
+        while self.frameTimer >= self.frameTime do
+            self.frameTimer = self.frameTimer - self.frameTime
             self.currentFrame = self.currentFrame + 1
             
             if self.currentFrame > self.lastFrame then
@@ -345,22 +274,12 @@ function TurnScrollUI:Draw()
         return
     end
     
-    -- Only show text during holding phase (when scroll is fully open)
-    -- or during late opening / early closing when scroll is mostly open
-    local showText = false
-    
-    if self.state == "holding" then
-        -- Always show text during hold phase
-        showText = true
-    elseif self.state == "opening" and self.currentFrame >= self.textStartFrame then
-        -- Show text in late opening phase
-        showText = true
-    elseif self.state == "closing" and self.currentFrame <= self.textEndFrame then
-        -- Show text in early closing phase
-        showText = true
+    -- Only show text when playing and within the text visibility range
+    if self.state ~= "playing" then
+        return
     end
     
-    if not showText then
+    if self.currentFrame < self.textStartFrame or self.currentFrame > self.textEndFrame then
         return
     end
 
@@ -398,8 +317,7 @@ end
 -- ============================================================================
 
 function TurnScrollUI:IsPlaying()
-    -- Animation is playing during opening, holding, or closing phases
-    return self.state == "opening" or self.state == "holding" or self.state == "closing"
+    return self.state == "playing"
 end
 
 -- ============================================================================
