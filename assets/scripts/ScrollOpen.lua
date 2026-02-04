@@ -205,14 +205,15 @@ function TurnScrollUI:Update(dt, cameraPos)
         SetAnimationDirection(self.scrollID, 3)
     end
 
-    -- Keep scroll anchored to camera
-    if self:ShouldUpdatePosition(cameraPos) then
-        local scrollX = cameraPos.x + self.offsetX
-        local scrollY = cameraPos.y + self.offsetY
-        SetSpritePosition(self.scrollID, scrollX, scrollY)
-        self.scrollWorldX = scrollX
-        self.scrollWorldY = scrollY
-    end
+    -- DISABLED: Keep scroll anchored to camera
+    -- Commenting this out makes the UI stay fixed on screen
+    -- if self:ShouldUpdatePosition(cameraPos) then
+    --     local scrollX = cameraPos.x + self.offsetX
+    --     local scrollY = cameraPos.y + self.offsetY
+    --     SetSpritePosition(self.scrollID, scrollX, scrollY)
+    --     self.scrollWorldX = scrollX
+    --     self.scrollWorldY = scrollY
+    -- end
 
     local phase = GetCurrentTurn() or "Player"
 
