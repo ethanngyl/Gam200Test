@@ -198,6 +198,16 @@ function UpdateEnemyTurnManager(dt)
         return
     end
 
+    -- Check if all enemies are dead - automatically end enemy turn
+    local enemies = GetAllEnemies()
+    if not enemies or #enemies == 0 then
+        print("[EnemyTurnManager] ========================================")
+        print("[EnemyTurnManager] ALL ENEMIES DEAD - Auto-ending enemy turn!")
+        print("[EnemyTurnManager] ========================================")
+        EndAllEnemyTurns()
+        return
+    end
+
     -- Update action timer
     if EnemyActionTimer > 0 then
         local oldTimer = EnemyActionTimer
