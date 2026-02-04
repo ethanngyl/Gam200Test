@@ -67,6 +67,12 @@
       "filepath": "assets/Audio/Turn_Sfx/Scroll_sfx.wav",
       "volume": 1,
       "preload": true
+    },
+    {
+      "name": "crystalsmash",
+      "filepath": "assets/Audio/UI_Sfx/AP_Crystal.wav",
+      "volume": 1,
+      "preload": true
     }
   ],
     "settings": {

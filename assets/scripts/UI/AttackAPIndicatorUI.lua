@@ -300,6 +300,7 @@ function AttackAPIndicatorUI:ConsumeOneAP()
     self.indicatorStates[crystalToConsume] = "consuming"
     
     -- Start consume animation (frames 8-19, rows 3-5)
+    PlaySound("crystalsmash", false, 0.7)
     SetAnimationFrameRange(entityID, self.consumeStartFrame, self.consumeFrameCount, true)
     SetAnimationLoop(entityID, false)  -- Don't loop - play once
     SetAnimationPlaying(entityID, true)
