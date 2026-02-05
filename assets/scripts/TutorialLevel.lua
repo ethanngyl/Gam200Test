@@ -27,6 +27,7 @@ local backgroundSpriteID = 0
 local scrollOverlayID = 0
 local overlaySprites = {}
 local cornerSpriteIDs = {}
+local enemyAnimSpriteID = 0  -- Animated enemy sprite (replaces static enemy.png)
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -131,6 +132,42 @@ function OnInit()
     -- ========================================================================
     ButtonManager.Initialize(config.menu.buttons)
 
+    -- ========================================================================
+    -- CREATE ANIMATED ENEMY SPRITE (replaces static enemy.png from JSON)
+    -- ========================================================================
+    -- Position and scale match the "label_enemyLabel" button in JSON
+    local enemyX = 0.8
+    local enemyY = -0.08
+    local enemyScaleX = 0.5
+    local enemyScaleY = 0.5
+    local enemyLayer = 11  -- Above the label button (layer 10)
+
+    -- Sprite sheet config: 1 row, 12 columns
+    local enemyRows = 1
+    local enemyCols = 12
+    local enemyFrameTime = 0.1  -- Animation speed
+
+    enemyAnimSpriteID = SpawnAnimatedSprite(
+        "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",
+        enemyX, enemyY,
+        enemyScaleX, enemyScaleY,
+        enemyLayer,
+        enemyRows,
+        enemyCols,
+        enemyRows * enemyCols,  -- Total frames: 12
+        enemyFrameTime,
+        true  -- Loop animation
+    )
+
+    if enemyAnimSpriteID > 0 then
+        Log("Animated enemy sprite created (ID: " .. enemyAnimSpriteID .. ")")
+        -- Start the animation
+        SetAnimationPlaying(enemyAnimSpriteID, true)
+        SetAnimationLoop(enemyAnimSpriteID, true)
+    else
+        Log("WARNING: Failed to create animated enemy sprite")
+    end
+
     initialized = true
     Log("Tutorial initialization complete")
     Log("Press F1 to toggle editor mode")
@@ -190,6 +227,12 @@ function OnDestroy()
         Log("Background sprite destroyed")
     end
 
+    -- Destroy animated enemy sprite
+    if enemyAnimSpriteID > 0 then
+        DestroyEntity(enemyAnimSpriteID)
+        Log("Animated enemy sprite destroyed")
+    end
+
     for overlayID, spriteID in pairs(overlaySprites) do
         if spriteID > 0 then
             DestroyEntity(spriteID)
@@ -207,6 +250,7 @@ function OnDestroy()
     config = nil
     initialized = false
     backgroundSpriteID = 0
+    enemyAnimSpriteID = 0
     overlaySprites = {}
     cornerSpriteIDs = {}
 
