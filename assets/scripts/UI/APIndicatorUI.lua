@@ -380,6 +380,52 @@ function APIndicatorUI:IsAnimating()
 end
 
 -- ============================================================================
+-- FORCE UPDATE - Instantly update AP display (skip animation)
+-- Call this when switching characters to show full AP immediately
+-- ============================================================================
+
+function APIndicatorUI:ForceUpdate()
+    -- Stop any ongoing animation
+    self.isAnimatingRefill = false
+    self.refillAnimTimer = 0.0
+    
+    -- Get current AP from the active character
+    local currentAP, maxPlayerAP = self.getAPFunc()
+    if not currentAP then 
+        currentAP = self.maxAP  -- Default to full if can't get AP
+    end
+    
+    -- Update max AP if needed
+    if self.useMaxFromAP and maxPlayerAP and maxPlayerAP > 0 then
+        self.maxAP = maxPlayerAP
+    end
+    
+    print("[APIndicatorUI] ForceUpdate: Setting AP to " .. currentAP .. "/" .. self.maxAP .. " (was " .. self.lastKnownAP .. ")")
+    
+    -- Get camera position for positioning
+    local camX, camY, camZ = GetCameraPosition()
+    local cameraPos = { x = camX, y = camY, z = camZ }
+    
+    -- Instantly update visuals
+    if self.useTint then
+        self:UpdateTints(currentAP)
+    else
+        -- For two-layer mode, need to handle AP change
+        self:HandleAPChange(currentAP, cameraPos)
+    end
+    
+    -- Update last known AP to current
+    self.lastKnownAP = currentAP
+    
+    print("[APIndicatorUI] ForceUpdate complete - now showing " .. currentAP .. " AP")
+end
+
+-- Alias for consistency with AttackAPIndicatorUI
+function APIndicatorUI:RestoreAllAP()
+    self:ForceUpdate()
+end
+
+-- ============================================================================
 -- CLEANUP
 -- ============================================================================
 
