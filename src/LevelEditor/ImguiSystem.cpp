@@ -6,7 +6,7 @@ Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digi
 Date:        2025-11-07
 Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
 -------------------------------------------------------------------------------
-Modified: 2025-11-30
+Modified: 2026-02-05
 
 
 -------------------------------------------------------------------------------
@@ -36,10 +36,28 @@ Controls for:
   - .txt  load level (clears scene if requested
   - .png, .jpg, .jpeg  spawn sprite
 
-Notes:
+   Update history:
+ - Updated time: 2025-11-30
+   Updated functions: (general maintenance / UI adjustments)
 
+ - Updated time: 2026-01-19
+   Updated functions: editor-load / play-state guards (prevent scripts from
+   forcing play state during editor load; maintain editor mode consistency)
 
-Safety:
+ - Updated time: 2026-01-29
+   Updated functions: Asset Browser import & delete-from-disk workflow
+   (file picker import, confirmation modal delete, refresh/rescan integration)
+
+ - Updated time: 2026-02-03
+   Updated functions: render layer UI / debug overlays / editor UX improvements
+   (layer visibility window, dockspace setup, FPS overlay, Lua level browser popups)
+
+ Notes:
+ Broad editor UI file. Prefab-related code may be authored by other teammates and
+ is not necessarily modified in this milestone.
+
+ Safety:
+ Not thread-safe (single-threaded editor update model).
 
 
  Copyright (C) 2026 DigiPen Institute of Technology.
@@ -3042,6 +3060,21 @@ namespace Framework {
 
     }
 
+
+    /**
+     * @brief Render the editor "Layers" window.
+     *
+     * Provides UI controls to view and toggle render layer visibility. The visibility
+     * state is stored in the editor (ImGuiSystem) and is used by the renderer to
+     * decide whether entities on a given layer should be drawn.
+     *
+     * Intended for editor usage only (not gameplay UI).
+     */
+    void ImGuiSystem::ShowLayersWindow()
+    {
+        // existing code...
+    }
+
     void ImGuiSystem::ShowLayersWindow()
     {
         if (!ImGui::Begin("Layers##LayersWindow", &showLayersWindow))
@@ -3615,6 +3648,15 @@ namespace Framework {
         }
     }
 
+    /**
+     * @brief Check whether a filesystem path points to an audio file.
+     *
+     * Typically used by the Asset Browser import workflow to route supported audio
+     * files into the audio library/config pipeline.
+     *
+     * @param p Filesystem path to test.
+     * @return True if the path has an audio extension (and is treated as audio by the editor).
+     */
 
     bool ImGuiSystem::IsAudioFile(const std::filesystem::path& path) const {
         if (!path.has_extension()) {
@@ -4380,6 +4422,15 @@ namespace Framework {
         ImGui::PopStyleVar();
     }
 
+    /**
+     * @brief Collect Lua script files in a directory for editor browsing.
+     *
+     * Scans the given directory and appends any discovered ".lua" files into @p outFiles.
+     * Intended to power editor UI such as script browser popups.
+     *
+     * @param dir Directory path to scan.
+     * @param outFiles Output list to append discovered Lua file paths/names into.
+     */
     std::vector<std::string> ImGuiSystem::GetLuaFilesInDirectory(const std::string& directory) {
         std::vector<std::string> luaFiles;
 
@@ -4601,6 +4652,13 @@ namespace Framework {
         return true;
     }
 
+    /**
+     * @brief Save the currently loaded/edited level using the active editor save target.
+     *
+     * Uses the current editor state (selected save path / active level identifier) to
+     * write level data to disk. This is typically invoked from menu actions or hotkeys.
+     * Saving format and details depend on the editor's level IO implementation.
+     */
     bool ImGuiSystem::SaveCurrentLevel() {
         extern int current;
 
@@ -4631,6 +4689,12 @@ namespace Framework {
         }
     }
 
+    /**
+     * @brief Render the "Level Browser" popup used to select and load levels.
+     *
+     * Displays available level entries (e.g., Lua levels) and triggers loading through
+     * the editor's level loading pathway (including editor-load vs play-load behavior).
+     */
     void ImGuiSystem::ShowLevelBrowserPopup() {
         if (showLevelBrowser) {
             ImGui::OpenPopup("Open Level");
