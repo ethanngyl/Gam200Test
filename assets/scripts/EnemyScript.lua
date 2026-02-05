@@ -104,6 +104,98 @@ local moveTimer = 0.0           -- Timer for next move
 local moveDelay = 0.3           -- Delay between moves in seconds (0.3s = visible movement)
 local movesThisTurn = 0         -- Track how many moves made this turn
 
+-- ============================================================================
+-- ENEMY ANIMATION (manual sprite sheet switching)
+-- NOTE: Enemy.zip only has Idle + Attack, so movement uses Idle as "walk".
+-- ============================================================================
+
+local ENEMY_ANIM = {
+    idleFront  = { tex = "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",  rows = 1, cols = 12, frames = 12, time = 0.08, loop = true  },
+    idleBack   = { tex = "assets/Enemy/Enemy_Knight_Idle_Back-Sheet.png",   rows = 1, cols = 4,  frames = 4,  time = 0.10, loop = true  },
+    idleSide   = { tex = "assets/Enemy/Enemy_Knight_Idle_Side-Sheet.png",   rows = 1, cols = 12, frames = 12, time = 0.08, loop = true  },
+
+    atkFront   = { tex = "assets/Enemy/Enemy_Knight_Attack_Front-Sheet.png", rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkBack    = { tex = "assets/Enemy/Enemy_Knight_Attack_Back-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkLeft    = { tex = "assets/Enemy/Enemy_Knight_Attack_Left-Sheet.png",  rows = 1, cols = 7, frames = 7, time = 0.07, loop = false }
+}
+
+local lastAnimKey = nil
+local lastFlipX = false
+
+-- Pending attack (play animation first, then apply damage)
+local pendingAttack = false
+local pendingAttackTimer = 0.0
+local pendingAttackTarget = 0
+local pendingAttackDamage = 0
+local pendingAttackAPCost = 0
+local pendingAttackPlayerX = 0
+local pendingAttackPlayerY = 0
+
+local function ApplySheet(animKey, flipX)
+    if not SetSpriteAnimationSheet then
+        print("[EnemyScript] SetSpriteAnimationSheet is NIL! animKey=" .. tostring(animKey))
+        return
+    end
+
+    if animKey == lastAnimKey and flipX == lastFlipX then
+        return
+    end
+
+    local a = ENEMY_ANIM[animKey]
+    if not a then
+        print("[EnemyScript] Missing ENEMY_ANIM key: " .. tostring(animKey))
+        return
+    end
+
+    local ok = SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    print("[EnemyScript] ApplySheet entity=" .. tostring(entityID) ..
+          " key=" .. tostring(animKey) ..
+          " flipX=" .. tostring(flipX) ..
+          " tex=" .. tostring(a.tex) ..
+          " ok=" .. tostring(ok))
+
+    if SetAnimationFlipX then
+        SetAnimationFlipX(entityID, flipX and true or false)
+    end
+
+    lastAnimKey = animKey
+    lastFlipX = flipX and true or false
+end
+
+
+local function SetFacingFromDelta(dx, dy)
+    -- dy>0 means target is "above" enemy on grid => back view (match your existing convention)
+    if math.abs(dx) > math.abs(dy) then
+        -- Side
+        -- Use idleSide; flipX true when facing LEFT (dx < 0), false when facing RIGHT (dx > 0)
+        ApplySheet("idleSide", dx < 0)
+    else
+        if dy > 0 then
+            ApplySheet("idleBack", false)
+        else
+            ApplySheet("idleFront", false)
+        end
+    end
+end
+
+local function SetAttackFacing(enemyX, enemyY, playerX, playerY)
+    local dx = playerX - enemyX
+    local dy = playerY - enemyY
+
+    if math.abs(dx) > math.abs(dy) then
+        -- Side attack: we only have LEFT sheet, so flip for right
+        -- If player is to the RIGHT (dx > 0), flipX = true to mirror left attack to right
+        ApplySheet("atkLeft", dx > 0)
+    else
+        if dy > 0 then
+            ApplySheet("atkBack", false)
+        else
+            ApplySheet("atkFront", false)
+        end
+    end
+end
+
+
 -- Global flag to track if any enemy has panned camera this turn
 if not _G.EnemyCameraPannedThisTurn then
     _G.EnemyCameraPannedThisTurn = false
@@ -128,6 +220,8 @@ function OnInit()
     currentState = STATE.IDLE
     currentPath = {}
     pathIndex = 1
+
+    ApplySheet("idleFront", false)
 
     -- CRITICAL: Set initial tile occupancy so players can't walk through this enemy
     local enemyX, enemyY = GetEntityGridPosition(entityID)
@@ -239,8 +333,59 @@ function OnUpdate(dt)
         end
     end
 
+        -- If an attack is pending, play animation first, then apply damage when timer ends
+    if pendingAttack then
+        pendingAttackTimer = pendingAttackTimer - dt
+        if pendingAttackTimer > 0 then
+            return
+        end
+
+        -- Timer finished: apply damage now
+        pendingAttack = false
+
+        print("[Enemy " .. entityID .. "] ATTACK HIT Player " .. pendingAttackTarget .. " for " .. pendingAttackDamage .. " damage")
+
+        local hpBefore, maxHP = GetEntityHP(pendingAttackTarget)
+        print("[Enemy " .. entityID .. "] Player " .. pendingAttackTarget .. " HP BEFORE: " .. tostring(hpBefore) .. "/" .. tostring(maxHP))
+
+        local success = DamageEntity(pendingAttackTarget, pendingAttackDamage)
+        print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
+
+        if success then
+            local hpAfter, _ = GetEntityHP(pendingAttackTarget)
+            print("[Enemy " .. entityID .. "] Player " .. pendingAttackTarget .. " HP AFTER: " .. tostring(hpAfter))
+
+            ConsumeEnemyAP(entityID, pendingAttackAPCost)
+
+            PulseTile(pendingAttackPlayerX, pendingAttackPlayerY, 0.3, 1.0, 0.0, 0.0)
+
+            if PopupManager and PopupManager.ShowDamageNumber then
+                local worldX, worldY = GetEntityWorldPosition(pendingAttackTarget)
+                if worldX then
+                    PopupManager.ShowDamageNumber(worldX, worldY + 0.2, pendingAttackDamage)
+                end
+            end
+        else
+            print("[Enemy " .. entityID .. "] ATTACK FAILED! Player " .. pendingAttackTarget .. " may not have Health component")
+        end
+
+        -- Return to idle after attack
+        local ex, ey = GetEntityGridPosition(entityID)
+        local px, py = GetEntityGridPosition(targetPlayerID)
+        if ex and px then
+            SetFacingFromDelta(px - ex, py - ey)
+        else
+            ApplySheet("idleFront", false)
+        end
+
+        -- Continue AI after resolving hit (may move if AP left)
+        ProcessAITurn()
+        return
+    end
+
     -- Execute AI decision making (will make ONE move per frame)
     ProcessAITurn()
+
 end
 
 function OnDestroy()
@@ -415,48 +560,32 @@ function ExecuteAttack()
         return
     end
 
-    -- Execute attack
-    print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " for " .. config.attackDamage .. " damage")
     
-    -- Debug: Check player HP before attack
-    local hpBefore, maxHP = GetEntityHP(targetPlayerID)
-    print("[Enemy " .. entityID .. "] Player " .. targetPlayerID .. " HP BEFORE: " .. tostring(hpBefore) .. "/" .. tostring(maxHP))
+    -- Play attack animation first, then apply damage when animation finishes
+    print("[Enemy " .. entityID .. "] ATTACKING Player " .. targetPlayerID .. " (animation first)")
 
-    local success = DamageEntity(targetPlayerID, config.attackDamage)
-    
-    print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
+    SetAttackFacing(enemyX, enemyY, playerX, playerY)
 
-    if success then
-        -- Debug: Check player HP after attack
-        local hpAfter, _ = GetEntityHP(targetPlayerID)
-        print("[Enemy " .. entityID .. "] Player " .. targetPlayerID .. " HP AFTER: " .. tostring(hpAfter))
-        
-        -- Consume attack AP
-        ConsumeEnemyAP(entityID, config.attackAPCost)
+    pendingAttack = true
+    pendingAttackTarget = targetPlayerID
+    pendingAttackDamage = config.attackDamage
+    pendingAttackAPCost = config.attackAPCost
+    pendingAttackPlayerX = playerX
+    pendingAttackPlayerY = playerY
 
-        -- Visual feedback
-        PulseTile(playerX, playerY, 0.3, 1.0, 0.0, 0.0)  -- Red pulse for damage
-
-        -- Show damage number popup (one-time animation)
-        if PopupManager and PopupManager.ShowDamageNumber then
-            local worldX, worldY = GetEntityWorldPosition(targetPlayerID)
-            if worldX then
-                PopupManager.ShowDamageNumber(worldX, worldY + 0.2, config.attackDamage)
-            end
-        end
+    -- Duration = frames * frameTime (small buffer to ensure last frame shows)
+    local key = lastAnimKey
+    local a = ENEMY_ANIM[key]
+    if a then
+        pendingAttackTimer = (a.frames * a.time) + 0.02
     else
-        print("[Enemy " .. entityID .. "] ATTACK FAILED! Player " .. targetPlayerID .. " may not have Health component")
+        pendingAttackTimer = 0.20
     end
 
-    -- Check if we can still act
-    currentAP = currentAP - config.attackAPCost
-    if currentAP >= config.apCostPerMove then
-        -- We can still move, try to chase
-        ExecuteChase()
-    else
-        -- End turn
-        FinishEnemyAction()
-    end
+    moveTimer = 0.0
+    -- Stop here; OnUpdate will apply damage when timer ends
+    return
+
 end
 
 function ExecuteChase()
@@ -545,6 +674,12 @@ function ExecuteChase()
         -- 1. Clearing occupancy at old position
         -- 2. Setting occupancy at new position
         -- No need to manually call SetTileOccupant here
+
+        -- Update facing + idle-as-walk animation based on movement direction
+        local dx = nextTile.x - enemyX
+        local dy = nextTile.y - enemyY
+        SetFacingFromDelta(dx, dy)
+
         local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then

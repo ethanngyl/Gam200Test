@@ -171,6 +171,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
             double deltaTime = (currentTime - lastTime) / 1000.0;
             lastTime = currentTime;
 
+            if (deltaTime < FIXED_DT) {
+                double sleepTime = (FIXED_DT - deltaTime);
+                Sleep((DWORD)(sleepTime * 1000.0));
+            }
+
             if (deltaTime > 0.25) {
                 deltaTime = 0.25;
             }

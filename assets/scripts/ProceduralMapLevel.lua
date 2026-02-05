@@ -334,11 +334,14 @@ function SetupProceduralEnemies(mapData)
         if enemyID and enemyID ~= 0 then
             Log("  Enemy " .. i .. " at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
             
-            -- Set target
-            SetEnemyTarget(enemyID, playerID)
-            
-            -- Attach enemy script
+            -- Attach enemy script FIRST (so OnInit runs immediately with this setup)
             AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+
+            -- Set target (C++ side)
+            SetEnemyTarget(enemyID, playerID)
+
+            Log("  Enemy " .. enemyID .. " script attached + target set to " .. tostring(playerID))
+
             
             table.insert(spawnedEnemies, enemyID)
         else
@@ -467,7 +470,7 @@ function HandleGoalTransition(dt)
             
             -- Transition to main menu immediately
             if SetNextGameState then
-                SetNextGameState("mainMenu")
+                SetNextGameState("LEVEL_END")
             else
                 Log("ERROR: No game state transition function available!")
             end

@@ -29,6 +29,7 @@
 #include "Grid\GridTile.h"
 #include "Graphics/RenderLayers.h"  // for standard layer constants
 #include "Pathfinding/Pathfinding.h"  // for EnemyAI component
+#include "Graphics/Texture.h"
 
 extern Framework::CoreEngine* engine;
 
@@ -415,13 +416,46 @@ namespace Framework {
          *                                       Vector2D(0.3f, 0.3f)); // smaller
          * @endcode
          */
-        Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.1f, 0.1f)) {
+        Entity SpawnEnemy(const Vector2D& position, float moveSpeed = 0.05f, const Vector2D& size = Vector2D(0.25f, 0.25f)) {
             (void)moveSpeed; // silence unused variable warning
 
-            Entity enemy = SpawnSprite("assets/enemy.png", position, Vector2D(0.1f, 0.1f));
+            Entity enemy = SpawnSprite("assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png", position, size);
+
+
+            entityManager->AddComponent<SpriteAnimation>(enemy);
+            auto& anim = entityManager->GetComponent<SpriteAnimation>(enemy);
+
+            // Idle Front: 12 frames
+            anim.rows = 1;
+            anim.columns = 12;
+            anim.frameCount = 12;
+            anim.frameTime = 0.08f;
+            anim.loop = true;
+            anim.playing = true;
+            anim.currentFrame = 0;
+            anim.startFrame = 0;
+            anim.elapsedTime = 0.0f;
+            anim.useJsonConfig = false;   // IMPORTANT: enemy uses manual sheet swaps (not JSON groupMap)
+
+            // load texture + compute frame sizes
+            
+            if (CORE && CORE->GetGraphicsSystem())
+            {
+                auto* gfx = CORE->GetGraphicsSystem();
+                anim.spriteSheet = gfx->GetResourceManager().LoadTexture("assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png");
+
+                Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+                if (tex)
+                {
+                    anim.frameWidth = tex->GetWidth() / anim.columns;
+                    anim.frameHeight = tex->GetHeight() / anim.rows;
+                }
+            }
+
+
             //entityManager->GetComponent<MeshRenderer>(enemy);
             auto& mr = entityManager->GetComponent<MeshRenderer>(enemy);
-            mr.material = GraphicsSystemV2::Material2;
+            //mr.material = GraphicsSystemV2::Material2;
             mr.layer = RenderLayers::Enemies;  // Enemies render below player
 
             // *** NEW: Add Health component ***
@@ -434,9 +468,15 @@ namespace Framework {
             // *** Add AP component for turn-based combat ***
             entityManager->AddComponent<AP>(enemy, 3);  // 3 AP by default (matches TileMapLoader)
 
-            entityManager->AddComponent<BoxCollider>(enemy);
-            auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
-            collider.size = size*5;
+            //entityManager->AddComponent<BoxCollider>(enemy);
+            //auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
+            //collider.size = size*5;
+
+            if (entityManager->HasComponent<BoxCollider>(enemy))
+            {
+                auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
+                collider.size = size * 1.2f; // or size * 1.2f if you want slightly bigger
+            }
 
             std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << " with EnemyAI and AP components\n";
             return enemy;

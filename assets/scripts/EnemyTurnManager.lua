@@ -214,7 +214,8 @@ function UpdateEnemyTurnManager(dt)
         print("[EnemyTurnManager] ========================================")
         print("[EnemyTurnManager] ALL ENEMIES DEAD - Auto-ending enemy turn!")
         print("[EnemyTurnManager] ========================================")
-        EndAllEnemyTurns()
+        SetNextGameState("LEVEL_END")
+        --EndAllEnemyTurns()
         return
     end
 
