@@ -580,7 +580,9 @@ function OnDraw()
     end
     
     -- Show controls
+    --[[
     DrawText("Playfair48", "WASD to move, P to pause", 50, 100, 0.8, 0.8, 0.8, 1.0)
+    ]]
 end
 
 -- ============================================================================
