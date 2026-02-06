@@ -4,13 +4,46 @@
  Author:      Jiahao Zhou
  Email:       jiahao.zhou@digipen.edu
  Date:        2026-01-27
+-------------------------------------------------------------------------------
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+-------------------------------------------------------------------------------
+ Brief:
+ Implements the Quadtree broadphase structure used to reduce collision candidate
+ checks by spatially partitioning world-space AABBs.
+
+ Responsibilities:
+ - Maintain a hierarchical partition (nodes) over fixed world bounds.
+ - Insert (Entity, AABB) items with depth/capacity constraints.
+ - Query candidate entities that may overlap a given AABB region.
+
+ Notes:
+ This system is a broadphase optimization. Query results are conservative and
+ may include false positives; narrowphase collision tests must confirm actual
+ collisions. Correctness requires never missing a potential overlap within the
+ world bounds.
 ===============================================================================
  */
+
 
 #include "Collision/Quadtree.h"
 
 namespace Framework
 {
+
+    /**
+     * @brief Construct a quadtree with fixed world bounds and limits.
+     *
+     * Initializes the root node using @p worldBounds and stores configuration
+     * constraints for maximum depth and per-node capacity.
+     *
+     * @param worldBounds World-space bounds for the root node.
+     * @param maxDepth Maximum subdivision depth (root depth is 0).
+     * @param maxItemsPerNode Maximum number of items per node before subdividing.
+     */
+
     Quadtree::Quadtree(const AABB& worldBounds, int maxDepthIn, int maxItemsPerNodeIn)
     {
         maxDepth = maxDepthIn;
@@ -21,6 +54,13 @@ namespace Framework
         root->depth = 0;
     }
 
+    /**
+     * @brief Clear all stored items and reset the tree to a single root node.
+     *
+     * Removes all node children and item lists. World bounds and configuration
+     * values remain unchanged.
+     */
+
     void Quadtree::Clear()
     {
         root->items.clear();
@@ -30,20 +70,62 @@ namespace Framework
         }
     }
 
+    /**
+     * @brief Insert an entity with its AABB into the quadtree.
+     *
+     * This is the public insertion entry point. If the AABB lies outside the
+     * world bounds, insertion may be ignored depending on your implementation.
+     * Uses recursive insertion to place the item as deep as possible while
+     * remaining conservative.
+     *
+     * @param entity ECS entity to insert.
+     * @param aabb World-space AABB used for broadphase.
+     */
+
     void Quadtree::Insert(Entity entity, const AABB& aabb)
     {
         Insert(root.get(), entity, aabb);
     }
+
+    /**
+     * @brief Query candidate entities whose AABBs may overlap a region.
+     *
+     * This is the public query entry point. Appends candidate entities into @p out.
+     * Results are conservative and may include false positives.
+     *
+     * @param region World-space query AABB.
+     * @param out Output list to append candidates into (not cleared).
+     */
 
     void Quadtree::Query(const AABB& region, std::vector<Entity>& out) const
     {
         Query(root.get(), region, out);
     }
 
+
+    /**
+     * @brief Get the root world bounds covered by the quadtree.
+     *
+     * @return Reference to the root node's bounds.
+     */
     const AABB& Quadtree::GetWorldBounds() const
     {
         return root->bounds;
     }
+
+    /**
+     * @brief Recursive insertion into a specific node.
+     *
+     * If the node has children and the AABB fits fully within exactly one child,
+     * the item is inserted into that child. Otherwise the item remains stored in
+     * the current node. When capacity is exceeded and depth allows, the node is
+     * subdivided.
+     *
+     * @param node Node to insert into.
+     * @param entity ECS entity to insert.
+     * @param aabb World-space AABB used for broadphase.
+     */
+
 
     void Quadtree::Insert(Node* node, Entity entity, const AABB& aabb)
     {
@@ -95,6 +177,17 @@ namespace Framework
         }
     }
 
+    /**
+     * @brief Recursive query helper.
+     *
+     * Traverses nodes whose bounds intersect @p region. For each visited node,
+     * appends entities stored in that node whose AABBs may overlap the region.
+     *
+     * @param node Current node being queried.
+     * @param region World-space query AABB.
+     * @param out Output list to append candidates into.
+     */
+
     void Quadtree::Query(const Node* node, const AABB& region, std::vector<Entity>& out) const
     {
         if (!AABBIntersects(node->bounds, region))
@@ -124,6 +217,16 @@ namespace Framework
         }
     }
 
+    /**
+     * @brief Subdivide a node into four child nodes.
+     *
+     * Partitions the node's bounds into quadrants and allocates children. The
+     * insertion logic determines whether existing items should remain in the
+     * parent or be pushed down.
+     *
+     * @param node Node to subdivide.
+     */
+
     void Quadtree::Subdivide(Node* node)
     {
         const Vector2D min = node->bounds.min;
@@ -152,6 +255,18 @@ namespace Framework
         node->children[2]->depth = node->depth + 1;
         node->children[3]->depth = node->depth + 1;
     }
+
+    /**
+     * @brief Compute which quadrant can fully contain an AABB.
+     *
+     * Used to decide whether an item can be inserted into exactly one child node.
+     * If the AABB crosses split lines (does not fit fully in a single quadrant),
+     * returns -1 so it stays in the current node.
+     *
+     * @param nodeBounds Bounds of the parent node.
+     * @param aabb Item AABB to place.
+     * @return Child index in [0,3] if fully contained by one child; otherwise -1.
+     */
 
     int Quadtree::GetChildIndex(const AABB& nodeBounds, const AABB& aabb) const
     {

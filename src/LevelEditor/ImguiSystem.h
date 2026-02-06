@@ -1,35 +1,48 @@
 ﻿/*
 ===============================================================================
-File:        ImGuiSystem.h
-Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
-Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
-Date:        2025-11-07
-Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
+ File:        ImGuiSystem.h
+ Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
+ Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
+ Date:        2025-11-07
+ Contribution: 40%(Ethan), 50%(Jiahao), 10%(Kahyan)
 -------------------------------------------------------------------------------
-ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
-OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
-drag-drop, asset browser) to ECS and subsystems.
-
-@brief ImGui editor/overlay declarations: menu bar, panels, level I/O, drag-drop,
-       and play/stop handoff to subsystems.
-
-Safety: Headers only declare interfaces; no heavy logic here. Guard pointers.
-
-Modified: 2025-11-26
-- Added SetupDockSpace() for docking system support
-- Enables Game viewport to auto-fit window size
-
-Modified: 2026-01-08
-- Added Script Browser functionality for ScriptComponent
-- Added GetLuaFilesInDirectory() for recursive .lua file search
-- Added ShowScriptBrowserPopup() for script selection UI
-
-
  Copyright (C) 2026 DigiPen Institute of Technology.
  Reproduction or disclosure of this file or its contents
  without the prior written consent of DigiPen Institute of
  Technology is prohibited.
+-------------------------------------------------------------------------------
+ Brief:
+ Declarations for the ImGui editor/overlay system. Provides menu bar, panels,
+ viewport UI, level I/O hooks, drag-drop, play/stop controls, and editor tooling
+ integration with ECS and engine subsystems.
+
+ Notes:
+ This header declares interfaces only. Implementation details are in ImGuiSystem.cpp.
+ Pointer members should be treated as optional and guarded before use.
+
+ Modified: 2025-11-26
+ - Added SetupDockSpace() for docking system support
+ - Enabled game viewport auto-fit to window size
+
+ Modified: 2026-01-08
+ - Added Script Browser functionality for ScriptComponent
+ - Added GetLuaFilesInDirectory() for recursive .lua search
+ - Added ShowScriptBrowserPopup() for script selection UI
+
+ Modified: 2026-01-19
+ - Added editor-load/play-state related declarations to support safe editor level load
+   (prevent scripts from forcing play state during editor load)
+
+ Modified: 2026-01-29
+ - Added Asset Browser import/delete-from-disk support declarations
+ - Added audio import helpers (IsAudioFile/IsAudioFileSupported/AddAudioToJSON)
+
+ Modified: 2026-02-03
+ - Added render layer UI + overlays (ShowLayersWindow/ShowFPSOverlay)
+ - Added Lua level browser popup + save-current convenience (ShowLevelBrowserPopup/SaveCurrentLevel)
+===============================================================================
 */
+
 
 
 #pragma once
