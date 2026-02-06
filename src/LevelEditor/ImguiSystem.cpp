@@ -3061,20 +3061,6 @@ namespace Framework {
     }
 
 
-    /**
-     * @brief Render the editor "Layers" window.
-     *
-     * Provides UI controls to view and toggle render layer visibility. The visibility
-     * state is stored in the editor (ImGuiSystem) and is used by the renderer to
-     * decide whether entities on a given layer should be drawn.
-     *
-     * Intended for editor usage only (not gameplay UI).
-     */
-    void ImGuiSystem::ShowLayersWindow()
-    {
-        // existing code...
-    }
-
     void ImGuiSystem::ShowLayersWindow()
     {
         if (!ImGui::Begin("Layers##LayersWindow", &showLayersWindow))

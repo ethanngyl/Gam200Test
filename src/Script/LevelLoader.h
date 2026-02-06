@@ -96,6 +96,8 @@ namespace Framework {
         static int Lua_ToggleEditor(lua_State* L);
         static int Lua_IsEditorEnabled(lua_State* L);
         static int Lua_SetEditorMode(lua_State* L);
+
+        lua_State* GetLuaState() const { return L; }
     private:
         // Singleton (private constructor)
         LevelLoader();
@@ -310,6 +312,14 @@ namespace Framework {
         static int Lua_SpawnChestAt(lua_State* L);
         static int Lua_SpawnGoalAt(lua_State* L);
 
+        // FSM Bridge API
+        static int Lua_FSM_AddComponent(lua_State* L);
+        static int Lua_FSM_AddState(lua_State* L);
+        static int Lua_FSM_Start(lua_State* L);
+        static int Lua_FSM_ChangeState(lua_State* L);
+        static int Lua_FSM_GetCurrentState(lua_State* L);
+        static int Lua_FSM_IsInState(lua_State* L);
+        static int Lua_FSM_SetDebug(lua_State* L);
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

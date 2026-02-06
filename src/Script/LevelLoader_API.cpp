@@ -66,7 +66,8 @@ Technology is prohibited.
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
 #include "MapGenerator/ProceduralMapLoader.h"    
-
+#include "FSMComponent.h"
+#include "LuaBridgeState.h"
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
 #ifdef min
@@ -4656,4 +4657,277 @@ namespace Framework {
         return 1;
     }
 
+    // ========================================================================
+    // FSM BRIDGE API
+    // ========================================================================
+
+    /**
+     * @brief Adds an FSMComponent to an entity (gives it a C++ state machine)
+     * Lua usage: FSM_AddComponent(entityID)
+     * @param entityID The entity to add FSM to
+     * @return boolean success
+     */
+    int LevelLoader::Lua_FSM_AddComponent(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        Entity entity(static_cast<EntityID>(entityID));
+
+        if (!entity.IsValid()) {
+            LOG_ERROR("FSM_Bridge", "Invalid entity ID: %d", (int)entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Add FSMComponent if not already present
+        if (!em->HasComponent<FSMComponent>(entity)) {
+            em->AddComponent<FSMComponent>(entity);
+            LOG_INFO("FSM_Bridge", "Added FSMComponent to entity %d", (int)entityID);
+        }
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    /**
+     * @brief Adds a Lua-bridged state to an entity's C++ FSM
+     * Lua usage: FSM_AddState(entityID, stateName, enterFunc, updateFunc, exitFunc)
+     * @param entityID   Entity with FSMComponent
+     * @param stateName  Unique state name (e.g., "Waiting")
+     * @param enterFunc  Global Lua function name for Enter callback
+     * @param updateFunc Global Lua function name for Update callback
+     * @param exitFunc   Global Lua function name for Exit callback
+     * @return boolean success
+     *
+     * Example:
+     *   FSM_AddState(playerID, "Waiting",
+     *       "PlayerWaiting_Enter", "PlayerWaiting_Update", "PlayerWaiting_Exit")
+     */
+    int LevelLoader::Lua_FSM_AddState(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* stateName = luaL_checkstring(L, 2);
+        const char* enterFunc = luaL_optstring(L, 3, "");
+        const char* updateFunc = luaL_optstring(L, 4, "");
+        const char* exitFunc = luaL_optstring(L, 5, "");
+
+        Entity entity(static_cast<EntityID>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<FSMComponent>(entity)) {
+            LOG_ERROR("FSM_Bridge", "Entity %d missing FSMComponent", (int)entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto& fsmComp = em->GetComponent<FSMComponent>(entity);
+
+        // Create a LuaBridgeState that calls back into Lua
+        auto state = std::make_unique<LuaBridgeState>(
+            stateName,
+            enterFunc ? enterFunc : "",
+            updateFunc ? updateFunc : "",
+            exitFunc ? exitFunc : ""
+        );
+
+        fsmComp.stateMachine.AddState(stateName, std::move(state));
+
+        LOG_INFO("FSM_Bridge", "Added state '%s' to entity %d [enter=%s, update=%s, exit=%s]",
+            stateName, (int)entityID, enterFunc, updateFunc, exitFunc);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    /**
+     * @brief Starts the C++ FSM with an initial state
+     * Lua usage: FSM_Start(entityID, stateName)
+     * @param entityID  Entity with FSMComponent
+     * @param stateName State to start with
+     * @return boolean success
+     */
+    int LevelLoader::Lua_FSM_Start(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* stateName = luaL_checkstring(L, 2);
+
+        Entity entity(static_cast<EntityID>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<FSMComponent>(entity)) {
+            LOG_ERROR("FSM_Bridge", "Entity %d missing FSMComponent", (int)entityID);
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto& fsmComp = em->GetComponent<FSMComponent>(entity);
+        fsmComp.stateMachine.Start(stateName);
+
+        LOG_INFO("FSM_Bridge", "Entity %d FSM started with state: %s", (int)entityID, stateName);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    /**
+     * @brief Changes to a different state on the C++ FSM
+     * Lua usage: FSM_ChangeState(entityID, stateName)
+     * @param entityID  Entity with FSMComponent
+     * @param stateName State to transition to
+     * @return boolean success
+     */
+    int LevelLoader::Lua_FSM_ChangeState(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* stateName = luaL_checkstring(L, 2);
+
+        Entity entity(static_cast<EntityID>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<FSMComponent>(entity)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto& fsmComp = em->GetComponent<FSMComponent>(entity);
+        fsmComp.stateMachine.ChangeState(stateName);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    /**
+     * @brief Gets the current state name of an entity's C++ FSM
+     * Lua usage: local state = FSM_GetCurrentState(entityID)
+     * @param entityID Entity with FSMComponent
+     * @return string current state name (or "" if not running)
+     */
+    int LevelLoader::Lua_FSM_GetCurrentState(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushstring(L, "");
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushstring(L, "");
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        Entity entity(static_cast<EntityID>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<FSMComponent>(entity)) {
+            lua_pushstring(L, "");
+            return 1;
+        }
+
+        auto& fsmComp = em->GetComponent<FSMComponent>(entity);
+        std::string stateName = fsmComp.stateMachine.GetCurrentStateName();
+
+        lua_pushstring(L, stateName.c_str());
+        return 1;
+    }
+
+    /**
+     * @brief Checks if an entity's C++ FSM is in a specific state
+     * Lua usage: local isWaiting = FSM_IsInState(entityID, "Waiting")
+     * @param entityID  Entity with FSMComponent
+     * @param stateName State name to check
+     * @return boolean true if in that state
+     */
+    int LevelLoader::Lua_FSM_IsInState(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* stateName = luaL_checkstring(L, 2);
+
+        Entity entity(static_cast<EntityID>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<FSMComponent>(entity)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto& fsmComp = em->GetComponent<FSMComponent>(entity);
+        bool result = (fsmComp.stateMachine.GetCurrentStateName() == stateName);
+
+        lua_pushboolean(L, result);
+        return 1;
+    }
+
+    /**
+     * @brief Enables/disables debug logging on an entity's C++ FSM
+     * Lua usage: FSM_SetDebug(entityID, true)
+     */
+    int LevelLoader::Lua_FSM_SetDebug(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        bool enabled = lua_toboolean(L, 2);
+
+        Entity entity(static_cast<EntityID>(entityID));
+
+        if (entity.IsValid() && em->HasComponent<FSMComponent>(entity)) {
+            auto& fsmComp = em->GetComponent<FSMComponent>(entity);
+            fsmComp.stateMachine.SetDebugEnabled(enabled);
+        }
+
+        return 0;
+    }
 } // namespace Framework

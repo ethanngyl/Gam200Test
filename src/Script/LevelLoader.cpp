@@ -619,6 +619,15 @@ namespace Framework {
         lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
         lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
 
+        // FSM Bridge API (C++ FSM to lua)
+        lua_register(L, "FSM_AddComponent", Lua_FSM_AddComponent);
+        lua_register(L, "FSM_AddState", Lua_FSM_AddState);
+        lua_register(L, "FSM_Start", Lua_FSM_Start);
+        lua_register(L, "FSM_ChangeState", Lua_FSM_ChangeState);
+        lua_register(L, "FSM_GetCurrentState", Lua_FSM_GetCurrentState);
+        lua_register(L, "FSM_IsInState", Lua_FSM_IsInState);
+        lua_register(L, "FSM_SetDebug", Lua_FSM_SetDebug);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 
