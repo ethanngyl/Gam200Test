@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- Level2.lua - ImGui Editor Showcase 
 -- Author:        Padilla Carl Jameson
 -- Date:          11/30/2025
@@ -138,9 +138,9 @@ function OnDraw()
     
     -- Display helper text
     DrawText("Sans32", "ImGui Editor Showcase", 50, 100, 0.6, 0.8, 0.8, 0.8)
-    DrawText("Sans24", "Press F1 to toggle editor", 50, 140, 0.5, 0.6, 0.6, 0.6)
-    DrawText("Sans24", "Press 5 for Main Menu", 50, 170, 0.5, 0.6, 0.6, 0.6)
-    DrawText("Sans24", "Press 3 for Level 3", 50, 200, 0.5, 0.6, 0.6, 0.6)
+    DrawText("Playfair48", "Press F1 to toggle editor", 50, 140, 0.5, 0.6, 0.6, 0.6)
+    DrawText("Playfair48", "Press 5 for Main Menu", 50, 170, 0.5, 0.6, 0.6, 0.6)
+    DrawText("Playfair48", "Press 3 for Level 3", 50, 200, 0.5, 0.6, 0.6, 0.6)
 end
 
 -- ============================================================================

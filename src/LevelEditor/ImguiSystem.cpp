@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -1642,9 +1642,10 @@ namespace Framework {
                 ImGui::SameLine();
 
                 char buffer[512];
-                strncpy(buffer, sc.scriptPath.c_str(), 511);
+                //strncpy(buffer, sc.scriptPath.c_str(), 511);
+                strncpy_s(buffer, sizeof(buffer), sc.scriptPath.c_str(), _TRUNCATE);
                 buffer[511] = '\0';
-
+                
                 ImGui::PushItemWidth(-100);  
                 if (ImGui::InputText("##ScriptPath", buffer, 512)) {
                     sc.scriptPath = buffer;
@@ -3070,10 +3071,7 @@ namespace Framework {
      *
      * Intended for editor usage only (not gameplay UI).
      */
-    void ImGuiSystem::ShowLayersWindow()
-    {
-        // existing code...
-    }
+    
 
     void ImGuiSystem::ShowLayersWindow()
     {

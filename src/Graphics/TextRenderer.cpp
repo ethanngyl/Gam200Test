@@ -264,9 +264,16 @@ void TextRenderer::draw(const std::string& fontKey,
     float scale,
     const glm::vec3& color)
 {
-    // Find the font; if missing, silently skip
+    // Find the font; if missing, log and skip
     auto it = fonts_.find(fontKey);
-    if (it == fonts_.end()) return;
+    if (it == fonts_.end()) {
+        std::cerr << "[TextRenderer] Font '" << fontKey << "' not found! Available fonts: ";
+        for (const auto& f : fonts_) {
+            std::cerr << "'" << f.first << "' ";
+        }
+        std::cerr << std::endl;
+        return;
+    }
 
     glUseProgram(program_);
 

@@ -43,8 +43,6 @@
 ===============================================================================
 */
 
-
-
 #pragma once
 #include "Precompiled.h"
 #include "imgui.h"
@@ -70,13 +68,13 @@ namespace Framework {
     };
 
     struct UndoStep {
-        UndoType type;          // What kind of action was this?
-        Entity entity;          // Which entity was affected?
+        UndoType type = UndoType::Transform;   // What kind of action was this? (default to Transform)
+        Entity entity{};                       // Which entity was affected?
 
         // Data for Transform Undo
-        Vector2D oldPosition;
-        Vector2D oldScale;
-        float oldRotation;
+        Vector2D oldPosition{};
+        Vector2D oldScale{};
+        float oldRotation = 0.0f;              // Initialize to 0.0f
 
         // Data for Deletion Undo (To restore it, we save it as a temp file)
         std::string tempFilePath;
@@ -238,7 +236,7 @@ namespace Framework {
         void ShowEntityInspector();
         void ShowSpawnerWindow();
         void ShowDebugWindow();
-        void ShowDemoWindow();
+        //void ShowDemoWindow();
         void ShowFPSOverlay();
 
         // ========================================================================
@@ -285,9 +283,9 @@ namespace Framework {
 
 
         void ShowAssetsWindow();
-        void SetupDefaultDockLayout();
+        //void SetupDefaultDockLayout();
         void ShowPrefabWindow();
-        void SpawnPrefabAtMouse(const std::string& prefabPath);
+        //void SpawnPrefabAtMouse(const std::string& prefabPath);
 
         /**
          * @brief Shows script browser popup for selecting Lua scripts

@@ -1,12 +1,47 @@
--- ============================================================================
--- Level3Clean.lua
--- REFACTORED - Clean, modular version of Level3 with 3-character party system
--- ============================================================================
--- This is a refactored version showing proper separation of concerns
--- UI management is delegated to UIManager
--- Level script focuses on level lifecycle and coordination
--- Party system: 3 characters act sequentially before enemy turn
--- ============================================================================
+--[[
+===============================================================================
+ File:          Level3Clean.lua
+ Authors:       Padilla Carl Jameson
+ Email:         c.padilla@digipen.edu
+ Co-Authors:    N/A
+ Date:          2026-02-06
+ Contribution:  Carl (100%)
+ ------------------------------------------------------------------------------
+
+ LEVEL 3 CONTROLLER (Tactical Grid & Party Management)
+
+ Brief:
+    The main lifecycle manager for Level 3. This script orchestrates the
+    tactical grid gameplay, specifically handling the refactored 3-character
+    party system (Warrior, Mage, Rogue). It delegates UI and Turn logic to
+    external managers while coordinating the overall game loop.
+
+ Usage:
+    1. Loaded by the LevelLoader or Engine as the primary level script.
+    2. Requires:
+       - PartyTurnManager.lua (Turn logic)
+       - EnemyTurnManager.lua (AI logic)
+       - UIManager.lua (HUD/GUI)
+    3. Controls:
+       - WASD: Move active character
+       - P / ESC: Pause Game
+       - F1: Toggle Editor Mode
+
+ Turn Flow:
+    [Player Turn] -> Warrior Act -> Mage Act -> Rogue Act -> [Enemy Turn]
+    [Enemy Turn]  -> AI Logic Execution -> [Player Turn]
+
+ Key Responsibilities:
+    - Level Lifecycle (OnInit, OnUpdate, OnDraw, OnDestroy)
+    - Entity Setup (Spawning Party & Enemies from TileMap)
+    - Subsystem Initialization (Audio, Camera, UI, Popups)
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 -- CRITICAL: Verify script is loading
 print("============================================================")

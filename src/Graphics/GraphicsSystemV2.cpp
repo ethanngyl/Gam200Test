@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        GraphicsSystemV2.cpp
 Author:      Sim Kah Yan
@@ -48,6 +48,7 @@ Technology is prohibited.
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <chrono>
 #include "Debugger/Trace.h"
 #include "Input/Input.h"
 #include "imgui.h"
@@ -371,6 +372,30 @@ namespace Framework {
         // Clear queues for next frame
         renderQueue.Clear();
         debugQueue.Clear();
+
+        // ========================================================================
+        // FPS CALCULATION AND TOGGLE (E key)
+        // ========================================================================
+        
+        // Toggle FPS display with E key (with debounce to prevent double-toggle)
+        static bool lastEKeyState = false;
+        bool currentEKeyState = inputManager && inputManager->IsKeyDown(KEY_E);
+        
+        if (currentEKeyState && !lastEKeyState) {
+            // Check if ImGui wants keyboard input - if so, don't toggle
+            bool imguiWantsKeyboard = false;
+            if (ImGui::GetCurrentContext()) {
+                imguiWantsKeyboard = ImGui::GetIO().WantCaptureKeyboard;
+            }
+            
+            if (!imguiWantsKeyboard) {
+                showFPS = !showFPS;
+                std::cout << "[FPS] FPS display " << (showFPS ? "enabled" : "disabled") << " (Press E to toggle)\n";
+            }
+        }
+        lastEKeyState = currentEKeyState;
+
+        // FPS calculation moved to RenderImGui() which is called once per frame
 
         // ========================================================================
         // UNBIND RENDER TARGET
@@ -1347,6 +1372,45 @@ namespace Framework {
 
     void GraphicsSystemV2::RenderImGui() {
         if (!window) return;
+
+        // ========================================================================
+        // FPS CALCULATION - Done here because this function is called once per frame
+        // ========================================================================
+        static auto lastFrameTime = std::chrono::high_resolution_clock::now();
+        auto now = std::chrono::high_resolution_clock::now();
+        float realDt = std::chrono::duration<float>(now - lastFrameTime).count();
+        lastFrameTime = now;
+        
+        if (realDt > 0.001f && realDt < 1.0f) {  // Sanity check (ignore < 1ms or > 1s)
+            float instantFPS = 1.0f / realDt;
+            currentFPS = currentFPS * 0.9f + instantFPS * 0.1f;  // Smoothed
+        }
+
+        // ========================================================================
+        // FPS DISPLAY - Draw LAST, right before swap, on top of everything
+        // ========================================================================
+        if (showFPS) {
+            int fbWidth, fbHeight;
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+            
+            // Ensure we're drawing to the default framebuffer
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, fbWidth, fbHeight);
+            
+            // Update text renderer for screen size
+            text_.setScreenSize(fbWidth, fbHeight);
+            
+            // Format FPS string
+            char fpsText[32];
+            snprintf(fpsText, sizeof(fpsText), "FPS: %.1f", currentFPS);
+            
+            // Position: top-right corner (moved left)
+            float textX = static_cast<float>(fbWidth) - 400.0f;
+            float textY = static_cast<float>(fbHeight) - 100.0f;
+            
+            // Draw with black color as requested
+            DrawText4("Sans48", fpsText, textX, textY, 1.0f, glm::vec3(255.0f, 0.0f, 0.0f));
+        }
 
         //    // Just swap - DON'T clear!
         glfwSwapBuffers(window);
