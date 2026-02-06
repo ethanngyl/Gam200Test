@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -3070,11 +3070,6 @@ namespace Framework {
      *
      * Intended for editor usage only (not gameplay UI).
      */
-    void ImGuiSystem::ShowLayersWindow()
-    {
-        // existing code...
-    }
-
     void ImGuiSystem::ShowLayersWindow()
     {
         if (!ImGui::Begin("Layers##LayersWindow", &showLayersWindow))
