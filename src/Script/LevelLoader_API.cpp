@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -489,6 +489,27 @@ namespace Framework {
      */
     int LevelLoader::Lua_IsKeyDown(lua_State* L) {
         const char* keyName = luaL_checkstring(L, 1);
+
+        // Only block gameplay hotkeys when an ImGui popup/modal is open OR when typing in a text input.
+        // If ImGui is merely visible (editor overlay), allow gameplay hotkeys to work.
+        if (ImGui::GetCurrentContext())
+        {
+            ImGuiIO& io = ImGui::GetIO();
+
+            // AnyPopupLevel catches nested popups/modals (e.g., Save/Load modal + child popup)
+            const bool anyPopupOpen =
+                ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+
+            const bool typingInTextBox = io.WantTextInput;
+
+            if (anyPopupOpen || typingInTextBox)
+            {
+                lua_pushboolean(L, false);
+                return 1;
+            }
+        }
+
+
         auto* input = CORE ? CORE->GetInputSystem() : nullptr;
         if (!input) {
             lua_pushboolean(L, false);
