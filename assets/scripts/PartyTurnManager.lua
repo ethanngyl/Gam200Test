@@ -379,6 +379,16 @@ function NextCharacterTurn()
             attackAPIndicator:RestoreAllAP()
             print("[PartyTurnManager] Restored all attack AP crystals")
         end
+        
+        -- Restore movement AP visuals (force immediate update)
+        local movementAPIndicator = UIManager.GetComponent("movementAP")
+        if movementAPIndicator and movementAPIndicator.ForceUpdate then
+            movementAPIndicator:ForceUpdate()
+            print("[PartyTurnManager] Force updated movement AP indicator")
+        elseif movementAPIndicator and movementAPIndicator.RestoreAllAP then
+            movementAPIndicator:RestoreAllAP()
+            print("[PartyTurnManager] Restored all movement AP crystals")
+        end
     end
 
     -- Start turn transition cooldown to prevent input carry-over
@@ -550,6 +560,16 @@ function ResetPartyTurn()
         if attackAPIndicator and attackAPIndicator.RestoreAllAP then
             attackAPIndicator:RestoreAllAP()
             Log("[PartyTurnManager] Restored all attack AP crystals for " .. PartyMembers[ActiveCharacterIndex].name)
+        end
+        
+        -- Restore movement AP visuals (force immediate update)
+        local movementAPIndicator = UIManager.GetComponent("movementAP")
+        if movementAPIndicator and movementAPIndicator.ForceUpdate then
+            movementAPIndicator:ForceUpdate()
+            Log("[PartyTurnManager] Force updated movement AP indicator")
+        elseif movementAPIndicator and movementAPIndicator.RestoreAllAP then
+            movementAPIndicator:RestoreAllAP()
+            Log("[PartyTurnManager] Restored all movement AP crystals")
         end
     end
 

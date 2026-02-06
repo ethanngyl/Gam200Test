@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan

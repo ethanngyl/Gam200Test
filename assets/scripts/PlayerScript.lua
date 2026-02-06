@@ -404,11 +404,12 @@ function ExecuteAttack()
     print("[PlayerScript] ===== EXECUTING ATTACK =====")
     print("============================================================")
 
-    local currentAP, maxAP = GetEntityAP(entityID)
-    print("[PlayerScript] Current AP: " .. currentAP .. "/" .. maxAP .. " (need " .. attackAPCost .. ")")
+    -- Use ATTACK AP, not movement AP
+    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+    print("[PlayerScript] Current Attack AP: " .. tostring(currentAttackAP) .. "/" .. tostring(maxAttackAP) .. " (need " .. attackAPCost .. ")")
 
-    if currentAP < attackAPCost then
-        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. currentAP .. " < " .. attackAPCost .. ")")
+    if not currentAttackAP or currentAttackAP < attackAPCost then
+        print("[PlayerScript] ATTACK BLOCKED: Not enough Attack AP (" .. tostring(currentAttackAP) .. " < " .. attackAPCost .. ")")
         ClearAttackPreview()
         return
     end
@@ -432,9 +433,10 @@ function ExecuteAttack()
     if success then
         print("[PlayerScript] Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
-        ConsumeEntityAP(entityID, attackAPCost)
-        local newAP = GetEntityAP(entityID)
-        print("[PlayerScript] AP consumed. New AP: " .. newAP .. "/" .. maxAP)
+        -- Consume ATTACK AP, not movement AP
+        ConsumeEntityAttackAP(entityID, attackAPCost)
+        local newAttackAP = GetEntityAttackAP(entityID)
+        print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAttackAP) .. "/" .. tostring(maxAttackAP))
 
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)
 
@@ -525,8 +527,9 @@ local function createPlayerStates(fsm)
                 print("[PlayerScript] SPACE key pressed")
 
                 if not attackPreviewActive then
-                    local currentAP, maxAP = GetEntityAP(entityID)
-                    if currentAP >= attackAPCost then
+                    -- Use ATTACK AP, not movement AP
+                    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+                    if currentAttackAP >= attackAPCost then
                         local testEnemy = FindEnemyInRange()
                         if testEnemy then
                             ShowAttackPreview()
@@ -536,7 +539,7 @@ local function createPlayerStates(fsm)
                             PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
                         end
                     else
-                        print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
+                        print("[PlayerScript] Not enough ATTACK AP to attack (" .. tostring(currentAttackAP) .. " < " .. attackAPCost .. ")")
                         PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                     end
                 else
@@ -673,12 +676,8 @@ local function createPlayerStates(fsm)
 
             if currentAP < apCostPerMove then
                 print("[PlayerScript] FAILED: Not enough AP!")
-                --PulseTile(self.targetX, self.targetY, 0.3, 1.0, 1.0, 0.3)
-
-                --if currentAP == 0 then
-                    --print("[PlayerScript] AP depleted - ending turn!")
-                    --endTurn()
-                --end
+                PulseTile(self.targetX, self.targetY, 0.3, 1.0, 1.0, 0.3)
+                -- Removed automatic turn end - player can still attack or press P to end turn
                 return
             end
 
@@ -709,11 +708,10 @@ local function createPlayerStates(fsm)
                 local newAP, maxAP = GetEntityAP(entityID)
                 print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
 
-                --if newAP == 0 then
-                    --print("[PlayerScript] AP depleted after movement - ending turn!")
-                    --endTurn()
-                    --return
-                --end
+                -- Removed automatic turn end - player can still attack or press P to end turn
+                if newAP == 0 then
+                    print("[PlayerScript] Movement AP depleted - player can still attack or press P to end turn")
+                end
 
                 -- Visual feedback
                 ShowTileBorder(self.targetX, self.targetY, 0.5)

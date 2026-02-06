@@ -127,9 +127,9 @@ function OnDraw()
     if currentMap then
         local statsY = 220
         DrawText("Sans32", "Map Stats:", 50, statsY, 1.0, 1.0, 0.3, 1.0)
-        DrawText("Sans24", "  Size: " .. currentMap.width .. "x" .. currentMap.height, 50, statsY + 30, 0.8, 0.8, 0.8, 1.0)
-        DrawText("Sans24", "  Enemies: " .. #currentMap.enemyPositions, 50, statsY + 55, 0.8, 0.8, 0.8, 1.0)
-        DrawText("Sans24", "  Chests: " .. #currentMap.chestPositions, 50, statsY + 80, 0.8, 0.8, 0.8, 1.0)
+        DrawText("Playfair48", "  Size: " .. currentMap.width .. "x" .. currentMap.height, 50, statsY + 30, 0.8, 0.8, 0.8, 1.0)
+        DrawText("Playfair48", "  Enemies: " .. #currentMap.enemyPositions, 50, statsY + 55, 0.8, 0.8, 0.8, 1.0)
+        DrawText("Playfair48", "  Chests: " .. #currentMap.chestPositions, 50, statsY + 80, 0.8, 0.8, 0.8, 1.0)
     end
 end
 

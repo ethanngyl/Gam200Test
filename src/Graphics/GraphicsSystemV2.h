@@ -372,6 +372,13 @@ namespace Framework {
         int targetWidth = 0;
         int targetHeight = 0;
         bool renderingToTarget = false;
+
+        // FPS Display
+        bool showFPS = false;           // Toggle with E key
+        float fpsUpdateTimer = 0.0f;    // Timer for FPS update interval
+        float currentFPS = 0.0f;        // Cached FPS value
+        int frameCount = 0;             // Frame counter for FPS calculation
+        static constexpr float FPS_UPDATE_INTERVAL = 0.5f;  // Update FPS every 0.5 seconds
     };
 
 } // namespace Framework
