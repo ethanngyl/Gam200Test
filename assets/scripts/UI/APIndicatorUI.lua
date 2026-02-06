@@ -1,10 +1,10 @@
 --[[
 ===============================================================================
 File:        APIndicatorUI.lua
-Author:      Sim Kah Yan
+Author:      Ethan Ng Yong Le, Sim Kah Yan
 Email:       kahyan.sim@digipen.edu
 Date:        2026-02-04 (yyyy-mm-dd)
-Contribution: 46% 
+Contribution: Ethan Ng Yong Le 54%, Sim Kah Yan 46% 
 -------------------------------------------------------------------------------
 Brief:
 UI component that displays Action Points (AP) as a row of crystal-style

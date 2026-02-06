@@ -1,7 +1,7 @@
 --[[
 ===============================================================================
  File:           AnimationController.lua
- Author:         
+ Author:         Ethan Ng Yong Le (Work In Progress for M5, not implemented in M4)
  Date:           2026-01-16
  ------------------------------------------------------------------------------
  Animation Controller Script
@@ -231,13 +231,13 @@ end
     SetCharacterType(type)
     Sets the character type for animation selection
 
-    @param type Character type string ("Warrior", "Mage", "Rogue")
+    @param type Character type string ("Warrior", "Magus", "Berserker")
 
     USAGE: Call this after attaching the script to set character-specific animations
     Example:
         AddScriptComponentToEntity(entityID, "assets/scripts/AnimationController.lua")
         -- Then from another script or level script:
-        -- SetEntityCharacterType(entityID, "Mage")
+        -- SetEntityCharacterType(entityID, "Magus")
 ]]--
 function SetCharacterType(type)
     characterType = type

@@ -5,6 +5,7 @@ Recommended Platform: Visual Studio 2022
 - Download the community version of visual studio
 - During the installation process, tick "Deskstop Development with C++" under workloads, and under Individual Components, tick "C++ CMake tools for windows"
 - This will allow for C++ capabilities and standard libraries along with CMake utilities
+- Note that the run.bat will not run unless the Visual Studio version is Visual Studio 17 2022
 
 Additional Applications Required:
 - GIT SCM

@@ -4,7 +4,7 @@ File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
 Email:       n.ethanyongle@digipen.edu; kahyan.sim@digipen.edu
 Date:        2026-02-04 (yyyy-mm-dd)
-Contribution: ETHAN NG (remaining); Sim Kah Yan 2% (82 lines of 4233 total)
+Contribution: ETHAN NG 98%(2758 lines of 2840 total); Sim Kah Yan 2% (82 lines of 2840 total)
 -------------------------------------------------------------------------------
 Brief:
 Level Loader Lua API implementation: C++ bridge to Lua. Static functions

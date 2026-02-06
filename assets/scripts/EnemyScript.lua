@@ -1,10 +1,9 @@
 --[[
 ===============================================================================
  File:          EnemyScript.lua
- Authors:       
- Co-Authors:    
- Date:          
- Contribution:  
+ Authors:       Ethan Ng Yong Le
+ Date:          01/25/2026
+ Contribution:  100%
  ------------------------------------------------------------------------------
 
  ENEMY SCRIPT - AI Behavior for Grid-Based Turn-Based Combat
