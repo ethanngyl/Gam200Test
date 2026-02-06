@@ -30,6 +30,7 @@ CMake Notes:
 - To install CMake, enter "winget install cmake" into your Command Prompt
 - To update CMake, enter "winget upgrade --id Kitware.CMake" into your Command Prompt
 - To check your current version of CMake, enter "cmake --version" into your command prompt
+- After running run.bat, please go to the build->Debug/Release folder and look for the executable file (.exe).
 
 Level Editor:
 - Level editor is enabled on all levels and can be toggled on and off via the f1 key, it is off by default.
