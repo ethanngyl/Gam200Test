@@ -1,0 +1,74 @@
+{
+  "skills": {
+    "BasicAttack": {
+      "name": "Basic Attack",
+      "description": "Attack adjacent tile (4 directions)",
+      "apCost": 3,
+      "damage": 1,
+      "range": 1,
+      "pattern": "adjacent",
+      "animationName": "Attack",
+      "soundEffect": "sword_slash"
+    },
+    "Slash": {
+      "name": "Slash",
+      "description": "Attack in a line (3 tiles forward)",
+      "apCost": 4,
+      "damage": 2,
+      "range": 3,
+      "pattern": "line",
+      "animationName": "Attack",
+      "soundEffect": "sword_slash"
+    },
+    "CrossSlash": {
+      "name": "Cross Slash",
+      "description": "Attack all 4 adjacent tiles",
+      "apCost": 5,
+      "damage": 1,
+      "range": 1,
+      "pattern": "cross",
+      "animationName": "Attack",
+      "soundEffect": "sword_slash"
+    },
+    "AreaBlast": {
+      "name": "Area Blast",
+      "description": "Attack all tiles in a 3x3 area",
+      "apCost": 6,
+      "damage": 2,
+      "range": 1,
+      "pattern": "area3x3",
+      "animationName": "Attack",
+      "soundEffect": "explosion"
+    },
+    "Fireball": {
+      "name": "Fireball",
+      "description": "Ranged attack (5 tiles)",
+      "apCost": 5,
+      "damage": 3,
+      "range": 5,
+      "pattern": "single",
+      "animationName": "Attack",
+      "soundEffect": "fireball"
+    },
+    "Cleave": {
+      "name": "Cleave",
+      "description": "Attack 3 tiles in front (cone)",
+      "apCost": 4,
+      "damage": 2,
+      "range": 1,
+      "pattern": "cone",
+      "animationName": "Attack",
+      "soundEffect": "sword_slash"
+    },
+    "PiercingShot": {
+      "name": "Piercing Shot",
+      "description": "Attack all enemies in a line",
+      "apCost": 4,
+      "damage": 1,
+      "range": 5,
+      "pattern": "pierce",
+      "animationName": "Attack",
+      "soundEffect": "arrow"
+    }
+  }
+}
