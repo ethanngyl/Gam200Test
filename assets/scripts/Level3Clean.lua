@@ -145,27 +145,54 @@ function OnInit()
     -- UNIFIED ANIMATION SYSTEM - Warrior animations for all 3 players
     -- ========================================================================
 
-    -- Apply Warrior animations (Idle_front) to ALL 3 players
-    LoadAnimationForAllPlayers("Idle_front")
-    Log("[Level3Clean] Loaded Warrior animations for all 3 players")
+    -- DEBUG: Check if new function exists
+    print("[Level3Clean] ========================================")
+    print("[Level3Clean] ANIMATION LOADING DEBUG")
+    print("[Level3Clean] ========================================")
+
+    if LoadAnimationForAllPlayers then
+        print("[Level3Clean] LoadAnimationForAllPlayers function EXISTS - calling it...")
+        LoadAnimationForAllPlayers("Idle_front")
+        print("[Level3Clean] LoadAnimationForAllPlayers RETURNED")
+    else
+        print("[Level3Clean] ERROR: LoadAnimationForAllPlayers function DOES NOT EXIST!")
+        print("[Level3Clean] Falling back to manual per-player loading...")
+        local players = GetAllPlayers()
+        if players then
+            for i = 1, #players do
+                local pid = players[i]
+                if pid and pid ~= 0 then
+                    print("[Level3Clean] Loading animation for player " .. i .. " (Entity " .. pid .. ")")
+                    if LoadAnimationForEntity then
+                        LoadAnimationForEntity(pid, "Idle_front")
+                        print("[Level3Clean]   LoadAnimationForEntity completed for player " .. i)
+                    else
+                        print("[Level3Clean]   ERROR: LoadAnimationForEntity also doesn't exist!")
+                    end
+                end
+            end
+        end
+    end
 
     -- Re-initialize animation state for all players (critical!)
-    -- PlayerScript OnInit ran BEFORE animations were loaded, so we need to set the initial state
+    print("[Level3Clean] Re-initializing animation state for all players...")
     local players = GetAllPlayers()
     if players then
         for i = 1, #players do
             local pid = players[i]
             if pid and pid ~= 0 then
+                print("[Level3Clean]   Player " .. i .. " (Entity " .. pid .. ") - Setting animation state...")
                 -- Set initial animation state (Idle, Front-facing)
                 SetAnimationGroup(pid, 0)           -- 0 = Idle
                 SetAnimationDirection(pid, 0)       -- 0 = Front
                 SetAnimationFlipX(pid, false)
                 SetAnimationPlaying(pid, true)
-                Log("[Level3Clean]   Player " .. i .. " (Entity " .. pid .. ") - Animation initialized")
+                print("[Level3Clean]   Player " .. i .. " animation state set - Group:0, Dir:0, Playing:true")
             end
         end
     end
-    Log("[Level3Clean] All players ready with animations")
+    print("[Level3Clean] All players animation initialization complete")
+    print("[Level3Clean] ========================================")
 
     -- ALTERNATIVE: Explicit per-player approach (same result)
     -- Uncomment to load explicitly for each player:
