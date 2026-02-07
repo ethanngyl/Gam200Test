@@ -829,57 +829,64 @@ namespace Framework {
         const char* animName = luaL_checkstring(L, 1);
         LOG_INFO("LOAD_ANIM", "=== LoadPlayerAnimation called: '%s' ===", animName);
 
-        // Find player entity (CircleCollider)
-        Entity player{ INVALID_ENTITY };
+        // Find ALL player entities (CircleCollider without EnemyAI)
+        std::vector<Entity> players;
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e)) {
-                player = e;
-                LOG_INFO("LOAD_ANIM", "Found player entity: %u", player.GetID());
-                break;
+            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
+                players.push_back(e);
+                LOG_INFO("LOAD_ANIM", "Found player entity: %u", e.GetID());
             }
         }
 
-        if (player.GetID() == INVALID_ENTITY) {
-            LOG_ERROR("LOAD_ANIM", "Player not found!");
+        if (players.empty()) {
+            LOG_ERROR("LOAD_ANIM", "No players found!");
             return 0;
         }
 
-        // Check player's current material
-        if (em->HasComponent<MeshRenderer>(player)) {
-            auto& mr = em->GetComponent<MeshRenderer>(player);
-            LOG_INFO("LOAD_ANIM", "Player material handle: %u", mr.material.GetID());
-        }
+        LOG_INFO("LOAD_ANIM", "Processing animations for %zu players", players.size());
 
-        // Add SpriteAnimation component if not present
-        if (!em->HasComponent<SpriteAnimation>(player)) {
-            em->AddComponent<SpriteAnimation>(player);
-            LOG_INFO("LOAD_ANIM", " Added SpriteAnimation component");
-        }
-        else {
-            LOG_INFO("LOAD_ANIM", "Player already has SpriteAnimation");
-        }
-
-        // Get animation component
-        auto& anim = em->GetComponent<SpriteAnimation>(player);
-        anim.playing = true;
-
-        // Load animation
         auto* animSys = loader->coreEngine->GetAnimationSystem();
         auto* gfx = loader->graphicsSystem;
 
-        if (animSys && gfx) {
-            animSys->LoadAnimation(player, anim, gfx, animName);
-            LOG_INFO("LOAD_ANIM", " Animation loaded:");
-            LOG_INFO("LOAD_ANIM", "  - Name: '%s'", anim.animName.c_str());
-            LOG_INFO("LOAD_ANIM", "  - Grid: %dx%d", anim.rows, anim.columns);
-            LOG_INFO("LOAD_ANIM", "  - Frames: %d", anim.frameCount);
-            LOG_INFO("LOAD_ANIM", "  - SpriteSheet: %u", anim.spriteSheet.GetID());
-            LOG_INFO("LOAD_ANIM", "  - Playing: %d", anim.playing);
-        }
-        else {
+        if (!animSys || !gfx) {
             LOG_ERROR("LOAD_ANIM", "AnimationSystem or GraphicsSystem not available");
+            return 0;
         }
 
+        // Apply animation to ALL players
+        for (Entity player : players) {
+            LOG_INFO("LOAD_ANIM", "--- Processing player %u ---", player.GetID());
+
+            // Check player's current material
+            if (em->HasComponent<MeshRenderer>(player)) {
+                auto& mr = em->GetComponent<MeshRenderer>(player);
+                LOG_INFO("LOAD_ANIM", "  Material handle: %u", mr.material.GetID());
+            }
+
+            // Add SpriteAnimation component if not present
+            if (!em->HasComponent<SpriteAnimation>(player)) {
+                em->AddComponent<SpriteAnimation>(player);
+                LOG_INFO("LOAD_ANIM", "  Added SpriteAnimation component");
+            }
+            else {
+                LOG_INFO("LOAD_ANIM", "  Already has SpriteAnimation");
+            }
+
+            // Get animation component
+            auto& anim = em->GetComponent<SpriteAnimation>(player);
+            anim.playing = true;
+
+            // Load animation
+            animSys->LoadAnimation(player, anim, gfx, animName);
+            LOG_INFO("LOAD_ANIM", "  Animation loaded:");
+            LOG_INFO("LOAD_ANIM", "    - Name: '%s'", anim.animName.c_str());
+            LOG_INFO("LOAD_ANIM", "    - Grid: %dx%d", anim.rows, anim.columns);
+            LOG_INFO("LOAD_ANIM", "    - Frames: %d", anim.frameCount);
+            LOG_INFO("LOAD_ANIM", "    - SpriteSheet: %u", anim.spriteSheet.GetID());
+            LOG_INFO("LOAD_ANIM", "    - Playing: %d", anim.playing);
+        }
+
+        LOG_INFO("LOAD_ANIM", "=== Successfully loaded animations for all %zu players ===", players.size());
         return 0;
     }
 
