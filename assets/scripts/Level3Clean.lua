@@ -154,24 +154,24 @@ function OnInit()
         print("[Level3Clean] LoadAnimationForAllPlayers function EXISTS - calling it...")
         LoadAnimationForAllPlayers("Idle_front")
         print("[Level3Clean] LoadAnimationForAllPlayers RETURNED")
-    else
-        print("[Level3Clean] ERROR: LoadAnimationForAllPlayers function DOES NOT EXIST!")
-        print("[Level3Clean] Falling back to manual per-player loading...")
+    elseif LoadAnimationForEntity then
+        print("[Level3Clean] LoadAnimationForAllPlayers NOT FOUND")
+        print("[Level3Clean] Using LoadAnimationForEntity fallback...")
         local players = GetAllPlayers()
         if players then
             for i = 1, #players do
                 local pid = players[i]
                 if pid and pid ~= 0 then
-                    print("[Level3Clean] Loading animation for player " .. i .. " (Entity " .. pid .. ")")
-                    if LoadAnimationForEntity then
-                        LoadAnimationForEntity(pid, "Idle_front")
-                        print("[Level3Clean]   LoadAnimationForEntity completed for player " .. i)
-                    else
-                        print("[Level3Clean]   ERROR: LoadAnimationForEntity also doesn't exist!")
-                    end
+                    print("[Level3Clean]   Loading animation for player " .. i .. " (Entity " .. pid .. ")")
+                    LoadAnimationForEntity(pid, "Idle_front")
+                    print("[Level3Clean]   Animation loaded for player " .. i)
                 end
             end
         end
+    else
+        print("[Level3Clean] NEW FUNCTIONS NOT FOUND - using manual workaround...")
+        dofile("assets/scripts/ApplyAnimationsToAllPlayers.lua")
+        ApplyAnimationsToAllPlayers()
     end
 
     -- Re-initialize animation state for all players (critical!)
