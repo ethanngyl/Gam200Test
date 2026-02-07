@@ -893,11 +893,20 @@ namespace Framework {
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (!entityManager->HasComponent<SpriteAnimation>(e))
             {
+                // Non-animated entities: Enforce defaultMaterial for shader compatibility
+                // This ensures tiles and static sprites render correctly
                 Material* mat = resourceManager.GetMaterial(cmd.material);
-                mat->u1 = mat->v1 = 1.f;
-                mat->u0 = mat->v0 = 0.f;
+                if (!mat || mat->shader != defaultShader) {
+                    cmd.material = defaultMaterial;
+                    mat = resourceManager.GetMaterial(cmd.material);
+                }
 
-                // Entity has no animation  safe to submit as-is
+                if (mat) {
+                    mat->u1 = mat->v1 = 1.f;
+                    mat->u0 = mat->v0 = 0.f;
+                }
+
+                // Entity has no animation - safe to submit as-is
                 renderQueue.Submit(cmd);
                 continue;
             }
@@ -909,10 +918,9 @@ namespace Framework {
             // Get the material for this command
             Material* mat = resourceManager.GetMaterial(cmd.material);
 
-            // CRITICAL FIX: Only fallback to defaultMaterial if material is NULL
-            // DO NOT override materials that use different shaders (like Shader2)
-            // Previously this forced all animated entities to share defaultMaterial
-            // causing UV conflicts and flickering between multiple animated sprites
+            // ANIMATED ENTITIES: Keep unique materials to prevent UV conflicts
+            // Each animated entity should have its own material instance
+            // Only fallback to defaultMaterial if material is completely missing
             if (!mat)
             {
                 cmd.material = defaultMaterial;
