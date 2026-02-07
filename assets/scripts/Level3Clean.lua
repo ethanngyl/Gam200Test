@@ -134,13 +134,38 @@ function OnInit()
         return
     end
 
-    -- Load animations
+    -- Load animation configuration
     LoadAnimationConfig("assets/JSON/animations.json")
-    LoadPlayerAnimation("Idle_front")
 
-    -- Setup entities
+    -- Setup entities FIRST (must exist before loading animations)
     SetupParty()  -- Changed from SetupPlayer() to SetupParty()
     SetupEnemies()
+
+    -- ========================================================================
+    -- UNIFIED ANIMATION SYSTEM - Choose one of the following approaches:
+    -- ========================================================================
+
+    -- OPTION 1: Load SAME animation for ALL 3 players (simple & consistent)
+    LoadAnimationForAllPlayers("Idle_front")
+    Log("[Level3Clean] Loaded 'Idle_front' animation for all players")
+
+    -- OPTION 2: Load UNIQUE animations for each player (maximum flexibility)
+    -- Uncomment this block to use different animations per player:
+    --[[
+    local players = GetAllPlayers()
+    if players and #players >= 3 then
+        LoadAnimationForEntity(players[1], "Warrior")  -- Player 1 = Warrior animations
+        LoadAnimationForEntity(players[2], "Mage")     -- Player 2 = Mage animations
+        LoadAnimationForEntity(players[3], "Rogue")    -- Player 3 = Rogue animations
+        Log("[Level3Clean] Loaded unique animations per player")
+    end
+    --]]
+
+    -- OPTION 3: Load animations for enemies (if enemies have sprite sheets)
+    -- Uncomment to enable enemy animations:
+    -- LoadAnimationForAllEnemies("Skeleton")
+    -- Log("[Level3Clean] Loaded 'Skeleton' animation for all enemies")
+    -- ========================================================================
 
     -- Initialize UI system (replaces 500+ lines of UI code!)
     UIManager.Init()

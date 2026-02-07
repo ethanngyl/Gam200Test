@@ -752,24 +752,9 @@ function OnInit(id)
 
     entityID = id
 
-        -- Make only the first-spawned player bigger (usually Player 1 / Warrior slot)
-    local players = GetAllPlayers()
-    local minID = nil
-
-    for i = 1, #players do
-        local pid = players[i]
-        if pid and pid ~= 0 then
-            if (minID == nil) or (pid < minID) then
-                minID = pid
-            end
-        end
-    end
-
-    if minID ~= nil and entityID == minID then
-        -- Tune these numbers
-        SetScale(entityID, 0.25, 0.25)
-        print("[PlayerScript] Scaled Player1 (min entity ID = " .. tostring(minID) .. ")")
-    end
+    -- Apply scale to ALL players (unified scaling)
+    SetScale(entityID, 0.25, 0.25)
+    print("[PlayerScript] Scaled Player " .. entityID .. " to 0.25x0.25")
 
 
     print("[PlayerScript] Checking AP/HP for Entity " .. entityID .. "...")

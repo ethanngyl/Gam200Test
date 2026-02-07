@@ -520,7 +520,12 @@ namespace Framework {
         // Animation
         lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
-        
+
+        // NEW: Unified Animation Loading API
+        lua_register(L, "LoadAnimationForEntity", Lua_LoadAnimationForEntity);
+        lua_register(L, "LoadAnimationForAllPlayers", Lua_LoadAnimationForAllPlayers);
+        lua_register(L, "LoadAnimationForAllEnemies", Lua_LoadAnimationForAllEnemies);
+
         // Scroll Animation API (for TurnScrollUI)
         lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
         lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
@@ -875,6 +880,188 @@ namespace Framework {
             LOG_ERROR("LOAD_ANIM", "AnimationSystem or GraphicsSystem not available");
         }
 
+        return 0;
+    }
+
+    // ========================================================================
+    // UNIFIED ANIMATION LOADING API
+    // ========================================================================
+
+    /**
+     * @brief Load animation for a specific entity
+     * Lua usage: LoadAnimationForEntity(entityID, animName)
+     * Example: LoadAnimationForEntity(player1, "Warrior")
+     */
+    int LevelLoader::Lua_LoadAnimationForEntity(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("ANIM_API", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("ANIM_API", "EntityManager not available");
+            return 0;
+        }
+
+        // Get parameters
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* animName = luaL_checkstring(L, 2);
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        // Validate entity exists
+        if (!em->HasEntity(entity)) {
+            LOG_ERROR("ANIM_API", "Entity %u does not exist", entityID);
+            return 0;
+        }
+
+        LOG_INFO("ANIM_API", "Loading animation '%s' for entity %u", animName, entityID);
+
+        // Add SpriteAnimation component if not present
+        if (!em->HasComponent<SpriteAnimation>(entity)) {
+            em->AddComponent<SpriteAnimation>(entity);
+            LOG_INFO("ANIM_API", "  Added SpriteAnimation component to entity %u", entityID);
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(entity);
+        anim.playing = true;
+
+        // Load animation
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (animSys && gfx) {
+            animSys->LoadAnimation(entity, anim, gfx, animName);
+            LOG_INFO("ANIM_API", "  Animation '%s' loaded successfully for entity %u", animName, entityID);
+        }
+        else {
+            LOG_ERROR("ANIM_API", "AnimationSystem or GraphicsSystem not available");
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Load SAME animation for ALL players
+     * Lua usage: LoadAnimationForAllPlayers(animName)
+     * Example: LoadAnimationForAllPlayers("Warrior") -- All 3 players use Warrior animations
+     */
+    int LevelLoader::Lua_LoadAnimationForAllPlayers(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("ANIM_API", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("ANIM_API", "EntityManager not available");
+            return 0;
+        }
+
+        const char* animName = luaL_checkstring(L, 1);
+        LOG_INFO("ANIM_API", "=== LoadAnimationForAllPlayers: '%s' ===", animName);
+
+        // Find ALL players (entities with CircleCollider)
+        std::vector<Entity> players;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e)) {
+                players.push_back(e);
+                LOG_INFO("ANIM_API", "  Found player entity: %u", e.GetID());
+            }
+        }
+
+        if (players.empty()) {
+            LOG_ERROR("ANIM_API", "No players found!");
+            return 0;
+        }
+
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (!animSys || !gfx) {
+            LOG_ERROR("ANIM_API", "AnimationSystem or GraphicsSystem not available");
+            return 0;
+        }
+
+        // Load animation for EACH player
+        for (Entity player : players) {
+            // Add SpriteAnimation component if not present
+            if (!em->HasComponent<SpriteAnimation>(player)) {
+                em->AddComponent<SpriteAnimation>(player);
+            }
+
+            auto& anim = em->GetComponent<SpriteAnimation>(player);
+            anim.playing = true;
+
+            animSys->LoadAnimation(player, anim, gfx, animName);
+            LOG_INFO("ANIM_API", "  Animation '%s' loaded for player %u", animName, player.GetID());
+        }
+
+        LOG_INFO("ANIM_API", "Successfully loaded animation '%s' for %zu players", animName, players.size());
+        return 0;
+    }
+
+    /**
+     * @brief Load SAME animation for ALL enemies
+     * Lua usage: LoadAnimationForAllEnemies(animName)
+     * Example: LoadAnimationForAllEnemies("Skeleton") -- All enemies use Skeleton animations
+     */
+    int LevelLoader::Lua_LoadAnimationForAllEnemies(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("ANIM_API", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("ANIM_API", "EntityManager not available");
+            return 0;
+        }
+
+        const char* animName = luaL_checkstring(L, 1);
+        LOG_INFO("ANIM_API", "=== LoadAnimationForAllEnemies: '%s' ===", animName);
+
+        // Find ALL enemies (entities with BoxCollider but NOT CircleCollider)
+        std::vector<Entity> enemies;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<BoxCollider>(e) && !em->HasComponent<CircleCollider>(e)) {
+                enemies.push_back(e);
+                LOG_INFO("ANIM_API", "  Found enemy entity: %u", e.GetID());
+            }
+        }
+
+        if (enemies.empty()) {
+            LOG_WARN("ANIM_API", "No enemies found (this is okay if level has no enemies)");
+            return 0;
+        }
+
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (!animSys || !gfx) {
+            LOG_ERROR("ANIM_API", "AnimationSystem or GraphicsSystem not available");
+            return 0;
+        }
+
+        // Load animation for EACH enemy
+        for (Entity enemy : enemies) {
+            // Add SpriteAnimation component if not present
+            if (!em->HasComponent<SpriteAnimation>(enemy)) {
+                em->AddComponent<SpriteAnimation>(enemy);
+            }
+
+            auto& anim = em->GetComponent<SpriteAnimation>(enemy);
+            anim.playing = true;
+
+            animSys->LoadAnimation(enemy, anim, gfx, animName);
+            LOG_INFO("ANIM_API", "  Animation '%s' loaded for enemy %u", animName, enemy.GetID());
+        }
+
+        LOG_INFO("ANIM_API", "Successfully loaded animation '%s' for %zu enemies", animName, enemies.size());
         return 0;
     }
 
