@@ -909,9 +909,11 @@ namespace Framework {
             // Get the material for this command
             Material* mat = resourceManager.GetMaterial(cmd.material);
 
-            // If the material is missing, or using the wrong shader (color-only),
-            // reroute this command to use the default textured material instead.
-            if (!mat || mat->shader != defaultShader)
+            // CRITICAL FIX: Only fallback to defaultMaterial if material is NULL
+            // DO NOT override materials that use different shaders (like Shader2)
+            // Previously this forced all animated entities to share defaultMaterial
+            // causing UV conflicts and flickering between multiple animated sprites
+            if (!mat)
             {
                 cmd.material = defaultMaterial;
                 mat = resourceManager.GetMaterial(cmd.material);
