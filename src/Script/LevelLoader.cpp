@@ -62,7 +62,6 @@ Technology is prohibited.
 #include "GameStateList.h"
 #include "Pause/GlobalPauseManager.h"
 #include "Component.h"     // CircleCollider, AP components
-#include "Pathfinding.h"   // EnemyAI component
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -831,10 +830,15 @@ namespace Framework {
         const char* animName = luaL_checkstring(L, 1);
         LOG_INFO("LOAD_ANIM", "=== LoadPlayerAnimation called: '%s' ===", animName);
 
-        // Find ALL player entities (CircleCollider without EnemyAI)
+        // Find ALL player entities (AP + CircleCollider = player)
+        // Players have: AP, CircleCollider, Health components
+        // Enemies have: EnemyAI component (which players don't have)
         std::vector<Entity> players;
         for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
+            bool hasAP = em->HasComponent<AP>(e);
+            bool hasCircleCollider = em->HasComponent<CircleCollider>(e);
+
+            if (hasAP && hasCircleCollider) {
                 players.push_back(e);
                 LOG_INFO("LOAD_ANIM", "Found player entity: %u", e.GetID());
             }
