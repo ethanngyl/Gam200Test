@@ -320,4 +320,14 @@ namespace Framework {
         static LevelLoader* GetLevelLoader(lua_State* L);
     };
 
+    // ========================================================================
+    // TILE TINTING SYSTEM
+    // ========================================================================
+
+    /**
+     * @brief Update tile tints and restore expired ones
+     * Called every frame from UpdateCurrentLevel
+     */
+    void UpdateTileTints();
+
 } // namespace Framework

@@ -65,7 +65,8 @@ Technology is prohibited.
 #include "Grid/GridECS.h" // Grid system functions
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
-#include "MapGenerator/ProceduralMapLoader.h"    
+#include "MapGenerator/ProceduralMapLoader.h"
+#include <Windows.h>      // For GetTickCount64()    
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -85,6 +86,47 @@ namespace Framework {
     // Global variable to track the currently active character for party system
     // Set by Lua's PartyTurnManager, queried by entity scripts
     static uint32_t g_activeCharacterID = 0;
+
+    // ========================================================================
+    // TILE TINTING SYSTEM - For PulseTile visual feedback
+    // ========================================================================
+
+    struct TileTintState {
+        Entity tileEntity;
+        glm::vec4 originalTint;
+        ULONGLONG expiryTimeMs;
+    };
+
+    static std::vector<TileTintState> s_activeTileTints;
+
+    /**
+     * @brief Update tile tints and restore expired ones
+     * Called every frame from UpdateCurrentLevel
+     */
+    void UpdateTileTints() {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return;
+
+        ULONGLONG now = GetTickCount64();
+
+        // Iterate backwards so we can safely erase
+        for (int i = static_cast<int>(s_activeTileTints.size()) - 1; i >= 0; --i) {
+            auto& state = s_activeTileTints[i];
+
+            // Check if tint has expired
+            if (now >= state.expiryTimeMs) {
+                // Restore original tint if entity still exists
+                if (state.tileEntity.GetID() != INVALID_ENTITY &&
+                    em->HasComponent<Renderable>(state.tileEntity)) {
+                    auto& renderable = em->GetComponent<Renderable>(state.tileEntity);
+                    renderable.tint = state.originalTint;
+                }
+
+                // Remove from active list
+                s_activeTileTints.erase(s_activeTileTints.begin() + i);
+            }
+        }
+    }
 
     // ========================================================================
     // AUDIO API
@@ -2274,20 +2316,71 @@ namespace Framework {
     }
 
     /**
-     * @brief Pulse tile animation
+     * @brief Pulse tile animation with color tinting
      * @param x, y Grid coordinates
-     * @param scale Pulse scale multiplier
-     * @param duration Duration in milliseconds
+     * @param duration Duration in seconds
+     * @param r, g, b RGB color components (0.0-1.0)
+     *
+     * Lua usage: PulseTile(x, y, duration, r, g, b)
+     * Example: PulseTile(5, 3, 0.3, 1.0, 0.0, 0.0) -- red pulse for 0.3 seconds
      */
     int LevelLoader::Lua_PulseTile(lua_State* L) {
-        (void)L;
-        // int x = static_cast<int>(luaL_checknumber(L, 1));
-        // int y = static_cast<int>(luaL_checknumber(L, 2));
-        // float scale = static_cast<float>(luaL_checknumber(L, 3));
-        // int duration = static_cast<int>(luaL_checknumber(L, 4));
+        // Parse parameters
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+        float durationSeconds = static_cast<float>(luaL_checknumber(L, 3));
+        float r = static_cast<float>(luaL_checknumber(L, 4));
+        float g = static_cast<float>(luaL_checknumber(L, 5));
+        float b = static_cast<float>(luaL_checknumber(L, 6));
 
-        // TODO: Implement tile pulse animation
-        // For now, this is a placeholder
+        // Get entity manager
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_WARN("PulseTile", "No EntityManager available");
+            return 0;
+        }
+
+        // Get tile entity at grid position
+        const Grid& grid = GetGrid();
+        if (!InBounds(GridCoord{x, y})) {
+            LOG_WARN("PulseTile", "Grid position (%d, %d) out of bounds", x, y);
+            return 0;
+        }
+
+        Entity tileEntity = grid.TileAt(x, y);
+        if (tileEntity.GetID() == INVALID_ENTITY) {
+            LOG_WARN("PulseTile", "No tile entity at (%d, %d)", x, y);
+            return 0;
+        }
+
+        // Check if tile has Renderable component
+        if (!em->HasComponent<Renderable>(tileEntity)) {
+            LOG_WARN("PulseTile", "Tile at (%d, %d) has no Renderable component", x, y);
+            return 0;
+        }
+
+        auto& renderable = em->GetComponent<Renderable>(tileEntity);
+
+        // Check if this tile is already being tinted
+        for (auto& state : s_activeTileTints) {
+            if (state.tileEntity == tileEntity) {
+                // Update expiry time and color
+                state.expiryTimeMs = GetTickCount64() + static_cast<ULONGLONG>(durationSeconds * 1000.0f);
+                renderable.tint = glm::vec4(r, g, b, 1.0f);
+                return 0;
+            }
+        }
+
+        // New tile tint - store original color
+        TileTintState state;
+        state.tileEntity = tileEntity;
+        state.originalTint = renderable.tint;
+        state.expiryTimeMs = GetTickCount64() + static_cast<ULONGLONG>(durationSeconds * 1000.0f);
+        s_activeTileTints.push_back(state);
+
+        // Apply new tint
+        renderable.tint = glm::vec4(r, g, b, 1.0f);
+
         return 0;
     }
 

@@ -365,6 +365,9 @@ namespace Framework {
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
 
+        // Update tile tints (restore expired tints)
+        UpdateTileTints();
+
         // NOTE: Don't skip OnUpdate when paused - PauseMenu needs to run to handle unpause!
         // The Lua level can check IsPaused() internally if needed.
 
