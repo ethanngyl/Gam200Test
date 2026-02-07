@@ -918,13 +918,22 @@ namespace Framework {
             // Get the material for this command
             Material* mat = resourceManager.GetMaterial(cmd.material);
 
-            // ANIMATED ENTITIES: Keep unique materials to prevent UV conflicts
-            // Each animated entity should have its own material instance
-            // Only fallback to defaultMaterial if material is completely missing
+            // ANIMATED ENTITIES: Ensure material has correct shader for texture rendering
+            // Players are spawned with Shader2 (color-only) which doesn't support textures
+            // We need to switch to defaultShader (textured) for animations to work
             if (!mat)
             {
+                // Material is missing - use default
                 cmd.material = defaultMaterial;
                 mat = resourceManager.GetMaterial(cmd.material);
+            }
+            else if (mat->shader != defaultShader)
+            {
+                // Material exists but has wrong shader (e.g., Shader2/color-only)
+                // Fix the shader to support textures/UV coordinates
+                LOG_INFO("ANIM_FIX", "Entity %u: Switching material shader from %u to defaultShader %u for animation support",
+                    e.GetID(), mat->shader.GetID(), defaultShader.GetID());
+                mat->shader = defaultShader;
             }
 
             // If still failed for some reason, skip this entity
