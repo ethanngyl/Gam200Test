@@ -147,7 +147,25 @@ function OnInit()
 
     -- Apply Warrior animations (Idle_front) to ALL 3 players
     LoadAnimationForAllPlayers("Idle_front")
-    Log("[Level3Clean] Applied Warrior animations to all 3 players")
+    Log("[Level3Clean] Loaded Warrior animations for all 3 players")
+
+    -- Re-initialize animation state for all players (critical!)
+    -- PlayerScript OnInit ran BEFORE animations were loaded, so we need to set the initial state
+    local players = GetAllPlayers()
+    if players then
+        for i = 1, #players do
+            local pid = players[i]
+            if pid and pid ~= 0 then
+                -- Set initial animation state (Idle, Front-facing)
+                SetAnimationGroup(pid, 0)           -- 0 = Idle
+                SetAnimationDirection(pid, 0)       -- 0 = Front
+                SetAnimationFlipX(pid, false)
+                SetAnimationPlaying(pid, true)
+                Log("[Level3Clean]   Player " .. i .. " (Entity " .. pid .. ") - Animation initialized")
+            end
+        end
+    end
+    Log("[Level3Clean] All players ready with animations")
 
     -- ALTERNATIVE: Explicit per-player approach (same result)
     -- Uncomment to load explicitly for each player:
