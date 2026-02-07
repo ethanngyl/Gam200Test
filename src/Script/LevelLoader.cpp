@@ -61,6 +61,8 @@ Technology is prohibited.
 #include "ImguiSystem.h"
 #include "GameStateList.h"
 #include "Pause/GlobalPauseManager.h"
+#include "Component.h"     // CircleCollider, AP components
+#include "Pathfinding.h"   // EnemyAI component
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
