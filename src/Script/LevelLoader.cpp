@@ -911,12 +911,6 @@ namespace Framework {
 
         Entity entity(static_cast<uint32_t>(entityID));
 
-        // Validate entity exists
-        if (!em->HasEntity(entity)) {
-            LOG_ERROR("ANIM_API", "Entity %u does not exist", entityID);
-            return 0;
-        }
-
         LOG_INFO("ANIM_API", "Loading animation '%s' for entity %u", animName, entityID);
 
         // Add SpriteAnimation component if not present
