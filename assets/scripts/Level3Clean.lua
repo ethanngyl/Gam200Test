@@ -142,21 +142,33 @@ function OnInit()
     SetupEnemies()
 
     -- ========================================================================
-    -- UNIFIED ANIMATION SYSTEM - Choose one of the following approaches:
+    -- UNIFIED ANIMATION SYSTEM - Warrior animations for all 3 players
     -- ========================================================================
 
-    -- OPTION 1: Load SAME animation for ALL 3 players (simple & consistent)
+    -- Apply Warrior animations (Idle_front) to ALL 3 players
     LoadAnimationForAllPlayers("Idle_front")
-    Log("[Level3Clean] Loaded 'Idle_front' animation for all players")
+    Log("[Level3Clean] Applied Warrior animations to all 3 players")
 
-    -- OPTION 2: Load UNIQUE animations for each player (maximum flexibility)
-    -- Uncomment this block to use different animations per player:
+    -- ALTERNATIVE: Explicit per-player approach (same result)
+    -- Uncomment to load explicitly for each player:
+    --[[
+    local players = GetAllPlayers()
+    if players and #players >= 3 then
+        LoadAnimationForEntity(players[1], "Idle_front")  -- Player 1 = Warrior
+        LoadAnimationForEntity(players[2], "Idle_front")  -- Player 2 = Warrior
+        LoadAnimationForEntity(players[3], "Idle_front")  -- Player 3 = Warrior
+        Log("[Level3Clean] Applied Warrior animations to each player explicitly")
+    end
+    --]]
+
+    -- FUTURE: Load UNIQUE animations for each player (when other character sheets exist)
+    -- Uncomment when you have Mage/Rogue/etc sprite sheets:
     --[[
     local players = GetAllPlayers()
     if players and #players >= 3 then
         LoadAnimationForEntity(players[1], "Warrior")  -- Player 1 = Warrior animations
-        LoadAnimationForEntity(players[2], "Mage")     -- Player 2 = Mage animations
-        LoadAnimationForEntity(players[3], "Rogue")    -- Player 3 = Rogue animations
+        LoadAnimationForEntity(players[2], "Mage")     -- Player 2 = Mage animations (needs Mage sprite sheet)
+        LoadAnimationForEntity(players[3], "Rogue")    -- Player 3 = Rogue animations (needs Rogue sprite sheet)
         Log("[Level3Clean] Loaded unique animations per player")
     end
     --]]
