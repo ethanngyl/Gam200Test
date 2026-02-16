@@ -182,6 +182,12 @@ local skillDamage = 2
 -- Load skill pattern definitions
 dofile("assets/scripts/SkillPatterns.lua")
 
+-- Helper: Check if this entity is the first player in the party
+local function isFirstPlayer()
+    local allPlayers = GetAllPlayers()
+    return allPlayers and #allPlayers > 0 and entityID == allPlayers[1]
+end
+
 -- Movement key state tracking (for press-only movement)
 local lastWKeyDown = false
 local lastSKeyDown = false
@@ -412,9 +418,9 @@ local function createPlayerStates(fsm)
             end
             lastSpaceKeyDown = spaceKeyDown
 
-            -- Check Key 1 for Skill Attack (3x3 AoE)
+            -- Check Key 1 for Skill Attack (3x3 AoE) - Player 1 only
             local key1Down = IsKeyDown("1")
-            if key1Down and not lastKey1Down then
+            if key1Down and not lastKey1Down and isFirstPlayer() then
                 print("[PlayerScript] KEY 1 pressed")
 
                 if not skillPreviewActive then
@@ -940,8 +946,9 @@ function OnUpdate(dt)
     -- SKILL ATTACK (KEY 1 - 3x3 AoE)
     -- ========================================================================
 
+    -- Skill attack only available to Player 1
     local key1Down = IsKeyDown("1")
-    if key1Down and not lastKey1Down then
+    if key1Down and not lastKey1Down and isFirstPlayer() then
         print("============================================================")
         print("[PlayerScript] ===== KEY 1 PRESSED (SKILL) =====")
         print("[PlayerScript] skillPreviewActive: " .. tostring(skillPreviewActive))
