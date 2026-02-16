@@ -76,7 +76,6 @@ namespace Framework
         if (!entityManager) return;
 
         std::vector<Entity> offScreenToDestroy;
-        //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
         for (Entity entity : entityManager->GetAllEntities())
         {
             if (entityManager->HasComponent<Transform>(entity) &&
@@ -218,61 +217,6 @@ namespace Framework
             auto& projCollider = entityManager->GetComponent<CircleCollider>(projectile);
 
             Collider projShape = Collider::create_circle(projCollider.radius, projTransform.position);
-
-            //for (Framework::Entity enemy : activeEnemies)
-            //{
-            //    // Skip enemy if already marked for destruction
-            //    if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), enemy) != entitiesToDestroy.end())
-            //        continue;
-
-            //    // Check enemy components
-            //    if (!entityManager->HasComponent<Transform>(enemy) ||
-            //        !entityManager->HasComponent<Health>(enemy) ||
-            //        !entityManager->HasComponent<BoxCollider>(enemy))
-            //    {
-            //        continue;
-            //    }
-
-            //    // --- FETCH ENEMY COMPONENTS ---
-            //    auto& enemyTransform = entityManager->GetComponent<Transform>(enemy);
-            //    auto& enemyHealth = entityManager->GetComponent<Health>(enemy);
-            //    auto& enemyCollider = entityManager->GetComponent<BoxCollider>(enemy);
-
-            //    // Create collision shape for enemy
-            //         Collider enemyShape = Collider::create_rect(
-            //             enemyCollider.size.x,
-            //             enemyCollider.size.y,
-            //             enemyTransform.position
-            //         );
-
-            //    // COLLISION CHECK AND EVENT HANDLING
-            //    if (check_collision(projShape, enemyShape))
-            //    {
-            //        // 1. DEAL DAMAGE and QUEUE EnemyDamagedMessage
-            //        const int damageDealt = 10;
-            //        enemyHealth.TakeDamage(damageDealt);
-
-            //        if (eventSystem) {
-            //            eventSystem->QueueMessage(new EnemyDamagedMessage(
-            //                enemy, projectile, damageDealt, enemyHealth.currentHealth, enemyTransform.position));
-            //        }
-
-            //        // 2. CHECK FOR DEATH
-            //        if (enemyHealth.isDead)
-            //        {
-            //            if (eventSystem) {
-            //                eventSystem->QueueMessage(new EnemyDeathMessage(
-            //                    enemy, projectile, enemyTransform.position));
-            //            }
-
-            //            entitiesToDestroy.push_back(enemy);
-            //        }
-
-            //        // Mark projectile for deferred destruction
-            //        entitiesToDestroy.push_back(projectile);
-            //        break; // Projectile is consumed after one hit
-            //    }
-            //}
 
             // Query candidate enemies near this projectile.
             
