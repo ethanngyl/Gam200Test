@@ -198,20 +198,22 @@ local SkillDefs = {
 
 -- Per-player skill assignments: playerIndex -> { key -> skillID }
 -- Player index is determined by spawn order (1 = first spawned, etc.)
+-- Keys 1-4 = show skill preview, Space = execute the previewed skill
 local PlayerSkills = {
-    [1] = { ["Space"] = "BasicAttack", ["1"] = "AreaBlast" },
-    [2] = { ["Space"] = "BasicAttack" },
-    [3] = { ["Space"] = "BasicAttack" },
+    [1] = { ["1"] = "BasicAttack", ["2"] = "AreaBlast" },
+    [2] = { ["1"] = "BasicAttack" },
+    [3] = { ["1"] = "BasicAttack" },
 }
 
--- All keys that can be bound to skills (used for state tracking)
-local allSkillKeys = { "Space", "1", "2", "3", "4" }
+-- All keys that can be bound to skills (used for preview selection)
+local skillSlotKeys = { "1", "2", "3", "4" }
 
--- Per-key held state tracking (replaces lastSpaceKeyDown, lastKey1Down, etc.)
+-- Per-key held state tracking
 local lastSkillKeyDown = {}
-for _, k in ipairs(allSkillKeys) do
+for _, k in ipairs(skillSlotKeys) do
     lastSkillKeyDown[k] = false
 end
+local lastSpaceKeyDown = false
 
 -- Active skill preview (only one at a time)
 -- nil when no preview is showing; { skillID, tiles = {{x,y},...} } when active
@@ -286,8 +288,8 @@ local function blockHeldKeys()
     else
         lastPKeyDown = false
     end
-    -- Track all skill keys
-    for _, key in ipairs(allSkillKeys) do
+    -- Track skill slot keys (1-4) and Space (execute)
+    for _, key in ipairs(skillSlotKeys) do
         if IsKeyDown(key) then
             lastSkillKeyDown[key] = true
             print("[PlayerScript]   " .. key .. " is held - will ignore until released")
@@ -295,11 +297,19 @@ local function blockHeldKeys()
             lastSkillKeyDown[key] = false
         end
     end
-    local anySkillKeyHeld = false
-    for _, key in ipairs(allSkillKeys) do
-        if lastSkillKeyDown[key] then anySkillKeyHeld = true; break end
+    if IsKeyDown("Space") then
+        lastSpaceKeyDown = true
+        print("[PlayerScript]   Space is held - will ignore until released")
+    else
+        lastSpaceKeyDown = false
     end
-    if next(blockedKeys) == nil and not lastPKeyDown and not anySkillKeyHeld then
+    local anyHeld = lastSpaceKeyDown
+    if not anyHeld then
+        for _, key in ipairs(skillSlotKeys) do
+            if lastSkillKeyDown[key] then anyHeld = true; break end
+        end
+    end
+    if next(blockedKeys) == nil and not lastPKeyDown and not anyHeld then
         print("[PlayerScript]   No keys held - input ready!")
     end
 end
@@ -361,9 +371,10 @@ local function endTurn()
     -- Don't reset lastPKeyDown here - keep it true if P is held
     -- lastPKeyDown = false
     -- Reset skill key states
-    for _, key in ipairs(allSkillKeys) do
+    for _, key in ipairs(skillSlotKeys) do
         lastSkillKeyDown[key] = false
     end
+    lastSpaceKeyDown = false
     -- Reset movement key states
     lastWKeyDown = false
     lastSKeyDown = false
@@ -440,28 +451,29 @@ local function createPlayerStates(fsm)
                 return
             end
 
-            -- Handle all skill keys for this player
+            -- Keys 1-4: select skill and show preview instantly
             local mySkills = getMySkills()
-            for _, key in ipairs(allSkillKeys) do
+            for _, key in ipairs(skillSlotKeys) do
                 local skillID = mySkills[key]
                 local keyDown = IsKeyDown(key)
                 if skillID and keyDown and not lastSkillKeyDown[key] then
                     local skill = SkillDefs[skillID]
-                    if activePreview and activePreview.skillID == skillID then
-                        -- Second press of same skill: execute
-                        ExecuteSkill(skillID)
+                    local currentAttackAP = GetEntityAttackAP(entityID)
+                    if skill and currentAttackAP >= skill.apCost then
+                        ShowSkillPreview(skillID)
                     else
-                        -- First press (or switching): show preview
-                        local currentAttackAP = GetEntityAttackAP(entityID)
-                        if skill and currentAttackAP >= skill.apCost then
-                            ShowSkillPreview(skillID)
-                        else
-                            PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
-                        end
+                        PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                     end
                 end
                 lastSkillKeyDown[key] = keyDown
             end
+
+            -- Space: execute the currently previewed skill
+            local spaceDown = IsKeyDown("Space")
+            if spaceDown and not lastSpaceKeyDown and activePreview then
+                ExecuteSkill(activePreview.skillID)
+            end
+            lastSpaceKeyDown = spaceDown
 
             -- Check movement input (PRESS-ONLY - not hold)
             local wDown = IsKeyDown("W") and not blockedKeys["W"]
@@ -754,9 +766,10 @@ function OnUpdate(dt)
             hasLoggedActive = false
             blockedKeys = {}
             lastPKeyDown = false
-            for _, key in ipairs(allSkillKeys) do
+            for _, key in ipairs(skillSlotKeys) do
                 lastSkillKeyDown[key] = false
             end
+            lastSpaceKeyDown = false
             -- Reset movement key states
             lastWKeyDown = false
             lastSKeyDown = false
@@ -910,30 +923,29 @@ function OnUpdate(dt)
         return
     end
 
-    -- First press: show preview. Second press (same skill): execute.
+    -- Keys 1-4: select skill and show preview instantly
     local mySkills = getMySkills()
-    for _, key in ipairs(allSkillKeys) do
+    for _, key in ipairs(skillSlotKeys) do
         local skillID = mySkills[key]
         local keyDown = IsKeyDown(key)
         if skillID and keyDown and not lastSkillKeyDown[key] then
             local skill = SkillDefs[skillID]
-            if activePreview and activePreview.skillID == skillID then
-                -- Second press of same skill: execute
-                print("[PlayerScript] Executing skill: " .. skill.name)
-                ExecuteSkill(skillID)
+            local currentAP = GetEntityAttackAP(entityID)
+            if skill and currentAP >= skill.apCost then
+                ShowSkillPreview(skillID)
             else
-                -- First press (or switching): show preview
-                local currentAP = GetEntityAttackAP(entityID)
-                if skill and currentAP >= skill.apCost then
-                    ShowSkillPreview(skillID)
-                    print("[PlayerScript] Preview shown: " .. skill.name)
-                else
-                    PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
-                end
+                PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
             end
         end
         lastSkillKeyDown[key] = keyDown
     end
+
+    -- Space: execute the currently previewed skill
+    local spaceDown = IsKeyDown("Space")
+    if spaceDown and not lastSpaceKeyDown and activePreview then
+        ExecuteSkill(activePreview.skillID)
+    end
+    lastSpaceKeyDown = spaceDown
 
 end
 
