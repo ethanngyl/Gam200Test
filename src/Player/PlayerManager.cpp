@@ -254,6 +254,7 @@ namespace Framework {
             }
 
             HandleAttackAction();
+            HandleSkillAttack();
 
             //// --- (Optional) PLAYER ATTACK on SPACE ---
             //if (inputSystem->IsKeyPressed(KEY_SPACE))
@@ -310,6 +311,13 @@ namespace Framework {
                 spaceAttackCooldown = 0.0f;
             }
 		}
+
+        if(skillAttackCooldown > 0.0f) {
+            skillAttackCooldown -= dt;
+            if(skillAttackCooldown < 0.0f) {
+                skillAttackCooldown = 0.0f;
+            }
+        }
 
 
         // ====================================================================
@@ -485,7 +493,7 @@ namespace Framework {
             return;
         }
 
-        if (attackPreviewActive) {
+        if (attackPreviewActive || skillPreviewActive) {
             return;
         }
 
@@ -1066,6 +1074,220 @@ namespace Framework {
         }
         attackPreviewTiles.clear();
         attackPreviewActive = false;
+    }
+
+    // ========================================================================
+    // SKILL 1 - 3x3 AoE Attack (Key 1)
+    // First press: show 3x3 preview around player
+    // Second press: deal 2 damage to all enemies in the 3x3 area
+    // ========================================================================
+
+    void PlayerControllerSystem::ShowSkillPreview()
+    {
+        if (!entityManager || !spawner) return;
+        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
+
+        const Grid& grid = GetGrid();
+        auto& pt = entityManager->GetComponent<Transform>(playerEntity);
+
+        auto optTile = WorldToTile(pt.position);
+        if (!optTile) return;
+
+        GridCoord p = *optTile;
+
+        skillPreviewTiles.clear();
+
+        // 3x3 area: offsets from -1 to +1 in both x and y
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                GridCoord c{ p.x + dx, p.y + dy };
+                if (!InBounds(c)) continue;
+
+                Entity tileEnt = grid.TileAt(c.x, c.y);
+                if (!tileEnt.IsValid()) continue;
+
+                if (!entityManager->HasComponent<GridTiles>(tileEnt))
+                    continue;
+
+                auto& tile = entityManager->GetComponent<GridTiles>(tileEnt);
+                if (tile.blocked) continue; // no preview on walls
+
+                Vector2D worldPos = TileToWorld(c);
+                const Vector2D tileSize = grid.spacing;
+
+                Entity e = spawner->SpawnSprite(
+                    "assets/TileMap/Attack_Indicator.png",
+                    worldPos,
+                    tileSize
+                );
+
+                if (entityManager->HasComponent<MeshRenderer>(e)) {
+                    auto& mr = entityManager->GetComponent<MeshRenderer>(e);
+                    mr.layer = 1; // draws above ground/enemies
+                }
+
+                skillPreviewTiles.push_back(e);
+            }
+        }
+
+        skillPreviewActive = true;
+    }
+
+    void PlayerControllerSystem::ClearSkillPreview()
+    {
+        if (!entityManager) return;
+        for (Entity e : skillPreviewTiles) {
+            if (e.IsValid()) {
+                entityManager->DestroyEntity(e);
+            }
+        }
+        skillPreviewTiles.clear();
+        skillPreviewActive = false;
+    }
+
+    std::vector<Entity> PlayerControllerSystem::FindEnemiesInArea()
+    {
+        std::vector<Entity> enemies;
+
+        if (!entityManager || !entityManager->HasComponent<Transform>(playerEntity))
+            return enemies;
+
+        auto& ptf = entityManager->GetComponent<Transform>(playerEntity);
+        auto optPlayerTile = WorldToTile(ptf.position);
+        if (!optPlayerTile) return enemies;
+
+        GridCoord p = *optPlayerTile;
+        const Grid& grid = GetGrid();
+
+        // 3x3 area: offsets from -1 to +1 in both x and y
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                GridCoord c{ p.x + dx, p.y + dy };
+                if (!InBounds(c)) continue;
+
+                Entity tileEnt = grid.TileAt(c.x, c.y);
+                if (!tileEnt.IsValid() ||
+                    !entityManager->HasComponent<GridTiles>(tileEnt))
+                    continue;
+
+                auto& tile = entityManager->GetComponent<GridTiles>(tileEnt);
+                Entity occ = tile.occupant;
+                if (!occ.IsValid()) continue;
+
+                if (entityManager->HasComponent<EnemyAI>(occ) &&
+                    entityManager->HasComponent<Health>(occ)) {
+                    enemies.push_back(occ);
+                }
+            }
+        }
+
+        return enemies;
+    }
+
+    void PlayerControllerSystem::HandleSkillAttack()
+    {
+        if (!inputSystem || !entityManager) return;
+        if (!IsPlayerTurn()) return;
+
+        if (skillAttackCooldown > 0.0f) return;
+
+        bool pressed = inputSystem->IsKeyPressed(KEY_1);
+
+        if (pressed && !key1Released) {
+            return; // still holding key, ignore
+        }
+
+        if (!pressed) {
+            key1Released = true;
+            return;
+        }
+
+        // New press detected
+        key1Released = false;
+
+        if (!entityManager->HasComponent<AttackAP>(playerEntity)) return;
+        auto& aap = entityManager->GetComponent<AttackAP>(playerEntity);
+        if (aap.points <= 0) {
+            LOG_WARN("SkillAttack", "No attack AP left");
+            return;
+        }
+
+        // ----------------------------------------------------------------
+        // FIRST PRESS: SHOW 3x3 PREVIEW (IF NONE ACTIVE)
+        // ----------------------------------------------------------------
+        if (!skillPreviewActive) {
+            ShowSkillPreview();
+            LOG_INFO("SkillAttack", "3x3 skill preview shown (Key 1)");
+            skillAttackCooldown = 0.2f;
+            return;
+        }
+
+        // ----------------------------------------------------------------
+        // SECOND PRESS: EXECUTE 3x3 AoE ATTACK + CLEAR PREVIEW
+        // ----------------------------------------------------------------
+        std::vector<Entity> targets = FindEnemiesInArea();
+
+        if (targets.empty()) {
+            LOG_INFO("SkillAttack", "No enemies in 3x3 area");
+            ClearSkillPreview();
+            return;
+        }
+
+        // Play attack sound
+        if (audioSystem) {
+            audioSystem->PlaySound("dmgb", false);
+        }
+
+        const int skillDamage = 2;
+
+        for (Entity target : targets) {
+            if (!entityManager->HasComponent<Health>(target)) continue;
+
+            auto& hp = entityManager->GetComponent<Health>(target);
+            hp.TakeDamage(skillDamage);
+
+            LOG_INFO("SkillAttack", "Hit enemy %u for %d. Enemy HP now %d/%d",
+                target.GetID(), skillDamage, hp.currentHealth, hp.maxHealth);
+
+            // Play take-damage sound for living enemies
+            if (audioSystem && !hp.isDead) {
+                audioSystem->PlaySound("takedmg", false);
+            }
+
+            if (hp.isDead) {
+                if (audioSystem) {
+                    audioSystem->PlaySound("death", false);
+                }
+                LOG_INFO("SkillAttack", "Enemy %u defeated!", target.GetID());
+
+                // Clear the tile occupant
+                const Grid& grid = GetGrid();
+                auto optTile = WorldToTile(
+                    entityManager->GetComponent<Transform>(target).position
+                );
+                if (optTile) {
+                    GridCoord ec = *optTile;
+                    Entity tileEntity = grid.TileAt(ec.x, ec.y);
+                    if (tileEntity.IsValid() &&
+                        entityManager->HasComponent<GridTiles>(tileEntity))
+                    {
+                        auto& tile = entityManager->GetComponent<GridTiles>(tileEntity);
+                        if (tile.occupant == target) {
+                            tile.occupant = Entity{ INVALID_ENTITY };
+                            tile.blocked = false;
+                        }
+                    }
+                }
+
+                entityManager->DestroyEntity(target);
+            }
+        }
+
+        aap.points--; // consume 1 attack AP
+        LOG_INFO("SkillAttack", "3x3 AoE attack executed. AttackAP=%d/%d", aap.points, aap.maxPoints);
+
+        ClearSkillPreview();
+        skillAttackCooldown = 0.2f;
     }
 
 } // namespace Framework
