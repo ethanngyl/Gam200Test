@@ -165,27 +165,79 @@ local blockedKeys = {}
 local lastPKeyDown = false
 
 
--- Attack state tracking
-local lastSpaceKeyDown = false
-local attackPreviewActive = false
-local attackPreviewTiles = {}
-local attackRange = 1
-local attackAPCost = 1
+-- ============================================================================
+-- SKILL SYSTEM (Data-Driven)
+-- ============================================================================
+--
+-- To add a new skill:
+--   1. Add its definition to SkillDefs below
+--   2. Assign it to a player + key in PlayerSkills
+--   3. Done. No new functions or state variables needed.
+-- ============================================================================
 
--- Skill 1 state tracking (Key 1 - 3x3 AoE)
-local lastKey1Down = false
-local skillPreviewActive = false
-local skillPreviewTiles = {}
-local skillAPCost = 1
-local skillDamage = 2
-
--- Load skill pattern definitions
+-- Load skill pattern definitions (provides SkillPatterns.GetPattern)
 dofile("assets/scripts/SkillPatterns.lua")
 
--- Helper: Check if this entity is the first player in the party
-local function isFirstPlayer()
+-- All available skill definitions
+local SkillDefs = {
+    BasicAttack = {
+        name     = "Basic Attack",
+        pattern  = "adjacent",
+        damage   = 1,
+        apCost   = 1,
+        range    = 1,
+    },
+    AreaBlast = {
+        name     = "Area Blast",
+        pattern  = "area3x3",
+        damage   = 2,
+        apCost   = 1,
+        range    = 0,  -- 0 = centered on caster
+    },
+}
+
+-- Per-player skill assignments: playerIndex -> { key -> skillID }
+-- Player index is determined by spawn order (1 = first spawned, etc.)
+local PlayerSkills = {
+    [1] = { ["Space"] = "BasicAttack", ["1"] = "AreaBlast" },
+    [2] = { ["Space"] = "BasicAttack" },
+    [3] = { ["Space"] = "BasicAttack" },
+}
+
+-- All keys that can be bound to skills (used for state tracking)
+local allSkillKeys = { "Space", "1", "2", "3", "4" }
+
+-- Per-key held state tracking (replaces lastSpaceKeyDown, lastKey1Down, etc.)
+local lastSkillKeyDown = {}
+for _, k in ipairs(allSkillKeys) do
+    lastSkillKeyDown[k] = false
+end
+
+-- Active skill preview (only one at a time)
+-- nil when no preview is showing; { skillID, tiles = {{x,y},...} } when active
+local activePreview = nil
+
+-- Cached player index (1, 2, or 3)
+local myPlayerIndex = nil
+
+local function getPlayerIndex()
+    if myPlayerIndex then return myPlayerIndex end
     local allPlayers = GetAllPlayers()
-    return allPlayers and #allPlayers > 0 and entityID == allPlayers[1]
+    if allPlayers then
+        for i, pid in ipairs(allPlayers) do
+            if pid == entityID then
+                myPlayerIndex = i
+                return i
+            end
+        end
+    end
+    return nil
+end
+
+local function getMySkills()
+    local idx = getPlayerIndex()
+    if idx then return PlayerSkills[idx] or {} end
+    return {}
 end
 
 -- Movement key state tracking (for press-only movement)
@@ -234,19 +286,20 @@ local function blockHeldKeys()
     else
         lastPKeyDown = false
     end
-    if IsKeyDown("Space") then
-        lastSpaceKeyDown = true
-        print("[PlayerScript]   SPACE is held - will ignore until released")
-    else
-        lastSpaceKeyDown = false
+    -- Track all skill keys
+    for _, key in ipairs(allSkillKeys) do
+        if IsKeyDown(key) then
+            lastSkillKeyDown[key] = true
+            print("[PlayerScript]   " .. key .. " is held - will ignore until released")
+        else
+            lastSkillKeyDown[key] = false
+        end
     end
-    if IsKeyDown("1") then
-        lastKey1Down = true
-        print("[PlayerScript]   1 is held - will ignore until released")
-    else
-        lastKey1Down = false
+    local anySkillKeyHeld = false
+    for _, key in ipairs(allSkillKeys) do
+        if lastSkillKeyDown[key] then anySkillKeyHeld = true; break end
     end
-    if next(blockedKeys) == nil and not lastPKeyDown and not lastSpaceKeyDown and not lastKey1Down then
+    if next(blockedKeys) == nil and not lastPKeyDown and not anySkillKeyHeld then
         print("[PlayerScript]   No keys held - input ready!")
     end
 end
@@ -307,15 +360,16 @@ local function endTurn()
     blockedKeys = {}
     -- Don't reset lastPKeyDown here - keep it true if P is held
     -- lastPKeyDown = false
-    lastSpaceKeyDown = false
-    lastKey1Down = false
+    -- Reset skill key states
+    for _, key in ipairs(allSkillKeys) do
+        lastSkillKeyDown[key] = false
+    end
     -- Reset movement key states
     lastWKeyDown = false
     lastSKeyDown = false
     lastAKeyDown = false
     lastDKeyDown = false
-    ClearAttackPreview()
-    ClearSkillPreview()
+    ClearActivePreview()
 end
 
 -- ============================================================================
@@ -386,61 +440,28 @@ local function createPlayerStates(fsm)
                 return
             end
 
-            -- Check SPACE key for attack
-            local spaceKeyDown = IsKeyDown("Space")
-            if spaceKeyDown and not lastSpaceKeyDown then
-                print("[PlayerScript] SPACE key pressed")
-
-                -- Clear skill preview if active (switching to basic attack)
-                if skillPreviewActive then
-                    ClearSkillPreview()
-                end
-
-                if not attackPreviewActive then
-                    -- Use ATTACK AP, not movement AP
-                    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
-                    if currentAttackAP >= attackAPCost then
-                        local testEnemy = FindEnemyInRange()
-                        if testEnemy then
-                            ShowAttackPreview()
-                            print("[PlayerScript] Attack preview shown - enemy in range")
+            -- Handle all skill keys for this player
+            local mySkills = getMySkills()
+            for _, key in ipairs(allSkillKeys) do
+                local skillID = mySkills[key]
+                local keyDown = IsKeyDown(key)
+                if skillID and keyDown and not lastSkillKeyDown[key] then
+                    local skill = SkillDefs[skillID]
+                    if activePreview and activePreview.skillID == skillID then
+                        -- Second press of same skill: execute
+                        ExecuteSkill(skillID)
+                    else
+                        -- First press (or switching): show preview
+                        local currentAttackAP = GetEntityAttackAP(entityID)
+                        if skill and currentAttackAP >= skill.apCost then
+                            ShowSkillPreview(skillID)
                         else
-                            print("[PlayerScript] No enemy in attack range!")
-                            PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
+                            PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                         end
-                    else
-                        print("[PlayerScript] Not enough ATTACK AP to attack (" .. tostring(currentAttackAP) .. " < " .. attackAPCost .. ")")
-                        PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                     end
-                else
-                    ExecuteAttack()
                 end
+                lastSkillKeyDown[key] = keyDown
             end
-            lastSpaceKeyDown = spaceKeyDown
-
-            -- Check Key 1 for Skill Attack (3x3 AoE) - Player 1 only
-            local key1Down = IsKeyDown("1")
-            if key1Down and not lastKey1Down and isFirstPlayer() then
-                print("[PlayerScript] KEY 1 pressed")
-
-                if not skillPreviewActive then
-                    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
-                    if currentAttackAP >= skillAPCost then
-                        -- Clear basic attack preview if active
-                        if attackPreviewActive then
-                            ClearAttackPreview()
-                        end
-                        ShowSkillPreview()
-                        print("[PlayerScript] Skill preview shown (3x3 AoE)")
-                    else
-                        print("[PlayerScript] Not enough ATTACK AP for skill (" .. tostring(currentAttackAP) .. " < " .. skillAPCost .. ")")
-                        PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
-                    end
-                else
-                    ExecuteSkillAttack()
-                end
-            end
-            lastKey1Down = key1Down
 
             -- Check movement input (PRESS-ONLY - not hold)
             local wDown = IsKeyDown("W") and not blockedKeys["W"]
@@ -515,14 +536,10 @@ local function createPlayerStates(fsm)
 
             print("[PlayerScript] Movement attempted! Target: (" .. self.targetX .. ", " .. self.targetY .. ")")
 
-            -- Clear attack/skill preview if moving
-            if attackPreviewActive then
-                print("[PlayerScript] Clearing attack preview due to movement")
-                ClearAttackPreview()
-            end
-            if skillPreviewActive then
+            -- Clear any active skill preview if moving
+            if activePreview then
                 print("[PlayerScript] Clearing skill preview due to movement")
-                ClearSkillPreview()
+                ClearActivePreview()
             end
 
             -- Execute movement
@@ -737,15 +754,15 @@ function OnUpdate(dt)
             hasLoggedActive = false
             blockedKeys = {}
             lastPKeyDown = false
-            lastSpaceKeyDown = false
-            lastKey1Down = false
+            for _, key in ipairs(allSkillKeys) do
+                lastSkillKeyDown[key] = false
+            end
             -- Reset movement key states
             lastWKeyDown = false
             lastSKeyDown = false
             lastAKeyDown = false
             lastDKeyDown = false
-            ClearAttackPreview()
-            ClearSkillPreview()
+            ClearActivePreview()
 
             if currentAnimGroup ~= AnimGroup.Idle then
                 currentAnimGroup = AnimGroup.Idle
@@ -885,547 +902,160 @@ function OnUpdate(dt)
     lastPKeyDown = pKeyDown  -- Update P key state for next frame
 
     -- ========================================================================
-    -- ATTACK SYSTEM (SPACE KEY)
+    -- SKILL SYSTEM (all skill keys handled generically)
     -- ========================================================================
 
-    -- Get THIS entity's current grid position (needed for attack preview check)
     local currentX, currentY = GetEntityGridPosition(entityID)
     if currentX == nil or currentY == nil then
-        print("[PlayerScript] ERROR: Entity " .. entityID .. " position is nil! (currentX=" .. tostring(currentX) .. ", currentY=" .. tostring(currentY) .. ")")
-        return  -- Entity position not available
+        return
     end
 
-    -- Allow player to attack enemies with SPACE key
-    -- First press: Show attack preview
-    -- Second press: Execute attack
-    local spaceKeyDown = IsKeyDown("Space")
-    if spaceKeyDown and not lastSpaceKeyDown then
-        -- SPACE key was just pressed
-        print("============================================================")
-        print("[PlayerScript] ===== SPACE KEY PRESSED =====")
-        print("[PlayerScript] attackPreviewActive: " .. tostring(attackPreviewActive))
-
-        -- Clear skill preview if active (switching to basic attack)
-        if skillPreviewActive then
-            ClearSkillPreview()
-        end
-
-        if not attackPreviewActive then
-            -- First press: Show attack preview
-            local currentAP, maxAP = GetEntityAttackAP(entityID)
-            print("[PlayerScript] Current Attack AP: " .. currentAP .. "/" .. maxAP .. " (attack cost: " .. attackAPCost .. ")")
-
-            if currentAP >= attackAPCost then
-                print("[PlayerScript] Sufficient AP - checking for enemies in range...")
-                -- Check if there's an enemy in range before showing preview
-                local testEnemy = FindEnemyInRange()
-                print("[PlayerScript] FindEnemyInRange() returned: " .. tostring(testEnemy))
-
-                if testEnemy then
-                    print("[PlayerScript] Enemy found - calling ShowAttackPreview()...")
-                    ShowAttackPreview()
-                    print("[PlayerScript] Attack preview shown - enemy in range")
+    -- First press: show preview. Second press (same skill): execute.
+    local mySkills = getMySkills()
+    for _, key in ipairs(allSkillKeys) do
+        local skillID = mySkills[key]
+        local keyDown = IsKeyDown(key)
+        if skillID and keyDown and not lastSkillKeyDown[key] then
+            local skill = SkillDefs[skillID]
+            if activePreview and activePreview.skillID == skillID then
+                -- Second press of same skill: execute
+                print("[PlayerScript] Executing skill: " .. skill.name)
+                ExecuteSkill(skillID)
+            else
+                -- First press (or switching): show preview
+                local currentAP = GetEntityAttackAP(entityID)
+                if skill and currentAP >= skill.apCost then
+                    ShowSkillPreview(skillID)
+                    print("[PlayerScript] Preview shown: " .. skill.name)
                 else
-                    print("[PlayerScript] No enemy in attack range!")
-                    PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse (no target)
+                    PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                 end
-            else
-                print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
-                PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)  -- Yellow pulse (not enough AP)
             end
-        else
-            -- Second press: Execute attack
-            print("[PlayerScript] Attack preview already active - executing attack...")
-            ExecuteAttack()
         end
-        print("============================================================")
+        lastSkillKeyDown[key] = keyDown
     end
-    lastSpaceKeyDown = spaceKeyDown  -- Update SPACE key state for next frame
-
-    -- ========================================================================
-    -- SKILL ATTACK (KEY 1 - 3x3 AoE)
-    -- ========================================================================
-
-    -- Skill attack only available to Player 1
-    local key1Down = IsKeyDown("1")
-    if key1Down and not lastKey1Down and isFirstPlayer() then
-        print("============================================================")
-        print("[PlayerScript] ===== KEY 1 PRESSED (SKILL) =====")
-        print("[PlayerScript] skillPreviewActive: " .. tostring(skillPreviewActive))
-
-        if not skillPreviewActive then
-            -- First press: Show skill preview
-            local currentAP, maxAP = GetEntityAttackAP(entityID)
-            print("[PlayerScript] Current Attack AP: " .. currentAP .. "/" .. maxAP .. " (skill cost: " .. skillAPCost .. ")")
-
-            if currentAP >= skillAPCost then
-                -- Clear basic attack preview if active
-                if attackPreviewActive then
-                    ClearAttackPreview()
-                end
-                ShowSkillPreview()
-                print("[PlayerScript] Skill preview shown (3x3 AoE)")
-            else
-                print("[PlayerScript] Not enough AP for skill (" .. currentAP .. " < " .. skillAPCost .. ")")
-                PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
-            end
-        else
-            -- Second press: Execute skill attack
-            print("[PlayerScript] Skill preview already active - executing skill...")
-            ExecuteSkillAttack()
-        end
-        print("============================================================")
-    end
-    lastKey1Down = key1Down
 
 end
 
 -- NOTE: Old duplicate movement code removed - FSM handles all movement input
 -- ============================================================================
--- ATTACK HELPER FUNCTIONS
+-- GENERIC SKILL FUNCTIONS (data-driven)
 -- ============================================================================
 
-function ShowAttackPreview()
-    -- Clear any existing preview
-    ClearAttackPreview()
+-- Show preview tiles for any skill
+function ShowSkillPreview(skillID)
+    ClearActivePreview()
 
-    -- Get this entity's current position
+    local skill = SkillDefs[skillID]
+    if not skill then
+        print("[PlayerScript] ERROR: Unknown skill '" .. tostring(skillID) .. "'")
+        return
+    end
+
     local currentX, currentY = GetEntityGridPosition(entityID)
-    if not currentX or not currentY then
-        print("[PlayerScript] ERROR: Cannot get position for attack preview")
-        return
-    end
+    if not currentX or not currentY then return end
 
-    print("[PlayerScript] Showing attack preview at (" .. currentX .. ", " .. currentY .. ") with range " .. attackRange)
+    print("[PlayerScript] Showing preview for " .. skill.name .. " at (" .. currentX .. ", " .. currentY .. ")")
 
-    -- Show attack preview tiles - only adjacent tiles (Manhattan distance = 1)
-    -- Only show tiles at exactly distance 1 (4 adjacent tiles: up, down, left, right)
-    local adjacentTiles = {
-        {x = currentX + 1, y = currentY},      -- Right
-        {x = currentX - 1, y = currentY},      -- Left
-        {x = currentX, y = currentY + 1},      -- Down
-        {x = currentX, y = currentY - 1}       -- Up
-    }
-
-    for _, tile in ipairs(adjacentTiles) do
-        print("[PlayerScript]   Checking tile at (" .. tile.x .. ", " .. tile.y .. ")")
-
-        local isValid = IsValidGridPosition and IsValidGridPosition(tile.x, tile.y) or true
-        print("[PlayerScript]   IsValidGridPosition: " .. tostring(isValid))
-
-        if isValid then
-            -- Tint the tile red for attack preview
-            print("[PlayerScript]     Calling TintTile(" .. tile.x .. ", " .. tile.y .. ") for attack preview")
-            TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.7)  -- Red tint with 70% opacity
-
-            -- Store the grid coordinates so we can clear them later
-            table.insert(attackPreviewTiles, {x = tile.x, y = tile.y})
-            print("[PlayerScript]   Tinted tile at grid(" .. tile.x .. ", " .. tile.y .. ")")
-        else
-            print("[PlayerScript]     Tile invalid, skipping")
-        end
-    end
-
-    if #attackPreviewTiles > 0 then
-        attackPreviewActive = true
-        print("[PlayerScript] Attack preview active with " .. #attackPreviewTiles .. " tinted tiles")
-    else
-        print("[PlayerScript] WARNING: No valid attack preview tiles found")
-    end
-end
-
-function ClearAttackPreview()
-    if #attackPreviewTiles > 0 then
-        print("[PlayerScript] Clearing " .. #attackPreviewTiles .. " attack preview tiles")
-        for _, tile in ipairs(attackPreviewTiles) do
-            if tile and tile.x and tile.y then
-                -- Reset tile tint to white (no tint)
-                TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
-                print("[PlayerScript]   Cleared tint on tile (" .. tile.x .. ", " .. tile.y .. ")")
-            end
-        end
-    end
-
-    -- Clear attack preview state
-    attackPreviewTiles = {}
-    attackPreviewActive = false
-    print("[PlayerScript] Attack preview cleared")
-end
-
-function FindEnemyInRange()
-    -- Get this entity's current position
-    local currentX, currentY = GetEntityGridPosition(entityID)
-    if not currentX or not currentY then
-        return nil
-    end
-
-    -- Get all enemies
-    local enemies = GetAllEnemies()
-    if not enemies or #enemies == 0 then
-        print("[PlayerScript] No enemies found")
-        return nil
-    end
-
-    print("[PlayerScript] Searching for enemies in range " .. attackRange .. " from (" .. currentX .. ", " .. currentY .. ")")
-
-    -- Find the closest enemy within attack range
-    local closestEnemy = nil
-    local closestEnemyX, closestEnemyY = nil, nil
-    local closestDistance = 999999
-
-    for _, enemyID in ipairs(enemies) do
-        local enemyX, enemyY = GetEntityGridPosition(enemyID)
-        if enemyX and enemyY then
-            -- Calculate Manhattan distance
-            local distance = math.abs(enemyX - currentX) + math.abs(enemyY - currentY)
-            print("[PlayerScript]   Enemy " .. enemyID .. " at (" .. enemyX .. ", " .. enemyY .. ") - distance: " .. distance)
-
-            if distance <= attackRange and distance < closestDistance then
-                closestEnemy = enemyID
-                closestEnemyX = enemyX
-                closestEnemyY = enemyY
-                closestDistance = distance
-            end
-        end
-    end
-
-    if closestEnemy then
-        print("[PlayerScript] Found closest enemy " .. closestEnemy .. " at (" .. closestEnemyX .. ", " .. closestEnemyY .. ") - distance: " .. closestDistance)
-        return closestEnemy, closestEnemyX, closestEnemyY
-    end
-
-    print("[PlayerScript] No enemy in attack range")
-    return nil
-end
-
-function ExecuteAttack()
-    print("============================================================")
-    print("[PlayerScript] ===== EXECUTING ATTACK =====")
-    print("============================================================")
-
-    -- Check AP
-    local currentAP, maxAP = GetEntityAttackAP(entityID)
-    print("[PlayerScript] Current Attack AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP) .. " (need " .. attackAPCost .. ")")
-
-    if currentAP < attackAPCost then
-        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. tostring(currentAP) .. " < " .. attackAPCost .. ")")
-        ClearAttackPreview()
-        return
-    end
-
-    -- Find enemy in range
-    print("[PlayerScript] Searching for enemy in range...")
-    local enemyID, enemyX, enemyY = FindEnemyInRange()
-
-    if not enemyID then
-        print("[PlayerScript] ATTACK BLOCKED: No enemy in attack range!")
-        print("============================================================")
-        ClearAttackPreview()
-        return
-    end
-
-    print("[PlayerScript] Target found: Enemy " .. enemyID .. " at (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
-
-        -- ============================================================
-    -- FIX: Face the enemy before playing Attack_side animation
-    -- (Knight side attack sheet is left-facing by default)
-    -- ============================================================
-    do
-        local px, py = GetEntityGridPosition(entityID)
-        if px and py and enemyX and enemyY then
-            local dx = enemyX - px
-            local dy = enemyY - py
-
-            local newDir = currentAnimDirection
-            local newFlip = isFlippedX
-
-            -- Decide facing axis (attack is usually 1-tile away, but keep robust)
-            if math.abs(dx) > math.abs(dy) then
-                newDir = AnimDirection.Side
-
-                -- IMPORTANT: for Knight_Attack_Left sheet,
-                -- flip when enemy is on the RIGHT.
-                if dx > 0 then
-                    newFlip = true   -- enemy right -> flip to face right
-                else
-                    newFlip = false  -- enemy left  -> keep left
-                end
-            elseif dy > 0 then
-                newDir = AnimDirection.Back
-                -- keep newFlip unchanged
-            elseif dy < 0 then
-                newDir = AnimDirection.Front
-                -- keep newFlip unchanged
-            end
-
-            if newDir ~= currentAnimDirection then
-                currentAnimDirection = newDir
-                SetAnimationDirection(entityID, currentAnimDirection)
-            end
-
-            if newFlip ~= isFlippedX then
-                isFlippedX = newFlip
-                SetAnimationFlipX(entityID, isFlippedX)
-            end
-        end
-    end
-
-
-    -- Check enemy HP BEFORE attack
-    local enemyHPBefore, enemyMaxHP = GetEntityHP(enemyID)
-    print("[PlayerScript] Enemy " .. enemyID .. " HP BEFORE attack: " .. tostring(enemyHPBefore) .. "/" .. tostring(enemyMaxHP))
-
-    -- Deal damage
-    local attackDamage = 1  -- Base damage
-    print("[PlayerScript] Calling DamageEntity(" .. enemyID .. ", " .. attackDamage .. ")...")
-    local success = DamageEntity(enemyID, attackDamage)
-
-    print("[PlayerScript] DamageEntity returned: " .. tostring(success))
-
-    if success then
-        print("[PlayerScript] Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
-
-        -- Check enemy HP AFTER attack
-        local enemyHPAfter, _ = GetEntityHP(enemyID)
-        print("[PlayerScript] Enemy " .. enemyID .. " HP AFTER attack: " .. tostring(enemyHPAfter))
-
-        -- Check if enemy should be dead
-        if enemyHPAfter and enemyHPAfter <= 0 then
-            print("[PlayerScript] !!! ENEMY " .. enemyID .. " HP <= 0 - SHOULD BE DESTROYED BY C++ !!!")
-        elseif not enemyHPAfter then
-            print("[PlayerScript] !!! ENEMY " .. enemyID .. " HP is nil - ENTITY MAY HAVE BEEN DESTROYED !!!")
-        else
-            print("[PlayerScript] Enemy " .. enemyID .. " still alive with " .. tostring(enemyHPAfter) .. " HP")
-        end
-
-        -- Consume attack AP (NOT movement AP!)
-        ConsumeEntityAttackAP(entityID, attackAPCost)
-        local newAP, newMaxAP = GetEntityAttackAP(entityID)
-        print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAP) .. "/" .. tostring(newMaxAP))
-
-        -- Trigger attack AP crystal shattering animation
-        print("[PlayerScript] ========== ANIMATION DEBUG ==========")
-        print("[PlayerScript] Attempting to access UIManager directly from entity script...")
-        print("[PlayerScript] UIManager type: " .. tostring(type(UIManager)))
-        print("[PlayerScript] UIManager value: " .. tostring(UIManager))
-
-        if UIManager then
-            print("[PlayerScript] UIManager exists in entity Lua state!")
-            print("[PlayerScript] UIManager.GetComponent type: " .. tostring(type(UIManager.GetComponent)))
-
-            if UIManager.GetComponent then
-                print("[PlayerScript] GetComponent method exists!")
-                print("[PlayerScript] Calling UIManager.GetComponent('attackAP')...")
-
-                local attackAPComponent = UIManager.GetComponent("attackAP")
-                print("[PlayerScript] attackAP component type: " .. tostring(type(attackAPComponent)))
-                print("[PlayerScript] attackAP component value: " .. tostring(attackAPComponent))
-
-                if attackAPComponent then
-                    print("[PlayerScript] attackAP component exists!")
-                    print("[PlayerScript] ConsumeOneAP type: " .. tostring(type(attackAPComponent.ConsumeOneAP)))
-
-                    if attackAPComponent.ConsumeOneAP then
-                        print("[PlayerScript] ConsumeOneAP method exists!")
-                        print("[PlayerScript] Calling attackAP:ConsumeOneAP()...")
-
-                        local success, errorMsg = pcall(function()
-                            attackAPComponent:ConsumeOneAP()
-                        end)
-
-                        if success then
-                            print("[PlayerScript] SUCCESS! Crystal animation triggered via direct UIManager access")
-                        else
-                            print("[PlayerScript] ERROR calling ConsumeOneAP(): " .. tostring(errorMsg))
-                        end
-                    else
-                        print("[PlayerScript] ConsumeOneAP method does not exist")
-                    end
-                else
-                    print("[PlayerScript] attackAP component is nil")
-                end
-            else
-                print("[PlayerScript] GetComponent method does not exist")
-            end
-        else
-            print("[PlayerScript] UIManager is nil in entity Lua state - trying C++ bridge...")
-            print("[PlayerScript] Calling TriggerAttackAPAnimation() via C++ bridge...")
-
-            local success, errorMsg = pcall(function()
-                TriggerAttackAPAnimation()
-            end)
-
-            if success then
-                print("[PlayerScript] C++ bridge call completed successfully")
-            else
-                print("[PlayerScript] ERROR calling C++ bridge: " .. tostring(errorMsg))
-            end
-        end
-
-        print("[PlayerScript] ========== END ANIMATION DEBUG ==========")
-
-        -- Visual feedback
-        PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)  -- Red pulse for damage
-
-        -- Play attack animation
-        currentAnimGroup = AnimGroup.Attack
-        SetAnimationGroup(entityID, currentAnimGroup)
-        SetAnimationLoop(entityID, false)  -- Play once
-        print("[PlayerScript] Playing attack animation")
-    else
-        print("[PlayerScript] Attack FAILED: DamageEntity returned false for enemy " .. enemyID)
-        print("[PlayerScript] Possible causes:")
-        print("[PlayerScript]   - Enemy has no Health component")
-        print("[PlayerScript]   - Entity ID is invalid")
-        print("[PlayerScript]   - Enemy was already destroyed")
-    end
-
-    print("============================================================")
-
-    -- Clear attack preview
-    ClearAttackPreview()
-end
-
--- ============================================================================
--- SKILL 1 HELPER FUNCTIONS (Key 1 - 3x3 AoE Attack)
--- ============================================================================
-
-function ShowSkillPreview()
-    -- Clear any existing skill preview
-    ClearSkillPreview()
-
-    -- Get this entity's current position
-    local currentX, currentY = GetEntityGridPosition(entityID)
-    if not currentX or not currentY then
-        print("[PlayerScript] ERROR: Cannot get position for skill preview")
-        return
-    end
-
-    print("[PlayerScript] Showing skill preview (3x3 AoE) at (" .. currentX .. ", " .. currentY .. ")")
-
-    -- Use SkillPatterns to get the 3x3 area centered on player (range=0 for self-centered)
-    local pattern = SkillPatterns.GetPattern("area3x3", 0, 0, false)
+    local pattern = SkillPatterns.GetPattern(skill.pattern, currentAnimDirection, skill.range, isFlippedX)
+    local tiles = {}
 
     for _, offset in ipairs(pattern) do
         local tileX = currentX + offset.x
         local tileY = currentY + offset.y
-
         if IsValidGridPosition(tileX, tileY) then
-            -- Tint the tile red for skill preview
             TintTile(tileX, tileY, 1.0, 0.3, 0.3, 0.7)
-            table.insert(skillPreviewTiles, {x = tileX, y = tileY})
-            print("[PlayerScript]   Tinted skill tile at grid(" .. tileX .. ", " .. tileY .. ")")
+            table.insert(tiles, {x = tileX, y = tileY})
         end
     end
 
-    if #skillPreviewTiles > 0 then
-        skillPreviewActive = true
-        print("[PlayerScript] Skill preview active with " .. #skillPreviewTiles .. " tinted tiles")
-    else
-        print("[PlayerScript] WARNING: No valid skill preview tiles found")
+    if #tiles > 0 then
+        activePreview = { skillID = skillID, tiles = tiles }
+        print("[PlayerScript] Preview active: " .. skill.name .. " (" .. #tiles .. " tiles)")
     end
 end
 
-function ClearSkillPreview()
-    if #skillPreviewTiles > 0 then
-        print("[PlayerScript] Clearing " .. #skillPreviewTiles .. " skill preview tiles")
-        for _, tile in ipairs(skillPreviewTiles) do
+-- Clear the active skill preview (works for any skill)
+function ClearActivePreview()
+    if activePreview and activePreview.tiles then
+        for _, tile in ipairs(activePreview.tiles) do
             if tile and tile.x and tile.y then
                 TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
-                print("[PlayerScript]   Cleared tint on skill tile (" .. tile.x .. ", " .. tile.y .. ")")
             end
         end
     end
-
-    skillPreviewTiles = {}
-    skillPreviewActive = false
+    activePreview = nil
 end
 
-function FindEnemiesInSkillArea()
+-- Find all enemies within a skill's pattern
+function FindEnemiesInPattern(skillID)
+    local skill = SkillDefs[skillID]
+    if not skill then return {} end
+
     local currentX, currentY = GetEntityGridPosition(entityID)
-    if not currentX or not currentY then
-        return {}
-    end
+    if not currentX or not currentY then return {} end
 
     local enemies = GetAllEnemies()
-    if not enemies or #enemies == 0 then
-        print("[PlayerScript] No enemies found for skill")
-        return {}
-    end
+    if not enemies or #enemies == 0 then return {} end
 
-    -- Use SkillPatterns to get the 3x3 area centered on player
-    local pattern = SkillPatterns.GetPattern("area3x3", 0, 0, false)
+    local pattern = SkillPatterns.GetPattern(skill.pattern, currentAnimDirection, skill.range, isFlippedX)
 
-    -- Build a lookup table of target tiles for fast checking
+    -- Build lookup of target tiles
     local targetTiles = {}
     for _, offset in ipairs(pattern) do
-        local tileX = currentX + offset.x
-        local tileY = currentY + offset.y
-        local key = tileX .. "," .. tileY
-        targetTiles[key] = true
+        targetTiles[(currentX + offset.x) .. "," .. (currentY + offset.y)] = true
     end
 
-    -- Find all enemies in the 3x3 area
-    local foundEnemies = {}
+    local found = {}
     for _, eID in ipairs(enemies) do
-        local enemyX, enemyY = GetEntityGridPosition(eID)
-        if enemyX and enemyY then
-            local key = enemyX .. "," .. enemyY
-            if targetTiles[key] then
-                table.insert(foundEnemies, {id = eID, x = enemyX, y = enemyY})
-                print("[PlayerScript]   Enemy " .. eID .. " at (" .. enemyX .. ", " .. enemyY .. ") is in skill area")
-            end
+        local ex, ey = GetEntityGridPosition(eID)
+        if ex and ey and targetTiles[ex .. "," .. ey] then
+            table.insert(found, {id = eID, x = ex, y = ey})
         end
     end
 
-    print("[PlayerScript] Found " .. #foundEnemies .. " enemies in 3x3 skill area")
-    return foundEnemies
+    return found
 end
 
-function ExecuteSkillAttack()
-    print("============================================================")
-    print("[PlayerScript] ===== EXECUTING SKILL ATTACK (3x3 AoE) =====")
-    print("============================================================")
-
-    -- Check AP
-    local currentAP, maxAP = GetEntityAttackAP(entityID)
-    print("[PlayerScript] Current Attack AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP) .. " (need " .. skillAPCost .. ")")
-
-    if not currentAP or currentAP < skillAPCost then
-        print("[PlayerScript] SKILL BLOCKED: Not enough AP (" .. tostring(currentAP) .. " < " .. skillAPCost .. ")")
-        ClearSkillPreview()
+-- Execute any skill: find enemies, deal damage, consume AP, animate
+function ExecuteSkill(skillID)
+    local skill = SkillDefs[skillID]
+    if not skill then
+        ClearActivePreview()
         return
     end
 
-    -- Find all enemies in the 3x3 area
-    print("[PlayerScript] Searching for enemies in skill area...")
-    local enemies = FindEnemiesInSkillArea()
+    print("[PlayerScript] ===== EXECUTING: " .. skill.name .. " =====")
 
+    -- Check AP
+    local currentAP, maxAP = GetEntityAttackAP(entityID)
+    if not currentAP or currentAP < skill.apCost then
+        print("[PlayerScript] Not enough Attack AP (" .. tostring(currentAP) .. " < " .. skill.apCost .. ")")
+        ClearActivePreview()
+        return
+    end
+
+    -- Find enemies in pattern
+    local enemies = FindEnemiesInPattern(skillID)
     if #enemies == 0 then
-        print("[PlayerScript] SKILL: No enemies in 3x3 area")
-        print("============================================================")
-        ClearSkillPreview()
+        print("[PlayerScript] No enemies in " .. skill.name .. " range")
+        ClearActivePreview()
         return
     end
 
     -- Face the first enemy found
     do
         local px, py = GetEntityGridPosition(entityID)
-        local firstEnemy = enemies[1]
-        if px and py and firstEnemy then
-            local dx = firstEnemy.x - px
-            local dy = firstEnemy.y - py
-
+        local first = enemies[1]
+        if px and py and first then
+            local dx = first.x - px
+            local dy = first.y - py
             local newDir = currentAnimDirection
             local newFlip = isFlippedX
 
             if math.abs(dx) > math.abs(dy) then
                 newDir = AnimDirection.Side
-                if dx > 0 then
-                    newFlip = true
-                else
-                    newFlip = false
-                end
+                newFlip = dx > 0
             elseif dy > 0 then
                 newDir = AnimDirection.Back
             elseif dy < 0 then
@@ -1443,43 +1073,30 @@ function ExecuteSkillAttack()
         end
     end
 
-    -- Deal damage to ALL enemies in the area
+    -- Deal damage to all enemies in pattern
     local enemiesHit = 0
     for _, enemy in ipairs(enemies) do
-        local enemyHPBefore, enemyMaxHP = GetEntityHP(enemy.id)
-        print("[PlayerScript] Enemy " .. enemy.id .. " HP BEFORE: " .. tostring(enemyHPBefore) .. "/" .. tostring(enemyMaxHP))
-
-        print("[PlayerScript] Calling DamageEntity(" .. enemy.id .. ", " .. skillDamage .. ")...")
-        local success = DamageEntity(enemy.id, skillDamage)
-
+        local success = DamageEntity(enemy.id, skill.damage)
         if success then
             enemiesHit = enemiesHit + 1
-            print("[PlayerScript] Hit enemy " .. enemy.id .. " for " .. skillDamage .. " damage")
-
-            local enemyHPAfter, _ = GetEntityHP(enemy.id)
-            print("[PlayerScript] Enemy " .. enemy.id .. " HP AFTER: " .. tostring(enemyHPAfter))
-
-            if enemyHPAfter and enemyHPAfter <= 0 then
-                print("[PlayerScript] !!! ENEMY " .. enemy.id .. " DEFEATED !!!")
-            end
-
-            -- Visual feedback per enemy hit
             PulseTile(enemy.x, enemy.y, 0.5, 1.0, 0.0, 0.0)
-        else
-            print("[PlayerScript] DamageEntity failed for enemy " .. enemy.id)
+
+            local hpAfter = GetEntityHP(enemy.id)
+            if hpAfter and hpAfter <= 0 then
+                print("[PlayerScript] Enemy " .. enemy.id .. " DEFEATED!")
+            end
         end
     end
 
-    -- Consume attack AP
-    ConsumeEntityAttackAP(entityID, skillAPCost)
-    local newAP, newMaxAP = GetEntityAttackAP(entityID)
-    print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAP) .. "/" .. tostring(newMaxAP))
+    -- Consume AP
+    ConsumeEntityAttackAP(entityID, skill.apCost)
+    print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
 
-    -- Trigger attack AP crystal animation
+    -- Trigger AP crystal animation
     if UIManager and UIManager.GetComponent then
-        local attackAPComponent = UIManager.GetComponent("attackAP")
-        if attackAPComponent and attackAPComponent.ConsumeOneAP then
-            pcall(function() attackAPComponent:ConsumeOneAP() end)
+        local comp = UIManager.GetComponent("attackAP")
+        if comp and comp.ConsumeOneAP then
+            pcall(function() comp:ConsumeOneAP() end)
         end
     else
         pcall(function() TriggerAttackAPAnimation() end)
@@ -1489,11 +1106,8 @@ function ExecuteSkillAttack()
     currentAnimGroup = AnimGroup.Attack
     SetAnimationGroup(entityID, currentAnimGroup)
     SetAnimationLoop(entityID, false)
-    print("[PlayerScript] Skill attack complete - " .. enemiesHit .. " enemies hit for " .. skillDamage .. " damage each")
-    print("============================================================")
 
-    -- Clear skill preview
-    ClearSkillPreview()
+    ClearActivePreview()
 end
 
 -- ============================================================================
@@ -1501,8 +1115,7 @@ end
 -- ============================================================================
 
 function OnDestroy()
-    ClearAttackPreview()
-    ClearSkillPreview()
+    ClearActivePreview()
     Log("[PlayerScript] Destroyed for entity " .. entityID)
 end
 
