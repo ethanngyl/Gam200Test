@@ -86,14 +86,6 @@ namespace Framework {
 		Entity FindFirstEnemyInRange(int minRange, int maxRange);
 
         // ========================================================================
-        // SKILL 1 - 3x3 AoE Attack (Key 1)
-        // ========================================================================
-        void HandleSkillAttack();
-        void ShowSkillPreview();
-        void ClearSkillPreview();
-        std::vector<Entity> FindEnemiesInArea();
-
-        // ========================================================================
         // PLAYER MOVEMENT HANDLERS
         // ========================================================================
         void UpdateTilePulseAnimation();
@@ -121,12 +113,6 @@ namespace Framework {
 		bool attackPreviewActive = false;
 		bool spaceReleased = true;
 		std::vector<Entity> attackPreviewTiles;
-
-        // Skill 1 (Key 1) - 3x3 AoE attack state
-        bool skillPreviewActive = false;
-        bool key1Released = true;
-        std::vector<Entity> skillPreviewTiles;
-        float skillAttackCooldown = 0.0f;
 
         // Arrow key movement cooldown to prevent double AP consumption
         float arrowMoveCooldown = 0.0f;
