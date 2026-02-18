@@ -18,9 +18,9 @@
 #pragma once
 #include "ECSEntity.h"
 #include "ECSComponent.h"
+#include "Memory/MemoryManager.h"
 #include <vector>
 #include <unordered_map>
-#include <memory>
 #include <typeindex>
 #include <stdexcept>
 
@@ -136,17 +136,19 @@ namespace Framework
         std::vector<Entity> allEntities; //All active entities
 
         /**
-         * @brief Component storage
+         * @brief Component storage (managed by custom MemoryManager)
          *
          * Nested map structure:
          * - Outer map: Component type -> Component instances for that type
-         * - Inner map: Entity ID -> Component instance
+         * - Inner map: Entity ID -> Component pointer (pool-allocated)
          *
-         * This sparse storage allows efficient component access and
-         * iteration over entities with specific component types.
+         * Components are allocated from the MemoryManager's pool allocators
+         * using placement new, NOT from the default C++ heap. Raw pointers
+         * are used instead of std::unique_ptr because lifetime is managed
+         * explicitly through the MemoryManager.
          */
         std::unordered_map<std::type_index,
-            std::unordered_map<EntityID, std::unique_ptr<ComponentBase>>> components;
+            std::unordered_map<EntityID, ComponentBase*>> components;
     };
 
     // Template implementations must be in header
@@ -154,9 +156,26 @@ namespace Framework
     T& EntityManager::AddComponent(Entity entity, Args&&... args)
     {
         std::type_index typeIndex(typeid(T));
-        auto component = std::make_unique<T>(std::forward<Args>(args)...);
-        T* ptr = component.get();
-        components[typeIndex][entity.GetID()] = std::move(component);
+
+        // Check if this entity already has this component type - if so,
+        // deallocate the old one through the MemoryManager first
+        auto& entityMap = components[typeIndex];
+        auto it = entityMap.find(entity.GetID());
+        if (it != entityMap.end() && it->second != nullptr)
+        {
+            ComponentBase* old = it->second;
+            size_t allocSize = old->GetAllocatedSize();
+            old->~ComponentBase();  // Call virtual destructor
+            MemoryManager::GetInstance().DeallocateBySize(old, allocSize);
+        }
+
+        // Allocate from the MemoryManager using placement new
+        // This gets a block from the pre-allocated pool (O(1), no OS call)
+        // and constructs the component in-place.
+        T* ptr = MemoryManager::GetInstance().Allocate<T>(
+            std::forward<Args>(args)...
+        );
+        entityMap[entity.GetID()] = ptr;
         return *ptr;
     }
 
@@ -178,7 +197,7 @@ namespace Framework
             throw std::runtime_error("GetComponent: Entity does not have this component");
         }
 
-        return *static_cast<T*>(entityIt->second.get());
+        return *static_cast<T*>(entityIt->second);
     }
 
     template<typename T>
@@ -196,7 +215,19 @@ namespace Framework
         std::type_index typeIndex(typeid(T));
         auto it = components.find(typeIndex);
         if (it != components.end()) {
-            it->second.erase(entity.GetID());
+            auto entityIt = it->second.find(entity.GetID());
+            if (entityIt != it->second.end()) {
+                // Deallocate through the MemoryManager:
+                // 1. Call virtual destructor (cleans up object state)
+                // 2. Return block to pool free list (O(1), no OS call)
+                ComponentBase* comp = entityIt->second;
+                if (comp) {
+                    size_t allocSize = comp->GetAllocatedSize();
+                    comp->~ComponentBase();
+                    MemoryManager::GetInstance().DeallocateBySize(comp, allocSize);
+                }
+                it->second.erase(entityIt);
+            }
         }
     }
 }
