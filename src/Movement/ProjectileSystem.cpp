@@ -300,6 +300,8 @@ namespace Framework
             // Check for a core component before destroying
             if (entityManager->HasComponent<Transform>(entity))
             {
+                // Clear tile occupancy before destroying so the tile becomes walkable
+                SpatialPartitioningRemove(entity);
                 entityManager->DestroyEntity(entity);
             }
         }
