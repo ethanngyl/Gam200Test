@@ -29,6 +29,7 @@
 #include "ProjectileSystem.h"
 #include "Collision/Quadtree.h"
 #include "Grid/Grid.h"
+#include "Grid/GridECS.h"
 #include <algorithm>
 namespace Framework
 {
@@ -84,9 +85,6 @@ namespace Framework
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 auto& movement = entityManager->GetComponent<ProjectileMovement>(entity);
 
-                transform.position.x += movement.direction.x * movement.moveSpeed * dt;
-                transform.position.y += movement.direction.y * movement.moveSpeed * dt;
-
                 // Apply movement
                 if (!movement.blocked) {
                     transform.position += movement.direction * movement.moveSpeed * dt;
@@ -95,12 +93,23 @@ namespace Framework
                     transform.position -= movement.direction * movement.moveSpeed * dt;
                 }
 
-                // Optional: Destroy projectiles that go off-screen
-                // This prevents memory leaks from projectiles flying forever
-                if (transform.position.x > 3.0f || transform.position.x < -3.0f ||
-                    transform.position.y > 2.0f || transform.position.y < -2.0f)
+                // Check if projectile hit a wall (blocked tile or out-of-bounds)
+                auto gridCoord = WorldToTile(transform.position);
+                if (!gridCoord.has_value()) {
+                    // Out of grid bounds - destroy
+                    offScreenToDestroy.push_back(entity);
+                }
+                else {
+                    // Check if the tile is blocked (wall)
+                    if (!IsWalkable(gridCoord.value())) {
+                        offScreenToDestroy.push_back(entity);
+                    }
+                }
+
+                // Fallback: destroy projectiles that go way off-screen
+                if (transform.position.x > 50.0f || transform.position.x < -50.0f ||
+                    transform.position.y > 50.0f || transform.position.y < -50.0f)
                 {
-                    // Projectile is off-screen, destroy it
                     offScreenToDestroy.push_back(entity);
                 }
             }
@@ -252,7 +261,9 @@ namespace Framework
 
                 if (check_collision(projShape, enemyShape))
                 {
-                    const int damageDealt = 10;
+                    // Use configurable damage from the projectile component
+                    auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
+                    const int damageDealt = projMovement.damage;
                     enemyHealth.TakeDamage(damageDealt);
 
                     if (eventSystem) {
@@ -269,8 +280,13 @@ namespace Framework
                         entitiesToDestroy.push_back(enemy);
                     }
 
-                    entitiesToDestroy.push_back(projectile);
-                    break;
+                    // Pierce: projectile continues through enemies
+                    // Non-pierce: projectile destroyed on first hit
+                    if (!projMovement.pierce) {
+                        entitiesToDestroy.push_back(projectile);
+                        break;
+                    }
+                    // If piercing, continue checking next enemies (don't break)
                 }
             }
 
