@@ -61,6 +61,8 @@ namespace Framework
         float moveSpeed = 100.0f;
         Vector2D direction;
         bool blocked = false;
+        int damage = 10;       // Configurable damage dealt on hit
+        bool pierce = false;   // If true, passes through enemies instead of stopping
     };
 
     enum class AnimGroup {

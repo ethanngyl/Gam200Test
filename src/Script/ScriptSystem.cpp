@@ -569,6 +569,9 @@ namespace Framework {
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);
         lua_register(L, "IsActiveCharacter", LevelLoader::Lua_IsActiveCharacter);
+
+        // Game API - Projectile Skills
+        lua_register(L, "SpawnSkillProjectile", LevelLoader::Lua_SpawnSkillProjectile);
     }
 
     /**

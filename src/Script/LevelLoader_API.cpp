@@ -4770,4 +4770,65 @@ namespace Framework {
         return 1;
     }
 
+    // ========================================================================
+    // PROJECTILE SKILL API
+    // ========================================================================
+
+    /**
+     * @brief Spawns a skill-based projectile from Lua
+     * @param worldX, worldY  World-space spawn position
+     * @param dirX, dirY      Direction vector (will be normalized)
+     * @param speed            Projectile speed in world units/second
+     * @param damage           Damage dealt on hit
+     * @param pierce           Boolean: true = pass through enemies
+     * @return entityID of the spawned projectile
+     *
+     * Usage from Lua:
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false)
+     */
+    int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+        float dirX   = static_cast<float>(luaL_checknumber(L, 3));
+        float dirY   = static_cast<float>(luaL_checknumber(L, 4));
+        float speed  = static_cast<float>(luaL_optnumber(L, 5, 3.0));
+        int   damage = static_cast<int>(luaL_optinteger(L, 6, 1));
+        bool  pierce = lua_toboolean(L, 7) != 0;
+
+        // Normalize direction
+        float len = std::sqrt(dirX * dirX + dirY * dirY);
+        if (len > 0.0001f) {
+            dirX /= len;
+            dirY /= len;
+        }
+
+        CoreEngine* core = CORE;
+        if (!core) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        EntitySpawner* spawner = core->GetSpawner();
+        EntityManager* em = core->GetEntityManager();
+        if (!spawner || !em) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        // Spawn the projectile entity using the existing spawner
+        Vector2D position(worldX, worldY);
+        Vector2D direction(dirX, dirY);
+        Entity projectile = spawner->SpawnProjectile(position, direction, speed);
+
+        // Configure damage and pierce on the projectile component
+        if (em->HasComponent<ProjectileMovement>(projectile)) {
+            auto& movement = em->GetComponent<ProjectileMovement>(projectile);
+            movement.damage = damage;
+            movement.pierce = pierce;
+        }
+
+        lua_pushinteger(L, projectile.GetID());
+        return 1;
+    }
+
 } // namespace Framework
