@@ -30,6 +30,7 @@
 #include "Collision/Quadtree.h"
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
+#include "Pathfinding/Pathfinding.h"
 #include <algorithm>
 namespace Framework
 {
@@ -157,8 +158,9 @@ namespace Framework
                 activeProjectiles.push_back(entity);
             }
 
-            // Filter for Enemies
-            if (entityManager->HasComponent<Transform>(entity) &&
+            // Filter for Enemies (must have EnemyAI to exclude players)
+            if (entityManager->HasComponent<EnemyAI>(entity) &&
+                entityManager->HasComponent<Transform>(entity) &&
                 entityManager->HasComponent<Health>(entity) &&
                 entityManager->HasComponent<BoxCollider>(entity))
             {
