@@ -990,6 +990,13 @@ function ShowSkillPreview(skillID)
 
     print("[PlayerScript] Showing preview for " .. skill.name .. " at (" .. currentX .. ", " .. currentY .. ")")
 
+    -- Projectile skills: no tile preview, just register as active for Space to execute
+    if skill.skillType == "projectile" then
+        activePreview = { skillID = skillID, tiles = {} }
+        print("[PlayerScript] Preview active (projectile, no tiles): " .. skill.name)
+        return
+    end
+
     local pattern = SkillPatterns.GetPattern(skill.pattern, currentAnimDirection, skill.range, isFlippedX)
     local tiles = {}
 
