@@ -179,6 +179,7 @@ local lastPKeyDown = false
 dofile("assets/scripts/SkillPatterns.lua")
 
 -- All available skill definitions
+-- skillType: nil/"melee" = instant damage, "projectile" = spawns a projectile
 local SkillDefs = {
     BasicAttack = {
         name     = "Basic Attack",
@@ -194,6 +195,26 @@ local SkillDefs = {
         apCost   = 1,
         range    = 0,  -- 0 = centered on caster
     },
+    Fireball = {
+        name      = "Fireball",
+        skillType = "projectile",
+        pattern   = "line",        -- preview: line in facing direction
+        damage    = 2,
+        apCost    = 1,
+        range     = 5,             -- preview range (tiles shown)
+        projSpeed = 3.0,           -- world units per second
+        pierce    = false,         -- stops on first enemy hit
+    },
+    PiercingShot = {
+        name      = "Piercing Shot",
+        skillType = "projectile",
+        pattern   = "pierce",      -- preview: line in facing direction
+        damage    = 1,
+        apCost    = 1,
+        range     = 7,             -- longer range preview
+        projSpeed = 4.0,           -- faster projectile
+        pierce    = true,          -- passes through all enemies
+    },
 }
 
 -- Per-player skill assignments: playerIndex -> { key -> skillID }
@@ -201,7 +222,7 @@ local SkillDefs = {
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 local PlayerSkills = {
     [1] = { ["1"] = "BasicAttack", ["2"] = "AreaBlast" },
-    [2] = { ["1"] = "BasicAttack" },
+    [2] = { ["1"] = "BasicAttack", ["2"] = "Fireball", ["3"] = "PiercingShot" },
     [3] = { ["1"] = "BasicAttack" },
 }
 
@@ -1029,7 +1050,24 @@ function FindEnemiesInPattern(skillID)
     return found
 end
 
--- Execute any skill: find enemies, deal damage, consume AP, animate
+-- Get the world-space direction vector for the player's current facing
+-- Uses movement conventions: W=+Y(Back), S=-Y(Front), D=+X(Side+flip), A=-X(Side)
+local function getFacingWorldDirection()
+    if currentAnimDirection == AnimDirection.Front then
+        return 0, -1   -- Facing camera = down = -Y
+    elseif currentAnimDirection == AnimDirection.Back then
+        return 0, 1    -- Facing away = up = +Y
+    elseif currentAnimDirection == AnimDirection.Side then
+        if isFlippedX then
+            return 1, 0   -- flipX=true = facing right = +X
+        else
+            return -1, 0  -- flipX=false = facing left = -X
+        end
+    end
+    return 0, -1  -- Default: down
+end
+
+-- Execute any skill: melee (instant damage) or projectile (spawns projectile)
 function ExecuteSkill(skillID)
     local skill = SkillDefs[skillID]
     if not skill then
@@ -1047,7 +1085,69 @@ function ExecuteSkill(skillID)
         return
     end
 
-    -- Find enemies in pattern
+    -- Branch: projectile skills spawn a projectile entity
+    if skill.skillType == "projectile" then
+        local px, py = GetEntityGridPosition(entityID)
+        if not px or not py then
+            ClearActivePreview()
+            return
+        end
+
+        -- Get the player's world position for spawning
+        local worldX, worldY = TileToWorld(px, py)
+        if not worldX or not worldY then
+            ClearActivePreview()
+            return
+        end
+
+        -- Get the facing direction in grid space, then convert to world direction
+        local gridDirX, gridDirY = getFacingWorldDirection()
+        local targetWorldX, targetWorldY = TileToWorld(px + gridDirX, py + gridDirY)
+        local dirX, dirY = 0, 0
+        if targetWorldX and targetWorldY then
+            dirX = targetWorldX - worldX
+            dirY = targetWorldY - worldY
+            local len = math.sqrt(dirX * dirX + dirY * dirY)
+            if len > 0 then dirX = dirX / len; dirY = dirY / len end
+        end
+
+        -- Spawn the projectile via C++ bridge
+        local projID = SpawnSkillProjectile(
+            worldX, worldY,
+            dirX, dirY,
+            skill.projSpeed or 3.0,
+            skill.damage or 1,
+            skill.pierce or false
+        )
+        print("[PlayerScript] Spawned projectile ID=" .. tostring(projID)
+            .. " dir=(" .. dirX .. "," .. dirY .. ")"
+            .. " speed=" .. (skill.projSpeed or 3.0)
+            .. " dmg=" .. skill.damage
+            .. " pierce=" .. tostring(skill.pierce or false))
+
+        -- Consume AP
+        ConsumeEntityAttackAP(entityID, skill.apCost)
+
+        -- Trigger AP crystal animation
+        if UIManager and UIManager.GetComponent then
+            local comp = UIManager.GetComponent("attackAP")
+            if comp and comp.ConsumeOneAP then
+                pcall(function() comp:ConsumeOneAP() end)
+            end
+        else
+            pcall(function() TriggerAttackAPAnimation() end)
+        end
+
+        -- Play attack animation
+        currentAnimGroup = AnimGroup.Attack
+        SetAnimationGroup(entityID, currentAnimGroup)
+        SetAnimationLoop(entityID, false)
+
+        ClearActivePreview()
+        return
+    end
+
+    -- Melee skills: find enemies in pattern and deal instant damage
     local enemies = FindEnemiesInPattern(skillID)
     if #enemies == 0 then
         print("[PlayerScript] No enemies in " .. skill.name .. " range")
