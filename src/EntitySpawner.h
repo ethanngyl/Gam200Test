@@ -540,6 +540,16 @@ namespace Framework {
             mr.layer = RenderLayers::Projectiles;  // Projectiles above player
             mr.tint = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);  // Black circle
 
+            // Force opaque alpha so the circle mesh renders without a texture
+            // (otherwise alpha discard kills the fragments)
+            if (CORE && CORE->GetGraphicsSystem()) {
+                auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
+                Material* mat = gs->GetResourceManager().GetMaterial(mr.material);
+                if (mat) {
+                    mat->forceOpaqueAlpha = true;
+                }
+            }
+
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
             movement.moveSpeed = speed;
