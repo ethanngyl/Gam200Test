@@ -1132,6 +1132,13 @@ function ExecuteSkill(skillID)
             .. " dmg=" .. skill.damage
             .. " pierce=" .. tostring(skill.pierce or false))
 
+        -- Player 2 skills 2 and 3: red circle sprite (no texture)
+        if projID and getPlayerIndex() == 2
+           and (skillID == "Fireball" or skillID == "PiercingShot") then
+            SetSpriteTexture(projID, "")       -- clear texture → solid color
+            SetSpriteColor(projID, 1, 0, 0, 1) -- red
+        end
+
         -- Consume AP
         ConsumeEntityAttackAP(entityID, skill.apCost)
 

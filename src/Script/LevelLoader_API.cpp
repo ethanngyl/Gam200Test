@@ -1245,14 +1245,27 @@ namespace Framework {
         auto& mr = em->GetComponent<MeshRenderer>(entity);
         mr.spriteName = texturePath;
 
-        // Load the new texture
         auto& resourceManager = gfx->GetResourceManager();
+
+        // Empty path = clear texture (render as solid color via tint)
+        if (texturePath[0] == '\0') {
+            mr.texture = INVALID_TEXTURE_HANDLE;
+            if (mr.material.IsValid()) {
+                Material* mat = resourceManager.GetMaterial(mr.material);
+                if (mat) {
+                    mat->albedoTexture = INVALID_TEXTURE_HANDLE;
+                }
+            }
+            return 0;
+        }
+
+        // Load the new texture
         TextureHandle newTexture = resourceManager.LoadTexture(texturePath);
         if (!newTexture.IsValid()) return 0;
-        
+
         // CRITICAL: Update mr.texture - this is what the renderer actually uses!
         mr.texture = newTexture;
-        
+
         // If entity has SpriteAnimation, update the spriteSheet too
         if (em->HasComponent<SpriteAnimation>(entity)) {
             auto& anim = em->GetComponent<SpriteAnimation>(entity);
