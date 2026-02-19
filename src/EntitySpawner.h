@@ -534,10 +534,11 @@ namespace Framework {
             const Vector2D& direction,
             float speed = 0.3f)
         {
-            Entity projectile = SpawnSprite("assets/Bullet.png", position, Vector2D(0.1f, 0.1f));
+            Entity projectile = SpawnSprite("circle", position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(projectile);
             mr.layer = RenderLayers::Projectiles;  // Projectiles above player
+            mr.tint = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);  // Black circle
 
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
