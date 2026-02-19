@@ -532,7 +532,7 @@ namespace Framework {
         Entity SpawnProjectile(
             const Vector2D& position,
             const Vector2D& direction,
-            float speed = 0.3f)
+            float speed = 0.15f)
         {
             Entity projectile = SpawnSprite("assets/new assets/bullet.png", position, Vector2D(0.1f, 0.1f));
 
