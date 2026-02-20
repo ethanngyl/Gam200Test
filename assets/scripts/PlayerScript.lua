@@ -1118,26 +1118,30 @@ function ExecuteSkill(skillID)
             if len > 0 then dirX = dirX / len; dirY = dirY / len end
         end
 
+        -- Determine projectile visuals per player/skill
+        local tintR, tintG, tintB, tintA = 1, 1, 1, 1   -- default white
+        local spritePath = nil                             -- nil = default bullet.png
+        if getPlayerIndex() == 2
+           and (skillID == "Fireball" or skillID == "PiercingShot") then
+            tintR, tintG, tintB, tintA = 1, 0, 0, 1      -- red
+            spritePath = ""                                 -- no texture → solid color
+        end
+
         -- Spawn the projectile via C++ bridge
         local projID = SpawnSkillProjectile(
             worldX, worldY,
             dirX, dirY,
             skill.projSpeed or 3.0,
             skill.damage or 1,
-            skill.pierce or false
+            skill.pierce or false,
+            tintR, tintG, tintB, tintA,
+            spritePath
         )
         print("[PlayerScript] Spawned projectile ID=" .. tostring(projID)
             .. " dir=(" .. dirX .. "," .. dirY .. ")"
             .. " speed=" .. (skill.projSpeed or 3.0)
             .. " dmg=" .. skill.damage
             .. " pierce=" .. tostring(skill.pierce or false))
-
-        -- Player 2 skills 2 and 3: red circle sprite (no texture)
-        if projID and getPlayerIndex() == 2
-           and (skillID == "Fireball" or skillID == "PiercingShot") then
-            SetSpriteTexture(projID, "")       -- clear texture → solid color
-            SetSpriteColor(projID, 1, 0, 0, 1) -- red
-        end
 
         -- Consume AP
         ConsumeEntityAttackAP(entityID, skill.apCost)
