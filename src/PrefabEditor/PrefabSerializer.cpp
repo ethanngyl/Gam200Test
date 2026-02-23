@@ -343,5 +343,157 @@ namespace PrefabSerializer
 
         return e;
     }
+
+    bool ApplyPrefabToEntity(Framework::EntityManager& em, 
+                             Framework::Entity entity, 
+                             const std::string& prefabPath,
+                             bool preservePosition)
+    {
+        if (!entity.IsValid()) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: Invalid entity\n";
+            return false;
+        }
+
+        // Open and parse the prefab file
+        std::ifstream file(prefabPath);
+        if (!file.is_open()) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: Failed to open prefab: " << prefabPath << "\n";
+            return false;
+        }
+
+        nlohmann::json data;
+        try {
+            file >> data;
+        }
+        catch (const nlohmann::json::exception& e) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: JSON parse error: " << e.what() << "\n";
+            return false;
+        }
+        file.close();
+
+        if (!data.contains("components")) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: Prefab missing components\n";
+            return false;
+        }
+
+        const auto& comps = data["components"];
+
+        // Save current position if we want to preserve it
+        Vector2D savedPosition(0.0f, 0.0f);
+        if (preservePosition && em.HasComponent<Transform>(entity)) {
+            savedPosition = em.GetComponent<Transform>(entity).position;
+        }
+
+        // Apply Transform (but preserve position if requested)
+        if (comps.contains("Transform")) {
+            const auto& t = comps["Transform"];
+            if (!em.HasComponent<Transform>(entity)) {
+                em.AddComponent<Transform>(entity);
+            }
+            auto& c = em.GetComponent<Transform>(entity);
+            
+            if (preservePosition) {
+                c.position = savedPosition;  // Keep original position
+            } else {
+                c.position = { t["position"][0], t["position"][1] };
+            }
+            c.scale = { t["scale"][0], t["scale"][1] };
+            if (t.contains("rotation"))
+                c.rotation = t["rotation"];
+        }
+
+        // Apply Sprite
+        if (comps.contains("Sprite")) {
+            const auto& s = comps["Sprite"];
+            if (!em.HasComponent<Sprite>(entity)) {
+                em.AddComponent<Sprite>(entity);
+            }
+            auto& c = em.GetComponent<Sprite>(entity);
+            c.texturePath = s.value("texturePath", "");
+            c.layer = s.value("layer", 0);
+        }
+
+        // Apply MeshRenderer
+        if (comps.contains("MeshRenderer")) {
+            const auto& m = comps["MeshRenderer"];
+            if (!em.HasComponent<MeshRenderer>(entity)) {
+                em.AddComponent<MeshRenderer>(entity);
+            }
+            auto& c = em.GetComponent<MeshRenderer>(entity);
+            c.spriteName = m.value("spriteName", "");
+            c.layer = m.value("layer", 0);
+            c.orderInLayer = m.value("orderInLayer", 0);
+            if (m.contains("tint")) {
+                c.tint.r = m["tint"][0];
+                c.tint.g = m["tint"][1];
+                c.tint.b = m["tint"][2];
+                c.tint.a = m["tint"][3];
+            }
+        }
+
+        // Apply Movement
+        if (comps.contains("Movement")) {
+            const auto& m = comps["Movement"];
+            if (!em.HasComponent<Movement>(entity)) {
+                em.AddComponent<Movement>(entity);
+            }
+            auto& c = em.GetComponent<Movement>(entity);
+            c.moveSpeed = m.value("speed", 0.0f);
+            c.direction.x = m["direction"][0];
+            c.direction.y = m["direction"][1];
+        }
+
+        // Apply BoxCollider
+        if (comps.contains("BoxCollider")) {
+            const auto& b = comps["BoxCollider"];
+            if (!em.HasComponent<BoxCollider>(entity)) {
+                em.AddComponent<BoxCollider>(entity);
+            }
+            auto& c = em.GetComponent<BoxCollider>(entity);
+            c.size.x = b["size"][0];
+            c.size.y = b["size"][1];
+            c.offset.x = b["offset"][0];
+            c.offset.y = b["offset"][1];
+            c.isTrigger = b.value("isTrigger", false);
+        }
+
+        // Apply CircleCollider
+        if (comps.contains("CircleCollider")) {
+            const auto& cdata = comps["CircleCollider"];
+            if (!em.HasComponent<CircleCollider>(entity)) {
+                em.AddComponent<CircleCollider>(entity);
+            }
+            auto& c = em.GetComponent<CircleCollider>(entity);
+            c.radius = cdata["radius"];
+            c.offset.x = cdata["offset"][0];
+            c.offset.y = cdata["offset"][1];
+        }
+
+        // Apply AudioSource
+        if (comps.contains("AudioSource")) {
+            const auto& audioData = comps["AudioSource"];
+            if (!em.HasComponent<AudioSource>(entity)) {
+                em.AddComponent<AudioSource>(entity);
+            }
+            auto& audio = em.GetComponent<AudioSource>(entity);
+            audio.soundName = audioData.value("soundName", "");
+            audio.volume = audioData.value("volume", 1.0f);
+            audio.pitch = audioData.value("pitch", 1.0f);
+            audio.loop = audioData.value("loop", false);
+            audio.playOnStart = audioData.value("playOnStart", false);
+        }
+
+        std::cout << "[PrefabSerializer] Applied prefab '" << prefabPath 
+                  << "' to entity " << entity.GetID() << "\n";
+
+        return true;
+    }
+
+    bool RevertToPrefab(Framework::EntityManager& em, 
+                        Framework::Entity entity, 
+                        const std::string& prefabPath)
+    {
+        return ApplyPrefabToEntity(em, entity, prefabPath, true);
+    }
 }
 

@@ -2296,6 +2296,17 @@ namespace Framework {
                     ImGui::Separator();
                     ImGui::TextColored(ImVec4(0.5f, 0.8f, 0.5f, 1.0f), "Prefab: %s",
                         std::filesystem::path(prefabSource).filename().string().c_str());
+                    
+                    // Revert to Prefab button - resets this entity to prefab values
+                    if (ImGui::Button("Revert to Prefab##RevertBtn")) {
+                        if (PrefabSerializer::RevertToPrefab(*entityManager, entity, prefabSource)) {
+                            std::cout << "[Inspector] Reverted entity " << entity.GetID() 
+                                      << " to prefab: " << prefabSource << "\n";
+                        }
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("Revert this entity's values to match the prefab.\nPosition will be preserved.");
+                    }
                 }
 
                 // ==================================================================
@@ -2321,24 +2332,118 @@ namespace Framework {
                 ImGui::SameLine();
 
                 // ------------------------------------------------------------------
-                // Save as prefab button
+                // Save Prefab button (Apply to all instances + Save)
                 // author: Sim Kah Yan
                 // ------------------------------------------------------------------
-                // - Serializes the current entity and its components to a .prefab
-                //   file under "assets/prefabs/".
-                // - Filename is auto-generated using the entity ID:
-                //       entity_<id>.prefab
-                // - Uses PrefabSerializer::SavePrefab, which writes out JSON
-                //   based on the components currently attached to this entity.
+                // If this entity is a prefab instance:
+                //   1) Updates all instances of this prefab with current values
+                //   2) Saves the prefab file
+                // If not a prefab instance:
+                //   - Creates a new prefab file from this entity
                 // ------------------------------------------------------------------
                 if (ImGui::Button("Save Prefab##SavePrefabBtn")) {
+                    std::string entityPrefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
+                    
+                    if (!entityPrefabSource.empty()) {
+                        // This entity is a prefab instance - update all instances and save
+                        auto instances = Framework::PrefabInstanceTracker::Get().GetInstancesOf(entityPrefabSource);
+                        
+                        // Propagate this entity's values to all other instances
+                        for (auto& inst : instances) {
+                            if (!inst.IsValid() || inst.GetID() == entity.GetID())
+                                continue;
+
+                            // --- Transform (preserve position, copy scale/rotation) ---
+                            if (entityManager->HasComponent<Transform>(entity) &&
+                                entityManager->HasComponent<Transform>(inst)) {
+                                auto& src = entityManager->GetComponent<Transform>(entity);
+                                auto& dst = entityManager->GetComponent<Transform>(inst);
+                                dst.scale = src.scale;
+                                dst.rotation = src.rotation;
+                            }
+
+                            // --- Sprite ---
+                            if (entityManager->HasComponent<Sprite>(entity) &&
+                                entityManager->HasComponent<Sprite>(inst)) {
+                                auto& src = entityManager->GetComponent<Sprite>(entity);
+                                auto& dst = entityManager->GetComponent<Sprite>(inst);
+                                dst.texturePath = src.texturePath;
+                                dst.layer = src.layer;
+                            }
+
+                            // --- MeshRenderer ---
+                            if (entityManager->HasComponent<MeshRenderer>(entity) &&
+                                entityManager->HasComponent<MeshRenderer>(inst)) {
+                                auto& src = entityManager->GetComponent<MeshRenderer>(entity);
+                                auto& dst = entityManager->GetComponent<MeshRenderer>(inst);
+                                dst.spriteName = src.spriteName;
+                                dst.layer = src.layer;
+                                dst.orderInLayer = src.orderInLayer;
+                                dst.tint = src.tint;
+                            }
+
+                            // --- Movement ---
+                            if (entityManager->HasComponent<Movement>(entity) &&
+                                entityManager->HasComponent<Movement>(inst)) {
+                                auto& src = entityManager->GetComponent<Movement>(entity);
+                                auto& dst = entityManager->GetComponent<Movement>(inst);
+                                dst.moveSpeed = src.moveSpeed;
+                                dst.direction = src.direction;
+                            }
+
+                            // --- BoxCollider ---
+                            if (entityManager->HasComponent<BoxCollider>(entity) &&
+                                entityManager->HasComponent<BoxCollider>(inst)) {
+                                auto& src = entityManager->GetComponent<BoxCollider>(entity);
+                                auto& dst = entityManager->GetComponent<BoxCollider>(inst);
+                                dst.size = src.size;
+                                dst.offset = src.offset;
+                                dst.isTrigger = src.isTrigger;
+                            }
+
+                            // --- CircleCollider ---
+                            if (entityManager->HasComponent<CircleCollider>(entity) &&
+                                entityManager->HasComponent<CircleCollider>(inst)) {
+                                auto& src = entityManager->GetComponent<CircleCollider>(entity);
+                                auto& dst = entityManager->GetComponent<CircleCollider>(inst);
+                                dst.radius = src.radius;
+                                dst.offset = src.offset;
+                            }
+                        }
+
+                        // Save the prefab file
+                        PrefabSerializer::SavePrefab(*entityManager, entity, entityPrefabSource);
+                        std::cout << "[Inspector] Saved prefab and updated " << instances.size() << " instances.\n";
+                    }
+                    else {
+                        // Not a prefab instance - create new prefab
+                        std::string prefabPath = "assets/prefabs/entity_" + std::to_string(entity.GetID()) + ".prefab";
+                        std::filesystem::create_directories("assets/prefabs");
+                        PrefabSerializer::SavePrefab(*entityManager, entity, prefabPath);
+                        // Register this entity as a prefab instance
+                        Framework::PrefabInstanceTracker::Get().RegisterInstance(entity, prefabPath);
+                        std::cout << "[Inspector] Created new prefab: " << prefabPath << "\n";
+                    }
+                }
+
+                ImGui::SameLine();
+
+                // ------------------------------------------------------------------
+                // Save as New Prefab button
+                // ------------------------------------------------------------------
+                // Creates a new prefab file from this entity without updating
+                // existing prefab instances. Useful for creating variants.
+                // ------------------------------------------------------------------
+                if (ImGui::Button("Save as New Prefab##SaveNewPrefabBtn")) {
                     std::string prefabPath = "assets/prefabs/entity_" + std::to_string(entity.GetID()) + ".prefab";
                     std::filesystem::create_directories("assets/prefabs");
-
-                    bool saved = PrefabSerializer::SavePrefab(*entityManager, entity, prefabPath);
-                    if (saved) {
-                        // Entity saved as prefab
-                    }
+                    PrefabSerializer::SavePrefab(*entityManager, entity, prefabPath);
+                    // Register this entity as a prefab instance of the NEW prefab
+                    Framework::PrefabInstanceTracker::Get().RegisterInstance(entity, prefabPath);
+                    std::cout << "[Inspector] Created new prefab: " << prefabPath << "\n";
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Creates a new prefab file.\nDoes NOT update other instances.");
                 }
 
                 ImGui::SameLine();
@@ -2809,98 +2914,34 @@ namespace Framework {
                 }
 
                 // ------------------------------------------------
-                // APPLY TO ALL INSTANCES + SAVE PREFAB
-                // Author: Sim Kah Yan
+                // APPLY TO ALL SCENES (Cross-Scene Prefab Update)
                 // ------------------------------------------------
-                // When pressed:
-                //   1) Copies edited component values from templateEntity to every
-                //      instance of this prefab (except position, which remains
-                //      per-instance for Transform).
-                //   2) Calls PrefabSerializer::SavePrefab on the template entity
-                //      to update the on-disk prefab definition.
+                // This is the key feature for syncing prefab changes across all scenes:
+                //   - Scans all JSON scene files in the saves directory
+                //   - Finds entities that reference this prefab
+                //   - Updates their component values to match the prefab
+                //   - Preserves per-instance positions
                 ImGui::Separator();
-                if (ImGui::Button("Apply To All Instances & Save Prefab##ApplyAll2", ImVec2(-1, 0))) {
-
-                    // 1) propagate templateEntity's values to every instance
-                    for (auto& inst : instances) {
-                        if (!inst.IsValid())
-                            continue;
-
-                        // --- Transform (position, scale, rotation) ---
-                        if (entityManager->HasComponent<Transform>(templateEntity) &&
-                            entityManager->HasComponent<Transform>(inst)) {
-
-                            auto& src = entityManager->GetComponent<Transform>(templateEntity);
-                            auto& dst = entityManager->GetComponent<Transform>(inst);
-
-                            //dst.position = src.position;
-                            dst.scale = src.scale;
-                            dst.rotation = src.rotation;
-                        }
-
-                        // --- Sprite ---
-                        if (entityManager->HasComponent<Sprite>(templateEntity) &&
-                            entityManager->HasComponent<Sprite>(inst)) {
-
-                            auto& src = entityManager->GetComponent<Sprite>(templateEntity);
-                            auto& dst = entityManager->GetComponent<Sprite>(inst);
-
-                            dst.texturePath = src.texturePath;
-                            dst.layer = src.layer;
-                        }
-
-                        // --- MeshRenderer ---
-                        if (entityManager->HasComponent<MeshRenderer>(templateEntity) &&
-                            entityManager->HasComponent<MeshRenderer>(inst)) {
-
-                            auto& src = entityManager->GetComponent<MeshRenderer>(templateEntity);
-                            auto& dst = entityManager->GetComponent<MeshRenderer>(inst);
-
-                            dst.spriteName = src.spriteName;
-                            dst.layer = src.layer;
-                            dst.orderInLayer = src.orderInLayer;
-                            dst.tint = src.tint;
-                        }
-
-                        // --- Movement ---
-                        if (entityManager->HasComponent<Movement>(templateEntity) &&
-                            entityManager->HasComponent<Movement>(inst)) {
-
-                            auto& src = entityManager->GetComponent<Movement>(templateEntity);
-                            auto& dst = entityManager->GetComponent<Movement>(inst);
-
-                            dst.moveSpeed = src.moveSpeed;
-                            dst.direction = src.direction;
-                        }
-
-                        // --- BoxCollider ---
-                        if (entityManager->HasComponent<BoxCollider>(templateEntity) &&
-                            entityManager->HasComponent<BoxCollider>(inst)) {
-
-                            auto& src = entityManager->GetComponent<BoxCollider>(templateEntity);
-                            auto& dst = entityManager->GetComponent<BoxCollider>(inst);
-
-                            dst.size = src.size;
-                            dst.offset = src.offset;
-                            dst.isTrigger = src.isTrigger;
-                        }
-
-                        // --- CircleCollider ---
-                        if (entityManager->HasComponent<CircleCollider>(templateEntity) &&
-                            entityManager->HasComponent<CircleCollider>(inst)) {
-
-                            auto& src = entityManager->GetComponent<CircleCollider>(templateEntity);
-                            auto& dst = entityManager->GetComponent<CircleCollider>(inst);
-
-                            dst.radius = src.radius;
-                            dst.offset = src.offset;
-                        }
-                    }
-
-                    // 2) write the prefab file using the template entity
+                ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Cross-Scene Update:");
+                
+                if (ImGui::Button("Apply Prefab to ALL Scenes##ApplyAllScenes", ImVec2(-1, 0))) {
+                    // First save the current prefab
                     PrefabSerializer::SavePrefab(*entityManager, templateEntity, prefabPath);
-
-                    // Prefab changes applied and saved
+                    
+                    // Then apply to all scene files
+                    int updatedCount = Framework::SaveLoadSystem::ApplyPrefabToAllScenes(prefabPath, "assets/saves/");
+                    
+                    // Show result in a tooltip or log
+                    if (updatedCount > 0) {
+                        std::cout << "[Prefab] Updated " << updatedCount << " scene files with prefab changes.\n";
+                    } else {
+                        std::cout << "[Prefab] No scene files needed updating (or no instances found).\n";
+                    }
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("Applies this prefab's changes to ALL scene files.\n"
+                                      "This updates entities in scenes that are NOT currently loaded.\n"
+                                      "Position is preserved for each instance.");
                 }
             }
         }
