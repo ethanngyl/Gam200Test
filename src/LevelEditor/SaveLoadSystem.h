@@ -87,11 +87,13 @@ namespace Framework {
          * @param filepath Path to the input JSON file
          * @param entityManager Pointer to the EntityManager
          * @param clearExisting If true, clears all existing entities before loading
+         * @param applyPrefabUpdates If true, applies latest prefab values to prefab instances
          * @return true if load was successful, false otherwise
          */
         static bool LoadFromJSON(const std::string& filepath, 
                                  EntityManager* entityManager, 
-                                 bool clearExisting = true);
+                                 bool clearExisting = true,
+                                 bool applyPrefabUpdates = false);
 
         /**
          * @brief Gets the auto-save file path for a specific level
@@ -143,6 +145,22 @@ namespace Framework {
          */
         static void SetGraphicsSystem(GraphicsSystemV2* graphics);
 
+        /**
+         * @brief Apply prefab changes to all scene files that contain instances of the prefab
+         * @param prefabPath Path to the prefab file
+         * @param scenesDirectory Directory containing scene JSON files to scan
+         * @return Number of scenes that were updated
+         */
+        static int ApplyPrefabToAllScenes(const std::string& prefabPath, 
+                                          const std::string& scenesDirectory = "assets/saves/");
+
+        /**
+         * @brief Get list of all scene files in a directory
+         * @param directory Directory to scan
+         * @return Vector of scene file paths
+         */
+        static std::vector<std::string> GetAllSceneFiles(const std::string& directory);
+
     private:
         static GraphicsSystemV2* s_graphicsSystem;
 
@@ -167,6 +185,7 @@ namespace Framework {
         static nlohmann::json SerializeAttackRangeComponent(const AttackRangeComponent& range);
         static nlohmann::json SerializeMeshRenderer(EntityManager* em, Entity entity);
         static nlohmann::json SerializeGridTiles(EntityManager* em, Entity entity);
+        static nlohmann::json SerializePrefabSource(const std::string& prefabPath);
 
         // Deserialization helpers
         static Entity DeserializeEntity(const nlohmann::json& json, EntityManager* entityManager);

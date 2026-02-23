@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:        ImGuiSystem.h
  Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -171,6 +171,10 @@ namespace Framework {
         void RecordUndoStep(Entity entity);
         void RecordCreationStep(Entity entity);         // For Spawning
         void RecordDeletionStep(Entity entity);         // For Deleting
+
+        // Copy/Paste functionality
+        void CopyEntity();                              // Ctrl+C - Copy selected entity to clipboard
+        void PasteEntity();                             // Ctrl+V - Paste entity from clipboard
 
         //jiahao
         Framework::Vector2D EditorScreenWorld();
@@ -354,6 +358,31 @@ namespace Framework {
 
         //undo step - jiahao
         std::vector<UndoStep> undoStack;
+
+        // Clipboard for copy/paste
+        std::string clipboardPrefabPath = "";           // Path to temp prefab file for clipboard
+        bool hasClipboardData = false;                  // Whether clipboard has valid data
+
+        // Entity filter/search
+        char entitySearchBuffer[64] = "";               // Search text buffer
+        bool filterByTransform = false;
+        bool filterBySprite = false;
+        bool filterByMeshRenderer = false;
+        bool filterByMovement = false;
+        bool filterByBoxCollider = false;
+        bool filterByCircleCollider = false;
+        bool filterByHealth = false;
+        bool filterByAP = false;
+        bool filterBySpriteAnimation = false;
+        bool filterByAudioSource = false;
+        bool filterByScriptComponent = false;
+        bool filterByPrefab = false;
+        bool showFilterPanel = false;                   // Toggle filter panel visibility
+
+        // Helper function to check if entity passes filter
+        bool EntityPassesFilter(Entity entity);
+        // Helper function to get filtered entities
+        std::vector<Entity> GetFilteredEntities(const std::vector<Entity>& allEntities);
 
         //audio pop up window variables - jiahao
         bool showAudioNamePopup = false;
