@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:        ImGuiSystem.h
  Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -61,23 +61,19 @@ namespace Framework {
     */
 
     //Define types of actions we can undo
-    enum class UndoType {
-        Transform,  // Moving, Scaling, Rotating
-        Creation,   // Spawning a new entity
-        Deletion    // Deleting an entity
+    enum class UndoType
+    {
+        Snapshot
     };
 
-    struct UndoStep {
-        UndoType type = UndoType::Transform;   // What kind of action was this? (default to Transform)
-        Entity entity{};                       // Which entity was affected?
+    struct UndoStep
+    {
+        UndoType type = UndoType::Snapshot;
 
-        // Data for Transform Undo
-        Vector2D oldPosition{};
-        Vector2D oldScale{};
-        float oldRotation = 0.0f;              // Initialize to 0.0f
+        Framework::EntityID liveEntityId = Framework::INVALID_ENTITY;
 
-        // Data for Deletion Undo (To restore it, we save it as a temp file)
-        std::string tempFilePath;
+        std::string beforePath;
+        std::string afterPath;
     };
 
     /**
@@ -168,9 +164,7 @@ namespace Framework {
 
         //undo function - jiahao
         void PerformUndo();
-        void RecordUndoStep(Entity entity);
-        void RecordCreationStep(Entity entity);         // For Spawning
-        void RecordDeletionStep(Entity entity);         // For Deleting
+
 
         // Copy/Paste functionality
         void CopyEntity();                              // Ctrl+C - Copy selected entity to clipboard
@@ -357,7 +351,37 @@ namespace Framework {
         bool m_isViewportFocused = false;        // Is viewport focused?
 
         //undo step - jiahao
+        
+
+        static constexpr size_t kUndoLimit = 30;
+
         std::vector<UndoStep> undoStack;
+        std::vector<UndoStep> redoStack;
+
+        uint64_t undoSerial = 0;
+
+        bool snapshotEditActive = false;
+        Framework::EntityID snapshotEditEntityId = Framework::INVALID_ENTITY;
+        std::string snapshotBeforePath;
+
+
+        void BeginSnapshotEdit(Framework::Entity entity);
+        void EndSnapshotEdit(Framework::Entity entity);
+
+        void PerformRedo();
+
+        
+
+        void PushSnapshotStep(Framework::Entity entity,
+            const std::string& beforePath,
+            const std::string& afterPath);
+
+        Framework::Entity ApplySnapshotStep(const UndoStep& step, bool useBefore);
+
+        std::string MakeUndoPath(const char* suffix);
+        void TrimHistory(std::vector<UndoStep>& stack);
+        void ClearRedo();
+        bool DoesEntityExist(Framework::EntityID id) const;
 
         // Clipboard for copy/paste
         std::string clipboardPrefabPath = "";           // Path to temp prefab file for clipboard
