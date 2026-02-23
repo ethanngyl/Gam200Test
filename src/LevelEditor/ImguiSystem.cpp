@@ -1722,13 +1722,89 @@ namespace Framework {
             ImGui::Separator();
         }
 
+        // ========================================================================
+        // SEARCH AND FILTER SECTION
+        // ========================================================================
         ImGui::Text("Total Entities: %d", totalEntities);
+        
+        // Search box
+        ImGui::SetNextItemWidth(200);
+        ImGui::InputTextWithHint("##EntitySearch", "Search by ID...", entitySearchBuffer, sizeof(entitySearchBuffer));
+        ImGui::SameLine();
+        if (ImGui::Button("Clear##ClearSearch")) {
+            entitySearchBuffer[0] = '\0';
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(showFilterPanel ? "Hide Filters" : "Show Filters")) {
+            showFilterPanel = !showFilterPanel;
+        }
+
+        // Filter panel (collapsible)
+        if (showFilterPanel) {
+            ImGui::BeginChild("FilterPanel", ImVec2(0, 120), true);
+            ImGui::Text("Filter by Component:");
+            
+            // Row 1
+            ImGui::Checkbox("Transform", &filterByTransform);
+            ImGui::SameLine(150);
+            ImGui::Checkbox("Sprite", &filterBySprite);
+            ImGui::SameLine(300);
+            ImGui::Checkbox("MeshRenderer", &filterByMeshRenderer);
+
+            // Row 2
+            ImGui::Checkbox("Movement", &filterByMovement);
+            ImGui::SameLine(150);
+            ImGui::Checkbox("BoxCollider", &filterByBoxCollider);
+            ImGui::SameLine(300);
+            ImGui::Checkbox("CircleCollider", &filterByCircleCollider);
+
+            // Row 3
+            ImGui::Checkbox("Health", &filterByHealth);
+            ImGui::SameLine(150);
+            ImGui::Checkbox("AP", &filterByAP);
+            ImGui::SameLine(300);
+            ImGui::Checkbox("SpriteAnimation", &filterBySpriteAnimation);
+
+            // Row 4
+            ImGui::Checkbox("AudioSource", &filterByAudioSource);
+            ImGui::SameLine(150);
+            ImGui::Checkbox("ScriptComponent", &filterByScriptComponent);
+            ImGui::SameLine(300);
+            ImGui::Checkbox("Is Prefab Instance", &filterByPrefab);
+
+            // Clear all filters button
+            if (ImGui::Button("Clear All Filters")) {
+                filterByTransform = false;
+                filterBySprite = false;
+                filterByMeshRenderer = false;
+                filterByMovement = false;
+                filterByBoxCollider = false;
+                filterByCircleCollider = false;
+                filterByHealth = false;
+                filterByAP = false;
+                filterBySpriteAnimation = false;
+                filterByAudioSource = false;
+                filterByScriptComponent = false;
+                filterByPrefab = false;
+            }
+            ImGui::EndChild();
+        }
+
         ImGui::Separator();
+
+        // Apply filters to get filtered entity list
+        std::vector<Entity> filteredEntities = GetFilteredEntities(allEntities);
+        const int filteredCount = static_cast<int>(filteredEntities.size());
+
+        // Show filter results
+        if (filteredCount != totalEntities) {
+            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Showing %d / %d entities (filtered)", filteredCount, totalEntities);
+        }
 
         // ========================================================================
         // PAGINATION CONTROLS
         // ========================================================================
-        const int totalPages = (totalEntities + entitiesPerPage - 1) / entitiesPerPage;
+        const int totalPages = (filteredCount + entitiesPerPage - 1) / entitiesPerPage;
 
         if (currentPage < 0) currentPage = 0;
         if (currentPage >= totalPages && totalPages > 0) currentPage = totalPages - 1;
@@ -1746,22 +1822,22 @@ namespace Framework {
             ImGui::Separator();
         }
 
-        // Calculate page slice
+        // Calculate page slice from filtered entities
         const int startIdx = currentPage * entitiesPerPage;
         int endIdx = startIdx + entitiesPerPage;
-        if (endIdx > totalEntities) {
-            endIdx = totalEntities;
+        if (endIdx > filteredCount) {
+            endIdx = filteredCount;
         }
 
         std::vector<Entity> pageEntities;
-        if (startIdx < totalEntities) {
+        if (startIdx < filteredCount) {
             pageEntities.assign(
-                allEntities.begin() + startIdx,
-                allEntities.begin() + endIdx
+                filteredEntities.begin() + startIdx,
+                filteredEntities.begin() + endIdx
             );
         }
 
-        ImGui::Text("Showing %d - %d of %d", startIdx + 1, endIdx, totalEntities);
+        ImGui::Text("Showing %d - %d of %d", startIdx + 1, endIdx, filteredCount);
         ImGui::Separator();
 
         // ========================================================================
@@ -3697,6 +3773,85 @@ namespace Framework {
                 std::cerr << "[Undo] Failed to restore entity from " << lastStep.tempFilePath << "\n";
             }
         }
+    }
+
+    // ============================================================================
+    // ENTITY FILTER FUNCTIONALITY
+    // ============================================================================
+
+    bool ImGuiSystem::EntityPassesFilter(Entity entity) {
+        if (!entityManager) return false;
+
+        // Check search text (search by ID)
+        if (entitySearchBuffer[0] != '\0') {
+            std::string searchStr(entitySearchBuffer);
+            std::string idStr = std::to_string(entity.GetID());
+            
+            // Check if ID contains the search string
+            if (idStr.find(searchStr) == std::string::npos) {
+                // Also check sprite name if available
+                bool foundInSpriteName = false;
+                if (entityManager->HasComponent<MeshRenderer>(entity)) {
+                    auto& mr = entityManager->GetComponent<MeshRenderer>(entity);
+                    std::string spriteName = mr.spriteName;
+                    // Case-insensitive search
+                    std::transform(spriteName.begin(), spriteName.end(), spriteName.begin(), ::tolower);
+                    std::string searchLower = searchStr;
+                    std::transform(searchLower.begin(), searchLower.end(), searchLower.begin(), ::tolower);
+                    if (spriteName.find(searchLower) != std::string::npos) {
+                        foundInSpriteName = true;
+                    }
+                }
+                if (!foundInSpriteName) {
+                    return false;
+                }
+            }
+        }
+
+        // Check component filters (entity must have ALL checked components)
+        if (filterByTransform && !entityManager->HasComponent<Transform>(entity)) return false;
+        if (filterBySprite && !entityManager->HasComponent<Sprite>(entity)) return false;
+        if (filterByMeshRenderer && !entityManager->HasComponent<MeshRenderer>(entity)) return false;
+        if (filterByMovement && !entityManager->HasComponent<Movement>(entity)) return false;
+        if (filterByBoxCollider && !entityManager->HasComponent<BoxCollider>(entity)) return false;
+        if (filterByCircleCollider && !entityManager->HasComponent<CircleCollider>(entity)) return false;
+        if (filterByHealth && !entityManager->HasComponent<Health>(entity)) return false;
+        if (filterByAP && !entityManager->HasComponent<AP>(entity)) return false;
+        if (filterBySpriteAnimation && !entityManager->HasComponent<SpriteAnimation>(entity)) return false;
+        if (filterByAudioSource && !entityManager->HasComponent<AudioSource>(entity)) return false;
+        if (filterByScriptComponent && !entityManager->HasComponent<ScriptComponent>(entity)) return false;
+        
+        // Check prefab filter
+        if (filterByPrefab) {
+            std::string prefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
+            if (prefabSource.empty()) return false;
+        }
+
+        return true;
+    }
+
+    std::vector<Entity> ImGuiSystem::GetFilteredEntities(const std::vector<Entity>& allEntities) {
+        // If no filters active, return all entities
+        bool anyFilterActive = (entitySearchBuffer[0] != '\0') ||
+                               filterByTransform || filterBySprite || filterByMeshRenderer ||
+                               filterByMovement || filterByBoxCollider || filterByCircleCollider ||
+                               filterByHealth || filterByAP || filterBySpriteAnimation ||
+                               filterByAudioSource || filterByScriptComponent || filterByPrefab;
+
+        if (!anyFilterActive) {
+            return allEntities;
+        }
+
+        std::vector<Entity> filtered;
+        filtered.reserve(allEntities.size());
+
+        for (const auto& entity : allEntities) {
+            if (EntityPassesFilter(entity)) {
+                filtered.push_back(entity);
+            }
+        }
+
+        return filtered;
     }
 
     // ============================================================================
