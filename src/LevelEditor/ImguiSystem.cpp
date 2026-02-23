@@ -1149,6 +1149,18 @@ namespace Framework {
                 // Undo triggered
                 PerformUndo();
             }
+
+            // Ctrl+C - Copy selected entity
+            bool isCPressed = input->IsKeyPressed(KEY_C);
+            if (isCtrlHeld && isCPressed) {
+                CopyEntity();
+            }
+
+            // Ctrl+V - Paste entity from clipboard
+            bool isVPressed = input->IsKeyPressed(KEY_V);
+            if (isCtrlHeld && isVPressed) {
+                PasteEntity();
+            }
         }
         
         //delete button to delete selected entity
@@ -3684,6 +3696,66 @@ namespace Framework {
             else {
                 std::cerr << "[Undo] Failed to restore entity from " << lastStep.tempFilePath << "\n";
             }
+        }
+    }
+
+    // ============================================================================
+    // COPY/PASTE FUNCTIONALITY
+    // ============================================================================
+
+    void ImGuiSystem::CopyEntity() {
+        if (!selectedEntity.IsValid() || !entityManager) {
+            std::cout << "[Clipboard] No entity selected to copy.\n";
+            return;
+        }
+
+        // Save selected entity to a temporary clipboard prefab file
+        clipboardPrefabPath = "assets/prefabs/_clipboard_temp.prefab";
+        std::filesystem::create_directories("assets/prefabs");
+
+        if (PrefabSerializer::SavePrefab(*entityManager, selectedEntity, clipboardPrefabPath)) {
+            hasClipboardData = true;
+            std::cout << "[Clipboard] Copied entity " << selectedEntity.GetID() << "\n";
+        }
+        else {
+            hasClipboardData = false;
+            std::cerr << "[Clipboard] Failed to copy entity.\n";
+        }
+    }
+
+    void ImGuiSystem::PasteEntity() {
+        if (!hasClipboardData || clipboardPrefabPath.empty() || !entityManager) {
+            std::cout << "[Clipboard] Nothing to paste.\n";
+            return;
+        }
+
+        if (!std::filesystem::exists(clipboardPrefabPath)) {
+            std::cout << "[Clipboard] Clipboard data not found.\n";
+            hasClipboardData = false;
+            return;
+        }
+
+        // Load the clipboard prefab to create a new entity
+        Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, clipboardPrefabPath);
+
+        if (newEntity.IsValid()) {
+            // Offset the position slightly so it doesn't overlap exactly
+            if (entityManager->HasComponent<Transform>(newEntity)) {
+                auto& t = entityManager->GetComponent<Transform>(newEntity);
+                t.position.x += 0.1f;
+                t.position.y += 0.1f;
+            }
+
+            // Record for undo
+            RecordCreationStep(newEntity);
+
+            // Select the newly pasted entity
+            selectedEntity = newEntity;
+
+            std::cout << "[Clipboard] Pasted new entity " << newEntity.GetID() << "\n";
+        }
+        else {
+            std::cerr << "[Clipboard] Failed to paste entity.\n";
         }
     }
 

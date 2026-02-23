@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:        ImGuiSystem.h
  Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -171,6 +171,10 @@ namespace Framework {
         void RecordUndoStep(Entity entity);
         void RecordCreationStep(Entity entity);         // For Spawning
         void RecordDeletionStep(Entity entity);         // For Deleting
+
+        // Copy/Paste functionality
+        void CopyEntity();                              // Ctrl+C - Copy selected entity to clipboard
+        void PasteEntity();                             // Ctrl+V - Paste entity from clipboard
 
         //jiahao
         Framework::Vector2D EditorScreenWorld();
@@ -354,6 +358,10 @@ namespace Framework {
 
         //undo step - jiahao
         std::vector<UndoStep> undoStack;
+
+        // Clipboard for copy/paste
+        std::string clipboardPrefabPath = "";           // Path to temp prefab file for clipboard
+        bool hasClipboardData = false;                  // Whether clipboard has valid data
 
         //audio pop up window variables - jiahao
         bool showAudioNamePopup = false;
