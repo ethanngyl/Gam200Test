@@ -1,16 +1,60 @@
--- ============================================================================
--- MapGenerator.lua
--- Procedural map generation system
--- ============================================================================
--- Generates grid-based tactical maps with rooms, corridors, enemies, and loot
---
--- Features:
--- - Multiple generation algorithms (rooms, cellular automata, maze)
--- - Configurable map size and parameters
--- - Automatic player/enemy/chest/goal placement
--- - Pathfinding validation (ensure goal is reachable)
--- - JSON export compatible with TileMap.json format
--- ============================================================================
+--[[
+===============================================================================
+ File:          MapGenerator.lua
+ Authors:       Josh Ong
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
+
+ MAP GENERATOR - Procedural Map Generation System (Lua)
+
+ Brief:
+    Generates grid-based tactical maps with rooms, corridors, enemies, and
+    loot. Supports multiple generation algorithms including rooms & corridors,
+    cellular automata caves, and open arenas. Automatically places player,
+    enemies, chests, and goal with pathfinding validation to ensure the goal
+    is always reachable.
+
+ Algorithms:
+    "rooms"    - Traditional dungeon with rectangular rooms and L-corridors
+    "cellular" - Cave-like terrain using cellular automata smoothing
+    "open"     - Simple arena with floor surrounded by walls
+
+ Features:
+    - Configurable map size and parameters
+    - Automatic player/enemy/chest/goal placement
+    - Pathfinding validation (ensure goal is reachable)
+    - JSON export compatible with TileMap.json format
+    - Console visualization for debugging
+
+ Usage:
+    local MapGenerator = require("MapGenerator")
+
+    local config = {
+        width = 21,
+        height = 26,
+        algorithm = "rooms",
+        minRoomSize = 3,
+        maxRoomSize = 8,
+        maxRooms = 10,
+        minEnemies = 2,
+        maxEnemies = 5,
+        minChests = 2,
+        maxChests = 4
+    }
+
+    local map = MapGenerator.Generate(config)
+    MapGenerator.Print(map)
+    MapGenerator.SaveToFile(map, "assets/JSON/GeneratedMap.json")
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 local MapGenerator = {}
 

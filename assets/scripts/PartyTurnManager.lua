@@ -1,11 +1,7 @@
-print("============================================================")
-print("========== PartyTurnManager.lua LOADING START ==========")
-print("============================================================")
-
 --[[
 ===============================================================================
  File:           PartyTurnManager.lua
- Author:         Auto-generated for party system implementation
+ Author:         Ethan Ng Yong Le
  Date:           2026-01-16
  ------------------------------------------------------------------------------
  Party Turn Manager
@@ -39,6 +35,10 @@ print("============================================================")
     -- When character finishes turn:
     EndCharacterTurn()  -- Marks character done, advances if last
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 ]]--
 
@@ -375,6 +375,16 @@ function NextCharacterTurn()
             attackAPIndicator:RestoreAllAP()
             print("[PartyTurnManager] Restored all attack AP crystals")
         end
+        
+        -- Restore movement AP visuals (force immediate update)
+        local movementAPIndicator = UIManager.GetComponent("movementAP")
+        if movementAPIndicator and movementAPIndicator.ForceUpdate then
+            movementAPIndicator:ForceUpdate()
+            print("[PartyTurnManager] Force updated movement AP indicator")
+        elseif movementAPIndicator and movementAPIndicator.RestoreAllAP then
+            movementAPIndicator:RestoreAllAP()
+            print("[PartyTurnManager] Restored all movement AP crystals")
+        end
     end
 
     -- Start turn transition cooldown to prevent input carry-over
@@ -382,7 +392,7 @@ function NextCharacterTurn()
     print(string.format("[PartyTurnManager] Turn transition cooldown started: %.2fs", TurnTransitionCooldown))
 
     print("[PartyTurnManager] ======================================")
-
+    PlaySound("turnstart", false, 0.5)
     -- Optional: Trigger camera switch
     OnCharacterSwitched(newActiveEntity)
 end
@@ -435,7 +445,7 @@ function EndPartyTurn()
 
     -- Switch to enemy turn using existing API
     EndPlayerTurn()
-
+    PlaySound("turnend", false, 0.5)
     -- Check what turn it is now
     local currentTurn = GetCurrentTurn()
     print("[PartyTurnManager] After EndPlayerTurn(), GetCurrentTurn() = " .. tostring(currentTurn))
@@ -471,6 +481,12 @@ function EndPartyTurn()
                 print("[PartyTurnManager] No enemies to act - skipping enemy turn!")
                 print("[PartyTurnManager] Calling EndEnemyTurn() to return to player...")
                 EndEnemyTurn()
+
+                -- CRITICAL: Reset party turn immediately since we're skipping enemy turn
+                -- Normally this would be called by OnEnemyTurnEnded() on the next frame,
+                -- but we need it NOW to avoid the party being stuck in a stale state
+                print("[PartyTurnManager] Immediately resetting party turn (no enemies)...")
+                ResetPartyTurn()
             end
         else
             print("[PartyTurnManager] WARNING: EnemyTurnManager not loaded!")
@@ -544,6 +560,16 @@ function ResetPartyTurn()
         if attackAPIndicator and attackAPIndicator.RestoreAllAP then
             attackAPIndicator:RestoreAllAP()
             Log("[PartyTurnManager] Restored all attack AP crystals for " .. PartyMembers[ActiveCharacterIndex].name)
+        end
+        
+        -- Restore movement AP visuals (force immediate update)
+        local movementAPIndicator = UIManager.GetComponent("movementAP")
+        if movementAPIndicator and movementAPIndicator.ForceUpdate then
+            movementAPIndicator:ForceUpdate()
+            Log("[PartyTurnManager] Force updated movement AP indicator")
+        elseif movementAPIndicator and movementAPIndicator.RestoreAllAP then
+            movementAPIndicator:RestoreAllAP()
+            Log("[PartyTurnManager] Restored all movement AP crystals")
         end
     end
 

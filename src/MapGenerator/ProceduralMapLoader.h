@@ -1,7 +1,54 @@
 #pragma once
-/*
+/**
 ===============================================================================
- ProceduralMapLoader - Spawns Generated Map into Grid
+ File:          ProceduralMapLoader.h
+ Author:        Josh Ong
+ Email:         josh.o@digipen.edu
+ Date:          2-5-2026
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+
+ PROCEDURAL MAP LOADER - Grid System Integration
+
+ Brief:
+    Bridges the MapGenerator output with the Grid system and EntitySpawner.
+    Takes a generated map and spawns tile entities into the game world,
+    configuring the Grid for pathfinding and gameplay systems. Includes
+    automatic tile variation (dark/light grass) and decorative rock placement.
+
+ Features:
+    - Configures Grid dimensions and world bounds
+    - Spawns tile entities with proper render layers
+    - Random grass variation (dark/light) for visual interest
+    - Decorative rock spawning on floor tiles
+    - GridTiles component setup for pathfinding
+
+ Usage:
+    // Configure map generation
+    MapGen::Config config;
+    config.width = 30;
+    config.height = 20;
+    config.algorithm = "rooms";
+
+    // Load into game world
+    MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
+        config,
+        entitySpawner,
+        entityManager,
+        Vector2D(0, 0),      // Start position
+        Vector2D(1, 1),      // Tile spacing
+        Vector2D(1, 1)       // Tile size
+    );
+
+    // Use spawn positions
+    SpawnPlayer(map.playerSpawn);
+    for (auto& pos : map.enemySpawns) { SpawnEnemy(pos); }
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

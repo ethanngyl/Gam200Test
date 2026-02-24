@@ -110,10 +110,10 @@
         },
         "layer": 10,
         "text": {
-          "content": "Return to Main Menu",
-          "font": "Playfair48",
+          "content": "BACK TO MAIN MENU",
+          "font": "Jersey20Regular",
           "offset": {
-            "x": -200.0,
+            "x": -140.0,
             "y": -13.0
           },
           "scale": 0.75,

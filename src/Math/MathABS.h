@@ -21,6 +21,12 @@
     potential overhead from <cmath> or <cstdlib> standard library calls.
   - **Magnitude Helper**: Includes LengthSq for squared magnitude, a common
     optimization technique that avoids a square root operation.
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
  */
 

@@ -17,6 +17,11 @@
   prevents entities from moving faster on the diagonal than they do along
   the cardinal axes. The final position is calculated using the entity's
   speed and delta time, and then clamped to the screen boundaries.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
  */
 #include "Precompiled.h"

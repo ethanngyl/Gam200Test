@@ -37,32 +37,23 @@ CURRENT LEVELS:
 
 MAIN MENU:
 The game starts at the main menu.
-Selecting Play loads Level 1.
+Selecting Play loads the task guide page
 Selecting Quit Game closes the application.
 
+GUIDE PAGE:
+This section introduces the main gameplay. Click the "next" button to enter the level selection page.
+
 LEVEL SELECTOR:
-Displays buttons for Levels 1 to 3.
-Selecting a level loads it.
-A Back button allows returning to the main menu.
+Displays buttons Editor's page, Demo page, and back.
 
-LEVEL 1:
-This level contains an animated bird sprite entity.
-The animation plays only while the player is moving using the WASD keys.
-Pressing the space bar fires a projectile upward.
-An enemy is present for testing the current subscriber-listener system, which allows the enemy to take damage from projectiles.
-Keys 3 and 4 upscale and downscale the player entity.
-Keys 7 and 8 rotate the player to the left and right.
-Key 5 returns to the main menu.
-Key 6 loads Level 2.
 
-LEVEL 2:
+Editor PAGE:
 This level functions as a sandbox and level editor for testing ImGui features.
 Further information can be found in the LevelEditor document.
-Pressing Key 3 loads Level 3.
-Level 3 can only be accessed through Level 2.
-Press ESC to pause the game. Use the WS keys, up and down arrow keys, or 1-3 keys to select, and use the space bar or Enter key to confirm the selection.
+Pressing Key 3 loads Demo page.
+Press ESC to pause the game. 
 
-LEVEL 3:
+Demo page:
 This level demonstrates the core grid system, entity occupancy, and enemy pathfinding loop.
 It verifies tile creation, world-to-tile conversion, occupancy tracking, arrow key movement, and enemy pursuit using the A* algorithm.
 The player is locked to one tile per turn and cannot move out of turn.

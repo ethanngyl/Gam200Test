@@ -1,7 +1,7 @@
 --[[
 ===============================================================================
  File:           AnimationController.lua
- Author:         Auto-generated from MovementSystem.cpp refactoring
+ Author:         Ethan Ng Yong Le (Work In Progress for M5, not implemented in M4)
  Date:           2026-01-16
  ------------------------------------------------------------------------------
  Animation Controller Script
@@ -38,7 +38,11 @@
     - Attack: Triggered by KEY_K (one-shot)
     - Injured: Triggered by KEY_J (one-shot)
     - Death: Triggered by KEY_L (one-shot, blocks movement)
-
+    
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 ]]--
 
@@ -227,13 +231,13 @@ end
     SetCharacterType(type)
     Sets the character type for animation selection
 
-    @param type Character type string ("Warrior", "Mage", "Rogue")
+    @param type Character type string ("Warrior", "Magus", "Berserker")
 
     USAGE: Call this after attaching the script to set character-specific animations
     Example:
         AddScriptComponentToEntity(entityID, "assets/scripts/AnimationController.lua")
         -- Then from another script or level script:
-        -- SetEntityCharacterType(entityID, "Mage")
+        -- SetEntityCharacterType(entityID, "Magus")
 ]]--
 function SetCharacterType(type)
     characterType = type

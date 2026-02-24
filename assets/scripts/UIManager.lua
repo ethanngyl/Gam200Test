@@ -1,10 +1,11 @@
 --[[
 ===============================================================================
 File:        UIManager.lua
-Author:      Sim Kah Yan
-Email:       kahyan.sim@digipen.edu
+Author:      Ethan Ng Yong Le
+Co Author:   Sim Kah Yan
+Email:       n.ethanyongle@digipen.edu, kahyan.sim@digipen.edu
 Date:        2026-02-04 (yyyy-mm-dd)
-Contribution: 18% (53 lines of 291 total)
+Contribution: Ethan Ng Yong Le 82%(238 Lines of 291 total) Sim Kah Yan 18% (53 lines of 291 total)
 -------------------------------------------------------------------------------
 Brief:
 Central UI coordinator that creates, updates, draws, and destroys all game UI
@@ -96,7 +97,7 @@ function UIManager.Init(config)
         maxAP = 5,
         size = 0.06,
         spacing = 0.1,
-        offsetX = -0.64,
+        offsetX = -0.82,
         offsetY = -0.42,
         layer = 4,
         filledTexture = "assets/UI/MovP.png",
@@ -147,22 +148,24 @@ function UIManager.Init(config)
     UIManager.components.health:Init({
         maxHP = 5,
         scale = 0.10,
-        offsetX = -0.72,
-        offsetY = -0.22,
+        offsetX = -0.82,
+        offsetY = -0.32,
         layer = 4,
         textureBasePath = "assets/UI/Health_"
     })
 
-    -- Create Turn Indicator
+    -- Create Turn Indicator (Animated sprite sheet)
     UIManager.components.turnIndicator = TurnIndicatorUI:New()
     UIManager.components.turnIndicator:Init({
-        offsetX = 0.65,
-        offsetY = 0.38,
-        scaleX = 0.28,
-        scaleY = 0.28,
+        offsetX = -0.82,
+        offsetY = -0.19,
+        scaleX = 0.18,
+        scaleY = 0.18,
         layer = 4,
-        enemyTexture = "assets/UI/Enemy_Turn_Icon.png",
-        playerTexture = "assets/UI/Player_Turn_Icon.png"
+        texture = "assets/UI/End_Turn_Button.png",
+        rows = 2,           -- Row 0: Player turn, Row 1: Enemy turn
+        cols = 2,           -- 2 columns per row
+        frameTime = 0.3     -- Animation speed (seconds per frame)
     })
 
     -- Create Turn Scroll UI (Your Turn animation)
@@ -175,7 +178,7 @@ function UIManager.Init(config)
         layer = 6,
         texture = "assets/UI/ScrollOpen.png",
         animName = "ScrollOpen",
-        frameTime = 0.03,
+        frameTime = 0.1,
         text = "Your Turn",
         textFont = "Sans48",
         textScale = 0.9,
@@ -214,15 +217,19 @@ function UIManager.Update(dt)
     local currentTurn = GetCurrentTurn and GetCurrentTurn() or "Player"
     local isEnemyTurn = (currentTurn == "Enemy")
 
-    -- Hide player-specific UI during enemy turn
+    -- Hide AP indicators during enemy turn (player can't use AP anyway)
     if UIManager.components.movementAP then
         UIManager.components.movementAP:SetEnabled(not isEnemyTurn)
     end
     if UIManager.components.attackAP then
         UIManager.components.attackAP:SetEnabled(not isEnemyTurn)
     end
+    -- IMPORTANT: Keep HealthUI enabled even during enemy turn!
+    -- This allows players to see their HP decrease when enemies attack
+    -- Health is ALWAYS visible (unlike AP which is only relevant during player turn)
+    -- Amended for now
     if UIManager.components.health then
-        UIManager.components.health:SetEnabled(not isEnemyTurn)
+        UIManager.components.health:SetEnabled(not isEnemyTurn)  -- Always enabled
     end
 
     -- Update all components

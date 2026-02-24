@@ -9,6 +9,11 @@ Contribution: 100%
 Brief:
 Implementation of PrefabInstanceRegistry, the central tracking system for
 entities spawned from prefab files.
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

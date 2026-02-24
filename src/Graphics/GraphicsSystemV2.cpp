@@ -48,6 +48,7 @@ Technology is prohibited.
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <chrono>
 #include "Debugger/Trace.h"
 #include "Input/Input.h"
 #include "imgui.h"
@@ -373,6 +374,30 @@ namespace Framework {
         // Clear queues for next frame
         renderQueue.Clear();
         debugQueue.Clear();
+
+        // ========================================================================
+        // FPS CALCULATION AND TOGGLE (E key)
+        // ========================================================================
+        
+        // Toggle FPS display with E key (with debounce to prevent double-toggle)
+        static bool lastEKeyState = false;
+        bool currentEKeyState = inputManager && inputManager->IsKeyDown(KEY_E);
+        
+        if (currentEKeyState && !lastEKeyState) {
+            // Check if ImGui wants keyboard input - if so, don't toggle
+            bool imguiWantsKeyboard = false;
+            if (ImGui::GetCurrentContext()) {
+                imguiWantsKeyboard = ImGui::GetIO().WantCaptureKeyboard;
+            }
+            
+            if (!imguiWantsKeyboard) {
+                showFPS = !showFPS;
+                std::cout << "[FPS] FPS display " << (showFPS ? "enabled" : "disabled") << " (Press E to toggle)\n";
+            }
+        }
+        lastEKeyState = currentEKeyState;
+
+        // FPS calculation moved to RenderImGui() which is called once per frame
 
         // ========================================================================
         // UNBIND RENDER TARGET
@@ -751,17 +776,18 @@ namespace Framework {
                     MaterialHandle existing = resourceManager.GetMaterialHandle(matName);
                     if (existing.IsValid()) {
                         mr.material = existing;
-                        continue;
+                        // Don't continue here - we still need to set up the render command!
                     }
+                    else {
+                        MaterialHandle inst = resourceManager.CreateMaterial(matName, base->shader);
 
-                    MaterialHandle inst = resourceManager.CreateMaterial(matName, base->shader);
+                        Material* pm = resourceManager.GetMaterial(inst);
+                        if (!pm) continue;
 
-                    Material* pm = resourceManager.GetMaterial(inst);
-                    if (!pm) continue;
-
-                    *pm = *base; // shallow copy of defaults
-                    pm->tint = glm::vec4(1.0f); // Force material tint to white
-                    mr.material = inst;
+                        *pm = *base; // shallow copy of defaults
+                        pm->tint = glm::vec4(1.0f); // Force material tint to white
+                        mr.material = inst;
+                    }
                 }
 
                 cmd.material = mr.material.IsValid() ? mr.material : defaultMaterial;
@@ -876,11 +902,20 @@ namespace Framework {
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (!entityManager->HasComponent<SpriteAnimation>(e))
             {
+                // Non-animated entities: Enforce defaultMaterial for shader compatibility
+                // This ensures tiles and static sprites render correctly
                 Material* mat = resourceManager.GetMaterial(cmd.material);
-                mat->u1 = mat->v1 = 1.f;
-                mat->u0 = mat->v0 = 0.f;
+                if (!mat || mat->shader != defaultShader) {
+                    cmd.material = defaultMaterial;
+                    mat = resourceManager.GetMaterial(cmd.material);
+                }
 
-                // Entity has no animation  safe to submit as-is
+                if (mat) {
+                    mat->u1 = mat->v1 = 1.f;
+                    mat->u0 = mat->v0 = 0.f;
+                }
+
+                // Entity has no animation - safe to submit as-is
                 renderQueue.Submit(cmd);
                 continue;
             }
@@ -892,12 +927,22 @@ namespace Framework {
             // Get the material for this command
             Material* mat = resourceManager.GetMaterial(cmd.material);
 
-            // If the material is missing, or using the wrong shader (color-only),
-            // reroute this command to use the default textured material instead.
-            if (!mat || mat->shader != defaultShader)
+            // ANIMATED ENTITIES: Ensure material has correct shader for texture rendering
+            // Players are spawned with Shader2 (color-only) which doesn't support textures
+            // We need to switch to defaultShader (textured) for animations to work
+            if (!mat)
             {
+                // Material is missing - use default
                 cmd.material = defaultMaterial;
                 mat = resourceManager.GetMaterial(cmd.material);
+            }
+            else if (mat->shader != defaultShader)
+            {
+                // Material exists but has wrong shader (e.g., Shader2/color-only)
+                // Fix the shader to support textures/UV coordinates
+                LOG_INFO("ANIM_FIX", "Entity %u: Switching material shader from %u to defaultShader %u for animation support",
+                    e.GetID(), mat->shader.GetID(), defaultShader.GetID());
+                mat->shader = defaultShader;
             }
 
             // If still failed for some reason, skip this entity
@@ -915,34 +960,89 @@ namespace Framework {
             mat->albedoTexture = anim.spriteSheet;
 
             Texture* tex = resourceManager.GetTexture(anim.spriteSheet);
-            if (!tex)
+            if (!tex) {
+                // Still render with default UVs if texture is missing
+                renderQueue.Submit(cmd);
                 continue;
+            }
 
             const int texW = tex->GetWidth();
             const int texH = tex->GetHeight();
-            if (texW <= 0 || texH <= 0 || anim.frameWidth <= 0 || anim.frameHeight <= 0)
+
+            // CRITICAL FIX: If frame dimensions are invalid, compute them from texture and animation settings
+            int safeFrameWidth = anim.frameWidth;
+            int safeFrameHeight = anim.frameHeight;
+            int safeCols = anim.columns;
+            int safeRows = anim.rows;
+
+            // If frame dimensions are 0 but we have valid columns/rows, compute from texture
+            if ((safeFrameWidth <= 0 || safeFrameHeight <= 0) && texW > 0 && texH > 0) {
+                if (safeCols <= 0) safeCols = 1;
+                if (safeRows <= 0) safeRows = 1;
+                safeFrameWidth = texW / safeCols;
+                safeFrameHeight = texH / safeRows;
+            }
+
+            // Final validation - if still invalid, use full texture as single frame
+            if (safeFrameWidth <= 0 || safeFrameHeight <= 0 || texW <= 0 || texH <= 0) {
+                // Can't compute valid UVs, render with defaults (full texture)
+                renderQueue.Submit(cmd);
                 continue;
+            }
 
-            // Prefer the configured column count if available
-            const int cols = (anim.columns > 0) ? anim.columns : (texW / anim.frameWidth);
+            // Use safe values computed above for cols/rows calculation
+            const int cols = (safeCols > 0) ? safeCols : 1;
+            const int rows = (safeRows > 0) ? safeRows : 1;
 
-            // Calculate actual frame index: startFrame + (currentFrame within range)
-            const int frameInRange = anim.currentFrame % max(1, anim.frameCount);
-            const int actualFrame = anim.startFrame + frameInRange;
+            const int totalCells = cols * rows;
+            if (cols <= 0 || rows <= 0 || totalCells <= 0) {
+                // Still render with default UVs
+                renderQueue.Submit(cmd);
+                continue;
+            }
+
+            // Clamp frameCount so we never walk past the sheet
+            int safeFrameCount = anim.frameCount;
+            if (safeFrameCount <= 0)
+                safeFrameCount = 1;
+
+            const int maxFramesAvailable = totalCells - anim.startFrame;
+            if (maxFramesAvailable <= 0)
+            {
+                safeFrameCount = 1;
+            }
+            else if (safeFrameCount > maxFramesAvailable)
+            {
+                safeFrameCount = maxFramesAvailable;
+            }
+
+            const int frameInRange = anim.currentFrame % safeFrameCount;
+            int actualFrame = anim.startFrame + frameInRange;
+
+            // Final absolute clamp (paranoia)
+            if (actualFrame < 0) actualFrame = 0;
+            if (actualFrame >= totalCells) actualFrame = totalCells - 1;
+
             const int x = actualFrame % cols;
             const int y = actualFrame / cols;
+            if (y < 0 || y >= rows) {
+                // Still render with default UVs
+                renderQueue.Submit(cmd);
+                continue;
+            }
+
 
             // Treat uvShrinkPx as pixels trimmed from each side of the frame
             float shrink = anim.uvShrinkPx;
             if (shrink < 0.0f) shrink = 0.0f;
-            if (shrink * 2.0f >= anim.frameWidth)  shrink = (anim.frameWidth - 1) * 0.5f;
-            if (shrink * 2.0f >= anim.frameHeight) shrink = (anim.frameHeight - 1) * 0.5f;
+            if (shrink * 2.0f >= safeFrameWidth)  shrink = (safeFrameWidth - 1) * 0.5f;
+            if (shrink * 2.0f >= safeFrameHeight) shrink = (safeFrameHeight - 1) * 0.5f;
 
             // Pixel coordinates inside the big texture
-            float leftPx = x * anim.frameWidth + shrink;
-            float rightPx = (x + 1) * anim.frameWidth - shrink;
-            float topPx = y * anim.frameHeight + shrink;
-            float bottomPx = (y + 1) * anim.frameHeight - shrink;
+            float leftPx = x * safeFrameWidth + shrink;
+            float rightPx = (x + 1) * safeFrameWidth - shrink;
+            float topPx = y * safeFrameHeight + shrink;
+            float bottomPx = (y + 1) * safeFrameHeight - shrink;
 
             // Convert to UV [0,1]
             float u0 = leftPx / float(texW);
@@ -1300,6 +1400,45 @@ namespace Framework {
 
     void GraphicsSystemV2::RenderImGui() {
         if (!window) return;
+
+        // ========================================================================
+        // FPS CALCULATION - Done here because this function is called once per frame
+        // ========================================================================
+        static auto lastFrameTime = std::chrono::high_resolution_clock::now();
+        auto now = std::chrono::high_resolution_clock::now();
+        float realDt = std::chrono::duration<float>(now - lastFrameTime).count();
+        lastFrameTime = now;
+        
+        if (realDt > 0.001f && realDt < 1.0f) {  // Sanity check (ignore < 1ms or > 1s)
+            float instantFPS = 1.0f / realDt;
+            currentFPS = currentFPS * 0.9f + instantFPS * 0.1f;  // Smoothed
+        }
+
+        // ========================================================================
+        // FPS DISPLAY - Draw LAST, right before swap, on top of everything
+        // ========================================================================
+        if (showFPS) {
+            int fbWidth, fbHeight;
+            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+            
+            // Ensure we're drawing to the default framebuffer
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glViewport(0, 0, fbWidth, fbHeight);
+            
+            // Update text renderer for screen size
+            text_.setScreenSize(fbWidth, fbHeight);
+            
+            // Format FPS string
+            char fpsText[32];
+            snprintf(fpsText, sizeof(fpsText), "FPS: %.1f", currentFPS);
+            
+            // Position: top-right corner (moved left)
+            float textX = static_cast<float>(fbWidth) - 400.0f;
+            float textY = static_cast<float>(fbHeight) - 100.0f;
+            
+            // Draw with black color as requested
+            DrawText4("Sans48", fpsText, textX, textY, 1.0f, glm::vec3(255.0f, 0.0f, 0.0f));
+        }
 
         //    // Just swap - DON'T clear!
         glfwSwapBuffers(window);

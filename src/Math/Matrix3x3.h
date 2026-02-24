@@ -24,6 +24,11 @@
       successfully inverted (i.e., not singular).
   -   A forward declaration of Vector2D is used to define the matrix-vector
       multiplication operator, preventing circular header dependencies.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 #pragma once

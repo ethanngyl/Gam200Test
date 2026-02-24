@@ -21,6 +21,11 @@
 	between phases, ensuring invalid transitions are prevented and incrementing the turn counter.
   - **State Queries**: IsPlayerTurn() and IsEnemyTurn() allow other systems to check
 	if it is their time to act and the system is not busy.
+
+	 Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
  */
 

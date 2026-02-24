@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -19,6 +19,11 @@
      - Implements a C++ <-> Lua bridge for Entity Component System management
      - Exposes engine functionality via static callback functions
      - Supports hot-reloading of scripts at runtime
+
+ Copyright (C) 2025 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 
@@ -509,6 +514,7 @@ namespace Framework {
         lua_register(L, "HasChestAtTile", LevelLoader::Lua_HasChestAtTile);
         lua_register(L, "CollectChest", LevelLoader::Lua_CollectChest);
         lua_register(L, "HasGoalAtTile", LevelLoader::Lua_HasGoalAtTile);
+        lua_register(L, "IsTileOccupied", LevelLoader::Lua_IsTileOccupied);  // Check if tile has an entity
 
         // Game API - Enemy/Entity
         lua_register(L, "FindPlayer", LevelLoader::Lua_FindPlayer);
@@ -544,6 +550,7 @@ namespace Framework {
         lua_register(L, "SetAnimationFrameRange", LevelLoader::Lua_SetAnimationFrameRange);  // Set startFrame and frameCount for sprite sheet animations
         lua_register(L, "GetAnimationGroup", LevelLoader::Lua_GetAnimationGroup);
         lua_register(L, "GetEntityMovementDirection", LevelLoader::Lua_GetEntityMovementDirection);
+        lua_register(L, "SetSpriteAnimationSheet", LevelLoader::Lua_SetSpriteAnimationSheet);
         
         // Game API - Sprite Control
         lua_register(L, "SpawnSprite", LevelLoader::Lua_SpawnSprite);

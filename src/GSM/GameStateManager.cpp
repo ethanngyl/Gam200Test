@@ -1,19 +1,42 @@
-﻿
-/*
-============================================================================
- File:          GameStateManager.cpp (With F9 Hot Reload + Fixed DT)
- Author:        Padilla carl Jameson Z
- Date:          11/30/2025
+﻿/**
+===============================================================================
+ File:          GameStateManager.cpp
+ Author:        Padilla Carl Jameson Z.
+ Email:         c.padilla@digipen.edu
+ Date:          2025-11-30
  Contribution:  100%
+ ------------------------------------------------------------------------------
 
- Description:
- Manages game state transitions and lifecycle for all game levels and menus.
- Supports Lua-scripted states with hot reload capability via F9 key. Each
- state defines load, initialize, update, draw, free, and unload function
- pointers. Integrates with LevelLoader for Lua script management and handles
- proper cleanup order (Lua first, then C++ systems). Uses fixed delta time
- for consistent gameplay updates across all states.
-============================================================================
+ GAME STATE MANAGER - State Lifecycle & Hot Reload
+
+ Brief:
+    Manages game state transitions and lifecycle for all game levels and menus.
+    Supports Lua-scripted states with hot reload capability via F9 key. Each
+    state defines load, initialize, update, draw, free, and unload function
+    pointers. Integrates with LevelLoader for Lua script management and handles
+    proper cleanup order (Lua first, then C++ systems). Uses fixed delta time
+    for consistent gameplay updates across all states.
+
+ Usage:
+    // Register a new game state
+    GSM::AddState("MainMenu", &MainMenuLoad, &MainMenuInit,
+                  &MainMenuUpdate, &MainMenuDraw,
+                  &MainMenuFree, &MainMenuUnload);
+
+    // Transition to a state
+    GSM::SetNextState("MainMenu");
+
+    // Hot reload current Lua state (F9)
+    if (Input::IsKeyTriggered(KEY_F9)) {
+        GSM::ReloadCurrentState();
+    }
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
 */
 
 

@@ -1,10 +1,28 @@
 ﻿/**
 ===============================================================================
- File:          WindowEventHandler.cpp (FIXED - Audio Restoration Working)
- Author:        Padilla Carl Jameson Z
+ File:          WindowEventHandler.cpp
+ Author:        Padilla Carl Jameson Z.
+ Email:         c.padilla@digipen.edu
  Date:          2025-11-30
+ Contribution:  100%
+ ------------------------------------------------------------------------------
 
- FIXED: s_wasManuallyPaused is now only checked when NOT already auto-paused
+ WINDOW EVENT HANDLER - Implementation
+
+ Brief:
+    Implementation of window event handling system. Manages auto-pause/resume
+    behavior for minimize and focus loss events, with proper tracking of manual
+    vs automatic pause states. Audio is muted on pause and restored on resume.
+    Input states are reset on focus changes to prevent stuck keys.
+
+ Note:
+    s_wasManuallyPaused is only checked when NOT already auto-paused to prevent
+    incorrect state restoration.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

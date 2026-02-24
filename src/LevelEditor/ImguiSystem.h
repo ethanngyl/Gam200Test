@@ -1,31 +1,47 @@
 ﻿/*
 ===============================================================================
-File:        ImGuiSystem.h
-Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
-Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
-Date:        2025-11-07
-Contribution: 40%(Ethan), 50%(Jiahao), 10%(kahyan)
+ File:        ImGuiSystem.h
+ Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
+ Email:       n.ethanyongle@digipen.edu, jiahao.zhou@digipen.edu, kahyan.sim@digipen.edu
+ Date:        2025-11-07
+ Contribution: 40%(Ethan), 50%(Jiahao), 10%(Kahyan)
 -------------------------------------------------------------------------------
-ImGui editor/overlay system. Integrates Dear ImGui with GLFW/
-OpenGL, draws ImGui editor UI, and bridges runtime actions (play/stop, open/save,
-drag-drop, asset browser) to ECS and subsystems.
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+-------------------------------------------------------------------------------
+ Brief:
+ Declarations for the ImGui editor/overlay system. Provides menu bar, panels,
+ viewport UI, level I/O hooks, drag-drop, play/stop controls, and editor tooling
+ integration with ECS and engine subsystems.
 
-@brief ImGui editor/overlay declarations: menu bar, panels, level I/O, drag-drop,
-       and play/stop handoff to subsystems.
+ Notes:
+ This header declares interfaces only. Implementation details are in ImGuiSystem.cpp.
+ Pointer members should be treated as optional and guarded before use.
 
-Safety: Headers only declare interfaces; no heavy logic here. Guard pointers.
+ Modified: 2025-11-26
+ - Added SetupDockSpace() for docking system support
+ - Enabled game viewport auto-fit to window size
 
-Modified: 2025-11-26
-- Added SetupDockSpace() for docking system support
-- Enables Game viewport to auto-fit window size
+ Modified: 2026-01-08
+ - Added Script Browser functionality for ScriptComponent
+ - Added GetLuaFilesInDirectory() for recursive .lua search
+ - Added ShowScriptBrowserPopup() for script selection UI
 
-Modified: 2026-01-08
-- Added Script Browser functionality for ScriptComponent
-- Added GetLuaFilesInDirectory() for recursive .lua file search
-- Added ShowScriptBrowserPopup() for script selection UI
+ Modified: 2026-01-19
+ - Added editor-load/play-state related declarations to support safe editor level load
+   (prevent scripts from forcing play state during editor load)
 
+ Modified: 2026-01-29
+ - Added Asset Browser import/delete-from-disk support declarations
+ - Added audio import helpers (IsAudioFile/IsAudioFileSupported/AddAudioToJSON)
+
+ Modified: 2026-02-03
+ - Added render layer UI + overlays (ShowLayersWindow/ShowFPSOverlay)
+ - Added Lua level browser popup + save-current convenience (ShowLevelBrowserPopup/SaveCurrentLevel)
+===============================================================================
 */
-
 
 #pragma once
 #include "Precompiled.h"
@@ -45,23 +61,19 @@ namespace Framework {
     */
 
     //Define types of actions we can undo
-    enum class UndoType {
-        Transform,  // Moving, Scaling, Rotating
-        Creation,   // Spawning a new entity
-        Deletion    // Deleting an entity
+    enum class UndoType
+    {
+        Snapshot
     };
 
-    struct UndoStep {
-        UndoType type;          // What kind of action was this?
-        Entity entity;          // Which entity was affected?
+    struct UndoStep
+    {
+        UndoType type = UndoType::Snapshot;
 
-        // Data for Transform Undo
-        Vector2D oldPosition;
-        Vector2D oldScale;
-        float oldRotation;
+        Framework::EntityID liveEntityId = Framework::INVALID_ENTITY;
 
-        // Data for Deletion Undo (To restore it, we save it as a temp file)
-        std::string tempFilePath;
+        std::string beforePath;
+        std::string afterPath;
     };
 
     /**
@@ -152,9 +164,11 @@ namespace Framework {
 
         //undo function - jiahao
         void PerformUndo();
-        void RecordUndoStep(Entity entity);
-        void RecordCreationStep(Entity entity);         // For Spawning
-        void RecordDeletionStep(Entity entity);         // For Deleting
+
+
+        // Copy/Paste functionality
+        void CopyEntity();                              // Ctrl+C - Copy selected entity to clipboard
+        void PasteEntity();                             // Ctrl+V - Paste entity from clipboard
 
         //jiahao
         Framework::Vector2D EditorScreenWorld();
@@ -220,7 +234,7 @@ namespace Framework {
         void ShowEntityInspector();
         void ShowSpawnerWindow();
         void ShowDebugWindow();
-        void ShowDemoWindow();
+        //void ShowDemoWindow();
         void ShowFPSOverlay();
 
         // ========================================================================
@@ -267,9 +281,9 @@ namespace Framework {
 
 
         void ShowAssetsWindow();
-        void SetupDefaultDockLayout();
+        //void SetupDefaultDockLayout();
         void ShowPrefabWindow();
-        void SpawnPrefabAtMouse(const std::string& prefabPath);
+        //void SpawnPrefabAtMouse(const std::string& prefabPath);
 
         /**
          * @brief Shows script browser popup for selecting Lua scripts
@@ -337,7 +351,62 @@ namespace Framework {
         bool m_isViewportFocused = false;        // Is viewport focused?
 
         //undo step - jiahao
+        
+
+        static constexpr size_t kUndoLimit = 30;
+
         std::vector<UndoStep> undoStack;
+        std::vector<UndoStep> redoStack;
+
+        uint64_t undoSerial = 0;
+
+        bool snapshotEditActive = false;
+        Framework::EntityID snapshotEditEntityId = Framework::INVALID_ENTITY;
+        std::string snapshotBeforePath;
+
+
+        void BeginSnapshotEdit(Framework::Entity entity);
+        void EndSnapshotEdit(Framework::Entity entity);
+
+        void PerformRedo();
+
+        
+
+        void PushSnapshotStep(Framework::Entity entity,
+            const std::string& beforePath,
+            const std::string& afterPath);
+
+        Framework::Entity ApplySnapshotStep(const UndoStep& step, bool useBefore);
+
+        std::string MakeUndoPath(const char* suffix);
+        void TrimHistory(std::vector<UndoStep>& stack);
+        void ClearRedo();
+        bool DoesEntityExist(Framework::EntityID id) const;
+
+        // Clipboard for copy/paste
+        std::string clipboardPrefabPath = "";           // Path to temp prefab file for clipboard
+        bool hasClipboardData = false;                  // Whether clipboard has valid data
+
+        // Entity filter/search
+        char entitySearchBuffer[64] = "";               // Search text buffer
+        bool filterByTransform = false;
+        bool filterBySprite = false;
+        bool filterByMeshRenderer = false;
+        bool filterByMovement = false;
+        bool filterByBoxCollider = false;
+        bool filterByCircleCollider = false;
+        bool filterByHealth = false;
+        bool filterByAP = false;
+        bool filterBySpriteAnimation = false;
+        bool filterByAudioSource = false;
+        bool filterByScriptComponent = false;
+        bool filterByPrefab = false;
+        bool showFilterPanel = false;                   // Toggle filter panel visibility
+
+        // Helper function to check if entity passes filter
+        bool EntityPassesFilter(Entity entity);
+        // Helper function to get filtered entities
+        std::vector<Entity> GetFilteredEntities(const std::vector<Entity>& allEntities);
 
         //audio pop up window variables - jiahao
         bool showAudioNamePopup = false;

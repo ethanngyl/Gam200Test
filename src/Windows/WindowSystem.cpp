@@ -21,6 +21,10 @@ Config File Support:
 - window_title: Window title string (default: "Struct Squad Game Engine")
 - fullscreen: Enable fullscreen mode (default: false)
 
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

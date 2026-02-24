@@ -4,7 +4,7 @@
  Author:         Josh Ong
  Email:          josh.o@digipen.edu
  Date:           2025-10-22
- Contribution:	 10%
+ Contribution:	 100%
  ------------------------------------------------------------------------------
 
   Brief:

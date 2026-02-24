@@ -12,6 +12,11 @@
  - Added GLFWwindow* member variable
  - Added SetWindow() method
  - GetMousePosition() now returns window-relative coordinates
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
  */
 #pragma once
@@ -71,7 +76,9 @@ namespace Framework
         KEY_SHIFT = VK_SHIFT,
 
         KEY_LEFT_CONTROL = VK_LCONTROL,
-        KEY_RIGHT_CONTROL = VK_RCONTROL
+        KEY_RIGHT_CONTROL = VK_RCONTROL,
+        KEY_LEFT_SHIFT = VK_LSHIFT,
+        KEY_RIGHT_SHIFT = VK_RSHIFT
     };
 
     /**

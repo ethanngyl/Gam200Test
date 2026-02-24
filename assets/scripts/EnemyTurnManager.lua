@@ -185,6 +185,16 @@ function EndAllEnemyTurns()
     -- Switch back to player turn
     EndEnemyTurn()
 
+    -- CRITICAL: Reset party turn immediately
+    -- Normally OnEnemyTurnEnded() would be called by the level script on next frame,
+    -- but we need to reset the party NOW to avoid being stuck in a stale state
+    if ResetPartyTurn then
+        print("[EnemyTurnManager] Immediately resetting party turn...")
+        ResetPartyTurn()
+    else
+        print("[EnemyTurnManager] WARNING: ResetPartyTurn not found!")
+    end
+
     print("[EnemyTurnManager] EndAllEnemyTurns() COMPLETE")
     print("============================================================")
 end
@@ -204,7 +214,8 @@ function UpdateEnemyTurnManager(dt)
         print("[EnemyTurnManager] ========================================")
         print("[EnemyTurnManager] ALL ENEMIES DEAD - Auto-ending enemy turn!")
         print("[EnemyTurnManager] ========================================")
-        EndAllEnemyTurns()
+        SetNextGameState("LEVEL_END")
+        --EndAllEnemyTurns()
         return
     end
 

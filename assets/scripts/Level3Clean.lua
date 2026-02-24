@@ -1,12 +1,47 @@
--- ============================================================================
--- Level3Clean.lua
--- REFACTORED - Clean, modular version of Level3 with 3-character party system
--- ============================================================================
--- This is a refactored version showing proper separation of concerns
--- UI management is delegated to UIManager
--- Level script focuses on level lifecycle and coordination
--- Party system: 3 characters act sequentially before enemy turn
--- ============================================================================
+--[[
+===============================================================================
+ File:          Level3Clean.lua
+ Authors:       Padilla Carl Jameson
+ Email:         c.padilla@digipen.edu
+ Co-Authors:    N/A
+ Date:          2026-02-06
+ Contribution:  Carl (100%)
+ ------------------------------------------------------------------------------
+
+ LEVEL 3 CONTROLLER (Tactical Grid & Party Management)
+
+ Brief:
+    The main lifecycle manager for Level 3. This script orchestrates the
+    tactical grid gameplay, specifically handling the refactored 3-character
+    party system (Warrior, Mage, Rogue). It delegates UI and Turn logic to
+    external managers while coordinating the overall game loop.
+
+ Usage:
+    1. Loaded by the LevelLoader or Engine as the primary level script.
+    2. Requires:
+       - PartyTurnManager.lua (Turn logic)
+       - EnemyTurnManager.lua (AI logic)
+       - UIManager.lua (HUD/GUI)
+    3. Controls:
+       - WASD: Move active character
+       - P / ESC: Pause Game
+       - F1: Toggle Editor Mode
+
+ Turn Flow:
+    [Player Turn] -> Warrior Act -> Mage Act -> Rogue Act -> [Enemy Turn]
+    [Enemy Turn]  -> AI Logic Execution -> [Player Turn]
+
+ Key Responsibilities:
+    - Level Lifecycle (OnInit, OnUpdate, OnDraw, OnDestroy)
+    - Entity Setup (Spawning Party & Enemies from TileMap)
+    - Subsystem Initialization (Audio, Camera, UI, Popups)
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
 
 -- CRITICAL: Verify script is loading
 print("============================================================")
@@ -26,6 +61,11 @@ _G.PopupManager = PopupManager
 print("[Level3Clean] Loading PartyTurnManager.lua...")
 dofile("assets/scripts/PartyTurnManager.lua")
 print("[Level3Clean] PartyTurnManager.lua loaded successfully")
+
+-- Load Enemy Turn Manager (REQUIRED for sequential enemy turns with delays)
+print("[Level3Clean] Loading EnemyTurnManager.lua...")
+dofile("assets/scripts/EnemyTurnManager.lua")
+print("[Level3Clean] EnemyTurnManager.lua loaded successfully")
 
 -- ============================================================================
 -- LEVEL STATE
@@ -100,13 +140,95 @@ function OnInit()
         return
     end
 
-    -- Load animations
+    -- Load animation configuration
     LoadAnimationConfig("assets/JSON/animations.json")
-    LoadPlayerAnimation("Idle_front")
 
-    -- Setup entities
+    -- Setup entities FIRST (must exist before loading animations)
     SetupParty()  -- Changed from SetupPlayer() to SetupParty()
     SetupEnemies()
+
+    -- ========================================================================
+    -- UNIFIED ANIMATION SYSTEM - Warrior animations for all 3 players
+    -- ========================================================================
+
+    -- DEBUG: Check if new function exists
+    print("[Level3Clean] ========================================")
+    print("[Level3Clean] ANIMATION LOADING DEBUG")
+    print("[Level3Clean] ========================================")
+
+    if LoadAnimationForAllPlayers then
+        print("[Level3Clean] LoadAnimationForAllPlayers function EXISTS - calling it...")
+        LoadAnimationForAllPlayers("Idle_front")
+        print("[Level3Clean] LoadAnimationForAllPlayers RETURNED")
+    elseif LoadAnimationForEntity then
+        print("[Level3Clean] LoadAnimationForAllPlayers NOT FOUND")
+        print("[Level3Clean] Using LoadAnimationForEntity fallback...")
+        local players = GetAllPlayers()
+        if players then
+            for i = 1, #players do
+                local pid = players[i]
+                if pid and pid ~= 0 then
+                    print("[Level3Clean]   Loading animation for player " .. i .. " (Entity " .. pid .. ")")
+                    LoadAnimationForEntity(pid, "Idle_front")
+                    print("[Level3Clean]   Animation loaded for player " .. i)
+                end
+            end
+        end
+    else
+        print("[Level3Clean] NEW FUNCTIONS NOT FOUND - using manual workaround...")
+        dofile("assets/scripts/ApplyAnimationsToAllPlayers.lua")
+        ApplyAnimationsToAllPlayers()
+    end
+
+    -- Re-initialize animation state for all players (critical!)
+    print("[Level3Clean] Re-initializing animation state for all players...")
+    local players = GetAllPlayers()
+    if players then
+        for i = 1, #players do
+            local pid = players[i]
+            if pid and pid ~= 0 then
+                print("[Level3Clean]   Player " .. i .. " (Entity " .. pid .. ") - Setting animation state...")
+                -- Set initial animation state (Idle, Front-facing)
+                SetAnimationGroup(pid, 0)           -- 0 = Idle
+                SetAnimationDirection(pid, 0)       -- 0 = Front
+                SetAnimationFlipX(pid, false)
+                SetAnimationPlaying(pid, true)
+                print("[Level3Clean]   Player " .. i .. " animation state set - Group:0, Dir:0, Playing:true")
+            end
+        end
+    end
+    print("[Level3Clean] All players animation initialization complete")
+    print("[Level3Clean] ========================================")
+
+    -- ALTERNATIVE: Explicit per-player approach (same result)
+    -- Uncomment to load explicitly for each player:
+    --[[
+    local players = GetAllPlayers()
+    if players and #players >= 3 then
+        LoadAnimationForEntity(players[1], "Idle_front")  -- Player 1 = Warrior
+        LoadAnimationForEntity(players[2], "Idle_front")  -- Player 2 = Warrior
+        LoadAnimationForEntity(players[3], "Idle_front")  -- Player 3 = Warrior
+        Log("[Level3Clean] Applied Warrior animations to each player explicitly")
+    end
+    --]]
+
+    -- FUTURE: Load UNIQUE animations for each player (when other character sheets exist)
+    -- Uncomment when you have Mage/Rogue/etc sprite sheets:
+    --[[
+    local players = GetAllPlayers()
+    if players and #players >= 3 then
+        LoadAnimationForEntity(players[1], "Warrior")  -- Player 1 = Warrior animations
+        LoadAnimationForEntity(players[2], "Mage")     -- Player 2 = Mage animations (needs Mage sprite sheet)
+        LoadAnimationForEntity(players[3], "Rogue")    -- Player 3 = Rogue animations (needs Rogue sprite sheet)
+        Log("[Level3Clean] Loaded unique animations per player")
+    end
+    --]]
+
+    -- OPTION 3: Load animations for enemies (if enemies have sprite sheets)
+    -- Uncomment to enable enemy animations:
+    -- LoadAnimationForAllEnemies("Skeleton")
+    -- Log("[Level3Clean] Loaded 'Skeleton' animation for all enemies")
+    -- ========================================================================
 
     -- Initialize UI system (replaces 500+ lines of UI code!)
     UIManager.Init()
@@ -208,6 +330,11 @@ function OnUpdate(dt)
 
     -- Update party turn manager (handles turn transition cooldown)
     UpdatePartyTurnManager(dt)
+
+    -- Update enemy turn manager (handles sequential enemy turns with delays)
+    if UpdateEnemyTurnManager then
+        UpdateEnemyTurnManager(dt)
+    end
 
     -- Update player particles
     UpdatePlayerParticles(dt)

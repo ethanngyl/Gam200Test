@@ -164,6 +164,7 @@ local blockedKeys = {}
 -- P key state tracking
 local lastPKeyDown = false
 
+
 -- Attack state tracking
 local lastSpaceKeyDown = false
 local attackPreviewActive = false
@@ -257,10 +258,10 @@ local function updateAnimationDirection(moveDirX, moveDirY)
         newDirection = AnimDirection.Front
     elseif moveDirX > 0 then
         newDirection = AnimDirection.Side
-        newFlipX = false
+        newFlipX = true
     elseif moveDirX < 0 then
         newDirection = AnimDirection.Side
-        newFlipX = true
+        newFlipX = false
     end
 
     if newDirection ~= currentAnimDirection then
@@ -403,11 +404,12 @@ function ExecuteAttack()
     print("[PlayerScript] ===== EXECUTING ATTACK =====")
     print("============================================================")
 
-    local currentAP, maxAP = GetEntityAP(entityID)
-    print("[PlayerScript] Current AP: " .. currentAP .. "/" .. maxAP .. " (need " .. attackAPCost .. ")")
+    -- Use ATTACK AP, not movement AP
+    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+    print("[PlayerScript] Current Attack AP: " .. tostring(currentAttackAP) .. "/" .. tostring(maxAttackAP) .. " (need " .. attackAPCost .. ")")
 
-    if currentAP < attackAPCost then
-        print("[PlayerScript] ATTACK BLOCKED: Not enough AP (" .. currentAP .. " < " .. attackAPCost .. ")")
+    if not currentAttackAP or currentAttackAP < attackAPCost then
+        print("[PlayerScript] ATTACK BLOCKED: Not enough Attack AP (" .. tostring(currentAttackAP) .. " < " .. attackAPCost .. ")")
         ClearAttackPreview()
         return
     end
@@ -431,9 +433,10 @@ function ExecuteAttack()
     if success then
         print("[PlayerScript] Attack SUCCESS! Enemy " .. enemyID .. " damaged for " .. attackDamage .. " HP")
 
-        ConsumeEntityAP(entityID, attackAPCost)
-        local newAP = GetEntityAP(entityID)
-        print("[PlayerScript] AP consumed. New AP: " .. newAP .. "/" .. maxAP)
+        -- Consume ATTACK AP, not movement AP
+        ConsumeEntityAttackAP(entityID, attackAPCost)
+        local newAttackAP = GetEntityAttackAP(entityID)
+        print("[PlayerScript] Attack AP consumed. New Attack AP: " .. tostring(newAttackAP) .. "/" .. tostring(maxAttackAP))
 
         PulseTile(enemyX, enemyY, 0.5, 1.0, 0.0, 0.0)
 
@@ -524,8 +527,9 @@ local function createPlayerStates(fsm)
                 print("[PlayerScript] SPACE key pressed")
 
                 if not attackPreviewActive then
-                    local currentAP, maxAP = GetEntityAP(entityID)
-                    if currentAP >= attackAPCost then
+                    -- Use ATTACK AP, not movement AP
+                    local currentAttackAP, maxAttackAP = GetEntityAttackAP(entityID)
+                    if currentAttackAP >= attackAPCost then
                         local testEnemy = FindEnemyInRange()
                         if testEnemy then
                             ShowAttackPreview()
@@ -535,7 +539,7 @@ local function createPlayerStates(fsm)
                             PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
                         end
                     else
-                        print("[PlayerScript] Not enough AP to attack (" .. currentAP .. " < " .. attackAPCost .. ")")
+                        print("[PlayerScript] Not enough ATTACK AP to attack (" .. tostring(currentAttackAP) .. " < " .. attackAPCost .. ")")
                         PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                     end
                 else
@@ -656,7 +660,15 @@ local function createPlayerStates(fsm)
                 return
             end
 
-            print("[PlayerScript] Step 1: PASSED - target is valid and walkable")
+            local isOccupied = IsTileOccupied(self.targetX, self.targetY)
+            print("[PlayerScript]   IsTileOccupied: " .. tostring(isOccupied))
+            if isOccupied then
+                print("[PlayerScript] FAILED: Tile occupied by another entity!")
+                PulseTile(self.targetX, self.targetY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse for occupied
+                return
+            end
+
+            print("[PlayerScript] Step 1: PASSED - target is valid, walkable, and unoccupied")
 
             print("[PlayerScript] Step 2: Checking AP...")
             local currentAP, maxAP = GetEntityAP(entityID)
@@ -665,11 +677,7 @@ local function createPlayerStates(fsm)
             if currentAP < apCostPerMove then
                 print("[PlayerScript] FAILED: Not enough AP!")
                 PulseTile(self.targetX, self.targetY, 0.3, 1.0, 1.0, 0.3)
-
-                if currentAP == 0 then
-                    print("[PlayerScript] AP depleted - ending turn!")
-                    endTurn()
-                end
+                -- Removed automatic turn end - player can still attack or press P to end turn
                 return
             end
 
@@ -700,10 +708,9 @@ local function createPlayerStates(fsm)
                 local newAP, maxAP = GetEntityAP(entityID)
                 print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
 
+                -- Removed automatic turn end - player can still attack or press P to end turn
                 if newAP == 0 then
-                    print("[PlayerScript] AP depleted after movement - ending turn!")
-                    endTurn()
-                    return
+                    print("[PlayerScript] Movement AP depleted - player can still attack or press P to end turn")
                 end
 
                 -- Visual feedback
@@ -744,6 +751,11 @@ function OnInit(id)
     print("============================================================")
 
     entityID = id
+
+    -- Apply scale to ALL players (unified scaling)
+    SetScale(entityID, 0.25, 0.25)
+    print("[PlayerScript] Scaled Player " .. entityID .. " to 0.25x0.25")
+
 
     print("[PlayerScript] Checking AP/HP for Entity " .. entityID .. "...")
     local ap, maxAP = GetEntityAP(entityID)
@@ -849,6 +861,7 @@ function OnUpdate(dt)
         print("========== PlayerScript: Entity " .. entityID .. " is now ACTIVE ==========")
         print("============================================================")
         local currentAP, maxAP = GetEntityAP(entityID)
+        local currentHP, maxHP = GetEntityHP(entityID)
         print("[PlayerScript] Entity " .. entityID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
         print("[PlayerScript] This entity will now respond to WASD input")
         print("============================================================")
@@ -1401,6 +1414,51 @@ function ExecuteAttack()
     end
 
     print("[PlayerScript] Target found: Enemy " .. enemyID .. " at (" .. tostring(enemyX) .. ", " .. tostring(enemyY) .. ")")
+
+        -- ============================================================
+    -- FIX: Face the enemy before playing Attack_side animation
+    -- (Knight side attack sheet is left-facing by default)
+    -- ============================================================
+    do
+        local px, py = GetEntityGridPosition(entityID)
+        if px and py and enemyX and enemyY then
+            local dx = enemyX - px
+            local dy = enemyY - py
+
+            local newDir = currentAnimDirection
+            local newFlip = isFlippedX
+
+            -- Decide facing axis (attack is usually 1-tile away, but keep robust)
+            if math.abs(dx) > math.abs(dy) then
+                newDir = AnimDirection.Side
+
+                -- IMPORTANT: for Knight_Attack_Left sheet,
+                -- flip when enemy is on the RIGHT.
+                if dx > 0 then
+                    newFlip = true   -- enemy right -> flip to face right
+                else
+                    newFlip = false  -- enemy left  -> keep left
+                end
+            elseif dy > 0 then
+                newDir = AnimDirection.Back
+                -- keep newFlip unchanged
+            elseif dy < 0 then
+                newDir = AnimDirection.Front
+                -- keep newFlip unchanged
+            end
+
+            if newDir ~= currentAnimDirection then
+                currentAnimDirection = newDir
+                SetAnimationDirection(entityID, currentAnimDirection)
+            end
+
+            if newFlip ~= isFlippedX then
+                isFlippedX = newFlip
+                SetAnimationFlipX(entityID, isFlippedX)
+            end
+        end
+    end
+
 
     -- Check enemy HP BEFORE attack
     local enemyHPBefore, enemyMaxHP = GetEntityHP(enemyID)

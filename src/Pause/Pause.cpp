@@ -4,7 +4,7 @@
  Author:        Padilla Carl Jameson Z
  Email:         c.padilla@digipen.edu
  Date:          2025-11-27
- Contribution:  Original: Carl | Fix: Claude
+ Contribution:  100%
  ------------------------------------------------------------------------------
   Text-Based Pause Menu with Framebuffer-Aware Positioning
 
@@ -12,6 +12,11 @@
   - Uses glfwGetFramebufferSize() instead of window size (fixes DPI scaling)
   - All layout values read from valueloader.txt (easy adjustment)
   - Consistent with Level1 UI style
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
 

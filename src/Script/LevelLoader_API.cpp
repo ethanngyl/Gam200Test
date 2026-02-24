@@ -1,10 +1,10 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
 Email:       n.ethanyongle@digipen.edu; kahyan.sim@digipen.edu
 Date:        2026-02-04 (yyyy-mm-dd)
-Contribution: ETHAN NG (remaining); Sim Kah Yan 2% (82 lines of 4233 total)
+Contribution: ETHAN NG 98%(2758 lines of 2840 total); Sim Kah Yan 2% (82 lines of 2840 total)
 -------------------------------------------------------------------------------
 Brief:
 Level Loader Lua API implementation: C++ bridge to Lua. Static functions
@@ -65,7 +65,8 @@ Technology is prohibited.
 #include "Grid/GridECS.h" // Grid system functions
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
-#include "MapGenerator/ProceduralMapLoader.h"    
+#include "MapGenerator/ProceduralMapLoader.h"
+#include <Windows.h>      // For GetTickCount64()    
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -93,6 +94,47 @@ namespace Framework {
      */
     int GetActivePlayerIndexForParticles() {
         return g_activePlayerIndex;
+    }
+
+    // ========================================================================
+    // TILE TINTING SYSTEM - For PulseTile visual feedback
+    // ========================================================================
+
+    struct TileTintState {
+        Entity tileEntity;
+        glm::vec4 originalTint;
+        ULONGLONG expiryTimeMs;
+    };
+
+    static std::vector<TileTintState> s_activeTileTints;
+
+    /**
+     * @brief Update tile tints and restore expired ones
+     * Called every frame from UpdateCurrentLevel
+     */
+    void UpdateTileTints() {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return;
+
+        ULONGLONG now = GetTickCount64();
+
+        // Iterate backwards so we can safely erase
+        for (int i = static_cast<int>(s_activeTileTints.size()) - 1; i >= 0; --i) {
+            auto& state = s_activeTileTints[i];
+
+            // Check if tint has expired
+            if (now >= state.expiryTimeMs) {
+                // Restore original tint if entity still exists
+                if (state.tileEntity.GetID() != INVALID_ENTITY &&
+                    em->HasComponent<Renderable>(state.tileEntity)) {
+                    auto& renderable = em->GetComponent<Renderable>(state.tileEntity);
+                    renderable.tint = state.originalTint;
+                }
+
+                // Remove from active list
+                s_activeTileTints.erase(s_activeTileTints.begin() + i);
+            }
+        }
     }
 
     // ========================================================================
@@ -498,6 +540,27 @@ namespace Framework {
      */
     int LevelLoader::Lua_IsKeyDown(lua_State* L) {
         const char* keyName = luaL_checkstring(L, 1);
+
+        // Only block gameplay hotkeys when an ImGui popup/modal is open OR when typing in a text input.
+        // If ImGui is merely visible (editor overlay), allow gameplay hotkeys to work.
+        if (ImGui::GetCurrentContext())
+        {
+            ImGuiIO& io = ImGui::GetIO();
+
+            // AnyPopupLevel catches nested popups/modals (e.g., Save/Load modal + child popup)
+            const bool anyPopupOpen =
+                ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+
+            const bool typingInTextBox = io.WantTextInput;
+
+            if (anyPopupOpen || typingInTextBox)
+            {
+                lua_pushboolean(L, false);
+                return 1;
+            }
+        }
+
+
         auto* input = CORE ? CORE->GetInputSystem() : nullptr;
         if (!input) {
             lua_pushboolean(L, false);
@@ -1178,7 +1241,6 @@ namespace Framework {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;
 
-        // Parse parameters: SetSpriteTexture(entityID, texturePath)
         lua_Integer entityID = luaL_checkinteger(L, 1);
         const char* texturePath = luaL_checkstring(L, 2);
 
@@ -1187,19 +1249,32 @@ namespace Framework {
         if (!em || !gfx) return 0;
 
         Entity entity(static_cast<uint32_t>(entityID));
-
-        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) {
-            LOG_WARN("LevelLoader", "SetSpriteTexture: Invalid entity or no MeshRenderer (ID=%lld)", entityID);
-            return 0;
-        }
+        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) return 0;
 
         auto& mr = em->GetComponent<MeshRenderer>(entity);
         mr.spriteName = texturePath;
 
-        // Request graphics system to update the mesh and material for this sprite
-        gfx->AssignMeshAndMaterial(mr, texturePath);
+        // Load the new texture
+        auto& resourceManager = gfx->GetResourceManager();
+        TextureHandle newTexture = resourceManager.LoadTexture(texturePath);
+        if (!newTexture.IsValid()) return 0;
+        
+        // CRITICAL: Update mr.texture - this is what the renderer actually uses!
+        mr.texture = newTexture;
+        
+        // If entity has SpriteAnimation, update the spriteSheet too
+        if (em->HasComponent<SpriteAnimation>(entity)) {
+            auto& anim = em->GetComponent<SpriteAnimation>(entity);
+            anim.spriteSheet = newTexture;
+        }
 
-        // Sprite texture set
+        // Update the material's texture
+        if (mr.material.IsValid()) {
+            Material* mat = resourceManager.GetMaterial(mr.material);
+            if (mat) {
+                mat->albedoTexture = newTexture;
+            }
+        }
 
         return 0;
     }
@@ -2250,20 +2325,71 @@ namespace Framework {
     }
 
     /**
-     * @brief Pulse tile animation
+     * @brief Pulse tile animation with color tinting
      * @param x, y Grid coordinates
-     * @param scale Pulse scale multiplier
-     * @param duration Duration in milliseconds
+     * @param duration Duration in seconds
+     * @param r, g, b RGB color components (0.0-1.0)
+     *
+     * Lua usage: PulseTile(x, y, duration, r, g, b)
+     * Example: PulseTile(5, 3, 0.3, 1.0, 0.0, 0.0) -- red pulse for 0.3 seconds
      */
     int LevelLoader::Lua_PulseTile(lua_State* L) {
-        (void)L;
-        // int x = static_cast<int>(luaL_checknumber(L, 1));
-        // int y = static_cast<int>(luaL_checknumber(L, 2));
-        // float scale = static_cast<float>(luaL_checknumber(L, 3));
-        // int duration = static_cast<int>(luaL_checknumber(L, 4));
+        // Parse parameters
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+        float durationSeconds = static_cast<float>(luaL_checknumber(L, 3));
+        float r = static_cast<float>(luaL_checknumber(L, 4));
+        float g = static_cast<float>(luaL_checknumber(L, 5));
+        float b = static_cast<float>(luaL_checknumber(L, 6));
 
-        // TODO: Implement tile pulse animation
-        // For now, this is a placeholder
+        // Get entity manager
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_WARN("PulseTile", "No EntityManager available");
+            return 0;
+        }
+
+        // Get tile entity at grid position
+        const Grid& grid = GetGrid();
+        if (!InBounds(GridCoord{x, y})) {
+            LOG_WARN("PulseTile", "Grid position (%d, %d) out of bounds", x, y);
+            return 0;
+        }
+
+        Entity tileEntity = grid.TileAt(x, y);
+        if (tileEntity.GetID() == INVALID_ENTITY) {
+            LOG_WARN("PulseTile", "No tile entity at (%d, %d)", x, y);
+            return 0;
+        }
+
+        // Check if tile has Renderable component
+        if (!em->HasComponent<Renderable>(tileEntity)) {
+            LOG_WARN("PulseTile", "Tile at (%d, %d) has no Renderable component", x, y);
+            return 0;
+        }
+
+        auto& renderable = em->GetComponent<Renderable>(tileEntity);
+
+        // Check if this tile is already being tinted
+        for (auto& state : s_activeTileTints) {
+            if (state.tileEntity == tileEntity) {
+                // Update expiry time and color
+                state.expiryTimeMs = GetTickCount64() + static_cast<ULONGLONG>(durationSeconds * 1000.0f);
+                renderable.tint = glm::vec4(r, g, b, 1.0f);
+                return 0;
+            }
+        }
+
+        // New tile tint - store original color
+        TileTintState state;
+        state.tileEntity = tileEntity;
+        state.originalTint = renderable.tint;
+        state.expiryTimeMs = GetTickCount64() + static_cast<ULONGLONG>(durationSeconds * 1000.0f);
+        s_activeTileTints.push_back(state);
+
+        // Apply new tint
+        renderable.tint = glm::vec4(r, g, b, 1.0f);
+
         return 0;
     }
 

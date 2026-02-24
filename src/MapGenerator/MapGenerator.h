@@ -1,11 +1,61 @@
 #pragma once
 /**
 ===============================================================================
- MapGenerator.h - Complete Professional Version
- Includes: Overlap detection, corridors, smart entity placement
+ File:          MapGenerator.h
+ Author:        Josh Ong
+ Email:         josh.o@digipen.edu
+ Date:          2-5-2026
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+
+ MAP GENERATOR - Procedural Dungeon Generation
+
+ Brief:
+    Complete procedural map generation system with multiple algorithms.
+    Includes overlap detection, corridor carving, and smart entity placement
+    with configurable constraints. Generates dungeon layouts with rooms,
+    caves, or open arenas, and places player, enemies, chests, and goals
+    with spatial constraints to ensure fair gameplay.
+
+ Supported Algorithms:
+    "rooms"    - Traditional dungeon with rectangular rooms and L-corridors
+    "cellular" - Cave-like terrain using cellular automata
+    "open"     - Simple arena with floor surrounded by walls
+
+ Entity Placement Features:
+    - Minimum distance constraints (player-enemy, enemy-enemy, player-chest)
+    - Player safe zone radius
+    - Goal placed at farthest reachable position
+    - Reachability validation via flood fill
+
+ Usage:
+    // Create generator (optional seed for reproducibility)
+    MapGen::Generator generator;
+    MapGen::Generator seededGen(12345);
+
+    // Configure generation
+    MapGen::Config config;
+    config.width = 30;
+    config.height = 20;
+    config.algorithm = "rooms";
+    config.maxRooms = 8;
+    config.minEnemies = 2;
+    config.maxEnemies = 5;
+
+    // Generate map
+    MapGen::GeneratedMap map = generator.generate(config);
+
+    // Access results
+    Position playerStart = map.playerSpawn;
+    for (const auto& enemy : map.enemySpawns) { ... }
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 */
-
 #pragma once
 #include <vector>
 #include <string>
