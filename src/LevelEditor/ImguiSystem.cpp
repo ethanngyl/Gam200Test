@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -801,7 +801,7 @@ namespace Framework {
                                 Vector2D(1.0f, 1.0f)
                             );
 
-                            RecordCreationStep(entity);//Record the creation for Undo
+                            //RecordCreationStep(entity);//Record the creation for Undo
 
                             // Spawned sprite from dropped file
                         }
@@ -1136,21 +1136,36 @@ namespace Framework {
         UpdatePicking();
 
         UpdateEntityDragging();
+
         InputSystem* input = CORE->GetInputSystem();
-        if (input) {
-            // Check if either Left Control or Right Control is being held down
-            bool isCtrlHeld = input->IsKeyDown(KEY_LEFT_CONTROL) || input->IsKeyDown(KEY_RIGHT_CONTROL);
+        if (input)
+        {
+            ImGuiIO& io = ImGui::GetIO();
 
-            // Check if the 'Z' key was just pressed this frame
-            bool isZPressed = input->IsKeyPressed(KEY_Z);
+            // Only block shortcuts when typing into InputText fields
+            if (!io.WantTextInput)
+            {
+                // Ctrl+Z (Undo) / Ctrl+Shift+Z (Redo)
+                if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Z, false))
+                {
+                    if (io.KeyShift)
+                    {
+                        PerformRedo();
+                    }
+                    else
+                    {
+                        PerformUndo();
+                    }
+                }
 
-            // If both Ctrl and Z are active, trigger the Undo
-            if (isCtrlHeld && isZPressed) {
-                // Undo triggered
-                PerformUndo();
+                // Optional: Ctrl+Y (Redo)
+                if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y, false))
+                {
+                    PerformRedo();
+                }
             }
-
-            // Ctrl+C - Copy selected entity
+			
+			bool isCtrlHeld = input->IsKeyDown(KEY_LEFT_CONTROL) || input->IsKeyDown(KEY_RIGHT_CONTROL);
             bool isCPressed = input->IsKeyPressed(KEY_C);
             if (isCtrlHeld && isCPressed) {
                 CopyEntity();
@@ -1162,6 +1177,7 @@ namespace Framework {
                 PasteEntity();
             }
         }
+
         
         //delete button to delete selected entity
         if (CORE->IsEditorMode() && entityManager) {
@@ -1172,7 +1188,7 @@ namespace Framework {
                 {
                     // Entity deleted
 
-                    RecordDeletionStep(selectedEntity);
+                    //RecordDeletionStep(selectedEntity);
 
                     SpatialPartitioningRemove(selectedEntity);
 
@@ -1658,10 +1674,12 @@ namespace Framework {
                 strncpy_s(buffer, sizeof(buffer), sc.scriptPath.c_str(), _TRUNCATE);
                 buffer[511] = '\0';
                 
-                ImGui::PushItemWidth(-100);  
+                ImGui::PushItemWidth(-100);
                 if (ImGui::InputText("##ScriptPath", buffer, 512)) {
                     sc.scriptPath = buffer;
                 }
+                if (ImGui::IsItemActivated()) { BeginSnapshotEdit(selectedEntity); }
+                if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(selectedEntity); }
                 ImGui::PopItemWidth();
 
                 ImGui::SameLine();
@@ -1896,8 +1914,16 @@ namespace Framework {
                         auto& transform = entityManager->GetComponent<Transform>(entity);
 
                         ImGui::DragFloat2("Position", &transform.position.x, 0.01f, -100.0f, 100.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::DragFloat2("Scale", &transform.scale.x, 0.01f, 0.01f, 100.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::DragFloat("Rotation", &transform.rotation, 0.1f, -360.0f, 360.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::TreePop();
                     }
@@ -1920,9 +1946,12 @@ namespace Framework {
                         strncpy_s(pathBuffer, sizeof(pathBuffer), sprite.texturePath.c_str(), _TRUNCATE);
                         pathBuffer[sizeof(pathBuffer) - 1] = '\0';
 
+                        // Texture Path text edit
                         if (ImGui::InputText("Texture Path", pathBuffer, sizeof(pathBuffer))) {
                             sprite.texturePath = pathBuffer;
                         }
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         if (ImGui::BeginDragDropTarget())
                         {
@@ -1931,15 +1960,20 @@ namespace Framework {
                                 const char* droppedPath = static_cast<const char*>(payload->Data);
                                 if (droppedPath && payload->DataSize > 0)
                                 {
+                                    BeginSnapshotEdit(entity);
+
                                     sprite.texturePath = droppedPath;
+
+                                    EndSnapshotEdit(entity);
                                 }
                             }
                             ImGui::EndDragDropTarget();
                         }
 
                         ImGui::DragInt("Layer", &sprite.layer, 1, -2000, 2000);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
-                        // Tint color picker
                         float tint[4] = { sprite.tint.r, sprite.tint.g, sprite.tint.b, sprite.tint.a };
                         if (ImGui::ColorEdit4("Tint##SpriteTint", tint)) {
                             sprite.tint.r = tint[0];
@@ -1947,6 +1981,8 @@ namespace Framework {
                             sprite.tint.b = tint[2];
                             sprite.tint.a = tint[3];
                         }
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::TreePop();
                     }
@@ -1973,6 +2009,8 @@ namespace Framework {
                         if (ImGui::InputText("Sprite Name", nameBuffer, sizeof(nameBuffer))) {
                             meshRenderer.spriteName = nameBuffer;
                         }
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         if (ImGui::BeginDragDropTarget())
                         {
@@ -1981,27 +2019,31 @@ namespace Framework {
                                 const char* droppedPath = static_cast<const char*>(payload->Data);
                                 if (droppedPath && payload->DataSize > 0)
                                 {
-                                    // Use full path so GraphicsSystemV2 can LoadTexture(droppedPath)
-                                    meshRenderer.spriteName = droppedPath;
+                                    BeginSnapshotEdit(entity);
 
+                                    meshRenderer.spriteName = droppedPath;
                                     meshRenderer.texture = TextureHandle();
 
-                                    // Optional: keep Sprite component in sync if it exists
                                     if (entityManager->HasComponent<Sprite>(entity))
                                     {
-                                        auto& spriteFromRenderer =
-                                            entityManager->GetComponent<Sprite>(entity);
+                                        auto& spriteFromRenderer = entityManager->GetComponent<Sprite>(entity);
                                         spriteFromRenderer.texturePath = droppedPath;
                                     }
+
+                                    EndSnapshotEdit(entity);
                                 }
                             }
                             ImGui::EndDragDropTarget();
                         }
 
                         ImGui::DragInt("Layer", &meshRenderer.layer, 1, -2000, 2000);
-                        ImGui::DragInt("Order in Layer", &meshRenderer.orderInLayer, 1, -100, 100);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
-                        // Tint color
+                        ImGui::DragInt("Order in Layer", &meshRenderer.orderInLayer, 1, -100, 100);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         float tint[4] = { meshRenderer.tint.r, meshRenderer.tint.g,
                                           meshRenderer.tint.b, meshRenderer.tint.a };
                         if (ImGui::ColorEdit4("Tint", tint)) {
@@ -2010,6 +2052,8 @@ namespace Framework {
                             meshRenderer.tint.b = tint[2];
                             meshRenderer.tint.a = tint[3];
                         }
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::TreePop();
                     }
@@ -2028,7 +2072,12 @@ namespace Framework {
                         auto& movement = entityManager->GetComponent<Movement>(entity);
 
                         ImGui::DragFloat("Speed", &movement.moveSpeed, 0.01f, 0.0f, 100.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::DragFloat2("Direction", &movement.direction.x, 0.01f, -1.0f, 1.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::TreePop();
                     }
@@ -2047,8 +2096,16 @@ namespace Framework {
                         auto& boxCollider = entityManager->GetComponent<BoxCollider>(entity);
 
                         ImGui::DragFloat2("Size", &boxCollider.size.x, 0.01f, 0.0f, 100.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::DragFloat2("Offset", &boxCollider.offset.x, 0.01f, -100.0f, 100.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::Checkbox("Is Trigger", &boxCollider.isTrigger);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::TreePop();
                     }
@@ -2067,7 +2124,12 @@ namespace Framework {
                         auto& circleCollider = entityManager->GetComponent<CircleCollider>(entity);
 
                         ImGui::DragFloat("Radius", &circleCollider.radius, 0.01f, 0.0f, 100.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::DragFloat2("Offset", &circleCollider.offset.x, 0.01f, -100.0f, 100.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::TreePop();
                     }
@@ -2114,11 +2176,24 @@ namespace Framework {
                         if (ImGui::InputText("Sound Name", audioBuffer, sizeof(audioBuffer))) {
                             audio.soundName = audioBuffer;
                         }
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::DragFloat("Volume", &audio.volume, 0.01f, 0.0f, 1.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::DragFloat("Pitch", &audio.pitch, 0.01f, 0.1f, 3.0f);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::Checkbox("Loop", &audio.loop);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
+
                         ImGui::Checkbox("Play", &audio.playOnStart);
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         ImGui::TreePop();
                     }
@@ -2146,9 +2221,11 @@ namespace Framework {
 
                         // Input field takes most of the width
                         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - 100);
-                        if (ImGui::InputText("##ScriptPath", pathBuffer, sizeof(pathBuffer))) {
+                        if (ImGui::InputText("##ScriptPathInline", pathBuffer, sizeof(pathBuffer))) {
                             script.scriptPath = pathBuffer;
                         }
+                        if (ImGui::IsItemActivated()) { BeginSnapshotEdit(entity); }
+                        if (ImGui::IsItemDeactivatedAfterEdit()) { EndSnapshotEdit(entity); }
 
                         // Browse button on the same line
                         ImGui::SameLine();
@@ -2239,123 +2316,212 @@ namespace Framework {
                     // Transform
                     if (!entityManager->HasComponent<Transform>(entity)) {
                         if (ImGui::MenuItem("Transform")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<Transform>(entity, Vector2D(0.0f, 0.0f));
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // Movement
                     if (!entityManager->HasComponent<Movement>(entity)) {
                         if (ImGui::MenuItem("Movement")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<Movement>(entity);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // Sprite
                     if (!entityManager->HasComponent<Sprite>(entity)) {
                         if (ImGui::MenuItem("Sprite")) {
+
+                            BeginSnapshotEdit(entity);
+
                             auto& sprite = entityManager->AddComponent<Sprite>(entity);
                             sprite.texturePath = "";
                             sprite.layer = 0;
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // MeshRenderer
                     if (!entityManager->HasComponent<MeshRenderer>(entity)) {
                         if (ImGui::MenuItem("MeshRenderer")) {
+
+                            BeginSnapshotEdit(entity);
+
                             auto& meshRenderer = entityManager->AddComponent<MeshRenderer>(entity);
                             meshRenderer.spriteName = "";
                             meshRenderer.layer = 0;
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // BoxCollider
                     if (!entityManager->HasComponent<BoxCollider>(entity)) {
                         if (ImGui::MenuItem("BoxCollider")) {
+
+                            std::string before = MakeUndoPath("before");
+                            std::string after = MakeUndoPath("after");
+
+                            PrefabSerializer::SavePrefab(*entityManager, entity, before);
+
                             auto& boxCollider = entityManager->AddComponent<BoxCollider>(entity);
                             boxCollider.size = Vector2D(1.0f, 1.0f);
                             boxCollider.offset = Vector2D(0.0f, 0.0f);
+
+                            PrefabSerializer::SavePrefab(*entityManager, entity, after);
+
+                            PushSnapshotStep(entity, before, after);
                         }
                     }
 
                     // CircleCollider
                     if (!entityManager->HasComponent<CircleCollider>(entity)) {
                         if (ImGui::MenuItem("CircleCollider")) {
-                            entityManager->AddComponent<CircleCollider>(entity, 0.5f, Vector2D(0.0f, 0.0f));
+                            std::string before = MakeUndoPath("before");
+                            std::string after = MakeUndoPath("after");
+                            PrefabSerializer::SavePrefab(*entityManager, entity, before);
+
+                            auto& cc = entityManager->AddComponent<CircleCollider>(entity);
+                            cc.radius = 0.5f;
+                            cc.offset = Vector2D(0.0f, 0.0f);
+
+                            PrefabSerializer::SavePrefab(*entityManager, entity, after);
+                            PushSnapshotStep(entity, before, after);
                         }
                     }
 
                     // AudioSource
                     if (!entityManager->HasComponent<AudioSource>(entity)) {
                         if (ImGui::MenuItem("AudioSource")) {
+
+                            BeginSnapshotEdit(entity);
+
                             auto& audio = entityManager->AddComponent<AudioSource>(entity);
                             audio.soundName = "";
                             audio.volume = 1.0f;
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // ScriptComponent
                     if (!entityManager->HasComponent<ScriptComponent>(entity)) {
                         if (ImGui::MenuItem("ScriptComponent")) {
+
+                            BeginSnapshotEdit(entity);
+
                             auto& script = entityManager->AddComponent<ScriptComponent>(entity);
                             script.scriptPath = "";
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // Health
                     if (!entityManager->HasComponent<Health>(entity)) {
                         if (ImGui::MenuItem("Health")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<Health>(entity, 50);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // SpriteAnimation
                     if (!entityManager->HasComponent<SpriteAnimation>(entity)) {
                         if (ImGui::MenuItem("SpriteAnimation")) {
+
+                            BeginSnapshotEdit(entity);
+
                             auto& anim = entityManager->AddComponent<SpriteAnimation>(entity);
                             anim.animName = "";
                             anim.frameCount = 1;
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // AP
                     if (!entityManager->HasComponent<AP>(entity)) {
                         if (ImGui::MenuItem("AP")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<AP>(entity, 3);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // AttackRangeComponent
                     if (!entityManager->HasComponent<AttackRangeComponent>(entity)) {
                         if (ImGui::MenuItem("AttackRangeComponent")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<AttackRangeComponent>(entity, 1, 3);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // Chest
                     if (!entityManager->HasComponent<Chest>(entity)) {
                         if (ImGui::MenuItem("Chest")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<Chest>(entity, 0);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // Goal
                     if (!entityManager->HasComponent<Goal>(entity)) {
                         if (ImGui::MenuItem("Goal")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<Goal>(entity, 0);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // Inventory
                     if (!entityManager->HasComponent<Inventory>(entity)) {
                         if (ImGui::MenuItem("Inventory")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<Inventory>(entity);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
                     // AttackAP
                     if (!entityManager->HasComponent<AttackAP>(entity)) {
                         if (ImGui::MenuItem("AttackAP")) {
+
+                            BeginSnapshotEdit(entity);
+
                             entityManager->AddComponent<AttackAP>(entity, 1);
+
+                            EndSnapshotEdit(entity);
                         }
                     }
 
@@ -2411,7 +2577,7 @@ namespace Framework {
                 // ------------------------------------------------------------------
                 if (ImGui::Button("Delete##DelBtn")) {
                     //Record the deletion here immediately
-                    RecordDeletionStep(entity);
+                    
 
                     entityToDelete = entity;
                     shouldDelete = true;
@@ -2585,6 +2751,9 @@ namespace Framework {
         // ----------------------------------------------------------------------
         // Process all component removals that were requested during UI rendering
         for (const auto& removal : componentsToRemove) {
+
+            BeginSnapshotEdit(removal.entity);
+
             if (removal.componentType == "Transform") {
                 entityManager->RemoveComponent<Transform>(removal.entity);
             }
@@ -2633,6 +2802,9 @@ namespace Framework {
             else if (removal.componentType == "AttackAP") {
                 entityManager->RemoveComponent<AttackAP>(removal.entity);
             }
+
+            EndSnapshotEdit(removal.entity);
+
         }
 
         // ----------------------------------------------------------------------
@@ -2647,6 +2819,12 @@ namespace Framework {
         //    a dangling entry for a destroyed entity.
         // ----------------------------------------------------------------------
         if (shouldDelete && entityToDelete.IsValid()) {
+
+            // --- UNDO: deletion snapshot (entity exists -> entity does not exist) ---
+            std::string beforePath = MakeUndoPath("delete_before");
+            PrefabSerializer::SavePrefab(*entityManager, entityToDelete, beforePath);
+            PushSnapshotStep(entityToDelete, beforePath, "");
+
             entityManager->DestroyEntity(entityToDelete);
             Framework::SpatialPartitioningRemove(entityToDelete);
             Framework::PrefabInstanceTracker::Get().UnregisterInstance(entityToDelete);
@@ -3074,7 +3252,7 @@ namespace Framework {
                 // 1. Create a raw entity
                 Framework::Entity blankEntity = entityManager->CreateEntity();
 
-                RecordCreationStep(blankEntity); //record the creation for undo
+                //RecordCreationStep(blankEntity); //record the creation for undo
 
                 // 2. Add a Transform component so it uses the slider coordinates
                 // Note: We assume AddComponent adds it. We then retrieve it to set data.
@@ -3085,6 +3263,11 @@ namespace Framework {
                 auto& transform = entityManager->GetComponent<Framework::Transform>(blankEntity);
                 transform.position = Vector2D(spawnX, spawnY);
                 transform.scale = Vector2D(1.0f, 1.0f); // Default scale so it's visible if you add a sprite later
+
+                // --- UNDO: creation snapshot (entity did not exist -> entity exists) ---
+                std::string afterPath = MakeUndoPath("create_after");
+                PrefabSerializer::SavePrefab(*entityManager, blankEntity, afterPath);
+                PushSnapshotStep(blankEntity, "", afterPath);
 
                 // Blank entity spawned
             }
@@ -3170,7 +3353,7 @@ namespace Framework {
                 Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, prefabPath);
 
                 if (newEntity.IsValid()) {
-                    RecordCreationStep(newEntity); //record the creation for undo
+                    //RecordCreationStep(newEntity); //record the creation for undo
 
                     // Set spawn position from spawner's X/Y values
                     if (entityManager->HasComponent<Transform>(newEntity)) {
@@ -3519,8 +3702,8 @@ namespace Framework {
                 return;
             }
             // Save the entity's current state to the Undo stack before modify it
-            RecordUndoStep(selectedEntity);
-
+            //RecordUndoStep(selectedEntity);
+            BeginSnapshotEdit(selectedEntity);
             // Get the transform component of the selected entity to read its data
             auto& transform = entityManager->GetComponent<Framework::Transform>(selectedEntity);
             // CHECK FOR SCALING: Left Click + Shift Key
@@ -3622,6 +3805,12 @@ namespace Framework {
 
         // --- RESET ON RELEASE (LEFT MOUSE) ---
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+
+            // Commit snapshot once per drag/scale action
+            if (isDraggingEntity || isScalingEntity) {
+                EndSnapshotEdit(draggingEntity);
+            }
+
             // If we were dragging or scaling, stop now
             if (isDraggingEntity || isScalingEntity) {
                 isDraggingEntity = false;
@@ -3630,8 +3819,15 @@ namespace Framework {
                 RebuildSpatialPartition();
             }
         }
+
         // --- RESET ON RELEASE (RIGHT MOUSE) ---
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+
+            // Commit snapshot once per rotate action
+            if (isRotatingEntity) {
+                EndSnapshotEdit(draggingEntity);
+            }
+
             isRotatingEntity = false;
         }
     }
@@ -3640,139 +3836,146 @@ namespace Framework {
     // It pushes the state onto a history stack so we can revert changes later.
     // author: jiahao.zhou@digipen
     // ============================================================================
-    void ImGuiSystem::RecordUndoStep(Entity entity) {
-        // First, check if the entity is valid and has a Transform to save
-        if (!entityManager || !entity.IsValid() || !entityManager->HasComponent<Transform>(entity)) {
-            return; // Safety check failed, do nothing
+
+    std::string ImGuiSystem::MakeUndoPath(const char* suffix)
+    {
+        std::filesystem::create_directories("assets/prefabs/_undo");
+        return "assets/prefabs/_undo/step_" + std::to_string(++undoSerial) + "_" + suffix + ".prefab";
+    }
+
+    void ImGuiSystem::ClearRedo()
+    {
+        // delete redo temp files
+        for (auto& s : redoStack)
+        {
+            if (!s.beforePath.empty()) { std::filesystem::remove(s.beforePath); }
+            if (!s.afterPath.empty()) { std::filesystem::remove(s.afterPath); }
         }
+        redoStack.clear();
+    }
 
-        // Get the current position of the entity (before the user moves it)
-        auto& transform = entityManager->GetComponent<Transform>(entity);
+    void ImGuiSystem::TrimHistory(std::vector<UndoStep>& stack)
+    {
+        while (stack.size() > kUndoLimit)
+        {
+            if (!stack.front().beforePath.empty()) { std::filesystem::remove(stack.front().beforePath); }
+            if (!stack.front().afterPath.empty()) { std::filesystem::remove(stack.front().afterPath); }
+            stack.erase(stack.begin());
+        }
+    }
 
-        // Create a new undo step with this info
+    void ImGuiSystem::PushSnapshotStep(Entity entity,
+        const std::string& beforePath,
+        const std::string& afterPath)
+    {
         UndoStep step;
-        step.type = UndoType::Transform; // Mark as a Transform change
-        step.entity = entity;
+        step.liveEntityId = entity.GetID();
+        step.beforePath = beforePath;
+        step.afterPath = afterPath;
 
-        //Save ALL transform data
-        step.oldPosition = transform.position;
-        step.oldScale = transform.scale;
-        step.oldRotation = transform.rotation;
-
-        // Add this step to the end of our history list
         undoStack.push_back(step);
+        TrimHistory(undoStack);
 
-        // Check if have exceeded our memory limit 
-        if (undoStack.size() > 20) {
-            // Remove the oldest step (from the front) when we exceed the limit
-            // If the oldest step was a temp file for deletion, we should delete that file to save space
-            if (undoStack.front().type == UndoType::Deletion) {
-                std::filesystem::remove(undoStack.front().tempFilePath);
-            }
-            undoStack.erase(undoStack.begin());
-        }
-
-        // Log for debugging purposes
-        // Undo step recorded
+        ClearRedo(); // IMPORTANT: new edit invalidates redo history
     }
 
-    // ============================================================================
-    // This function records a "Creation" action in the undo history.
-    // It allows the user to undo spawning an object by deleting it later.
-    // author: jiahao.zhou@digipen
-    // ============================================================================
-    void ImGuiSystem::RecordCreationStep(Entity entity) {
-        UndoStep step;
-        step.type = UndoType::Creation;
-        step.entity = entity;
-        undoStack.push_back(step);
-        // Creation undo step recorded
+    void ImGuiSystem::BeginSnapshotEdit(Entity entity)
+    {
+        if (snapshotEditActive) { return; }
+
+        snapshotEditActive = true;
+        snapshotEditEntityId = entity.GetID();
+        snapshotBeforePath = MakeUndoPath("before");
+
+        PrefabSerializer::SavePrefab(*entityManager, entity, snapshotBeforePath);
     }
 
-    // ============================================================================
-    // This function records a "Deletion" action in the undo history.
-    // It saves the entity's data to a temporary file before it gets destroyed,
-    // so we can reload/restore it if the user presses Undo.
-    // author: jiahao.zhou@digipen
-    // ============================================================================
-    void ImGuiSystem::RecordDeletionStep(Entity entity) {
-        // Save the entity to a temp file so we can restore it later
-        std::string tempPath = "assets/prefabs/_undo_temp_" + std::to_string(entity.GetID()) + ".prefab";
-        
-        // Ensure directory exists
-        std::filesystem::create_directories("assets/prefabs");
+    void ImGuiSystem::EndSnapshotEdit(Entity entity)
+    {
+        if (!snapshotEditActive) { return; }
+        if (snapshotEditEntityId != entity.GetID()) { return; }
 
-        // Use your existing PrefabSerializer
-        if (PrefabSerializer::SavePrefab(*entityManager, entity, tempPath)) {
-            UndoStep step;
-            step.type = UndoType::Deletion;
-            step.tempFilePath = tempPath; 
-            // Note: We don't store step.entity here because the ID might change or be invalid after delete
-            
-            undoStack.push_back(step);
-            // Deletion undo step recorded
-        }
+        std::string afterPath = MakeUndoPath("after");
+        PrefabSerializer::SavePrefab(*entityManager, entity, afterPath);
+
+        PushSnapshotStep(entity, snapshotBeforePath, afterPath);
+
+        snapshotEditActive = false;
+        snapshotEditEntityId = Framework::INVALID_ENTITY;
+        snapshotBeforePath.clear();
     }
 
-    // ============================================================================
-    // This function reverts the last recorded action from the undo stack.
-    // It handles three types of undo operations:
-    // 1. Transform: Restores position, scale, and rotation of an entity.
-    // 2. Creation: Destroys an entity that was just created.
-    // 3. Deletion: Restores a deleted entity by loading from a backup prefab.
-    // author: jiahao.zhou@digipen
-    // ============================================================================
 
-    void ImGuiSystem::PerformUndo() {
-        if (undoStack.empty()) {
-            // No undo steps available
-            return;
+    bool ImGuiSystem::DoesEntityExist(EntityID id) const
+    {
+        if (!entityManager) { return false; }
+
+        for (auto e : entityManager->GetAllEntities())
+        {
+            if (e.GetID() == id) { return true; }
+        }
+        return false;
+    }
+
+    Entity ImGuiSystem::ApplySnapshotStep(const UndoStep& step, bool useBefore)
+    {
+        if (!entityManager) { return {}; }
+
+        Entity live(step.liveEntityId);
+        if (DoesEntityExist(step.liveEntityId))
+        {
+            Framework::SpatialPartitioningRemove(live);
+            entityManager->DestroyEntity(live);
+            Framework::PrefabInstanceTracker::Get().UnregisterInstance(live);
         }
 
-        UndoStep lastStep = undoStack.back();
+        const std::string& path = useBefore ? step.beforePath : step.afterPath;
+        if (path.empty())
+        {
+            return {}; // “empty snapshot” means entity should not exist (used for create/delete)
+        }
+
+        Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, path);
+        return newEntity;
+    }
+
+
+    void ImGuiSystem::PerformUndo()
+    {
+        if (undoStack.empty()) { return; }
+
+        UndoStep step = undoStack.back();
         undoStack.pop_back();
 
-        // --------------------------------------------------------------------
-        // CASE 1: UNDO TRANSFORM (Pos, Scale, Rot)
-        // --------------------------------------------------------------------
-        if (lastStep.type == UndoType::Transform) {
-            if (entityManager->HasComponent<Transform>(lastStep.entity)) {
-                auto& transform = entityManager->GetComponent<Transform>(lastStep.entity);
+        Entity newEntity = ApplySnapshotStep(step, true);
 
-                // Restore ALL values
-                transform.position = lastStep.oldPosition;
-                transform.scale = lastStep.oldScale;
-                transform.rotation = lastStep.oldRotation;
+        step.liveEntityId = newEntity.IsValid() ? newEntity.GetID() : Framework::INVALID_ENTITY;
+        redoStack.push_back(step);
+        TrimHistory(redoStack);
 
-                // Transform restored
-            }
-        }
-        // --------------------------------------------------------------------
-        // CASE 2: UNDO CREATION (Delete the created object)
-        // --------------------------------------------------------------------
-        else if (lastStep.type == UndoType::Creation) {
-            if (lastStep.entity.IsValid()) {
-                // Created entity destroyed
-                entityManager->DestroyEntity(lastStep.entity);
-                SpatialPartitioningRemove(lastStep.entity);
-            }
-        }
-        // --------------------------------------------------------------------
-        // CASE 3: UNDO DELETION (Restore the deleted object)
-        // --------------------------------------------------------------------
-        else if (lastStep.type == UndoType::Deletion) {
-            // Load from the backup file we made
-            Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, lastStep.tempFilePath);
+        selectedEntity = newEntity;
 
-            if (newEntity.IsValid()) {
-                // Deleted entity restored
-                // Optional: Delete the temp file now that we've used it? 
-                // Or keep it in case we Redo (if you implement Redo later).
-            }
-            else {
-                std::cerr << "[Undo] Failed to restore entity from " << lastStep.tempFilePath << "\n";
-            }
-        }
+        draggingEntity = Framework::Entity{};
+        isDraggingEntity = false;
+        isScalingEntity = false;
+        isRotatingEntity = false;
+        RebuildSpatialPartition();
+    }
+
+    void ImGuiSystem::PerformRedo()
+    {
+        if (redoStack.empty()) { return; }
+
+        UndoStep step = redoStack.back();
+        redoStack.pop_back();
+
+        Entity newEntity = ApplySnapshotStep(step, false);
+
+        step.liveEntityId = newEntity.IsValid() ? newEntity.GetID() : Framework::INVALID_ENTITY;
+        undoStack.push_back(step);
+        TrimHistory(undoStack);
+
+        selectedEntity = newEntity;
     }
 
     // ============================================================================
@@ -3902,7 +4105,7 @@ namespace Framework {
             }
 
             // Record for undo
-            RecordCreationStep(newEntity);
+            //RecordCreationStep(newEntity);
 
             // Select the newly pasted entity
             selectedEntity = newEntity;
@@ -4764,22 +4967,26 @@ namespace Framework {
 
                 selectableCount++;
 
-                if (ImGui::Selectable(scriptFile.c_str())) {
+                if (ImGui::Selectable(scriptFile.c_str()))
+                {
                     selectedScriptPath = scriptFile;
 
-                    if (entityPendingScriptAssignment.IsValid() &&
-                        entityManager) {
+                    if (entityPendingScriptAssignment.IsValid() && entityManager)
+                    {
+                        BeginSnapshotEdit(entityPendingScriptAssignment);
 
-                        if (entityManager->HasComponent<ScriptComponent>(entityPendingScriptAssignment)) {
+                        if (entityManager->HasComponent<ScriptComponent>(entityPendingScriptAssignment))
+                        {
                             auto& sc = entityManager->GetComponent<ScriptComponent>(entityPendingScriptAssignment);
                             sc.scriptPath = "assets/scripts/" + selectedScriptPath;
                         }
-                        else {
+                        else
+                        {
                             auto& sc = entityManager->AddComponent<ScriptComponent>(entityPendingScriptAssignment);
                             sc.scriptPath = "assets/scripts/" + selectedScriptPath;
                         }
 
-                        // Script assigned to entity
+                        EndSnapshotEdit(entityPendingScriptAssignment);
                     }
 
                     ImGui::CloseCurrentPopup();
