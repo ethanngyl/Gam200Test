@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -78,6 +78,9 @@ Technology is prohibited.
 #endif
 
 namespace Framework {
+
+    // Per-entity config for EnemyScript (targetMode, attackDamage, etc.)
+    static std::unordered_map<uint32_t, std::unordered_map<std::string, std::string>> s_enemyConfig;
 
     // ========================================================================
     // PARTY SYSTEM STATE - Shared between Lua and C++
@@ -1617,6 +1620,42 @@ namespace Framework {
 
         LOG_WARN("LevelLoader", "SetEnemyTarget: Enemy %u has no EnemyAI component", enemyID);
         lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    /**
+     * @brief Set per-entity config for EnemyScript (called by level before AddScriptComponentToEntity)
+     * Lua usage: SetEnemyConfig(entityID, key, value)  -- value: string or number
+     */
+    int LevelLoader::Lua_SetEnemyConfig(lua_State* L) {
+        uint32_t entityID = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+        const char* key = luaL_checkstring(L, 2);
+        std::string value;
+        if (lua_isnumber(L, 3)) {
+            value = std::to_string(static_cast<double>(lua_tonumber(L, 3)));
+        } else {
+            value = luaL_optstring(L, 3, "");
+        }
+        s_enemyConfig[entityID][key] = value;
+        return 0;
+    }
+
+    /**
+     * @brief Get per-entity config (called by EnemyScript OnInit)
+     * Lua usage: local val = GetEnemyConfig(entityID, key)  -- returns string or nil
+     */
+    int LevelLoader::Lua_GetEnemyConfig(lua_State* L) {
+        uint32_t entityID = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+        const char* key = luaL_checkstring(L, 2);
+        auto it = s_enemyConfig.find(entityID);
+        if (it != s_enemyConfig.end()) {
+            auto kit = it->second.find(key);
+            if (kit != it->second.end()) {
+                lua_pushstring(L, kit->second.c_str());
+                return 1;
+            }
+        }
+        lua_pushnil(L);
         return 1;
     }
 
@@ -3475,6 +3514,8 @@ namespace Framework {
         int height = static_cast<int>(luaL_checknumber(L, 2));
         const char* algorithm = luaL_checkstring(L, 3);
 
+        s_enemyConfig.clear();  // Clear stale config from previous level
+
         LevelLoader* loader = GetLevelLoader(L);
         CoreEngine* core = loader->coreEngine;
 
@@ -3490,6 +3531,8 @@ namespace Framework {
         config.width = width;
         config.height = height;
         config.algorithm = algorithm;
+        config.minEnemies = 3;
+        config.maxEnemies = 3;
 
         // Grid parameters - MATCH YOUR TileMap.json
         const float TILE_SIZE = 128.0f;
@@ -4505,7 +4548,7 @@ namespace Framework {
         static bool turnActive = false;
         static int activeEnemyIndex = 0;
         static float actionTimer = 0.0f;
-        static float actionDelay = 0.5f;  // 0.5 seconds between enemies
+        static float actionDelay = 0.0f;  // No delay - timer is decremented by level's Lua UpdateEnemyTurnManager which uses a separate Lua timer
         static std::vector<int> enemyList;
         static bool needsReinitialize = true;
     }
@@ -4619,24 +4662,50 @@ namespace Framework {
             EnemyTurnState::activeEnemyIndex = 0;
             EnemyTurnState::needsReinitialize = true;
 
-            // Call Lua OnEnemyTurnEnded() if it exists
-            lua_getglobal(L, "OnEnemyTurnEnded");
-            if (lua_isfunction(L, -1)) {
-                if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-                    const char* err = lua_tostring(L, -1);
-                    LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling OnEnemyTurnEnded: %s", err);
-                    lua_pop(L, 1);
+            // Call EndAllEnemyTurns() in the LevelLoader's Lua state (where it handles EndEnemyTurn + ResetPartyTurn)
+            LevelLoader* loader = GetLevelLoader(L);
+            if (loader && loader->L) {
+                lua_State* levelL = loader->L;
+                lua_getglobal(levelL, "EndAllEnemyTurns");
+                if (lua_isfunction(levelL, -1)) {
+                    if (lua_pcall(levelL, 0, 0, 0) != LUA_OK) {
+                        const char* err = lua_tostring(levelL, -1);
+                        LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling EndAllEnemyTurns: %s", err);
+                        lua_pop(levelL, 1);
+                    }
+                } else {
+                    lua_pop(levelL, 1);
+                    // Fallback: directly end enemy turn if Lua function not found
+                    LOG_WARN("LevelLoader", "[EnemyTurnSystem] EndAllEnemyTurns not found in level Lua state, calling Lua_EndEnemyTurn directly");
+                    Lua_EndEnemyTurn(L);
                 }
             } else {
-                lua_pop(L, 1);
+                // No LevelLoader available - end turn directly
+                Lua_EndEnemyTurn(L);
             }
         } else {
+            int nextEnemy = EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1];
             LOG_INFO("LevelLoader", "[EnemyTurnSystem] Moving to enemy %d (index %d/%d)",
-                EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1],
+                nextEnemy,
                 EnemyTurnState::activeEnemyIndex,
                 (int)EnemyTurnState::enemyList.size());
 
-            // Reset action timer for next enemy
+            // Pan camera to next enemy via LevelLoader's Lua state
+            LevelLoader* loader = GetLevelLoader(L);
+            if (loader && loader->L) {
+                lua_State* levelL = loader->L;
+                lua_getglobal(levelL, "SetCameraFollowTarget");
+                if (lua_isfunction(levelL, -1)) {
+                    lua_pushinteger(levelL, nextEnemy);
+                    if (lua_pcall(levelL, 1, 0, 0) != LUA_OK) {
+                        lua_pop(levelL, 1);
+                    }
+                } else {
+                    lua_pop(levelL, 1);
+                }
+            }
+
+            // actionDelay is 0.0f so actionTimer stays at 0 - next enemy acts immediately
             EnemyTurnState::actionTimer = EnemyTurnState::actionDelay;
         }
 

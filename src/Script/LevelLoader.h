@@ -325,6 +325,9 @@ namespace Framework {
         static int Lua_SpawnChestAt(lua_State* L);
         static int Lua_SpawnGoalAt(lua_State* L);
 
+        // Enemy config (set by level, read by EnemyScript OnInit)
+        static int Lua_SetEnemyConfig(lua_State* L);
+        static int Lua_GetEnemyConfig(lua_State* L);
         // Projectile Skill API
         // SpawnSkillProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
         static int Lua_SpawnSkillProjectile(lua_State* L);
