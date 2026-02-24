@@ -166,12 +166,7 @@ namespace Framework
                     if (!movement.blocked) {
                         transform.position += movement.direction * movement.moveSpeed * dt;
                     }
-                    // If blocked, don't move at all (not backwards)
-                    // else {
-                    //     transform.position -= movement.direction * movement.moveSpeed * dt;
-                    // }
-
-                    //// Optional: Keep on screen
+                    // Keep on screen
                     if (transform.position.x > x_bound) transform.position.x = x_bound;
                     if (transform.position.x < -x_bound) transform.position.x = -x_bound;
                     if (transform.position.y > y_bound) transform.position.y = y_bound;

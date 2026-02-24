@@ -141,6 +141,12 @@ namespace Framework
     {
         LOG_INFO("CORE", "[1/5] Creating engine systems...");
 
+        // Initialize the custom Memory Manager BEFORE any entity/component
+        // allocation. This pre-allocates memory pools that will be used by
+        // the ECS for all component storage via placement new.
+        MemoryManager::GetInstance().Initialize();
+        LOG_INFO("CORE", "MemoryManager initialized");
+
         entityManager = new EntityManager();
         windowSystem = new WindowSystem();
         graphicsSystem = new GraphicsSystemV2();
@@ -405,6 +411,11 @@ namespace Framework
             delete entityManager;
             entityManager = nullptr;
         }
+
+        // Shutdown the custom Memory Manager AFTER all entities/components
+        // have been deallocated. This returns all pool page memory to the OS.
+        MemoryManager::GetInstance().Shutdown();
+        LOG_INFO("CORE", "MemoryManager shut down - all pool memory returned to OS");
 
         // Terminate GLFW
         if (windowSystem) {

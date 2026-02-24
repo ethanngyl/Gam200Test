@@ -558,6 +558,7 @@ namespace Framework {
         lua_register(L, "SetSpriteVisibility", LevelLoader::Lua_SetSpriteVisibility);
         lua_register(L, "SetSpritePosition", LevelLoader::Lua_SetSpritePosition);
         lua_register(L, "SetSpriteColor", LevelLoader::Lua_SetSpriteColor);
+        lua_register(L, "SetSpriteTexture", LevelLoader::Lua_SetSpriteTexture);
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
@@ -569,6 +570,9 @@ namespace Framework {
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);
         lua_register(L, "IsActiveCharacter", LevelLoader::Lua_IsActiveCharacter);
+
+        // Game API - Projectile Skills
+        lua_register(L, "SpawnSkillProjectile", LevelLoader::Lua_SpawnSkillProjectile);
     }
 
     /**

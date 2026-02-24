@@ -325,6 +325,10 @@ namespace Framework {
         static int Lua_SpawnChestAt(lua_State* L);
         static int Lua_SpawnGoalAt(lua_State* L);
 
+        // Projectile Skill API
+        // SpawnSkillProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
+        static int Lua_SpawnSkillProjectile(lua_State* L);
+
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
