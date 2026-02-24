@@ -315,6 +315,9 @@ namespace Framework {
         static int Lua_SpawnChestAt(lua_State* L);
         static int Lua_SpawnGoalAt(lua_State* L);
 
+        // Enemy config (set by level, read by EnemyScript OnInit)
+        static int Lua_SetEnemyConfig(lua_State* L);
+        static int Lua_GetEnemyConfig(lua_State* L);
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

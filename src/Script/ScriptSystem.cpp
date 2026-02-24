@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -568,6 +568,7 @@ namespace Framework {
         lua_register(L, "RefillEntityAttackAP", LevelLoader::Lua_RefillEntityAttackAP);
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);
+        lua_register(L, "GetEnemyConfig", LevelLoader::Lua_GetEnemyConfig);
         lua_register(L, "IsActiveCharacter", LevelLoader::Lua_IsActiveCharacter);
     }
 

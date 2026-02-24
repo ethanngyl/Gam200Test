@@ -65,16 +65,17 @@ local entityID = 0              -- This enemy's ID (set in OnInit)
 local currentState = STATE.IDLE
 local behaviorType = BEHAVIOR.AGGRESSIVE  -- Default behavior
 local targetPlayerID = 0        -- Player to chase/attack
+local targetMode = "closest"    -- "closest" | "lowestHP" | "highestHP"
+
+-- MP (Move Points) - separate from AP, used exclusively for movement
+local maxMP = 5             -- Max move points per turn (configurable)
+local movesRemaining = 0    -- Remaining MP this turn (reset each turn)
 
 -- AI parameters (configurable per enemy type)
 local config = {
-    -- Movement
-    apCostPerMove = 1,          -- AP cost to move 1 tile
-    maxMovesPerTurn = 3,        -- Maximum tiles to move per turn
-
     -- Combat
     attackRange = 1,            -- How many tiles away enemy can attack
-    attackAPCost = 2,           -- AP cost to attack
+    attackAPCost = 2,           -- AP cost per attack
     attackDamage = 1,           -- Damage dealt per attack
 
     -- Behavior
@@ -221,6 +222,33 @@ function OnInit()
     pathIndex = 1
 
     ApplySheet("idleFront", false)
+        print("[Enemy " .. entityID .. "] GetEnemyConfig EXISTS, reading config...")
+
+    -- Apply per-entity config (set by level via SetEnemyConfig before AddScriptComponentToEntity)
+        print("[Enemy " .. entityID .. "] targetMode from config = " .. tostring(mode))
+    if GetEnemyConfig then
+        local mode = GetEnemyConfig(entityID, "targetMode")
+        if mode and mode ~= "" then targetMode = mode end
+        local dmg = GetEnemyConfig(entityID, "attackDamage")
+        if dmg then config.attackDamage = tonumber(dmg) or config.attackDamage end
+        local mp = GetEnemyConfig(entityID, "maxMP")
+        if mp then maxMP = tonumber(mp) or maxMP end
+        local hp = GetEnemyConfig(entityID, "maxHP")
+        if hp then
+            local h = tonumber(hp) or 5
+            SetEntityHP(entityID, h, h)
+        end
+        local tr = GetEnemyConfig(entityID, "tintR")
+        if tr and SetSpriteColor then
+            local r = tonumber(tr) or 1
+            local g = tonumber(GetEnemyConfig(entityID, "tintG") or "1") or 1
+            local b = tonumber(GetEnemyConfig(entityID, "tintB") or "1") or 1
+            SetSpriteColor(entityID, r, g, b, 1)
+        end
+        print("[Enemy " .. entityID .. "] Config: targetMode=" .. tostring(targetMode) .. " dmg=" .. tostring(config.attackDamage) .. " MP=" .. tostring(maxMP))
+    else
+        print("[Enemy " .. entityID .. "] WARNING: GetEnemyConfig is NIL")
+    end
 
     -- CRITICAL: Set initial tile occupancy so players can't walk through this enemy
     local enemyX, enemyY = GetEntityGridPosition(entityID)
@@ -317,7 +345,8 @@ function OnUpdate(dt)
     if not isMyTurnToAct then
         isMyTurnToAct = true
         movesThisTurn = 0
-        print("[Enemy " .. entityID .. "] ========== STARTING TURN ==========")
+        movesRemaining = maxMP   -- Refill MP at turn start
+        print("[Enemy " .. entityID .. "] ========== STARTING TURN ========== (AP=" .. tostring(select(1, GetEntityAP(entityID))) .. ", MP=" .. movesRemaining .. ")")
 
         -- CRITICAL: Find closest player dynamically each turn
         local closestPlayer, closestDistance = FindClosestPlayer()
@@ -405,11 +434,11 @@ end
 -- ============================================================================
 
 function ProcessAITurn()
-    -- Get enemy AP
     local currentAP, maxAP = GetEntityAP(entityID)
 
-    if not currentAP or currentAP == 0 or currentAP < config.apCostPerMove then
-        print("[Enemy " .. entityID .. "] Not enough AP, finishing turn")
+    -- Finish if both AP (for attacks) and MP (for movement) are exhausted
+    if (not currentAP or currentAP < config.attackAPCost) and movesRemaining <= 0 then
+        print("[Enemy " .. entityID .. "] No AP or MP remaining, finishing turn")
         FinishEnemyAction()
         return
     end
@@ -629,25 +658,8 @@ function ExecuteChase()
         end
     end
 
-    -- Calculate maximum moves we can make this turn
-    local maxMoves = config.maxMovesPerTurn
-
-    -- CRITICAL: Reserve AP for attacking if we're getting close to the player
-    -- Check if we'll be in attack range after moving
-    local distanceToPlayer = CalculateDistance(enemyX, enemyY, playerX, playerY)
-    if distanceToPlayer <= config.maxMovesPerTurn + config.attackRange then
-        -- We might reach attack range this turn, reserve AP for attacking
-        local apNeededForAttack = config.attackAPCost
-        local apAvailableForMovement = currentAP - apNeededForAttack
-
-        -- Only reserve if we have enough AP, otherwise just use all available AP for movement
-        if apAvailableForMovement >= config.apCostPerMove then
-            maxMoves = math.min(maxMoves, math.floor(apAvailableForMovement / config.apCostPerMove))
-        end
-    end
-
-    -- Move ONE tile per frame (not all at once!)
-    if currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesThisTurn < maxMoves then
+    -- Move ONE tile per frame using MP (not AP)
+    if movesRemaining > 0 and pathIndex <= #currentPath then
         local nextTile = currentPath[pathIndex]
 
         -- Validate tile is walkable (terrain check)
@@ -682,8 +694,7 @@ function ExecuteChase()
         local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
-                ConsumeEnemyAP(entityID, config.apCostPerMove)
-                currentAP = currentAP - config.apCostPerMove
+                movesRemaining = movesRemaining - 1   -- Consume 1 MP per tile moved
                 movesThisTurn = movesThisTurn + 1
                 pathIndex = pathIndex + 1
 
@@ -713,8 +724,7 @@ function ExecuteChase()
             end
     end
 
-    -- If we get here, we can't move anymore (out of AP, path, or maxMoves)
-    -- Check if we're now in attack range
+    -- If we get here, MP exhausted or path ended - check if now in attack range
     local newEnemyX, newEnemyY = GetEntityGridPosition(entityID)
     local distance = CalculateDistance(newEnemyX, newEnemyY, playerX, playerY)
 
@@ -729,8 +739,7 @@ function ExecuteChase()
 end
 
 function ExecuteFlee()
-    -- Move away from player
-    local currentAP, maxAP = GetEntityAP(entityID)
+    -- Move away from player (uses MP)
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
@@ -743,25 +752,20 @@ function ExecuteFlee()
     local deltaX = enemyX - playerX
     local deltaY = enemyY - playerY
 
-    -- Try to move in opposite direction
     local fleeX = enemyX
     local fleeY = enemyY
 
     if math.abs(deltaX) > math.abs(deltaY) then
-        -- Move horizontally away
         fleeX = enemyX + (deltaX > 0 and 1 or -1)
     else
-        -- Move vertically away
         fleeY = enemyY + (deltaY > 0 and 1 or -1)
     end
 
-    -- Attempt flee movement
-    if currentAP >= config.apCostPerMove then
-        -- Check if flee tile is walkable and not occupied
+    if movesRemaining > 0 then
         if IsWalkableTile(fleeX, fleeY) and not IsTileOccupied(fleeX, fleeY) then
             local success = MoveEntityToTile(entityID, fleeX, fleeY)
             if success then
-                ConsumeEnemyAP(entityID, config.apCostPerMove)
+                movesRemaining = movesRemaining - 1
                 PulseTile(fleeX, fleeY, 0.2, 1.0, 1.0, 0.0)  -- Yellow pulse (fleeing)
             end
         else
@@ -773,16 +777,14 @@ function ExecuteFlee()
 end
 
 function ExecutePatrol()
-    -- Simple random movement
-    local currentAP, maxAP = GetEntityAP(entityID)
+    -- Simple random movement (uses MP)
     local enemyX, enemyY = GetEntityGridPosition(entityID)
 
-    if currentAP < config.apCostPerMove then
+    if movesRemaining <= 0 then
         FinishEnemyAction()
         return
     end
 
-    -- Pick random adjacent tile
     local directions = {
         {x = 1, y = 0},
         {x = -1, y = 0},
@@ -794,11 +796,10 @@ function ExecutePatrol()
     local newX = enemyX + dir.x
     local newY = enemyY + dir.y
 
-    -- Check if patrol tile is walkable and not occupied
     if IsWalkableTile(newX, newY) and not IsTileOccupied(newX, newY) then
         local success = MoveEntityToTile(entityID, newX, newY)
         if success then
-            ConsumeEnemyAP(entityID, config.apCostPerMove)
+            movesRemaining = movesRemaining - 1
             PulseTile(newX, newY, 0.2, 0.5, 0.5, 1.0)  -- Blue pulse (patrol)
         end
     end
@@ -815,55 +816,83 @@ function CalculateDistance(x1, y1, x2, y2)
     return math.abs(x2 - x1) + math.abs(y2 - y1)
 end
 
--- Find the closest player from all party members
-function FindClosestPlayer()
-    -- Get enemy position
+-- Find target player based on targetMode: "closest" | "lowestHP" | "highestHP"
+function FindTargetPlayer()
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     if not enemyX then
         print("[Enemy " .. entityID .. "] ERROR: GetEntityGridPosition returned nil!")
         return nil
     end
 
-    -- Use GetAllPlayers() (C++ function available in all Lua states)
     local players = GetAllPlayers()
-
-    -- Validate player list
     if not players or type(players) ~= "table" or #players == 0 then
         print("[Enemy " .. entityID .. "] WARNING: GetAllPlayers() returned no players, using fallback")
         return FindPlayer()
     end
 
-    -- Find closest player and build detailed distance report
-    local closestPlayerID = nil
-    local closestDistance = 999999
-    local distanceReport = {}
-
+    -- Build list of alive players with HP and position
+    local candidates = {}
     for i, playerID in ipairs(players) do
-        -- Skip dead players
         local currentHP, maxHP = GetEntityHP(playerID)
-        if not currentHP or currentHP <= 0 then
-            table.insert(distanceReport, "P" .. playerID .. "=DEAD")
-            -- Skip dead players - don't target them
-        else
+        if currentHP and currentHP > 0 then
             local playerX, playerY = GetEntityGridPosition(playerID)
             if playerX then
                 local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
-                table.insert(distanceReport, "P" .. playerID .. "=" .. distance)
-                if distance < closestDistance then
-                    closestDistance = distance
-                    closestPlayerID = playerID
-                end
+                table.insert(candidates, { id = playerID, hp = currentHP, distance = distance })
             end
         end
     end
 
-    if closestPlayerID then
-        print("[Enemy " .. entityID .. "] Target: P" .. closestPlayerID .. " [" .. table.concat(distanceReport, ", ") .. "]")
-    else
-        print("[Enemy " .. entityID .. "] WARNING: No valid player found from " .. #players .. " candidates")
+    if #candidates == 0 then
+        print("[Enemy " .. entityID .. "] WARNING: No valid player found")
+        return nil
     end
 
-    return closestPlayerID, closestDistance
+    local targetID = nil
+    local targetDistance = 999999
+
+    if targetMode == "lowestHP" then
+        -- Pick player with strictly lowest HP only
+        local lowestHP = math.huge
+        for _, c in ipairs(candidates) do
+            if c.hp < lowestHP then lowestHP = c.hp end
+        end
+        for _, c in ipairs(candidates) do
+            if c.hp == lowestHP then
+                targetID = c.id
+                targetDistance = c.distance
+                break
+            end
+        end
+    elseif targetMode == "highestHP" then
+        -- Pick player with strictly highest HP only
+        local highestHP = -math.huge
+        for _, c in ipairs(candidates) do
+            if c.hp > highestHP then highestHP = c.hp end
+        end
+        for _, c in ipairs(candidates) do
+            if c.hp == highestHP then
+                targetID = c.id
+                targetDistance = c.distance
+                break
+            end
+        end
+    else
+        -- "closest" (default): pick by distance
+        for _, c in ipairs(candidates) do
+            if c.distance < targetDistance then
+                targetDistance = c.distance
+                targetID = c.id
+            end
+        end
+    end
+
+    return targetID, targetDistance
+end
+
+-- Legacy alias (calls FindTargetPlayer)
+function FindClosestPlayer()
+    return FindTargetPlayer()
 end
 
 -- GetEntityHP(entityID) C++ function already exists in LevelLoader API
@@ -877,6 +906,11 @@ end
 function SetBehavior(behavior)
     behaviorType = behavior
     Log("[EnemyScript] Enemy " .. entityID .. " behavior set to: " .. behavior)
+end
+
+function SetTargetMode(mode)
+    targetMode = mode or "closest"
+    Log("[EnemyScript] Enemy " .. entityID .. " target mode set to: " .. targetMode)
 end
 
 function SetAggression(range)
