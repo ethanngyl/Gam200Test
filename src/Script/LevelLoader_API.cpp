@@ -4798,6 +4798,8 @@ namespace Framework {
      *
      * Usage from Lua:
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false)
+     *   -- with optional tint (args 8-11) and sprite path (arg 12):
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,0,0,1, "")
      */
     int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
@@ -4807,6 +4809,18 @@ namespace Framework {
         float speed  = static_cast<float>(luaL_optnumber(L, 5, 3.0));
         int   damage = static_cast<int>(luaL_optinteger(L, 6, 1));
         bool  pierce = lua_toboolean(L, 7) != 0;
+
+        // Optional tint (args 8-11, default white)
+        float tintR = static_cast<float>(luaL_optnumber(L, 8, 1.0));
+        float tintG = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        float tintB = static_cast<float>(luaL_optnumber(L, 10, 1.0));
+        float tintA = static_cast<float>(luaL_optnumber(L, 11, 1.0));
+        glm::vec4 tint(tintR, tintG, tintB, tintA);
+
+        // Optional sprite path (arg 12, default = bullet.png)
+        const char* spriteArg = luaL_optstring(L, 12, nullptr);
+        std::string spritePath = spriteArg ? std::string(spriteArg)
+                                           : std::string("assets/new assets/bullet.png");
 
         // Normalize direction
         float len = std::sqrt(dirX * dirX + dirY * dirY);
@@ -4831,7 +4845,7 @@ namespace Framework {
         // Spawn the projectile entity using the existing spawner
         Vector2D position(worldX, worldY);
         Vector2D direction(dirX, dirY);
-        Entity projectile = spawner->SpawnProjectile(position, direction, speed);
+        Entity projectile = spawner->SpawnProjectile(position, direction, speed, spritePath, tint);
 
         // Configure damage and pierce on the projectile component
         if (em->HasComponent<ProjectileMovement>(projectile)) {
