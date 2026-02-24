@@ -1118,6 +1118,11 @@ function ExecuteSkill(skillID)
             if len > 0 then dirX = dirX / len; dirY = dirY / len end
         end
 
+        -- Fallback: if adjacent tile was out of bounds, use grid direction directly
+        if dirX == 0 and dirY == 0 then
+            dirX, dirY = gridDirX, gridDirY
+        end
+
         -- Determine projectile visuals per player/skill
         local tintR, tintG, tintB, tintA = 1, 1, 1, 1   -- default white
         local spritePath = nil                             -- nil = default bullet.png
