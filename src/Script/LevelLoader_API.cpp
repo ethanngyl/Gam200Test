@@ -1344,7 +1344,7 @@ namespace Framework {
      * @return currentAP (int), maxAP (int)
      *
      * Implementation details:
-     * - Scans for an entity with CircleCollider but NO EnemyAI component
+     * - Finds the player entity via FindFirstByTag(em, "Player")
      * - Returns 0,0 if player or AP component is missing
      */
     int LevelLoader::Lua_GetPlayerAP(lua_State* L) {
