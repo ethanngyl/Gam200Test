@@ -28,7 +28,7 @@ Details:
   enemy turn manager); Animation (config, player load, frame control); Party
   (GetEntityAP, ConsumeEntityAP, SetActiveCharacter, etc.); Script component;
   Grid movement; Save/Load; Procedural map; Entity spawning; Editor mode.
-  g_activeCharacterID shared for party system. All callbacks get LevelLoader
+  Active character is fully tracked in Lua (PartyTurnManager). All callbacks get LevelLoader
   via GetLevelLoader(L) and null-check subsystems.
 
 Notes:
@@ -78,14 +78,6 @@ Technology is prohibited.
 #endif
 
 namespace Framework {
-
-    // ========================================================================
-    // PARTY SYSTEM STATE - Shared between Lua and C++
-    // ========================================================================
-
-    // Global variable to track the currently active character for party system
-    // Set by Lua's PartyTurnManager, queried by entity scripts
-    static uint32_t g_activeCharacterID = 0;
 
     // ========================================================================
     // TILE TINTING SYSTEM - For PulseTile visual feedback
@@ -1733,7 +1725,8 @@ namespace Framework {
     int LevelLoader::Lua_SetActiveCharacter(lua_State* L)
     {
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
-        g_activeCharacterID = static_cast<uint32_t>(entityID);
+        // NOTE: Active character tracking is fully managed in Lua (PartyTurnManager).
+        // IsActiveCharacter() bridges directly to the level Lua state, so no C++ state needed.
         LOG_INFO("LevelLoader", "SetActiveCharacter: Active character set to entity %d", entityID);
         return 0;
     }

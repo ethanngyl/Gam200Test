@@ -436,9 +436,9 @@ local function createPlayerStates(fsm)
                 return
             end
 
-            -- Update cooldown
+            -- Guard: skip input while move cooldown is active
+            -- (moveCooldown is decremented by the main Update path)
             if moveCooldown > 0 then
-                moveCooldown = moveCooldown - dt
                 return
             end
 
@@ -999,38 +999,10 @@ function OnUpdate(dt)
     end
     lastPKeyDown = pKeyDown  -- Update P key state for next frame
 
-    -- ========================================================================
-    -- SKILL SYSTEM (all skill keys handled generically)
-    -- ========================================================================
-
-    local currentX, currentY = GetEntityGridPosition(entityID)
-    if currentX == nil or currentY == nil then
-        return
-    end
-
-    -- Keys 1-4: select skill and show preview instantly
-    local mySkills = getMySkills()
-    for _, key in ipairs(skillSlotKeys) do
-        local skillID = mySkills[key]
-        local keyDown = IsKeyDown(key)
-        if skillID and keyDown and not lastSkillKeyDown[key] then
-            local skill = SkillDefs[skillID]
-            local currentAP = GetEntityAttackAP(entityID)
-            if skill and currentAP >= skill.apCost then
-                ShowSkillPreview(skillID)
-            else
-                PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
-            end
-        end
-        lastSkillKeyDown[key] = keyDown
-    end
-
-    -- Space: execute the currently previewed skill
-    local spaceDown = IsKeyDown("Space")
-    if spaceDown and not lastSpaceKeyDown and activePreview then
-        ExecuteSkill(activePreview.skillID)
-    end
-    lastSpaceKeyDown = spaceDown
+    -- NOTE: Skill key handling (1-4 + Space) removed from here.
+    -- The FSM WaitingForInput state is the single source of truth for skill input.
+    -- Having duplicate skill processing here caused lastSkillKeyDown to be updated
+    -- twice per frame, leading to missed key presses during moveCooldown transitions.
 
 end
 
@@ -1182,6 +1154,11 @@ function ExecuteSkill(skillID)
             if len > 0 then dirX = dirX / len; dirY = dirY / len end
         end
 
+        -- Fallback: if adjacent tile was out of bounds, use grid direction directly
+        if dirX == 0 and dirY == 0 then
+            dirX, dirY = gridDirX, gridDirY
+        end
+
         -- Determine projectile visuals per player/skill
         local tintR, tintG, tintB, tintA = 1, 1, 1, 1   -- default white
         local spritePath = nil                             -- nil = default bullet.png
@@ -1201,13 +1178,19 @@ function ExecuteSkill(skillID)
             tintR, tintG, tintB, tintA,
             spritePath
         )
+        if not projID then
+            print("[PlayerScript] ERROR: SpawnSkillProjectile returned nil - not consuming AP")
+            ClearActivePreview()
+            return
+        end
+
         print("[PlayerScript] Spawned projectile ID=" .. tostring(projID)
             .. " dir=(" .. dirX .. "," .. dirY .. ")"
             .. " speed=" .. (skill.projSpeed or 3.0)
             .. " dmg=" .. skill.damage
             .. " pierce=" .. tostring(skill.pierce or false))
 
-        -- Consume AP
+        -- Consume AP only after successful spawn
         ConsumeEntityAttackAP(entityID, skill.apCost)
 
         -- Trigger AP crystal animation
