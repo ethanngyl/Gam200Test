@@ -521,6 +521,7 @@ namespace Framework {
         lua_register(L, "GetEnemyAP", LevelLoader::Lua_GetEnemyAP);
         lua_register(L, "RefillEnemyAP", LevelLoader::Lua_RefillEnemyAP);
         lua_register(L, "GetEntityGridPosition", LevelLoader::Lua_GetEntityGridPosition);
+        lua_register(L, "GetEntityWorldPosition", LevelLoader::Lua_GetEntityWorldPosition);
         lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);

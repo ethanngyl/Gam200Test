@@ -79,30 +79,39 @@ namespace Framework {
 
         if (!entityManager) return;
 
-        // Only update during enemy turn
+        // ========================================================================
+        // IMPORTANT: Enemy movement is now handled entirely by Lua scripts
+        // (EnemyScript.lua + EnemyTurnManager.lua). The Lua system handles:
+        //   - AI state machine (chase/attack/flee/patrol)
+        //   - Pathfinding (via FindPathToTarget which calls FindPath)
+        //   - Movement with smooth glide animation
+        //   - AP management and turn sequencing
+        //
+        // This C++ Update() previously moved enemies directly by setting
+        // transform.position, which conflicted with Lua's glide system
+        // (causing teleporting, snap-backs, and inconsistent animation).
+        //
+        // The static FindPath() and SpawnEnemyFurthestFromPlayer() methods
+        // are still used by the Lua API layer and remain functional.
+        // ========================================================================
+
+        // Only regenerate AP at the start of each new enemy turn
         if (!IsEnemyTurn()) return;
 
         const Grid& grid = GetGrid();
         if (grid.cols <= 0 || grid.rows <= 0 || !grid.em) return;
 
-        // Get global turn info for AP regeneration
         auto& globalTurn = Turn();
         static uint64_t lastEnemyTurnIndex = 0;
 
-        // ========================================================================
-        // SEQUENTIAL ENEMY MOVEMENT - Track which enemy is currently acting
-        // ========================================================================
-        static int currentEnemyIndex = 0;  // Which enemy's turn is it?
-        static bool needsReset = true;     // Reset index at start of enemy turn
-
-        // Check if this is a NEW enemy turn (regenerate AP for all enemies)
+        // Regenerate AP for all enemies at the start of a new enemy turn
         if (globalTurn.turnIndex > lastEnemyTurnIndex) {
             for (Entity entity : entityManager->GetAllEntities()) {
                 if (entityManager->HasComponent<EnemyAI>(entity) &&
-                    entityManager->HasComponent<Health>(entity)  && 
+                    entityManager->HasComponent<Health>(entity) &&
                     entityManager->HasComponent<AP>(entity)) {
                     auto& hp = entityManager->GetComponent<Health>(entity);
-					auto& stats = entityManager->GetComponent<AP>(entity);
+                    auto& stats = entityManager->GetComponent<AP>(entity);
 
                     // Skip dead enemies
                     if (hp.isDead || hp.currentHealth <= 0) continue;
@@ -113,311 +122,11 @@ namespace Framework {
             }
 
             lastEnemyTurnIndex = globalTurn.turnIndex;
-            currentEnemyIndex = 0;  // Reset to first enemy
-            needsReset = false;
+            LOG_INFO("EnemyAI", "AP regenerated for all enemies (turn %llu)", lastEnemyTurnIndex);
         }
 
-        // ========================================================================
-        // COLLECT ALL LIVING ENEMIES
-        // ========================================================================
-        std::vector<Entity> livingEnemies;
-        for (Entity entity : entityManager->GetAllEntities()) {
-            if (!entityManager->HasComponent<EnemyAI>(entity)) continue;
-            if (!entityManager->HasComponent<Transform>(entity)) continue;
-            if (!entityManager->HasComponent<AP>(entity)) continue;
-            if (!entityManager->HasComponent<Health>(entity)) continue;
-
-            auto& hp = entityManager->GetComponent<Health>(entity);                    
-            if (hp.currentHealth > 0 && !hp.isDead) {                                 
-                livingEnemies.push_back(entity);
-            }
-        }
-
-        if (livingEnemies.empty()) {
-            LOG_WARN("EnemyTurn", "No living enemies, ending turn");
-            EndEnemyTurn();
-            return;
-        }
-
-        // ========================================================================
-        // SEQUENTIAL LOGIC: Only update ONE enemy per frame
-        // ========================================================================
-
-        // Check if current enemy finished their turn
-        if (currentEnemyIndex >= livingEnemies.size()) {
-            // All enemies done, end turn
-            EndEnemyTurn();
-            currentEnemyIndex = 0;
-            needsReset = true;
-            return;
-        }
-
-        // Get current enemy
-        Entity currentEnemy = livingEnemies[currentEnemyIndex];
-        auto& ai = entityManager->GetComponent<EnemyAI>(currentEnemy);
-        auto& transform = entityManager->GetComponent<Transform>(currentEnemy);
-        auto& stats = entityManager->GetComponent<AP>(currentEnemy);
-		//auto& hp = entityManager->GetComponent<Health>(currentEnemy);
-
-        // CRITICAL FIX: Initialize delay when switching to a new enemy
-        // This prevents all enemies from moving simultaneously on the first frame
-        static int lastActiveEnemyIndex = -1;
-        if (currentEnemyIndex != lastActiveEnemyIndex) {
-            // Just switched to a new enemy - set initial delay
-            ai.moveTimer = ai.moveDelay;
-            lastActiveEnemyIndex = currentEnemyIndex;
-            LOG_INFO("EnemyAI", "Now acting: Enemy %u (index %d/%zu)",
-                currentEnemy.GetID(), currentEnemyIndex, livingEnemies.size() - 1);
-
-            // Pan camera to this enemy
-            if (graphicsSystem) {
-                graphicsSystem->SetFollowTarget(currentEnemy);
-                LOG_INFO("EnemyAI", "Camera now following Enemy %u", currentEnemy.GetID());
-            }
-
-            return;  // Wait one frame before acting
-        }
-
-        // Check if this enemy has AP left
-        if (stats.actionPoints <= 0) {
-            currentEnemyIndex++;  // Move to next enemy
-            return;
-        }
-
-        // ========================================================================
-        // UPDATE CURRENT ENEMY
-        // ========================================================================
-
-        // Update movement timer
-        ai.moveTimer -= dt;
-        if (ai.moveTimer > 0.0f) {
-            return; // Still waiting for movement delay
-        }
-
-        // CRITICAL FIX: Find closest player dynamically instead of using hardcoded target
-        // This ensures enemies always chase the actually closest player
-        auto enemyTileOpt = WorldToTile(transform.position);
-        if (!enemyTileOpt.has_value()) {
-            currentEnemyIndex++;
-            return;
-        }
-        GridCoord enemyTile = *enemyTileOpt;
-
-        // Find all players (entities with AP + CircleCollider, but NOT EnemyAI)
-        Entity closestPlayer{ INVALID_ENTITY };
-        int closestDistance = 999999;
-        GridCoord closestPlayerTile{ 0, 0 };
-
-        for (Entity entity : entityManager->GetAllEntities()) {
-            if (!entityManager->HasComponent<AP>(entity)) continue;
-            if (!entityManager->HasComponent<CircleCollider>(entity)) continue;
-            if (entityManager->HasComponent<EnemyAI>(entity)) continue;  // Skip enemies
-            if (!entityManager->HasComponent<Transform>(entity)) continue;
-
-            // Skip dead players - they are no longer valid targets
-            if (entityManager->HasComponent<Health>(entity)) {
-                const auto& health = entityManager->GetComponent<Health>(entity);
-                if (health.isDead) {
-                    continue;  // Dead player - don't target
-                }
-            }
-
-            // This is a player - check distance
-            auto& playerTransform = entityManager->GetComponent<Transform>(entity);
-            auto playerTileOpt = WorldToTile(playerTransform.position);
-            if (!playerTileOpt.has_value()) continue;
-
-            GridCoord playerTile = *playerTileOpt;
-            int distance = Heuristic(enemyTile, playerTile);
-
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closestPlayer = entity;
-                closestPlayerTile = playerTile;
-            }
-        }
-
-        // Validate we found a player
-        if (closestPlayer.GetID() == INVALID_ENTITY) {
-            LOG_WARN("EnemyAI", "Enemy %u: No players found", currentEnemy.GetID());
-            stats.actionPoints = 0;
-            currentEnemyIndex++;
-            return;
-        }
-
-        // Update target if it changed
-        if (ai.targetEntity.GetID() != closestPlayer.GetID()) {
-            LOG_INFO("EnemyAI", "Enemy %u retargeting: %u -> %u (distance: %d)",
-                currentEnemy.GetID(), ai.targetEntity.GetID(), closestPlayer.GetID(), closestDistance);
-            ai.targetEntity = closestPlayer;
-            ai.currentPath.clear();  // Clear old path when target changes
-        }
-
-        GridCoord targetTile = closestPlayerTile;
-
-        // Check if adjacent to target (can attack)
-        int distance = Heuristic(enemyTile, targetTile);
-        if (distance == 1) {
-            // Check if we have enough AP to attack
-            const int attackAPCost = 2;
-            if (stats.actionPoints < attackAPCost) {
-                // Not enough AP to attack, move to next enemy
-                LOG_INFO("EnemyAI", "Enemy %u adjacent but only has %d AP (need %d to attack)",
-                    currentEnemy.GetID(), stats.actionPoints, attackAPCost);
-                stats.actionPoints = 0;
-                currentEnemyIndex++;
-                return;
-            }
-
-            // ========================================================================
-            // PLAY ENEMY ATTACK SOUND EFFECT
-            // ========================================================================
-            if (audioSystem) {
-                audioSystem->PlaySound("dmgb", false);  // Play damage sound
-            }
-
-            LOG_INFO("EnemyAI", "Enemy %u ATTACKING Player %u", currentEnemy.GetID(), closestPlayer.GetID());
-
-            // ATTACK! Consume 2 AP (attack cost)
-            stats.actionPoints -= attackAPCost;
-            ai.moveTimer = ai.moveDelay;
-
-            // Deal damage to target
-            if (entityManager->HasComponent<Health>(ai.targetEntity)) {
-                auto& targetHp = entityManager->GetComponent<Health>(ai.targetEntity);
-				targetHp.TakeDamage(1); // Flat 1 damage for now
-
-                // ========================================================================
-                // PLAY TAKE DAMAGE SOUND EFFECT (Player gets hit)
-                // ========================================================================
-                if (audioSystem && !targetHp.isDead) {
-                    audioSystem->PlaySound("takedmg", false);  // Play take damage sound
-                }
-
-                // Target hit
-
-                if (targetHp.currentHealth <= 0) {
-                    targetHp.currentHealth = 0;
-                    targetHp.isDead = true;
-                    LOG_ERROR("Combat", "Player %u DEFEATED!", ai.targetEntity.GetID());
-
-                    // Clear tile occupancy and destroy dead player entity
-                    if (entityManager->HasComponent<Transform>(ai.targetEntity)) {
-                        auto& deadTransform = entityManager->GetComponent<Transform>(ai.targetEntity);
-                        auto deadTileOpt = WorldToTile(deadTransform.position);
-                        if (deadTileOpt.has_value()) {
-                            SetOccupant(deadTileOpt.value(), Entity{ INVALID_ENTITY });
-                            LOG_INFO("Combat", "  -> Cleared tile occupancy for dead player at (%d, %d)",
-                                deadTileOpt.value().x, deadTileOpt.value().y);
-                        }
-                    }
-
-                    // Destroy the dead player entity
-                    LOG_WARN("Combat", "  -> Destroying dead player entity %u", ai.targetEntity.GetID());
-                    entityManager->DestroyEntity(ai.targetEntity);
-
-                    // Check if ALL players are dead before triggering game over
-                    bool allPlayersDead = true;
-                    for (Entity entity : entityManager->GetAllEntities()) {
-                        if (!entityManager->HasComponent<AP>(entity)) continue;
-                        if (!entityManager->HasComponent<CircleCollider>(entity)) continue;
-                        if (entityManager->HasComponent<EnemyAI>(entity)) continue;  // Skip enemies
-                        if (!entityManager->HasComponent<Health>(entity)) continue;
-
-                        auto& playerHp = entityManager->GetComponent<Health>(entity);
-                        if (playerHp.currentHealth > 0 && !playerHp.isDead) {
-                            allPlayersDead = false;
-                            break;
-                        }
-                    }
-
-                    if (allPlayersDead) {
-                        GSM_SetNextState(LEVEL_END);
-                        LOG_ERROR("Combat", "ALL PLAYERS DEFEATED - GAME OVER!");
-                    }
-                }
-            }
-
-            // If out of AP, move to next enemy
-            if (stats.actionPoints <= 0) {
-                currentEnemyIndex++;
-            }
-            return;
-        }
-
-        // ========================================================================
-        // PATHFINDING: Calculate path to target
-        // ========================================================================
-        ai.currentPath = FindPath(enemyTile, targetTile, grid);
-
-        if (ai.currentPath.empty()) {
-            LOG_WARN("EnemyAI", "Enemy %u: No path found!", currentEnemy.GetID());
-            stats.actionPoints = 0;
-            currentEnemyIndex++;
-            return;
-        }
-
-        // Skip the starting position if it's in the path
-        if (ai.currentPath[0].x == enemyTile.x && ai.currentPath[0].y == enemyTile.y) {
-            ai.pathIndex = 1;
-        }
-        else {
-            ai.pathIndex = 0;
-        }
-
-        // Path found
-
-        // ========================================================================
-        // MOVEMENT: Move to next tile in path
-        // ========================================================================
-        if (ai.pathIndex < ai.currentPath.size()) {
-            GridCoord nextTile = ai.currentPath[ai.pathIndex];
-
-            // Check if tile is passable (allow moving onto target's tile)
-            const bool passable =
-                (nextTile.x == targetTile.x && nextTile.y == targetTile.y) ||
-                IsWalkable(nextTile);
-
-            if (!passable) {
-                LOG_WARN("EnemyAI", "Enemy %u: Next tile (%d,%d) blocked!",
-                    currentEnemy.GetID(), nextTile.x, nextTile.y);
-                ai.currentPath.clear();
-                stats.actionPoints = 0;
-                currentEnemyIndex++;
-                return;
-            }
-
-            // Update occupancy
-            SetOccupant(enemyTile, Entity{ INVALID_ENTITY });
-
-            // Move enemy
-            transform.position = TileToWorld(nextTile);
-            SetOccupant(nextTile, currentEnemy);
-
-            // ========================================================================
-            // PLAY WALKING SOUND EFFECT
-            // ========================================================================
-            if (audioSystem) {
-                audioSystem->PlaySound("walk1", false);
-            }
-
-            // Update state
-            ai.moveTimer = ai.moveDelay;
-            ai.pathIndex++;
-            stats.actionPoints--;
-
-            // Enemy moved
-
-            // If out of AP, move to next enemy
-            if (stats.actionPoints <= 0) {
-                currentEnemyIndex++;
-            }
-        }
-        else {
-            // Path exhausted
-            stats.actionPoints = 0;
-            currentEnemyIndex++;
-        }
+        // All movement/pathfinding/combat is handled by Lua - do not process here
+        return;
     }
 
     /**
@@ -540,7 +249,7 @@ namespace Framework {
     * @param goal Target grid coordinate
     * @param grid Grid reference for bounds and neighbor checking
     * @return Vector of grid coordinates forming the optimal path
-    *     
+    *
     * Implements classic A* pathfinding with:
     * - Priority queue for efficient lowest-cost node selection
     * - Manhattan distance heuristic for 4-directional movement
