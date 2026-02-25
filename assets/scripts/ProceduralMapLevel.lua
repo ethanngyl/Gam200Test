@@ -173,19 +173,24 @@ function OnInit()
     -- Setup Party UI
     SetupPartyUI()
 
-    -- CRITICAL: Disable grid movement
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    Log("!!! DISABLING grid movement !!!")
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    -- CRITICAL: Disable C++ grid movement (Lua handles movement via PartyTurnManager)
     SetGridMovementEnabled(false)
-    
-    -- IMPORTANT: Set camera to follow first party member
-    -- NOTE: SetCameraFollowEntity may not be registered - check if it exists
-    if partyMembers[1] then
-        -- Try to use the graphics system's follow target if available
-        Log("First party member entity: " .. partyMembers[1])
-        -- SetCameraFollowEntity is not exposed to Lua - camera will stay at 0,0
+
+    -- Remove WASD movement from all players (grid movement handled by Lua scripts)
+    for _, pid in ipairs(partyMembers) do
+        RemoveMovementComponent(pid)
+        Log("Removed Movement component from player " .. pid)
     end
+
+    -- Set camera to follow first party member
+    if partyMembers[1] then
+        SetCameraFollowTarget(partyMembers[1])
+        Log("Camera following player " .. partyMembers[1])
+    end
+
+    -- Initialize turn system (Player phase, not busy)
+    InitializeTurnSystem()
+    Log("Turn system initialized: Player phase")
 
     initialized = true
     Log("========================================")

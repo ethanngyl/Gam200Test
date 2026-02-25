@@ -50,6 +50,7 @@
 #include "Turn.h"
 #include "Pathfinding.h"  // EnemyAI component
 #include "Component.h"    // Movement, CircleCollider components
+#include "TagHelper.h"
 
 // ============================================================================
 // LEVEL SCRIPT PATH LOOKUP TABLE
@@ -363,70 +364,28 @@ void GSM_Update()
         // ============================================================================
         fpInitialize = []() {
             LOG_INFO("GSM", "Level3 ready (Lua-scripted)");
-            // Additional C++ initialization (player controller setup)
+            // Player setup (Movement removal, camera follow, turn system init)
+            // is now handled by ProceduralMapLevel.lua OnInit via:
+            //   RemoveMovementComponent(), SetCameraFollowTarget(), InitializeTurnSystem()
+
+            // Configure C++ player controller with minimal plumbing so its
+            // Update() can run (even though gridMovement is disabled by Lua).
             extern Framework::CoreEngine* engine;
             if (engine) {
                 auto* em = engine->GetEntityManager();
-                auto* playerController = engine->GetPlayerController();
+                auto* pc = engine->GetPlayerController();
                 auto* spawner = engine->GetSpawner();
                 auto* input = engine->GetInputSystem();
 
-                if (em && playerController && spawner && input) {
-                    // Find player entity (spawned by TileMapLoader in Lua)
-                    // Player has CircleCollider but NOT EnemyAI (distinguishes from enemies)
-                    Framework::Entity player{ Framework::INVALID_ENTITY };
-                    for (Framework::Entity e : em->GetAllEntities()) {
-                        if (em->HasComponent<Framework::CircleCollider>(e) &&
-                            !em->HasComponent<Framework::EnemyAI>(e)) {
-                            player = e;
-                            break;
-                        }
-                    }
-
+                if (em && pc && spawner && input) {
+                    Framework::Entity player = Framework::FindFirstByTag(em, "Player");
                     if (player.GetID() != Framework::INVALID_ENTITY) {
-                        // DISABLE WASD movement: Remove Movement component to prevent MovementSystem from processing player
-                        // Grid movement via arrow keys only (handled by PlayerControllerSystem)
-                        if (em->HasComponent<Framework::Movement>(player)) {
-                            em->RemoveComponent<Framework::Movement>(player);
-                            LOG_INFO("GSM", "Removed Movement component from player - WASD disabled, arrow keys only");
-                        }
-
-                        // Add player stats (AP) if not already added
-                        if (!em->HasComponent<Framework::AP>(player)) {
-                            em->AddComponent<Framework::AP>(player, 5);  // 100 HP, 5 AP
-                            LOG_INFO("GSM", "Added AP component to player: 100 HP, 5 AP");
-                        }
-                        else {
-                            auto& ap = em->GetComponent<Framework::AP>(player);
-                            LOG_INFO("GSM", "Player already has AP: %d/%d AP",
-                                ap.actionPoints, ap.maxActionPoints);
-                        }
-
-                        // Configure player controller
-                        playerController->SetPlayerEntity(player);
-                        playerController->SetEntitySpawner(spawner);
-                        playerController->SetEntityManager(em);
-                        playerController->SetInputSystem(input);
-                        // DISABLED: Don't force grid movement ON - let Lua scripts control it
-                        // playerController->SetGridMovementEnabled(true);
-
-                        // Set camera follow
-                        if (auto* gfx = engine->GetGraphicsSystem()) {
-                            gfx->SetFollowTarget(player);
-                        }
-
-                        LOG_INFO("GSM", "Player controller configured for entity ID: %u", player.GetID());
-                        // LOG_INFO("GSM", "Grid movement enabled: TRUE");
+                        pc->SetPlayerEntity(player);
+                        pc->SetEntitySpawner(spawner);
+                        pc->SetEntityManager(em);
+                        pc->SetInputSystem(input);
+                        LOG_INFO("GSM", "Player controller configured for entity %u", player.GetID());
                     }
-                    else {
-                        LOG_ERROR("GSM", "No player entity found!");
-                    }
-
-                    // Initialize turn system
-                    auto& turn = Framework::Turn();
-                    turn.phase = Framework::TurnPhase::Player;
-                    turn.busy = false;
-                    LOG_INFO("GSM", "Turn system initialized: Phase=Player, Busy=false, TurnIndex=%d", turn.turnIndex);
                 }
             }
             };
@@ -466,17 +425,10 @@ void GSM_Update()
                     //engine->SetPlaying(true);
 
                     // Find and cache player entity if needed
-                    // Player has CircleCollider but NOT EnemyAI (Movement component removed for grid movement)
                     if (cachedPlayer.GetID() == Framework::INVALID_ENTITY) {
                         auto* em = engine->GetEntityManager();
                         if (em) {
-                            for (Framework::Entity e : em->GetAllEntities()) {
-                                if (em->HasComponent<Framework::CircleCollider>(e) &&
-                                    !em->HasComponent<Framework::EnemyAI>(e)) {
-                                    cachedPlayer = e;
-                                    break;
-                                }
-                            }
+                            cachedPlayer = Framework::FindFirstByTag(em, "Player");
                         }
                     }
 
