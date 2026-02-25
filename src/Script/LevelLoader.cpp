@@ -574,6 +574,7 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", Lua_EndEnemyTurn);
+        lua_register(L, "CallLevelFunction", Lua_CallLevelFunction);
         lua_register(L, "SetPlayerFlipX", Lua_SetPlayerFlipX);
         lua_register(L, "HasChestAtTile", Lua_HasChestAtTile);
         lua_register(L, "CollectChest", Lua_CollectChest);
@@ -624,6 +625,8 @@ namespace Framework {
 
         // Entity Spawning API
         lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
+        lua_register(L, "RemoveMovementComponent", Lua_RemoveMovementComponent);
+        lua_register(L, "InitializeTurnSystem", Lua_InitializeTurnSystem);
         lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);
         lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
         lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
