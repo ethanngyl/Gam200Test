@@ -52,6 +52,31 @@
 #include "Component.h"    // Movement, CircleCollider components
 
 // ============================================================================
+// LEVEL SCRIPT PATH LOOKUP TABLE
+// ============================================================================
+// Centralises all Lua script paths so they can be changed in one place.
+// Index matches the GS_STATES enum (see GameStateList.h).
+// nullptr means the state has no associated Lua script.
+static const char* const g_levelScriptPaths[] = {
+    "assets/scripts/MainMenuLevel.lua",      // mainMenu       (0)
+    nullptr,                                  // settingsMenu   (1)
+    "assets/scripts/LevelSelectLevel.lua",   // Level_select   (2)
+    "assets/scripts/Level2.lua",             // LEVEL_2        (3)
+    "assets/scripts/ProceduralMapLevel.lua", // LEVEL_3        (4)
+    "assets/scripts/EndLevel.lua",           // LEVEL_END      (5)
+    "assets/scripts/TutorialLevel.lua",      // TUTORIAL       (6)
+};
+static constexpr int g_levelScriptPathCount =
+    static_cast<int>(sizeof(g_levelScriptPaths) / sizeof(g_levelScriptPaths[0]));
+
+/// Returns the Lua script path for a game state, or nullptr if none.
+static const char* GetLevelScript(int state) {
+    if (state >= 0 && state < g_levelScriptPathCount)
+        return g_levelScriptPaths[state];
+    return nullptr;
+}
+
+// ============================================================================
 // GLOBAL VARIABLE DEFINITIONS
 // ============================================================================
 int current = 0;
@@ -102,12 +127,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/MainMenuLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(mainMenu), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load MainMenu Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/MainMenuLevel.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(mainMenu));
                 next = GS_QUIT;
             }
             else {
@@ -198,12 +223,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading LevelSelect Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/LevelSelectLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(Level_select), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load LevelSelect Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/LevelSelectLevel.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(Level_select));
                 next = GS_QUIT;
             }
             else {
@@ -288,7 +313,7 @@ void GSM_Update()
         // Use LevelLoader to load Level2.lua
         fpLoad = []() {
                 Framework::LevelLoader::GetInstance().LoadLevel(
-                "assets/scripts/Level2.lua",
+                GetLevelScript(LEVEL_2),
                 g_loadAsEditorMode
             );
             g_loadAsEditorMode = false;  // Reset flag after use
@@ -320,12 +345,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Level3 Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/ProceduralMapLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(LEVEL_3), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Level3 Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/Level3Clean.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(LEVEL_3));
                 next = GS_QUIT;
             }
             else {
@@ -566,12 +591,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Tutorial Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/TutorialLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(TUTORIAL), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Tutorial Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/TutorialLevel.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(TUTORIAL));
                 next = GS_QUIT;
             }
             else {
@@ -662,12 +687,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/EndLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(LEVEL_END), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load MainMenu Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/EndLevel.lua exists");
+                LOG_ERROR("GSM", "CRITICAL: Failed to load EndLevel Lua script!");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(LEVEL_END));
                 next = GS_QUIT;
             }
             else {
