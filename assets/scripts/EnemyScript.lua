@@ -702,15 +702,6 @@ function ExecuteChase()
                 ShowTileBorder(nextTile.x, nextTile.y, 0.3)
                 PulseTile(nextTile.x, nextTile.y, 0.2, 1.0, 0.5, 0.0)  -- Orange pulse
 
-                -- Manage tile occupancy
-                --local enemyX, enemyY = GetEntityGridPosition(entityID)
-                --if enemyX and enemyY then
-                    -- Only set occupancy if the enemy actually moved
-                  --  if not SetTileOccupant or SetTileOccupant(enemyX, enemyY, entityID) then
-                    --    Log("[EnemyScript] Enemy " .. entityID .. " set occupancy at (" .. enemyX .. ", " .. enemyY .. ")")
-                    --end
-                --end
-
                 -- Set timer for next move (creates visible delay)
                 moveTimer = moveDelay
 

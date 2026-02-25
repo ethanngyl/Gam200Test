@@ -33,6 +33,16 @@ namespace Framework
     {
     public:
         virtual ~ComponentBase() = default;
+
+        /**
+         * @brief Returns the sizeof() of the actual derived component type
+         * @return Size in bytes of the derived type
+         *
+         * Used by the MemoryManager to find the correct pool when deallocating
+         * through a ComponentBase* pointer (type-erased deallocation).
+         * Each Component<T> overrides this to return sizeof(T).
+         */
+        virtual size_t GetAllocatedSize() const = 0;
     };
 
     /**
@@ -62,12 +72,16 @@ namespace Framework
     {
     public:
         /**
-         * @brief Gets the unique type ID for this component type
-         * @return Unique component type identifier
+         * @brief Returns sizeof(T) for MemoryManager pool deallocation
          *
-         * Returns the same ID for all instances of type T.
-         * Thread-safe due to static initialization guarantees.
+         * When the ECS needs to deallocate a component through a ComponentBase*
+         * pointer, it calls this to determine which pool the memory came from.
          */
+        size_t GetAllocatedSize() const override
+        {
+            return sizeof(T);
+        }
+
         static ComponentTypeID GetTypeID()
         {
             static ComponentTypeID typeID = GetNextTypeID();

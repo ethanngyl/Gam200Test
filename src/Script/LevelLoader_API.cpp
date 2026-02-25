@@ -1248,14 +1248,27 @@ namespace Framework {
         auto& mr = em->GetComponent<MeshRenderer>(entity);
         mr.spriteName = texturePath;
 
-        // Load the new texture
         auto& resourceManager = gfx->GetResourceManager();
+
+        // Empty path = clear texture (render as solid color via tint)
+        if (texturePath[0] == '\0') {
+            mr.texture = INVALID_TEXTURE_HANDLE;
+            if (mr.material.IsValid()) {
+                Material* mat = resourceManager.GetMaterial(mr.material);
+                if (mat) {
+                    mat->albedoTexture = INVALID_TEXTURE_HANDLE;
+                }
+            }
+            return 0;
+        }
+
+        // Load the new texture
         TextureHandle newTexture = resourceManager.LoadTexture(texturePath);
         if (!newTexture.IsValid()) return 0;
-        
+
         // CRITICAL: Update mr.texture - this is what the renderer actually uses!
         mr.texture = newTexture;
-        
+
         // If entity has SpriteAnimation, update the spriteSheet too
         if (em->HasComponent<SpriteAnimation>(entity)) {
             auto& anim = em->GetComponent<SpriteAnimation>(entity);
@@ -4836,6 +4849,81 @@ namespace Framework {
         }
 
         lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // ========================================================================
+    // PROJECTILE SKILL API
+    // ========================================================================
+
+    /**
+     * @brief Spawns a skill-based projectile from Lua
+     * @param worldX, worldY  World-space spawn position
+     * @param dirX, dirY      Direction vector (will be normalized)
+     * @param speed            Projectile speed in world units/second
+     * @param damage           Damage dealt on hit
+     * @param pierce           Boolean: true = pass through enemies
+     * @return entityID of the spawned projectile
+     *
+     * Usage from Lua:
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false)
+     *   -- with optional tint (args 8-11) and sprite path (arg 12):
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,0,0,1, "")
+     */
+    int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+        float dirX   = static_cast<float>(luaL_checknumber(L, 3));
+        float dirY   = static_cast<float>(luaL_checknumber(L, 4));
+        float speed  = static_cast<float>(luaL_optnumber(L, 5, 3.0));
+        int   damage = static_cast<int>(luaL_optinteger(L, 6, 1));
+        bool  pierce = lua_toboolean(L, 7) != 0;
+
+        // Optional tint (args 8-11, default white)
+        float tintR = static_cast<float>(luaL_optnumber(L, 8, 1.0));
+        float tintG = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        float tintB = static_cast<float>(luaL_optnumber(L, 10, 1.0));
+        float tintA = static_cast<float>(luaL_optnumber(L, 11, 1.0));
+        glm::vec4 tint(tintR, tintG, tintB, tintA);
+
+        // Optional sprite path (arg 12, default = bullet.png)
+        const char* spriteArg = luaL_optstring(L, 12, nullptr);
+        std::string spritePath = spriteArg ? std::string(spriteArg)
+                                           : std::string("assets/new assets/bullet.png");
+
+        // Normalize direction
+        float len = std::sqrt(dirX * dirX + dirY * dirY);
+        if (len > 0.0001f) {
+            dirX /= len;
+            dirY /= len;
+        }
+
+        CoreEngine* core = CORE;
+        if (!core) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        EntitySpawner* spawner = core->GetSpawner();
+        EntityManager* em = core->GetEntityManager();
+        if (!spawner || !em) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        // Spawn the projectile entity using the existing spawner
+        Vector2D position(worldX, worldY);
+        Vector2D direction(dirX, dirY);
+        Entity projectile = spawner->SpawnProjectile(position, direction, speed, spritePath, tint);
+
+        // Configure damage and pierce on the projectile component
+        if (em->HasComponent<ProjectileMovement>(projectile)) {
+            auto& movement = em->GetComponent<ProjectileMovement>(projectile);
+            movement.damage = damage;
+            movement.pierce = pierce;
+        }
+
+        lua_pushinteger(L, projectile.GetID());
         return 1;
     }
 

@@ -532,12 +532,28 @@ namespace Framework {
         Entity SpawnProjectile(
             const Vector2D& position,
             const Vector2D& direction,
-            float speed = 0.3f)
+            float speed = 0.15f,
+            const std::string& spritePath = "assets/new assets/bullet.png",
+            const glm::vec4& tint = glm::vec4(1.0f))
         {
-            Entity projectile = SpawnSprite("assets/Bullet.png", position, Vector2D(0.1f, 0.1f));
+            Entity projectile = SpawnSprite(
+                spritePath.empty() ? "quad" : spritePath,
+                position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(projectile);
             mr.layer = RenderLayers::Projectiles;  // Projectiles above player
+            mr.tint = tint;
+
+            // If no sprite path, clear texture so it renders as a solid-color quad
+            if (spritePath.empty()) {
+                mr.spriteName.clear();
+                mr.texture = INVALID_TEXTURE_HANDLE;
+                if (mr.material.IsValid() && CORE && CORE->GetGraphicsSystem()) {
+                    auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
+                    Material* mat = gs->GetResourceManager().GetMaterial(mr.material);
+                    if (mat) mat->albedoTexture = INVALID_TEXTURE_HANDLE;
+                }
+            }
 
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
