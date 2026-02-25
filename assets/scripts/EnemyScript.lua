@@ -103,6 +103,10 @@ local moveTimer = 0.0           -- Timer for next move
 local moveDelay = 0.55           -- Delay between moves in seconds (0.3s = visible movement)
 local movesThisTurn = 0         -- Track how many moves made this turn
 
+-- Safety: track how long this enemy has been active to detect stuck state
+local activeTimer = 0.0         -- Time spent as active enemy this turn
+local maxActiveTime = 8.0       -- Max seconds before force-finishing turn
+
 -- Smooth glide state (lerps sprite between tiles)
 local glideActive = false
 local glideElapsed = 0.0
@@ -272,6 +276,7 @@ function OnUpdate(dt)
             isMyTurnToAct = false
             moveTimer = 0.0
             movesThisTurn = 0
+            activeTimer = 0.0
             -- Snap glide to end position if interrupted by turn change
             if glideActive then
                 SetSpritePosition(entityID, glideEndX, glideEndY)
@@ -372,10 +377,19 @@ function OnUpdate(dt)
 
     
 
+    -- Safety: track active time and force-finish if stuck
+    activeTimer = activeTimer + dt
+    if activeTimer >= maxActiveTime then
+        print("[Enemy " .. entityID .. "] SAFETY: Active for " .. string.format("%.1f", activeTimer) .. "s, force-finishing turn!")
+        FinishEnemyAction()
+        return
+    end
+
     -- First time acting - set up turn
     if not isMyTurnToAct then
         isMyTurnToAct = true
         movesThisTurn = 0
+        activeTimer = 0.0  -- Reset active timer at turn start
         print("[Enemy " .. entityID .. "] ========== STARTING TURN ==========")
         print("[Enemy " .. entityID .. "] glideActive=" .. tostring(glideActive) .. " moveTimer=" .. moveTimer .. " hasActed=" .. tostring(hasActedThisTurn))
 
@@ -464,12 +478,23 @@ function OnUpdate(dt)
         end
 
         -- Continue AI after resolving hit (may move if AP left)
-        ProcessAITurn()
+        local ok, err = pcall(ProcessAITurn)
+        if not ok then
+            print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn (post-attack): " .. tostring(err))
+            FinishEnemyAction()
+        end
         return
     end
 
     -- Execute AI decision making (will make ONE move per frame)
-    ProcessAITurn()
+    -- Wrapped in pcall to catch errors and prevent stuck turns
+    local aiOk, aiErr = pcall(ProcessAITurn)
+    if not aiOk then
+        print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn: " .. tostring(aiErr))
+        print("[Enemy " .. entityID .. "] Force-finishing turn due to error")
+        FinishEnemyAction()
+        return
+    end
 
 end
 
@@ -1041,6 +1066,10 @@ function FinishEnemyAction()
     moveTimer = 0.0    -- Reset timer
     glideActive = false -- Reset glide
     pendingFinishAfterGlide = false  -- Reset pending flag
+    pendingAttack = false -- Reset pending attack
+    activeTimer = 0.0  -- Reset active timer
+    currentPath = {}   -- Clear stale path
+    pathIndex = 1
     Log("[Enemy " .. entityID .. "] Finished turn")
     MarkEnemyActionComplete()  -- Advance to next enemy in sequence
 end
