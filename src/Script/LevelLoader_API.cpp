@@ -4547,25 +4547,33 @@ namespace Framework {
     int LevelLoader::Lua_IsActiveEnemy(lua_State* L) {
         int entityID = (int)luaL_checkinteger(L, 1);
 
-        // Reinitialize if needed
-        if (EnemyTurnState::needsReinitialize) {
-            Lua_InitializeEnemyTurn(L);
-        }
-
-        if (!EnemyTurnState::turnActive || EnemyTurnState::activeEnemyIndex == 0) {
+        // Forward to Lua EnemyTurnManager in the level Lua state
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->L) {
             lua_pushboolean(L, false);
             return 1;
         }
 
-        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+        lua_State* levelL = loader->L;
+        lua_getglobal(levelL, "IsActiveEnemy");
+        if (lua_isfunction(levelL, -1)) {
+            lua_pushinteger(levelL, entityID);
+            if (lua_pcall(levelL, 1, 1, 0) != LUA_OK) {
+                const char* err = lua_tostring(levelL, -1);
+                LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling Lua IsActiveEnemy: %s", err);
+                lua_pop(levelL, 1);
+                lua_pushboolean(L, false);
+                return 1;
+            }
+            bool isActive = lua_toboolean(levelL, -1);
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, isActive);
+        }
+        else {
+            lua_pop(levelL, 1);
             lua_pushboolean(L, false);
-            return 1;
         }
 
-        int activeID = EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1];
-        bool isActive = (entityID == activeID);
-
-        lua_pushboolean(L, isActive);
         return 1;
     }
 
@@ -4575,54 +4583,65 @@ namespace Framework {
      * @return true if enemy can act (timer expired), false if still in delay
      */
     int LevelLoader::Lua_IsEnemyActionReady(lua_State* L) {
-        bool ready = EnemyTurnState::turnActive && (EnemyTurnState::actionTimer <= 0.0f);
-        lua_pushboolean(L, ready);
+        // Forward to Lua EnemyTurnManager in the level Lua state
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->L) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_State* levelL = loader->L;
+        lua_getglobal(levelL, "IsEnemyActionReady");
+        if (lua_isfunction(levelL, -1)) {
+            if (lua_pcall(levelL, 0, 1, 0) != LUA_OK) {
+                const char* err = lua_tostring(levelL, -1);
+                LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling Lua IsEnemyActionReady: %s", err);
+                lua_pop(levelL, 1);
+                lua_pushboolean(L, false);
+                return 1;
+            }
+            bool ready = lua_toboolean(levelL, -1);
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, ready);
+        }
+        else {
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, false);
+        }
+
         return 1;
     }
 
     /**
-     * @brief Mark current enemy as done and advance to next
-     * Lua usage: MarkEnemyActionComplete()
-     * Call this when enemy finishes its turn
-     */
+    * @brief Mark current enemy as done and advance to next
+    * Lua usage: MarkEnemyActionComplete()
+    * Call this when enemy finishes its turn
+    */
     int LevelLoader::Lua_MarkEnemyActionComplete(lua_State* L) {
-        if (!EnemyTurnState::turnActive) {
-            LOG_WARN("LevelLoader", "[EnemyTurnSystem] MarkEnemyActionComplete called but turn not active");
+        // Forward to the Lua EnemyTurnManager in the LEVEL Lua state
+        // (Entity scripts have their own Lua state, so we need to call
+        //  into the level state where EnemyTurnManager.lua is loaded)
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->L) {
+            LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Cannot forward MarkEnemyActionComplete - no level Lua state");
             return 0;
         }
 
-        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Enemy %d completed action",
-            EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1]);
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Forwarding MarkEnemyActionComplete to Lua EnemyTurnManager");
 
-        // Move to next enemy
-        EnemyTurnState::activeEnemyIndex++;
-
-        // Check if all enemies have acted
-        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
-            LOG_INFO("LevelLoader", "[EnemyTurnSystem] All enemies have acted - ending enemy turn");
-            EnemyTurnState::turnActive = false;
-            EnemyTurnState::activeEnemyIndex = 0;
-            EnemyTurnState::needsReinitialize = true;
-
-            // Call Lua OnEnemyTurnEnded() if it exists
-            lua_getglobal(L, "OnEnemyTurnEnded");
-            if (lua_isfunction(L, -1)) {
-                if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-                    const char* err = lua_tostring(L, -1);
-                    LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling OnEnemyTurnEnded: %s", err);
-                    lua_pop(L, 1);
-                }
-            } else {
-                lua_pop(L, 1);
+        // Call MarkEnemyActionComplete() in the level Lua state
+        lua_State* levelL = loader->L;
+        lua_getglobal(levelL, "MarkEnemyActionComplete");
+        if (lua_isfunction(levelL, -1)) {
+            if (lua_pcall(levelL, 0, 0, 0) != LUA_OK) {
+                const char* err = lua_tostring(levelL, -1);
+                LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling Lua MarkEnemyActionComplete: %s", err);
+                lua_pop(levelL, 1);
             }
-        } else {
-            LOG_INFO("LevelLoader", "[EnemyTurnSystem] Moving to enemy %d (index %d/%d)",
-                EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1],
-                EnemyTurnState::activeEnemyIndex,
-                (int)EnemyTurnState::enemyList.size());
-
-            // Reset action timer for next enemy
-            EnemyTurnState::actionTimer = EnemyTurnState::actionDelay;
+        }
+        else {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] MarkEnemyActionComplete not found in level Lua state");
+            lua_pop(levelL, 1);
         }
 
         return 0;
