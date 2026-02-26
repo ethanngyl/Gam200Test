@@ -1129,11 +1129,13 @@ function ExecuteSkill(skillID)
         -- Consume AP only after successful spawn
         ConsumeEntityAttackAP(entityID, skill.apCost)
 
-        -- Trigger AP crystal animation
+        -- Trigger AP crystal animation (once per AP spent)
         if UIManager and UIManager.GetComponent then
             local comp = UIManager.GetComponent("attackAP")
             if comp and comp.ConsumeOneAP then
-                pcall(function() comp:ConsumeOneAP() end)
+                for i = 1, skill.apCost do
+                    pcall(function() comp:ConsumeOneAP() end)
+                end
             end
         else
             pcall(function() TriggerAttackAPAnimation() end)
@@ -1205,11 +1207,13 @@ function ExecuteSkill(skillID)
     ConsumeEntityAttackAP(entityID, skill.apCost)
     print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
 
-    -- Trigger AP crystal animation
+    -- Trigger AP crystal animation (once per AP spent)
     if UIManager and UIManager.GetComponent then
         local comp = UIManager.GetComponent("attackAP")
         if comp and comp.ConsumeOneAP then
-            pcall(function() comp:ConsumeOneAP() end)
+            for i = 1, skill.apCost do
+                pcall(function() comp:ConsumeOneAP() end)
+            end
         end
     else
         pcall(function() TriggerAttackAPAnimation() end)
