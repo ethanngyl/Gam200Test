@@ -28,7 +28,7 @@ Details:
   enemy turn manager); Animation (config, player load, frame control); Party
   (GetEntityAP, ConsumeEntityAP, SetActiveCharacter, etc.); Script component;
   Grid movement; Save/Load; Procedural map; Entity spawning; Editor mode.
-  g_activeCharacterID shared for party system. All callbacks get LevelLoader
+  Active character is fully tracked in Lua (PartyTurnManager). All callbacks get LevelLoader
   via GetLevelLoader(L) and null-check subsystems.
 
 Notes:
@@ -58,6 +58,7 @@ Technology is prohibited.
 #include "ImguiSystem.h"
 #include "TileMapLoader.h"
 #include "Component.h"    // Movement, CircleCollider, AP components
+#include "TagHelper.h"    // FindFirstByTag, FindAllByTag
 #include "Graphics/RenderComponents.h"  // Renderable component
 #include "Pathfinding.h"  // EnemyAI component
 #include "Turn.h"         // Turn system
@@ -78,14 +79,6 @@ Technology is prohibited.
 #endif
 
 namespace Framework {
-
-    // ========================================================================
-    // PARTY SYSTEM STATE - Shared between Lua and C++
-    // ========================================================================
-
-    // Global variable to track the currently active character for party system
-    // Set by Lua's PartyTurnManager, queried by entity scripts
-    static uint32_t g_activeCharacterID = 0;
 
     // ========================================================================
     // TILE TINTING SYSTEM - For PulseTile visual feedback
@@ -821,16 +814,7 @@ namespace Framework {
                 auto* audio = loader->coreEngine->GetAudioSystem();
 
                 if (em && pc && spawner && input) {
-                    Framework::Entity player{ Framework::INVALID_ENTITY };
-                    for (Framework::Entity e : em->GetAllEntities())
-                    {
-                        if (em->HasComponent<Framework::CircleCollider>(e) &&
-                            !em->HasComponent<Framework::EnemyAI>(e))
-                        {
-                            player = e;
-                            break;
-                        }
-                    }
+                    Framework::Entity player = Framework::FindFirstByTag(em, "Player");
 
                     if (player.GetID() != Framework::INVALID_ENTITY) {
                         pc->SetPlayerEntity(player);
@@ -1360,7 +1344,7 @@ namespace Framework {
      * @return currentAP (int), maxAP (int)
      *
      * Implementation details:
-     * - Scans for an entity with CircleCollider but NO EnemyAI component
+     * - Finds the player entity via FindFirstByTag(em, "Player")
      * - Returns 0,0 if player or AP component is missing
      */
     int LevelLoader::Lua_GetPlayerAP(lua_State* L) {
@@ -1372,16 +1356,8 @@ namespace Framework {
             return 2;
         }
 
-        // Find player entity (has CircleCollider but NOT EnemyAI)
-        // Note: Movement component is removed in Level 3 for grid-based movement
-        Entity player(INVALID_ENTITY);
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player entity by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() == INVALID_ENTITY) {
             LOG_WARN("LevelLoader", "GetPlayerAP: Player entity not found");
@@ -1416,15 +1392,8 @@ namespace Framework {
             return 2;
         }
 
-        // Find player entity (CircleCollider but NOT EnemyAI)
-        Entity player(INVALID_ENTITY);
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player entity by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() == INVALID_ENTITY ||
             !em->HasComponent<AttackAP>(player)) {
@@ -1478,14 +1447,11 @@ namespace Framework {
             return 1;
         }
 
-        // Find player entity (has CircleCollider but NOT EnemyAI)
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
-                // Player found
-                lua_pushinteger(L, e.GetID());
-                return 1;
-            }
+        // Find player entity by tag
+        Entity player = FindFirstByTag(em, "Player");
+        if (player.GetID() != INVALID_ENTITY) {
+            lua_pushinteger(L, player.GetID());
+            return 1;
         }
 
         LOG_WARN("LevelLoader", "FindPlayer: No player found");
@@ -1514,14 +1480,12 @@ namespace Framework {
         lua_newtable(L);
         int index = 1;
 
-        // Find all entities with EnemyAI component
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<EnemyAI>(e)) {
-                lua_pushinteger(L, index++);
-                lua_pushinteger(L, e.GetID());
-                lua_settable(L, -3);
-                // Enemy found
-            }
+        // Find all enemies by tag
+        auto enemies = FindAllByTag(em, "Enemy");
+        for (Entity e : enemies) {
+            lua_pushinteger(L, index++);
+            lua_pushinteger(L, e.GetID());
+            lua_settable(L, -3);
         }
 
         // All enemies retrieved
@@ -1547,22 +1511,14 @@ namespace Framework {
         }
 
         lua_newtable(L);
+
+        // Find all players by tag
+        auto players = FindAllByTag(em, "Player");
         int index = 1;
-
-        // Find all entities with AP component (indicates player in turn-based system)
-        // Players have: AP, CircleCollider, Health components
-        // Enemies have: EnemyAI component (we exclude those)
-        // NOTE: Changed from Movement to AP because Movement was unreliable for entity 547
-        for (Entity e : em->GetAllEntities()) {
-            bool hasAP = em->HasComponent<AP>(e);
-            bool hasCircleCollider = em->HasComponent<CircleCollider>(e);
-            bool hasEnemyAI = em->HasComponent<EnemyAI>(e);
-
-            if (hasAP && hasCircleCollider && !hasEnemyAI) {
-                lua_pushinteger(L, index++);
-                lua_pushinteger(L, e.GetID());
-                lua_settable(L, -3);
-            }
+        for (Entity e : players) {
+            lua_pushinteger(L, index++);
+            lua_pushinteger(L, e.GetID());
+            lua_settable(L, -3);
         }
 
         // All players retrieved
@@ -1642,15 +1598,8 @@ namespace Framework {
             return 2;
         }
 
-        // Find player entity
-        Entity player(INVALID_ENTITY);
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) &&
-                !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player entity by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() == INVALID_ENTITY) {
             lua_pushinteger(L, 0);
@@ -1733,7 +1682,8 @@ namespace Framework {
     int LevelLoader::Lua_SetActiveCharacter(lua_State* L)
     {
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
-        g_activeCharacterID = static_cast<uint32_t>(entityID);
+        // NOTE: Active character tracking is fully managed in Lua (PartyTurnManager).
+        // IsActiveCharacter() bridges directly to the level Lua state, so no C++ state needed.
         LOG_INFO("LevelLoader", "SetActiveCharacter: Active character set to entity %d", entityID);
         return 0;
     }
@@ -1888,15 +1838,8 @@ namespace Framework {
             return 2;
         }
 
-        // Find the player: has Health, NOT EnemyAI
-        Framework::Entity player(Framework::INVALID_ENTITY);
-        for (Framework::Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<Framework::Health>(e) &&
-                !em->HasComponent<Framework::EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find the player by tag
+        Framework::Entity player = Framework::FindFirstByTag(em, "Player");
 
         if (!player.IsValid() || !em->HasComponent<Framework::Health>(player)) {
             lua_pushinteger(L, 0);
@@ -2204,14 +2147,8 @@ namespace Framework {
             return 2;
         }
 
-        // Find player (has CircleCollider but NOT EnemyAI)
-        Entity player = Framework::INVALID_ENTITY;
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() == Framework::INVALID_ENTITY || !em->HasComponent<Transform>(player)) {
             lua_pushnil(L);
@@ -2281,14 +2218,8 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        // Find player (has CircleCollider but NOT EnemyAI)
-        Entity player = Framework::INVALID_ENTITY;
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() == Framework::INVALID_ENTITY || !em->HasComponent<Transform>(player)) {
             return 0;
@@ -2407,14 +2338,8 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        // Find player (has CircleCollider but NOT EnemyAI)
-        Entity player = Framework::INVALID_ENTITY;
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() != Framework::INVALID_ENTITY && em->HasComponent<AP>(player)) {
             auto& ap = em->GetComponent<AP>(player);
@@ -2438,14 +2363,8 @@ namespace Framework {
             return 0;
         }
 
-        // Find player (has CircleCollider but NOT EnemyAI)
-        Entity player = Framework::INVALID_ENTITY;
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() == Framework::INVALID_ENTITY) {
             LOG_WARN("LevelLoader", "RefillPlayerAP: Player entity not found");
@@ -2518,14 +2437,8 @@ namespace Framework {
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
         if (!em) return 0;
 
-        // Find player (has CircleCollider but NOT EnemyAI)
-        Entity player = Framework::INVALID_ENTITY;
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e) && !em->HasComponent<EnemyAI>(e)) {
-                player = e;
-                break;
-            }
-        }
+        // Find player by tag
+        Entity player = FindFirstByTag(em, "Player");
 
         if (player.GetID() != Framework::INVALID_ENTITY && em->HasComponent<SpriteAnimation>(player)) {
             auto& anim = em->GetComponent<SpriteAnimation>(player);
@@ -3758,8 +3671,8 @@ namespace Framework {
         // Spawn player
         Entity player = spawner->SpawnPlayer(Vector2D(worldX, worldY));
 
-        // CRITICAL: Ensure Movement component is present (required for GetAllPlayers())
-        // Sometimes this component gets removed by camera/active character systems
+        // Ensure Movement component is present (used by MovementSystem for WASD control).
+        // Levels that use Lua grid movement call RemoveMovementComponent() to disable WASD.
         if (!em->HasComponent<Movement>(player)) {
             std::cout << "[SpawnPlayerAt] WARNING: Entity " << player.GetID() << " missing Movement component - adding it now" << std::endl;
             em->AddComponent<Movement>(player);
@@ -3776,6 +3689,38 @@ namespace Framework {
 
         lua_pushnumber(L, player.GetID());
         return 1;
+    }
+
+    /**
+     * @brief Remove the Movement component from an entity (disables WASD movement)
+     * Lua usage: RemoveMovementComponent(entityID)
+     */
+    int LevelLoader::Lua_RemoveMovementComponent(lua_State* L) {
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity{ static_cast<uint32_t>(entityID) };
+        if (em->HasComponent<Movement>(entity)) {
+            em->RemoveComponent<Movement>(entity);
+            LOG_INFO("LevelLoader", "RemoveMovementComponent: Removed from entity %d", entityID);
+        }
+        return 0;
+    }
+
+    /**
+     * @brief Initialize the turn system to Player phase
+     * Lua usage: InitializeTurnSystem()
+     */
+    int LevelLoader::Lua_InitializeTurnSystem(lua_State* L) {
+        (void)L;
+        auto& turn = Framework::Turn();
+        turn.phase = Framework::TurnPhase::Player;
+        turn.busy = false;
+        LOG_INFO("LevelLoader", "InitializeTurnSystem: Phase=Player, Busy=false");
+        return 0;
     }
 
     int LevelLoader::Lua_SpawnEnemyAt(lua_State* L) {
@@ -3885,6 +3830,75 @@ namespace Framework {
      * Lua states) to call the EndCharacterTurn() function in the LevelLoader's
      * Lua state where PartyTurnManager is running.
      */
+    /**
+     * @brief Generic bridge: call any global function in the level Lua state.
+     *
+     * Usage from entity scripts:
+     *   CallLevelFunction("FunctionName")              -- no args, no return
+     *   local r = CallLevelFunction("Foo", 42)         -- int arg, 1 return
+     *   local a,b = CallLevelFunction("Bar", "x", 3)   -- mixed args, 2 returns
+     *
+     * Supported argument types: number, string, boolean, nil.
+     * Return values are forwarded back to the caller (up to LUA_MULTRET).
+     */
+    int LevelLoader::Lua_CallLevelFunction(lua_State* L) {
+        const char* funcName = luaL_checkstring(L, 1);
+        int nargs = lua_gettop(L) - 1;  // everything after the function name
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader) {
+            LOG_ERROR("LevelLoader", "CallLevelFunction(%s): No loader", funcName);
+            return 0;
+        }
+        lua_State* levelL = loader->L;
+        if (!levelL) {
+            LOG_ERROR("LevelLoader", "CallLevelFunction(%s): No level Lua state", funcName);
+            return 0;
+        }
+
+        // Push function
+        lua_getglobal(levelL, funcName);
+        if (!lua_isfunction(levelL, -1)) {
+            LOG_ERROR("LevelLoader", "CallLevelFunction: '%s' is not a function in level state", funcName);
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        // Forward arguments from entity state → level state
+        for (int i = 2; i <= nargs + 1; ++i) {
+            switch (lua_type(L, i)) {
+                case LUA_TNUMBER:  lua_pushnumber(levelL, lua_tonumber(L, i));   break;
+                case LUA_TSTRING:  lua_pushstring(levelL, lua_tostring(L, i));   break;
+                case LUA_TBOOLEAN: lua_pushboolean(levelL, lua_toboolean(L, i)); break;
+                default:           lua_pushnil(levelL);                          break;
+            }
+        }
+
+        // Call (nargs arguments, multiple returns)
+        int topBefore = lua_gettop(levelL) - nargs - 1;  // stack before func+args
+        int result = lua_pcall(levelL, nargs, LUA_MULTRET, 0);
+        if (result != LUA_OK) {
+            const char* err = lua_tostring(levelL, -1);
+            LOG_ERROR("LevelLoader", "CallLevelFunction(%s) error: %s", funcName, err ? err : "?");
+            lua_pop(levelL, 1);
+            return 0;
+        }
+
+        // Forward return values from level state → entity state
+        int nresults = lua_gettop(levelL) - topBefore;
+        for (int i = topBefore + 1; i <= topBefore + nresults; ++i) {
+            switch (lua_type(levelL, i)) {
+                case LUA_TNUMBER:  lua_pushnumber(L, lua_tonumber(levelL, i));   break;
+                case LUA_TSTRING:  lua_pushstring(L, lua_tostring(levelL, i));   break;
+                case LUA_TBOOLEAN: lua_pushboolean(L, lua_toboolean(levelL, i)); break;
+                case LUA_TNIL:     lua_pushnil(L);                               break;
+                default:           lua_pushnil(L);                               break;
+            }
+        }
+        lua_pop(levelL, nresults);  // clean level state stack
+        return nresults;
+    }
+
     int LevelLoader::Lua_EndCharacterTurn(lua_State* L) {
         std::cout << "[LevelLoader API] EndCharacterTurn() called from entity script" << std::endl;
 
@@ -4509,13 +4523,12 @@ namespace Framework {
             return 0;
         }
 
-        // Get all enemies
+        // Get all enemies by tag
         EnemyTurnState::enemyList.clear();
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<EnemyAI>(e)) {
-                EnemyTurnState::enemyList.push_back(e.GetID());
-                LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found enemy: %d", e.GetID());
-            }
+        auto enemies = FindAllByTag(em, "Enemy");
+        for (Entity e : enemies) {
+            EnemyTurnState::enemyList.push_back(e.GetID());
+            LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found enemy: %d", e.GetID());
         }
 
         LOG_INFO("LevelLoader", "[EnemyTurnSystem] Found %d enemies total", (int)EnemyTurnState::enemyList.size());
@@ -4547,25 +4560,33 @@ namespace Framework {
     int LevelLoader::Lua_IsActiveEnemy(lua_State* L) {
         int entityID = (int)luaL_checkinteger(L, 1);
 
-        // Reinitialize if needed
-        if (EnemyTurnState::needsReinitialize) {
-            Lua_InitializeEnemyTurn(L);
-        }
-
-        if (!EnemyTurnState::turnActive || EnemyTurnState::activeEnemyIndex == 0) {
+        // Forward to Lua EnemyTurnManager in the level Lua state
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->L) {
             lua_pushboolean(L, false);
             return 1;
         }
 
-        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
+        lua_State* levelL = loader->L;
+        lua_getglobal(levelL, "IsActiveEnemy");
+        if (lua_isfunction(levelL, -1)) {
+            lua_pushinteger(levelL, entityID);
+            if (lua_pcall(levelL, 1, 1, 0) != LUA_OK) {
+                const char* err = lua_tostring(levelL, -1);
+                LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling Lua IsActiveEnemy: %s", err);
+                lua_pop(levelL, 1);
+                lua_pushboolean(L, false);
+                return 1;
+            }
+            bool isActive = lua_toboolean(levelL, -1);
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, isActive);
+        }
+        else {
+            lua_pop(levelL, 1);
             lua_pushboolean(L, false);
-            return 1;
         }
 
-        int activeID = EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1];
-        bool isActive = (entityID == activeID);
-
-        lua_pushboolean(L, isActive);
         return 1;
     }
 
@@ -4575,54 +4596,65 @@ namespace Framework {
      * @return true if enemy can act (timer expired), false if still in delay
      */
     int LevelLoader::Lua_IsEnemyActionReady(lua_State* L) {
-        bool ready = EnemyTurnState::turnActive && (EnemyTurnState::actionTimer <= 0.0f);
-        lua_pushboolean(L, ready);
+        // Forward to Lua EnemyTurnManager in the level Lua state
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->L) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_State* levelL = loader->L;
+        lua_getglobal(levelL, "IsEnemyActionReady");
+        if (lua_isfunction(levelL, -1)) {
+            if (lua_pcall(levelL, 0, 1, 0) != LUA_OK) {
+                const char* err = lua_tostring(levelL, -1);
+                LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling Lua IsEnemyActionReady: %s", err);
+                lua_pop(levelL, 1);
+                lua_pushboolean(L, false);
+                return 1;
+            }
+            bool ready = lua_toboolean(levelL, -1);
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, ready);
+        }
+        else {
+            lua_pop(levelL, 1);
+            lua_pushboolean(L, false);
+        }
+
         return 1;
     }
 
     /**
-     * @brief Mark current enemy as done and advance to next
-     * Lua usage: MarkEnemyActionComplete()
-     * Call this when enemy finishes its turn
-     */
+    * @brief Mark current enemy as done and advance to next
+    * Lua usage: MarkEnemyActionComplete()
+    * Call this when enemy finishes its turn
+    */
     int LevelLoader::Lua_MarkEnemyActionComplete(lua_State* L) {
-        if (!EnemyTurnState::turnActive) {
-            LOG_WARN("LevelLoader", "[EnemyTurnSystem] MarkEnemyActionComplete called but turn not active");
+        // Forward to the Lua EnemyTurnManager in the LEVEL Lua state
+        // (Entity scripts have their own Lua state, so we need to call
+        //  into the level state where EnemyTurnManager.lua is loaded)
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->L) {
+            LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Cannot forward MarkEnemyActionComplete - no level Lua state");
             return 0;
         }
 
-        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Enemy %d completed action",
-            EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1]);
+        LOG_INFO("LevelLoader", "[EnemyTurnSystem] Forwarding MarkEnemyActionComplete to Lua EnemyTurnManager");
 
-        // Move to next enemy
-        EnemyTurnState::activeEnemyIndex++;
-
-        // Check if all enemies have acted
-        if (EnemyTurnState::activeEnemyIndex > (int)EnemyTurnState::enemyList.size()) {
-            LOG_INFO("LevelLoader", "[EnemyTurnSystem] All enemies have acted - ending enemy turn");
-            EnemyTurnState::turnActive = false;
-            EnemyTurnState::activeEnemyIndex = 0;
-            EnemyTurnState::needsReinitialize = true;
-
-            // Call Lua OnEnemyTurnEnded() if it exists
-            lua_getglobal(L, "OnEnemyTurnEnded");
-            if (lua_isfunction(L, -1)) {
-                if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
-                    const char* err = lua_tostring(L, -1);
-                    LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling OnEnemyTurnEnded: %s", err);
-                    lua_pop(L, 1);
-                }
-            } else {
-                lua_pop(L, 1);
+        // Call MarkEnemyActionComplete() in the level Lua state
+        lua_State* levelL = loader->L;
+        lua_getglobal(levelL, "MarkEnemyActionComplete");
+        if (lua_isfunction(levelL, -1)) {
+            if (lua_pcall(levelL, 0, 0, 0) != LUA_OK) {
+                const char* err = lua_tostring(levelL, -1);
+                LOG_ERROR("LevelLoader", "[EnemyTurnSystem] Error calling Lua MarkEnemyActionComplete: %s", err);
+                lua_pop(levelL, 1);
             }
-        } else {
-            LOG_INFO("LevelLoader", "[EnemyTurnSystem] Moving to enemy %d (index %d/%d)",
-                EnemyTurnState::enemyList[EnemyTurnState::activeEnemyIndex - 1],
-                EnemyTurnState::activeEnemyIndex,
-                (int)EnemyTurnState::enemyList.size());
-
-            // Reset action timer for next enemy
-            EnemyTurnState::actionTimer = EnemyTurnState::actionDelay;
+        }
+        else {
+            LOG_WARN("LevelLoader", "[EnemyTurnSystem] MarkEnemyActionComplete not found in level Lua state");
+            lua_pop(levelL, 1);
         }
 
         return 0;

@@ -362,6 +362,8 @@ namespace Framework {
 
 			entityManager->AddComponent<AP>(player, 5); // max 5 action points
 
+			entityManager->AddComponent<TagComponent>(player, "Player");
+
 			//entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
 
             // NOTE: SpriteAnimation component is now loaded via Lua (LoadPlayerAnimation)
@@ -464,6 +466,8 @@ namespace Framework {
             // *** CRITICAL: Add EnemyAI component so GetAllEnemies() can find this enemy ***
             // This matches what TileMapLoader.cpp does when spawning enemies (lines 286-291)
             entityManager->AddComponent<EnemyAI>(enemy);
+
+            entityManager->AddComponent<TagComponent>(enemy, "Enemy");
 
             // *** Add AP component for turn-based combat ***
             entityManager->AddComponent<AP>(enemy, 3);  // 3 AP by default (matches TileMapLoader)

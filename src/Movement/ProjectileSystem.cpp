@@ -31,6 +31,7 @@
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Pathfinding/Pathfinding.h"
+#include "TagHelper.h"
 #include <algorithm>
 namespace Framework
 {
@@ -95,14 +96,16 @@ namespace Framework
                 }
 
                 // Check if projectile hit a wall (blocked tile or out-of-bounds)
+                // Uses IsTileStaticBlocked instead of IsWalkable so projectiles
+                // pass through entity-occupied tiles and only stop on walls.
                 auto gridCoord = WorldToTile(transform.position);
                 if (!gridCoord.has_value()) {
                     // Out of grid bounds - destroy
                     offScreenToDestroy.push_back(entity);
                 }
                 else {
-                    // Check if the tile is blocked (wall)
-                    if (!IsWalkable(gridCoord.value())) {
+                    // Only destroy on static walls, NOT on entity-occupied tiles
+                    if (IsTileStaticBlocked(gridCoord.value())) {
                         offScreenToDestroy.push_back(entity);
                     }
                 }
@@ -158,8 +161,9 @@ namespace Framework
                 activeProjectiles.push_back(entity);
             }
 
-            // Filter for Enemies (must have EnemyAI to exclude players)
-            if (entityManager->HasComponent<EnemyAI>(entity) &&
+            // Filter for Enemies (must have "Enemy" tag)
+            if (entityManager->HasComponent<Framework::TagComponent>(entity) &&
+                entityManager->GetComponent<Framework::TagComponent>(entity).tag == "Enemy" &&
                 entityManager->HasComponent<Transform>(entity) &&
                 entityManager->HasComponent<Health>(entity) &&
                 entityManager->HasComponent<BoxCollider>(entity))
