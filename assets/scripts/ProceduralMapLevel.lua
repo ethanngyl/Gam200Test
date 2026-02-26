@@ -276,9 +276,6 @@ function SetupProceduralParty(mapData)
         SetEntityHP(cfg.id, cfg.hp, cfg.hp)
     end
 
-    -- Tint: lowest HP (player1=5) → red, highest HP (player3=7) → green, middle no change
-    SetSpriteColor(player1, 1.0, 0.35, 0.35, 1.0)  -- red (lowest HP)
-    SetSpriteColor(player3, 0.35, 1.0, 0.35, 1.0)  -- green (highest HP)
 
     -- Attach scripts to all 3 players
     for i, playerID in ipairs({player1, player2, player3}) do
@@ -343,9 +340,9 @@ function SetupProceduralEnemies(mapData)
     -- Enemy types (AP=5 and MP=5 for all, per-type differences: targetMode, attackDamage, maxHP, tint)
     local enemyTypeConfig = {
         -- 1号: targets lowest HP player, high attack, low HP, red
-        [1] = { targetMode = "lowestHP",  attackDamage = 3, maxHP = 2, maxMP = 5, tintR = 1,   tintG = 0.3, tintB = 0.3 },
-        -- 2号: targets highest HP player, low attack, high HP, green
-        [2] = { targetMode = "highestHP", attackDamage = 1, maxHP = 8, maxMP = 5, tintR = 0.3, tintG = 1,   tintB = 0.3 },
+        [1] = { targetMode = "lowestHP",  attackDamage = 3, maxHP = 2, maxMP = 5 },
+        -- 2号: targets highest HP player, low attack, high HP
+        [2] = { targetMode = "highestHP", attackDamage = 1, maxHP = 8, maxMP = 5 },
         -- 3号: targets closest player, standard stats, default color
         [3] = { targetMode = "closest",   attackDamage = 1, maxHP = 5, maxMP = 5 },
     }

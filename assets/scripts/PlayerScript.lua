@@ -385,6 +385,7 @@ local function endTurn()
         currentAnimGroup = AnimGroup.Idle
         SetAnimationGroup(entityID, currentAnimGroup)
     end
+    SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)  -- restore default color on turn end
     EndCharacterTurn()
     hasLoggedActive = false
     lastActiveCheck = false
@@ -782,7 +783,8 @@ function OnUpdate(dt)
     local isActive = IsActiveCharacter(entityID)
     if not isActive then
         if lastActiveCheck then
-            -- Just became inactive
+            -- Just became inactive - restore default color
+            SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)
             lastActiveCheck = false
             hasLoggedActive = false
             blockedKeys = {}
@@ -835,6 +837,8 @@ function OnUpdate(dt)
 
     -- Detect if we just became active this frame
     if isActive and not lastActiveCheck then
+        -- Just became active - highlight red
+        SetSpriteColor(entityID, 1.0, 0.35, 0.35, 1.0)
         print("[PlayerScript] Entity " .. entityID .. " just became active - checking held keys...")
         blockHeldKeys()
     end
@@ -923,6 +927,7 @@ function OnUpdate(dt)
             SetAnimationGroup(entityID, currentAnimGroup)
         end
 
+        SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)  -- restore default color on turn end
         EndCharacterTurn()
         hasLoggedActive = false  -- Reset for next character
         lastActiveCheck = false  -- Reset active tracking
