@@ -164,11 +164,6 @@ function HealthUI:Update(dt, cameraPos)
     -- Only update tracking during player turn to avoid confusion during enemy turn
     if currentTurn == "Player" and self.trackedCharID ~= charID then
         self.trackedCharID = charID
-        -- Update maxHP for the new character so HP clamping is correct
-        local _, newMaxHP = GetEntityHP(charID)
-        if newMaxHP and newMaxHP > 0 then
-            self.maxHP = newMaxHP
-        end
         -- Force update when character changes
         self.lastHP = -1
     end

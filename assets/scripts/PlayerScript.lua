@@ -191,16 +191,16 @@ local SkillDefs = {
     AreaBlast = {
         name     = "Area Blast",
         pattern  = "area3x3",
-        damage   = 1,
-        apCost   = 2,
+        damage   = 2,
+        apCost   = 1,
         range    = 0,  -- 0 = centered on caster
     },
     Fireball = {
         name      = "Fireball",
         skillType = "projectile",
         pattern   = "line",        -- preview: line in facing direction
-        damage    = 1,
-        apCost    = 2,
+        damage    = 5,
+        apCost    = 1,
         range     = 5,             -- preview range (tiles shown)
         projSpeed = 3.0,           -- world units per second
         pierce    = false,         -- stops on first enemy hit
@@ -209,8 +209,8 @@ local SkillDefs = {
         name      = "Piercing Shot",
         skillType = "projectile",
         pattern   = "pierce",      -- preview: line in facing direction
-        damage    = 2,
-        apCost    = 3,
+        damage    = 5,
+        apCost    = 1,
         range     = 7,             -- longer range preview
         projSpeed = 4.0,           -- faster projectile
         pierce    = true,          -- passes through all enemies
@@ -222,7 +222,7 @@ local SkillDefs = {
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 local PlayerSkills = {
     [1] = { ["1"] = "BasicAttack", ["2"] = "AreaBlast" },
-    [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
+    [2] = { ["1"] = "BasicAttack", ["2"] = "Fireball", ["3"] = "PiercingShot" },
     [3] = { ["1"] = "BasicAttack" },
 }
 
@@ -385,7 +385,6 @@ local function endTurn()
         currentAnimGroup = AnimGroup.Idle
         SetAnimationGroup(entityID, currentAnimGroup)
     end
-    SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)  -- restore default color on turn end
     EndCharacterTurn()
     hasLoggedActive = false
     lastActiveCheck = false
@@ -532,22 +531,42 @@ local function createPlayerStates(fsm)
     })
 
     -- ========================================================================
-    -- MOVING STATE
+    -- MOVING STATE (Smooth Glide)
     -- ========================================================================
     fsm:addState("Moving", {
-        targetX = 0,
-        targetY = 0,
+        -- Lerp state
+        startWorldX = 0,
+        startWorldY = 0,
+        endWorldX   = 0,
+        endWorldY   = 0,
+        elapsed     = 0,
+        duration    = 0.18,  -- seconds to glide (set high to test, lower later)
+        moveValid   = false,
+
+        -- Direction / target
         moveDirX = 0,
         moveDirY = 0,
+        targetX  = 0,
+        targetY  = 0,
 
         enter = function(self)
+            print("[MOVING] enter() called")
+            self.moveValid = false
+            self.elapsed = 0
+
             local currentX, currentY = GetEntityGridPosition(entityID)
-            self.targetX = currentX
-            self.targetY = currentY
+            if not currentX or not currentY then
+                print("[MOVING] EARLY EXIT: no grid position")
+                self.fsm:changeState("WaitingForInput")
+                return
+            end
+
+            self.targetX  = currentX
+            self.targetY  = currentY
             self.moveDirX = 0
             self.moveDirY = 0
 
-            -- Determine direction
+            -- Determine direction from FSM data
             if self.fsm:getData("moveW") then
                 self.targetY = currentY + 1
                 self.moveDirY = 1
@@ -576,114 +595,158 @@ local function createPlayerStates(fsm)
                 ClearActivePreview()
             end
 
-            -- Execute movement
-            self:executeMove()
-
-            -- Return to WaitingForInput
-            self.fsm:changeState("WaitingForInput")
-        end,
-
-        update = function(self, dt)
-            -- Movement is instant, this state exits immediately
-        end,
-
-        exit = function(self)
-            -- Nothing special
-        end,
-
-        executeMove = function(self)
-            print("[PlayerScript] Step 1: Validating target position (" .. self.targetX .. ", " .. self.targetY .. ")...")
+            -- ==============================================================
+            -- VALIDATION
+            -- ==============================================================
 
             local isValid = IsValidGridPosition(self.targetX, self.targetY)
-            print("[PlayerScript]   IsValidGridPosition: " .. tostring(isValid))
             if not isValid then
                 print("[PlayerScript] FAILED: Invalid grid position!")
+                self.fsm:changeState("WaitingForInput")
                 return
             end
 
             local isWalkable = IsWalkableTile(self.targetX, self.targetY)
-            print("[PlayerScript]   IsWalkableTile: " .. tostring(isWalkable))
             if not isWalkable then
                 print("[PlayerScript] FAILED: Tile not walkable!")
                 PulseTile(self.targetX, self.targetY, 0.3, 1.0, 0.3, 0.3)
+                self.fsm:changeState("WaitingForInput")
                 return
             end
 
             local isOccupied = IsTileOccupied(self.targetX, self.targetY)
-            print("[PlayerScript]   IsTileOccupied: " .. tostring(isOccupied))
             if isOccupied then
-                print("[PlayerScript] FAILED: Tile occupied by another entity!")
-                PulseTile(self.targetX, self.targetY, 0.3, 1.0, 0.5, 0.0)  -- Orange pulse for occupied
+                print("[PlayerScript] FAILED: Tile occupied!")
+                PulseTile(self.targetX, self.targetY, 0.3, 1.0, 0.5, 0.0)
+                self.fsm:changeState("WaitingForInput")
                 return
             end
 
-            print("[PlayerScript] Step 1: PASSED - target is valid, walkable, and unoccupied")
-
-            print("[PlayerScript] Step 2: Checking AP...")
             local currentAP, maxAP = GetEntityAP(entityID)
-            print("[PlayerScript]   Entity " .. entityID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP) .. " (need " .. apCostPerMove .. ")")
-
             if currentAP < apCostPerMove then
                 print("[PlayerScript] FAILED: Not enough AP!")
                 PulseTile(self.targetX, self.targetY, 0.3, 1.0, 1.0, 0.3)
-                -- Removed automatic turn end - player can still attack or press P to end turn
+                self.fsm:changeState("WaitingForInput")
                 return
             end
 
-            print("[PlayerScript] Step 2: PASSED - sufficient AP")
+            -- ==============================================================
+            -- ALL CHECKS PASSED
+            -- ==============================================================
+            print("[MOVING] All checks passed! Setting up glide...")
 
-            print("[PlayerScript] Step 3: Calling MoveEntityToTile(" .. entityID .. ", " .. self.targetX .. ", " .. self.targetY .. ")...")
-            local success = MoveEntityToTile(entityID, self.targetX, self.targetY)
-            print("[PlayerScript] Step 3: MoveEntityToTile returned: " .. tostring(success))
-
-            if success then
-                print("[PlayerScript] Step 4: Movement SUCCESS! Consuming AP...")
-
-                -- Update animation direction
-                updateAnimationDirection(self.moveDirX, self.moveDirY)
-
-                -- Switch to Walk animation
-                if currentAnimGroup ~= AnimGroup.Attack and
-                   currentAnimGroup ~= AnimGroup.Injured and
-                   currentAnimGroup ~= AnimGroup.Death then
-                    currentAnimGroup = AnimGroup.Walk
-                    SetAnimationGroup(entityID, currentAnimGroup)
-                    SetAnimationPlaying(entityID, true)
-                end
-
-                -- Consume AP
+            -- 1) Save the current world position BEFORE the snap
+            local sx, sy = GetEntityWorldPosition(entityID)
+            if not sx or not sy then
+                print("[MOVING] WARNING: Could not get start position, falling back to instant")
+                MoveEntityToTile(entityID, self.targetX, self.targetY)
                 ConsumeEntityAP(entityID, apCostPerMove)
-
-                local newAP, maxAP = GetEntityAP(entityID)
-                print("[PlayerScript] After movement: Entity " .. entityID .. " AP: " .. tostring(newAP) .. "/" .. tostring(maxAP))
-
-                -- Removed automatic turn end - player can still attack or press P to end turn
-                if newAP == 0 then
-                    print("[PlayerScript] Movement AP depleted - player can still attack or press P to end turn")
-                end
-
-                -- Visual feedback
-                ShowTileBorder(self.targetX, self.targetY, 0.5)
-                PulseTile(self.targetX, self.targetY, 0.3, 0.3, 1.0, 0.3)
-
-                -- Check for chest
-                if HasChestAtTile(self.targetX, self.targetY) then
-                    CollectChest(self.targetX, self.targetY)
-                    Log("[PlayerScript] Collected chest at (" .. self.targetX .. ", " .. self.targetY .. ")")
-                end
-
-                -- Check for goal
-                if HasGoalAtTile(self.targetX, self.targetY) then
-                    Log("[PlayerScript] Reached goal! Level complete!")
-                end
-
-                moveCooldown = moveCooldownTime
-
-                Log("[PlayerScript] Moved to (" .. self.targetX .. ", " .. self.targetY .. ") - AP remaining: " .. newAP)
-            else
-                Log("[PlayerScript] Failed to move to (" .. self.targetX .. ", " .. self.targetY .. ")")
+                self.fsm:changeState("WaitingForInput")
+                return
             end
-        end
+            self.startWorldX = sx
+            self.startWorldY = sy
+
+            -- 2) Do the normal MoveEntityToTile (updates grid occupancy + snaps position)
+            local success = MoveEntityToTile(entityID, self.targetX, self.targetY)
+            if not success then
+                print("[MOVING] MoveEntityToTile failed!")
+                self.fsm:changeState("WaitingForInput")
+                return
+            end
+
+            -- 3) Save the end position (where MoveEntityToTile just snapped us to)
+            local ex, ey = GetEntityWorldPosition(entityID)
+            if not ex or not ey then
+                print("[MOVING] WARNING: Could not get end position")
+                ConsumeEntityAP(entityID, apCostPerMove)
+                self.fsm:changeState("WaitingForInput")
+                return
+            end
+            self.endWorldX = ex
+            self.endWorldY = ey
+
+            -- 4) Yank the sprite BACK to the start position (grid is already updated)
+            SetSpritePosition(entityID, self.startWorldX, self.startWorldY)
+
+            -- 5) Consume AP
+            ConsumeEntityAP(entityID, apCostPerMove)
+            local newAP, _ = GetEntityAP(entityID)
+            print("[PlayerScript] AP consumed. Remaining: " .. tostring(newAP))
+
+            if newAP == 0 then
+                print("[PlayerScript] Movement AP depleted - player can still attack or press P to end turn")
+            end
+
+            -- 6) Update animation direction + switch to Walk
+            updateAnimationDirection(self.moveDirX, self.moveDirY)
+
+            if currentAnimGroup ~= AnimGroup.Attack and
+               currentAnimGroup ~= AnimGroup.Injured and
+               currentAnimGroup ~= AnimGroup.Death then
+                currentAnimGroup = AnimGroup.Walk
+                SetAnimationGroup(entityID, currentAnimGroup)
+                SetAnimationPlaying(entityID, true)
+            end
+
+            -- 7) Visual feedback
+            ShowTileBorder(self.targetX, self.targetY, 0.5)
+            PulseTile(self.targetX, self.targetY, 0.3, 0.3, 1.0, 0.3)
+
+            -- 8) Check for chest/goal
+            if HasChestAtTile(self.targetX, self.targetY) then
+                CollectChest(self.targetX, self.targetY)
+                Log("[PlayerScript] Collected chest at (" .. self.targetX .. ", " .. self.targetY .. ")")
+            end
+
+            if HasGoalAtTile(self.targetX, self.targetY) then
+                Log("[PlayerScript] Reached goal! Level complete!")
+            end
+
+            -- 9) Mark glide as valid + set cooldown
+            self.moveValid = true
+            moveCooldown = moveCooldownTime
+
+            print("[MOVING] Glide: (" .. sx .. "," .. sy .. ") -> (" .. ex .. "," .. ey .. ") over " .. self.duration .. "s")
+            -- NOTE: Do NOT changeState here! update() will handle the glide.
+        end,
+
+        update = function(self, dt)
+            if not self.moveValid then
+                self.fsm:changeState("WaitingForInput")
+                return
+            end
+
+            self.elapsed = self.elapsed + dt
+            local t = self.elapsed / self.duration
+            if t > 1.0 then t = 1.0 end
+
+            -- Ease-out quadratic: fast launch, gentle arrival
+            local eased = 1.0 - (1.0 - t) * (1.0 - t)
+
+            -- Lerp position
+            local x = self.startWorldX + (self.endWorldX - self.startWorldX) * eased
+            local y = self.startWorldY + (self.endWorldY - self.startWorldY) * eased
+
+            -- Set ONLY the visual position (grid already updated in enter)
+            SetSpritePosition(entityID, x, y)
+
+            print("[GLIDE] t=" .. string.format("%.2f", t) .. " pos=(" .. string.format("%.4f", x) .. "," .. string.format("%.4f", y) .. ")")
+
+            -- Arrived?
+            if t >= 1.0 then
+                SetSpritePosition(entityID, self.endWorldX, self.endWorldY)
+                self.fsm:changeState("WaitingForInput")
+            end
+        end,
+
+        exit = function(self)
+            -- Safety: ensure we're exactly on the target tile
+            if self.moveValid then
+                SetSpritePosition(entityID, self.endWorldX, self.endWorldY)
+            end
+            self.moveValid = false
+        end,
     })
 end
 
@@ -783,8 +846,7 @@ function OnUpdate(dt)
     local isActive = IsActiveCharacter(entityID)
     if not isActive then
         if lastActiveCheck then
-            -- Just became inactive - restore default color
-            SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)
+            -- Just became inactive
             lastActiveCheck = false
             hasLoggedActive = false
             blockedKeys = {}
@@ -837,8 +899,6 @@ function OnUpdate(dt)
 
     -- Detect if we just became active this frame
     if isActive and not lastActiveCheck then
-        -- Just became active - highlight red
-        SetSpriteColor(entityID, 1.0, 0.35, 0.35, 1.0)
         print("[PlayerScript] Entity " .. entityID .. " just became active - checking held keys...")
         blockHeldKeys()
     end
@@ -927,7 +987,6 @@ function OnUpdate(dt)
             SetAnimationGroup(entityID, currentAnimGroup)
         end
 
-        SetSpriteColor(entityID, 1.0, 1.0, 1.0, 1.0)  -- restore default color on turn end
         EndCharacterTurn()
         hasLoggedActive = false  -- Reset for next character
         lastActiveCheck = false  -- Reset active tracking
@@ -1134,13 +1193,11 @@ function ExecuteSkill(skillID)
         -- Consume AP only after successful spawn
         ConsumeEntityAttackAP(entityID, skill.apCost)
 
-        -- Trigger AP crystal animation (once per AP spent)
+        -- Trigger AP crystal animation
         if UIManager and UIManager.GetComponent then
             local comp = UIManager.GetComponent("attackAP")
             if comp and comp.ConsumeOneAP then
-                for i = 1, skill.apCost do
-                    pcall(function() comp:ConsumeOneAP() end)
-                end
+                pcall(function() comp:ConsumeOneAP() end)
             end
         else
             pcall(function() TriggerAttackAPAnimation() end)
@@ -1212,13 +1269,11 @@ function ExecuteSkill(skillID)
     ConsumeEntityAttackAP(entityID, skill.apCost)
     print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
 
-    -- Trigger AP crystal animation (once per AP spent)
+    -- Trigger AP crystal animation
     if UIManager and UIManager.GetComponent then
         local comp = UIManager.GetComponent("attackAP")
         if comp and comp.ConsumeOneAP then
-            for i = 1, skill.apCost do
-                pcall(function() comp:ConsumeOneAP() end)
-            end
+            pcall(function() comp:ConsumeOneAP() end)
         end
     else
         pcall(function() TriggerAttackAPAnimation() end)

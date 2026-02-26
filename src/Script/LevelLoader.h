@@ -253,6 +253,7 @@ namespace Framework {
         static int Lua_GetTurnIndex(lua_State* L);
         static int Lua_EndPlayerTurn(lua_State* L);
         static int Lua_EndEnemyTurn(lua_State* L);
+        static int Lua_CallLevelFunction(lua_State* L);  // Generic entity→level bridge
         static int Lua_EndCharacterTurn(lua_State* L);  // Party turn system - bridge to level Lua state
         static int Lua_IsUIAnimating(lua_State* L);     // Check if UI is animating - bridge to level Lua state
         static int Lua_IsInTurnTransition(lua_State* L); // Check if in turn transition cooldown - bridge to level Lua state
@@ -311,13 +312,12 @@ namespace Framework {
 
         // Entity Spawning API
         static int Lua_SpawnPlayerAt(lua_State* L);
+        static int Lua_RemoveMovementComponent(lua_State* L);
+        static int Lua_InitializeTurnSystem(lua_State* L);
         static int Lua_SpawnEnemyAt(lua_State* L);
         static int Lua_SpawnChestAt(lua_State* L);
         static int Lua_SpawnGoalAt(lua_State* L);
 
-        // Enemy config (set by level, read by EnemyScript OnInit)
-        static int Lua_SetEnemyConfig(lua_State* L);
-        static int Lua_GetEnemyConfig(lua_State* L);
         // Projectile Skill API
         // SpawnSkillProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
         static int Lua_SpawnSkillProjectile(lua_State* L);
