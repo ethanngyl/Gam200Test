@@ -1114,13 +1114,19 @@ function ExecuteSkill(skillID)
             tintR, tintG, tintB, tintA,
             spritePath
         )
+        if not projID then
+            print("[PlayerScript] ERROR: SpawnSkillProjectile returned nil - not consuming AP")
+            ClearActivePreview()
+            return
+        end
+
         print("[PlayerScript] Spawned projectile ID=" .. tostring(projID)
             .. " dir=(" .. dirX .. "," .. dirY .. ")"
             .. " speed=" .. (skill.projSpeed or 3.0)
             .. " dmg=" .. skill.damage
             .. " pierce=" .. tostring(skill.pierce or false))
 
-        -- Consume AP
+        -- Consume AP only after successful spawn
         ConsumeEntityAttackAP(entityID, skill.apCost)
 
         -- Trigger AP crystal animation

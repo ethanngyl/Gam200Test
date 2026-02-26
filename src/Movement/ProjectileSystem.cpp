@@ -95,14 +95,16 @@ namespace Framework
                 }
 
                 // Check if projectile hit a wall (blocked tile or out-of-bounds)
+                // Uses IsTileStaticBlocked instead of IsWalkable so projectiles
+                // pass through entity-occupied tiles and only stop on walls.
                 auto gridCoord = WorldToTile(transform.position);
                 if (!gridCoord.has_value()) {
                     // Out of grid bounds - destroy
                     offScreenToDestroy.push_back(entity);
                 }
                 else {
-                    // Check if the tile is blocked (wall)
-                    if (!IsWalkable(gridCoord.value())) {
+                    // Only destroy on static walls, NOT on entity-occupied tiles
+                    if (IsTileStaticBlocked(gridCoord.value())) {
                         offScreenToDestroy.push_back(entity);
                     }
                 }
