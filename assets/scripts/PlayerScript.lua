@@ -222,7 +222,7 @@ local SkillDefs = {
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 local PlayerSkills = {
     [1] = { ["1"] = "BasicAttack", ["2"] = "AreaBlast" },
-    [2] = { ["1"] = "BasicAttack", ["2"] = "Fireball", ["3"] = "PiercingShot" },
+    [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
     [3] = { ["1"] = "BasicAttack" },
 }
 
