@@ -65,16 +65,17 @@ local entityID = 0              -- This enemy's ID (set in OnInit)
 local currentState = STATE.IDLE
 local behaviorType = BEHAVIOR.AGGRESSIVE  -- Default behavior
 local targetPlayerID = 0        -- Player to chase/attack
+local targetMode = "closest"    -- "closest" | "lowestHP" | "highestHP"
+
+-- MP (Move Points) - separate from AP, used exclusively for movement
+local maxMP = 5             -- Max move points per turn (configurable)
+local movesRemaining = 0    -- Remaining MP this turn (reset each turn)
 
 -- AI parameters (configurable per enemy type)
 local config = {
-    -- Movement
-    apCostPerMove = 1,          -- AP cost to move 1 tile
-    maxMovesPerTurn = 3,        -- Maximum tiles to move per turn
-
     -- Combat
     attackRange = 1,            -- How many tiles away enemy can attack
-    attackAPCost = 2,           -- AP cost to attack
+    attackAPCost = 2,           -- AP cost per attack
     attackDamage = 1,           -- Damage dealt per attack
 
     -- Behavior
@@ -100,22 +101,8 @@ local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to 
 
 -- Movement timing (for visible, sequential moves)
 local moveTimer = 0.0           -- Timer for next move
-local moveDelay = 0.55           -- Delay between moves in seconds (0.3s = visible movement)
+local moveDelay = 0.3           -- Delay between moves in seconds (0.3s = visible movement)
 local movesThisTurn = 0         -- Track how many moves made this turn
-
--- Safety: track how long this enemy has been active to detect stuck state
-local activeTimer = 0.0         -- Time spent as active enemy this turn
-local maxActiveTime = 8.0       -- Max seconds before force-finishing turn
-
--- Smooth glide state (lerps sprite between tiles)
-local glideActive = false
-local glideElapsed = 0.0
-local glideDuration = 0.5      -- Seconds to glide (tune to taste)
-local glideStartX = 0.0
-local glideStartY = 0.0
-local glideEndX = 0.0
-local glideEndY = 0.0
-local pendingFinishAfterGlide = false  -- When true, FinishEnemyAction() is called after glide ends
 
 -- ============================================================================
 -- ENEMY ANIMATION (manual sprite sheet switching)
@@ -235,6 +222,33 @@ function OnInit()
     pathIndex = 1
 
     ApplySheet("idleFront", false)
+        print("[Enemy " .. entityID .. "] GetEnemyConfig EXISTS, reading config...")
+
+    -- Apply per-entity config (set by level via SetEnemyConfig before AddScriptComponentToEntity)
+        print("[Enemy " .. entityID .. "] targetMode from config = " .. tostring(mode))
+    if GetEnemyConfig then
+        local mode = GetEnemyConfig(entityID, "targetMode")
+        if mode and mode ~= "" then targetMode = mode end
+        local dmg = GetEnemyConfig(entityID, "attackDamage")
+        if dmg then config.attackDamage = tonumber(dmg) or config.attackDamage end
+        local mp = GetEnemyConfig(entityID, "maxMP")
+        if mp then maxMP = tonumber(mp) or maxMP end
+        local hp = GetEnemyConfig(entityID, "maxHP")
+        if hp then
+            local h = tonumber(hp) or 5
+            SetEntityHP(entityID, h, h)
+        end
+        local tr = GetEnemyConfig(entityID, "tintR")
+        if tr and SetSpriteColor then
+            local r = tonumber(tr) or 1
+            local g = tonumber(GetEnemyConfig(entityID, "tintG") or "1") or 1
+            local b = tonumber(GetEnemyConfig(entityID, "tintB") or "1") or 1
+            SetSpriteColor(entityID, r, g, b, 1)
+        end
+        print("[Enemy " .. entityID .. "] Config: targetMode=" .. tostring(targetMode) .. " dmg=" .. tostring(config.attackDamage) .. " MP=" .. tostring(maxMP))
+    else
+        print("[Enemy " .. entityID .. "] WARNING: GetEnemyConfig is NIL")
+    end
 
     -- CRITICAL: Set initial tile occupancy so players can't walk through this enemy
     local enemyX, enemyY = GetEntityGridPosition(entityID)
@@ -262,13 +276,6 @@ function OnUpdate(dt)
     -- Enemy AI only runs during enemy turn
     local currentTurn = GetCurrentTurn()
 
-    if currentTurn == "Enemy" then
-        -- Only print once when entering enemy turn to avoid spam
-        if not isMyTurnToAct and not hasActedThisTurn then
-            print("[Enemy " .. entityID .. " FRAME] turn=Enemy glide=" .. tostring(glideActive) .. " acted=" .. tostring(hasActedThisTurn))
-        end
-    end
-
     if currentTurn ~= "Enemy" then
         -- Reset acted flag when it's not enemy turn
         if lastEnemyTurn == "Enemy" then
@@ -276,12 +283,6 @@ function OnUpdate(dt)
             isMyTurnToAct = false
             moveTimer = 0.0
             movesThisTurn = 0
-            activeTimer = 0.0
-            -- Snap glide to end position if interrupted by turn change
-            if glideActive then
-                SetSpritePosition(entityID, glideEndX, glideEndY)
-                glideActive = false
-            end
         end
         lastEnemyTurn = currentTurn
         return
@@ -289,42 +290,6 @@ function OnUpdate(dt)
 
     -- Track that this is enemy turn
     lastEnemyTurn = "Enemy"
-
-    -- Smooth glide: interpolate sprite position each frame
-    if glideActive then
-        glideElapsed = glideElapsed + dt
-        local t = glideElapsed / glideDuration
-        if t > 1.0 then t = 1.0 end
-
-        -- Ease-out quadratic
-        local eased = 1.0 - (1.0 - t) * (1.0 - t)
-
-        local x = glideStartX + (glideEndX - glideStartX) * eased
-        local y = glideStartY + (glideEndY - glideStartY) * eased
-        SetSpritePosition(entityID, x, y)
-        print("[Enemy " .. entityID .. " GLIDE UPDATE] t=" .. string.format("%.2f", t) .. " pos=(" .. string.format("%.4f", x) .. "," .. string.format("%.4f", y) .. ")")  -- THIS ONE
-
-        if t >= 1.0 then
-            SetSpritePosition(entityID, glideEndX, glideEndY)
-            glideActive = false
-            print("[Enemy " .. entityID .. " GLIDE] Complete!")
-            
-            -- If Flee/Patrol requested finish after glide, do it now
-            if pendingFinishAfterGlide then
-                pendingFinishAfterGlide = false
-                FinishEnemyAction()
-                return
-            end
-            
-            -- Set move delay AFTER glide completes (not when glide starts)
-            -- This prevents stacking glide duration + moveDelay
-            moveTimer = moveDelay
-        end
-        -- While gliding, don't process AI (wait for glide to finish)
-        if glideActive then
-            return
-        end
-    end
 
     -- SEQUENTIAL TURN SYSTEM: Only act if this enemy is the active one
     if not IsActiveEnemy then
@@ -372,16 +337,7 @@ function OnUpdate(dt)
         if moveTimer < 0 then
             moveTimer = 0
         end
-        return
-    end
-
-    
-
-    -- Safety: track active time and force-finish if stuck
-    activeTimer = activeTimer + dt
-    if activeTimer >= maxActiveTime then
-        print("[Enemy " .. entityID .. "] SAFETY: Active for " .. string.format("%.1f", activeTimer) .. "s, force-finishing turn!")
-        FinishEnemyAction()
+        -- Still waiting for move delay
         return
     end
 
@@ -389,9 +345,8 @@ function OnUpdate(dt)
     if not isMyTurnToAct then
         isMyTurnToAct = true
         movesThisTurn = 0
-        activeTimer = 0.0  -- Reset active timer at turn start
-        print("[Enemy " .. entityID .. "] ========== STARTING TURN ==========")
-        print("[Enemy " .. entityID .. "] glideActive=" .. tostring(glideActive) .. " moveTimer=" .. moveTimer .. " hasActed=" .. tostring(hasActedThisTurn))
+        movesRemaining = maxMP   -- Refill MP at turn start
+        print("[Enemy " .. entityID .. "] ========== STARTING TURN ========== (AP=" .. tostring(select(1, GetEntityAP(entityID))) .. ", MP=" .. movesRemaining .. ")")
 
         -- CRITICAL: Find closest player dynamically each turn
         local closestPlayer, closestDistance = FindClosestPlayer()
@@ -438,32 +393,6 @@ function OnUpdate(dt)
                     PopupManager.ShowDamageNumber(worldX, worldY + 0.2, pendingAttackDamage)
                 end
             end
-
-            -- CHECK: Did we kill the player? If all players dead -> game over
-            if not hpAfter or hpAfter <= 0 then
-                print("[Enemy " .. entityID .. "] Player " .. pendingAttackTarget .. " KILLED!")
-
-                -- Check if ALL players are dead
-                local allDead = true
-                local players = GetAllPlayers()
-                if players and #players > 0 then
-                    for _, pid in ipairs(players) do
-                        local php, _ = GetEntityHP(pid)
-                        if php and php > 0 then
-                            allDead = false
-                            break
-                        end
-                    end
-                end
-
-                if allDead then
-                    print("[Enemy " .. entityID .. "] ALL PLAYERS DEFEATED - GAME OVER!")
-                    if SetNextGameState then
-                        SetNextGameState("LEVEL_END")
-                    end
-                    return  -- Stop processing, game is over
-                end
-            end
         else
             print("[Enemy " .. entityID .. "] ATTACK FAILED! Player " .. pendingAttackTarget .. " may not have Health component")
         end
@@ -478,23 +407,12 @@ function OnUpdate(dt)
         end
 
         -- Continue AI after resolving hit (may move if AP left)
-        local ok, err = pcall(ProcessAITurn)
-        if not ok then
-            print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn (post-attack): " .. tostring(err))
-            FinishEnemyAction()
-        end
+        ProcessAITurn()
         return
     end
 
     -- Execute AI decision making (will make ONE move per frame)
-    -- Wrapped in pcall to catch errors and prevent stuck turns
-    local aiOk, aiErr = pcall(ProcessAITurn)
-    if not aiOk then
-        print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn: " .. tostring(aiErr))
-        print("[Enemy " .. entityID .. "] Force-finishing turn due to error")
-        FinishEnemyAction()
-        return
-    end
+    ProcessAITurn()
 
 end
 
@@ -516,11 +434,11 @@ end
 -- ============================================================================
 
 function ProcessAITurn()
-    -- Get enemy AP
     local currentAP, maxAP = GetEntityAP(entityID)
 
-    if not currentAP or currentAP == 0 or currentAP < config.apCostPerMove then
-        print("[Enemy " .. entityID .. "] Not enough AP, finishing turn")
+    -- Finish if both AP (for attacks) and MP (for movement) are exhausted
+    if (not currentAP or currentAP < config.attackAPCost) and movesRemaining <= 0 then
+        print("[Enemy " .. entityID .. "] No AP or MP remaining, finishing turn")
         FinishEnemyAction()
         return
     end
@@ -740,26 +658,8 @@ function ExecuteChase()
         end
     end
 
-    -- Calculate maximum moves we can make this turn
-    local maxMoves = config.maxMovesPerTurn
-
-    -- CRITICAL: Reserve AP for attacking if we're getting close to the player
-    -- Check if we'll be in attack range after moving
-    local distanceToPlayer = CalculateDistance(enemyX, enemyY, playerX, playerY)
-    if distanceToPlayer <= config.maxMovesPerTurn + config.attackRange then
-        -- We might reach attack range this turn, reserve AP for attacking
-        local apNeededForAttack = config.attackAPCost
-        local apAvailableForMovement = currentAP - apNeededForAttack
-
-        -- Only reserve if we have enough AP, otherwise just use all available AP for movement
-        if apAvailableForMovement >= config.apCostPerMove then
-            maxMoves = math.min(maxMoves, math.floor(apAvailableForMovement / config.apCostPerMove))
-        end
-    end
-
-    print("[Enemy " .. entityID .. "] MOVE CHECK: AP=" .. currentAP .. " pathIdx=" .. pathIndex .. "/" .. #currentPath .. " moves=" .. movesThisTurn .. "/" .. maxMoves .. " glide=" .. tostring(glideActive))
-    -- Move ONE tile per frame (not all at once!)
-    if currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesThisTurn < maxMoves then
+    -- Move ONE tile per frame using MP (not AP)
+    if movesRemaining > 0 and pathIndex <= #currentPath then
         local nextTile = currentPath[pathIndex]
 
         -- Validate tile is walkable (terrain check)
@@ -791,32 +691,10 @@ function ExecuteChase()
         local dy = nextTile.y - enemyY
         SetFacingFromDelta(dx, dy)
 
-        -- SMOOTH GLIDE: Save start pos, snap grid, then lerp sprite back
-        local sx, sy = GetEntityWorldPosition(entityID)
-        print("[Enemy GLIDE] GetEntityWorldPosition returned sx=" .. tostring(sx) .. " sy=" .. tostring(sy))  -- THIS ONE
-
-
         local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
-                -- Start glide: get end position, yank sprite back to start
-                local ex, ey = GetEntityWorldPosition(entityID)
-                print("[Enemy GLIDE] After move: ex=" .. tostring(ex) .. " ey=" .. tostring(ey))  -- THIS ONE
-                if sx and sy and ex and ey then
-                    glideActive = true
-                    glideElapsed = 0.0
-                    glideStartX = sx
-                    glideStartY = sy
-                    glideEndX = ex
-                    glideEndY = ey
-                    SetSpritePosition(entityID, sx, sy)  -- Yank back to start
-                    print("[Enemy GLIDE] Started! (" .. sx .. "," .. sy .. ") -> (" .. ex .. "," .. ey .. ")")  -- THIS ONE
-                else
-                    print("[Enemy GLIDE] FAILED: nil positions! ...")  -- THIS ONE
-                end
-
-                ConsumeEnemyAP(entityID, config.apCostPerMove)
-                currentAP = currentAP - config.apCostPerMove
+                movesRemaining = movesRemaining - 1   -- Consume 1 MP per tile moved
                 movesThisTurn = movesThisTurn + 1
                 pathIndex = pathIndex + 1
 
@@ -828,6 +706,10 @@ function ExecuteChase()
                 -- This prevents double-stacking glide duration + moveDelay
 
                 -- Return to let next frame handle the glide, then the next move
+                -- Set timer for next move (creates visible delay)
+                moveTimer = moveDelay
+
+                -- Return to let next frame handle the next move
                 return
             else
                 -- Movement failed, recalculate path next turn
@@ -837,8 +719,7 @@ function ExecuteChase()
             end
     end
 
-    -- If we get here, we can't move anymore (out of AP, path, or maxMoves)
-    -- Check if we're now in attack range
+    -- If we get here, MP exhausted or path ended - check if now in attack range
     local newEnemyX, newEnemyY = GetEntityGridPosition(entityID)
     local distance = CalculateDistance(newEnemyX, newEnemyY, playerX, playerY)
 
@@ -853,8 +734,7 @@ function ExecuteChase()
 end
 
 function ExecuteFlee()
-    -- Move away from player
-    local currentAP, maxAP = GetEntityAP(entityID)
+    -- Move away from player (uses MP)
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     local playerX, playerY = GetEntityGridPosition(targetPlayerID)
 
@@ -867,37 +747,20 @@ function ExecuteFlee()
     local deltaX = enemyX - playerX
     local deltaY = enemyY - playerY
 
-    -- Try to move in opposite direction
     local fleeX = enemyX
     local fleeY = enemyY
 
     if math.abs(deltaX) > math.abs(deltaY) then
-        -- Move horizontally away
         fleeX = enemyX + (deltaX > 0 and 1 or -1)
     else
-        -- Move vertically away
         fleeY = enemyY + (deltaY > 0 and 1 or -1)
     end
 
-    -- Attempt flee movement
-    if currentAP >= config.apCostPerMove then
-        -- Check if flee tile is walkable and not occupied
+    if movesRemaining > 0 then
         if IsWalkableTile(fleeX, fleeY) and not IsTileOccupied(fleeX, fleeY) then
-            local sx, sy = GetEntityWorldPosition(entityID)
             local success = MoveEntityToTile(entityID, fleeX, fleeY)
             if success then
-                -- Start glide
-                local ex, ey = GetEntityWorldPosition(entityID)
-                if sx and sy and ex and ey then
-                    glideActive = true
-                    glideElapsed = 0.0
-                    glideStartX = sx
-                    glideStartY = sy
-                    glideEndX = ex
-                    glideEndY = ey
-                    SetSpritePosition(entityID, sx, sy)
-                end
-                ConsumeEnemyAP(entityID, config.apCostPerMove)
+                movesRemaining = movesRemaining - 1
                 PulseTile(fleeX, fleeY, 0.2, 1.0, 1.0, 0.0)  -- Yellow pulse (fleeing)
             end
         else
@@ -905,27 +768,18 @@ function ExecuteFlee()
         end
     end
 
-    -- If glide started, finish turn after glide completes; otherwise finish now
-    if glideActive then
-        pendingFinishAfterGlide = true
-    else
-        FinishEnemyAction()
-    end
-    -- If glideActive, the glide will complete in OnUpdate, then FinishEnemyAction()
-    -- will be called via the pendingFinishAfterGlide flag
+    FinishEnemyAction()
 end
 
 function ExecutePatrol()
-    -- Simple random movement
-    local currentAP, maxAP = GetEntityAP(entityID)
+    -- Simple random movement (uses MP)
     local enemyX, enemyY = GetEntityGridPosition(entityID)
 
-    if currentAP < config.apCostPerMove then
+    if movesRemaining <= 0 then
         FinishEnemyAction()
         return
     end
 
-    -- Pick random adjacent tile
     local directions = {
         {x = 1, y = 0},
         {x = -1, y = 0},
@@ -937,33 +791,15 @@ function ExecutePatrol()
     local newX = enemyX + dir.x
     local newY = enemyY + dir.y
 
-    -- Check if patrol tile is walkable and not occupied
     if IsWalkableTile(newX, newY) and not IsTileOccupied(newX, newY) then
-        local sx, sy = GetEntityWorldPosition(entityID)
         local success = MoveEntityToTile(entityID, newX, newY)
         if success then
-            -- Start glide
-            local ex, ey = GetEntityWorldPosition(entityID)
-            if sx and sy and ex and ey then
-                glideActive = true
-                glideElapsed = 0.0
-                glideStartX = sx
-                glideStartY = sy
-                glideEndX = ex
-                glideEndY = ey
-                SetSpritePosition(entityID, sx, sy)
-            end
-            ConsumeEnemyAP(entityID, config.apCostPerMove)
+            movesRemaining = movesRemaining - 1
             PulseTile(newX, newY, 0.2, 0.5, 0.5, 1.0)  -- Blue pulse (patrol)
         end
     end
 
-    -- If glide started, finish turn after glide completes; otherwise finish now
-    if glideActive then
-        pendingFinishAfterGlide = true
-    else
-        FinishEnemyAction()
-    end
+    FinishEnemyAction()
 end
 
 -- ============================================================================
@@ -975,55 +811,83 @@ function CalculateDistance(x1, y1, x2, y2)
     return math.abs(x2 - x1) + math.abs(y2 - y1)
 end
 
--- Find the closest player from all party members
-function FindClosestPlayer()
-    -- Get enemy position
+-- Find target player based on targetMode: "closest" | "lowestHP" | "highestHP"
+function FindTargetPlayer()
     local enemyX, enemyY = GetEntityGridPosition(entityID)
     if not enemyX then
         print("[Enemy " .. entityID .. "] ERROR: GetEntityGridPosition returned nil!")
         return nil
     end
 
-    -- Use GetAllPlayers() (C++ function available in all Lua states)
     local players = GetAllPlayers()
-
-    -- Validate player list
     if not players or type(players) ~= "table" or #players == 0 then
         print("[Enemy " .. entityID .. "] WARNING: GetAllPlayers() returned no players, using fallback")
         return FindPlayer()
     end
 
-    -- Find closest player and build detailed distance report
-    local closestPlayerID = nil
-    local closestDistance = 999999
-    local distanceReport = {}
-
+    -- Build list of alive players with HP and position
+    local candidates = {}
     for i, playerID in ipairs(players) do
-        -- Skip dead players
         local currentHP, maxHP = GetEntityHP(playerID)
-        if not currentHP or currentHP <= 0 then
-            table.insert(distanceReport, "P" .. playerID .. "=DEAD")
-            -- Skip dead players - don't target them
-        else
+        if currentHP and currentHP > 0 then
             local playerX, playerY = GetEntityGridPosition(playerID)
             if playerX then
                 local distance = CalculateDistance(enemyX, enemyY, playerX, playerY)
-                table.insert(distanceReport, "P" .. playerID .. "=" .. distance)
-                if distance < closestDistance then
-                    closestDistance = distance
-                    closestPlayerID = playerID
-                end
+                table.insert(candidates, { id = playerID, hp = currentHP, distance = distance })
             end
         end
     end
 
-    if closestPlayerID then
-        print("[Enemy " .. entityID .. "] Target: P" .. closestPlayerID .. " [" .. table.concat(distanceReport, ", ") .. "]")
-    else
-        print("[Enemy " .. entityID .. "] WARNING: No valid player found from " .. #players .. " candidates")
+    if #candidates == 0 then
+        print("[Enemy " .. entityID .. "] WARNING: No valid player found")
+        return nil
     end
 
-    return closestPlayerID, closestDistance
+    local targetID = nil
+    local targetDistance = 999999
+
+    if targetMode == "lowestHP" then
+        -- Pick player with strictly lowest HP only
+        local lowestHP = math.huge
+        for _, c in ipairs(candidates) do
+            if c.hp < lowestHP then lowestHP = c.hp end
+        end
+        for _, c in ipairs(candidates) do
+            if c.hp == lowestHP then
+                targetID = c.id
+                targetDistance = c.distance
+                break
+            end
+        end
+    elseif targetMode == "highestHP" then
+        -- Pick player with strictly highest HP only
+        local highestHP = -math.huge
+        for _, c in ipairs(candidates) do
+            if c.hp > highestHP then highestHP = c.hp end
+        end
+        for _, c in ipairs(candidates) do
+            if c.hp == highestHP then
+                targetID = c.id
+                targetDistance = c.distance
+                break
+            end
+        end
+    else
+        -- "closest" (default): pick by distance
+        for _, c in ipairs(candidates) do
+            if c.distance < targetDistance then
+                targetDistance = c.distance
+                targetID = c.id
+            end
+        end
+    end
+
+    return targetID, targetDistance
+end
+
+-- Legacy alias (calls FindTargetPlayer)
+function FindClosestPlayer()
+    return FindTargetPlayer()
 end
 
 -- GetEntityHP(entityID) C++ function already exists in LevelLoader API
@@ -1037,6 +901,11 @@ end
 function SetBehavior(behavior)
     behaviorType = behavior
     Log("[EnemyScript] Enemy " .. entityID .. " behavior set to: " .. behavior)
+end
+
+function SetTargetMode(mode)
+    targetMode = mode or "closest"
+    Log("[EnemyScript] Enemy " .. entityID .. " target mode set to: " .. targetMode)
 end
 
 function SetAggression(range)
@@ -1064,12 +933,6 @@ function FinishEnemyAction()
     hasActedThisTurn = true
     movesThisTurn = 0  -- Reset for next turn
     moveTimer = 0.0    -- Reset timer
-    glideActive = false -- Reset glide
-    pendingFinishAfterGlide = false  -- Reset pending flag
-    pendingAttack = false -- Reset pending attack
-    activeTimer = 0.0  -- Reset active timer
-    currentPath = {}   -- Clear stale path
-    pathIndex = 1
     Log("[Enemy " .. entityID .. "] Finished turn")
     MarkEnemyActionComplete()  -- Advance to next enemy in sequence
 end

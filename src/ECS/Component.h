@@ -177,8 +177,9 @@ namespace Framework
         void* fmodChannel = nullptr;
     };
 
-    struct TagComponent : public Component<TagComponent> {
+    struct TagComponent {
         std::string tag;           // e.g., "Player", "Enemy", "Collectible"
+        std::vector<std::string> groups;  // Multiple groups: {"Damageable", "Physics"}
 
         TagComponent() = default;
         TagComponent(const std::string& t) : tag(t) {}

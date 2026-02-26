@@ -31,7 +31,6 @@
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Pathfinding/Pathfinding.h"
-#include "TagHelper.h"
 #include <algorithm>
 namespace Framework
 {
@@ -161,9 +160,8 @@ namespace Framework
                 activeProjectiles.push_back(entity);
             }
 
-            // Filter for Enemies (must have "Enemy" tag)
-            if (entityManager->HasComponent<Framework::TagComponent>(entity) &&
-                entityManager->GetComponent<Framework::TagComponent>(entity).tag == "Enemy" &&
+            // Filter for Enemies (must have EnemyAI to exclude players)
+            if (entityManager->HasComponent<EnemyAI>(entity) &&
                 entityManager->HasComponent<Transform>(entity) &&
                 entityManager->HasComponent<Health>(entity) &&
                 entityManager->HasComponent<BoxCollider>(entity))

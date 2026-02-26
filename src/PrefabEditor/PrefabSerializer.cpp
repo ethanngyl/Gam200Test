@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        PrefabSerializer.cpp
 Author:      Sim Kah Yan
@@ -74,6 +74,7 @@ namespace PrefabSerializer
         // ---------------------------------------------------------------------
         out << "{\n";
         out << "  \"entity\": " << e.GetID() << ",\n";
+        out << "  \"prefabSource\": \"" << Framework::PrefabInstanceTracker::Get().GetPrefabOf(e) << "\",\n";
         out << "  \"components\": {\n";
 
         // Helper to insert commas between component blocks.
@@ -179,17 +180,36 @@ namespace PrefabSerializer
         //
         // If sprite animation is used, persist basic animation setup:
         // sheet ID, frame dimensions/count, current frame and flags.
-        if (em.HasComponent<SpriteAnimation>(e)) {
+        // SpriteAnimation
+        if (em.HasComponent<SpriteAnimation>(e))
+        {
             auto& a = em.GetComponent<SpriteAnimation>(e);
             writeComma();
+
             out << "    \"SpriteAnimation\": {"
+                << "\"group\":" << static_cast<int>(a.group) << ","
+                << "\"direction\":" << static_cast<int>(a.direction) << ","
+                << "\"animName\":\"" << a.animName << "\","
+
                 << "\"spriteSheet\":" << a.spriteSheet.GetID() << ","
+
+                << "\"currentFrame\":" << a.currentFrame << ","
+                << "\"elapsedTime\":" << f2(a.elapsedTime) << ","
+
+                << "\"startFrame\":" << a.startFrame << ","
+                << "\"frameCount\":" << a.frameCount << ","
+                << "\"rows\":" << a.rows << ","
+                << "\"columns\":" << a.columns << ","
+                << "\"frameTime\":" << f2(a.frameTime) << ","
+
                 << "\"frameWidth\":" << a.frameWidth << ","
                 << "\"frameHeight\":" << a.frameHeight << ","
-                << "\"frameCount\":" << a.frameCount << ","
-                << "\"currentFrame\":" << a.currentFrame << ","
-                << "\"uvShrinkPx\":" << a.uvShrinkPx << ","
-                << "\"flipX\":" << (a.flipX ? "true" : "false")
+
+                << "\"uvShrinkPx\":" << f2(a.uvShrinkPx) << ","
+                << "\"loop\":" << (a.loop ? "true" : "false") << ","
+                << "\"playing\":" << (a.playing ? "true" : "false") << ","
+                << "\"flipX\":" << (a.flipX ? "true" : "false") << ","
+                << "\"useJsonConfig\":" << (a.useJsonConfig ? "true" : "false")
                 << "}";
         }
 
@@ -210,6 +230,117 @@ namespace PrefabSerializer
                 << "\"playOnStart\":" << (audio.playOnStart ? "true" : "false")
                 << "}";
         }
+
+        // ---------------------------------------------------------------------
+        // ScriptComponent
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<ScriptComponent>(e))
+        {
+            auto& sc = em.GetComponent<ScriptComponent>(e);
+            writeComma();
+            out << "    \"ScriptComponent\": {"
+                << "\"scriptPath\":\"" << sc.scriptPath << "\""
+                << "}";
+        }
+
+        // ---------------------------------------------------------------------
+        // Health
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<Health>(e))
+        {
+            auto& h = em.GetComponent<Health>(e);
+            writeComma();
+            out << "    \"Health\": {"
+                << "\"maxHealth\":" << h.maxHealth << ","
+                << "\"currentHealth\":" << h.currentHealth << ","
+                << "\"isDead\":" << (h.isDead ? "true" : "false")
+                << "}";
+        }
+
+        // ---------------------------------------------------------------------
+        // AP
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<AP>(e))
+        {
+            auto& ap = em.GetComponent<AP>(e);
+            writeComma();
+            out << "    \"AP\": {"
+                << "\"actionPoints\":" << ap.actionPoints << ","
+                << "\"maxActionPoints\":" << ap.maxActionPoints
+                << "}";
+        }
+
+        // ---------------------------------------------------------------------
+        // AttackRangeComponent
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<AttackRangeComponent>(e))
+        {
+            auto& ar = em.GetComponent<AttackRangeComponent>(e);
+            writeComma();
+            out << "    \"AttackRangeComponent\": {"
+                << "\"minRange\":" << ar.minRange << ","
+                << "\"maxRange\":" << ar.maxRange << ","
+                << "\"showRange\":" << (ar.showRange ? "true" : "false")
+                << "}";
+        }
+
+        // ---------------------------------------------------------------------
+        // Chest
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<Chest>(e))
+        {
+            auto& c = em.GetComponent<Chest>(e);
+            writeComma();
+            out << "    \"Chest\": {"
+                << "\"collected\":" << (c.collected ? "true" : "false") << ","
+                << "\"chestID\":" << c.chestID
+                << "}";
+        }
+
+        // ---------------------------------------------------------------------
+        // Goal
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<Goal>(e))
+        {
+            auto& g = em.GetComponent<Goal>(e);
+            writeComma();
+            out << "    \"Goal\": {"
+                << "\"chestsRequired\":" << g.chestsRequired << ","
+                << "\"canExit\":" << (g.canExit ? "true" : "false")
+                << "}";
+        }
+
+        // ---------------------------------------------------------------------
+        // Inventory
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<Inventory>(e))
+        {
+            auto& inv = em.GetComponent<Inventory>(e);
+            writeComma();
+            out << "    \"Inventory\": {"
+                << "\"collectedChests\":[";
+            for (size_t i = 0; i < inv.collectedChests.size(); ++i)
+            {
+                if (i > 0) out << ",";
+                out << inv.collectedChests[i];
+            }
+            out << "]"
+                << "}";
+        }
+
+        // ---------------------------------------------------------------------
+        // AttackAP
+        // ---------------------------------------------------------------------
+        if (em.HasComponent<AttackAP>(e))
+        {
+            auto& atk = em.GetComponent<AttackAP>(e);
+            writeComma();
+            out << "    \"AttackAP\": {"
+                << "\"points\":" << atk.points << ","
+                << "\"maxPoints\":" << atk.maxPoints
+                << "}";
+        }
+
 
         // Close the "components" object and the root JSON object.
         out << "\n  }\n";
@@ -335,13 +466,306 @@ namespace PrefabSerializer
             audio.fmodChannel = nullptr;  // Always initialize to nullptr
         }
 
+        // SpriteAnimation
+        // SpriteAnimation
+        if (comps.contains("SpriteAnimation"))
+        {
+            const auto& a = comps["SpriteAnimation"];
+            em.AddComponent<Framework::SpriteAnimation>(e);
+            auto& c = em.GetComponent<Framework::SpriteAnimation>(e);
+
+            c.group = static_cast<Framework::AnimGroup>(a.value("group", static_cast<int>(Framework::AnimGroup::Idle)));
+            c.direction = static_cast<Framework::AnimDirection>(a.value("direction", static_cast<int>(Framework::AnimDirection::Front)));
+            c.animName = a.value("animName", "");
+
+            c.spriteSheet = Framework::TextureHandle(a.value("spriteSheet", 0));
+
+            c.currentFrame = a.value("currentFrame", 0);
+            c.elapsedTime = a.value("elapsedTime", 0.0f);
+
+            c.startFrame = a.value("startFrame", 0);
+            c.frameCount = a.value("frameCount", 1);
+            c.rows = a.value("rows", 1);
+            c.columns = a.value("columns", 1);
+            c.frameTime = a.value("frameTime", 0.1f);
+
+            c.frameWidth = a.value("frameWidth", 0);
+            c.frameHeight = a.value("frameHeight", 0);
+
+            c.uvShrinkPx = a.value("uvShrinkPx", 0.0f);
+            c.loop = a.value("loop", true);
+            c.playing = a.value("playing", true);
+            c.flipX = a.value("flipX", false);
+            c.useJsonConfig = a.value("useJsonConfig", true);
+        }
+
+        // ScriptComponent
+        if (comps.contains("ScriptComponent"))
+        {
+            const auto& s = comps["ScriptComponent"];
+            em.AddComponent<ScriptComponent>(e);
+            auto& sc = em.GetComponent<ScriptComponent>(e);
+            sc.scriptPath = s.value("scriptPath", "");
+            sc.L = nullptr;
+            sc.initialized = false;
+            sc.updateTimer = 0.0f;
+            sc.hasOnInit = false;
+            sc.hasOnUpdate = false;
+            sc.hasOnDestroy = false;
+        }
+
+        // Health
+        if (comps.contains("Health"))
+        {
+            const auto& h = comps["Health"];
+            em.AddComponent<Health>(e);
+            auto& hc = em.GetComponent<Health>(e);
+            hc.maxHealth = h.value("maxHealth", 50);
+            hc.currentHealth = h.value("currentHealth", hc.maxHealth);
+            hc.isDead = h.value("isDead", false);
+        }
+
+        // AP
+        if (comps.contains("AP"))
+        {
+            const auto& a = comps["AP"];
+            em.AddComponent<AP>(e);
+            auto& ap = em.GetComponent<AP>(e);
+            ap.actionPoints = a.value("actionPoints", 3);
+            ap.maxActionPoints = a.value("maxActionPoints", 3);
+        }
+
+        // AttackRangeComponent
+        if (comps.contains("AttackRangeComponent"))
+        {
+            const auto& r = comps["AttackRangeComponent"];
+            em.AddComponent<AttackRangeComponent>(e);
+            auto& ar = em.GetComponent<AttackRangeComponent>(e);
+            ar.minRange = r.value("minRange", 1);
+            ar.maxRange = r.value("maxRange", 3);
+            ar.showRange = r.value("showRange", false);
+        }
+
+        // Chest
+        if (comps.contains("Chest"))
+        {
+            const auto& c = comps["Chest"];
+            em.AddComponent<Chest>(e);
+            auto& chest = em.GetComponent<Chest>(e);
+            chest.collected = c.value("collected", false);
+            chest.chestID = c.value("chestID", 0);
+        }
+
+        // Goal
+        if (comps.contains("Goal"))
+        {
+            const auto& g = comps["Goal"];
+            em.AddComponent<Goal>(e);
+            auto& goal = em.GetComponent<Goal>(e);
+            goal.chestsRequired = g.value("chestsRequired", 0);
+            goal.canExit = g.value("canExit", false);
+        }
+
+        // Inventory
+        if (comps.contains("Inventory"))
+        {
+            const auto& inv = comps["Inventory"];
+            em.AddComponent<Inventory>(e);
+            auto& inventory = em.GetComponent<Inventory>(e);
+
+            inventory.collectedChests.clear();
+            if (inv.contains("collectedChests") && inv["collectedChests"].is_array())
+            {
+                for (const auto& v : inv["collectedChests"])
+                {
+                    inventory.collectedChests.push_back(v.get<int>());
+                }
+            }
+        }
+
+        // AttackAP
+        if (comps.contains("AttackAP"))
+        {
+            const auto& a = comps["AttackAP"];
+            em.AddComponent<AttackAP>(e);
+            auto& atk = em.GetComponent<AttackAP>(e);
+            atk.points = a.value("points", 1);
+            atk.maxPoints = a.value("maxPoints", 3);
+        }
+
+
         // ---------------------------------------------------------------------
         // STEP 4: Register this entity as a prefab instance so tools
         //         (like the prefab editor) can track and update it.
         // ---------------------------------------------------------------------
-        Framework::PrefabInstanceTracker::Get().RegisterInstance(e, path);
+        std::string prefabSource;
+        if (data.contains("prefabSource"))
+        {
+            prefabSource = data.value("prefabSource", "");
+        }
+        else
+        {
+            prefabSource = path; // backward compatibility
+        }
+
+        if (!prefabSource.empty())
+        {
+            Framework::PrefabInstanceTracker::Get().RegisterInstance(e, prefabSource);
+        }
 
         return e;
+    }
+
+    bool ApplyPrefabToEntity(Framework::EntityManager& em, 
+                             Framework::Entity entity, 
+                             const std::string& prefabPath,
+                             bool preservePosition)
+    {
+        if (!entity.IsValid()) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: Invalid entity\n";
+            return false;
+        }
+
+        // Open and parse the prefab file
+        std::ifstream file(prefabPath);
+        if (!file.is_open()) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: Failed to open prefab: " << prefabPath << "\n";
+            return false;
+        }
+
+        nlohmann::json data;
+        try {
+            file >> data;
+        }
+        catch (const nlohmann::json::exception& e) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: JSON parse error: " << e.what() << "\n";
+            return false;
+        }
+        file.close();
+
+        if (!data.contains("components")) {
+            std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: Prefab missing components\n";
+            return false;
+        }
+
+        const auto& comps = data["components"];
+
+        // Save current position if we want to preserve it
+        Vector2D savedPosition(0.0f, 0.0f);
+        if (preservePosition && em.HasComponent<Transform>(entity)) {
+            savedPosition = em.GetComponent<Transform>(entity).position;
+        }
+
+        // Apply Transform (but preserve position if requested)
+        if (comps.contains("Transform")) {
+            const auto& t = comps["Transform"];
+            if (!em.HasComponent<Transform>(entity)) {
+                em.AddComponent<Transform>(entity);
+            }
+            auto& c = em.GetComponent<Transform>(entity);
+            
+            if (preservePosition) {
+                c.position = savedPosition;  // Keep original position
+            } else {
+                c.position = { t["position"][0], t["position"][1] };
+            }
+            c.scale = { t["scale"][0], t["scale"][1] };
+            if (t.contains("rotation"))
+                c.rotation = t["rotation"];
+        }
+
+        // Apply Sprite
+        if (comps.contains("Sprite")) {
+            const auto& s = comps["Sprite"];
+            if (!em.HasComponent<Sprite>(entity)) {
+                em.AddComponent<Sprite>(entity);
+            }
+            auto& c = em.GetComponent<Sprite>(entity);
+            c.texturePath = s.value("texturePath", "");
+            c.layer = s.value("layer", 0);
+        }
+
+        // Apply MeshRenderer
+        if (comps.contains("MeshRenderer")) {
+            const auto& m = comps["MeshRenderer"];
+            if (!em.HasComponent<MeshRenderer>(entity)) {
+                em.AddComponent<MeshRenderer>(entity);
+            }
+            auto& c = em.GetComponent<MeshRenderer>(entity);
+            c.spriteName = m.value("spriteName", "");
+            c.layer = m.value("layer", 0);
+            c.orderInLayer = m.value("orderInLayer", 0);
+            if (m.contains("tint")) {
+                c.tint.r = m["tint"][0];
+                c.tint.g = m["tint"][1];
+                c.tint.b = m["tint"][2];
+                c.tint.a = m["tint"][3];
+            }
+        }
+
+        // Apply Movement
+        if (comps.contains("Movement")) {
+            const auto& m = comps["Movement"];
+            if (!em.HasComponent<Movement>(entity)) {
+                em.AddComponent<Movement>(entity);
+            }
+            auto& c = em.GetComponent<Movement>(entity);
+            c.moveSpeed = m.value("speed", 0.0f);
+            c.direction.x = m["direction"][0];
+            c.direction.y = m["direction"][1];
+        }
+
+        // Apply BoxCollider
+        if (comps.contains("BoxCollider")) {
+            const auto& b = comps["BoxCollider"];
+            if (!em.HasComponent<BoxCollider>(entity)) {
+                em.AddComponent<BoxCollider>(entity);
+            }
+            auto& c = em.GetComponent<BoxCollider>(entity);
+            c.size.x = b["size"][0];
+            c.size.y = b["size"][1];
+            c.offset.x = b["offset"][0];
+            c.offset.y = b["offset"][1];
+            c.isTrigger = b.value("isTrigger", false);
+        }
+
+        // Apply CircleCollider
+        if (comps.contains("CircleCollider")) {
+            const auto& cdata = comps["CircleCollider"];
+            if (!em.HasComponent<CircleCollider>(entity)) {
+                em.AddComponent<CircleCollider>(entity);
+            }
+            auto& c = em.GetComponent<CircleCollider>(entity);
+            c.radius = cdata["radius"];
+            c.offset.x = cdata["offset"][0];
+            c.offset.y = cdata["offset"][1];
+        }
+
+        // Apply AudioSource
+        if (comps.contains("AudioSource")) {
+            const auto& audioData = comps["AudioSource"];
+            if (!em.HasComponent<AudioSource>(entity)) {
+                em.AddComponent<AudioSource>(entity);
+            }
+            auto& audio = em.GetComponent<AudioSource>(entity);
+            audio.soundName = audioData.value("soundName", "");
+            audio.volume = audioData.value("volume", 1.0f);
+            audio.pitch = audioData.value("pitch", 1.0f);
+            audio.loop = audioData.value("loop", false);
+            audio.playOnStart = audioData.value("playOnStart", false);
+        }
+
+        std::cout << "[PrefabSerializer] Applied prefab '" << prefabPath 
+                  << "' to entity " << entity.GetID() << "\n";
+
+        return true;
+    }
+
+    bool RevertToPrefab(Framework::EntityManager& em, 
+                        Framework::Entity entity, 
+                        const std::string& prefabPath)
+    {
+        return ApplyPrefabToEntity(em, entity, prefabPath, true);
     }
 }
 

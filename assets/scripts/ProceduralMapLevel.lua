@@ -173,24 +173,19 @@ function OnInit()
     -- Setup Party UI
     SetupPartyUI()
 
-    -- CRITICAL: Disable C++ grid movement (Lua handles movement via PartyTurnManager)
+    -- CRITICAL: Disable grid movement
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    Log("!!! DISABLING grid movement !!!")
+    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     SetGridMovementEnabled(false)
-
-    -- Remove WASD movement from all players (grid movement handled by Lua scripts)
-    for _, pid in ipairs(partyMembers) do
-        RemoveMovementComponent(pid)
-        Log("Removed Movement component from player " .. pid)
-    end
-
-    -- Set camera to follow first party member
+    
+    -- IMPORTANT: Set camera to follow first party member
+    -- NOTE: SetCameraFollowEntity may not be registered - check if it exists
     if partyMembers[1] then
-        SetCameraFollowTarget(partyMembers[1])
-        Log("Camera following player " .. partyMembers[1])
+        -- Try to use the graphics system's follow target if available
+        Log("First party member entity: " .. partyMembers[1])
+        -- SetCameraFollowEntity is not exposed to Lua - camera will stay at 0,0
     end
-
-    -- Initialize turn system (Player phase, not busy)
-    InitializeTurnSystem()
-    Log("Turn system initialized: Player phase")
 
     initialized = true
     Log("========================================")
@@ -271,6 +266,17 @@ function SetupProceduralParty(mapData)
     MoveEntityToTile(player2, mapData.partySpawns[2].x, mapData.partySpawns[2].y)
     MoveEntityToTile(player3, mapData.partySpawns[3].x, mapData.partySpawns[3].y)
 
+    -- Set player HP: player1=5, player2=6, player3=7
+    local playerHPConfig = {
+        { id = player1, hp = 3 },
+        { id = player2, hp = 4 },
+        { id = player3, hp = 5 },
+    }
+    for _, cfg in ipairs(playerHPConfig) do
+        SetEntityHP(cfg.id, cfg.hp, cfg.hp)
+    end
+
+
     -- Attach scripts to all 3 players
     for i, playerID in ipairs({player1, player2, player3}) do
         local scriptSuccess = AddScriptComponentToEntity(playerID, "assets/scripts/PlayerScript.lua")
@@ -331,23 +337,45 @@ function SetupProceduralEnemies(mapData)
 
     local spawnedEnemies = {}
 
+    -- Enemy types (AP=5 and MP=5 for all, per-type differences: targetMode, attackDamage, maxHP, tint)
+    local enemyTypeConfig = {
+        -- 1号: targets lowest HP player, high attack, low HP, red
+        [1] = { targetMode = "lowestHP",  attackDamage = 3, maxHP = 2, maxMP = 5 },
+        -- 2号: targets highest HP player, low attack, high HP
+        [2] = { targetMode = "highestHP", attackDamage = 1, maxHP = 8, maxMP = 5 },
+        -- 3号: targets closest player, standard stats, default color
+        [3] = { targetMode = "closest",   attackDamage = 1, maxHP = 5, maxMP = 5 },
+    }
+
     for i, enemy in ipairs(mapData.enemies) do
         local ex = enemy.worldX
         local ey = enemy.worldY
         local enemyID = SpawnEnemyAt(ex, ey)
         
         if enemyID and enemyID ~= 0 then
-            Log("  Enemy " .. i .. " at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
+            Log("  Enemy " .. i .. " (type " .. i .. ") at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
             
-            -- Attach enemy script FIRST (so OnInit runs immediately with this setup)
+            -- Set config BEFORE attaching script (EnemyScript OnInit reads via GetEnemyConfig)
+            local cfg = enemyTypeConfig[i]
+            if cfg then
+                SetEnemyConfig(enemyID, "targetMode",    cfg.targetMode)
+                SetEnemyConfig(enemyID, "attackDamage",  cfg.attackDamage)
+                SetEnemyConfig(enemyID, "maxHP",         cfg.maxHP)
+                SetEnemyConfig(enemyID, "maxMP",         cfg.maxMP)
+                if cfg.tintR then
+                    SetEnemyConfig(enemyID, "tintR", cfg.tintR)
+                    SetEnemyConfig(enemyID, "tintG", cfg.tintG)
+                    SetEnemyConfig(enemyID, "tintB", cfg.tintB)
+                end
+            end
+
+            -- Attach enemy script (OnInit reads config and applies)
             AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
 
-            -- Set target (C++ side)
+            -- Set initial target (C++ side; Lua will retarget each turn based on targetMode)
             SetEnemyTarget(enemyID, playerID)
 
             Log("  Enemy " .. enemyID .. " script attached + target set to " .. tostring(playerID))
-
-            
             table.insert(spawnedEnemies, enemyID)
         else
             Log("  Enemy " .. i .. " FAILED to spawn!")
