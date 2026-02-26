@@ -191,16 +191,16 @@ local SkillDefs = {
     AreaBlast = {
         name     = "Area Blast",
         pattern  = "area3x3",
-        damage   = 2,
-        apCost   = 1,
+        damage   = 1,
+        apCost   = 2,
         range    = 0,  -- 0 = centered on caster
     },
     Fireball = {
         name      = "Fireball",
         skillType = "projectile",
         pattern   = "line",        -- preview: line in facing direction
-        damage    = 5,
-        apCost    = 1,
+        damage    = 1,
+        apCost    = 2,
         range     = 5,             -- preview range (tiles shown)
         projSpeed = 3.0,           -- world units per second
         pierce    = false,         -- stops on first enemy hit
@@ -209,8 +209,8 @@ local SkillDefs = {
         name      = "Piercing Shot",
         skillType = "projectile",
         pattern   = "pierce",      -- preview: line in facing direction
-        damage    = 5,
-        apCost    = 1,
+        damage    = 2,
+        apCost    = 3,
         range     = 7,             -- longer range preview
         projSpeed = 4.0,           -- faster projectile
         pierce    = true,          -- passes through all enemies
@@ -222,7 +222,7 @@ local SkillDefs = {
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 local PlayerSkills = {
     [1] = { ["1"] = "BasicAttack", ["2"] = "AreaBlast" },
-    [2] = { ["1"] = "BasicAttack", ["2"] = "Fireball", ["3"] = "PiercingShot" },
+    [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
     [3] = { ["1"] = "BasicAttack" },
 }
 
@@ -1134,11 +1134,13 @@ function ExecuteSkill(skillID)
         -- Consume AP only after successful spawn
         ConsumeEntityAttackAP(entityID, skill.apCost)
 
-        -- Trigger AP crystal animation
+        -- Trigger AP crystal animation (once per AP spent)
         if UIManager and UIManager.GetComponent then
             local comp = UIManager.GetComponent("attackAP")
             if comp and comp.ConsumeOneAP then
-                pcall(function() comp:ConsumeOneAP() end)
+                for i = 1, skill.apCost do
+                    pcall(function() comp:ConsumeOneAP() end)
+                end
             end
         else
             pcall(function() TriggerAttackAPAnimation() end)
@@ -1210,11 +1212,13 @@ function ExecuteSkill(skillID)
     ConsumeEntityAttackAP(entityID, skill.apCost)
     print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
 
-    -- Trigger AP crystal animation
+    -- Trigger AP crystal animation (once per AP spent)
     if UIManager and UIManager.GetComponent then
         local comp = UIManager.GetComponent("attackAP")
         if comp and comp.ConsumeOneAP then
-            pcall(function() comp:ConsumeOneAP() end)
+            for i = 1, skill.apCost do
+                pcall(function() comp:ConsumeOneAP() end)
+            end
         end
     else
         pcall(function() TriggerAttackAPAnimation() end)
