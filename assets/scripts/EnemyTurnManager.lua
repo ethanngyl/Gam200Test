@@ -35,10 +35,6 @@ EnemyTurnActive = false     -- True when in enemy turn phase
 EnemyActionDelay = 0.5      -- Delay in seconds between enemy actions
 EnemyActionTimer = 0.0      -- Current action timer
 
--- Safety timeout: auto-advance if an enemy gets stuck (e.g. no path, script error)
-EnemyStuckTimeout = 10.0    -- Max seconds an enemy can be active before auto-advancing
-EnemyStuckTimer = 0.0       -- Tracks how long current enemy has been active
-
 -- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
@@ -58,7 +54,6 @@ function InitializeEnemyTurn()
     ActiveEnemyIndex = 1
     EnemyTurnActive = true
     EnemyActionTimer = 0.0  -- Start immediately
-    EnemyStuckTimer = 0.0   -- Reset stuck timer
 
     local firstEnemy = enemies[1]
     print("[EnemyTurnManager] Starting with enemy " .. firstEnemy)
@@ -168,7 +163,6 @@ function NextEnemyTurn()
 
     -- Reset action timer for next enemy
     EnemyActionTimer = EnemyActionDelay
-    EnemyStuckTimer = 0.0  -- Reset stuck timer for new enemy
 
     print("[EnemyTurnManager] ======================================")
 end
@@ -235,18 +229,6 @@ function UpdateEnemyTurnManager(dt)
         if EnemyActionTimer == 0 then
             print("[EnemyTurnManager] Action timer ready! (was " .. string.format("%.3f", oldTimer) .. ", now 0.0)")
         end
-    end
-
-    -- Safety timeout: auto-advance if an enemy is stuck too long
-    EnemyStuckTimer = EnemyStuckTimer + dt
-    if EnemyStuckTimer >= EnemyStuckTimeout then
-        local activeEnemy = GetActiveEnemy()
-        print("[EnemyTurnManager] ========================================")
-        print("[EnemyTurnManager] SAFETY TIMEOUT: Enemy " .. tostring(activeEnemy) .. " stuck for " .. string.format("%.1f", EnemyStuckTimer) .. "s!")
-        print("[EnemyTurnManager] Auto-advancing to next enemy...")
-        print("[EnemyTurnManager] ========================================")
-        EnemyStuckTimer = 0.0
-        NextEnemyTurn()
     end
 end
 

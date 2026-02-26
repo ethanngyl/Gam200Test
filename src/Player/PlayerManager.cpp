@@ -44,7 +44,6 @@
 #include "Vector2D.h"
 #include "Pathfinding.h"
 #include "Turn.h"
-#include "TagHelper.h"
 #include <Windows.h>
 
 namespace Framework {
@@ -690,7 +689,8 @@ namespace Framework {
                 //gridTile.blocked = false;
 
                 // Visual feedback: hide chest or change appearance
-                if (entityManager->HasComponent<Framework::Renderable>(occupant) && entityManager->HasComponent<Framework::Chest>(occupant)) {
+                if (entityManager->HasComponent<Framework::Renderable>(occupant) && entityManager->HasComponent<Framework::Chest>(occupant)
+                    && !entityManager->HasComponent<EnemyAI>(occupant)) {
                     auto& chest = entityManager->GetComponent<Framework::Chest>(occupant);
 
                     // only hide the same entity you just marked collected
@@ -799,8 +799,7 @@ namespace Framework {
                 Entity occ = tile.occupant;
                 if (!occ.IsValid()) continue;
 
-                if (entityManager->HasComponent<TagComponent>(occ) &&
-                    entityManager->GetComponent<TagComponent>(occ).tag == "Enemy" &&
+                if (entityManager->HasComponent<EnemyAI>(occ) &&
                     entityManager->HasComponent<Health>(occ)) {
                     return occ; // found enemy in cross range
                 }
