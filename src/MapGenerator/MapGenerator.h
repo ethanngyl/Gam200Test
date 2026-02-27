@@ -105,6 +105,11 @@ namespace Framework {
             bool ensureGoalIsFar = true;
             int minPlayerGoalDistance = 10;
             int maxPlacementAttempts = 100;
+
+            // Boss arena (used with "rooms_arena" algorithm)
+            int arenaWidth = 9;       // Width of the boss arena
+            int arenaHeight = 9;      // Height of the boss arena
+            int minArenaDistFromPlayer = 8;  // Min distance from player spawn to arena center
         };
 
         struct GeneratedMap {
@@ -116,6 +121,12 @@ namespace Framework {
             Position goalSpawn;
             std::vector<Position> enemySpawns;
             std::vector<Position> chestSpawns;
+
+            // Boss arena (if generated with "rooms_arena" algorithm)
+            Position arenaCenter;     // Center of the boss arena
+            Position arenaMin;        // Top-left corner of arena floor
+            Position arenaMax;        // Bottom-right corner of arena floor (exclusive)
+            bool hasArena = false;    // True if an arena was generated
 
             GeneratedMap(int w = 0, int h = 0);
             bool isValid(int x, int y) const;
@@ -167,6 +178,9 @@ namespace Framework {
 
             // Arena
             void generateArena(GeneratedMap& map);
+
+            // Rooms + Boss Arena hybrid
+            void generateRoomsWithArena(GeneratedMap& map, const Config& config);
 
             // Entity placement
             bool placeEntities(GeneratedMap& map, const Config& config);
