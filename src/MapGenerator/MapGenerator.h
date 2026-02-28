@@ -128,6 +128,12 @@ namespace Framework {
             Position arenaMax;        // Bottom-right corner of arena floor (exclusive)
             bool hasArena = false;    // True if an arena was generated
 
+            bool isInArena(int x, int y) const {
+                return hasArena &&
+                       x >= arenaMin.x && x < arenaMax.x &&
+                       y >= arenaMin.y && y < arenaMax.y;
+            }
+
             GeneratedMap(int w = 0, int h = 0);
             bool isValid(int x, int y) const;
             TileType getTile(int x, int y) const;
