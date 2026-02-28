@@ -170,52 +170,28 @@ local lastPKeyDown = false
 -- ============================================================================
 --
 -- To add a new skill:
---   1. Add its definition to SkillDefs below
---   2. Assign it to a player + key in PlayerSkills
+--   1. Add its definition to assets/JSON/Skills.json
+--   2. Assign it to a player + key in PlayerSkills below
 --   3. Done. No new functions or state variables needed.
 -- ============================================================================
 
 -- Load skill pattern definitions (provides SkillPatterns.GetPattern)
 dofile("assets/scripts/SkillPatterns.lua")
 
--- All available skill definitions
+-- Load skill definitions from JSON (single source of truth)
 -- skillType: nil/"melee" = instant damage, "projectile" = spawns a projectile
-local SkillDefs = {
-    BasicAttack = {
-        name     = "Basic Attack",
-        pattern  = "adjacent",
-        damage   = 1,
-        apCost   = 1,
-        range    = 1,
-    },
-    AreaBlast = {
-        name     = "Area Blast",
-        pattern  = "area3x3",
-        damage   = 2,
-        apCost   = 1,
-        range    = 0,  -- 0 = centered on caster
-    },
-    Fireball = {
-        name      = "Fireball",
-        skillType = "projectile",
-        pattern   = "line",        -- preview: line in facing direction
-        damage    = 5,
-        apCost    = 1,
-        range     = 5,             -- preview range (tiles shown)
-        projSpeed = 3.0,           -- world units per second
-        pierce    = false,         -- stops on first enemy hit
-    },
-    PiercingShot = {
-        name      = "Piercing Shot",
-        skillType = "projectile",
-        pattern   = "pierce",      -- preview: line in facing direction
-        damage    = 5,
-        apCost    = 1,
-        range     = 7,             -- longer range preview
-        projSpeed = 4.0,           -- faster projectile
-        pierce    = true,          -- passes through all enemies
-    },
-}
+local SkillDefs = {}
+do
+    local skillData = LoadJSON("assets/JSON/Skills.json")
+    if skillData and skillData.skills then
+        SkillDefs = skillData.skills
+        print("[PlayerScript] Loaded " .. (function()
+            local n = 0; for _ in pairs(SkillDefs) do n = n + 1 end; return n
+        end)() .. " skills from Skills.json")
+    else
+        print("[PlayerScript] ERROR: Failed to load Skills.json! Using empty skill table.")
+    end
+end
 
 -- Per-player skill assignments: playerIndex -> { key -> skillID }
 -- Player index is determined by spawn order (1 = first spawned, etc.)

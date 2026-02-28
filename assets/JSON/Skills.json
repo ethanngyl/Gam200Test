@@ -35,18 +35,21 @@
       "description": "Attack all tiles in a 3x3 area",
       "apCost": 6,
       "damage": 2,
-      "range": 1,
+      "range": 0,
       "pattern": "area3x3",
       "animationName": "Attack",
       "soundEffect": "explosion"
     },
     "Fireball": {
       "name": "Fireball",
-      "description": "Ranged attack (5 tiles)",
+      "description": "Ranged projectile attack (5 tiles)",
+      "skillType": "projectile",
       "apCost": 5,
       "damage": 3,
       "range": 5,
-      "pattern": "single",
+      "pattern": "line",
+      "projSpeed": 3.0,
+      "pierce": false,
       "animationName": "Attack",
       "soundEffect": "fireball"
     },
@@ -63,10 +66,13 @@
     "PiercingShot": {
       "name": "Piercing Shot",
       "description": "Attack all enemies in a line",
+      "skillType": "projectile",
       "apCost": 4,
       "damage": 1,
-      "range": 5,
+      "range": 7,
       "pattern": "pierce",
+      "projSpeed": 4.0,
+      "pierce": true,
       "animationName": "Attack",
       "soundEffect": "arrow"
     }
