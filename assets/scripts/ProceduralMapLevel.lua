@@ -163,7 +163,10 @@ function OnInit()
 
     -- Setup enemies
     SetupProceduralEnemies(mapData)
-    
+
+    -- Spawn boss in arena
+    SpawnProceduralBoss(mapData)
+
     -- Spawn chests and goal
     SpawnProceduralChestsAndGoal(mapData)
 
@@ -355,6 +358,55 @@ function SetupProceduralEnemies(mapData)
     end
 
     Log("Spawned " .. #spawnedEnemies .. " enemies successfully")
+    Log("========================================")
+    return true
+end
+
+-- ============================================================================
+-- HELPER: Spawn Boss in Arena
+-- ============================================================================
+
+function SpawnProceduralBoss(mapData)
+    if not mapData.hasArena then
+        Log("No boss arena in this level")
+        return true
+    end
+
+    Log("========================================")
+    Log("Spawning boss in arena...")
+    Log("========================================")
+
+    local bx = mapData.arenaWorldX
+    local by = mapData.arenaWorldY
+
+    if not bx or not by then
+        Log("ERROR: Arena world coordinates missing!")
+        return false
+    end
+
+    local playerID = partyMembers[1]
+    if not playerID or playerID == 0 then
+        Log("ERROR: Cannot configure boss without player")
+        return false
+    end
+
+    -- Spawn boss as an enemy entity (same stats as regular enemies)
+    local bossID = SpawnEnemyAt(bx, by)
+
+    if not bossID or bossID == 0 then
+        Log("ERROR: Failed to spawn boss!")
+        return false
+    end
+
+    Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
+
+    -- Attach BossScript instead of EnemyScript
+    AddScriptComponentToEntity(bossID, "assets/scripts/BossScript.lua")
+
+    -- Set target (C++ side)
+    SetEnemyTarget(bossID, playerID)
+
+    Log("Boss " .. bossID .. " BossScript attached + target set to " .. tostring(playerID))
     Log("========================================")
     return true
 end
