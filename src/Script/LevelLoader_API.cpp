@@ -3647,6 +3647,38 @@ namespace Framework {
         lua_pushnumber(L, map.height);
         lua_settable(L, -3);
 
+        // ========================================
+        // BOSS ARENA DATA (if generated with "rooms_arena")
+        // ========================================
+        if (map.hasArena) {
+            lua_pushstring(L, "hasArena");
+            lua_pushboolean(L, 1);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "arenaX");
+            lua_pushnumber(L, map.arenaCenter.x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "arenaY");
+            lua_pushnumber(L, map.arenaCenter.y);
+            lua_settable(L, -3);
+
+            float arenaWorldX = startPos.x + (map.arenaCenter.x * spacing.x);
+            float arenaWorldY = startPos.y + (map.arenaCenter.y * spacing.y);
+
+            lua_pushstring(L, "arenaWorldX");
+            lua_pushnumber(L, arenaWorldX);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "arenaWorldY");
+            lua_pushnumber(L, arenaWorldY);
+            lua_settable(L, -3);
+
+            std::cout << "[Lua_LoadProceduralMap] Arena center: grid("
+                << map.arenaCenter.x << ", " << map.arenaCenter.y
+                << ") -> world(" << arenaWorldX << ", " << arenaWorldY << ")\n";
+        }
+
         std::cout << "[Lua_LoadProceduralMap] Added " << partySpawns.size() << " spaced party spawns\n";
 
         return 1;

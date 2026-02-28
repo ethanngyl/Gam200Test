@@ -124,7 +124,7 @@ function OnInit()
     -- PROCEDURAL MAP GENERATION
     -- ========================================
     Log("Generating procedural map...")
-    local mapData = LoadProceduralMap(21, 26, "rooms")
+    local mapData = LoadProceduralMap(35, 35, "rooms_arena")
 
     -- Debug output
     Log("DEBUG: mapData = " .. tostring(mapData))
