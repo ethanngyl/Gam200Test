@@ -178,20 +178,9 @@ local lastPKeyDown = false
 -- Load skill pattern definitions (provides SkillPatterns.GetPattern)
 dofile("assets/scripts/SkillPatterns.lua")
 
--- Load skill definitions from JSON (single source of truth)
+-- Skill definitions loaded from JSON in OnInit() (single source of truth)
 -- skillType: nil/"melee" = instant damage, "projectile" = spawns a projectile
 local SkillDefs = {}
-do
-    local skillData = LoadJSON("assets/JSON/Skills.json")
-    if skillData and skillData.skills then
-        SkillDefs = skillData.skills
-        print("[PlayerScript] Loaded " .. (function()
-            local n = 0; for _ in pairs(SkillDefs) do n = n + 1 end; return n
-        end)() .. " skills from Skills.json")
-    else
-        print("[PlayerScript] ERROR: Failed to load Skills.json! Using empty skill table.")
-    end
-end
 
 -- Per-player skill assignments: playerIndex -> { key -> skillID }
 -- Player index is determined by spawn order (1 = first spawned, etc.)
@@ -739,6 +728,16 @@ function OnInit(id)
     print("============================================================")
 
     entityID = id
+
+    -- Load skill definitions from JSON
+    local skillData = LoadJSON("assets/JSON/Skills.json")
+    if skillData and skillData.skills then
+        SkillDefs = skillData.skills
+        local n = 0; for _ in pairs(SkillDefs) do n = n + 1 end
+        print("[PlayerScript] Loaded " .. n .. " skills from Skills.json")
+    else
+        print("[PlayerScript] ERROR: Failed to load Skills.json!")
+    end
 
     -- Apply scale to ALL players (unified scaling)
     SetScale(entityID, 0.25, 0.25)
