@@ -100,8 +100,22 @@ local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to 
 
 -- Movement timing (for visible, sequential moves)
 local moveTimer = 0.0           -- Timer for next move
-local moveDelay = 0.3           -- Delay between moves in seconds (0.3s = visible movement)
+local moveDelay = 0.55           -- Delay between moves in seconds (0.3s = visible movement)
 local movesThisTurn = 0         -- Track how many moves made this turn
+
+-- Safety: track how long this enemy has been active to detect stuck state
+local activeTimer = 0.0         -- Time spent as active enemy this turn
+local maxActiveTime = 8.0       -- Max seconds before force-finishing turn
+
+-- Smooth glide state (lerps sprite between tiles)
+local glideActive = false
+local glideElapsed = 0.0
+local glideDuration = 0.5      -- Seconds to glide (tune to taste)
+local glideStartX = 0.0
+local glideStartY = 0.0
+local glideEndX = 0.0
+local glideEndY = 0.0
+local pendingFinishAfterGlide = false  -- When true, FinishEnemyAction() is called after glide ends
 
 -- ============================================================================
 -- ENEMY ANIMATION (manual sprite sheet switching)
@@ -248,6 +262,13 @@ function OnUpdate(dt)
     -- Enemy AI only runs during enemy turn
     local currentTurn = GetCurrentTurn()
 
+    if currentTurn == "Enemy" then
+        -- Only print once when entering enemy turn to avoid spam
+        if not isMyTurnToAct and not hasActedThisTurn then
+            print("[Enemy " .. entityID .. " FRAME] turn=Enemy glide=" .. tostring(glideActive) .. " acted=" .. tostring(hasActedThisTurn))
+        end
+    end
+
     if currentTurn ~= "Enemy" then
         -- Reset acted flag when it's not enemy turn
         if lastEnemyTurn == "Enemy" then
@@ -255,6 +276,12 @@ function OnUpdate(dt)
             isMyTurnToAct = false
             moveTimer = 0.0
             movesThisTurn = 0
+            activeTimer = 0.0
+            -- Snap glide to end position if interrupted by turn change
+            if glideActive then
+                SetSpritePosition(entityID, glideEndX, glideEndY)
+                glideActive = false
+            end
         end
         lastEnemyTurn = currentTurn
         return
@@ -262,6 +289,42 @@ function OnUpdate(dt)
 
     -- Track that this is enemy turn
     lastEnemyTurn = "Enemy"
+
+    -- Smooth glide: interpolate sprite position each frame
+    if glideActive then
+        glideElapsed = glideElapsed + dt
+        local t = glideElapsed / glideDuration
+        if t > 1.0 then t = 1.0 end
+
+        -- Ease-out quadratic
+        local eased = 1.0 - (1.0 - t) * (1.0 - t)
+
+        local x = glideStartX + (glideEndX - glideStartX) * eased
+        local y = glideStartY + (glideEndY - glideStartY) * eased
+        SetSpritePosition(entityID, x, y)
+        print("[Enemy " .. entityID .. " GLIDE UPDATE] t=" .. string.format("%.2f", t) .. " pos=(" .. string.format("%.4f", x) .. "," .. string.format("%.4f", y) .. ")")  -- THIS ONE
+
+        if t >= 1.0 then
+            SetSpritePosition(entityID, glideEndX, glideEndY)
+            glideActive = false
+            print("[Enemy " .. entityID .. " GLIDE] Complete!")
+            
+            -- If Flee/Patrol requested finish after glide, do it now
+            if pendingFinishAfterGlide then
+                pendingFinishAfterGlide = false
+                FinishEnemyAction()
+                return
+            end
+            
+            -- Set move delay AFTER glide completes (not when glide starts)
+            -- This prevents stacking glide duration + moveDelay
+            moveTimer = moveDelay
+        end
+        -- While gliding, don't process AI (wait for glide to finish)
+        if glideActive then
+            return
+        end
+    end
 
     -- SEQUENTIAL TURN SYSTEM: Only act if this enemy is the active one
     if not IsActiveEnemy then
@@ -309,7 +372,16 @@ function OnUpdate(dt)
         if moveTimer < 0 then
             moveTimer = 0
         end
-        -- Still waiting for move delay
+        return
+    end
+
+    
+
+    -- Safety: track active time and force-finish if stuck
+    activeTimer = activeTimer + dt
+    if activeTimer >= maxActiveTime then
+        print("[Enemy " .. entityID .. "] SAFETY: Active for " .. string.format("%.1f", activeTimer) .. "s, force-finishing turn!")
+        FinishEnemyAction()
         return
     end
 
@@ -317,7 +389,9 @@ function OnUpdate(dt)
     if not isMyTurnToAct then
         isMyTurnToAct = true
         movesThisTurn = 0
+        activeTimer = 0.0  -- Reset active timer at turn start
         print("[Enemy " .. entityID .. "] ========== STARTING TURN ==========")
+        print("[Enemy " .. entityID .. "] glideActive=" .. tostring(glideActive) .. " moveTimer=" .. moveTimer .. " hasActed=" .. tostring(hasActedThisTurn))
 
         -- CRITICAL: Find closest player dynamically each turn
         local closestPlayer, closestDistance = FindClosestPlayer()
@@ -364,6 +438,32 @@ function OnUpdate(dt)
                     PopupManager.ShowDamageNumber(worldX, worldY + 0.2, pendingAttackDamage)
                 end
             end
+
+            -- CHECK: Did we kill the player? If all players dead -> game over
+            if not hpAfter or hpAfter <= 0 then
+                print("[Enemy " .. entityID .. "] Player " .. pendingAttackTarget .. " KILLED!")
+
+                -- Check if ALL players are dead
+                local allDead = true
+                local players = GetAllPlayers()
+                if players and #players > 0 then
+                    for _, pid in ipairs(players) do
+                        local php, _ = GetEntityHP(pid)
+                        if php and php > 0 then
+                            allDead = false
+                            break
+                        end
+                    end
+                end
+
+                if allDead then
+                    print("[Enemy " .. entityID .. "] ALL PLAYERS DEFEATED - GAME OVER!")
+                    if SetNextGameState then
+                        SetNextGameState("LEVEL_END")
+                    end
+                    return  -- Stop processing, game is over
+                end
+            end
         else
             print("[Enemy " .. entityID .. "] ATTACK FAILED! Player " .. pendingAttackTarget .. " may not have Health component")
         end
@@ -378,12 +478,23 @@ function OnUpdate(dt)
         end
 
         -- Continue AI after resolving hit (may move if AP left)
-        ProcessAITurn()
+        local ok, err = pcall(ProcessAITurn)
+        if not ok then
+            print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn (post-attack): " .. tostring(err))
+            FinishEnemyAction()
+        end
         return
     end
 
     -- Execute AI decision making (will make ONE move per frame)
-    ProcessAITurn()
+    -- Wrapped in pcall to catch errors and prevent stuck turns
+    local aiOk, aiErr = pcall(ProcessAITurn)
+    if not aiOk then
+        print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn: " .. tostring(aiErr))
+        print("[Enemy " .. entityID .. "] Force-finishing turn due to error")
+        FinishEnemyAction()
+        return
+    end
 
 end
 
@@ -646,6 +757,7 @@ function ExecuteChase()
         end
     end
 
+    print("[Enemy " .. entityID .. "] MOVE CHECK: AP=" .. currentAP .. " pathIdx=" .. pathIndex .. "/" .. #currentPath .. " moves=" .. movesThisTurn .. "/" .. maxMoves .. " glide=" .. tostring(glideActive))
     -- Move ONE tile per frame (not all at once!)
     if currentAP >= config.apCostPerMove and pathIndex <= #currentPath and movesThisTurn < maxMoves then
         local nextTile = currentPath[pathIndex]
@@ -679,9 +791,30 @@ function ExecuteChase()
         local dy = nextTile.y - enemyY
         SetFacingFromDelta(dx, dy)
 
+        -- SMOOTH GLIDE: Save start pos, snap grid, then lerp sprite back
+        local sx, sy = GetEntityWorldPosition(entityID)
+        print("[Enemy GLIDE] GetEntityWorldPosition returned sx=" .. tostring(sx) .. " sy=" .. tostring(sy))  -- THIS ONE
+
+
         local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
+                -- Start glide: get end position, yank sprite back to start
+                local ex, ey = GetEntityWorldPosition(entityID)
+                print("[Enemy GLIDE] After move: ex=" .. tostring(ex) .. " ey=" .. tostring(ey))  -- THIS ONE
+                if sx and sy and ex and ey then
+                    glideActive = true
+                    glideElapsed = 0.0
+                    glideStartX = sx
+                    glideStartY = sy
+                    glideEndX = ex
+                    glideEndY = ey
+                    SetSpritePosition(entityID, sx, sy)  -- Yank back to start
+                    print("[Enemy GLIDE] Started! (" .. sx .. "," .. sy .. ") -> (" .. ex .. "," .. ey .. ")")  -- THIS ONE
+                else
+                    print("[Enemy GLIDE] FAILED: nil positions! ...")  -- THIS ONE
+                end
+
                 ConsumeEnemyAP(entityID, config.apCostPerMove)
                 currentAP = currentAP - config.apCostPerMove
                 movesThisTurn = movesThisTurn + 1
@@ -691,19 +824,10 @@ function ExecuteChase()
                 ShowTileBorder(nextTile.x, nextTile.y, 0.3)
                 PulseTile(nextTile.x, nextTile.y, 0.2, 1.0, 0.5, 0.0)  -- Orange pulse
 
-                -- Manage tile occupancy
-                --local enemyX, enemyY = GetEntityGridPosition(entityID)
-                --if enemyX and enemyY then
-                    -- Only set occupancy if the enemy actually moved
-                  --  if not SetTileOccupant or SetTileOccupant(enemyX, enemyY, entityID) then
-                    --    Log("[EnemyScript] Enemy " .. entityID .. " set occupancy at (" .. enemyX .. ", " .. enemyY .. ")")
-                    --end
-                --end
+                -- Don't set moveTimer here - it's set in glide completion handler
+                -- This prevents double-stacking glide duration + moveDelay
 
-                -- Set timer for next move (creates visible delay)
-                moveTimer = moveDelay
-
-                -- Return to let next frame handle the next move
+                -- Return to let next frame handle the glide, then the next move
                 return
             else
                 -- Movement failed, recalculate path next turn
@@ -759,8 +883,20 @@ function ExecuteFlee()
     if currentAP >= config.apCostPerMove then
         -- Check if flee tile is walkable and not occupied
         if IsWalkableTile(fleeX, fleeY) and not IsTileOccupied(fleeX, fleeY) then
+            local sx, sy = GetEntityWorldPosition(entityID)
             local success = MoveEntityToTile(entityID, fleeX, fleeY)
             if success then
+                -- Start glide
+                local ex, ey = GetEntityWorldPosition(entityID)
+                if sx and sy and ex and ey then
+                    glideActive = true
+                    glideElapsed = 0.0
+                    glideStartX = sx
+                    glideStartY = sy
+                    glideEndX = ex
+                    glideEndY = ey
+                    SetSpritePosition(entityID, sx, sy)
+                end
                 ConsumeEnemyAP(entityID, config.apCostPerMove)
                 PulseTile(fleeX, fleeY, 0.2, 1.0, 1.0, 0.0)  -- Yellow pulse (fleeing)
             end
@@ -769,7 +905,14 @@ function ExecuteFlee()
         end
     end
 
-    FinishEnemyAction()
+    -- If glide started, finish turn after glide completes; otherwise finish now
+    if glideActive then
+        pendingFinishAfterGlide = true
+    else
+        FinishEnemyAction()
+    end
+    -- If glideActive, the glide will complete in OnUpdate, then FinishEnemyAction()
+    -- will be called via the pendingFinishAfterGlide flag
 end
 
 function ExecutePatrol()
@@ -796,14 +939,31 @@ function ExecutePatrol()
 
     -- Check if patrol tile is walkable and not occupied
     if IsWalkableTile(newX, newY) and not IsTileOccupied(newX, newY) then
+        local sx, sy = GetEntityWorldPosition(entityID)
         local success = MoveEntityToTile(entityID, newX, newY)
         if success then
+            -- Start glide
+            local ex, ey = GetEntityWorldPosition(entityID)
+            if sx and sy and ex and ey then
+                glideActive = true
+                glideElapsed = 0.0
+                glideStartX = sx
+                glideStartY = sy
+                glideEndX = ex
+                glideEndY = ey
+                SetSpritePosition(entityID, sx, sy)
+            end
             ConsumeEnemyAP(entityID, config.apCostPerMove)
             PulseTile(newX, newY, 0.2, 0.5, 0.5, 1.0)  -- Blue pulse (patrol)
         end
     end
 
-    FinishEnemyAction()
+    -- If glide started, finish turn after glide completes; otherwise finish now
+    if glideActive then
+        pendingFinishAfterGlide = true
+    else
+        FinishEnemyAction()
+    end
 end
 
 -- ============================================================================
@@ -904,6 +1064,12 @@ function FinishEnemyAction()
     hasActedThisTurn = true
     movesThisTurn = 0  -- Reset for next turn
     moveTimer = 0.0    -- Reset timer
+    glideActive = false -- Reset glide
+    pendingFinishAfterGlide = false  -- Reset pending flag
+    pendingAttack = false -- Reset pending attack
+    activeTimer = 0.0  -- Reset active timer
+    currentPath = {}   -- Clear stale path
+    pathIndex = 1
     Log("[Enemy " .. entityID .. "] Finished turn")
     MarkEnemyActionComplete()  -- Advance to next enemy in sequence
 end

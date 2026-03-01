@@ -307,6 +307,186 @@ namespace Framework {
         }
 
         // ============================================================================
+        // ALGORITHM 4: ROOMS + BOSS ARENA
+        // ============================================================================
+
+        void Generator::generateRoomsWithArena(GeneratedMap& map, const Config& config) {
+            std::cout << "[MapGen] Generating rooms with isolated boss arena...\n";
+
+            int arenaW = config.arenaWidth;
+            int arenaH = config.arenaHeight;
+
+            // ================================================================
+            // STEP 1: Reserve arena position FIRST (before generating rooms)
+            // Arena gets a 1-tile wall border around it for visual separation
+            // ================================================================
+            int border = 1;  // Wall border thickness around arena
+            int reservedW = arenaW + border * 2;  // Total reserved width
+            int reservedH = arenaH + border * 2;  // Total reserved height
+
+            // Arena must fit within map bounds (with 2-tile outer wall)
+            int minAX = 2;
+            int minAY = 2;
+            int maxAX = map.width - reservedW - 2;
+            int maxAY = map.height - reservedH - 2;
+
+            if (maxAX < minAX || maxAY < minAY) {
+                std::cout << "[MapGen] WARNING: Map too small for boss arena! Need at least "
+                    << (reservedW + 4) << "x" << (reservedH + 4)
+                    << " but map is " << map.width << "x" << map.height << "\n";
+                std::cout << "[MapGen] Falling back to rooms only\n";
+                generateRooms(map, config);
+                return;
+            }
+
+            // Pick a random corner/edge region for the arena (far from center)
+            // Try placing in each corner and pick the best
+            struct Candidate {
+                int x, y, score;
+            };
+            std::vector<Candidate> corners = {
+                { minAX, minAY, 0 },                           // top-left
+                { maxAX, minAY, 0 },                           // top-right
+                { minAX, maxAY, 0 },                           // bottom-left
+                { maxAX, maxAY, 0 },                           // bottom-right
+                { map.width / 2 - reservedW / 2, minAY, 0 },  // top-center
+                { map.width / 2 - reservedW / 2, maxAY, 0 },  // bottom-center
+            };
+
+            // Clamp all candidates to valid range
+            for (auto& c : corners) {
+                if (c.x < minAX) c.x = minAX;
+                if (c.x > maxAX) c.x = maxAX;
+                if (c.y < minAY) c.y = minAY;
+                if (c.y > maxAY) c.y = maxAY;
+                // Score by distance from map center
+                int cx = c.x + reservedW / 2;
+                int cy = c.y + reservedH / 2;
+                c.score = abs(cx - map.width / 2) + abs(cy - map.height / 2);
+            }
+
+            // Shuffle candidates with same-ish scores for variety, then pick best
+            shuffle(corners);
+            std::sort(corners.begin(), corners.end(),
+                [](const Candidate& a, const Candidate& b) { return a.score > b.score; });
+
+            // Reserved region top-left (includes wall border)
+            int reserveX = corners[0].x;
+            int reserveY = corners[0].y;
+
+            // Actual arena floor area (inside the border)
+            int arenaX = reserveX + border;
+            int arenaY = reserveY + border;
+
+            Position aCenter(arenaX + arenaW / 2, arenaY + arenaH / 2);
+
+            std::cout << "[MapGen] Arena reserved at (" << reserveX << ", " << reserveY
+                << ") size " << reservedW << "x" << reservedH
+                << " (floor: " << arenaX << "," << arenaY
+                << " " << arenaW << "x" << arenaH << ")\n";
+
+            // ================================================================
+            // STEP 2: Generate rooms, but EXCLUDE the reserved arena region
+            // We temporarily mark the reserved region as floor so roomsOverlap
+            // and random placement will avoid it. Then we reset it.
+            // ================================================================
+
+            // Instead of modifying the generation, we'll generate rooms normally
+            // then remove any room tiles that fall inside the reserved region
+
+            generateRooms(map, config);
+
+            // Erase any floor tiles that overlap with the reserved region
+            // (reserved region = arena + border)
+            int erasedCount = 0;
+            for (int y = reserveY; y < reserveY + reservedH && y < map.height; y++) {
+                for (int x = reserveX; x < reserveX + reservedW && x < map.width; x++) {
+                    if (map.getTile(x, y) == TileType::FLOOR) {
+                        map.setTile(x, y, TileType::WALL);
+                        erasedCount++;
+                    }
+                }
+            }
+            if (erasedCount > 0) {
+                std::cout << "[MapGen] Erased " << erasedCount
+                    << " room tiles from arena reserved zone\n";
+            }
+
+            // ================================================================
+            // STEP 3: Carve the arena floor (inside the border)
+            // The border stays as walls, creating a visible wall ring
+            // ================================================================
+            for (int y = arenaY; y < arenaY + arenaH; y++) {
+                for (int x = arenaX; x < arenaX + arenaW; x++) {
+                    if (map.isValid(x, y)) {
+                        map.setTile(x, y, TileType::FLOOR);
+                    }
+                }
+            }
+
+            map.arenaCenter = aCenter;
+            map.arenaMin = Position(arenaX, arenaY);
+            map.arenaMax = Position(arenaX + arenaW, arenaY + arenaH);
+            map.hasArena = true;
+
+            std::cout << "[MapGen] Boss arena carved: center ("
+                << aCenter.x << ", " << aCenter.y << ")\n";
+
+            // ================================================================
+            // STEP 4: Connect arena to room network with a single corridor
+            // Find the nearest room floor tile OUTSIDE the reserved zone
+            // Then punch a corridor through the wall border
+            // ================================================================
+            Position nearestFloor(-1, -1);
+            int nearestDist = 999999;
+
+            for (int y = 0; y < map.height; y++) {
+                for (int x = 0; x < map.width; x++) {
+                    // Skip tiles inside the reserved zone
+                    if (x >= reserveX && x < reserveX + reservedW &&
+                        y >= reserveY && y < reserveY + reservedH) {
+                        continue;
+                    }
+                    if (map.getTile(x, y) != TileType::FLOOR) continue;
+
+                    int dist = abs(x - aCenter.x) + abs(y - aCenter.y);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearestFloor = Position(x, y);
+                    }
+                }
+            }
+
+            if (nearestFloor.x >= 0) {
+                // Carve corridor from arena edge to the nearest room tile
+                // Use a point on the arena edge closest to the target
+                int corridorStartX = aCenter.x;
+                int corridorStartY = aCenter.y;
+
+                // Clamp to arena edge facing the target
+                if (nearestFloor.x < arenaX) corridorStartX = arenaX;
+                else if (nearestFloor.x >= arenaX + arenaW) corridorStartX = arenaX + arenaW - 1;
+
+                if (nearestFloor.y < arenaY) corridorStartY = arenaY;
+                else if (nearestFloor.y >= arenaY + arenaH) corridorStartY = arenaY + arenaH - 1;
+
+                Room fakeArena(corridorStartX, corridorStartY, 1, 1);
+                Room fakeTarget(nearestFloor.x, nearestFloor.y, 1, 1);
+                createCorridor(map, fakeArena, fakeTarget);
+
+                std::cout << "[MapGen] Arena connected via corridor: ("
+                    << corridorStartX << "," << corridorStartY << ") -> ("
+                    << nearestFloor.x << "," << nearestFloor.y
+                    << ") dist=" << nearestDist << "\n";
+            }
+            else {
+                std::cout << "[MapGen] WARNING: No room tiles found to connect arena!\n";
+            }
+
+            std::cout << "[MapGen] Rooms + isolated boss arena complete!\n";
+        }
+
+        // ============================================================================
         // ENTITY PLACEMENT - Distance & Constraint Checking
         // ============================================================================
 
@@ -774,6 +954,9 @@ namespace Framework {
             // Generate map layout
             if (config.algorithm == "rooms") {
                 generateRooms(map, config);
+            }
+            else if (config.algorithm == "rooms_arena") {
+                generateRoomsWithArena(map, config);
             }
             else if (config.algorithm == "cellular") {
                 generateCaves(map, config);

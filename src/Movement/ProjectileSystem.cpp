@@ -29,6 +29,9 @@
 #include "ProjectileSystem.h"
 #include "Collision/Quadtree.h"
 #include "Grid/Grid.h"
+#include "Grid/GridECS.h"
+#include "Pathfinding/Pathfinding.h"
+#include "TagHelper.h"
 #include <algorithm>
 namespace Framework
 {
@@ -76,7 +79,6 @@ namespace Framework
         if (!entityManager) return;
 
         std::vector<Entity> offScreenToDestroy;
-        //if (!Framework::CORE || !Framework::CORE->IsPlaying()) return;
         for (Entity entity : entityManager->GetAllEntities())
         {
             if (entityManager->HasComponent<Transform>(entity) &&
@@ -84,9 +86,6 @@ namespace Framework
             {
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 auto& movement = entityManager->GetComponent<ProjectileMovement>(entity);
-
-                transform.position.x += movement.direction.x * movement.moveSpeed * dt;
-                transform.position.y += movement.direction.y * movement.moveSpeed * dt;
 
                 // Apply movement
                 if (!movement.blocked) {
@@ -96,12 +95,25 @@ namespace Framework
                     transform.position -= movement.direction * movement.moveSpeed * dt;
                 }
 
-                // Optional: Destroy projectiles that go off-screen
-                // This prevents memory leaks from projectiles flying forever
-                if (transform.position.x > 3.0f || transform.position.x < -3.0f ||
-                    transform.position.y > 2.0f || transform.position.y < -2.0f)
+                // Check if projectile hit a wall (blocked tile or out-of-bounds)
+                // Uses IsTileStaticBlocked instead of IsWalkable so projectiles
+                // pass through entity-occupied tiles and only stop on walls.
+                auto gridCoord = WorldToTile(transform.position);
+                if (!gridCoord.has_value()) {
+                    // Out of grid bounds - destroy
+                    offScreenToDestroy.push_back(entity);
+                }
+                else {
+                    // Only destroy on static walls, NOT on entity-occupied tiles
+                    if (IsTileStaticBlocked(gridCoord.value())) {
+                        offScreenToDestroy.push_back(entity);
+                    }
+                }
+
+                // Fallback: destroy projectiles that go way off-screen
+                if (transform.position.x > 50.0f || transform.position.x < -50.0f ||
+                    transform.position.y > 50.0f || transform.position.y < -50.0f)
                 {
-                    // Projectile is off-screen, destroy it
                     offScreenToDestroy.push_back(entity);
                 }
             }
@@ -149,8 +161,10 @@ namespace Framework
                 activeProjectiles.push_back(entity);
             }
 
-            // Filter for Enemies
-            if (entityManager->HasComponent<Transform>(entity) &&
+            // Filter for Enemies (must have "Enemy" tag)
+            if (entityManager->HasComponent<Framework::TagComponent>(entity) &&
+                entityManager->GetComponent<Framework::TagComponent>(entity).tag == "Enemy" &&
+                entityManager->HasComponent<Transform>(entity) &&
                 entityManager->HasComponent<Health>(entity) &&
                 entityManager->HasComponent<BoxCollider>(entity))
             {
@@ -219,61 +233,6 @@ namespace Framework
 
             Collider projShape = Collider::create_circle(projCollider.radius, projTransform.position);
 
-            //for (Framework::Entity enemy : activeEnemies)
-            //{
-            //    // Skip enemy if already marked for destruction
-            //    if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), enemy) != entitiesToDestroy.end())
-            //        continue;
-
-            //    // Check enemy components
-            //    if (!entityManager->HasComponent<Transform>(enemy) ||
-            //        !entityManager->HasComponent<Health>(enemy) ||
-            //        !entityManager->HasComponent<BoxCollider>(enemy))
-            //    {
-            //        continue;
-            //    }
-
-            //    // --- FETCH ENEMY COMPONENTS ---
-            //    auto& enemyTransform = entityManager->GetComponent<Transform>(enemy);
-            //    auto& enemyHealth = entityManager->GetComponent<Health>(enemy);
-            //    auto& enemyCollider = entityManager->GetComponent<BoxCollider>(enemy);
-
-            //    // Create collision shape for enemy
-            //         Collider enemyShape = Collider::create_rect(
-            //             enemyCollider.size.x,
-            //             enemyCollider.size.y,
-            //             enemyTransform.position
-            //         );
-
-            //    // COLLISION CHECK AND EVENT HANDLING
-            //    if (check_collision(projShape, enemyShape))
-            //    {
-            //        // 1. DEAL DAMAGE and QUEUE EnemyDamagedMessage
-            //        const int damageDealt = 10;
-            //        enemyHealth.TakeDamage(damageDealt);
-
-            //        if (eventSystem) {
-            //            eventSystem->QueueMessage(new EnemyDamagedMessage(
-            //                enemy, projectile, damageDealt, enemyHealth.currentHealth, enemyTransform.position));
-            //        }
-
-            //        // 2. CHECK FOR DEATH
-            //        if (enemyHealth.isDead)
-            //        {
-            //            if (eventSystem) {
-            //                eventSystem->QueueMessage(new EnemyDeathMessage(
-            //                    enemy, projectile, enemyTransform.position));
-            //            }
-
-            //            entitiesToDestroy.push_back(enemy);
-            //        }
-
-            //        // Mark projectile for deferred destruction
-            //        entitiesToDestroy.push_back(projectile);
-            //        break; // Projectile is consumed after one hit
-            //    }
-            //}
-
             // Query candidate enemies near this projectile.
             
 			enemyCandidates.clear();
@@ -308,7 +267,9 @@ namespace Framework
 
                 if (check_collision(projShape, enemyShape))
                 {
-                    const int damageDealt = 10;
+                    // Use configurable damage from the projectile component
+                    auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
+                    const int damageDealt = projMovement.damage;
                     enemyHealth.TakeDamage(damageDealt);
 
                     if (eventSystem) {
@@ -325,8 +286,13 @@ namespace Framework
                         entitiesToDestroy.push_back(enemy);
                     }
 
-                    entitiesToDestroy.push_back(projectile);
-                    break;
+                    // Pierce: projectile continues through enemies
+                    // Non-pierce: projectile destroyed on first hit
+                    if (!projMovement.pierce) {
+                        entitiesToDestroy.push_back(projectile);
+                        break;
+                    }
+                    // If piercing, continue checking next enemies (don't break)
                 }
             }
 
@@ -338,6 +304,8 @@ namespace Framework
             // Check for a core component before destroying
             if (entityManager->HasComponent<Transform>(entity))
             {
+                // Clear tile occupancy before destroying so the tile becomes walkable
+                SpatialPartitioningRemove(entity);
                 entityManager->DestroyEntity(entity);
             }
         }

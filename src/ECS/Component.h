@@ -61,6 +61,8 @@ namespace Framework
         float moveSpeed = 100.0f;
         Vector2D direction;
         bool blocked = false;
+        int damage = 10;       // Configurable damage dealt on hit
+        bool pierce = false;   // If true, passes through enemies instead of stopping
     };
 
     enum class AnimGroup {
@@ -175,9 +177,8 @@ namespace Framework
         void* fmodChannel = nullptr;
     };
 
-    struct TagComponent {
+    struct TagComponent : public Component<TagComponent> {
         std::string tag;           // e.g., "Player", "Enemy", "Collectible"
-        std::vector<std::string> groups;  // Multiple groups: {"Damageable", "Physics"}
 
         TagComponent() = default;
         TagComponent(const std::string& t) : tag(t) {}
