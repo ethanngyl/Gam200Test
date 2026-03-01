@@ -1289,13 +1289,15 @@ end
 -- Helper: consume attack AP and trigger UI animation
 local function consumeAttackAPAndAnimate(cost)
     ConsumeEntityAttackAP(entityID, cost)
-    if UIManager and UIManager.GetComponent then
-        local comp = UIManager.GetComponent("attackAP")
-        if comp and comp.ConsumeOneAP then
-            pcall(function() comp:ConsumeOneAP() end)
+    for i = 1, cost do
+        if UIManager and UIManager.GetComponent then
+            local comp = UIManager.GetComponent("attackAP")
+            if comp and comp.ConsumeOneAP then
+                pcall(function() comp:ConsumeOneAP() end)
+            end
+        else
+            pcall(function() TriggerAttackAPAnimation() end)
         end
-    else
-        pcall(function() TriggerAttackAPAnimation() end)
     end
 end
 
