@@ -383,6 +383,19 @@ function OnUpdate(dt)
 
     if hasActedThisTurn then return end
 
+    -- Check if boss is stunned
+    if HasStatusEffect and HasStatusEffect(entityID, "stun") then
+        print("[Boss " .. entityID .. "] STUNNED - skipping turn")
+        DecrementStatusEffects(entityID)
+        FinishBossAction()
+        return
+    end
+
+    -- Decrement status effects at turn start
+    if DecrementStatusEffects then
+        DecrementStatusEffects(entityID)
+    end
+
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
         if moveTimer < 0 then moveTimer = 0 end
@@ -423,7 +436,7 @@ function OnUpdate(dt)
         pendingSkillActive = false
         for _, t in ipairs(pendingSkillTargets) do
             print("[Boss " .. entityID .. "] Skill " .. pendingSkillID .. " hits Entity " .. t.entityID .. " for " .. t.damage)
-            DamageEntity(t.entityID, t.damage)
+            DamageEntity(t.entityID, t.damage, entityID)
             local px, py = GetEntityGridPosition(t.entityID)
             if px then
                 PulseTile(px, py, 0.3, 1.0, 0.0, 0.0)

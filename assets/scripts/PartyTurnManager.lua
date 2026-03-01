@@ -356,6 +356,11 @@ function NextCharacterTurn()
     -- Notify C++ about active character change
     SetActiveCharacter(newActiveEntity)
 
+    -- Decrement status effects at turn start (guard/parry durations, etc.)
+    if DecrementStatusEffects then
+        DecrementStatusEffects(newActiveEntity)
+    end
+
     -- Refill AP for the new active character
     RefillEntityAP(newActiveEntity)
     RefillEntityAttackAP(newActiveEntity)
