@@ -3063,6 +3063,13 @@ namespace Framework {
         if (em->HasComponent<StatusEffects>(entity)) {
             auto& effects = em->GetComponent<StatusEffects>(entity);
 
+            // 0. Immune: block all damage, do NOT consume the effect
+            if (effects.HasEffect("immune")) {
+                LOG_INFO("StatusEffect", "Entity %u is IMMUNE - blocked %d damage!", entity.GetID(), amount);
+                lua_pushboolean(L, 1);
+                return 1;
+            }
+
             // 1. Guard: absorb all damage, consume the effect
             if (effects.HasEffect("guard")) {
                 LOG_INFO("StatusEffect", "Entity %u GUARD blocked %d damage!", entity.GetID(), amount);
@@ -3770,6 +3777,23 @@ namespace Framework {
 
             lua_pushstring(L, "arenaWorldY");
             lua_pushnumber(L, arenaWorldY);
+            lua_settable(L, -3);
+
+            // Arena floor boundaries (grid coordinates)
+            lua_pushstring(L, "arenaMinX");
+            lua_pushnumber(L, map.arenaMin.x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "arenaMinY");
+            lua_pushnumber(L, map.arenaMin.y);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "arenaMaxX");
+            lua_pushnumber(L, map.arenaMax.x);
+            lua_settable(L, -3);
+
+            lua_pushstring(L, "arenaMaxY");
+            lua_pushnumber(L, map.arenaMax.y);
             lua_settable(L, -3);
 
             std::cout << "[Lua_LoadProceduralMap] Arena center: grid("

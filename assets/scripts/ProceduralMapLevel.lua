@@ -406,6 +406,16 @@ function SpawnProceduralBoss(mapData)
     -- Set target (C++ side)
     SetEnemyTarget(bossID, playerID)
 
+    -- Store arena boundaries globally so BossScript can check player positions
+    _G.ArenaBounds = {
+        minX = mapData.arenaMinX or (mapData.arenaX - 3),
+        minY = mapData.arenaMinY or (mapData.arenaY - 3),
+        maxX = mapData.arenaMaxX or (mapData.arenaX + 4),
+        maxY = mapData.arenaMaxY or (mapData.arenaY + 4),
+    }
+    Log("Arena bounds set: (" .. _G.ArenaBounds.minX .. "," .. _G.ArenaBounds.minY
+        .. ") to (" .. _G.ArenaBounds.maxX .. "," .. _G.ArenaBounds.maxY .. ")")
+
     Log("Boss " .. bossID .. " BossScript attached + target set to " .. tostring(playerID))
     Log("========================================")
     return true
