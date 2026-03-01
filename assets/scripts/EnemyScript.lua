@@ -69,7 +69,7 @@ local targetPlayerID = 0        -- Player to chase/attack
 local targetMode = "closest"    -- "closest" | "lowestHP" | "highestHP"
 
 -- MP (Move Points) - separate from AP, used exclusively for movement
-local maxMP = 5             -- Max move points per turn (configurable)
+local maxMP = 3             -- Max move points per turn (configurable)
 local movesRemaining = 0    -- Remaining MP this turn (reset each turn)
 
 -- AI parameters (configurable per enemy type)
@@ -82,9 +82,9 @@ local config = {
     -- Combat (Ranged)
     rangedAttackEnabled = true, -- Set to false to disable ranged attacks
     rangedAttackMinRange = 2,   -- Minimum range for ranged attack (must be > melee range)
-    rangedAttackMaxRange = 999, -- Maximum range for ranged attack (999 = effectively unlimited)
+    rangedAttackMaxRange = 3, -- Maximum range for ranged attack (999 = effectively unlimited)
     rangedAttackDamage = 2,     -- Damage dealt by ranged attack
-    rangedAttackAPCost = 1,     -- AP cost per ranged attack
+    rangedAttackAPCost = 3,     -- AP cost per ranged attack (剑气)
     rangedProjectileSpeed = 3.0,-- Projectile speed
     rangedProjectileSprite = "assets/new assets/bullet.png",  -- Projectile sprite
 

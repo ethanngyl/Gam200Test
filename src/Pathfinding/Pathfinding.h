@@ -81,8 +81,8 @@ namespace Framework {
             , moveDelay(1.2f)  // Delay between each tile move (seconds)
             , targetEntity(INVALID_ENTITY)
             , hasReachedTarget(false)
-            , movePoints(5)
-            , maxMovePoints(5)
+            , movePoints(3)
+            , maxMovePoints(3)
             , blockMovement(false)
         {
         }

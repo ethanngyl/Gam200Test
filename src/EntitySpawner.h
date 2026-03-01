@@ -466,7 +466,7 @@ namespace Framework {
             entityManager->AddComponent<EnemyAI>(enemy);
 
             // *** Add AP component for turn-based combat ***
-            entityManager->AddComponent<AP>(enemy, 5);  // 5 AP by default
+            entityManager->AddComponent<AP>(enemy, 3);  // 3 AP per turn
 
             //entityManager->AddComponent<BoxCollider>(enemy);
             //auto& collider = entityManager->GetComponent<BoxCollider>(enemy);

@@ -337,14 +337,14 @@ function SetupProceduralEnemies(mapData)
 
     local spawnedEnemies = {}
 
-    -- Enemy types (AP=5 and MP=5 for all, per-type differences: targetMode, attackDamage, maxHP, tint)
+    -- Enemy types (AP=3 and MP=3 for all, per-type differences: targetMode, attackDamage, maxHP, tint)
     local enemyTypeConfig = {
         -- 1号: targets lowest HP player, high attack, low HP, red
-        [1] = { targetMode = "lowestHP",  attackDamage = 3, maxHP = 2, maxMP = 5 },
+        [1] = { targetMode = "lowestHP",  attackDamage = 3, maxHP = 2, maxMP = 3 },
         -- 2号: targets highest HP player, low attack, high HP
-        [2] = { targetMode = "highestHP", attackDamage = 1, maxHP = 8, maxMP = 5 },
+        [2] = { targetMode = "highestHP", attackDamage = 1, maxHP = 8, maxMP = 3 },
         -- 3号: targets closest player, standard stats, default color
-        [3] = { targetMode = "closest",   attackDamage = 1, maxHP = 5, maxMP = 5 },
+        [3] = { targetMode = "closest",   attackDamage = 1, maxHP = 5, maxMP = 3 },
     }
 
     for i, enemy in ipairs(mapData.enemies) do
