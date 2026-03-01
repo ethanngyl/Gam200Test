@@ -42,6 +42,22 @@ EnemyActionTimer = 0.0      -- Current action timer
 function InitializeEnemyTurn()
     print("[EnemyTurnManager] Initializing enemy turn")
 
+    -- CRITICAL: Check if all players are dead FIRST
+    local players = GetAllPlayers()
+    if not players or #players == 0 then
+        print("[EnemyTurnManager] ============================================")
+        print("[EnemyTurnManager] GAME OVER: No players found - all dead!")
+        print("[EnemyTurnManager] ============================================")
+        EnemyTurnActive = false
+        
+        -- Trigger game over
+        if SetNextGameState then
+            print("[EnemyTurnManager] Switching to LEVEL_END...")
+            SetNextGameState("LEVEL_END")
+        end
+        return false
+    end
+
     local enemies = GetAllEnemies()
     if not enemies or #enemies == 0 then
         print("[EnemyTurnManager] No enemies found!")
@@ -174,6 +190,21 @@ function EndAllEnemyTurns()
 
     EnemyTurnActive = false
     ActiveEnemyIndex = 0
+
+    -- CRITICAL: Check if all players are dead before switching back to player turn
+    local players = GetAllPlayers()
+    if not players or #players == 0 then
+        print("[EnemyTurnManager] ============================================")
+        print("[EnemyTurnManager] GAME OVER: No players remaining!")
+        print("[EnemyTurnManager] ============================================")
+        
+        -- Trigger game over instead of switching to player turn
+        if SetNextGameState then
+            print("[EnemyTurnManager] Switching to LEVEL_END...")
+            SetNextGameState("LEVEL_END")
+        end
+        return
+    end
 
     -- Pan camera back to active player
     local activePlayerID = GetActiveCharacter()

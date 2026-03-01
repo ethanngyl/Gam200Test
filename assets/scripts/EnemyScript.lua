@@ -354,14 +354,29 @@ function OnUpdate(dt)
         if closestPlayer and closestPlayer > 0 then
             targetPlayerID = closestPlayer
         else
-            print("[Enemy " .. entityID .. "] No player found!")
+            print("[Enemy " .. entityID .. "] No player found - all players may be dead!")
             hasActedThisTurn = true  -- Mark as acted even if no target
+            
+            -- Check if this is a game over situation (no alive players)
+            -- Use global flag to prevent multiple enemies from triggering game over
+            if not _G.GameOverTriggered then
+                _G.GameOverTriggered = true
+                print("[Enemy " .. entityID .. "] GAME OVER - All players defeated! Switching to End Level...")
+                
+                -- Use SetNextGameState to switch to end level
+                if SetNextGameState then
+                    SetNextGameState("LEVEL_END")
+                else
+                    print("[Enemy " .. entityID .. "] ERROR: SetNextGameState not available!")
+                end
+            end
+            
             MarkEnemyActionComplete()  -- Advance to next enemy
             return  -- No player to target
         end
     end
 
-        -- If an attack is pending, play animation first, then apply damage when timer ends
+    -- If an attack is pending, play animation first, then apply damage when timer ends
     if pendingAttack then
         pendingAttackTimer = pendingAttackTimer - dt
         if pendingAttackTimer > 0 then
@@ -797,7 +812,6 @@ function ExecutePatrol()
 
     FinishEnemyAction()
 end
-
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================

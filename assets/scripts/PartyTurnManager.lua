@@ -334,9 +334,35 @@ function NextCharacterTurn()
 
     -- Check if all characters have acted (or are dead)
     if ActiveCharacterIndex > #PartyMembers then
+        -- Check if ALL party members are dead (not just finished acting)
+        local allDead = true
+        for i = 1, #PartyMembers do
+            local hp, _ = GetEntityHP(PartyMembers[i].entityID)
+            if hp and hp > 0 then
+                allDead = false
+                break
+            end
+        end
+        
+        if allDead then
+            print("[PartyTurnManager] ============================================")
+            print("[PartyTurnManager] GAME OVER: All party members are DEAD!")
+            print("[PartyTurnManager] ============================================")
+            PartyTurnComplete = true
+            
+            -- Trigger game over - switch to end level
+            if SetNextGameState then
+                print("[PartyTurnManager] Switching to LEVEL_END...")
+                SetNextGameState("LEVEL_END")
+            else
+                print("[PartyTurnManager] ERROR: SetNextGameState not available!")
+            end
+            return
+        end
+        
         PartyTurnComplete = true
         print("[PartyTurnManager] ======================================")
-        print("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED (or are dead)!")
+        print("[PartyTurnManager] ALL PARTY MEMBERS HAVE ACTED!")
         print("[PartyTurnManager] PartyTurnComplete = true")
         print("[PartyTurnManager] Waiting for EndPartyTurn() to switch to enemy phase")
         print("[PartyTurnManager] ======================================")
@@ -542,8 +568,18 @@ function ResetPartyTurn()
 
     -- Check if all characters are dead
     if ActiveCharacterIndex > #PartyMembers then
-        Log("[PartyTurnManager] ERROR: All party members are dead in ResetPartyTurn!")
+        print("[PartyTurnManager] ============================================")
+        print("[PartyTurnManager] GAME OVER: All party members are DEAD!")
+        print("[PartyTurnManager] ============================================")
         PartyTurnComplete = true
+        
+        -- Trigger game over - switch to end level
+        if SetNextGameState then
+            print("[PartyTurnManager] Switching to LEVEL_END...")
+            SetNextGameState("LEVEL_END")
+        else
+            print("[PartyTurnManager] ERROR: SetNextGameState not available!")
+        end
         return
     end
 
