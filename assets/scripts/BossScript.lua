@@ -131,6 +131,14 @@ local chargingActive = false     -- Currently in charge state
 local skipNextTurn = false       -- Next turn is the skip turn
 local executeReady = false       -- Ready to teleport and execute
 
+-- Health bar state
+local healthBarBG = nil
+local healthBarFG = nil
+local healthBarWidth = 0.7       -- Wider bar for boss
+local healthBarHeight = 0.08     -- Slightly taller
+local healthBarOffsetY = 0.4
+local healthBarLayer = 50
+
 -- ============================================================================
 -- ANIMATION (reuses enemy knight sheets)
 -- ============================================================================
@@ -320,9 +328,33 @@ function OnInit()
     end
 
     targetPlayerID = FindClosestPlayer() or 0
+
+    -- Spawn health bar sprites above boss
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if wx and wy then
+        local barY = wy + healthBarOffsetY
+        healthBarBG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer)
+        if healthBarBG and healthBarBG > 0 then
+            SetSpriteColor(healthBarBG, 0.15, 0.15, 0.15, 0.85)
+        end
+        healthBarFG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer + 1)
+        if healthBarFG and healthBarFG > 0 then
+            SetSpriteColor(healthBarFG, 0.85, 0.0, 0.0, 1.0)  -- red for boss
+        end
+    end
 end
 
 function OnDestroy()
+    -- Clean up health bar sprites
+    if healthBarBG and healthBarBG > 0 then
+        DestroyEntity(healthBarBG)
+        healthBarBG = nil
+    end
+    if healthBarFG and healthBarFG > 0 then
+        DestroyEntity(healthBarFG)
+        healthBarFG = nil
+    end
+
     local bx, by = GetEntityGridPosition(entityID)
     if bx and by and SetTileOccupant then
         SetTileOccupant(bx, by, 0)
@@ -334,7 +366,43 @@ end
 -- MAIN UPDATE
 -- ============================================================================
 
+-- Update boss health bar position and fill
+local function UpdateHealthBar()
+    if not healthBarBG or not healthBarFG then return end
+    if healthBarBG <= 0 or healthBarFG <= 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if not wx or not wy then return end
+
+    local barY = wy + healthBarOffsetY
+    SetSpritePosition(healthBarBG, wx, barY)
+
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or not maxHP or maxHP <= 0 then return end
+
+    local ratio = currentHP / maxHP
+    if ratio < 0 then ratio = 0 end
+    if ratio > 1 then ratio = 1 end
+
+    local fgWidth = healthBarWidth * ratio
+    local fgX = wx - (healthBarWidth - fgWidth) * 0.5
+    SetSpritePosition(healthBarFG, fgX, barY)
+    SetScale(healthBarFG, fgWidth, healthBarHeight)
+
+    -- Boss bar: always red, but brighter when lower HP
+    local r, g, b = 0.85, 0.0, 0.0
+    if ratio <= 0.25 then
+        r, g, b = 1.0, 0.0, 0.0
+    elseif ratio <= 0.5 then
+        r, g, b = 0.9, 0.15, 0.0
+    end
+    SetSpriteColor(healthBarFG, r, g, b, 1.0)
+end
+
 function OnUpdate(dt)
+    -- Update health bar every frame
+    UpdateHealthBar()
+
     local currentTurn = GetCurrentTurn()
 
     -- Reset state when leaving enemy turn
