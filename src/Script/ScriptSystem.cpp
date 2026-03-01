@@ -523,6 +523,9 @@ namespace Framework {
         lua_register(L, "GetEntityGridPosition", LevelLoader::Lua_GetEntityGridPosition);
         lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
+        lua_register(L, "ConsumeEnemyMP", LevelLoader::Lua_ConsumeEnemyMP);
+        lua_register(L, "GetEntityMP", LevelLoader::Lua_GetEntityMP);
+        lua_register(L, "SetEnemyBlockMovement", LevelLoader::Lua_SetEnemyBlockMovement);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", LevelLoader::Lua_FindPathToTarget);
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
@@ -574,6 +577,7 @@ namespace Framework {
 
         // Game API - Projectile Skills
         lua_register(L, "SpawnSkillProjectile", LevelLoader::Lua_SpawnSkillProjectile);
+        lua_register(L, "SpawnEnemyProjectile", LevelLoader::Lua_SpawnEnemyProjectile);
     }
 
     /**

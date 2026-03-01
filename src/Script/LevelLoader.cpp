@@ -586,6 +586,9 @@ namespace Framework {
         lua_register(L, "GetEntityWorldPosition", Lua_GetEntityWorldPosition);
         lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
+        lua_register(L, "ConsumeEnemyMP", Lua_ConsumeEnemyMP);
+        lua_register(L, "GetEntityMP", Lua_GetEntityMP);
+        lua_register(L, "SetEnemyBlockMovement", Lua_SetEnemyBlockMovement);
         lua_register(L, "DamageEntity", Lua_DamageEntity);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -130,6 +130,9 @@ namespace Framework
         //if statement to check if entity has enemy component, checks if projectile collides with enemy, sends a msg to enemy that its taking dmg
         // once health gone, destroy enemy entity plus projectile
         CheckProjectileEnemyCollisions();
+        
+        // Check enemy projectiles hitting players
+        CheckProjectilePlayerCollisions();
     }
 
     /**
@@ -303,6 +306,151 @@ namespace Framework
             if (entityManager->HasComponent<Transform>(entity))
             {
                 // Clear tile occupancy before destroying so the tile becomes walkable
+                SpatialPartitioningRemove(entity);
+                entityManager->DestroyEntity(entity);
+            }
+        }
+    }
+
+    void ProjectileMovementSystem::CheckProjectilePlayerCollisions() {
+        if (!entityManager || !eventSystem) return;
+
+        // 1. MANUAL FILTERING - Enemy projectiles and Players
+        std::vector<Framework::Entity> enemyProjectiles;
+        std::vector<Framework::Entity> activePlayers;
+
+        for (Framework::Entity entity : entityManager->GetAllEntities())
+        {
+            // Filter for Enemy Projectiles (must have isEnemyProjectile = true)
+            if (entityManager->HasComponent<ProjectileMovement>(entity) &&
+                entityManager->HasComponent<Transform>(entity) &&
+                entityManager->HasComponent<CircleCollider>(entity))
+            {
+                auto& movement = entityManager->GetComponent<ProjectileMovement>(entity);
+                if (movement.isEnemyProjectile) {
+                    enemyProjectiles.push_back(entity);
+                }
+            }
+
+            // Filter for Players (has AP + CircleCollider + Health, but NOT EnemyAI)
+            if (entityManager->HasComponent<AP>(entity) &&
+                entityManager->HasComponent<CircleCollider>(entity) &&
+                entityManager->HasComponent<Health>(entity) &&
+                entityManager->HasComponent<Transform>(entity) &&
+                !entityManager->HasComponent<EnemyAI>(entity))
+            {
+                activePlayers.push_back(entity);
+            }
+        }
+
+        // Skip if no enemy projectiles or no players
+        if (enemyProjectiles.empty() || activePlayers.empty()) return;
+
+        // --- BROADPHASE (Quadtree) ---
+        AABB worldBounds;
+        {
+            const Grid& g = GetGrid();
+            worldBounds.min = g.worldbound_min;
+            worldBounds.max = g.worldbound_max;
+
+            if (worldBounds.min.x == 0.0f && worldBounds.min.y == 0.0f &&
+                worldBounds.max.x == 0.0f && worldBounds.max.y == 0.0f)
+            {
+                worldBounds.min = Vector2D(-100.0f, -100.0f);
+                worldBounds.max = Vector2D(100.0f, 100.0f);
+            }
+        }
+
+        Quadtree playerQt(worldBounds, 6, 8);
+
+        for (Framework::Entity player : activePlayers)
+        {
+            if (!entityManager->HasComponent<Transform>(player) ||
+                !entityManager->HasComponent<CircleCollider>(player))
+            {
+                continue;
+            }
+
+            auto& playerTransform = entityManager->GetComponent<Transform>(player);
+            auto& playerCollider = entityManager->GetComponent<CircleCollider>(player);
+
+            const AABB playerAABB = MakeAABBFromCircle(playerTransform.position, playerCollider.radius);
+            playerQt.Insert(player, playerAABB);
+        }
+
+        std::vector<Framework::Entity> playerCandidates;
+        playerCandidates.reserve(8);
+
+        // 2. COLLISION AND DEFERRED DESTRUCTION LOGIC
+        std::vector<Framework::Entity> entitiesToDestroy;
+
+        for (Framework::Entity projectile : enemyProjectiles)
+        {
+            if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), projectile) != entitiesToDestroy.end())
+                continue;
+
+            if (!entityManager->HasComponent<Transform>(projectile) ||
+                !entityManager->HasComponent<CircleCollider>(projectile) ||
+                !entityManager->HasComponent<ProjectileMovement>(projectile))
+            {
+                continue;
+            }
+
+            auto& projTransform = entityManager->GetComponent<Transform>(projectile);
+            auto& projCollider = entityManager->GetComponent<CircleCollider>(projectile);
+
+            Collider projShape = Collider::create_circle(projCollider.radius, projTransform.position);
+
+            playerCandidates.clear();
+            const AABB projAABB = MakeAABBFromCircle(projTransform.position, projCollider.radius);
+            playerQt.Query(projAABB, playerCandidates);
+
+            for (Framework::Entity player : playerCandidates)
+            {
+                if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), player) != entitiesToDestroy.end())
+                    continue;
+
+                if (!entityManager->HasComponent<Transform>(player) ||
+                    !entityManager->HasComponent<Health>(player) ||
+                    !entityManager->HasComponent<CircleCollider>(player))
+                {
+                    continue;
+                }
+
+                auto& playerTransform = entityManager->GetComponent<Transform>(player);
+                auto& playerHealth = entityManager->GetComponent<Health>(player);
+                auto& playerCollider = entityManager->GetComponent<CircleCollider>(player);
+
+                Collider playerShape = Collider::create_circle(playerCollider.radius, playerTransform.position);
+
+                if (check_collision(projShape, playerShape))
+                {
+                    auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
+                    const int damageDealt = projMovement.damage;
+                    playerHealth.TakeDamage(damageDealt);
+
+                    std::cout << "[ProjectileSystem] Enemy projectile hit Player " << player.GetID() 
+                              << " for " << damageDealt << " damage! HP: " << playerHealth.currentHealth << "\n";
+
+                    if (playerHealth.isDead)
+                    {
+                        std::cout << "[ProjectileSystem] Player " << player.GetID() << " DIED!\n";
+                        entitiesToDestroy.push_back(player);
+                    }
+
+                    if (!projMovement.pierce) {
+                        entitiesToDestroy.push_back(projectile);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. EXECUTE DEFERRED DESTRUCTION
+        for (Framework::Entity entity : entitiesToDestroy)
+        {
+            if (entityManager->HasComponent<Transform>(entity))
+            {
                 SpatialPartitioningRemove(entity);
                 entityManager->DestroyEntity(entity);
             }

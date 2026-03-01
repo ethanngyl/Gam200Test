@@ -564,7 +564,13 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(projectile);
             collider.radius = 0.05f;
 
-            std::cout << "[EntitySpawner] Spawned projectile on layer " << RenderLayers::Projectiles << "\n";
+            std::cout << "[EntitySpawner] Spawned projectile ID=" << projectile.GetID() 
+                      << " at (" << position.x << "," << position.y << ")"
+                      << " dir=(" << direction.x << "," << direction.y << ")"
+                      << " speed=" << speed
+                      << " layer=" << RenderLayers::Projectiles 
+                      << " tint=(" << tint.r << "," << tint.g << "," << tint.b << "," << tint.a << ")"
+                      << " sprite=" << (spritePath.empty() ? "SOLID_COLOR" : spritePath) << "\n";
             return projectile;
         }
 

@@ -272,6 +272,9 @@ namespace Framework {
         static int Lua_GetEntityWorldPosition(lua_State* L);  // Get world coords from Transform
         static int Lua_MoveEntityToTile(lua_State* L);
         static int Lua_ConsumeEnemyAP(lua_State* L);
+        static int Lua_ConsumeEnemyMP(lua_State* L);
+        static int Lua_GetEntityMP(lua_State* L);
+        static int Lua_SetEnemyBlockMovement(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
         
@@ -321,6 +324,10 @@ namespace Framework {
         // Projectile Skill API
         // SpawnSkillProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
         static int Lua_SpawnSkillProjectile(lua_State* L);
+        
+        // Enemy Projectile API (damages players instead of enemies)
+        // SpawnEnemyProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
+        static int Lua_SpawnEnemyProjectile(lua_State* L);
 
 
         // Helper to get LevelLoader instance from Lua state

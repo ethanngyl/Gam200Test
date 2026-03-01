@@ -84,5 +84,6 @@ namespace Framework
         EventSystem* eventSystem;
 
         void CheckProjectileEnemyCollisions();
+        void CheckProjectilePlayerCollisions();
     };
 }

@@ -71,13 +71,19 @@ namespace Framework {
         float moveDelay;                      // Delay between moves (seconds)
         Entity targetEntity;                  // Who to chase (usually player)
         bool hasReachedTarget;                // Flag to prevent spam logs
+        int movePoints;                       // MP for movement (consumed per tile)
+        int maxMovePoints;                    // Max MP per turn
+        bool blockMovement;                   // Lua sets true during ranged attack; C++ skips movement
 
         EnemyAI()
             : pathIndex(0)
             , moveTimer(0.0f)
-            , moveDelay(0.7f)
+            , moveDelay(1.2f)  // Delay between each tile move (seconds)
             , targetEntity(INVALID_ENTITY)
             , hasReachedTarget(false)
+            , movePoints(5)
+            , maxMovePoints(5)
+            , blockMovement(false)
         {
         }
     };

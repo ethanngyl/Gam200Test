@@ -107,8 +107,12 @@ namespace Framework {
                     // Skip dead enemies
                     if (hp.isDead || hp.currentHealth <= 0) continue;
 
-                    // Regenerate AP
+                    // Regenerate AP (for attacks) and MP (for movement)
                     stats.actionPoints = stats.maxActionPoints;
+                    if (entityManager->HasComponent<EnemyAI>(entity)) {
+                        auto& enemyAI = entityManager->GetComponent<EnemyAI>(entity);
+                        enemyAI.movePoints = enemyAI.maxMovePoints;
+                    }
                 }
             }
 
@@ -178,8 +182,8 @@ namespace Framework {
             return;  // Wait one frame before acting
         }
 
-        // Check if this enemy has AP left
-        if (stats.actionPoints <= 0) {
+        // Advance when both AP (attacks) and MP (movement) are exhausted
+        if (stats.actionPoints <= 0 && ai.movePoints <= 0) {
             currentEnemyIndex++;  // Move to next enemy
             return;
         }
@@ -187,6 +191,11 @@ namespace Framework {
         // ========================================================================
         // UPDATE CURRENT ENEMY
         // ========================================================================
+
+        // Lua sets blockMovement during ranged attack - skip movement, don't advance
+        if (ai.blockMovement) {
+            return;
+        }
 
         // Update movement timer
         ai.moveTimer -= dt;
@@ -346,13 +355,19 @@ namespace Framework {
         }
 
         // ========================================================================
-        // PATHFINDING: Calculate path to target
+        // PATHFINDING: Calculate path to target (need MP to move)
         // ========================================================================
+        if (ai.movePoints <= 0) {
+            // No MP left, can't move - advance to next enemy
+            currentEnemyIndex++;
+            return;
+        }
+
         ai.currentPath = FindPath(enemyTile, targetTile, grid);
 
         if (ai.currentPath.empty()) {
             LOG_WARN("EnemyAI", "Enemy %u: No path found!", currentEnemy.GetID());
-            stats.actionPoints = 0;
+            ai.movePoints = 0;
             currentEnemyIndex++;
             return;
         }
@@ -382,7 +397,7 @@ namespace Framework {
                 LOG_WARN("EnemyAI", "Enemy %u: Next tile (%d,%d) blocked!",
                     currentEnemy.GetID(), nextTile.x, nextTile.y);
                 ai.currentPath.clear();
-                stats.actionPoints = 0;
+                ai.movePoints = 0;
                 currentEnemyIndex++;
                 return;
             }
@@ -401,21 +416,19 @@ namespace Framework {
                 audioSystem->PlaySound("walk1", false);
             }
 
-            // Update state
+            // Update state - consume MP for movement (AP is for attacks only)
             ai.moveTimer = ai.moveDelay;
             ai.pathIndex++;
-            stats.actionPoints--;
+            ai.movePoints--;
 
-            // Enemy moved
-
-            // If out of AP, move to next enemy
-            if (stats.actionPoints <= 0) {
+            // Enemy moved - advance if no MP left
+            if (ai.movePoints <= 0) {
                 currentEnemyIndex++;
             }
         }
         else {
             // Path exhausted
-            stats.actionPoints = 0;
+            ai.movePoints = 0;
             currentEnemyIndex++;
         }
     }
@@ -711,7 +724,7 @@ namespace Framework {
         entityManager->AddComponent<EnemyAI>(enemy);
         auto& ai = entityManager->GetComponent<EnemyAI>(enemy);
         ai.targetEntity = playerEntity;  // Chase the player
-        ai.moveDelay = 0.7f;  // 0.7 seconds between moves
+        ai.moveDelay = 1.2f;  // 1.2 seconds between moves
 
         // Mark the tile as occupied
         SetOccupant(furthestTile, enemy);

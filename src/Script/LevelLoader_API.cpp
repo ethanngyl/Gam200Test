@@ -3145,6 +3145,97 @@ namespace Framework {
     }
 
     /**
+     * @brief Get entity's MP (Move Points) - for enemies with EnemyAI
+     * Usage: local currentMP, maxMP = GetEntityMP(entityID)
+     */
+    int LevelLoader::Lua_GetEntityMP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<EnemyAI>(entity)) {
+            lua_pushinteger(L, 0);
+            lua_pushinteger(L, 0);
+            return 2;
+        }
+
+        auto& ai = em->GetComponent<EnemyAI>(entity);
+        lua_pushinteger(L, ai.movePoints);
+        lua_pushinteger(L, ai.maxMovePoints);
+        return 2;
+    }
+
+    /**
+     * @brief Consume entity's MP (Move Points) - for enemy movement
+     * @param entityID The entity ID
+     * @param amount Amount of MP to consume
+     *
+     * Usage: ConsumeEnemyMP(enemyID, 1)
+     */
+    int LevelLoader::Lua_ConsumeEnemyMP(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int amount = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<EnemyAI>(entity)) {
+            return 0;
+        }
+
+        auto& ai = em->GetComponent<EnemyAI>(entity);
+        ai.movePoints -= amount;
+        if (ai.movePoints < 0) {
+            ai.movePoints = 0;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Set blockMovement flag - when true, C++ Pathfinding skips movement (e.g. during ranged attack)
+     * Usage: SetEnemyBlockMovement(entityID, true/false)
+     */
+    int LevelLoader::Lua_SetEnemyBlockMovement(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        bool block = lua_toboolean(L, 2) != 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+        if (!em->HasComponent<EnemyAI>(entity)) return 0;
+
+        em->GetComponent<EnemyAI>(entity).blockMovement = block;
+        return 0;
+    }
+
+    /**
      * @brief Deal damage to entity
      * @param entityID The entity ID
      * @param amount Damage amount
@@ -4922,6 +5013,95 @@ namespace Framework {
             movement.damage = damage;
             movement.pierce = pierce;
         }
+
+        lua_pushinteger(L, projectile.GetID());
+        return 1;
+    }
+
+    /**
+     * @brief Spawns an enemy projectile that damages players (not enemies)
+     * @param worldX, worldY   Starting world position
+     * @param dirX, dirY       Direction vector (will be normalized)
+     * @param speed            Movement speed (default 3.0)
+     * @param damage           Damage dealt on hit (default 1)
+     * @param pierce           Boolean: true = pass through players
+     * @param tintR/G/B/A      Optional tint color (default white)
+     * @param spritePath       Optional sprite path (default bullet.png)
+     * @param scaleX, scaleY   Optional scale (default 0.5, 0.5 - larger than player projectiles)
+     * @return entityID of the spawned projectile
+     *
+     * Usage from Lua:
+     *   local projID = SpawnEnemyProjectile(wx, wy, dx, dy, 3.0, 2, false)
+     *   local projID = SpawnEnemyProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,1,1,1, "assets/sword_energy.png", 0.5, 0.5)
+     */
+    int LevelLoader::Lua_SpawnEnemyProjectile(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+        float dirX   = static_cast<float>(luaL_checknumber(L, 3));
+        float dirY   = static_cast<float>(luaL_checknumber(L, 4));
+        float speed  = static_cast<float>(luaL_optnumber(L, 5, 3.0));
+        int   damage = static_cast<int>(luaL_optinteger(L, 6, 1));
+        bool  pierce = lua_toboolean(L, 7) != 0;
+
+        // Optional tint (args 8-11, default white)
+        float tintR = static_cast<float>(luaL_optnumber(L, 8, 1.0));
+        float tintG = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        float tintB = static_cast<float>(luaL_optnumber(L, 10, 1.0));
+        float tintA = static_cast<float>(luaL_optnumber(L, 11, 1.0));
+        glm::vec4 tint(tintR, tintG, tintB, tintA);
+
+        // Optional sprite path (arg 12, default = bullet.png)
+        const char* spriteArg = luaL_optstring(L, 12, nullptr);
+        std::string spritePath = spriteArg ? std::string(spriteArg)
+                                           : std::string("assets/new assets/bullet.png");
+
+        // Optional scale (args 13-14, default 0.25 - same size as enemy units)
+        float scaleX = static_cast<float>(luaL_optnumber(L, 13, 1));
+        float scaleY = static_cast<float>(luaL_optnumber(L, 14, 1));
+
+        // Normalize direction
+        float len = std::sqrt(dirX * dirX + dirY * dirY);
+        if (len > 0.0001f) {
+            dirX /= len;
+            dirY /= len;
+        }
+
+        CoreEngine* core = CORE;
+        if (!core) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        EntitySpawner* spawner = core->GetSpawner();
+        EntityManager* em = core->GetEntityManager();
+        if (!spawner || !em) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        // Spawn the projectile entity using the existing spawner
+        Vector2D position(worldX, worldY);
+        Vector2D direction(dirX, dirY);
+        Entity projectile = spawner->SpawnProjectile(position, direction, speed, spritePath, tint);
+
+        // Increase the projectile size (default SpawnProjectile uses 0.1x0.1 which is tiny)
+        if (em->HasComponent<Transform>(projectile)) {
+            auto& transform = em->GetComponent<Transform>(projectile);
+            transform.scale = Vector2D(scaleX, scaleY);
+        }
+
+        // Configure damage, pierce, and mark as enemy projectile
+        if (em->HasComponent<ProjectileMovement>(projectile)) {
+            auto& movement = em->GetComponent<ProjectileMovement>(projectile);
+            movement.damage = damage;
+            movement.pierce = pierce;
+            movement.isEnemyProjectile = true;  // This makes it damage players, not enemies
+        }
+
+        std::cout << "[LevelLoader] Spawned ENEMY projectile ID=" << projectile.GetID() 
+                  << " at (" << worldX << "," << worldY << ") dir=(" << dirX << "," << dirY << ")"
+                  << " damage=" << damage << " scale=(" << scaleX << "," << scaleY << ")"
+                  << " sprite=" << spritePath << "\n";
 
         lua_pushinteger(L, projectile.GetID());
         return 1;

@@ -56,6 +56,7 @@ local STATE = {
     IDLE = "idle",
     CHASING = "chasing",
     ATTACKING = "attacking",
+    RANGED_ATTACKING = "ranged_attacking",
     FLEEING = "fleeing",
     PATROLLING = "patrolling"
 }
@@ -73,10 +74,19 @@ local movesRemaining = 0    -- Remaining MP this turn (reset each turn)
 
 -- AI parameters (configurable per enemy type)
 local config = {
-    -- Combat
-    attackRange = 1,            -- How many tiles away enemy can attack
-    attackAPCost = 2,           -- AP cost per attack
-    attackDamage = 1,           -- Damage dealt per attack
+    -- Combat (Melee)
+    attackRange = 1,            -- How many tiles away enemy can attack (melee)
+    attackAPCost = 2,           -- AP cost per melee attack
+    attackDamage = 1,           -- Damage dealt per melee attack
+
+    -- Combat (Ranged)
+    rangedAttackEnabled = true, -- Set to false to disable ranged attacks
+    rangedAttackMinRange = 2,   -- Minimum range for ranged attack (must be > melee range)
+    rangedAttackMaxRange = 999, -- Maximum range for ranged attack (999 = effectively unlimited)
+    rangedAttackDamage = 2,     -- Damage dealt by ranged attack
+    rangedAttackAPCost = 1,     -- AP cost per ranged attack
+    rangedProjectileSpeed = 3.0,-- Projectile speed
+    rangedProjectileSprite = "assets/new assets/bullet.png",  -- Projectile sprite
 
     -- Behavior
     aggroRange = 8,             -- Tiles away to detect player (used by DEFENSIVE/PATROL behaviors; AGGRESSIVE ignores this)
@@ -85,7 +95,10 @@ local config = {
 
     -- Pathfinding
     maxPathLength = 10,         -- Maximum path length to consider
-    recalculatePathEveryNTurns = 3  -- Recalculate path periodically
+    recalculatePathEveryNTurns = 3,  -- Recalculate path periodically
+
+    -- Movement
+    moveDelay = 0.6             -- Delay between each tile move (seconds)
 }
 
 -- Internal state
@@ -101,7 +114,6 @@ local isMyTurnToAct = false     -- Track if it's currently this enemy's turn to 
 
 -- Movement timing (for visible, sequential moves)
 local moveTimer = 0.0           -- Timer for next move
-local moveDelay = 0.3           -- Delay between moves in seconds (0.3s = visible movement)
 local movesThisTurn = 0         -- Track how many moves made this turn
 
 -- ============================================================================
@@ -130,6 +142,20 @@ local pendingAttackDamage = 0
 local pendingAttackAPCost = 0
 local pendingAttackPlayerX = 0
 local pendingAttackPlayerY = 0
+
+-- Pending ranged attack (delayed damage, no projectile entity)
+local pendingRangedAttack = false
+local pendingRangedAttackTimer = 0.0
+local pendingRangedAttackTotalTime = 1.0
+local pendingRangedAttackTarget = 0
+local pendingRangedAttackDamage = 0
+local pendingRangedAttackPlayerX = 0
+local pendingRangedAttackPlayerY = 0
+local pendingRangedAttackEnemyX = 0
+local pendingRangedAttackEnemyY = 0
+local pendingRangedAttackPostHitDelay = 0.0  -- 1 sec wait after hit before enemy can move
+local pendingRangedAttackIdleKey = "idleFront"   -- 剑气期间保持待机动画
+local pendingRangedAttackIdleFlipX = false
 
 local function ApplySheet(animKey, flipX)
     if not SetSpriteAnimationSheet then
@@ -341,11 +367,63 @@ function OnUpdate(dt)
         return
     end
 
+    -- Pending ranged attack: wait for travel effect, then apply damage and continue AI
+    if pendingRangedAttack then
+        -- 挥剑动画约 0.55 秒（8帧*0.07），挥完后再切待机
+        if pendingRangedAttackTimer <= 0.45 then
+            ApplySheet(pendingRangedAttackIdleKey, pendingRangedAttackIdleFlipX)
+        end
+        pendingRangedAttackTimer = pendingRangedAttackTimer - dt
+        local progress = 1 - (pendingRangedAttackTimer / pendingRangedAttackTotalTime)
+        progress = math.max(0, math.min(1, progress))
+        local currX = math.floor(pendingRangedAttackEnemyX + (pendingRangedAttackPlayerX - pendingRangedAttackEnemyX) * progress + 0.5)
+        local currY = math.floor(pendingRangedAttackEnemyY + (pendingRangedAttackPlayerY - pendingRangedAttackEnemyY) * progress + 0.5)
+        PulseTile(currX, currY, 0.15, 0.3, 0.8, 1.0)  -- Cyan/blue 剑气
+
+        if pendingRangedAttackTimer > 0 then
+            return
+        end
+
+        pendingRangedAttack = false
+        print("[Enemy " .. entityID .. "] Ranged attack HIT Player " .. pendingRangedAttackTarget .. " for " .. pendingRangedAttackDamage .. " damage")
+        local success = DamageEntity(pendingRangedAttackTarget, pendingRangedAttackDamage)
+        if success then
+            PulseTile(pendingRangedAttackPlayerX, pendingRangedAttackPlayerY, 0.3, 1.0, 0.0, 0.0)
+            if PopupManager and PopupManager.ShowDamageNumber then
+                local worldX, worldY = GetEntityWorldPosition(pendingRangedAttackTarget)
+                if worldX then
+                    PopupManager.ShowDamageNumber(worldX, worldY + 0.2, pendingRangedAttackDamage)
+                end
+            end
+        end
+        -- 剑气击中后等待 1 秒，敌人才可进行下一步移动
+        pendingRangedAttackPostHitDelay = 1.0
+        return
+    end
+
+    -- 剑气击中后的 1 秒等待
+    if pendingRangedAttackPostHitDelay > 0 then
+        ApplySheet(pendingRangedAttackIdleKey, pendingRangedAttackIdleFlipX)  -- 保持待机动画
+        pendingRangedAttackPostHitDelay = pendingRangedAttackPostHitDelay - dt
+        if pendingRangedAttackPostHitDelay > 0 then
+            return
+        end
+        if SetEnemyBlockMovement then SetEnemyBlockMovement(entityID, false) end  -- 解除移动封锁
+        ProcessAITurn()
+        return
+    end
+
     -- First time acting - set up turn
     if not isMyTurnToAct then
         isMyTurnToAct = true
         movesThisTurn = 0
-        movesRemaining = maxMP   -- Refill MP at turn start
+        -- Sync MP from EnemyAI component (unified with C++ Pathfinding)
+        if GetEntityMP then
+            local mp, max = GetEntityMP(entityID)
+            movesRemaining = (mp and mp > 0) and mp or maxMP
+        else
+            movesRemaining = maxMP
+        end
         print("[Enemy " .. entityID .. "] ========== STARTING TURN ========== (AP=" .. tostring(select(1, GetEntityAP(entityID))) .. ", MP=" .. movesRemaining .. ")")
 
         -- CRITICAL: Find closest player dynamically each turn
@@ -452,7 +530,9 @@ function ProcessAITurn()
     local currentAP, maxAP = GetEntityAP(entityID)
 
     -- Finish if both AP (for attacks) and MP (for movement) are exhausted
-    if (not currentAP or currentAP < config.attackAPCost) and movesRemaining <= 0 then
+    -- Check minimum AP needed for any attack type
+    local minAPNeeded = math.min(config.attackAPCost, config.rangedAttackAPCost or config.attackAPCost)
+    if (not currentAP or currentAP < minAPNeeded) and movesRemaining <= 0 then
         print("[Enemy " .. entityID .. "] No AP or MP remaining, finishing turn")
         FinishEnemyAction()
         return
@@ -464,6 +544,8 @@ function ProcessAITurn()
     -- Execute action based on current state
     if currentState == STATE.ATTACKING then
         ExecuteAttack()
+    elseif currentState == STATE.RANGED_ATTACKING then
+        ExecuteRangedAttack()
     elseif currentState == STATE.CHASING then
         ExecuteChase()
     elseif currentState == STATE.FLEEING then
@@ -521,11 +603,18 @@ function UpdateAIState()
         return
     end
 
+    -- Check if ranged attack is possible (priority over melee in certain situations)
+    local canRanged, rangedDir = CanRangedAttack(enemyX, enemyY, playerX, playerY)
+    local currentAP, maxAP = GetEntityAP(entityID)
+    
     -- State transition logic based on behavior type and distance
     if behaviorType == BEHAVIOR.AGGRESSIVE then
         -- AGGRESSIVE enemies ALWAYS chase players regardless of distance
         if distance <= config.attackRange then
             currentState = STATE.ATTACKING
+        elseif canRanged and currentAP and currentAP >= config.rangedAttackAPCost then
+            -- Player in ranged attack range (straight line, 2-3 tiles away)
+            currentState = STATE.RANGED_ATTACKING
         else
             currentState = STATE.CHASING
         end
@@ -533,6 +622,8 @@ function UpdateAIState()
     elseif behaviorType == BEHAVIOR.DEFENSIVE then
         if distance <= config.attackRange then
             currentState = STATE.ATTACKING
+        elseif canRanged and currentAP and currentAP >= config.rangedAttackAPCost then
+            currentState = STATE.RANGED_ATTACKING
         elseif distance <= 3 then  -- Smaller aggro range
             currentState = STATE.CHASING
         else
@@ -540,7 +631,10 @@ function UpdateAIState()
         end
 
     elseif behaviorType == BEHAVIOR.RANGED then
-        if distance <= config.attackRange and distance >= config.preferredDistance then
+        -- RANGED behavior prioritizes ranged attacks
+        if canRanged and currentAP and currentAP >= config.rangedAttackAPCost then
+            currentState = STATE.RANGED_ATTACKING
+        elseif distance <= config.attackRange and distance >= config.preferredDistance then
             currentState = STATE.ATTACKING
         elseif distance < config.preferredDistance then
             currentState = STATE.FLEEING  -- Too close, back away
@@ -551,6 +645,8 @@ function UpdateAIState()
     elseif behaviorType == BEHAVIOR.PATROL then
         if distance <= config.attackRange then
             currentState = STATE.ATTACKING
+        elseif canRanged and currentAP and currentAP >= config.rangedAttackAPCost then
+            currentState = STATE.RANGED_ATTACKING
         elseif distance <= 4 then
             currentState = STATE.CHASING
         else
@@ -631,6 +727,67 @@ function ExecuteAttack()
 
 end
 
+function ExecuteRangedAttack()
+    local currentAP, maxAP = GetEntityAP(entityID)
+    
+    -- Check if we have enough AP for ranged attack
+    if not currentAP or currentAP < config.rangedAttackAPCost then
+        print("[Enemy " .. entityID .. "] Not enough AP for ranged attack, chasing instead")
+        ExecuteChase()
+        return
+    end
+    
+    -- Get positions
+    local enemyX, enemyY = GetEntityGridPosition(entityID)
+    local playerX, playerY = GetEntityGridPosition(targetPlayerID)
+    
+    if not enemyX or not playerX then
+        FinishEnemyAction()
+        return
+    end
+    
+    -- Verify ranged attack is still valid
+    local canRanged, direction = CanRangedAttack(enemyX, enemyY, playerX, playerY)
+    if not canRanged then
+        print("[Enemy " .. entityID .. "] Player no longer in ranged attack range, chasing")
+        currentState = STATE.CHASING
+        ExecuteChase()
+        return
+    end
+    
+    -- Face the player（攻击挥砍动画）
+    SetAttackFacing(enemyX, enemyY, playerX, playerY)
+    -- 记录朝向，剑气飞行期间切回待机
+    local dx, dy = playerX - enemyX, playerY - enemyY
+    if math.abs(dx) > math.abs(dy) then
+        pendingRangedAttackIdleKey, pendingRangedAttackIdleFlipX = "idleSide", (dx < 0)
+    elseif dy > 0 then
+        pendingRangedAttackIdleKey, pendingRangedAttackIdleFlipX = "idleBack", false
+    else
+        pendingRangedAttackIdleKey, pendingRangedAttackIdleFlipX = "idleFront", false
+    end
+    
+    print("[Enemy " .. entityID .. "] RANGED ATTACK at Player " .. targetPlayerID .. " (delayed damage, no projectile)")
+    
+    -- AP 仅用于攻击
+    ConsumeEnemyAP(entityID, config.rangedAttackAPCost)
+    -- 阻止 C++ Pathfinding 在剑气期间移动（MP 仅用于移动，不在此消耗）
+    if SetEnemyBlockMovement then SetEnemyBlockMovement(entityID, true) end
+    
+    -- Set up delayed damage (no projectile entity - pure Lua)
+    pendingRangedAttack = true
+    pendingRangedAttackTimer = 1.0
+    pendingRangedAttackTotalTime = 1.0
+    pendingRangedAttackTarget = targetPlayerID
+    pendingRangedAttackDamage = config.rangedAttackDamage
+    pendingRangedAttackPlayerX = playerX
+    pendingRangedAttackPlayerY = playerY
+    pendingRangedAttackEnemyX = enemyX
+    pendingRangedAttackEnemyY = enemyY
+    
+    -- OnUpdate will show traveling PulseTile effect and apply damage when timer expires
+end
+
 function ExecuteChase()
     local currentAP, maxAP = GetEntityAP(entityID)
 
@@ -709,6 +866,7 @@ function ExecuteChase()
         local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
 
             if success then
+                if ConsumeEnemyMP then ConsumeEnemyMP(entityID, 1) end  -- Sync with C++ EnemyAI.movePoints
                 movesRemaining = movesRemaining - 1   -- Consume 1 MP per tile moved
                 movesThisTurn = movesThisTurn + 1
                 pathIndex = pathIndex + 1
@@ -718,7 +876,7 @@ function ExecuteChase()
                 PulseTile(nextTile.x, nextTile.y, 0.2, 1.0, 0.5, 0.0)  -- Orange pulse
 
                 -- Set timer for next move (creates visible delay)
-                moveTimer = moveDelay
+                moveTimer = config.moveDelay or 0.6
 
                 -- Return to let next frame handle the next move
                 return
@@ -819,6 +977,48 @@ end
 function CalculateDistance(x1, y1, x2, y2)
     -- Manhattan distance (grid-based)
     return math.abs(x2 - x1) + math.abs(y2 - y1)
+end
+
+-- Check if player is in ranged attack range (straight line only, no diagonals)
+function CanRangedAttack(enemyX, enemyY, playerX, playerY)
+    -- Check if ranged attack is enabled
+    if not config.rangedAttackEnabled then
+        return false, nil
+    end
+    
+    local dx = playerX - enemyX
+    local dy = playerY - enemyY
+    
+    -- Must be in a straight line (either dx=0 or dy=0, but not both)
+    if dx ~= 0 and dy ~= 0 then
+        return false, nil  -- Diagonal, not allowed
+    end
+    
+    if dx == 0 and dy == 0 then
+        return false, nil  -- Same tile
+    end
+    
+    -- Calculate distance
+    local distance = math.abs(dx) + math.abs(dy)
+    
+    -- Check range: must be within min and max range
+    if distance < config.rangedAttackMinRange or distance > config.rangedAttackMaxRange then
+        return false, nil
+    end
+    
+    -- Determine direction for projectile
+    local direction = nil
+    if dx > 0 then
+        direction = "right"
+    elseif dx < 0 then
+        direction = "left"
+    elseif dy > 0 then
+        direction = "up"
+    elseif dy < 0 then
+        direction = "down"
+    end
+    
+    return true, direction
 end
 
 -- Find target player based on targetMode: "closest" | "lowestHP" | "highestHP"
