@@ -117,6 +117,14 @@ local glideEndX = 0.0
 local glideEndY = 0.0
 local pendingFinishAfterGlide = false  -- When true, FinishEnemyAction() is called after glide ends
 
+-- Health bar state
+local healthBarBG = nil        -- Background bar entity (dark)
+local healthBarFG = nil        -- Foreground bar entity (colored)
+local healthBarWidth = 0.5     -- Total bar width in world units
+local healthBarHeight = 0.06   -- Bar height in world units
+local healthBarOffsetY = 0.35  -- How far above enemy center
+local healthBarLayer = 50      -- Render layer (above entities, below UI)
+
 -- ============================================================================
 -- ENEMY ANIMATION (manual sprite sheet switching)
 -- NOTE: Enemy.zip only has Idle + Attack, so movement uses Idle as "walk".
@@ -256,9 +264,68 @@ function OnInit()
     else
         Log("[EnemyScript] WARNING: Enemy " .. entityID .. " could not find player")
     end
+
+    -- Spawn health bar sprites above enemy
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if wx and wy then
+        local barY = wy + healthBarOffsetY
+        -- Background (dark gray)
+        healthBarBG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer)
+        if healthBarBG and healthBarBG > 0 then
+            SetSpriteColor(healthBarBG, 0.15, 0.15, 0.15, 0.85)
+        end
+        -- Foreground (green, drawn on top)
+        healthBarFG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer + 1)
+        if healthBarFG and healthBarFG > 0 then
+            SetSpriteColor(healthBarFG, 0.0, 0.85, 0.0, 1.0)
+        end
+        Log("[EnemyScript] Enemy " .. entityID .. " health bar spawned (BG=" .. tostring(healthBarBG) .. " FG=" .. tostring(healthBarFG) .. ")")
+    end
+end
+
+-- Update health bar position and fill based on current HP
+local function UpdateHealthBar()
+    if not healthBarBG or not healthBarFG then return end
+    if healthBarBG <= 0 or healthBarFG <= 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if not wx or not wy then return end
+
+    local barY = wy + healthBarOffsetY
+
+    -- Position background (always full width, centered on enemy)
+    SetSpritePosition(healthBarBG, wx, barY)
+
+    -- Get HP ratio
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or not maxHP or maxHP <= 0 then return end
+
+    local ratio = currentHP / maxHP
+    if ratio < 0 then ratio = 0 end
+    if ratio > 1 then ratio = 1 end
+
+    -- Scale foreground width by HP ratio, offset to align left edges
+    local fgWidth = healthBarWidth * ratio
+    local fgX = wx - (healthBarWidth - fgWidth) * 0.5
+    SetSpritePosition(healthBarFG, fgX, barY)
+    SetScale(healthBarFG, fgWidth, healthBarHeight)
+
+    -- Color: green -> yellow -> red based on HP
+    local r, g, b = 0.0, 0.85, 0.0
+    if ratio <= 0.25 then
+        r, g, b = 0.9, 0.1, 0.1       -- red
+    elseif ratio <= 0.5 then
+        r, g, b = 0.95, 0.65, 0.0      -- orange
+    elseif ratio <= 0.75 then
+        r, g, b = 0.95, 0.95, 0.0      -- yellow
+    end
+    SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
 function OnUpdate(dt)
+    -- Update health bar every frame (runs regardless of turn)
+    UpdateHealthBar()
+
     -- Enemy AI only runs during enemy turn
     local currentTurn = GetCurrentTurn()
 
@@ -521,6 +588,16 @@ function OnDestroy()
             Log("[EnemyScript] Enemy " .. entityID .. " cleared occupancy at (" .. enemyX .. ", " .. enemyY .. ")")
         end
     end
+    -- Clean up health bar sprites
+    if healthBarBG and healthBarBG > 0 then
+        DestroyEntity(healthBarBG)
+        healthBarBG = nil
+    end
+    if healthBarFG and healthBarFG > 0 then
+        DestroyEntity(healthBarFG)
+        healthBarFG = nil
+    end
+
     Log("[EnemyScript] Enemy " .. entityID .. " destroyed")
 end
 
