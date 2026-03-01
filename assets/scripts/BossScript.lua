@@ -135,7 +135,7 @@ local executeReady = false       -- Ready to teleport and execute
 local healthBarBG = nil
 local healthBarFG = nil
 local healthBarWidth = 0.4       -- Wider bar for boss
-local healthBarHeight = 0.045    -- Slightly taller
+local healthBarHeight = 0.02     -- Slightly taller
 local healthBarOffsetY = 0.22
 local healthBarLayer = 50
 
