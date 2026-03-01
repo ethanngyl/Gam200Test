@@ -578,6 +578,13 @@ namespace Framework {
 
         // JSON Loading (shared with LevelLoader)
         lua_register(L, "LoadJSON", LevelLoader::Lua_LoadJSON);
+
+        // Status Effect API
+        lua_register(L, "ApplyStatusEffect", LevelLoader::Lua_ApplyStatusEffect);
+        lua_register(L, "HasStatusEffect", LevelLoader::Lua_HasStatusEffect);
+        lua_register(L, "RemoveStatusEffect", LevelLoader::Lua_RemoveStatusEffect);
+        lua_register(L, "DecrementStatusEffects", LevelLoader::Lua_DecrementStatusEffects);
+        lua_register(L, "GetStatusEffectSource", LevelLoader::Lua_GetStatusEffectSource);
     }
 
     /**

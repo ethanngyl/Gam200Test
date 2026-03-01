@@ -632,6 +632,13 @@ namespace Framework {
         lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
         lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
 
+        // Status Effect API
+        lua_register(L, "ApplyStatusEffect", Lua_ApplyStatusEffect);
+        lua_register(L, "HasStatusEffect", Lua_HasStatusEffect);
+        lua_register(L, "RemoveStatusEffect", Lua_RemoveStatusEffect);
+        lua_register(L, "DecrementStatusEffects", Lua_DecrementStatusEffects);
+        lua_register(L, "GetStatusEffectSource", Lua_GetStatusEffectSource);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 

@@ -366,6 +366,19 @@ function OnUpdate(dt)
         return
     end
 
+    -- Check if this enemy is stunned
+    if HasStatusEffect and HasStatusEffect(entityID, "stun") then
+        print("[Enemy " .. entityID .. "] STUNNED - skipping turn")
+        DecrementStatusEffects(entityID)
+        FinishEnemyAction()
+        return
+    end
+
+    -- Decrement status effects at turn start (vulnerability, etc.)
+    if DecrementStatusEffects then
+        DecrementStatusEffects(entityID)
+    end
+
     -- Update move timer
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
@@ -421,7 +434,7 @@ function OnUpdate(dt)
         local hpBefore, maxHP = GetEntityHP(pendingAttackTarget)
         print("[Enemy " .. entityID .. "] Player " .. pendingAttackTarget .. " HP BEFORE: " .. tostring(hpBefore) .. "/" .. tostring(maxHP))
 
-        local success = DamageEntity(pendingAttackTarget, pendingAttackDamage)
+        local success = DamageEntity(pendingAttackTarget, pendingAttackDamage, entityID)
         print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
 
         if success then
