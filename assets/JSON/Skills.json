@@ -1,8 +1,9 @@
 {
   "skills": {
-    "BasicAttack": {
-      "name": "Basic Attack",
-      "description": "Attack adjacent tile (4 directions)",
+    "Thrust": {
+      "name": "Thrust",
+      "description": "Targets 1 adjacent enemy, deals 1 damage",
+      "skillType": "melee",
       "apCost": 1,
       "damage": 1,
       "range": 1,
@@ -10,35 +11,94 @@
       "animationName": "Attack",
       "soundEffect": "sword_slash"
     },
-    "Slash": {
-      "name": "Slash",
-      "description": "Attack in a line (3 tiles forward)",
+    "SweepingSlash": {
+      "name": "Sweeping Slash",
+      "description": "Damages all enemies in a 3x3 area",
+      "skillType": "melee",
+      "apCost": 2,
+      "damage": 1,
+      "range": 0,
+      "pattern": "area3x3",
+      "animationName": "Attack",
+      "soundEffect": "sword_slash"
+    },
+    "Guard": {
+      "name": "Guard",
+      "description": "Blocks the next instance of damage taken",
+      "skillType": "self_buff",
+      "effect": "guard",
+      "duration": -1,
       "apCost": 1,
-      "damage": 2,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "shield_up"
+    },
+    "SwiftBlow": {
+      "name": "Swift Blow",
+      "description": "Dash 3 tiles in a direction, damaging all enemies in the path",
+      "skillType": "dash",
+      "apCost": 2,
+      "damage": 1,
+      "dashRange": 3,
       "range": 3,
       "pattern": "line",
       "animationName": "Attack",
       "soundEffect": "sword_slash"
     },
-    "CrossSlash": {
-      "name": "Cross Slash",
-      "description": "Attack all 4 adjacent tiles",
+    "KnightsOath": {
+      "name": "Knight's Oath",
+      "description": "Select an ally; damage taken by that ally is redirected to you for 2 turns",
+      "skillType": "ally_target",
+      "effect": "knightsOath",
+      "duration": 2,
       "apCost": 1,
-      "damage": 1,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "shield_up"
+    },
+    "Parry": {
+      "name": "Parry",
+      "description": "The next damage dealt to you is dealt to the attacker instead",
+      "skillType": "self_buff",
+      "effect": "parry",
+      "duration": -1,
+      "apCost": 2,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "shield_up"
+    },
+    "ExploitWeakness": {
+      "name": "Exploit Weakness",
+      "description": "Target adjacent enemy takes +1 damage from all sources for 2 turns",
+      "skillType": "melee_debuff",
+      "effect": "vulnerable",
+      "effectDuration": 2,
+      "extraDamage": 1,
+      "apCost": 2,
+      "damage": 0,
       "range": 1,
-      "pattern": "cross",
+      "pattern": "adjacent",
       "animationName": "Attack",
       "soundEffect": "sword_slash"
     },
-    "AreaBlast": {
-      "name": "Area Blast",
-      "description": "Attack all tiles in a 3x3 area",
-      "apCost": 1,
-      "damage": 2,
-      "range": 0,
-      "pattern": "area3x3",
+    "Bash": {
+      "name": "Bash",
+      "description": "Stuns an adjacent enemy for 1 turn",
+      "skillType": "melee_cc",
+      "effect": "stun",
+      "effectDuration": 1,
+      "apCost": 2,
+      "damage": 0,
+      "range": 1,
+      "pattern": "adjacent",
       "animationName": "Attack",
-      "soundEffect": "explosion"
+      "soundEffect": "sword_slash"
     },
     "Fireball": {
       "name": "Fireball",
@@ -52,16 +112,6 @@
       "pierce": false,
       "animationName": "Attack",
       "soundEffect": "fireball"
-    },
-    "Cleave": {
-      "name": "Cleave",
-      "description": "Attack 3 tiles in front (cone)",
-      "apCost": 1,
-      "damage": 2,
-      "range": 1,
-      "pattern": "cone",
-      "animationName": "Attack",
-      "soundEffect": "sword_slash"
     },
     "PiercingShot": {
       "name": "Piercing Shot",

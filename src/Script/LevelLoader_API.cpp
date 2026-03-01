@@ -3019,40 +3019,141 @@ namespace Framework {
     }
 
     /**
-     * @brief Deal damage to entity
-     * @param entityID The entity ID
+     * @brief Deal damage to entity, with status effect checks
+     * @param entityID The target entity ID
      * @param amount Damage amount
+     * @param attackerID (optional) The attacking entity ID (needed for Parry)
+     *
+     * Status effect handling order:
+     *   1. Guard   -> absorb all damage, consume effect, return
+     *   2. Knight's Oath -> redirect damage to the oath source (knight)
+     *   3. Vulnerable -> increase damage by extraData amount
+     *   4. Apply damage
+     *   5. Parry   -> deal original damage back to attacker, consume effect
      *
      * Usage: DamageEntity(targetID, 1)
+     *        DamageEntity(targetID, 1, attackerID)
      */
     int LevelLoader::Lua_DamageEntity(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
-            lua_pushboolean(L, 0);  // Return false
+            lua_pushboolean(L, 0);
             return 1;
         }
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
-            lua_pushboolean(L, 0);  // Return false
+            lua_pushboolean(L, 0);
             return 1;
         }
 
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
         int amount = static_cast<int>(luaL_checknumber(L, 2));
+        int attackerID = static_cast<int>(luaL_optinteger(L, 3, 0));
 
         Entity entity(static_cast<uint32_t>(entityID));
 
         if (!em->HasComponent<Health>(entity)) {
-            lua_pushboolean(L, 0);  // Return false - entity has no health
+            lua_pushboolean(L, 0);
             return 1;
         }
 
+        // === STATUS EFFECT CHECKS ===
+
+        if (em->HasComponent<StatusEffects>(entity)) {
+            auto& effects = em->GetComponent<StatusEffects>(entity);
+
+            // 1. Guard: absorb all damage, consume the effect
+            if (effects.HasEffect("guard")) {
+                LOG_INFO("StatusEffect", "Entity %u GUARD blocked %d damage!", entity.GetID(), amount);
+                effects.RemoveEffect("guard");
+                lua_pushboolean(L, 1);
+                return 1;
+            }
+
+            // 2. Knight's Oath: redirect damage to the protecting knight
+            const auto* oathEffect = effects.GetEffect("knightsOath");
+            if (oathEffect) {
+                uint32_t knightID = oathEffect->sourceEntity;
+                Entity knight(knightID);
+                if (em->HasComponent<Health>(knight)) {
+                    LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
+                        amount, entity.GetID(), knightID);
+
+                    auto& knightHP = em->GetComponent<Health>(knight);
+                    knightHP.currentHealth -= amount;
+
+                    if (knightHP.currentHealth <= 0) {
+                        knightHP.currentHealth = 0;
+                        knightHP.isDead = true;
+                        LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
+
+                        if (em->HasComponent<Transform>(knight)) {
+                            auto& transform = em->GetComponent<Transform>(knight);
+                            auto tileOpt = Framework::WorldToTile(transform.position);
+                            if (tileOpt.has_value()) {
+                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                            }
+                        }
+                        em->DestroyEntity(knight);
+                    }
+
+                    lua_pushboolean(L, 1);
+                    return 1;
+                }
+            }
+
+            // 3. Vulnerable: increase incoming damage
+            const auto* vulnEffect = effects.GetEffect("vulnerable");
+            if (vulnEffect) {
+                int extraDmg = vulnEffect->extraData;
+                LOG_INFO("StatusEffect", "Entity %u is VULNERABLE: %d + %d extra damage",
+                    entity.GetID(), amount, extraDmg);
+                amount += extraDmg;
+            }
+        }
+
+        // === APPLY DAMAGE ===
+
         auto& health = em->GetComponent<Health>(entity);
+        int prevHP = health.currentHealth;
         health.currentHealth -= amount;
 
         LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
-            entity.GetID(), amount, health.currentHealth + amount, health.currentHealth);
+            entity.GetID(), amount, prevHP, health.currentHealth);
+
+        // === PARRY CHECK (after damage is applied) ===
+
+        if (attackerID > 0 && em->HasComponent<StatusEffects>(entity)) {
+            auto& effects = em->GetComponent<StatusEffects>(entity);
+            if (effects.HasEffect("parry")) {
+                effects.RemoveEffect("parry");
+                Entity attacker(static_cast<uint32_t>(attackerID));
+                if (em->HasComponent<Health>(attacker)) {
+                    auto& attackerHP = em->GetComponent<Health>(attacker);
+                    attackerHP.currentHealth -= amount;
+                    LOG_INFO("StatusEffect", "PARRY! Entity %u reflects %d damage back to attacker %u",
+                        entity.GetID(), amount, attackerID);
+
+                    if (attackerHP.currentHealth <= 0) {
+                        attackerHP.currentHealth = 0;
+                        attackerHP.isDead = true;
+                        LOG_WARN("LevelLoader", "!!! Attacker %u DIED from parried damage !!!", attackerID);
+
+                        if (em->HasComponent<Transform>(attacker)) {
+                            auto& transform = em->GetComponent<Transform>(attacker);
+                            auto tileOpt = Framework::WorldToTile(transform.position);
+                            if (tileOpt.has_value()) {
+                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                            }
+                        }
+                        em->DestroyEntity(attacker);
+                    }
+                }
+            }
+        }
+
+        // === DEATH CHECK ===
 
         if (health.currentHealth <= 0) {
             health.currentHealth = 0;
@@ -3060,7 +3161,6 @@ namespace Framework {
 
             LOG_WARN("LevelLoader", "!!! Entity %u DIED - Beginning cleanup !!!", entity.GetID());
 
-            // Clear tile occupancy before destroying entity
             if (em->HasComponent<Transform>(entity)) {
                 auto& transform = em->GetComponent<Transform>(entity);
                 auto tileOpt = Framework::WorldToTile(transform.position);
@@ -3071,21 +3171,19 @@ namespace Framework {
                 }
             }
 
-            // Log what components this entity has before destruction
             LOG_INFO("LevelLoader", "  -> Entity components before destruction:");
             if (em->HasComponent<Transform>(entity)) LOG_INFO("LevelLoader", "     - Transform");
             if (em->HasComponent<Renderable>(entity)) LOG_INFO("LevelLoader", "     - Renderable");
             if (em->HasComponent<AP>(entity)) LOG_INFO("LevelLoader", "     - AP");
             if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
 
-            // Delete the entity completely
             LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
             em->DestroyEntity(entity);
             LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
             LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
         }
 
-        lua_pushboolean(L, 1);  // Return true - damage successful
+        lua_pushboolean(L, 1);
         return 1;
     }
 
@@ -4919,6 +5017,192 @@ namespace Framework {
         }
 
         lua_pushinteger(L, projectile.GetID());
+        return 1;
+    }
+
+    // ========================================================================
+    // STATUS EFFECT API
+    // ========================================================================
+
+    /**
+     * @brief Apply a status effect to an entity
+     * @param entityID Target entity
+     * @param type Effect type string ("guard", "parry", "stun", "vulnerable", "knightsOath")
+     * @param turns Duration in turns (-1 = permanent / until consumed)
+     * @param sourceEntity (optional) Who applied this effect
+     * @param targetEntity (optional) For knightsOath: which ally is protected
+     * @param extraData (optional) For vulnerable: extra damage amount
+     *
+     * Usage: ApplyStatusEffect(entityID, "guard", -1)
+     *        ApplyStatusEffect(enemyID, "stun", 1, casterID)
+     *        ApplyStatusEffect(allyID, "knightsOath", 2, knightID, allyID)
+     *        ApplyStatusEffect(enemyID, "vulnerable", 2, casterID, 0, 1)
+     */
+    int LevelLoader::Lua_ApplyStatusEffect(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        const char* type = luaL_checkstring(L, 2);
+        int turns = static_cast<int>(luaL_optinteger(L, 3, -1));
+        uint32_t source = static_cast<uint32_t>(luaL_optinteger(L, 4, 0));
+        uint32_t target = static_cast<uint32_t>(luaL_optinteger(L, 5, 0));
+        int extra = static_cast<int>(luaL_optinteger(L, 6, 0));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        // Add StatusEffects component if not present
+        if (!em->HasComponent<StatusEffects>(entity)) {
+            em->AddComponent<StatusEffects>(entity);
+        }
+
+        auto& effects = em->GetComponent<StatusEffects>(entity);
+        effects.AddEffect(type, turns, source, target, extra);
+
+        LOG_INFO("StatusEffect", "Applied '%s' to entity %u (turns=%d, source=%u, target=%u, extra=%d)",
+            type, entity.GetID(), turns, source, target, extra);
+
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+
+    /**
+     * @brief Check if an entity has a specific status effect
+     * @param entityID Target entity
+     * @param type Effect type string
+     * @return boolean
+     *
+     * Usage: local has = HasStatusEffect(entityID, "stun")
+     */
+    int LevelLoader::Lua_HasStatusEffect(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        const char* type = luaL_checkstring(L, 2);
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<StatusEffects>(entity)) {
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        auto& effects = em->GetComponent<StatusEffects>(entity);
+        lua_pushboolean(L, effects.HasEffect(type) ? 1 : 0);
+        return 1;
+    }
+
+    /**
+     * @brief Remove a specific status effect from an entity
+     * @param entityID Target entity
+     * @param type Effect type string
+     *
+     * Usage: RemoveStatusEffect(entityID, "guard")
+     */
+    int LevelLoader::Lua_RemoveStatusEffect(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        const char* type = luaL_checkstring(L, 2);
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (em->HasComponent<StatusEffects>(entity)) {
+            auto& effects = em->GetComponent<StatusEffects>(entity);
+            effects.RemoveEffect(type);
+            LOG_INFO("StatusEffect", "Removed '%s' from entity %u", type, entity.GetID());
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Decrement all status effect durations on an entity by 1 turn
+     *        Effects that reach 0 turns are automatically removed.
+     * @param entityID Target entity
+     *
+     * Usage: DecrementStatusEffects(entityID)  -- call at start of entity's turn
+     */
+    int LevelLoader::Lua_DecrementStatusEffects(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (em->HasComponent<StatusEffects>(entity)) {
+            auto& effects = em->GetComponent<StatusEffects>(entity);
+            effects.DecrementTurns();
+        }
+
+        return 0;
+    }
+
+    /**
+     * @brief Get the source entity of a status effect (e.g. who applied Knight's Oath)
+     * @param entityID Target entity
+     * @param type Effect type string
+     * @return sourceEntityID or nil if not found
+     *
+     * Usage: local knightID = GetStatusEffectSource(allyID, "knightsOath")
+     */
+    int LevelLoader::Lua_GetStatusEffectSource(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        const char* type = luaL_checkstring(L, 2);
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<StatusEffects>(entity)) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        auto& effects = em->GetComponent<StatusEffects>(entity);
+        const auto* effect = effects.GetEffect(type);
+        if (effect) {
+            lua_pushinteger(L, effect->sourceEntity);
+        } else {
+            lua_pushnil(L);
+        }
         return 1;
     }
 

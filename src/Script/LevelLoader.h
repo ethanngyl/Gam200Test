@@ -322,6 +322,12 @@ namespace Framework {
         // SpawnSkillProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
         static int Lua_SpawnSkillProjectile(lua_State* L);
 
+        // Status Effect API
+        static int Lua_ApplyStatusEffect(lua_State* L);    // ApplyStatusEffect(entityID, type, turns, sourceEntity, targetEntity, extraData)
+        static int Lua_HasStatusEffect(lua_State* L);      // HasStatusEffect(entityID, type) -> bool
+        static int Lua_RemoveStatusEffect(lua_State* L);   // RemoveStatusEffect(entityID, type)
+        static int Lua_DecrementStatusEffects(lua_State* L);// DecrementStatusEffects(entityID)
+        static int Lua_GetStatusEffectSource(lua_State* L); // GetStatusEffectSource(entityID, type) -> sourceEntityID or nil
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
