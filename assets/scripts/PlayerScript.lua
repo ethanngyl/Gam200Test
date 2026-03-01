@@ -499,60 +499,47 @@ local function createPlayerStates(fsm)
                     local skill = SkillDefs[dashMode.skillID]
                     local dashRange = skill and skill.dashRange or 3
 
-                    -- Validate: check that the dash path isn't blocked immediately
+                    -- Validate: check that the first tile isn't a wall
+                    -- (enemies are OK - dash passes through them)
                     local px, py = GetEntityGridPosition(entityID)
                     local firstX = px + newDirX
                     local firstY = py + newDirY
-                    if px and py and IsValidGridPosition(firstX, firstY) and IsWalkableTile(firstX, firstY) then
-                        -- Check for enemy at last tile + wall behind
-                        local blocked = false
-                        local enemies = GetAllEnemies()
-                        local lastX = px + newDirX * dashRange
-                        local lastY = py + newDirY * dashRange
-                        if enemies then
-                            for _, eID in ipairs(enemies) do
-                                local ex, ey = GetEntityGridPosition(eID)
-                                if ex == lastX and ey == lastY then
-                                    -- Enemy at last tile: check wall behind
-                                    local behindX = lastX + newDirX
-                                    local behindY = lastY + newDirY
-                                    if not IsValidGridPosition(behindX, behindY) or not IsWalkableTile(behindX, behindY) then
-                                        blocked = true
-                                    end
-                                    break
-                                end
+                    local firstIsWall = not px or not py
+                        or not IsValidGridPosition(firstX, firstY)
+                        or (not IsWalkableTile(firstX, firstY) and not IsTileOccupied(firstX, firstY))
+                    if not firstIsWall then
+                        dashMode.dirX = newDirX
+                        dashMode.dirY = newDirY
+
+                        -- Clear old preview tiles
+                        if activePreview and activePreview.tiles then
+                            for _, tile in ipairs(activePreview.tiles) do
+                                TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
                             end
                         end
 
-                        if blocked then
-                            PulseTile(currentX, currentY, 0.3, 1.0, 0.3, 0.3)
-                            print("[PlayerScript] Dash blocked: wall behind enemy at end of path")
-                        else
-                            dashMode.dirX = newDirX
-                            dashMode.dirY = newDirY
-
-                            -- Clear old preview tiles
-                            if activePreview and activePreview.tiles then
-                                for _, tile in ipairs(activePreview.tiles) do
-                                    TintTile(tile.x, tile.y, 1.0, 1.0, 1.0, 1.0)
-                                end
+                        -- Show dash path preview (passes through enemies)
+                        local tiles = {}
+                        for i = 1, dashRange do
+                            local tileX = px + newDirX * i
+                            local tileY = py + newDirY * i
+                            if not IsValidGridPosition(tileX, tileY) then
+                                break  -- out of bounds
                             end
-
-                            -- Show dash path preview
-                            local tiles = {}
-                            for i = 1, dashRange do
-                                local tileX = px + newDirX * i
-                                local tileY = py + newDirY * i
-                                if IsValidGridPosition(tileX, tileY) and IsWalkableTile(tileX, tileY) then
-                                    TintTile(tileX, tileY, 1.0, 0.5, 0.0, 0.7)  -- orange for dash path
-                                    table.insert(tiles, {x = tileX, y = tileY})
-                                else
-                                    break  -- wall stops preview
-                                end
+                            local walkable = IsWalkableTile(tileX, tileY)
+                            local occupied = IsTileOccupied(tileX, tileY)
+                            if not walkable and not occupied then
+                                break  -- wall stops dash
                             end
-                            activePreview = { skillID = dashMode.skillID, tiles = tiles }
-                            print("[PlayerScript] Dash direction: (" .. newDirX .. "," .. newDirY .. "), Space to execute")
+                            if occupied then
+                                TintTile(tileX, tileY, 1.0, 0.2, 0.0, 0.7)  -- red for enemy in path
+                            else
+                                TintTile(tileX, tileY, 1.0, 0.5, 0.0, 0.7)  -- orange for dash path
+                            end
+                            table.insert(tiles, {x = tileX, y = tileY})
                         end
+                        activePreview = { skillID = dashMode.skillID, tiles = tiles }
+                        print("[PlayerScript] Dash direction: (" .. newDirX .. "," .. newDirY .. "), Space to execute")
                     else
                         PulseTile(currentX, currentY, 0.3, 1.0, 0.3, 0.3)
                         print("[PlayerScript] Dash blocked: wall in that direction")
@@ -1447,64 +1434,39 @@ function ExecuteSkill(skillID)
         local enemiesHit = 0
         local landX, landY = px, py
 
-        -- Walk along the dash path
+        -- Walk along the dash path (passes through enemies, stops at walls)
         for i = 1, dashRange do
             local nextX = px + dirX * i
             local nextY = py + dirY * i
 
-            -- Check for walls / invalid tiles
-            if not IsValidGridPosition(nextX, nextY) or not IsWalkableTile(nextX, nextY) then
+            if not IsValidGridPosition(nextX, nextY) then
+                break  -- out of bounds
+            end
+
+            local walkable = IsWalkableTile(nextX, nextY)
+            local occupied = IsTileOccupied(nextX, nextY)
+
+            if not walkable and not occupied then
                 break  -- hit a wall, stop before this tile
             end
 
-            -- Check if there's an enemy at this tile
-            local enemies = GetAllEnemies()
-            local enemyAtTile = nil
-            if enemies then
-                for _, eID in ipairs(enemies) do
-                    local ex, ey = GetEntityGridPosition(eID)
-                    if ex == nextX and ey == nextY then
-                        enemyAtTile = eID
-                        break
-                    end
-                end
-            end
-
-            if enemyAtTile then
-                -- Damage the enemy
-                DamageEntity(enemyAtTile, skill.damage)
-                PulseTile(nextX, nextY, 0.5, 1.0, 0.0, 0.0)
-                enemiesHit = enemiesHit + 1
-
-                -- If this is the last tile in range, try to land 1 tile behind the enemy
-                if i == dashRange then
-                    local behindX = nextX + dirX
-                    local behindY = nextY + dirY
-                    if IsValidGridPosition(behindX, behindY) and IsWalkableTile(behindX, behindY) then
-                        -- Can't land behind, check if tile is occupied
-                        local occupied = IsTileOccupied(behindX, behindY)
-                        if not occupied then
-                            landX = behindX
-                            landY = behindY
-                        else
-                            -- Wall/occupied behind enemy: can't dash this direction
-                            -- (already checked in preview, but safety check)
-                            landX = px + dirX * (i - 1)
-                            landY = py + dirY * (i - 1)
+            if occupied then
+                -- Enemy at this tile: damage them and dash through
+                local enemies = GetAllEnemies()
+                if enemies then
+                    for _, eID in ipairs(enemies) do
+                        local ex, ey = GetEntityGridPosition(eID)
+                        if ex == nextX and ey == nextY then
+                            DamageEntity(eID, skill.damage)
+                            PulseTile(nextX, nextY, 0.5, 1.0, 0.0, 0.0)
+                            enemiesHit = enemiesHit + 1
+                            break
                         end
-                    else
-                        -- Wall behind enemy at last tile: land 1 tile before enemy
-                        landX = px + dirX * (i - 1)
-                        landY = py + dirY * (i - 1)
                     end
-                else
-                    -- Enemy not at last tile: land 1 tile before this enemy
-                    landX = px + dirX * (i - 1)
-                    landY = py + dirY * (i - 1)
                 end
-                break  -- stop dashing after hitting an enemy at range limit or before
+                -- Don't update landX/landY - can't land on an enemy
             else
-                -- Empty tile: can pass through
+                -- Empty tile: can land here
                 landX = nextX
                 landY = nextY
             end
