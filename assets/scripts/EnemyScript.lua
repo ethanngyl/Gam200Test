@@ -120,9 +120,9 @@ local pendingFinishAfterGlide = false  -- When true, FinishEnemyAction() is call
 -- Health bar state
 local healthBarBG = nil        -- Background bar entity (dark)
 local healthBarFG = nil        -- Foreground bar entity (colored)
-local healthBarWidth = 0.5     -- Total bar width in world units
-local healthBarHeight = 0.06   -- Bar height in world units
-local healthBarOffsetY = 0.35  -- How far above enemy center
+local healthBarWidth = 0.3     -- Total bar width in world units
+local healthBarHeight = 0.035  -- Bar height in world units
+local healthBarOffsetY = 0.18  -- How far above enemy center
 local healthBarLayer = 50      -- Render layer (above entities, below UI)
 
 -- ============================================================================
