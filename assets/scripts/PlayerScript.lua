@@ -213,6 +213,10 @@ local dashMode = nil
 -- nil when not targeting; { skillID = ... } when active
 local allyTargetMode = nil
 
+-- Enemy targeting state: when an enemy_target skill is previewed, click an enemy to select
+-- nil when not targeting; { skillID = ..., selectedEnemy = nil } when active
+local enemyTargetMode = nil
+
 -- Cached player index (1, 2, or 3)
 local myPlayerIndex = nil
 
@@ -596,6 +600,52 @@ local function createPlayerStates(fsm)
                 lastAKeyDown = aDown
                 lastDKeyDown = dDown
                 return  -- consume all input while in ally target mode
+            end
+
+            -- ============================================================
+            -- ENEMY TARGET MODE: click to select an enemy
+            -- ============================================================
+            if enemyTargetMode then
+                if IsMouseButtonPressed and IsMouseButtonPressed(0) then
+                    local mouseX, mouseY = GetMousePosition()
+                    if mouseX and mouseY then
+                        local enemies = GetAllEnemies()
+                        if enemies then
+                            for _, eID in ipairs(enemies) do
+                                local wx, wy = GetEntityWorldPosition(eID)
+                                if wx and wy then
+                                    local dist = math.sqrt((mouseX - wx)^2 + (mouseY - wy)^2)
+                                    if dist < 0.5 then
+                                        enemyTargetMode.selectedEnemy = eID
+                                        print("[PlayerScript] Enemy selected: " .. eID .. ", Space to confirm")
+
+                                        -- Re-tint: highlight selected enemy
+                                        if activePreview and activePreview.tiles then
+                                            for _, tile in ipairs(activePreview.tiles) do
+                                                TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.4)
+                                            end
+                                        end
+                                        local ex, ey = GetEntityGridPosition(eID)
+                                        if ex and ey then
+                                            TintTile(ex, ey, 1.0, 0.0, 0.0, 0.9)  -- bright red for selected
+                                        end
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                -- Update key states but don't process movement
+                local wDown = IsKeyDown("W") and not blockedKeys["W"]
+                local sDown = IsKeyDown("S") and not blockedKeys["S"]
+                local aDown = IsKeyDown("A") and not blockedKeys["A"]
+                local dDown = IsKeyDown("D") and not blockedKeys["D"]
+                lastWKeyDown = wDown
+                lastSKeyDown = sDown
+                lastAKeyDown = aDown
+                lastDKeyDown = dDown
+                return  -- consume all input while in enemy target mode
             end
 
             -- Check movement input (PRESS-ONLY - not hold)
@@ -1163,7 +1213,43 @@ function ShowSkillPreview(skillID)
         return
     end
 
-    -- Ally target skills (Knight's Oath): enter ally targeting mode
+    -- Global damage skills (Lightning Strike): tint self, Space to hit all enemies
+    if skill.skillType == "global_damage" then
+        TintTile(currentX, currentY, 1.0, 1.0, 0.3, 0.7)  -- yellow tint on self
+        activePreview = { skillID = skillID, tiles = {{x = currentX, y = currentY}} }
+        print("[PlayerScript] Preview active (global damage): " .. skill.name)
+        return
+    end
+
+    -- Self-overload skills (Overload): tint self, Space to execute
+    if skill.skillType == "self_overload" then
+        TintTile(currentX, currentY, 1.0, 0.5, 0.0, 0.7)  -- orange tint on self
+        activePreview = { skillID = skillID, tiles = {{x = currentX, y = currentY}} }
+        print("[PlayerScript] Preview active (self-overload): " .. skill.name)
+        return
+    end
+
+    -- Enemy target skills (Earthen Bind, Mana Drain, Soul Rend): click an enemy to select
+    if skill.skillType == "enemy_target" then
+        enemyTargetMode = { skillID = skillID }
+        -- Tint all enemy tiles red
+        local tiles = {}
+        local enemies = GetAllEnemies()
+        if enemies then
+            for _, eID in ipairs(enemies) do
+                local ex, ey = GetEntityGridPosition(eID)
+                if ex and ey then
+                    TintTile(ex, ey, 1.0, 0.3, 0.3, 0.7)  -- red tint on enemies
+                    table.insert(tiles, {x = ex, y = ey})
+                end
+            end
+        end
+        activePreview = { skillID = skillID, tiles = tiles }
+        print("[PlayerScript] Enemy target mode: click an enemy to select, Space to execute")
+        return
+    end
+
+    -- Ally target skills (Knight's Oath, Soul Merge): enter ally targeting mode
     if skill.skillType == "ally_target" then
         allyTargetMode = { skillID = skillID }
         -- Tint all ally tiles green
@@ -1224,6 +1310,7 @@ function ClearActivePreview()
     activePreview = nil
     dashMode = nil
     allyTargetMode = nil
+    enemyTargetMode = nil
 end
 
 -- Find all enemies within a skill's pattern
@@ -1324,6 +1411,60 @@ local function faceToward(targetX, targetY)
 end
 
 -- Execute any skill based on its skillType
+-- Helper: heal a specific entity by amount (capped at max HP)
+local function healEntity(targetID, amount)
+    local hp, maxHP = GetEntityHP(targetID)
+    if hp and maxHP and hp > 0 and hp < maxHP then
+        local newHP = math.min(hp + amount, maxHP)
+        SetEntityHP(targetID, newHP)
+        return true
+    end
+    return false
+end
+
+-- Helper: get bonus damage from soulMergeBuff
+local function getSoulMergeBonusDamage()
+    if HasStatusEffect and HasStatusEffect(entityID, "soulMergeBuff") then
+        return 1
+    end
+    return 0
+end
+
+-- Helper: after damaging an enemy, check for soulRend (heal all players) and kill heal
+local function checkPostDamageEffects(enemyID)
+    -- Soul Rend: if enemy has soulRend, heal all players for 1 HP
+    if HasStatusEffect and HasStatusEffect(enemyID, "soulRend") then
+        local allPlayers = GetAllPlayers()
+        if allPlayers then
+            for _, pid in ipairs(allPlayers) do
+                if healEntity(pid, 1) then
+                    print("[PlayerScript] Soul Rend: healed player " .. pid .. " for 1 HP")
+                end
+            end
+        end
+    end
+
+    -- Soul Merge Buff: if caster has soulMergeBuff and enemy died, heal caster for 1 HP
+    if HasStatusEffect and HasStatusEffect(entityID, "soulMergeBuff") then
+        local hp = GetEntityHP(enemyID)
+        if hp and hp <= 0 then
+            if healEntity(entityID, 1) then
+                print("[PlayerScript] Soul Merge: kill heal +1 HP for player " .. entityID)
+            end
+        end
+    end
+end
+
+-- Helper: damage an enemy with soulMergeBuff bonus and post-damage effects
+local function damageEnemyWithEffects(enemyID, baseDamage)
+    local damage = baseDamage + getSoulMergeBonusDamage()
+    local success = DamageEntity(enemyID, damage)
+    if success then
+        checkPostDamageEffects(enemyID)
+    end
+    return success
+end
+
 function ExecuteSkill(skillID)
     local skill = SkillDefs[skillID]
     if not skill then
@@ -1373,7 +1514,7 @@ function ExecuteSkill(skillID)
 
         -- Apply damage if any
         if skill.damage and skill.damage > 0 then
-            DamageEntity(target.id, skill.damage)
+            damageEnemyWithEffects(target.id, skill.damage)
         end
 
         consumeAttackAPAndAnimate(skill.apCost)
@@ -1404,7 +1545,7 @@ function ExecuteSkill(skillID)
 
         -- Apply damage if any
         if skill.damage and skill.damage > 0 then
-            DamageEntity(target.id, skill.damage)
+            damageEnemyWithEffects(target.id, skill.damage)
         end
 
         consumeAttackAPAndAnimate(skill.apCost)
@@ -1457,7 +1598,7 @@ function ExecuteSkill(skillID)
                     for _, eID in ipairs(enemies) do
                         local ex, ey = GetEntityGridPosition(eID)
                         if ex == nextX and ey == nextY then
-                            DamageEntity(eID, skill.damage)
+                            damageEnemyWithEffects(eID, skill.damage)
                             PulseTile(nextX, nextY, 0.5, 1.0, 0.0, 0.0)
                             enemiesHit = enemiesHit + 1
                             break
@@ -1485,7 +1626,7 @@ function ExecuteSkill(skillID)
     end
 
     -- ================================================================
-    -- ALLY TARGET skills (Knight's Oath)
+    -- ALLY TARGET skills (Knight's Oath, Soul Merge)
     -- ================================================================
     if skill.skillType == "ally_target" then
         if not allyTargetMode or not allyTargetMode.selectedAlly then
@@ -1494,9 +1635,113 @@ function ExecuteSkill(skillID)
         end
 
         local allyID = allyTargetMode.selectedAlly
+
+        if skill.effect == "soulMerge" then
+            -- Soul Merge: sacrifice self, permanently buff the ally
+            -- 1. Mark self as merged (permanent - turn will be skipped)
+            ApplyStatusEffect(entityID, "soulMerge", -1, entityID)
+
+            -- 2. Buff the ally
+            ApplyStatusEffect(allyID, "soulMergeBuff", -1, entityID, allyID)
+
+            -- 3. +2 Health (increase current and max)
+            local allyHP, allyMaxHP = GetEntityHP(allyID)
+            if allyHP and allyMaxHP then
+                SetEntityHP(allyID, allyHP + 2, allyMaxHP + 2)
+                print("[PlayerScript] Soul Merge: ally " .. allyID .. " HP " .. allyHP .. " -> " .. (allyHP + 2) .. " (max " .. (allyMaxHP + 2) .. ")")
+            end
+
+            -- 4. +1 Movement AP (add to current; PartyTurnManager handles future turns)
+            ConsumeEntityAP(allyID, -1)
+
+            -- 5. +1 Attack AP (add to current; PartyTurnManager handles future turns)
+            ConsumeEntityAttackAP(allyID, -1)
+
+            consumeAttackAPAndAnimate(skill.apCost)
+            print("[PlayerScript] Soul Merge: " .. entityID .. " sacrificed for ally " .. allyID)
+            playAttackAnimation()
+            ClearActivePreview()
+            return
+        end
+
+        -- Default ally_target behavior (Knight's Oath)
         ApplyStatusEffect(allyID, skill.effect, skill.duration, entityID, allyID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": protecting ally " .. allyID .. " for " .. skill.duration .. " turns")
+        playAttackAnimation()
+        ClearActivePreview()
+        return
+    end
+
+    -- ================================================================
+    -- GLOBAL DAMAGE skills (Lightning Strike)
+    -- ================================================================
+    if skill.skillType == "global_damage" then
+        local enemies = GetAllEnemies()
+        local enemiesHit = 0
+        if enemies then
+            for _, eID in ipairs(enemies) do
+                local success = damageEnemyWithEffects(eID, skill.damage)
+                if success then
+                    enemiesHit = enemiesHit + 1
+                    local ex, ey = GetEntityGridPosition(eID)
+                    if ex and ey then
+                        PulseTile(ex, ey, 0.5, 1.0, 1.0, 0.0)  -- yellow pulse for lightning
+                    end
+                end
+            end
+        end
+        consumeAttackAPAndAnimate(skill.apCost)
+        print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
+        playAttackAnimation()
+        ClearActivePreview()
+        return
+    end
+
+    -- ================================================================
+    -- SELF-OVERLOAD skills (Overload)
+    -- ================================================================
+    if skill.skillType == "self_overload" then
+        local apGain = skill.apGain or 2
+        -- Gain AP immediately (consume negative = add)
+        ConsumeEntityAttackAP(entityID, -apGain)
+        -- Apply overload: next turn AP won't refill
+        ApplyStatusEffect(entityID, "overload", 1, entityID)
+        if skill.apCost > 0 then
+            consumeAttackAPAndAnimate(skill.apCost)
+        end
+        print("[PlayerScript] " .. skill.name .. ": gained " .. apGain .. " AP, next turn AP won't refill")
+        playAttackAnimation()
+        ClearActivePreview()
+        return
+    end
+
+    -- ================================================================
+    -- ENEMY TARGET skills (Earthen Bind, Mana Drain, Soul Rend)
+    -- ================================================================
+    if skill.skillType == "enemy_target" then
+        if not enemyTargetMode or not enemyTargetMode.selectedEnemy then
+            print("[PlayerScript] Enemy target: no enemy selected yet (click an enemy)")
+            return  -- don't clear preview, wait for selection
+        end
+
+        local targetID = enemyTargetMode.selectedEnemy
+        local ex, ey = GetEntityGridPosition(targetID)
+
+        -- Apply the skill's effect to the target enemy
+        local extra = skill.extraData or 0
+        ApplyStatusEffect(targetID, skill.effect, skill.effectDuration, entityID, 0, extra)
+        if ex and ey then
+            PulseTile(ex, ey, 0.5, 0.8, 0.3, 1.0)  -- purple pulse for debuff
+        end
+
+        -- Apply damage if any
+        if skill.damage and skill.damage > 0 then
+            damageEnemyWithEffects(targetID, skill.damage)
+        end
+
+        consumeAttackAPAndAnimate(skill.apCost)
+        print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to enemy " .. targetID)
         playAttackAnimation()
         ClearActivePreview()
         return
@@ -1581,7 +1826,7 @@ function ExecuteSkill(skillID)
 
     local enemiesHit = 0
     for _, enemy in ipairs(enemies) do
-        local success = DamageEntity(enemy.id, skill.damage)
+        local success = damageEnemyWithEffects(enemy.id, skill.damage)
         if success then
             enemiesHit = enemiesHit + 1
             PulseTile(enemy.x, enemy.y, 0.5, 1.0, 0.0, 0.0)

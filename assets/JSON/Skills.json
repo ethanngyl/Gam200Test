@@ -125,6 +125,83 @@
       "pierce": true,
       "animationName": "Attack",
       "soundEffect": "arrow"
+    },
+    "LightningStrike": {
+      "name": "Lightning Strike",
+      "description": "Damages all enemies regardless of their location",
+      "skillType": "global_damage",
+      "apCost": 3,
+      "damage": 1,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "fireball"
+    },
+    "EarthenBind": {
+      "name": "Earthen Bind",
+      "description": "Target enemy's movement is reduced by 2 next turn",
+      "skillType": "enemy_target",
+      "effect": "earthenBind",
+      "effectDuration": 1,
+      "extraData": 2,
+      "apCost": 2,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "shield_up"
+    },
+    "ManaDrain": {
+      "name": "Mana Drain",
+      "description": "Target enemy starts with 1 less AP next turn",
+      "skillType": "enemy_target",
+      "effect": "manaDrain",
+      "effectDuration": 1,
+      "extraData": 1,
+      "apCost": 1,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "fireball"
+    },
+    "Overload": {
+      "name": "Overload",
+      "description": "Gain 2 AP this turn. AP does not refill next turn",
+      "skillType": "self_overload",
+      "apCost": 0,
+      "apGain": 2,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "shield_up"
+    },
+    "SoulRend": {
+      "name": "Soul Rend",
+      "description": "Damage dealt to target enemy restores 1 health to all characters for 1 turn",
+      "skillType": "enemy_target",
+      "effect": "soulRend",
+      "effectDuration": 1,
+      "apCost": 2,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "fireball"
+    },
+    "SoulMerge": {
+      "name": "Soul Merge",
+      "description": "Sacrifice self to permanently buff an ally: +2 Health, +1 Movement, +1 AP, +1 Damage, kill heal",
+      "skillType": "ally_target",
+      "effect": "soulMerge",
+      "duration": -1,
+      "apCost": 3,
+      "damage": 0,
+      "range": 0,
+      "pattern": "none",
+      "animationName": "Attack",
+      "soundEffect": "shield_up"
     }
   }
 }

@@ -441,7 +441,21 @@ function OnUpdate(dt)
         return
     end
 
-    -- Decrement status effects at turn start (vulnerability, etc.)
+    -- Earthen Bind: consume extra AP to reduce movement this turn
+    if HasStatusEffect and HasStatusEffect(entityID, "earthenBind") then
+        local reduction = 2  -- movement points reduced
+        ConsumeEnemyAP(entityID, reduction)
+        print("[Enemy " .. entityID .. "] EARTHEN BIND - movement AP reduced by " .. reduction)
+    end
+
+    -- Mana Drain: consume AP to reduce available actions this turn
+    if HasStatusEffect and HasStatusEffect(entityID, "manaDrain") then
+        local reduction = 1
+        ConsumeEnemyAP(entityID, reduction)
+        print("[Enemy " .. entityID .. "] MANA DRAIN - AP reduced by " .. reduction)
+    end
+
+    -- Decrement status effects at turn start (vulnerability, earthenBind, manaDrain, etc.)
     if DecrementStatusEffects then
         DecrementStatusEffects(entityID)
     end
