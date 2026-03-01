@@ -448,7 +448,18 @@ function OnUpdate(dt)
             end
             print("[Boss " .. entityID .. "] All players in arena - BOSS ACTIVATED!")
         else
-            return  -- do nothing
+            -- Still need to finish our turn action so the turn system doesn't softlock
+            local currentTurn = GetCurrentTurn()
+            if currentTurn == "Enemy" then
+                local ok, isActive = pcall(IsActiveEnemy, entityID)
+                if ok and isActive then
+                    local ok2, actionReady = pcall(IsEnemyActionReady)
+                    if ok2 and actionReady then
+                        FinishBossAction()
+                    end
+                end
+            end
+            return
         end
     end
 
