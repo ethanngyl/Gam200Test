@@ -139,6 +139,9 @@ local healthBarHeight = 0.045    -- Slightly taller
 local healthBarOffsetY = 0.22
 local healthBarLayer = 50
 
+-- Boss idle state: immune and does nothing until all 3 players enter the arena
+local bossActivated = false
+
 -- ============================================================================
 -- ANIMATION (reuses enemy knight sheets)
 -- ============================================================================
@@ -329,6 +332,12 @@ function OnInit()
 
     targetPlayerID = FindClosestPlayer() or 0
 
+    -- Boss starts immune until all players enter the arena
+    if ApplyStatusEffect then
+        ApplyStatusEffect(entityID, "immune", -1, entityID)
+        print("[Boss " .. entityID .. "] Immune until all players enter arena")
+    end
+
     -- Spawn health bar sprites above boss
     local wx, wy = GetEntityWorldPosition(entityID)
     if wx and wy then
@@ -399,9 +408,49 @@ local function UpdateHealthBar()
     SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
+-- Check if all 3 players are inside the arena bounds
+local function AreAllPlayersInArena()
+    local arena = _G.ArenaBounds
+    if not arena then return false end
+
+    local players = GetAllPlayers()
+    if not players or #players == 0 then return false end
+
+    local count = 0
+    local alive = 0
+    for _, pid in ipairs(players) do
+        local hp = GetEntityHP(pid)
+        if hp and hp > 0 then
+            alive = alive + 1
+            local px, py = GetEntityGridPosition(pid)
+            if px and py
+               and px >= arena.minX and px < arena.maxX
+               and py >= arena.minY and py < arena.maxY then
+                count = count + 1
+            end
+        end
+    end
+
+    -- All living players must be in the arena
+    return alive > 0 and count == alive
+end
+
 function OnUpdate(dt)
     -- Update health bar every frame
     UpdateHealthBar()
+
+    -- Boss stays idle until all players enter the arena
+    if not bossActivated then
+        if AreAllPlayersInArena() then
+            bossActivated = true
+            if RemoveStatusEffect then
+                RemoveStatusEffect(entityID, "immune")
+            end
+            print("[Boss " .. entityID .. "] All players in arena - BOSS ACTIVATED!")
+        else
+            return  -- do nothing
+        end
+    end
 
     local currentTurn = GetCurrentTurn()
 
