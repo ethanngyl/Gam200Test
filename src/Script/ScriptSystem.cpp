@@ -575,6 +575,9 @@ namespace Framework {
 
         // Game API - Projectile Skills
         lua_register(L, "SpawnSkillProjectile", LevelLoader::Lua_SpawnSkillProjectile);
+
+        // JSON Loading (shared with LevelLoader)
+        lua_register(L, "LoadJSON", LevelLoader::Lua_LoadJSON);
     }
 
     /**
