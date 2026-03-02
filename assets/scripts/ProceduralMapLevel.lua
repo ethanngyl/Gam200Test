@@ -49,6 +49,7 @@
 ]]--
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
+local SkillSwapUI = require("SkillSwapUI")
 
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)
@@ -525,22 +526,25 @@ function HandleGoalTransition(dt)
         -- Check if any player reached the goal
         if CheckGoalReached() then
             goalReached = true
-            
+
             -- Play victory sound if available
             if PlaySound then
                 pcall(function()
                     PlaySound("victory", false, 1.0)
                 end)
             end
-            
-            Log("GOAL REACHED - Transitioning to Main Menu immediately...")
-            
-            -- Transition to main menu immediately
-            if SetNextGameState then
-                SetNextGameState("LEVEL_END")
-            else
-                Log("ERROR: No game state transition function available!")
-            end
+
+            Log("GOAL REACHED - Opening skill swap screen...")
+
+            -- Show skill swap UI; when player clicks Continue, transition to next level
+            SkillSwapUI.Show(function()
+                Log("Skill swap complete - Transitioning to next level...")
+                if SetNextGameState then
+                    SetNextGameState("LEVEL_END")
+                else
+                    Log("ERROR: No game state transition function available!")
+                end
+            end)
         end
     end
 end
@@ -559,12 +563,15 @@ function OnUpdate(dt)
     -- Handle pause menu
     PauseMenu.Update(dt)
 
+    -- Update skill swap UI (runs while paused, handles its own input)
+    SkillSwapUI.Update(dt)
+
     -- Update party UI
     if partyUI then
         partyUI:OnUpdate(dt)
     end
 
-    -- Skip game logic if paused
+    -- Skip game logic if paused (SkillSwapUI pauses the game while active)
     if IsPaused() then
         return
     end
@@ -637,6 +644,9 @@ end
 
 function OnDraw()
     PauseMenu.Draw()
+
+    -- Render skill swap UI overlay
+    SkillSwapUI.Draw()
 
     -- Render UI components (including scroll animation text)
     UIManager.Draw()

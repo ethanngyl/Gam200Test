@@ -185,10 +185,11 @@ local SkillDefs = {}
 -- Per-player skill assignments: playerIndex -> { key -> skillID }
 -- Player index is determined by spawn order (1 = first spawned, etc.)
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
+-- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "BasicAttack", ["2"] = "AreaBlast" },
-    [2] = { ["1"] = "BasicAttack", ["2"] = "Fireball", ["3"] = "PiercingShot" },
-    [3] = { ["1"] = "BasicAttack" },
+    [1] = { ["1"] = "Thrust", ["2"] = "Guard" },
+    [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
+    [3] = { ["1"] = "SwiftBlow" },
 }
 
 -- All keys that can be bound to skills (used for preview selection)
@@ -924,6 +925,26 @@ function OnInit(id)
         print("[PlayerScript] Loaded " .. n .. " skills from Skills.json")
     else
         print("[PlayerScript] ERROR: Failed to load Skills.json!")
+    end
+
+    -- Load skill loadout from JSON (written by SkillSwapUI between levels)
+    local loadoutData = LoadJSON("assets/JSON/SkillLoadout.json")
+    if loadoutData and loadoutData.players then
+        for i = 1, 3 do
+            local p = loadoutData.players[tostring(i)]
+            if p then
+                PlayerSkills[i] = {}
+                for slot = 1, 4 do
+                    local sid = p[tostring(slot)]
+                    if sid then
+                        PlayerSkills[i][tostring(slot)] = sid
+                    end
+                end
+            end
+        end
+        print("[PlayerScript] Loaded skill loadout from SkillLoadout.json")
+    else
+        print("[PlayerScript] No SkillLoadout.json found, using default skills")
     end
 
     -- Apply scale to ALL players (unified scaling)
