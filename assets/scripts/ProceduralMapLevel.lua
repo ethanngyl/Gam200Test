@@ -84,6 +84,10 @@ local kSpacingY = 0.1
 -- Audio configuration
 local audioConfig = nil
 
+-- Level progression (read from LevelProgress.json)
+local currentLevel = 1
+local totalLevels  = 3
+
 -- ============================================================================
 -- GOAL STATE
 -- ============================================================================
@@ -97,8 +101,15 @@ local goalTransitionDelay = 0
 -- ============================================================================
 
 function OnInit()
+    -- Read level progression
+    local progress = LoadJSON("assets/JSON/LevelProgress.json")
+    if progress then
+        currentLevel = progress.currentLevel or 1
+        totalLevels  = progress.totalLevels  or 3
+    end
+
     Log("========================================")
-    Log("LEVEL 3: PROCEDURAL MAP VERSION")
+    Log("LEVEL " .. currentLevel .. " / " .. totalLevels .. ": PROCEDURAL MAP")
     Log("========================================")
 
     -- Initialize pause menu
@@ -536,9 +547,21 @@ function HandleGoalTransition(dt)
 
             Log("GOAL REACHED - Opening skill swap screen...")
 
-            -- Show skill swap UI; when player clicks Continue, transition to next level
+            -- Show skill swap UI; when player clicks Continue, advance and transition
             SkillSwapUI.Show(function()
-                Log("Skill swap complete - Transitioning to next level...")
+                -- Advance level progress for next play
+                local nextLevel = currentLevel + 1
+                local f = io.open("assets/JSON/LevelProgress.json", "w")
+                if f then
+                    f:write("{\n")
+                    f:write("  \"currentLevel\": " .. nextLevel .. ",\n")
+                    f:write("  \"totalLevels\": " .. totalLevels .. "\n")
+                    f:write("}\n")
+                    f:close()
+                    Log("[LevelProgress] Advanced to level " .. nextLevel .. " / " .. totalLevels)
+                end
+
+                Log("Skill swap complete - Transitioning to level end screen...")
                 if SetNextGameState then
                     SetNextGameState("LEVEL_END")
                 else
@@ -651,15 +674,18 @@ function OnDraw()
     -- Render UI components (including scroll animation text)
     UIManager.Draw()
 
+    -- Level indicator (top-right corner)
+    local fbW, fbH = GetFramebufferSize()
+    if fbW and fbW > 0 then
+        local scaleRef = fbW / 1920
+        DrawText("Jersey20Regular", "Level " .. currentLevel .. " / " .. totalLevels,
+            fbW - 220 * scaleRef, 30 * scaleRef, 0.6 * scaleRef, 0.9, 0.9, 0.7)
+    end
+
     -- Check if IsEditorMode exists
     if IsEditorMode and IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
-    
-    -- Show controls
-    --[[
-    DrawText("Playfair48", "WASD to move, P to pause", 50, 100, 0.8, 0.8, 0.8, 1.0)
-    ]]
 end
 
 -- ============================================================================

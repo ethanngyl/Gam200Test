@@ -167,6 +167,15 @@ function OnLevel3ButtonClicked()
     end
 
     Log("DEMO button clicked!")
+
+    -- Reset level progress to level 1 when starting a new game
+    local f = io.open("assets/JSON/LevelProgress.json", "w")
+    if f then
+        f:write("{\n  \"currentLevel\": 1,\n  \"totalLevels\": 3\n}\n")
+        f:close()
+        Log("[LevelSelect] Level progress reset to 1")
+    end
+
     ButtonManager.TransitionTo("LEVEL_3")
 end
 
