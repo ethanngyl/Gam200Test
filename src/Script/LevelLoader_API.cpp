@@ -3150,7 +3150,7 @@ namespace Framework {
                 amount += extraDmg;
             }
 
-            / 4. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
+            // 4. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
             const auto* reductionEffect = effects.GetEffect("damageReduction");
             if (reductionEffect) {
                 int reduction = reductionEffect->extraData;
