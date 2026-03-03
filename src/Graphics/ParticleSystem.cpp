@@ -26,37 +26,40 @@ namespace Framework {
 		// Query active graphics system to convert pixel size into world-space scale
 		// Size (pixel -> world conversion)
 		auto* graphics = CORE->GetGraphicsSystem();
-		//float pixelSize = 15.0f; // desired size in pixels
-		float worldScale = (2.0f * settings.size) / float(graphics->GetRenderHeight());
+		//float worldScale = (5.0f * settings.size) / float(graphics->GetRenderHeight());
+		float worldScale = settings.size;
 
 		Entity entity = CORE->GetEntityManager()->CreateEntity();
 		
 		CORE->GetEntityManager()->AddComponent<Transform>(entity, emitter);
 		auto& transform = CORE->GetEntityManager()->GetComponent<Transform>(entity);
 		transform.position = emitter;
-		transform.scale = { worldScale , worldScale };	// Size
+		transform.scale = { worldScale, worldScale };	// Size
 
 		CORE->GetEntityManager()->AddComponent<Particle>(entity);
 		auto& particle = CORE->GetEntityManager()->GetComponent<Particle>(entity);
+
+		// frand: gives any random number from 0.0f to 1.0f
+		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };
+
+		// Add some random size variation (0.7x to 1.3x, for example)
+		float sizeJitter = 0.7f + frand() * 0.6f;
+
 		// Store start values for interpolation
 		particle.startTint = settings.tint;
 		particle.endTint = settings.endTint;
-		particle.startSize = worldScale;
-		particle.endSize = settings.endSize;
+		particle.startSize = worldScale * sizeJitter;
+		particle.endSize = worldScale * settings.endSize * sizeJitter;
 		particle.gravity = settings.gravity;
 		particle.fadeOut = settings.fadeOut;
 		particle.shrinkOverTime = settings.shrinkOverTime;
 		particle.growOverTime = settings.growOverTime;
 
-		// Sprite
-		CORE->GetEntityManager()->AddComponent<Sprite>(entity);
-		auto& sprite = CORE->GetEntityManager()->GetComponent<Sprite>(entity);
-		sprite.texturePath = settings.texturePath;
-		sprite.layer = settings.layer;
-		sprite.tint = settings.tint;
-
-		// frand: gives any random number from 0.0f to 1.0f
-		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };
+		// Mesh (Body for the particle)
+		CORE->GetEntityManager()->AddComponent<MeshRenderer>(entity);
+		auto& mr = CORE->GetEntityManager()->GetComponent<MeshRenderer>(entity);
+		mr.layer = settings.layer;
+		mr.tint = settings.tint;
 		
 		// Lifetime
 		particle.lifetime = settings.minLifetime + frand() * (settings.maxLifetime - settings.minLifetime);
@@ -82,8 +85,11 @@ namespace Framework {
 			direction = settings.direction;
 
 			// scale up by 2 then shift by -1 (Range: -1 to 1)
-			direction.x += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
-			direction.y += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
+			//direction.x += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
+			//direction.y += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
+
+			direction.y = std::abs(direction.y); // push mostly upward for smoke
+			direction.x += ((frand() * 2.0f) - 1.0f) * 0.2f; // a bit more sideways
 
 			// direction normalized
 			direction.normalize();
@@ -121,12 +127,16 @@ namespace Framework {
 
 			auto& transform = entityManager->GetComponent<Transform>(entity);
 			auto& particle = entityManager->GetComponent<Particle>(entity);
-			auto& sprite = entityManager->GetComponent<Sprite>(entity);
+			auto& mr = entityManager->GetComponent<MeshRenderer>(entity);
 
 			// Apply physics
 			if (particle.gravity.x != 0.0f || particle.gravity.y != 0.0f) {
-				particle.velocity.x += particle.gravity.x * dt;
-				particle.velocity.y += particle.gravity.y * dt;
+				//particle.velocity.x += particle.gravity.x * dt;
+				//particle.velocity.y += particle.gravity.y * dt;
+
+				float drag = 1.0f; // slow down...
+				particle.velocity.x += particle.velocity.x * drag * dt;
+				particle.velocity.y += particle.velocity.y * drag * dt;
 			}
 
 			// Update position
@@ -143,24 +153,19 @@ namespace Framework {
 			if (lifeProgress >= 0.0f && lifeProgress <= 1.0f) {
 				if (particle.fadeOut) {
 					// Fade out tint
-					sprite.tint.r = particle.startTint.r +
+					mr.tint.r = particle.startTint.r +
 						(particle.endTint.r - particle.startTint.r) * lifeProgress;
-					sprite.tint.g = particle.startTint.g +
+					mr.tint.g = particle.startTint.g +
 						(particle.endTint.g - particle.startTint.g) * lifeProgress;
-					sprite.tint.b = particle.startTint.b +
+					mr.tint.b = particle.startTint.b +
 						(particle.endTint.b - particle.startTint.b) * lifeProgress;
-					sprite.tint.a = particle.startTint.a +
+					mr.tint.a = particle.startTint.a +
 						(particle.endTint.a - particle.startTint.a) * lifeProgress;
 				}
 
-				if (particle.shrinkOverTime) {
-					// Shrink over time
-					float currentSize = particle.startSize +
-						(particle.endSize - particle.startSize) * lifeProgress;
-					transform.scale = { currentSize, currentSize };
-				}
-				else if (particle.growOverTime) {
-					// Grow over time
+				if (particle.shrinkOverTime || particle.growOverTime)
+				{
+					float lifeProgress = particle.age / particle.maxLifetime;
 					float currentSize = particle.startSize +
 						(particle.endSize - particle.startSize) * lifeProgress;
 					transform.scale = { currentSize, currentSize };

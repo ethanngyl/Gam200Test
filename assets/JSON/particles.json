@@ -1,23 +1,22 @@
 {
   "settings": {
     "Smoke": {
-      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [0.6, 0.6, 0.6, 0.28],
       "endTint": [0.15, 0.15, 0.15, 0.0],
       "layer": 5,
 
       "spawnRate": 10,
-      "size": 0.18,
+      "size": 0.10,
       "endSize": 0.50,
 
-      "minLifetime": 1.4,
-      "maxLifetime": 2.4,
+      "minLifetime": 1.0,
+      "maxLifetime": 2.0,
 
-      "minSpeed": 0.03,
-      "maxSpeed": 0.06,
+      "minSpeed": 0.05,
+      "maxSpeed": 0.10,
 
       "direction": [0.0, 1.0],
-      "directionFuzz": 0.45,
+      "directionFuzz": 0.25,
       "gravity": [0.0, 0.015],
 
       "fadeOut": true,
@@ -28,7 +27,6 @@
     },
 
     "Explosion": {
-      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [1.0, 0.8, 0.3, 1.0],
       "endTint": [0.8, 0.1, 0.0, 0.0],
       "layer": 6,
@@ -55,62 +53,7 @@
       "ownerPlayerID": -1
     },
 
-    "Sparks": {
-      "texturePath": "assets/UI/AP_Crystal(old).png",
-      "tint": [1.0, 0.95, 0.7, 1.0],
-      "endTint": [1.0, 0.4, 0.1, 0.0],
-      "layer": 7,
-
-      "spawnRate": 0,
-      "burstCount": 18,
-
-      "size": 0.06,
-      "endSize": 0.015,
-
-      "minLifetime": 0.16,
-      "maxLifetime": 0.42,
-
-      "minSpeed": 5.0,
-      "maxSpeed": 10.0,
-
-      "direction": [0.0, 0.0],
-      "directionFuzz": 1.6,
-      "gravity": [0.0, -14.0],
-
-      "fadeOut": true,
-      "shrinkOverTime": true,
-      "ownerPlayerID": -1
-    },
-
-    "Rain": {
-      "texturePath": "assets/UI/AP_Crystal(old).png",
-      "tint": [0.6, 0.8, 1.0, 0.55],
-      "endTint": [0.6, 0.8, 1.0, 0.15],
-      "layer": 3,
-
-      "spawnRate": 65,
-      "burstCount": 0,
-
-      "size": 0.04,
-      "endSize": 0.04,
-
-      "minLifetime": 0.45,
-      "maxLifetime": 0.85,
-
-      "minSpeed": 10.0,
-      "maxSpeed": 16.0,
-
-      "direction": [0.0, -1.0],
-      "directionFuzz": 0.12,
-      "gravity": [0.0, -28.0],
-
-      "fadeOut": true,
-      "shrinkOverTime": false,
-      "ownerPlayerID": -1
-    },
-
     "Player1Aura": {
-      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [1.0, 0.3, 0.3, 0.6],
       "endTint": [1.0, 0.1, 0.1, 0.0],
       "layer": 5,
@@ -137,7 +80,6 @@
     },
 
     "Player2Aura": {
-      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [0.3, 1.0, 0.3, 0.6],
       "endTint": [0.1, 1.0, 0.1, 0.0],
       "layer": 5,
@@ -164,7 +106,6 @@
     },
 
     "Player3Aura": {
-      "texturePath": "assets/UI/AP_Crystal(old).png",
       "tint": [1.0, 1.0, 0.3, 0.6],
       "endTint": [1.0, 1.0, 0.1, 0.0],
       "layer": 5,
@@ -193,8 +134,6 @@
 
   "emitters": [
     { "setting": "Smoke",     "emitter": [ -0.5, 0.5] },
-    { "setting": "Explosion", "emitter": [ 0.5, 0.5] },
-    { "setting": "Sparks",    "emitter": [ -0.5, -0.5] },
-    { "setting": "Rain",      "emitter": [ 0.5, -0.5] }
+    { "setting": "Explosion", "emitter": [ 0.5, 0.5] }
   ]
 }

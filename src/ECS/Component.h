@@ -69,6 +69,7 @@ namespace Framework
         // Visual interpolation
         glm::vec4 startTint{ 1.0f, 1.0f, 1.0f, 1.0f };
         glm::vec4 endTint{ 1.0f, 1.0f, 1.0f, 0.0f };
+        
         float startSize = 1.0f;
         float endSize = 0.0f;
 
