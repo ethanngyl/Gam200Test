@@ -381,11 +381,15 @@ function OnUpdate(dt)
         if pendingProjectileTimer > 0 then return end
         pendingProjectile = false
 
-        -- Fire the projectile
+        -- Fire the projectile (offset spawn forward to avoid self-hit)
         local wx, wy = GetEntityWorldPosition(entityID)
         if wx and wy and SpawnSkillProjectile then
+            -- Offset spawn position 1 tile ahead in facing direction
+            -- so the projectile clears the mage's own collider
+            local spawnOffsetX = facingDirX * 0.1
+            local spawnOffsetY = facingDirY * 0.1
             local projID = SpawnSkillProjectile(
-                wx, wy,
+                wx + spawnOffsetX, wy + spawnOffsetY,
                 facingDirX, facingDirY,
                 config.arcaneBoltSpeed,
                 config.arcaneBoltDamage,
