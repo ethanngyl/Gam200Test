@@ -310,6 +310,9 @@ namespace Framework {
         // Procedural Map API
         static int Lua_LoadProceduralMap(lua_State* L);
 
+        // Entity Stats API
+        static int Lua_SetEntityMaxAP(lua_State* L);  // SetEntityMaxAP(entityID, maxAP) - sets both max and current AP
+
         // Entity Spawning API
         static int Lua_SpawnPlayerAt(lua_State* L);
         static int Lua_RemoveMovementComponent(lua_State* L);

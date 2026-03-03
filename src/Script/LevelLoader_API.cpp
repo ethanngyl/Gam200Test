@@ -2681,6 +2681,37 @@ namespace Framework {
     }
 
     /**
+     * @brief Set entity's max AP and refill to that value
+     * Lua usage: SetEntityMaxAP(entityID, maxAP)
+     * @param entityID The entity ID
+     * @param maxAP New maximum AP value (also sets current AP to this value)
+     */
+    int LevelLoader::Lua_SetEntityMaxAP(lua_State* L) {
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) {
+            LOG_ERROR("LevelLoader", "SetEntityMaxAP: No EntityManager");
+            return 0;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int maxAP = static_cast<int>(luaL_checknumber(L, 2));
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<AP>(entity)) {
+            LOG_WARN("LevelLoader", "SetEntityMaxAP: Entity %d invalid or missing AP component", entityID);
+            return 0;
+        }
+
+        auto& ap = em->GetComponent<AP>(entity);
+        ap.maxActionPoints = maxAP;
+        ap.actionPoints = maxAP;
+        LOG_INFO("LevelLoader", "SetEntityMaxAP: Entity %d max AP set to %d", entityID, maxAP);
+
+        return 0;
+    }
+
+    /**
      * @brief Refill enemy AP to maximum - legacy name
      * Lua usage: RefillEnemyAP(entityID)
      * @param entityID The enemy entity ID
@@ -3117,6 +3148,16 @@ namespace Framework {
                 LOG_INFO("StatusEffect", "Entity %u is VULNERABLE: %d + %d extra damage",
                     entity.GetID(), amount, extraDmg);
                 amount += extraDmg;
+            }
+
+            / 4. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
+            const auto* reductionEffect = effects.GetEffect("damageReduction");
+            if (reductionEffect) {
+                int reduction = reductionEffect->extraData;
+                LOG_INFO("StatusEffect", "Entity %u has DAMAGE REDUCTION: %d damage reduced by %d",
+                    entity.GetID(), amount, reduction);
+                amount -= reduction;
+                if (amount < 0) amount = 0;
             }
         }
 

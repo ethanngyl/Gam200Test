@@ -603,6 +603,7 @@ namespace Framework {
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
+        lua_register(L, "SetEntityMaxAP", Lua_SetEntityMaxAP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
         lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
