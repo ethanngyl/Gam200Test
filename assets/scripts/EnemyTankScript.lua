@@ -293,6 +293,11 @@ function OnInit()
 
     ApplySheet("idleFront", false)
 
+    -- Tint green to distinguish as tank
+    if SetSpriteColor then
+        SetSpriteColor(entityID, 0.3, 0.9, 0.3, 1.0)
+    end
+
     local ex, ey = GetEntityGridPosition(entityID)
     if ex and ey and SetTileOccupant then
         SetTileOccupant(ex, ey, entityID)

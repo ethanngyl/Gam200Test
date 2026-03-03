@@ -3534,6 +3534,8 @@ namespace Framework {
         config.width = width;
         config.height = height;
         config.algorithm = algorithm;
+        config.minEnemies = 4;   // Ensure at least 4 enemies for all enemy types
+        config.maxEnemies = 6;
 
         // Grid parameters - MATCH YOUR TileMap.json
         const float TILE_SIZE = 128.0f;

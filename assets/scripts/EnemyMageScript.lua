@@ -269,6 +269,11 @@ function OnInit()
 
     ApplySheet("idleFront", false)
 
+    -- Tint blue to distinguish as mage
+    if SetSpriteColor then
+        SetSpriteColor(entityID, 0.4, 0.6, 1.0, 1.0)
+    end
+
     local ex, ey = GetEntityGridPosition(entityID)
     if ex and ey and SetTileOccupant then
         SetTileOccupant(ex, ey, entityID)

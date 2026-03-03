@@ -326,6 +326,20 @@ end
 -- HELPER: Setup Procedural Enemies
 -- ============================================================================
 
+-- Enemy type assignment order: ensures at least one of each new type spawns.
+-- Index 1 = Knight Commander (yellow), 2 = Knight, 3 = Mage (blue),
+-- 4 = Tank (green). Any additional enemies are regular EnemyScript knights.
+local ENEMY_TYPE_SCRIPTS = {
+    "assets/scripts/EnemyKnightCommanderScript.lua",  -- 1: Knight Commander
+    "assets/scripts/EnemyKnightScript.lua",            -- 2: Knight
+    "assets/scripts/EnemyMageScript.lua",              -- 3: Mage
+    "assets/scripts/EnemyTankScript.lua",              -- 4: Tank
+}
+
+local ENEMY_TYPE_NAMES = {
+    "Knight Commander", "Knight", "Mage", "Tank"
+}
+
 function SetupProceduralEnemies(mapData)
     Log("========================================")
     Log("Spawning procedural enemies...")
@@ -342,6 +356,12 @@ function SetupProceduralEnemies(mapData)
         return false
     end
 
+    -- Reset global enemy death counter for this level
+    _G.EnemiesDeadThisLevel = 0
+    _G.KnightCommanderIDs = {}
+    _G.RallyingCryActive = false
+    _G.RallyingCryPending = false
+
     Log("Spawning " .. #mapData.enemies .. " enemies:")
 
     local spawnedEnemies = {}
@@ -350,19 +370,29 @@ function SetupProceduralEnemies(mapData)
         local ex = enemy.worldX
         local ey = enemy.worldY
         local enemyID = SpawnEnemyAt(ex, ey)
-        
+
         if enemyID and enemyID ~= 0 then
-            Log("  Enemy " .. i .. " at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
-            
-            -- Attach enemy script FIRST (so OnInit runs immediately with this setup)
-            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+            -- Assign enemy type: first 4 get unique types, rest are regular
+            local scriptPath
+            local typeName
+            if i <= #ENEMY_TYPE_SCRIPTS then
+                scriptPath = ENEMY_TYPE_SCRIPTS[i]
+                typeName = ENEMY_TYPE_NAMES[i]
+            else
+                scriptPath = "assets/scripts/EnemyScript.lua"
+                typeName = "Regular"
+            end
+
+            Log("  Enemy " .. i .. " [" .. typeName .. "] at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
+
+            -- Attach enemy script (OnInit runs and sets stats/tint)
+            AddScriptComponentToEntity(enemyID, scriptPath)
 
             -- Set target (C++ side)
             SetEnemyTarget(enemyID, playerID)
 
-            Log("  Enemy " .. enemyID .. " script attached + target set to " .. tostring(playerID))
+            Log("  Enemy " .. enemyID .. " " .. typeName .. " script attached + target set to " .. tostring(playerID))
 
-            
             table.insert(spawnedEnemies, enemyID)
         else
             Log("  Enemy " .. i .. " FAILED to spawn!")

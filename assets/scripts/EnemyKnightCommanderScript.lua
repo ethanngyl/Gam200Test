@@ -243,6 +243,11 @@ function OnInit()
 
     ApplySheet("idleFront", false)
 
+    -- Tint yellow to distinguish from regular knights
+    if SetSpriteColor then
+        SetSpriteColor(entityID, 1.0, 0.9, 0.3, 1.0)
+    end
+
     -- Set tile occupancy
     local ex, ey = GetEntityGridPosition(entityID)
     if ex and ey and SetTileOccupant then
