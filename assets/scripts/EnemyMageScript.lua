@@ -407,6 +407,19 @@ function OnUpdate(dt)
         -- Fire the projectile (offset spawn forward to clear own collider)
         local wx, wy = GetEntityWorldPosition(entityID)
         if wx and wy and SpawnSkillProjectile then
+            -- Apply Bolstered Morale bonus
+            local bonusDmg = 0
+            if _G.KnightCommanderIDs then
+                for _, cid in ipairs(_G.KnightCommanderIDs) do
+                    local chp = GetEntityHP(cid)
+                    if chp and chp > 0 then
+                        bonusDmg = bonusDmg + 1
+                        break  -- Only +1 total from Bolstered Morale
+                    end
+                end
+            end
+            local totalDmg = config.arcaneBoltDamage + bonusDmg
+
             -- Offset spawn position well past the mage's collider
             local spawnOffsetX = facingDirX * 0.05
             local spawnOffsetY = facingDirY * 0.05
@@ -414,14 +427,14 @@ function OnUpdate(dt)
                 wx + spawnOffsetX, wy + spawnOffsetY,
                 facingDirX, facingDirY,
                 config.arcaneBoltSpeed,
-                config.arcaneBoltDamage,
+                totalDmg,
                 false,           -- no pierce
                 0.4, 0.2, 1.0, 1.0,  -- purple tint
                 "",              -- default sprite
                 true,            -- isEnemyProjectile: damages players, not enemies
                 entityID         -- sourceEntityID: prevent self-hit
             )
-            print("[EnemyMage " .. entityID .. "] Arcane Bolt fired! Projectile=" .. tostring(projID))
+            print("[EnemyMage " .. entityID .. "] Arcane Bolt fired! dmg=" .. totalDmg .. " Projectile=" .. tostring(projID))
         end
 
         -- Check if we have enough AP for another arcane bolt

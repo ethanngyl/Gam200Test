@@ -510,12 +510,25 @@ function OnUpdate(dt)
         -- Timer finished: apply damage now
         pendingAttack = false
 
-        print("[Enemy " .. entityID .. "] ATTACK HIT Player " .. pendingAttackTarget .. " for " .. pendingAttackDamage .. " damage")
+        -- Apply Bolstered Morale bonus
+        local bonusDmg = 0
+        if _G.KnightCommanderIDs then
+            for _, cid in ipairs(_G.KnightCommanderIDs) do
+                local chp = GetEntityHP(cid)
+                if chp and chp > 0 then
+                    bonusDmg = bonusDmg + 1
+                    break  -- Only +1 total from Bolstered Morale
+                end
+            end
+        end
+        local totalDmg = pendingAttackDamage + bonusDmg
+
+        print("[Enemy " .. entityID .. "] ATTACK HIT Player " .. pendingAttackTarget .. " for " .. totalDmg .. " damage")
 
         local hpBefore, maxHP = GetEntityHP(pendingAttackTarget)
         print("[Enemy " .. entityID .. "] Player " .. pendingAttackTarget .. " HP BEFORE: " .. tostring(hpBefore) .. "/" .. tostring(maxHP))
 
-        local success = DamageEntity(pendingAttackTarget, pendingAttackDamage, entityID)
+        local success = DamageEntity(pendingAttackTarget, totalDmg, entityID)
         print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
 
         if success then
@@ -529,7 +542,7 @@ function OnUpdate(dt)
             if PopupManager and PopupManager.ShowDamageNumber then
                 local worldX, worldY = GetEntityWorldPosition(pendingAttackTarget)
                 if worldX then
-                    PopupManager.ShowDamageNumber(worldX, worldY + 0.2, pendingAttackDamage)
+                    PopupManager.ShowDamageNumber(worldX, worldY + 0.2, totalDmg)
                 end
             end
 
