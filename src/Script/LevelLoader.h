@@ -275,6 +275,8 @@ namespace Framework {
         static int Lua_MoveEntityToTile(lua_State* L);
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
+        static int Lua_GetDamageModifier(lua_State* L);  // GetDamageModifier(entityID)
+        static int Lua_SetDamageModifier(lua_State* L);  // SetDamageModifier(entityID, modifier)
         static int Lua_FindPathToTarget(lua_State* L);
         
         // Tile Occupancy API

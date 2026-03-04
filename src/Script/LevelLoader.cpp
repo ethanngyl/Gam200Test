@@ -590,6 +590,8 @@ namespace Framework {
         lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", Lua_DamageEntity);
+        lua_register(L, "GetDamageModifier", Lua_GetDamageModifier);
+        lua_register(L, "SetDamageModifier", Lua_SetDamageModifier);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
         // Tile Occupancy API

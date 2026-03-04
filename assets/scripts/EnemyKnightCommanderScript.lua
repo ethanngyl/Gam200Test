@@ -190,11 +190,31 @@ local function FindClosestPlayer()
     return closestID, closestDist
 end
 
--- Get bonus damage from Bolstered Morale (other commanders alive)
-local function GetBolsteredMoraleDamage()
-    -- This commander provides the bonus, but it doesn't stack with itself
-    -- Other scripts check _G.KnightCommanderIDs
-    return 0
+-- Apply Bolstered Morale passive: +1 damageModifier to all enemies
+local function ApplyBolsteredMorale()
+    local enemies = GetAllEnemies()
+    if not enemies then return end
+    for _, eid in ipairs(enemies) do
+        if eid ~= entityID then
+            local current = GetDamageModifier(eid) or 0
+            SetDamageModifier(eid, current + 1)
+            print("[KnightCommander " .. entityID .. "] Bolstered Morale: +1 damageModifier on enemy " .. eid)
+        end
+    end
+end
+
+-- Remove Bolstered Morale passive: -1 damageModifier from all enemies
+local function RemoveBolsteredMorale()
+    local enemies = GetAllEnemies()
+    if not enemies then return end
+    for _, eid in ipairs(enemies) do
+        if eid ~= entityID then
+            local current = GetDamageModifier(eid) or 0
+            local newVal = current - 1
+            if newVal < 0 then newVal = 0 end
+            SetDamageModifier(eid, newVal)
+        end
+    end
 end
 
 -- ============================================================================
@@ -256,6 +276,9 @@ function OnInit()
 
     targetPlayerID = FindClosestPlayer() or 0
 
+    -- Apply Bolstered Morale passive to all existing enemies
+    ApplyBolsteredMorale()
+
     -- Spawn health bar
     local wx, wy = GetEntityWorldPosition(entityID)
     if wx and wy then
@@ -272,6 +295,9 @@ function OnInit()
 end
 
 function OnDestroy()
+    -- Remove Bolstered Morale from all enemies
+    RemoveBolsteredMorale()
+
     -- Remove from commander list
     if _G.KnightCommanderIDs then
         for i, id in ipairs(_G.KnightCommanderIDs) do
@@ -400,21 +426,9 @@ function OnUpdate(dt)
         if pendingAttackTimer > 0 then return end
         pendingAttack = false
 
-        -- Apply damage (include Bolstered Morale bonus from OTHER commanders)
-        local bonusDmg = 0
-        if _G.KnightCommanderIDs then
-            for _, cid in ipairs(_G.KnightCommanderIDs) do
-                if cid ~= entityID then
-                    local chp = GetEntityHP(cid)
-                    if chp and chp > 0 then
-                        bonusDmg = bonusDmg + 1
-                    end
-                end
-            end
-        end
-        local totalDmg = pendingAttackDamage + bonusDmg
-        DamageEntity(pendingAttackTarget, totalDmg, entityID)
-        print("[KnightCommander " .. entityID .. "] Strike hit for " .. totalDmg .. " damage")
+        -- Apply damage (damageModifier on target already handles Bolstered Morale)
+        DamageEntity(pendingAttackTarget, pendingAttackDamage, entityID)
+        print("[KnightCommander " .. entityID .. "] Strike hit for " .. pendingAttackDamage .. " damage")
 
         local px, py = GetEntityGridPosition(pendingAttackTarget)
         if px then PulseTile(px, py, 0.3, 1.0, 0.0, 0.0) end

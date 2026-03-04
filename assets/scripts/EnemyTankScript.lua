@@ -426,20 +426,9 @@ function OnUpdate(dt)
         if pendingAttackTimer > 0 then return end
         pendingAttack = false
 
-        -- Apply damage with Bolstered Morale bonus
-        local bonusDmg = 0
-        if _G.KnightCommanderIDs then
-            for _, cid in ipairs(_G.KnightCommanderIDs) do
-                local chp = GetEntityHP(cid)
-                if chp and chp > 0 then
-                    bonusDmg = bonusDmg + 1
-                    break
-                end
-            end
-        end
-        local totalDmg = pendingAttackDamage + bonusDmg
-        DamageEntity(pendingAttackTarget, totalDmg, entityID)
-        print("[EnemyTank " .. entityID .. "] Shield Bash hit for " .. totalDmg)
+        -- damageModifier on target already handles Bolstered Morale
+        DamageEntity(pendingAttackTarget, pendingAttackDamage, entityID)
+        print("[EnemyTank " .. entityID .. "] Shield Bash hit for " .. pendingAttackDamage)
 
         -- Apply stun to target
         if ApplyStatusEffect then

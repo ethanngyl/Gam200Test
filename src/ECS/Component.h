@@ -247,6 +247,7 @@ namespace Framework
         int maxHealth = 50;
         int currentHealth = 50;
         bool isDead = false;
+        int damageModifier = 0;  // Flat bonus to incoming damage (e.g., Knight Commander passive)
 
         Health() = default;
         Health(int max) : maxHealth(max), currentHealth(max) {}

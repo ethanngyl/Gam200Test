@@ -1822,6 +1822,53 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Get the damage modifier for an entity
+     * Lua usage: local mod = GetDamageModifier(entityID)
+     */
+    int LevelLoader::Lua_GetDamageModifier(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) { lua_pushinteger(L, 0); return 1; }
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) { lua_pushinteger(L, 0); return 1; }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Health>(entity)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& hp = em->GetComponent<Health>(entity);
+        lua_pushinteger(L, hp.damageModifier);
+        return 1;
+    }
+
+    /**
+     * @brief Set the damage modifier for an entity
+     * Lua usage: SetDamageModifier(entityID, modifier)
+     */
+    int LevelLoader::Lua_SetDamageModifier(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int modifier = static_cast<int>(luaL_checknumber(L, 2));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Health>(entity)) return 0;
+
+        auto& hp = em->GetComponent<Health>(entity);
+        hp.damageModifier = modifier;
+
+        LOG_INFO("LevelLoader", "SetDamageModifier: Entity %d damageModifier set to %d",
+                 entityID, modifier);
+        return 0;
+    }
+
     int LevelLoader::Lua_GetPlayerHP(lua_State* L)
     {
         LevelLoader* loader = GetLevelLoader(L);
@@ -3183,9 +3230,18 @@ namespace Framework {
             }
         }
 
-        // === APPLY DAMAGE ===
+        // === DAMAGE MODIFIER (e.g., Knight Commander's Bolstered Morale) ===
 
         auto& health = em->GetComponent<Health>(entity);
+        if (health.damageModifier != 0) {
+            LOG_INFO("StatusEffect", "Entity %u has damageModifier=%d, base damage=%d",
+                entity.GetID(), health.damageModifier, amount);
+            amount += health.damageModifier;
+            if (amount < 0) amount = 0;
+        }
+
+        // === APPLY DAMAGE ===
+
         int prevHP = health.currentHealth;
         health.currentHealth -= amount;
 

@@ -527,6 +527,8 @@ namespace Framework {
         lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
+        lua_register(L, "GetDamageModifier", LevelLoader::Lua_GetDamageModifier);
+        lua_register(L, "SetDamageModifier", LevelLoader::Lua_SetDamageModifier);
         lua_register(L, "FindPathToTarget", LevelLoader::Lua_FindPathToTarget);
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
