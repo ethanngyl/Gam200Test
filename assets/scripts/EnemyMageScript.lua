@@ -381,20 +381,22 @@ function OnUpdate(dt)
         if pendingProjectileTimer > 0 then return end
         pendingProjectile = false
 
-        -- Fire the projectile (offset spawn forward to avoid self-hit)
+        -- Fire the projectile (offset spawn forward to clear own collider)
         local wx, wy = GetEntityWorldPosition(entityID)
         if wx and wy and SpawnSkillProjectile then
-            -- Offset spawn position 1 tile ahead in facing direction
-            -- so the projectile clears the mage's own collider
-            local spawnOffsetX = facingDirX * 0.1
-            local spawnOffsetY = facingDirY * 0.1
+            -- Offset spawn position well past the mage's collider
+            local spawnOffsetX = facingDirX * 0.05
+            local spawnOffsetY = facingDirY * 0.05
             local projID = SpawnSkillProjectile(
                 wx + spawnOffsetX, wy + spawnOffsetY,
                 facingDirX, facingDirY,
                 config.arcaneBoltSpeed,
                 config.arcaneBoltDamage,
                 false,           -- no pierce
-                0.4, 0.2, 1.0, 1.0  -- purple tint
+                0.4, 0.2, 1.0, 1.0,  -- purple tint
+                "",              -- default sprite
+                true,            -- isEnemyProjectile: damages players, not enemies
+                entityID         -- sourceEntityID: prevent self-hit
             )
             print("[EnemyMage " .. entityID .. "] Arcane Bolt fired! Projectile=" .. tostring(projID))
         end
@@ -462,6 +464,20 @@ function PhaseInit()
     if barrierCooldown <= 0 and currentAP >= config.barrierAPCost then
         currentTurnPhase = PHASE.BARRIER
         return
+    end
+
+    -- If player is already in line of sight at good range, skip movement and attack
+    if currentAP >= config.arcaneBoltAPCost and targetPlayerID then
+        local ex, ey = GetEntityGridPosition(entityID)
+        local px, py = GetEntityGridPosition(targetPlayerID)
+        if ex and px then
+            local dist = CalculateDistance(ex, ey, px, py)
+            if IsInLineOfSight(ex, ey, px, py) and dist >= 2 and dist <= config.arcaneBoltRange then
+                print("[EnemyMage " .. entityID .. "] Player in LOS at range " .. dist .. ", skipping move to attack")
+                currentTurnPhase = PHASE.ATTACK
+                return
+            end
+        end
     end
 
     currentTurnPhase = PHASE.MOVE
@@ -617,6 +633,12 @@ function PhaseAttack()
     local ex, ey = GetEntityGridPosition(entityID)
     local px, py = GetEntityGridPosition(targetPlayerID)
     if not ex or not px then
+        FinishAction()
+        return
+    end
+
+    -- Only fire if player is in line of sight (same row or column)
+    if not IsInLineOfSight(ex, ey, px, py) then
         FinishAction()
         return
     end

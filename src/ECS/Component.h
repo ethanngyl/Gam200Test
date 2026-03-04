@@ -63,6 +63,8 @@ namespace Framework
         bool blocked = false;
         int damage = 10;       // Configurable damage dealt on hit
         bool pierce = false;   // If true, passes through enemies instead of stopping
+        bool isEnemyProjectile = false;  // If true, damages players instead of enemies
+        uint32_t sourceEntityID = 0;     // Entity that spawned this projectile (skip self-hit)
     };
 
     enum class AnimGroup {

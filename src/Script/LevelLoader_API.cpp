@@ -5029,6 +5029,8 @@ namespace Framework {
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false)
      *   -- with optional tint (args 8-11) and sprite path (arg 12):
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,0,0,1, "")
+     *   -- with enemy projectile flag (arg 13) and source entity (arg 14):
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 1, false, r,g,b,a, "", true, sourceID)
      */
     int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
@@ -5050,6 +5052,10 @@ namespace Framework {
         const char* spriteArg = luaL_optstring(L, 12, nullptr);
         std::string spritePath = spriteArg ? std::string(spriteArg)
                                            : std::string("assets/new assets/bullet.png");
+
+        // Optional enemy projectile flag (arg 13) and source entity ID (arg 14)
+        bool isEnemyProjectile = lua_toboolean(L, 13) != 0;
+        uint32_t sourceEntityID = static_cast<uint32_t>(luaL_optinteger(L, 14, 0));
 
         // Normalize direction
         float len = std::sqrt(dirX * dirX + dirY * dirY);
@@ -5076,11 +5082,13 @@ namespace Framework {
         Vector2D direction(dirX, dirY);
         Entity projectile = spawner->SpawnProjectile(position, direction, speed, spritePath, tint);
 
-        // Configure damage and pierce on the projectile component
+        // Configure damage, pierce, and enemy projectile flags on the component
         if (em->HasComponent<ProjectileMovement>(projectile)) {
             auto& movement = em->GetComponent<ProjectileMovement>(projectile);
             movement.damage = damage;
             movement.pierce = pierce;
+            movement.isEnemyProjectile = isEnemyProjectile;
+            movement.sourceEntityID = sourceEntityID;
         }
 
         lua_pushinteger(L, projectile.GetID());

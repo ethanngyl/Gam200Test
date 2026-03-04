@@ -150,6 +150,7 @@ namespace Framework
         // 1. MANUAL FILTERING
         std::vector<Framework::Entity> activeProjectiles;
         std::vector<Framework::Entity> activeEnemies;
+        std::vector<Framework::Entity> activePlayers;
 
         for (Framework::Entity entity : entityManager->GetAllEntities())
         {
@@ -169,6 +170,15 @@ namespace Framework
                 entityManager->HasComponent<BoxCollider>(entity))
             {
                 activeEnemies.push_back(entity);
+            }
+
+            // Filter for Players (must have "Player" tag)
+            if (entityManager->HasComponent<Framework::TagComponent>(entity) &&
+                entityManager->GetComponent<Framework::TagComponent>(entity).tag == "Player" &&
+                entityManager->HasComponent<Transform>(entity) &&
+                entityManager->HasComponent<Health>(entity))
+            {
+                activePlayers.push_back(entity);
             }
         }
 
@@ -230,21 +240,74 @@ namespace Framework
             // --- FETCH PROJECTILE COMPONENTS ---
             auto& projTransform = entityManager->GetComponent<Transform>(projectile);
             auto& projCollider = entityManager->GetComponent<CircleCollider>(projectile);
+            auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
 
             Collider projShape = Collider::create_circle(projCollider.radius, projTransform.position);
-
-            // Query candidate enemies near this projectile.
-            
-			enemyCandidates.clear();
-
-            // Match your current projectile shape: center = projTransform.position (offset ignored in your code)
             const AABB projAABB = MakeAABBFromCircle(projTransform.position, projCollider.radius);
+
+            // --- ENEMY PROJECTILE: check against players ---
+            if (projMovement.isEnemyProjectile)
+            {
+                for (Framework::Entity player : activePlayers)
+                {
+                    if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), player) != entitiesToDestroy.end())
+                        continue;
+
+                    if (!entityManager->HasComponent<Transform>(player) ||
+                        !entityManager->HasComponent<Health>(player))
+                    {
+                        continue;
+                    }
+
+                    auto& playerTransform = entityManager->GetComponent<Transform>(player);
+                    auto& playerHealth = entityManager->GetComponent<Health>(player);
+
+                    // Build player collider (use CircleCollider if available, else BoxCollider)
+                    Collider playerShape;
+                    if (entityManager->HasComponent<CircleCollider>(player)) {
+                        auto& playerCircle = entityManager->GetComponent<CircleCollider>(player);
+                        playerShape = Collider::create_circle(playerCircle.radius, playerTransform.position + playerCircle.offset);
+                    } else if (entityManager->HasComponent<BoxCollider>(player)) {
+                        auto& playerBox = entityManager->GetComponent<BoxCollider>(player);
+                        playerShape = Collider::create_rect(playerBox.size.x, playerBox.size.y, playerTransform.position);
+                    } else {
+                        continue;
+                    }
+
+                    if (check_collision(projShape, playerShape))
+                    {
+                        const int damageDealt = projMovement.damage;
+                        playerHealth.TakeDamage(damageDealt);
+
+                        std::cout << "[ProjectileSystem] Enemy projectile hit Player " << player.GetID()
+                                  << " for " << damageDealt << " damage! HP=" << playerHealth.currentHealth << "\n";
+
+                        if (playerHealth.isDead)
+                        {
+                            entitiesToDestroy.push_back(player);
+                        }
+
+                        if (!projMovement.pierce) {
+                            entitiesToDestroy.push_back(projectile);
+                            break;
+                        }
+                    }
+                }
+                continue;  // Enemy projectiles don't hit enemies
+            }
+
+            // --- PLAYER PROJECTILE: check against enemies (existing logic) ---
+            enemyCandidates.clear();
             enemyQt.Query(projAABB, enemyCandidates);
 
             for (Framework::Entity enemy : enemyCandidates)
             {
                 // Skip enemy if already marked for destruction
                 if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), enemy) != entitiesToDestroy.end())
+                    continue;
+
+                // Skip self-hit (source entity that spawned this projectile)
+                if (projMovement.sourceEntityID != 0 && enemy.GetID() == projMovement.sourceEntityID)
                     continue;
 
                 // Check enemy components
@@ -268,7 +331,6 @@ namespace Framework
                 if (check_collision(projShape, enemyShape))
                 {
                     // Use configurable damage from the projectile component
-                    auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
                     const int damageDealt = projMovement.damage;
                     enemyHealth.TakeDamage(damageDealt);
 
