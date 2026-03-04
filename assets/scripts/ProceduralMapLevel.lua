@@ -372,16 +372,12 @@ function SetupProceduralEnemies(mapData)
         local enemyID = SpawnEnemyAt(ex, ey)
 
         if enemyID and enemyID ~= 0 then
-            -- Assign enemy type: first 4 get unique types, rest are regular
+            -- Assign enemy type: cycle through the 4 specialized types
             local scriptPath
             local typeName
-            if i <= #ENEMY_TYPE_SCRIPTS then
-                scriptPath = ENEMY_TYPE_SCRIPTS[i]
-                typeName = ENEMY_TYPE_NAMES[i]
-            else
-                scriptPath = "assets/scripts/EnemyScript.lua"
-                typeName = "Regular"
-            end
+            local typeIndex = ((i - 1) % #ENEMY_TYPE_SCRIPTS) + 1
+            scriptPath = ENEMY_TYPE_SCRIPTS[typeIndex]
+            typeName = ENEMY_TYPE_NAMES[typeIndex]
 
             Log("  Enemy " .. i .. " [" .. typeName .. "] at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
 
