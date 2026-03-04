@@ -224,9 +224,32 @@ local function FindRandomAlly()
     return allies[math.random(#allies)]
 end
 
--- Check if target player is in line of sight (same row or column)
+-- Check if target player is in line of sight (same row or column, no walls between)
 local function IsInLineOfSight(ex, ey, px, py)
-    return ex == px or ey == py
+    if ex ~= px and ey ~= py then
+        return false  -- Not on same row or column
+    end
+
+    -- Walk each tile between mage and player checking for walls
+    if ex == px then
+        -- Same column: walk vertically
+        local step = (py > ey) and 1 or -1
+        for y = ey + step, py - step, step do
+            if IsTileWall and IsTileWall(ex, y) then
+                return false  -- Wall blocking LOS
+            end
+        end
+    else
+        -- Same row: walk horizontally
+        local step = (px > ex) and 1 or -1
+        for x = ex + step, px - step, step do
+            if IsTileWall and IsTileWall(x, ey) then
+                return false  -- Wall blocking LOS
+            end
+        end
+    end
+
+    return true
 end
 
 -- ============================================================================
@@ -401,14 +424,22 @@ function OnUpdate(dt)
             print("[EnemyMage " .. entityID .. "] Arcane Bolt fired! Projectile=" .. tostring(projID))
         end
 
-        -- Return to idle
-        local ex, ey = GetEntityGridPosition(entityID)
-        if ex and targetPlayerID > 0 then
-            local px, py = GetEntityGridPosition(targetPlayerID)
-            if px then SetFacingFromDelta(px - ex, py - ey) end
+        -- Check if we have enough AP for another arcane bolt
+        local remainingAP = GetEntityAP(entityID)
+        if remainingAP >= config.arcaneBoltAPCost then
+            -- Try to fire again - go back to attack phase
+            print("[EnemyMage " .. entityID .. "] AP remaining=" .. remainingAP .. ", checking for another shot")
+            currentTurnPhase = PHASE.ATTACK
+            moveTimer = 0.3  -- Brief delay between shots for visual clarity
+        else
+            -- Return to idle facing and end turn
+            local ex, ey = GetEntityGridPosition(entityID)
+            if ex and targetPlayerID > 0 then
+                local px, py = GetEntityGridPosition(targetPlayerID)
+                if px then SetFacingFromDelta(px - ex, py - ey) end
+            end
+            FinishAction()
         end
-
-        FinishAction()
         return
     end
 

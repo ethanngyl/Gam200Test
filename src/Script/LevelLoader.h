@@ -245,6 +245,7 @@ namespace Framework {
         static int Lua_GetPlayerGridPosition(lua_State* L);
         static int Lua_IsValidGridPosition(lua_State* L);
         static int Lua_IsWalkableTile(lua_State* L);
+        static int Lua_IsTileWall(lua_State* L);
         static int Lua_MovePlayerToTile(lua_State* L);
         static int Lua_ShowTileBorder(lua_State* L);
         static int Lua_PulseTile(lua_State* L);

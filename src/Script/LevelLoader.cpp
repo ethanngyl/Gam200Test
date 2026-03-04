@@ -566,6 +566,7 @@ namespace Framework {
         lua_register(L, "GetPlayerGridPosition", Lua_GetPlayerGridPosition);
         lua_register(L, "IsValidGridPosition", Lua_IsValidGridPosition);
         lua_register(L, "IsWalkableTile", Lua_IsWalkableTile);
+        lua_register(L, "IsTileWall", Lua_IsTileWall);
         lua_register(L, "MovePlayerToTile", Lua_MovePlayerToTile);
         lua_register(L, "SetGridMovementEnabled", Lua_SetGridMovementEnabled);
         lua_register(L, "ShowTileBorder", Lua_ShowTileBorder);

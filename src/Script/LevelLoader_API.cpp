@@ -2203,6 +2203,28 @@ namespace Framework {
     }
 
     /**
+     * @brief Check if tile is a wall (static block only, ignores entity occupancy)
+     * @param x, y Grid coordinates
+     * @return true if tile is a wall/obstacle
+     *
+     * Unlike IsWalkableTile, this only checks for static walls/obstacles
+     * and ignores entity occupancy. Used for line-of-sight checks where
+     * projectiles pass through entities but stop at walls.
+     *
+     * Lua usage: local blocked = IsTileWall(x, y)
+     */
+    int LevelLoader::Lua_IsTileWall(lua_State* L) {
+        int x = static_cast<int>(luaL_checknumber(L, 1));
+        int y = static_cast<int>(luaL_checknumber(L, 2));
+
+        Framework::GridCoord coord{ x, y };
+        bool blocked = Framework::IsTileStaticBlocked(coord);
+
+        lua_pushboolean(L, blocked);
+        return 1;
+    }
+
+    /**
      * @brief Move player to grid tile
      * @param x, y Grid coordinates
      *
