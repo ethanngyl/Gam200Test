@@ -426,7 +426,6 @@ function OnUpdate(dt)
         if pendingAttackTimer > 0 then return end
         pendingAttack = false
 
-        -- Apply damage (damageModifier on target already handles Bolstered Morale)
         DamageEntity(pendingAttackTarget, pendingAttackDamage, entityID)
         print("[KnightCommander " .. entityID .. "] Strike hit for " .. pendingAttackDamage .. " damage")
 
@@ -440,7 +439,15 @@ function OnUpdate(dt)
             if px2 then SetFacingFromDelta(px2 - ex, py2 - ey) end
         end
 
-        FinishAction()
+        -- Check if we have AP remaining to attack again
+        local remainingAP = GetEntityAP(entityID)
+        if remainingAP >= config.strikeAPCost then
+            print("[KnightCommander " .. entityID .. "] AP remaining=" .. remainingAP .. ", trying another attack")
+            currentTurnPhase = PHASE.ATTACK
+            moveTimer = 0.3  -- Brief delay between attacks for visual clarity
+        else
+            FinishAction()
+        end
         return
     end
 

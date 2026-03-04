@@ -3230,11 +3230,27 @@ namespace Framework {
             }
         }
 
-        // === DAMAGE MODIFIER (e.g., Knight Commander's Bolstered Morale) ===
+        // === ATTACKER DAMAGE MODIFIER (e.g., Knight Commander's Bolstered Morale) ===
+        // The damageModifier on the ATTACKER increases outgoing damage
+
+        if (attackerID > 0) {
+            Entity attacker(static_cast<uint32_t>(attackerID));
+            if (em->HasComponent<Health>(attacker)) {
+                auto& attackerHealth = em->GetComponent<Health>(attacker);
+                if (attackerHealth.damageModifier != 0) {
+                    LOG_INFO("StatusEffect", "Attacker %u has damageModifier=%d, base damage=%d",
+                        attacker.GetID(), attackerHealth.damageModifier, amount);
+                    amount += attackerHealth.damageModifier;
+                    if (amount < 0) amount = 0;
+                }
+            }
+        }
+
+        // === TARGET DAMAGE MODIFIER (legacy: modifier on the target entity) ===
 
         auto& health = em->GetComponent<Health>(entity);
         if (health.damageModifier != 0) {
-            LOG_INFO("StatusEffect", "Entity %u has damageModifier=%d, base damage=%d",
+            LOG_INFO("StatusEffect", "Target %u has damageModifier=%d, base damage=%d",
                 entity.GetID(), health.damageModifier, amount);
             amount += health.damageModifier;
             if (amount < 0) amount = 0;
