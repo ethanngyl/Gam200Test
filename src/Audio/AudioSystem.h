@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          AudioSystem.h
  Author:        ETHAN NG
@@ -218,6 +218,10 @@ namespace Framework {
          */
         void StopAllSounds();
 
+        // M5 1105: BGM fade support
+        void PlayMusic(const std::string& soundName, float fadeInSec = 0.5f, bool loop = true);
+        void StopMusic(float fadeOutSec = 0.5f);
+
         /**
          * @brief Sets the global master volume for all audio
          * @param volume Volume level from 0.0 (silent) to 1.0 (full volume)
@@ -308,6 +312,9 @@ namespace Framework {
          */
         void UpdateAudioSources();
 
+        // M5 1105: called from Update(dt)
+        void UpdateMusicFade(float dt);
+
         // Pointer to entity manager for ECS integration (non-owning)
         EntityManager* entityManager = nullptr;
 
@@ -317,9 +324,28 @@ namespace Framework {
         // Master channel group - all audio routes through this before output
         FMOD::ChannelGroup* masterGroup = nullptr;
 
+        // M5 1105: Dedicated BGM routing + fade state
+        FMOD::ChannelGroup* musicGroup = nullptr;
+        FMOD::Channel* musicChannel = nullptr;
+
+        bool musicFadeActive = false;
+        float musicFadeStartVol = 1.0f;
+        float musicFadeTargetVol = 1.0f;
+        float musicFadeElapsed = 0.0f;
+        float musicFadeDuration = 0.0f;
+
+        bool musicStopWhenFadeDone = false;
+
+        std::string pendingMusicName;
+        bool pendingMusicLoop = true;
+        float pendingMusicFadeIn = 0.5f;
+
+
         // Sound cache mapping unique names to FMOD sound objects
         // Key: Unique sound name, Value: FMOD sound pointer
         std::unordered_map<std::string, FMOD::Sound*> sounds;
+
+
 
         // Maximum number of sounds that can play simultaneously (default: 32)
         // If exceeded, FMOD will steal the oldest/quietest channel
