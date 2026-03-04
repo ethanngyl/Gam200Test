@@ -306,27 +306,34 @@ function NextCharacterTurn()
     print(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
 
-    -- Skip dead characters
+    -- Skip dead characters and Soul Merge sacrificed characters
     local skippedDead = 0
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
-        if currentHP and currentHP > 0 then
-            -- This character is alive, use them
-            break
-        else
-            -- This character is dead, skip to next
+        -- Skip dead characters
+        if not currentHP or currentHP <= 0 then
             print(string.format("[PartyTurnManager] %s is DEAD (HP: %s), skipping...",
                 PartyMembers[ActiveCharacterIndex].name, tostring(currentHP)))
-            PartyMembers[ActiveCharacterIndex].hasActed = true  -- Mark as acted so they don't block
+            PartyMembers[ActiveCharacterIndex].hasActed = true
             ActiveCharacterIndex = ActiveCharacterIndex + 1
             skippedDead = skippedDead + 1
+        -- Skip Soul Merge sacrificed characters (turn permanently skipped)
+        elseif HasStatusEffect and HasStatusEffect(checkEntity, "soulMerge") then
+            print(string.format("[PartyTurnManager] %s has SOUL MERGE - turn skipped",
+                PartyMembers[ActiveCharacterIndex].name))
+            PartyMembers[ActiveCharacterIndex].hasActed = true
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+            skippedDead = skippedDead + 1
+        else
+            -- This character is alive and active, use them
+            break
         end
     end
 
     if skippedDead > 0 then
-        print(string.format("[PartyTurnManager] Skipped %d dead character(s)", skippedDead))
+        print(string.format("[PartyTurnManager] Skipped %d dead/merged character(s)", skippedDead))
     end
 
     print(string.format("[PartyTurnManager DEBUG] Check: %d > %d = %s",
@@ -356,12 +363,34 @@ function NextCharacterTurn()
     -- Notify C++ about active character change
     SetActiveCharacter(newActiveEntity)
 
-    -- Refill AP for the new active character
-    RefillEntityAP(newActiveEntity)
-    RefillEntityAttackAP(newActiveEntity)
+    -- Check for Overload BEFORE decrementing (overload prevents AP refill this turn)
+    local hasOverload = HasStatusEffect and HasStatusEffect(newActiveEntity, "overload")
+
+    -- Decrement status effects at turn start (guard/parry durations, overload, etc.)
+    if DecrementStatusEffects then
+        DecrementStatusEffects(newActiveEntity)
+    end
+
+    -- Refill AP for the new active character (skip if overloaded)
+    if hasOverload then
+        print(string.format("[PartyTurnManager] %s has OVERLOAD - AP refill skipped this turn",
+            PartyMembers[ActiveCharacterIndex].name))
+    else
+        RefillEntityAP(newActiveEntity)
+        RefillEntityAttackAP(newActiveEntity)
+    end
+
+    -- Soul Merge Buff: grant +1 movement AP and +1 attack AP each turn
+    if HasStatusEffect and HasStatusEffect(newActiveEntity, "soulMergeBuff") then
+        ConsumeEntityAP(newActiveEntity, -1)        -- +1 movement AP
+        ConsumeEntityAttackAP(newActiveEntity, -1)  -- +1 attack AP
+        print(string.format("[PartyTurnManager] %s has SOUL MERGE BUFF - +1 movement AP, +1 attack AP",
+            PartyMembers[ActiveCharacterIndex].name))
+    end
+
     local currentAP, maxAP = GetEntityAP(newActiveEntity)
     local currentAttackAP, maxAttackAP = GetEntityAttackAP(newActiveEntity)
-    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d, AttackAP refilled to %d/%d",
+    print(string.format("[PartyTurnManager] %s AP: %d/%d, AttackAP: %d/%d",
         PartyMembers[ActiveCharacterIndex].name,
         currentAP,
         maxAP,
@@ -519,24 +548,54 @@ function ResetPartyTurn()
     -- Reset hasActed flags and refill AP for all party members
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
-        RefillEntityAP(PartyMembers[i].entityID)
-        RefillEntityAttackAP(PartyMembers[i].entityID)
+        local eid = PartyMembers[i].entityID
+
+        -- Check for Overload BEFORE decrementing
+        local hasOverload = HasStatusEffect and HasStatusEffect(eid, "overload")
+
+        -- Decrement status effects for all characters at round start
+        if DecrementStatusEffects then
+            DecrementStatusEffects(eid)
+        end
+
+        -- Refill AP (skip if overloaded)
+        if hasOverload then
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has OVERLOAD - AP refill skipped",
+                PartyMembers[i].name))
+        else
+            RefillEntityAP(eid)
+            RefillEntityAttackAP(eid)
+        end
+
+        -- Soul Merge Buff: grant +1 movement AP and +1 attack AP
+        if HasStatusEffect and HasStatusEffect(eid, "soulMergeBuff") then
+            ConsumeEntityAP(eid, -1)
+            ConsumeEntityAttackAP(eid, -1)
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has SOUL MERGE BUFF - +1 AP bonus",
+                PartyMembers[i].name))
+        end
     end
 
-    -- Skip dead characters when resetting turn
+    -- Skip dead characters and Soul Merge sacrificed characters when resetting turn
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
-        if currentHP and currentHP > 0 then
-            -- This character is alive, use them
-            break
-        else
-            -- This character is dead, skip to next
+        if not currentHP or currentHP <= 0 then
+            -- This character is dead, skip
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s is DEAD (HP: %s), skipping...",
                 PartyMembers[ActiveCharacterIndex].name, tostring(currentHP)))
-            PartyMembers[ActiveCharacterIndex].hasActed = true  -- Mark as acted
+            PartyMembers[ActiveCharacterIndex].hasActed = true
             ActiveCharacterIndex = ActiveCharacterIndex + 1
+        elseif HasStatusEffect and HasStatusEffect(checkEntity, "soulMerge") then
+            -- This character is Soul Merged, skip permanently
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has SOUL MERGE - skipping",
+                PartyMembers[ActiveCharacterIndex].name))
+            PartyMembers[ActiveCharacterIndex].hasActed = true
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+        else
+            -- This character is alive and active, use them
+            break
         end
     end
 

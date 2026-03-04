@@ -76,9 +76,7 @@ namespace Framework
         KEY_SHIFT = VK_SHIFT,
 
         KEY_LEFT_CONTROL = VK_LCONTROL,
-        KEY_RIGHT_CONTROL = VK_RCONTROL,
-        KEY_LEFT_SHIFT = VK_LSHIFT,
-        KEY_RIGHT_SHIFT = VK_RSHIFT
+        KEY_RIGHT_CONTROL = VK_RCONTROL
     };
 
     /**

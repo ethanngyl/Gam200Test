@@ -245,6 +245,7 @@ namespace Framework {
         static int Lua_GetPlayerGridPosition(lua_State* L);
         static int Lua_IsValidGridPosition(lua_State* L);
         static int Lua_IsWalkableTile(lua_State* L);
+        static int Lua_IsTileWall(lua_State* L);
         static int Lua_MovePlayerToTile(lua_State* L);
         static int Lua_ShowTileBorder(lua_State* L);
         static int Lua_PulseTile(lua_State* L);
@@ -253,6 +254,7 @@ namespace Framework {
         static int Lua_GetTurnIndex(lua_State* L);
         static int Lua_EndPlayerTurn(lua_State* L);
         static int Lua_EndEnemyTurn(lua_State* L);
+        static int Lua_CallLevelFunction(lua_State* L);  // Generic entity→level bridge
         static int Lua_EndCharacterTurn(lua_State* L);  // Party turn system - bridge to level Lua state
         static int Lua_IsUIAnimating(lua_State* L);     // Check if UI is animating - bridge to level Lua state
         static int Lua_IsInTurnTransition(lua_State* L); // Check if in turn transition cooldown - bridge to level Lua state
@@ -309,15 +311,27 @@ namespace Framework {
         // Procedural Map API
         static int Lua_LoadProceduralMap(lua_State* L);
 
+        // Entity Stats API
+        static int Lua_SetEntityMaxAP(lua_State* L);  // SetEntityMaxAP(entityID, maxAP) - sets both max and current AP
+
         // Entity Spawning API
         static int Lua_SpawnPlayerAt(lua_State* L);
+        static int Lua_RemoveMovementComponent(lua_State* L);
+        static int Lua_InitializeTurnSystem(lua_State* L);
         static int Lua_SpawnEnemyAt(lua_State* L);
         static int Lua_SpawnChestAt(lua_State* L);
         static int Lua_SpawnGoalAt(lua_State* L);
 
-        // Enemy config (set by level, read by EnemyScript OnInit)
-        static int Lua_SetEnemyConfig(lua_State* L);
-        static int Lua_GetEnemyConfig(lua_State* L);
+        // Projectile Skill API
+        // SpawnSkillProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
+        static int Lua_SpawnSkillProjectile(lua_State* L);
+
+        // Status Effect API
+        static int Lua_ApplyStatusEffect(lua_State* L);    // ApplyStatusEffect(entityID, type, turns, sourceEntity, targetEntity, extraData)
+        static int Lua_HasStatusEffect(lua_State* L);      // HasStatusEffect(entityID, type) -> bool
+        static int Lua_RemoveStatusEffect(lua_State* L);   // RemoveStatusEffect(entityID, type)
+        static int Lua_DecrementStatusEffects(lua_State* L);// DecrementStatusEffects(entityID)
+        static int Lua_GetStatusEffectSource(lua_State* L); // GetStatusEffectSource(entityID, type) -> sourceEntityID or nil
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

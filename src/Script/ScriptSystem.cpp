@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -488,6 +488,7 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", LevelLoader::Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", LevelLoader::Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", LevelLoader::Lua_EndEnemyTurn);
+        lua_register(L, "CallLevelFunction", LevelLoader::Lua_CallLevelFunction);  // Generic entity→level bridge
         lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
         lua_register(L, "IsUIAnimating", LevelLoader::Lua_IsUIAnimating);  // Check UI animation state
         lua_register(L, "IsInTurnTransition", LevelLoader::Lua_IsInTurnTransition);  // Check turn transition cooldown
@@ -506,6 +507,7 @@ namespace Framework {
         // Game API - Grid/Tiles
         lua_register(L, "IsValidGridPosition", LevelLoader::Lua_IsValidGridPosition);
         lua_register(L, "IsWalkableTile", LevelLoader::Lua_IsWalkableTile);
+        lua_register(L, "IsTileWall", LevelLoader::Lua_IsTileWall);
         lua_register(L, "MovePlayerToTile", LevelLoader::Lua_MovePlayerToTile);
         lua_register(L, "SetGridMovementEnabled", LevelLoader::Lua_SetGridMovementEnabled);
         lua_register(L, "ShowTileBorder", LevelLoader::Lua_ShowTileBorder);
@@ -521,6 +523,7 @@ namespace Framework {
         lua_register(L, "GetEnemyAP", LevelLoader::Lua_GetEnemyAP);
         lua_register(L, "RefillEnemyAP", LevelLoader::Lua_RefillEnemyAP);
         lua_register(L, "GetEntityGridPosition", LevelLoader::Lua_GetEntityGridPosition);
+        lua_register(L, "GetEntityWorldPosition", LevelLoader::Lua_GetEntityWorldPosition);
         lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
@@ -558,6 +561,7 @@ namespace Framework {
         lua_register(L, "SetSpriteVisibility", LevelLoader::Lua_SetSpriteVisibility);
         lua_register(L, "SetSpritePosition", LevelLoader::Lua_SetSpritePosition);
         lua_register(L, "SetSpriteColor", LevelLoader::Lua_SetSpriteColor);
+        lua_register(L, "SetSpriteTexture", LevelLoader::Lua_SetSpriteTexture);
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
@@ -568,8 +572,20 @@ namespace Framework {
         lua_register(L, "RefillEntityAttackAP", LevelLoader::Lua_RefillEntityAttackAP);
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);
-        lua_register(L, "GetEnemyConfig", LevelLoader::Lua_GetEnemyConfig);
         lua_register(L, "IsActiveCharacter", LevelLoader::Lua_IsActiveCharacter);
+
+        // Game API - Projectile Skills
+        lua_register(L, "SpawnSkillProjectile", LevelLoader::Lua_SpawnSkillProjectile);
+
+        // JSON Loading (shared with LevelLoader)
+        lua_register(L, "LoadJSON", LevelLoader::Lua_LoadJSON);
+
+        // Status Effect API
+        lua_register(L, "ApplyStatusEffect", LevelLoader::Lua_ApplyStatusEffect);
+        lua_register(L, "HasStatusEffect", LevelLoader::Lua_HasStatusEffect);
+        lua_register(L, "RemoveStatusEffect", LevelLoader::Lua_RemoveStatusEffect);
+        lua_register(L, "DecrementStatusEffects", LevelLoader::Lua_DecrementStatusEffects);
+        lua_register(L, "GetStatusEffectSource", LevelLoader::Lua_GetStatusEffectSource);
     }
 
     /**
