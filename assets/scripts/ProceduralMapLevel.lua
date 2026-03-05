@@ -264,6 +264,8 @@ function SetupProceduralParty(mapData)
     local player2 = SpawnPlayerAt(mapData.partySpawns[2].worldX, mapData.partySpawns[2].worldY)
     local player3 = SpawnPlayerAt(mapData.partySpawns[3].worldX, mapData.partySpawns[3].worldY)
 
+    SetAnimationPrefix(player2, "Mage_")
+
     if not player1 or player1 == 0 then
         Log("ERROR: Failed to spawn Player 1!")
         return false

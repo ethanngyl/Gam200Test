@@ -135,10 +135,10 @@ namespace Framework {
             return;
         }
 
-        // Stop all audio if audio system exists
-        if (audioSystem) {
-            audioSystem->StopAllSounds();
-        }
+        //// Stop all audio if audio system exists
+        //if (audioSystem) {
+        //    audioSystem->StopAllSounds();
+        //}
 
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader.h
 Author:      GE YONGQI, Sim Kah Yan
@@ -221,6 +221,7 @@ namespace Framework {
         static int Lua_SetAnimationDirection(lua_State* L);
         static int Lua_SetAnimationFlipX(lua_State* L);
         static int Lua_SetAnimationPlaying(lua_State* L);
+        static int Lua_SetAnimationPrefix(lua_State* L);
         static int Lua_SetAnimationLoop(lua_State* L);
         static int Lua_SetAnimationFrameRange(lua_State* L);  // Set animation frame range (startFrame, frameCount)
         static int Lua_GetAnimationGroup(lua_State* L);
@@ -276,7 +277,7 @@ namespace Framework {
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
         static int Lua_FindPathToTarget(lua_State* L);
-        
+
         // Tile Occupancy API
         static int Lua_SetTileOccupant(lua_State* L);  // Set entity occupying a tile
         static int Lua_GetTileOccupant(lua_State* L);  // Get entity at tile (or 0 if empty)

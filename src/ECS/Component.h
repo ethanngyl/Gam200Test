@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           Component.h
  Author:         ETHAN NG YONG LE
@@ -90,7 +90,7 @@ namespace Framework
 
         /** The animation name that maps to JSON key */
         std::string animName;     // final JSON animation key
-
+        std::string animPrefix; // e.g. "Mage_" to override animation keys per-entity
         /** Handle to the full sprite sheet */
         TextureHandle spriteSheet;
 

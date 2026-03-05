@@ -313,6 +313,17 @@ namespace Framework {
                 selected = "Idle_front";  // Safe fallback
             }
 
+            // Optional per-entity override: "Mage_" + "Attack_front" => "Mage_Attack_front"
+            // Only apply if that key exists in the loaded animation JSON.
+            if (!anim.animPrefix.empty())
+            {
+                const std::string prefixed = anim.animPrefix + selected;
+                if (animNameSet.find(prefixed) != animNameSet.end())
+                {
+                    selected = prefixed;
+                }
+            }
+
             // CRITICAL FIX: Force LoadAnimation if:
             // 1. Animation name changed
             // 2. OR frameWidth/frameHeight are invalid (0 or negative)
@@ -390,6 +401,15 @@ namespace Framework {
                             if (idleSelected.empty()) {
                                 idleSelected = "Idle_front";  // Safe fallback
                             }
+
+                            // Apply per-entity prefix (e.g. "Mage_" + "Idle_front" => "Mage_Idle_front")
+                            if (!anim.animPrefix.empty()) {
+                                const std::string prefixed = anim.animPrefix + idleSelected;
+                                if (animNameSet.count(prefixed) > 0) {
+                                    idleSelected = prefixed;
+                                }
+                            }
+
                             if (!idleSelected.empty())
                             {
                                 anim.animName = idleSelected;
@@ -437,7 +457,7 @@ namespace Framework {
         g_animationConfigPath = configPath;
         animEntries.clear();
         groupMap.clear();
-
+        animNameSet.clear();
         std::ifstream file(configPath);
         if (!file.is_open()) {
             LOG_ERROR("ANIM", "Failed to open animation JSON: %s", configPath.c_str());
@@ -458,13 +478,16 @@ namespace Framework {
             return;
         }
 
+        // =====================================================================
+        // PASS 1: Collect ALL animation names into animNameSet & animEntries
+        // =====================================================================
         for (auto& [key, animObj] : j["animations"].items()) {
 
             AnimEntry entry;
             entry.name = key;
-            entry.file = key;  // you can change this if needed for editor use
+            entry.file = key;
+            animNameSet.insert(key);
 
-            // Optional: key binding (like 'O', 'W', 'S', etc.)
             if (animObj.contains("key") && animObj["key"].is_string()) {
                 const std::string keyStr = animObj["key"].get<std::string>();
                 if (!keyStr.empty())
@@ -472,10 +495,19 @@ namespace Framework {
             }
 
             animEntries.push_back(entry);
+        }
 
-            // -----------------------------
-            // NEW: Read group & direction from JSON
-            // -----------------------------
+        // =====================================================================
+        // PASS 2: Build groupMap from BASE animations only (skip variants)
+        //
+        // A "variant" is an animation whose name = SomePrefix_ + BaseName,
+        // where BaseName is ALSO a valid animation in animNameSet.
+        // e.g. "Mage_Attack_front" is a variant because "Attack_front" exists.
+        // Variants are looked up at runtime via the per-entity animPrefix field,
+        // so they must NOT overwrite the base entry in groupMap.
+        // =====================================================================
+        for (auto& [key, animObj] : j["animations"].items()) {
+
             std::string groupStr = animObj.value("group", std::string{});
             std::string dirStr = animObj.value("direction", std::string{});
 
@@ -494,13 +526,31 @@ namespace Framework {
                 direction = AnimDirection::None;
             }
 
-            groupMap[group][direction] = key;
+            // Detect variant: check every underscore position to see if the
+            // suffix after the prefix is itself a known base animation name.
+            // e.g. "Mage_Attack_front" -> suffix "Attack_front" exists -> variant
+            bool isVariant = false;
+            for (size_t i = 1; i < key.size(); ++i) {
+                if (key[i] == '_') {
+                    std::string suffix = key.substr(i + 1);
+                    if (animNameSet.count(suffix) > 0) {
+                        isVariant = true;
+                        LOG_INFO("ANIM", "Animation '%s' is a variant of '%s' - skipping groupMap",
+                            key.c_str(), suffix.c_str());
+                        break;
+                    }
+                }
+            }
 
-            LOG_INFO("ANIM", "Added animation: name=%s group=%s dir=%s key=%c",
-                entry.name.c_str(),
+            if (!isVariant) {
+                groupMap[group][direction] = key;
+            }
+
+            LOG_INFO("ANIM", "Added animation: name=%s group=%s dir=%s variant=%s",
+                key.c_str(),
                 groupStr.c_str(),
                 dirStr.c_str(),
-                entry.key ? entry.key : '-');
+                isVariant ? "YES" : "no");
         }
 
         LOG_INFO("ANIM", "Total animations loaded from JSON: %zu", animEntries.size());
