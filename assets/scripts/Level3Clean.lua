@@ -594,21 +594,22 @@ function SetupEnemies()
 
     print("[SetupEnemies] Step 3: Configuring " .. enemyCount .. " enemies...")
 
-    -- Enemy type scripts to cycle through
-    local ENEMY_TYPE_SCRIPTS = {
-        "assets/scripts/EnemyKnightCommanderScript.lua",
-        "assets/scripts/EnemyKnightScript.lua",
-        "assets/scripts/EnemyMageScript.lua",
-        "assets/scripts/EnemyTankScript.lua",
+    -- Enemy type configs for unified EnemyGeneric.lua
+    local ENEMY_TYPE_CONFIGS = {
+        "knight_commander",
+        "knight",
+        "mage",
+        "tank",
     }
     local ENEMY_TYPE_NAMES = {
         "Knight Commander", "Knight", "Mage", "Tank"
     }
 
     -- Configure each enemy
+    _G.EnemyConfigRegistry = _G.EnemyConfigRegistry or {}
     for i, enemyID in ipairs(enemies) do
-        local typeIndex = ((i - 1) % #ENEMY_TYPE_SCRIPTS) + 1
-        local scriptPath = ENEMY_TYPE_SCRIPTS[typeIndex]
+        local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
+        local configType = ENEMY_TYPE_CONFIGS[typeIndex]
         local typeName = ENEMY_TYPE_NAMES[typeIndex]
 
         print("[SetupEnemies]   === Configuring Enemy " .. i .. " [" .. typeName .. "] (Entity " .. enemyID .. ") ===")
@@ -618,9 +619,10 @@ function SetupEnemies()
         local targetSuccess = SetEnemyTarget(enemyID, playerID)
         print("[SetupEnemies]     SetEnemyTarget result: " .. tostring(targetSuccess))
 
-        -- Attach enemy script
-        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", '" .. typeName .. "')...")
-        local scriptSuccess = AddScriptComponentToEntity(enemyID, scriptPath)
+        -- Register config type and attach unified enemy script
+        _G.EnemyConfigRegistry[enemyID] = configType
+        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", '" .. typeName .. "' config=" .. configType .. ")...")
+        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua")
         print("[SetupEnemies]     AddScriptComponentToEntity result: " .. tostring(scriptSuccess))
 
         if targetSuccess and scriptSuccess then

@@ -335,6 +335,11 @@ namespace Framework {
         static int Lua_DecrementStatusEffects(lua_State* L);// DecrementStatusEffects(entityID)
         static int Lua_GetStatusEffectSource(lua_State* L); // GetStatusEffectSource(entityID, type) -> sourceEntityID or nil
 
+        // Unified Skill Database API
+        static int Lua_GetSkillByID(lua_State* L);         // GetSkillByID(skillID) -> table or nil
+        static int Lua_GetClassSkills(lua_State* L);       // GetClassSkills(className) -> table of skill tables
+        static int Lua_GetSkillCount(lua_State* L);        // GetSkillCount(className) -> int
+
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

@@ -67,6 +67,7 @@ Technology is prohibited.
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
 #include "MapGenerator/ProceduralMapLoader.h"
+#include "Skills/SkillComponent.h"  // SkillDatabase, SkillData
 #include <Windows.h>      // For GetTickCount64()    
 
 // Fix for Windows min/max macro conflicts
@@ -5372,6 +5373,131 @@ namespace Framework {
         } else {
             lua_pushnil(L);
         }
+        return 1;
+    }
+
+    // ========================================================================
+    // UNIFIED SKILL DATABASE API
+    // ========================================================================
+
+    // Helper: push a SkillData as a Lua table onto the stack
+    static void PushSkillDataToLua(lua_State* L, const SkillData& skill) {
+        lua_newtable(L);
+
+        lua_pushinteger(L, skill.skillID);          lua_setfield(L, -2, "skillID");
+        lua_pushstring(L, skill.skillName.c_str());  lua_setfield(L, -2, "name");
+        lua_pushstring(L, skill.description.c_str()); lua_setfield(L, -2, "description");
+        lua_pushinteger(L, skill.apCost);            lua_setfield(L, -2, "apCost");
+        lua_pushinteger(L, skill.cooldown);          lua_setfield(L, -2, "cooldownMax");
+        lua_pushinteger(L, skill.damage);            lua_setfield(L, -2, "damage");
+        lua_pushnumber(L, skill.damageMultiplier);   lua_setfield(L, -2, "damageMultiplier");
+        lua_pushinteger(L, skill.range);             lua_setfield(L, -2, "range");
+        lua_pushinteger(L, skill.areaSize);          lua_setfield(L, -2, "areaSize");
+        lua_pushstring(L, skill.skillType.c_str());  lua_setfield(L, -2, "type");
+        lua_pushboolean(L, skill.multiAttack);       lua_setfield(L, -2, "multiAttack");
+        lua_pushboolean(L, skill.requiresLineOfSight); lua_setfield(L, -2, "requiresLineOfSight");
+        lua_pushinteger(L, skill.preferredDistance);  lua_setfield(L, -2, "preferredDistance");
+        lua_pushnumber(L, skill.projectileSpeed);    lua_setfield(L, -2, "projectileSpeed");
+        lua_pushstring(L, skill.statusEffect.c_str()); lua_setfield(L, -2, "statusEffect");
+        lua_pushinteger(L, skill.statusDuration);    lua_setfield(L, -2, "statusDuration");
+        lua_pushstring(L, skill.summonConfig.c_str()); lua_setfield(L, -2, "summonConfig");
+        lua_pushinteger(L, skill.summonDeathThreshold); lua_setfield(L, -2, "summonDeathThreshold");
+        lua_pushstring(L, skill.condition.c_str());  lua_setfield(L, -2, "condition");
+        lua_pushnumber(L, skill.conditionThreshold); lua_setfield(L, -2, "conditionThreshold");
+        lua_pushboolean(L, skill.targetSelfIfNoAlly); lua_setfield(L, -2, "targetSelfIfNoAlly");
+        lua_pushstring(L, skill.iconPath.c_str());   lua_setfield(L, -2, "iconPath");
+        lua_pushstring(L, skill.animationName.c_str()); lua_setfield(L, -2, "animationName");
+
+        // Target type as string
+        const char* targetStr = "none";
+        switch (skill.targetType) {
+            case SkillTargetType::Self: targetStr = "self"; break;
+            case SkillTargetType::SingleEnemy: targetStr = "single_enemy"; break;
+            case SkillTargetType::AllEnemies: targetStr = "all_enemies"; break;
+            case SkillTargetType::SingleAlly: targetStr = "single_ally"; break;
+            case SkillTargetType::AllAllies: targetStr = "all_allies"; break;
+            case SkillTargetType::Area: targetStr = "area"; break;
+            default: break;
+        }
+        lua_pushstring(L, targetStr); lua_setfield(L, -2, "targetType");
+
+        // Effect type as string
+        const char* effectStr = "none";
+        switch (skill.effectType) {
+            case SkillEffectType::Physical: effectStr = "physical"; break;
+            case SkillEffectType::Magical: effectStr = "magical"; break;
+            case SkillEffectType::Healing: effectStr = "healing"; break;
+            case SkillEffectType::Buff: effectStr = "buff"; break;
+            case SkillEffectType::Debuff: effectStr = "debuff"; break;
+            case SkillEffectType::Utility: effectStr = "utility"; break;
+            default: break;
+        }
+        lua_pushstring(L, effectStr); lua_setfield(L, -2, "effectType");
+
+        // Owner class as string
+        lua_pushstring(L, SkillDatabase::GetClassName(skill.ownerClass));
+        lua_setfield(L, -2, "ownerClass");
+    }
+
+    // Helper: convert class name string to CharacterClass enum
+    static CharacterClass ClassNameToEnum(const std::string& name) {
+        if (name == "Swordmaster") return CharacterClass::Swordmaster;
+        if (name == "Magus") return CharacterClass::Magus;
+        if (name == "Berserker") return CharacterClass::Berserker;
+        if (name == "EnemyKnight") return CharacterClass::EnemyKnight;
+        if (name == "EnemyMage") return CharacterClass::EnemyMage;
+        if (name == "EnemyTank") return CharacterClass::EnemyTank;
+        if (name == "EnemyKnightCommander") return CharacterClass::EnemyKnightCommander;
+        return CharacterClass::None;
+    }
+
+    /**
+     * Lua: GetSkillByID(skillID) -> table or nil
+     * Returns a table with all skill properties, or nil if not found.
+     */
+    int LevelLoader::Lua_GetSkillByID(lua_State* L) {
+        int skillID = static_cast<int>(luaL_checkinteger(L, 1));
+        const SkillData* skill = SkillDatabase::GetInstance().GetSkillByID(skillID);
+        if (skill) {
+            PushSkillDataToLua(L, *skill);
+        } else {
+            lua_pushnil(L);
+        }
+        return 1;
+    }
+
+    /**
+     * Lua: GetClassSkills(className) -> table of skill tables
+     * className: "Swordmaster", "Magus", "Berserker", "EnemyKnight", "EnemyMage", etc.
+     */
+    int LevelLoader::Lua_GetClassSkills(lua_State* L) {
+        const char* className = luaL_checkstring(L, 1);
+        CharacterClass charClass = ClassNameToEnum(className);
+        if (charClass == CharacterClass::None) {
+            lua_newtable(L);  // Return empty table
+            return 1;
+        }
+
+        const auto& skills = SkillDatabase::GetInstance().GetClassSkills(charClass);
+        lua_newtable(L);
+        for (size_t i = 0; i < skills.size(); ++i) {
+            PushSkillDataToLua(L, skills[i]);
+            lua_rawseti(L, -2, static_cast<int>(i + 1));
+        }
+        return 1;
+    }
+
+    /**
+     * Lua: GetSkillCount(className) -> int
+     */
+    int LevelLoader::Lua_GetSkillCount(lua_State* L) {
+        const char* className = luaL_checkstring(L, 1);
+        CharacterClass charClass = ClassNameToEnum(className);
+        if (charClass == CharacterClass::None) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+        lua_pushinteger(L, SkillDatabase::GetInstance().GetSkillCount(charClass));
         return 1;
     }
 

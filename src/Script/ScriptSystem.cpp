@@ -588,6 +588,11 @@ namespace Framework {
         lua_register(L, "RemoveStatusEffect", LevelLoader::Lua_RemoveStatusEffect);
         lua_register(L, "DecrementStatusEffects", LevelLoader::Lua_DecrementStatusEffects);
         lua_register(L, "GetStatusEffectSource", LevelLoader::Lua_GetStatusEffectSource);
+
+        // Unified Skill Database API
+        lua_register(L, "GetSkillByID", LevelLoader::Lua_GetSkillByID);
+        lua_register(L, "GetClassSkills", LevelLoader::Lua_GetClassSkills);
+        lua_register(L, "GetSkillCount", LevelLoader::Lua_GetSkillCount);
     }
 
     /**

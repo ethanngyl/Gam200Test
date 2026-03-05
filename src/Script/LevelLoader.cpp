@@ -643,6 +643,11 @@ namespace Framework {
         lua_register(L, "DecrementStatusEffects", Lua_DecrementStatusEffects);
         lua_register(L, "GetStatusEffectSource", Lua_GetStatusEffectSource);
 
+        // Unified Skill Database API
+        lua_register(L, "GetSkillByID", Lua_GetSkillByID);
+        lua_register(L, "GetClassSkills", Lua_GetClassSkills);
+        lua_register(L, "GetSkillCount", Lua_GetSkillCount);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 
