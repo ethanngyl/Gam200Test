@@ -363,12 +363,24 @@ function NextCharacterTurn()
     -- Notify C++ about active character change
     SetActiveCharacter(newActiveEntity)
 
+    -- Check if stunned BEFORE decrementing (stun skips the entire turn)
+    local isStunned = HasStatusEffect and HasStatusEffect(newActiveEntity, "stun")
+
     -- Check for Overload BEFORE decrementing (overload prevents AP refill this turn)
     local hasOverload = HasStatusEffect and HasStatusEffect(newActiveEntity, "overload")
 
     -- Decrement status effects at turn start (guard/parry durations, overload, etc.)
     if DecrementStatusEffects then
         DecrementStatusEffects(newActiveEntity)
+    end
+
+    -- If stunned, skip this character's turn entirely
+    if isStunned then
+        print(string.format("[PartyTurnManager] %s is STUNNED - skipping turn!",
+            PartyMembers[ActiveCharacterIndex].name))
+        PartyMembers[ActiveCharacterIndex].hasActed = true
+        NextCharacterTurn()
+        return
     end
 
     -- Refill AP for the new active character (skip if overloaded)
@@ -550,12 +562,20 @@ function ResetPartyTurn()
         PartyMembers[i].hasActed = false
         local eid = PartyMembers[i].entityID
 
-        -- Check for Overload BEFORE decrementing
+        -- Check for stun and Overload BEFORE decrementing
+        local isStunned = HasStatusEffect and HasStatusEffect(eid, "stun")
         local hasOverload = HasStatusEffect and HasStatusEffect(eid, "overload")
 
         -- Decrement status effects for all characters at round start
         if DecrementStatusEffects then
             DecrementStatusEffects(eid)
+        end
+
+        -- If stunned, mark as acted so their turn is skipped
+        if isStunned then
+            PartyMembers[i].hasActed = true
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s is STUNNED - turn skipped!",
+                PartyMembers[i].name))
         end
 
         -- Refill AP (skip if overloaded)
@@ -576,7 +596,7 @@ function ResetPartyTurn()
         end
     end
 
-    -- Skip dead characters and Soul Merge sacrificed characters when resetting turn
+    -- Skip dead, stunned, and Soul Merge sacrificed characters when resetting turn
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
         local currentHP, maxHP = GetEntityHP(checkEntity)
@@ -592,6 +612,9 @@ function ResetPartyTurn()
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has SOUL MERGE - skipping",
                 PartyMembers[ActiveCharacterIndex].name))
             PartyMembers[ActiveCharacterIndex].hasActed = true
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+        elseif PartyMembers[ActiveCharacterIndex].hasActed then
+            -- This character was already marked (e.g. stunned), skip
             ActiveCharacterIndex = ActiveCharacterIndex + 1
         else
             -- This character is alive and active, use them
