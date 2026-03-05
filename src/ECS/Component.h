@@ -189,7 +189,8 @@ namespace Framework
     struct ScriptComponent : public Component<ScriptComponent>
     {
         std::string scriptPath;
-        lua_State* L = nullptr; 
+        std::string configType;   // Optional config type passed to script (e.g. "mage", "tank")
+        lua_State* L = nullptr;
         bool initialized = false;
         float updateTimer = 0.0f;
 

@@ -380,10 +380,8 @@ function SetupProceduralEnemies(mapData)
 
             Log("  Enemy " .. i .. " [" .. typeName .. "] at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
 
-            -- Register config type and attach unified enemy script
-            _G.EnemyConfigRegistry = _G.EnemyConfigRegistry or {}
-            _G.EnemyConfigRegistry[enemyID] = configType
-            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua")
+            -- Attach unified enemy script with config type
+            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
 
             -- Set target (C++ side)
             SetEnemyTarget(enemyID, playerID)

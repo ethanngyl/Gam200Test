@@ -238,6 +238,13 @@ namespace Framework {
         script->initialized = false;
         lua_pushinteger(script->L, entity.GetID());
         lua_setglobal(script->L, "self");
+
+        // Pass configType to script's Lua state if set
+        if (!script->configType.empty()) {
+            lua_pushstring(script->L, script->configType.c_str());
+            lua_setglobal(script->L, "configType");
+        }
+
         // Load the script file
         if (luaL_dofile(script->L, scriptPath.c_str()) != LUA_OK) {
             const char* error = lua_tostring(script->L, -1);

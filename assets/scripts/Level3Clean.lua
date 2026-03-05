@@ -606,7 +606,6 @@ function SetupEnemies()
     }
 
     -- Configure each enemy
-    _G.EnemyConfigRegistry = _G.EnemyConfigRegistry or {}
     for i, enemyID in ipairs(enemies) do
         local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
         local configType = ENEMY_TYPE_CONFIGS[typeIndex]
@@ -619,10 +618,9 @@ function SetupEnemies()
         local targetSuccess = SetEnemyTarget(enemyID, playerID)
         print("[SetupEnemies]     SetEnemyTarget result: " .. tostring(targetSuccess))
 
-        -- Register config type and attach unified enemy script
-        _G.EnemyConfigRegistry[enemyID] = configType
+        -- Attach unified enemy script with config type passed as 3rd parameter
         print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", '" .. typeName .. "' config=" .. configType .. ")...")
-        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua")
+        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
         print("[SetupEnemies]     AddScriptComponentToEntity result: " .. tostring(scriptSuccess))
 
         if targetSuccess and scriptSuccess then

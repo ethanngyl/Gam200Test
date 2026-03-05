@@ -13,10 +13,9 @@
     skills, AI behavior, animations, and visuals.
 
  Usage:
-    -- Set enemy config type BEFORE attaching script via global registry
-    _G.EnemyConfigRegistry = _G.EnemyConfigRegistry or {}
-    _G.EnemyConfigRegistry[enemyID] = "knight"  -- or "mage", "tank", "knight_commander"
-    AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua")
+    -- Pass config type as 3rd parameter to AddScriptComponentToEntity
+    AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", "knight")
+    -- Supported: "knight", "mage", "tank", "knight_commander"
 
  Supported Enemy Types (via JSON configs):
     knight           - Durable frontline with Summon Reinforcements
@@ -119,9 +118,8 @@ local lastTurnPhase = nil
 -- CONFIG LOADING
 -- ============================================================================
 
--- Global registry: level scripts set _G.EnemyConfigRegistry[entityID] = "mage" etc.
--- before attaching this script. OnInit reads it.
-_G.EnemyConfigRegistry = _G.EnemyConfigRegistry or {}
+-- Config type is now passed via the C++ ScriptSystem as a Lua global "configType"
+-- (set as the 3rd parameter to AddScriptComponentToEntity)
 
 -- Default animations (used when config doesn't specify or as fallback)
 local DEFAULT_ANIM = {
@@ -134,11 +132,9 @@ local DEFAULT_ANIM = {
 }
 
 local function LoadConfig()
-    -- Read config type from global registry (set by level script before attaching)
-    local registeredType = _G.EnemyConfigRegistry[entityID]
-    if registeredType and registeredType ~= "" then
-        enemyType = registeredType
-        _G.EnemyConfigRegistry[entityID] = nil  -- Clean up
+    -- Read config type from the configType global set by C++ ScriptSystem
+    if configType and configType ~= "" then
+        enemyType = configType
     end
 
     -- Load JSON config using existing LoadJSON API
@@ -561,9 +557,7 @@ local function ResolveSummon()
             if newID and newID ~= 0 then
                 -- Use the configured summon config type, or same type as self
                 local summonType = special.summonConfig or config.type
-                _G.EnemyConfigRegistry = _G.EnemyConfigRegistry or {}
-                _G.EnemyConfigRegistry[newID] = summonType
-                AddScriptComponentToEntity(newID, special.summonScript or "assets/scripts/EnemyGeneric.lua")
+                AddScriptComponentToEntity(newID, special.summonScript or "assets/scripts/EnemyGeneric.lua", summonType)
                 local playerID = targetPlayerID or (FindClosestPlayer() or 0)
                 if playerID > 0 then
                     SetEnemyTarget(newID, playerID)

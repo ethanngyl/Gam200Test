@@ -2092,14 +2092,16 @@ namespace Framework {
      * @brief Add a ScriptComponent to an entity with specified script path
      * @param entityID (number) The entity ID to add component to
      * @param scriptPath (string) Path to the Lua script file
+     * @param configType (string, optional) Config type passed to the script as a global
      * @return true if successful
      *
-     * Usage: AddScriptComponentToEntity(entityID, "assets/scripts/PlayerScript.lua")
+     * Usage: AddScriptComponentToEntity(entityID, "assets/scripts/EnemyGeneric.lua", "mage")
      */
     int LevelLoader::Lua_AddScriptComponentToEntity(lua_State* L) {
         // Get parameters
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
         const char* scriptPath = luaL_checkstring(L, 2);
+        const char* configType = lua_isstring(L, 3) ? lua_tostring(L, 3) : nullptr;
 
         // Get entity manager
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
@@ -2126,8 +2128,12 @@ namespace Framework {
         // Add ScriptComponent
         auto& script = em->AddComponent<ScriptComponent>(entity);
         script.scriptPath = scriptPath;
+        if (configType) {
+            script.configType = configType;
+        }
 
-        LOG_INFO("LevelLoader", "Added ScriptComponent to entity %d: %s", entityID, scriptPath);
+        LOG_INFO("LevelLoader", "Added ScriptComponent to entity %d: %s (config: %s)",
+            entityID, scriptPath, configType ? configType : "none");
 
         lua_pushboolean(L, true);
         return 1;
