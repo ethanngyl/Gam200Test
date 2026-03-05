@@ -103,6 +103,17 @@ namespace Framework {
         result = fmodSystem->getMasterChannelGroup(&masterGroup);
         CheckFMODError(result, "getMasterChannelGroup");
 
+        // M5 1105: Create Music group under master
+        result = fmodSystem->createChannelGroup("Music", &musicGroup);
+        CheckFMODError(result, "createChannelGroup(Music)");
+
+        if (result == FMOD_OK && masterGroup && musicGroup)
+        {
+            result = masterGroup->addGroup(musicGroup);
+            CheckFMODError(result, "masterGroup->addGroup(Music)");
+        }
+
+
         std::cout << "[Audio] FMOD initialized successfully\n";
     }
 
@@ -115,7 +126,7 @@ namespace Framework {
      * - Allows use to modify the audio in real-time and processess changes requested while the game is running
      */
     void AudioSystem::Update(float dt) {
-        (void)dt; // silence unused variable warning
+        //(void)dt; // silence unused variable warning
 
         DBG_SCOPE_SYS("Audio System", eng::debug::Subsystem::Audio);
 
@@ -134,6 +145,9 @@ namespace Framework {
         if (masterGroup) {
             masterGroup->setPaused(!shouldPlay);
         }
+
+        UpdateMusicFade(dt);
+
         // Update FMOD
         fmodSystem->update();
 
@@ -383,6 +397,10 @@ namespace Framework {
         if (masterGroup) {
             masterGroup->stop();
         }
+        musicChannel = nullptr;
+        musicFadeActive = false;
+        musicStopWhenFadeDone = false;
+        pendingMusicName.clear();
     }
 
     /**
@@ -636,5 +654,131 @@ namespace Framework {
 
     std::cout << "[AudioSystem] Reload Complete. Loaded " << loadedCount << " sounds.\n";
 }
+
+    void AudioSystem::PlayMusic(const std::string& soundName, float fadeInSec, bool loop)
+    {
+        if (!fmodSystem || !musicGroup) return;
+
+        bool isPlaying = false;
+        if (musicChannel) {
+            musicChannel->isPlaying(&isPlaying);
+        }
+
+        // If already playing, fade out then swap
+        if (isPlaying) {
+            pendingMusicName = soundName;
+            pendingMusicLoop = loop;
+            pendingMusicFadeIn = fadeInSec;
+            StopMusic(0.5f);
+            return;
+        }
+
+        auto it = sounds.find(soundName);
+        if (it == sounds.end()) {
+            std::cerr << "[Audio] Music not found: " << soundName << "\n";
+            return;
+        }
+
+        FMOD::Channel* channel = nullptr;
+        FMOD_RESULT result = fmodSystem->playSound(it->second, musicGroup, true, &channel);
+        CheckFMODError(result, "playSound(Music)");
+        if (result != FMOD_OK || !channel) return;
+
+        channel->setMode(loop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF);
+        channel->setVolume(0.0f);
+        channel->setPaused(false);
+
+        musicChannel = channel;
+
+        // Fade in
+        musicFadeActive = true;
+        musicFadeStartVol = 0.0f;
+        musicFadeTargetVol = 1.0f;
+        musicFadeElapsed = 0.0f;
+        musicFadeDuration = (fadeInSec > 0.0f) ? fadeInSec : 0.0f;
+        musicStopWhenFadeDone = false;
+
+        if (musicFadeDuration <= 0.0f) {
+            musicChannel->setVolume(1.0f);
+            musicFadeActive = false;
+        }
+    }
+
+    void AudioSystem::StopMusic(float fadeOutSec)
+    {
+        if (!musicChannel) return;
+
+        bool isPlaying = false;
+        musicChannel->isPlaying(&isPlaying);
+
+        if (!isPlaying) {
+            musicChannel = nullptr;
+            return;
+        }
+
+        float currentVol = 1.0f;
+        musicChannel->getVolume(&currentVol);
+
+        if (fadeOutSec <= 0.0f) {
+            musicChannel->stop();
+            musicChannel = nullptr;
+            musicFadeActive = false;
+            musicStopWhenFadeDone = false;
+            return;
+        }
+
+        // Fade out
+        musicFadeActive = true;
+        musicFadeStartVol = currentVol;
+        musicFadeTargetVol = 0.0f;
+        musicFadeElapsed = 0.0f;
+        musicFadeDuration = fadeOutSec;
+        musicStopWhenFadeDone = true;
+    }
+
+    void AudioSystem::UpdateMusicFade(float dt)
+    {
+        if (!musicFadeActive || !musicChannel) return;
+        if (dt <= 0.0f) return;
+
+        musicFadeElapsed += dt;
+
+        if (musicFadeDuration <= 0.0f)
+        {
+            musicChannel->setVolume(musicFadeTargetVol);
+            musicFadeActive = false;
+            return;
+        }
+
+        float t = musicFadeElapsed / musicFadeDuration;
+        if (t > 1.0f) t = 1.0f;
+
+        float newVol = musicFadeStartVol + (musicFadeTargetVol - musicFadeStartVol) * t;
+        musicChannel->setVolume(newVol);
+
+        if (t >= 1.0f)
+        {
+            musicFadeActive = false;
+
+            if (musicStopWhenFadeDone)
+            {
+                musicChannel->stop();
+                musicChannel = nullptr;
+                musicStopWhenFadeDone = false;
+
+                // If a track was queued during fade-out, start it now
+                if (!pendingMusicName.empty())
+                {
+                    std::string next = pendingMusicName;
+                    bool nextLoop = pendingMusicLoop;
+                    float nextFadeIn = pendingMusicFadeIn;
+
+                    pendingMusicName.clear();
+
+                    PlayMusic(next, nextFadeIn, nextLoop);
+                }
+            }
+        }
+    }
 
 } // namespace Framework
