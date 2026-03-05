@@ -56,7 +56,6 @@ namespace Framework {
 		particleSystems.clear();
 		settings.clear();
 		emitterIdToIndex.clear();
-		temporaryEffects.clear();
 		nextEmitterId = 1;
 
 		std::ifstream file(path);
@@ -119,5 +118,44 @@ namespace Framework {
 	void ParticleSystemManager::SendEngineMessage(Message* msg) {
 	// Optional: print debug info
 		std::cout << "[ParticleSystemManager] " << msg->MessageId << std::endl;
+	}
+
+	// Creates a new emitter at runtime from a named preset
+	int ParticleSystemManager::SpawnEmitterFromPreset(const std::string& presetName, float x, float y, int ownerPlayerID)
+	{
+		std::cout << "[PSM] SpawnEmitterFromPreset called: " << presetName << " at (" << x << "," << y << ") owner=" << ownerPlayerID << "\n";
+
+		auto it = settings.find(presetName);
+		if (it == settings.end()) {
+			std::cout << "[PSM] Preset '" << presetName << "' not found\n";
+			return -1;
+		}
+
+		auto& ps = AddParticleSystem();
+		ParticleSystem::Settings s = it->second;
+		s.ownerPlayerID = ownerPlayerID;  // override with caller's playerID
+		ps.SetSettings(s);
+		ps.SetEmitter(x, y);
+
+		// Start inactive — only activates when SetActivePlayer is called
+		ps.SetActive(ownerPlayerID == -1);  // always-on emitters start active
+
+		int emitterID = nextEmitterId++;
+		emitterIdToIndex[emitterID] = particleSystems.size() - 1;
+
+		if (s.burstCnt > 0) ps.SpawnBurst(s.burstCnt);
+
+		return emitterID;
+	}
+
+	// Activates only the emitters belonging to playerIndex; -1 = deactivate all player emitters
+	void ParticleSystemManager::SetActivePlayer(int playerIndex)
+	{
+		for (auto& ps : particleSystems) {
+			int owner = ps.GetOwnerPlayer();
+			if (owner == -1) continue;  // always-on emitters, don't touch
+			ps.SetActive(owner == playerIndex);
+		}
+		std::cout << "[PSM] Active player set to " << playerIndex << "\n";
 	}
 } // namespace Framework

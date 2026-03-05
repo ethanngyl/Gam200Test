@@ -1,139 +1,45 @@
 {
   "settings": {
     "Smoke": {
-      "tint": [0.6, 0.6, 0.6, 0.28],
-      "endTint": [0.15, 0.15, 0.15, 0.0],
+      "tint": [ 0.6, 0.6, 0.6, 0.28 ],
+      "endTint": [ 0.15, 0.15, 0.15, 0.0 ],
       "layer": 5,
-
       "spawnRate": 10,
       "size": 0.10,
       "endSize": 0.50,
-
       "minLifetime": 1.0,
       "maxLifetime": 2.0,
-
       "minSpeed": 0.05,
       "maxSpeed": 0.10,
-
-      "direction": [0.0, 1.0],
+      "direction": [ 0.0, 1.0 ],
       "directionFuzz": 0.25,
-      "gravity": [0.0, 0.015],
-
+      "gravity": [ 0.0, 0.015 ],
       "fadeOut": true,
       "shrinkOverTime": false,
       "growOverTime": true,
       "burstCount": 0,
       "ownerPlayerID": -1
     },
-
     "Explosion": {
-      "tint": [1.0, 0.8, 0.3, 1.0],
-      "endTint": [0.8, 0.1, 0.0, 0.0],
+      "tint": [ 1.0, 0.8, 0.3, 1.0 ],
+      "endTint": [ 0.8, 0.1, 0.0, 0.0 ],
       "layer": 6,
-
       "spawnRate": 0,
       "burstCount": 22,
-
       "size": 0.18,
       "endSize": 0.55,
-
       "minLifetime": 0.25,
       "maxLifetime": 0.55,
-
       "minSpeed": 1.2,
       "maxSpeed": 2.6,
-
-      "direction": [0.0, 0.0],
+      "direction": [ 0.0, 0.0 ],
       "directionFuzz": 1.25,
-      "gravity": [0.0, -1.8],
-
+      "gravity": [ 0.0, -1.8 ],
       "fadeOut": true,
       "shrinkOverTime": false,
       "growOverTime": true,
       "ownerPlayerID": -1
-    },
-
-    "Player1Aura": {
-      "tint": [1.0, 0.3, 0.3, 0.6],
-      "endTint": [1.0, 0.1, 0.1, 0.0],
-      "layer": 5,
-
-      "spawnRate": 20,
-      "size": 0.08,
-      "endSize": 0.16,
-
-      "minLifetime": 0.6,
-      "maxLifetime": 1.0,
-
-      "minSpeed": 0.2,
-      "maxSpeed": 0.4,
-
-      "direction": [0.0, 0.5],
-      "directionFuzz": 1.0,
-      "gravity": [0.0, 0.08],
-
-      "fadeOut": true,
-      "shrinkOverTime": false,
-      "growOverTime": true,
-      "burstCount": 0,
-      "ownerPlayerID": 0
-    },
-
-    "Player2Aura": {
-      "tint": [0.3, 1.0, 0.3, 0.6],
-      "endTint": [0.1, 1.0, 0.1, 0.0],
-      "layer": 5,
-
-      "spawnRate": 20,
-      "size": 0.08,
-      "endSize": 0.16,
-
-      "minLifetime": 0.6,
-      "maxLifetime": 1.0,
-
-      "minSpeed": 0.2,
-      "maxSpeed": 0.4,
-
-      "direction": [0.0, 0.5],
-      "directionFuzz": 1.0,
-      "gravity": [0.0, 0.08],
-
-      "fadeOut": true,
-      "shrinkOverTime": false,
-      "growOverTime": true,
-      "burstCount": 0,
-      "ownerPlayerID": 1
-    },
-
-    "Player3Aura": {
-      "tint": [1.0, 1.0, 0.3, 0.6],
-      "endTint": [1.0, 1.0, 0.1, 0.0],
-      "layer": 5,
-
-      "spawnRate": 20,
-      "size": 0.08,
-      "endSize": 0.16,
-
-      "minLifetime": 0.6,
-      "maxLifetime": 1.0,
-
-      "minSpeed": 0.2,
-      "maxSpeed": 0.4,
-
-      "direction": [0.0, 0.5],
-      "directionFuzz": 1.0,
-      "gravity": [0.0, 0.08],
-
-      "fadeOut": true,
-      "shrinkOverTime": false,
-      "growOverTime": true,
-      "burstCount": 0,
-      "ownerPlayerID": 2
     }
   },
-
-  "emitters": [
-    { "setting": "Smoke",     "emitter": [ -0.5, 0.5] },
-    { "setting": "Explosion", "emitter": [ 0.5, 0.5] }
-  ]
+ "emitters": []
 }

@@ -318,10 +318,14 @@ namespace Framework {
         // Enemy config (set by level, read by EnemyScript OnInit)
         static int Lua_SetEnemyConfig(lua_State* L);
         static int Lua_GetEnemyConfig(lua_State* L);
+
         // Projectile Skill API
         // SpawnSkillProjectile(worldX, worldY, dirX, dirY, speed, damage, pierce)
         static int Lua_SpawnSkillProjectile(lua_State* L);
 
+        // Particles
+        static int Lua_SpawnParticleEmitter(lua_State* L);
+        static int Lua_SetActivePlayerIndex(lua_State* L);
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

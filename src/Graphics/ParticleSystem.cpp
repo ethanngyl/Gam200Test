@@ -82,6 +82,8 @@ namespace Framework {
 	void ParticleSystem::Update(float dt) {
 		if (dt <= 0.0f) return; // saftey check
 
+		if (!active) { spawnAcc = 0.0f; return; }
+
 		EntityManager* entityManager = CORE->GetEntityManager();
 		if (!entityManager) return;
 

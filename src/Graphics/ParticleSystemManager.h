@@ -14,6 +14,9 @@ namespace Framework {
 
 		int ReloadFromJSON(const std::string& path);
 
+		int  SpawnEmitterFromPreset(const std::string& presetName, float x, float y, int ownerPlayerID);
+		void SetActivePlayer(int playerIndex);
+
 		// Manadatory overrides
 		virtual void Initialize() override;
 		virtual void Update(float dt) override;
@@ -26,12 +29,5 @@ namespace Framework {
 		std::unordered_map<int, size_t> emitterIdToIndex; // NEW: Map IDs to indices
 		size_t controlled{ 0 };
 		int nextEmitterId{ 1 };
-
-		// Temporary effects tracking
-		struct TemporaryEffect {
-			int emitterId;
-			float remainingTime;
-		};
-		std::vector<TemporaryEffect> temporaryEffects;
 	};
 } // namespace Framework

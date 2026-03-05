@@ -607,6 +607,10 @@ namespace Framework {
         lua_register(L, "SetActiveCharacter", Lua_SetActiveCharacter);
         lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
 
+        // Particles
+        lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
+        lua_register(L, "SetActivePlayerIndex", Lua_SetActivePlayerIndex);
+
         lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
         lua_register(L, "IsEditorMode", lua_IsEditorMode);
         lua_register(L, "ShouldDisableGameplay", Lua_ShouldDisableGameplay);

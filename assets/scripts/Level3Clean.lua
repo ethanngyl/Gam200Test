@@ -191,6 +191,7 @@ function OnInit()
             end
         end
     end
+    print("[Level3Clean] ========================================")
     print("[Level3Clean] All players animation initialization complete")
     print("[Level3Clean] ========================================")
 
@@ -375,6 +376,7 @@ function OnDestroy()
     audioConfig = nil
     initialized = false
 
+    Log("========================================")
     Log("Level 3 cleanup complete")
     Log("========================================")
 end
@@ -536,12 +538,29 @@ function SetupParty()
         for i = 1, #verifyMembers do
             print("[SetupParty]     Member " .. i .. ": Entity " .. verifyMembers[i])
         end
+
+        -- Spawn smoke particle emitters on each player
+        print("[SetupParty] Step 10: Spawning particle emitters...")
+        for i = 1, 3 do
+            print("[SetupParty]   About to get world pos for player " .. i .. " entity=" .. tostring(allPlayers[i]))
+            local wx, wy = GetEntityWorldPosition(allPlayers[i])
+            print("[SetupParty]   Got pos: " .. tostring(wx) .. ", " .. tostring(wy))
+            if wx ~= nil and wy ~= nil then
+                local id = SpawnParticleEmitter("Smoke", wx, wy, i - 1)
+                print("[SetupParty]   Emitter spawned id=" .. tostring(id))
+            else
+                print("[SetupParty]   SKIPPED nil pos")
+            end
+        end
+        SetActivePlayerIndex(0) 
+        print("[SetupParty] Step 10: DONE")
+
     else
         print("[SetupParty] ERROR: InitializeParty() FAILED!")
         return false
     end
 
-    print("[SetupParty] Step 10: SetupParty() COMPLETED SUCCESSFULLY")
+    print("[SetupParty] Step 11: SetupParty() COMPLETED SUCCESSFULLY")
     return true
 end
 
