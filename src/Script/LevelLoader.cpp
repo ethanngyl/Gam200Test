@@ -546,14 +546,6 @@ namespace Framework {
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
         lua_register(L, "GetEntityMovementDirection", Lua_GetEntityMovementDirection);
 
-        // Particles
-        lua_register(L, "CreateParticleEmitter", Lua_CreateParticleEmitter);
-        lua_register(L, "DestroyParticleEmitter", Lua_DestroyParticleEmitter);
-        lua_register(L, "SetParticleEmitterPosition", Lua_SetParticleEmitterPosition);
-        lua_register(L, "SetParticleEmitterOwner", Lua_SetParticleEmitterOwner);
-        lua_register(L, "CreateParticleEffect", Lua_CreateParticleEffect);
-        lua_register(L, "SetActivePlayerIndex", Lua_SetActivePlayerIndex);
-
         // Party System - Entity-Based APIs
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
         lua_register(L, "GetEntityAttackAP", Lua_GetEntityAttackAP);

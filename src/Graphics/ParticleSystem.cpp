@@ -1,26 +1,8 @@
 ﻿#include "Precompiled.h"
 
-namespace {
-	// Get active player index from Lua
-	int GetCurrentActivePlayer() {
-		return Framework::GetActivePlayerIndexForParticles();
-	}
-
-	// Check if particle should be active based on current turn
-	bool ShouldBeActive(int ownerPlayerID) {
-		if (ownerPlayerID < 0) return true;  // Always active
-		int currentPlayer = GetCurrentActivePlayer();
-		if (currentPlayer < 0) return true;  // No active player = show all
-		return currentPlayer == ownerPlayerID;
-	}
-}
-
 namespace Framework {
-    // Access to active player index (defined in LevelLoader_API.cpp)
-	int GetActivePlayerIndexForParticles();  // Forward declaration
-
 	void ParticleSystem::CreateParticle() {
-		if (!active || !ShouldBeActive(settings.ownerPlayerID)) return;
+		if (!active) return;
 		if (!CORE || !CORE->GetGraphicsSystem() || !CORE->GetEntityManager()) return; // safety check
 
 		// Query active graphics system to convert pixel size into world-space scale
@@ -42,14 +24,11 @@ namespace Framework {
 		// frand: gives any random number from 0.0f to 1.0f
 		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };
 
-		// Add some random size variation (0.7x to 1.3x, for example)
-		float sizeJitter = 0.7f + frand() * 0.6f;
-
 		// Store start values for interpolation
 		particle.startTint = settings.tint;
 		particle.endTint = settings.endTint;
-		particle.startSize = worldScale * sizeJitter;
-		particle.endSize = worldScale * settings.endSize * sizeJitter;
+		particle.startSize = worldScale;
+		particle.endSize = worldScale * settings.endSize;
 		particle.gravity = settings.gravity;
 		particle.fadeOut = settings.fadeOut;
 		particle.shrinkOverTime = settings.shrinkOverTime;
@@ -131,12 +110,8 @@ namespace Framework {
 
 			// Apply physics
 			if (particle.gravity.x != 0.0f || particle.gravity.y != 0.0f) {
-				//particle.velocity.x += particle.gravity.x * dt;
-				//particle.velocity.y += particle.gravity.y * dt;
-
-				float drag = 1.0f; // slow down...
-				particle.velocity.x += particle.velocity.x * drag * dt;
-				particle.velocity.y += particle.velocity.y * drag * dt;
+				particle.velocity.x += particle.gravity.x * dt;
+				particle.velocity.y += particle.gravity.y * dt;
 			}
 
 			// Update position

@@ -64,9 +64,6 @@ namespace Framework {
     class AudioSystem;
     class GraphicsSystemV2;
 
-    // Particle system helper
-    int GetActivePlayerIndexForParticles();
-
     /**
      * @class LevelLoader
      * @brief Manages Lua-scripted game levels/states
@@ -228,13 +225,6 @@ namespace Framework {
         static int Lua_SetAnimationFrameRange(lua_State* L);  // Set animation frame range (startFrame, frameCount)
         static int Lua_GetAnimationGroup(lua_State* L);
         static int Lua_GetEntityMovementDirection(lua_State* L);
-
-        static int Lua_CreateParticleEmitter(lua_State* L);
-        static int Lua_DestroyParticleEmitter(lua_State* L);
-        static int Lua_SetParticleEmitterPosition(lua_State* L);
-        static int Lua_SetParticleEmitterOwner(lua_State* L);
-        static int Lua_CreateParticleEffect(lua_State* L);
-        static int Lua_SetActivePlayerIndex(lua_State* L);
 
         // Party System - Entity-Based APIs
         static int Lua_GetEntityAP(lua_State* L);

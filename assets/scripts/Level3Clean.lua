@@ -87,12 +87,6 @@ local kStartY = -0.4
 local kSpacingX = 0.1
 local kSpacingY = 0.1
 
--- Particle System State
-local particleEmitters = {}
-local playerAttackedThisFrame = false
-local lastAttackingEntity = 0
-local playerParticleEmitters = {} 
-
 -- Audio configuration
 local audioConfig = nil
 
@@ -239,9 +233,6 @@ function OnInit()
     -- Setup Party UI (shows all 3 characters)
     SetupPartyUI()
 
-     -- Initialize player particle emitters
-    InitializePlayerParticles()
-
     -- CRITICAL: Re-disable grid movement AFTER all initialization
     -- Some systems (GameStateManager) may re-enable it during setup
     Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -275,18 +266,6 @@ function OnUpdate(dt)
 
     -- Update audio
     UpdateAudio(dt)
-
-    -- Spawn particles when player attacks
-    if playerAttackedThisFrame and lastAttackingEntity ~= 0 then
-        SpawnAttackParticles(lastAttackingEntity)
-        playerAttackedThisFrame = false
-        lastAttackingEntity = 0
-    end
-
-    -- Press T to test particles (TEMPORARY - REMOVE AFTER TESTING)
-    if IsKeyDown("T") then
-        TestParticles()
-    end
 
     -- Handle pause menu (always runs)
     PauseMenu.Update(dt)
@@ -336,9 +315,6 @@ function OnUpdate(dt)
         UpdateEnemyTurnManager(dt)
     end
 
-    -- Update player particles
-    UpdatePlayerParticles(dt)
-
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
 
@@ -377,19 +353,6 @@ function OnDestroy()
     Log("========================================")
     Log("Level 3 cleanup...")
     Log("========================================")
-
-    -- Cleanup particles
-    CleanupParticles()
-
-     -- Cleanup player particles
-    if playerParticleEmitters then
-        for i = 1, #playerParticleEmitters do
-            if playerParticleEmitters[i] and playerParticleEmitters[i] > 0 then
-                DestroyParticleEmitter(playerParticleEmitters[i])
-            end
-        end
-        playerParticleEmitters = {}
-    end
 
     -- Cleanup party UI
     if partyUI then
@@ -474,130 +437,6 @@ function LoadTileMapData()
     end
 
     return success
-end
-
--- ============================================================================
--- PLAYER PARTICLE EMITTERS
--- ============================================================================
-function InitializePlayerParticles()
-    Log("========================================")
-    Log("Initializing PLAYER particle emitters...")
-    Log("========================================")
-    
-    -- partyMembers is set in SetupParty() at line 513
-    for i = 1, #partyMembers do
-        local playerEntity = partyMembers[i]
-        
-        if playerEntity and playerEntity > 0 then
-            local x, y = GetEntityWorldPosition(playerEntity)
-            
-            -- Create emitter: Player1Aura, Player2Aura, or Player3Aura
-            local presetName = "Player" .. i .. "Aura"
-            local emitterId = CreateParticleEmitter(presetName, x, y)
-            
-            if emitterId > 0 then
-                SetParticleEmitterOwner(emitterId, i - 1)
-                playerParticleEmitters[i] = emitterId
-                Log("Created particle emitter for Player " .. i .. " (ID: " .. emitterId .. ")")
-            else
-                Log("ERROR: Failed to create emitter for Player " .. i)
-            end
-        end
-    end
-    
-    Log("Player particle emitters created!")
-end
-
--- ============================================================================
--- PARTICLE SYSTEM: Set active player for particles
--- ============================================================================
-function SetActivePlayerForParticles(playerIndex)
-    -- playerIndex: 0=Player1, 1=Player2, 2=Player3, -1=none
-    SetActivePlayerIndex(playerIndex)
-end
-
-function UpdatePlayerParticles(dt)
-    for i = 1, #playerParticleEmitters do
-        local emitterId = playerParticleEmitters[i]
-        local playerEntity = partyMembers[i]
-        
-        if emitterId and emitterId > 0 and playerEntity and playerEntity > 0 then
-            local x, y = GetEntityWorldPosition(playerEntity)
-            SetParticleEmitterPosition(emitterId, x, y)
-        end
-    end
-end
-
--- ============================================================================
--- HELPER FUNCTIONS- PARTICLE EFFECT
--- ============================================================================
-
-function SpawnAttackParticles(attackerEntityID)
-    if not attackerEntityID or attackerEntityID == 0 then
-        return
-    end
-    
-    local worldX, worldY = GetEntityWorldPosition(attackerEntityID)
-    local effectId = CreateParticleEffect("Sparks", worldX, worldY, 0.5)
-    Log("[Particles] Attack particles spawned at (" .. worldX .. ", " .. worldY .. ")")
-    
-    return effectId
-end
-
-function SpawnDamageParticles(targetEntityID, damageAmount)
-    if not targetEntityID or targetEntityID == 0 then
-        return
-    end
-    
-    local worldX, worldY = GetEntityWorldPosition(targetEntityID)
-    local effectName = "Explosion"
-    local duration = 0.8
-    
-    if damageAmount and damageAmount > 10 then
-        duration = 1.2
-    end
-    
-    local effectId = CreateParticleEffect(effectName, worldX, worldY, duration)
-    Log("[Particles] Damage particles spawned at (" .. worldX .. ", " .. worldY .. ")")
-    
-    return effectId
-end
-
-function SpawnDeathParticles(entityID)
-    if not entityID or entityID == 0 then
-        return
-    end
-    
-    local worldX, worldY = GetEntityWorldPosition(entityID)
-    CreateParticleEffect("Explosion", worldX, worldY, 2.0)
-    Log("[Particles] Death particles spawned at (" .. worldX .. ", " .. worldY .. ")")
-end
-
--- ============================================================================
--- HELPER FUNCTIONS - PARTICLE CLEANUP
--- ============================================================================
-
-function CleanupParticles()
-    Log("[Particles] Cleaning up runtime emitters...")
-    
-    local count = 0
-    for name, emitterId in pairs(particleEmitters) do
-        if emitterId and emitterId > 0 then
-            DestroyParticleEmitter(emitterId)
-            count = count + 1
-            Log("[Particles] Destroyed emitter: " .. name)
-        end
-    end
-    
-    particleEmitters = {}
-    Log("[Particles] Cleanup complete - destroyed " .. count .. " emitters")
-end
-
--- Add this to your existing OnDestroy() function if you have one
--- Or create it if you don't:
-function OnDestroy()
-    CleanupParticles()
-    -- Add any other cleanup code here
 end
 
 -- ============================================================================

@@ -91,14 +91,6 @@ namespace Framework {
     static uint32_t g_activeCharacterID = 0;
     static int g_activePlayerIndex = -1;  // 0=Player1, 1=Player2, 2=Player3, -1=none
     
-    /**
-     * @brief Gets the current active player index for particle system
-     * @return 0=Player1, 1=Player2, 2=Player3, -1=none
-     */
-    int GetActivePlayerIndexForParticles() {
-        return g_activePlayerIndex;
-    }
-
     // ========================================================================
     // TILE TINTING SYSTEM - For PulseTile visual feedback
     // ========================================================================
@@ -4865,120 +4857,6 @@ namespace Framework {
 
         lua_pushboolean(L, true);
         return 1;
-    }
-
-    // ============================================================================
-    // PARTICLE SYSTEM API
-    // ============================================================================
-
-    /**
-     * @brief Creates a particle emitter
-     * Lua: local id = CreateParticleEmitter("Player1Aura", x, y)
-     */
-    int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
-        if (!CORE) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        const char* preset = luaL_checkstring(L, 1);
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-
-        int id = pm->CreateEmitter(preset, x, y);
-        lua_pushinteger(L, id);
-        return 1;
-    }
-
-    /**
-     * @brief Destroys a particle emitter
-     * Lua: DestroyParticleEmitter(id)
-     */
-    int LevelLoader::Lua_DestroyParticleEmitter(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = luaL_checkinteger(L, 1);
-        pm->DestroyEmitter(id);
-        return 0;
-    }
-
-    /**
-     * @brief Sets emitter position
-     * Lua: SetParticleEmitterPosition(id, x, y)
-     */
-    int LevelLoader::Lua_SetParticleEmitterPosition(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = luaL_checkinteger(L, 1);
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-
-        pm->SetEmitterPosition(id, x, y);
-        return 0;
-    }
-
-    /**
-     * @brief Sets which player owns this emitter
-     * Lua: SetParticleEmitterOwner(id, playerIndex)
-     */
-    int LevelLoader::Lua_SetParticleEmitterOwner(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = luaL_checkinteger(L, 1);
-        int playerID = luaL_checkinteger(L, 2);
-
-        pm->SetEmitterOwner(id, playerID);
-        return 0;
-    }
-
-    /**
-     * @brief Creates temporary particle effect
-     * Lua: CreateParticleEffect("Explosion", x, y, duration)
-     */
-    int LevelLoader::Lua_CreateParticleEffect(lua_State* L) {
-        if (!CORE) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        const char* preset = luaL_checkstring(L, 1);
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-        float duration = static_cast<float>(luaL_optnumber(L, 4, 1.0));
-
-        int id = pm->CreateTemporaryEffect(preset, x, y, duration);
-        lua_pushinteger(L, id);
-        return 1;
-    }
-
-    /**
-     * @brief Sets which player is currently active (for particle system)
-     * Lua: SetActivePlayerIndex(0)  -- 0, 1, 2, or -1
-     */
-    int LevelLoader::Lua_SetActivePlayerIndex(lua_State* L) {
-        g_activePlayerIndex = luaL_checkinteger(L, 1);
-        return 0;
     }
 
     // ========================================================================
