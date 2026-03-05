@@ -84,6 +84,25 @@ namespace Framework {
 			return false;
 		}
 
+		/// Checks only static tile blocking (walls/obstacles), ignoring entity occupancy.
+		/// Used by ProjectileMovementSystem so projectiles pass through entities
+		/// and are only stopped by walls.
+		inline bool IsTileStaticBlocked(GridCoord c) {
+			const auto& grid = GetGrid();
+			if (!grid.InBounds(c.x, c.y) || !grid.em) {
+				return true;   // out of bounds = blocked
+			}
+			Entity e = grid.TileAt(c.x, c.y);
+			if (e.GetID() == INVALID_ENTITY) {
+				return true;
+			}
+			if (!grid.em->HasComponent<GridTiles>(e)) {
+				return true;
+			}
+			const auto& gridTile = grid.em->GetComponent<GridTiles>(e);
+			return gridTile.blocked;
+		}
+
 		inline bool SetBlocked(GridCoord c, bool blocked) {
 			auto& grid = GetGrid();
 			if (!grid.InBounds(c.x, c.y) || !grid.em) {

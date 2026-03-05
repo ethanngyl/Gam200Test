@@ -103,6 +103,9 @@
 //ConfigReader
 #include "ConfigReader\ConfigReader.h"
 
+//Memory Manager (custom pool allocator for game objects)
+#include "Memory/MemoryManager.h"
+
 //ECS
 #include "ECSComponent.h"
 #include "ECSEntity.h"

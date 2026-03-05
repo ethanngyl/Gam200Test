@@ -24,6 +24,11 @@ local backgroundSpriteID = 0  -- Store background sprite entity ID
 local logoSpriteID = 0        -- Store logo sprite entity ID
 local cornerSpriteIDs = {}    -- Store corner sprite entity IDs
 
+-- Level progression
+local currentLevel = 1
+local totalLevels  = 3
+local hasMoreLevels = false
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -121,6 +126,38 @@ function OnInit()
     -- ========================================================================
     ButtonManager.Initialize(config.menu.buttons)
 
+    -- ========================================================================
+    -- LEVEL PROGRESSION: Add "Next Level" button if more levels remain
+    -- ========================================================================
+    local progress = LoadJSON("assets/JSON/LevelProgress.json")
+    if progress then
+        currentLevel = progress.currentLevel or 1
+        totalLevels  = progress.totalLevels  or 3
+    end
+
+    hasMoreLevels = (currentLevel <= totalLevels)
+
+    if hasMoreLevels then
+        Log("[EndLevel] Level " .. currentLevel .. " / " .. totalLevels .. " - showing Next Level button")
+        ButtonManager.CreateButton({
+            id       = "nextLevel",
+            texture  = "assets/Menu/Ui_btn.png",
+            position = { x = 0.0, y = -0.05 },
+            scale    = { x = 1.0, y = 0.2 },
+            layer    = 10,
+            text     = {
+                content = "NEXT LEVEL",
+                font    = "Jersey20Regular",
+                offset  = { x = -80.0, y = -13.0 },
+                scale   = 0.75,
+                color   = { r = 0.2, g = 1.0, b = 0.2 },
+            },
+            callback = "OnNextLevelButtonClicked",
+        })
+    else
+        Log("[EndLevel] All " .. totalLevels .. " levels complete!")
+    end
+
     initialized = true
     Log("End Level initialization complete")
     Log("Press F1 to toggle editor")
@@ -130,12 +167,30 @@ end
 -- BUTTON CALLBACKS
 -- ============================================================================
 
+function OnNextLevelButtonClicked()
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    Log("NEXT LEVEL button clicked! Loading level " .. currentLevel .. "...")
+    ButtonManager.TransitionTo("LEVEL_3")
+end
+
 function OnBackButtonClicked()
     if not ButtonManager.CanExecuteCallback() then
         return
     end
 
     Log("BACK button clicked!")
+
+    -- Reset level progress when returning to main menu
+    local f = io.open("assets/JSON/LevelProgress.json", "w")
+    if f then
+        f:write("{\n  \"currentLevel\": 1,\n  \"totalLevels\": " .. totalLevels .. "\n}\n")
+        f:close()
+        Log("[EndLevel] Level progress reset to 1")
+    end
+
     ButtonManager.TransitionTo("mainMenu", "button2")
 end
 
@@ -161,6 +216,20 @@ function OnDraw()
 
     -- ButtonManager handles all button rendering and editor mode visuals
     ButtonManager.DrawAll()
+
+    -- Level completion text
+    local fbW, fbH = GetFramebufferSize()
+    if fbW and fbW > 0 then
+        local cx = fbW * 0.5
+        local scaleRef = fbW / 1920
+        if hasMoreLevels then
+            DrawText("Jersey20Regular", "LEVEL " .. (currentLevel - 1) .. " COMPLETE!",
+                cx - 160 * scaleRef, 80 * scaleRef, 1.0 * scaleRef, 1, 1, 0.4)
+        else
+            DrawText("Jersey20Regular", "ALL LEVELS COMPLETE!",
+                cx - 180 * scaleRef, 80 * scaleRef, 1.0 * scaleRef, 1, 0.85, 0.2)
+        end
+    end
 end
 
 -- ============================================================================
