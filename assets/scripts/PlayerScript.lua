@@ -1800,10 +1800,12 @@ function ExecuteSkill(skillID)
 
         local tintR, tintG, tintB, tintA = 1, 1, 1, 1
         local spritePath = nil
+        local explosionOnHit = false
         if getPlayerIndex() == 2
            and (skillID == "Fireball" or skillID == "PiercingShot") then
             tintR, tintG, tintB, tintA = 1, 0, 0, 1
             spritePath = ""
+            explosionOnHit = true
         end
 
         local projID = SpawnSkillProjectile(
@@ -1813,7 +1815,10 @@ function ExecuteSkill(skillID)
             skill.damage or 1,
             skill.pierce or false,
             tintR, tintG, tintB, tintA,
-            spritePath
+            spritePath,
+            false,          -- isEnemyProjectile (arg 13)
+            0,              -- sourceEntityID (arg 14)
+            explosionOnHit  -- spawnExplosionOnHit (arg 15)
         )
         if not projID then
             print("[PlayerScript] ERROR: SpawnSkillProjectile returned nil")

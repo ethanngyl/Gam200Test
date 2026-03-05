@@ -6,7 +6,7 @@
  Date:           2025-09-30
  Contribution:   100%
  ------------------------------------------------------------------------------
- 
+
   Design notes:
   Contains all component data structures used in the Entity Component System.
  * Components are pure data containers with no behavior - systems operate on them.
@@ -65,6 +65,7 @@ namespace Framework
         bool pierce = false;   // If true, passes through enemies instead of stopping
         bool isEnemyProjectile = false;  // If true, damages players instead of enemies
         uint32_t sourceEntityID = 0;     // Entity that spawned this projectile (skip self-hit)
+        bool spawnExplosionOnHit = false; // If true, spawn explosion VFX on impact
     };
 
     enum class AnimGroup {
@@ -114,9 +115,12 @@ namespace Framework
         bool loop = true;
         bool playing = true;
         bool flipX = false;
-        
+
         /** If false, skip JSON-based animation selection (for UI elements, etc.) */
         bool useJsonConfig = true;
+
+        /** If true and loop==false, entity is destroyed when animation finishes */
+        bool autoDestroyOnFinish = false;
     };
 
     /**
@@ -189,7 +193,7 @@ namespace Framework
     struct ScriptComponent : public Component<ScriptComponent>
     {
         std::string scriptPath;
-        lua_State* L = nullptr; 
+        lua_State* L = nullptr;
         bool initialized = false;
         float updateTimer = 0.0f;
 
@@ -276,7 +280,7 @@ namespace Framework
         int maxActionPoints = 3;
 
         AP() = default;
-		AP(int maxAP) : actionPoints(maxAP), maxActionPoints(maxAP) {}
+        AP(int maxAP) : actionPoints(maxAP), maxActionPoints(maxAP) {}
     };
 
     struct AttackRangeComponent : public Component<AttackRangeComponent> {
@@ -373,10 +377,10 @@ namespace Framework
         }
 
         void AddEffect(const std::string& type, int turns, uint32_t source = 0,
-                        uint32_t target = 0, int extra = 0) {
+            uint32_t target = 0, int extra = 0) {
             // Remove existing effect of same type before adding
             RemoveEffect(type);
-            effects.push_back({type, turns, source, target, extra});
+            effects.push_back({ type, turns, source, target, extra });
         }
 
         void RemoveEffect(const std::string& type) {

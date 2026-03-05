@@ -160,6 +160,9 @@ namespace Framework {
     void AnimationSystem::Update(float dt) {
         if (!entityManager) return;
 
+        // Collect entities whose one-shot animation finished with autoDestroyOnFinish
+        std::vector<Entity> autoDestroyList;
+
         // === Sprite sheet frame stepping ===
         for (Entity e : entityManager->GetAllEntities()) {
             if (!entityManager->HasComponent<SpriteAnimation>(e)) continue;
@@ -245,6 +248,11 @@ namespace Framework {
                                 {
                                     // For other non-loop one-shots (if any), just freeze on last frame
                                     anim.playing = false;
+
+                                    // Auto-destroy effect entities (explosions, etc.)
+                                    if (anim.autoDestroyOnFinish) {
+                                        autoDestroyList.push_back(e);
+                                    }
                                 }
                             }
                         }
@@ -428,6 +436,13 @@ namespace Framework {
 
                 // PERFORMANCE FIX: Removed per-frame logging (was causing 1-3ms lag per frame)
                 // LOG_INFO("ANIM", "Entity %u Animation '%s' advanced to frame %d", (unsigned)e.id, anim.animName.c_str(), anim.currentFrame);
+            }
+        }
+
+        // === Auto-destroy effect entities whose one-shot animation finished ===
+        for (Entity eff : autoDestroyList) {
+            if (entityManager->HasComponent<Transform>(eff)) {
+                entityManager->DestroyEntity(eff);
             }
         }
     }

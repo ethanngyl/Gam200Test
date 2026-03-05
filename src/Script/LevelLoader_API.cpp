@@ -3258,6 +3258,23 @@ namespace Framework {
             if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
 
             LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
+
+            // Call Lua OnDestroy before entity destruction (cleans up health bars, etc.)
+            if (em->HasComponent<ScriptComponent>(entity)) {
+                auto& script = em->GetComponent<ScriptComponent>(entity);
+                if (script.hasOnDestroy && script.L) {
+                    lua_getglobal(script.L, "OnDestroy");
+                    if (lua_isfunction(script.L, -1)) {
+                        if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                            lua_pop(script.L, 1);
+                        }
+                    }
+                    else {
+                        lua_pop(script.L, 1);
+                    }
+                }
+            }
+
             em->DestroyEntity(entity);
             LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
             LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
@@ -5123,6 +5140,9 @@ namespace Framework {
         bool isEnemyProjectile = lua_toboolean(L, 13) != 0;
         uint32_t sourceEntityID = static_cast<uint32_t>(luaL_optinteger(L, 14, 0));
 
+        // Optional explosion VFX flag (arg 15, default false)
+        bool spawnExplosionOnHit = lua_toboolean(L, 15) != 0;
+
         // Normalize direction
         float len = std::sqrt(dirX * dirX + dirY * dirY);
         if (len > 0.0001f) {
@@ -5155,6 +5175,7 @@ namespace Framework {
             movement.pierce = pierce;
             movement.isEnemyProjectile = isEnemyProjectile;
             movement.sourceEntityID = sourceEntityID;
+            movement.spawnExplosionOnHit = spawnExplosionOnHit;
         }
 
         lua_pushinteger(L, projectile.GetID());
