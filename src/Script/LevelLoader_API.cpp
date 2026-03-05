@@ -2847,8 +2847,8 @@ namespace Framework {
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
-        std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
-            << transform.position.x << ", " << transform.position.y << ")" << std::endl;
+        //std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
+            //<< transform.position.x << ", " << transform.position.y << ")" << std::endl;
 
         lua_pushnumber(L, transform.position.x);
         lua_pushnumber(L, transform.position.y);
