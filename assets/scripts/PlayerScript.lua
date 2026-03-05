@@ -210,13 +210,16 @@ local activePreview = nil
 -- nil when not in dash mode; { skillID = ..., dirX = 0, dirY = 0 } when active
 local dashMode = nil
 
--- Ally targeting state: when an ally_target skill is previewed, click an ally to select
--- nil when not targeting; { skillID = ... } when active
+-- Ally targeting state: when an ally_target skill is previewed, Tab/Shift+Tab to cycle
+-- nil when not targeting; { skillID, targets, currentIndex, selectedAlly } when active
 local allyTargetMode = nil
 
--- Enemy targeting state: when an enemy_target skill is previewed, click an enemy to select
--- nil when not targeting; { skillID = ..., selectedEnemy = nil } when active
+-- Enemy targeting state: when an enemy_target skill is previewed, Tab/Shift+Tab to cycle
+-- nil when not targeting; { skillID, targets = {eid,...}, currentIndex, selectedEnemy } when active
 local enemyTargetMode = nil
+
+-- Tab key state for edge detection (Tab/Shift+Tab cycling)
+local lastTabKeyDown = false
 
 -- Cached player index (1, 2, or 3)
 local myPlayerIndex = nil
@@ -555,43 +558,33 @@ local function createPlayerStates(fsm)
             end
 
             -- ============================================================
-            -- ALLY TARGET MODE: click to select an ally
+            -- ALLY TARGET MODE: Tab/Shift+Tab to cycle, Space to confirm
             -- ============================================================
             if allyTargetMode then
-                if IsMouseButtonPressed and IsMouseButtonPressed(0) then
-                    local mouseX, mouseY = GetMousePosition()
-                    if mouseX and mouseY then
-                        -- Find which ally (if any) is at or near the click position
-                        local allPlayers = GetAllPlayers()
-                        if allPlayers then
-                            for _, pid in ipairs(allPlayers) do
-                                if pid ~= entityID then
-                                    local wx, wy = GetEntityWorldPosition(pid)
-                                    if wx and wy then
-                                        local dist = math.sqrt((mouseX - wx)^2 + (mouseY - wy)^2)
-                                        if dist < 0.5 then  -- click within 0.5 world units of ally
-                                            allyTargetMode.selectedAlly = pid
-                                            print("[PlayerScript] Ally selected: " .. pid .. ", Space to confirm")
+                local tabDown = IsKeyDown("Tab")
+                local tabPressed = tabDown and not lastTabKeyDown
+                lastTabKeyDown = tabDown
 
-                                            -- Re-tint: highlight selected ally
-                                            if activePreview and activePreview.tiles then
-                                                for _, tile in ipairs(activePreview.tiles) do
-                                                    TintTile(tile.x, tile.y, 0.3, 1.0, 0.3, 0.4)
-                                                end
-                                            end
-                                            local apx, apy = GetEntityGridPosition(pid)
-                                            if apx and apy then
-                                                TintTile(apx, apy, 0.0, 1.0, 0.0, 0.9)  -- bright green for selected
-                                            end
-                                            break
-                                        end
-                                    end
-                                end
-                            end
-                        end
+                if tabPressed and #allyTargetMode.targets > 0 then
+                    local n = #allyTargetMode.targets
+                    local idx = allyTargetMode.currentIndex
+                    if IsKeyDown("Shift") then
+                        idx = idx - 1
+                        if idx < 1 then idx = n end
+                    else
+                        idx = idx + 1
+                        if idx > n then idx = 1 end
                     end
+                    allyTargetMode.currentIndex = idx
+                    allyTargetMode.selectedAlly = allyTargetMode.targets[idx]
+                    -- Re-tint: highlight selected (selected=bold green, unselected=very dim)
+                    for i, t in ipairs(activePreview and activePreview.tiles or {}) do
+                        local bright = (i == idx)
+                        TintTile(t.x, t.y, bright and 0.0 or 0.1, bright and 1.0 or 0.15, bright and 0.0 or 0.1, bright and 0.95 or 0.35)
+                    end
+                    print("[PlayerScript] Ally selected: " .. tostring(allyTargetMode.selectedAlly) .. " (" .. idx .. "/" .. n .. "), Space to confirm")
                 end
-                -- Update key states but don't process movement
+
                 local wDown = IsKeyDown("W") and not blockedKeys["W"]
                 local sDown = IsKeyDown("S") and not blockedKeys["S"]
                 local aDown = IsKeyDown("A") and not blockedKeys["A"]
@@ -604,40 +597,33 @@ local function createPlayerStates(fsm)
             end
 
             -- ============================================================
-            -- ENEMY TARGET MODE: click to select an enemy
+            -- ENEMY TARGET MODE: Tab/Shift+Tab to cycle, Space to confirm
             -- ============================================================
             if enemyTargetMode then
-                if IsMouseButtonPressed and IsMouseButtonPressed(0) then
-                    local mouseX, mouseY = GetMousePosition()
-                    if mouseX and mouseY then
-                        local enemies = GetAllEnemies()
-                        if enemies then
-                            for _, eID in ipairs(enemies) do
-                                local wx, wy = GetEntityWorldPosition(eID)
-                                if wx and wy then
-                                    local dist = math.sqrt((mouseX - wx)^2 + (mouseY - wy)^2)
-                                    if dist < 0.5 then
-                                        enemyTargetMode.selectedEnemy = eID
-                                        print("[PlayerScript] Enemy selected: " .. eID .. ", Space to confirm")
+                local tabDown = IsKeyDown("Tab")
+                local tabPressed = tabDown and not lastTabKeyDown
+                lastTabKeyDown = tabDown
 
-                                        -- Re-tint: highlight selected enemy
-                                        if activePreview and activePreview.tiles then
-                                            for _, tile in ipairs(activePreview.tiles) do
-                                                TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.4)
-                                            end
-                                        end
-                                        local ex, ey = GetEntityGridPosition(eID)
-                                        if ex and ey then
-                                            TintTile(ex, ey, 1.0, 0.0, 0.0, 0.9)  -- bright red for selected
-                                        end
-                                        break
-                                    end
-                                end
-                            end
-                        end
+                if tabPressed and #enemyTargetMode.targets > 0 then
+                    local n = #enemyTargetMode.targets
+                    local idx = enemyTargetMode.currentIndex
+                    if IsKeyDown("Shift") then
+                        idx = idx - 1
+                        if idx < 1 then idx = n end
+                    else
+                        idx = idx + 1
+                        if idx > n then idx = 1 end
                     end
+                    enemyTargetMode.currentIndex = idx
+                    enemyTargetMode.selectedEnemy = enemyTargetMode.targets[idx]
+                    -- Re-tint: highlight selected (selected=bold red, unselected=very dim)
+                    for i, t in ipairs(activePreview and activePreview.tiles or {}) do
+                        local bright = (i == idx)
+                        TintTile(t.x, t.y, bright and 1.0 or 0.15, bright and 0.0 or 0.1, bright and 0.0 or 0.1, bright and 0.95 or 0.35)
+                    end
+                    print("[PlayerScript] Enemy selected: " .. tostring(enemyTargetMode.selectedEnemy) .. " (" .. idx .. "/" .. n .. "), Space to execute")
                 end
-                -- Update key states but don't process movement
+
                 local wDown = IsKeyDown("W") and not blockedKeys["W"]
                 local sDown = IsKeyDown("S") and not blockedKeys["S"]
                 local aDown = IsKeyDown("A") and not blockedKeys["A"]
@@ -1038,6 +1024,7 @@ function OnUpdate(dt)
                 lastSkillKeyDown[key] = false
             end
             lastSpaceKeyDown = false
+            lastTabKeyDown = false
             -- Reset movement key states
             lastWKeyDown = false
             lastSKeyDown = false
@@ -1250,30 +1237,39 @@ function ShowSkillPreview(skillID)
         return
     end
 
-    -- Enemy target skills (Earthen Bind, Mana Drain, Soul Rend): click an enemy to select
+    -- Enemy target skills (Earthen Bind, Mana Drain, Soul Rend): Tab to cycle, Space to confirm
     if skill.skillType == "enemy_target" then
-        enemyTargetMode = { skillID = skillID }
-        -- Tint all enemy tiles red
+        local targets = {}
         local tiles = {}
         local enemies = GetAllEnemies()
         if enemies then
             for _, eID in ipairs(enemies) do
                 local ex, ey = GetEntityGridPosition(eID)
                 if ex and ey then
-                    TintTile(ex, ey, 1.0, 0.3, 0.3, 0.7)  -- red tint on enemies
+                    table.insert(targets, eID)
                     table.insert(tiles, {x = ex, y = ey})
                 end
             end
         end
+        if #targets == 0 then
+            print("[PlayerScript] No enemies to target")
+            PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
+            return
+        end
+        local idx = 1
+        enemyTargetMode = { skillID = skillID, targets = targets, currentIndex = idx, selectedEnemy = targets[idx] }
         activePreview = { skillID = skillID, tiles = tiles }
-        print("[PlayerScript] Enemy target mode: click an enemy to select, Space to execute")
+        -- Tint: dim all, highlight first (selected=bold red, unselected=very dim)
+        for i, t in ipairs(tiles) do
+            TintTile(t.x, t.y, (i == idx) and 1.0 or 0.15, (i == idx) and 0.0 or 0.1, (i == idx) and 0.0 or 0.1, (i == idx) and 0.95 or 0.35)
+        end
+        print("[PlayerScript] Enemy target mode: Tab/Shift+Tab to cycle, Space to execute")
         return
     end
 
-    -- Ally target skills (Knight's Oath, Soul Merge): enter ally targeting mode
+    -- Ally target skills (Knight's Oath, Soul Merge): Tab to cycle, Space to confirm
     if skill.skillType == "ally_target" then
-        allyTargetMode = { skillID = skillID }
-        -- Tint all ally tiles green
+        local targets = {}
         local tiles = {}
         local allPlayers = GetAllPlayers()
         if allPlayers then
@@ -1281,14 +1277,25 @@ function ShowSkillPreview(skillID)
                 if pid ~= entityID then
                     local px, py = GetEntityGridPosition(pid)
                     if px and py then
-                        TintTile(px, py, 0.3, 1.0, 0.3, 0.7)  -- green tint on allies
+                        table.insert(targets, pid)
                         table.insert(tiles, {x = px, y = py})
                     end
                 end
             end
         end
+        if #targets == 0 then
+            print("[PlayerScript] No allies to target")
+            PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
+            return
+        end
+        local idx = 1
+        allyTargetMode = { skillID = skillID, targets = targets, currentIndex = idx, selectedAlly = targets[idx] }
         activePreview = { skillID = skillID, tiles = tiles }
-        print("[PlayerScript] Ally target mode: click an ally to select, Space to cancel")
+        -- Tint: dim all, highlight first (selected=bold green, unselected=very dim)
+        for i, t in ipairs(tiles) do
+            TintTile(t.x, t.y, (i == idx) and 0.0 or 0.1, (i == idx) and 1.0 or 0.15, (i == idx) and 0.0 or 0.1, (i == idx) and 0.95 or 0.35)
+        end
+        print("[PlayerScript] Ally target mode: Tab/Shift+Tab to cycle, Space to confirm")
         return
     end
 
@@ -1332,6 +1339,7 @@ function ClearActivePreview()
     dashMode = nil
     allyTargetMode = nil
     enemyTargetMode = nil
+    lastTabKeyDown = false
 end
 
 -- Find all enemies within a skill's pattern

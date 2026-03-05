@@ -293,6 +293,7 @@ namespace Framework {
 
         // Grid Conversion API
         static int Lua_TileToWorld(lua_State* L);
+        static int Lua_ScreenToTile(lua_State* L);  // Convert screen coords to grid tile (for mouse target selection)
 
         // Script Component Management API
         static int Lua_AddScriptComponentToEntity(lua_State* L);

@@ -601,6 +601,7 @@ namespace Framework {
 
         // Grid Conversion API
         lua_register(L, "TileToWorld", Lua_TileToWorld);
+        lua_register(L, "ScreenToTile", Lua_ScreenToTile);
 
         // Entity-specific APIs (proper naming)
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);

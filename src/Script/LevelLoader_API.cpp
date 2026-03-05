@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -570,6 +570,7 @@ namespace Framework {
         else if (strcmp(keyName, "Escape") == 0) keyCode = KEY_ESCAPE;
         else if (strcmp(keyName, "Enter") == 0) keyCode = KEY_ENTER;
         else if (strcmp(keyName, "Shift") == 0) keyCode = KEY_SHIFT;
+        else if (strcmp(keyName, "Tab") == 0) keyCode = KEY_TAB;
 
         // Arrow keys
         else if (strcmp(keyName, "Up") == 0) keyCode = KEY_UP;
@@ -3397,6 +3398,41 @@ namespace Framework {
     // ========================================================================
     // GRID CONVERSION API
     // ========================================================================
+
+    /**
+     * @brief Convert screen coordinates to grid tile (for mouse target selection)
+     * @param screenX Screen X (from GetMousePosition)
+     * @param screenY Screen Y (from GetMousePosition)
+     * @param useViewportCoords Optional: use ImGui viewport coords (default false)
+     * @return tileX, tileY (two numbers, or nil,nil if out of bounds)
+     *
+     * Usage: local mx, my = GetMousePosition(); local tx, ty = ScreenToTile(mx, my)
+     */
+    int LevelLoader::Lua_ScreenToTile(lua_State* L) {
+        float screenX = static_cast<float>(luaL_checknumber(L, 1));
+        float screenY = static_cast<float>(luaL_checknumber(L, 2));
+        bool useViewportCoords = lua_toboolean(L, 3) != 0;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->uiSystem) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        Framework::Vector2D worldPos = loader->uiSystem->ScreenToWorld(screenX, screenY, useViewportCoords);
+        auto tileOpt = Framework::WorldToTile(worldPos);
+
+        if (!tileOpt || !Framework::InBounds(*tileOpt)) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        lua_pushinteger(L, tileOpt->x);
+        lua_pushinteger(L, tileOpt->y);
+        return 2;
+    }
 
     /**
      * @brief Convert grid tile coordinates to world position
