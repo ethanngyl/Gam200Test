@@ -290,8 +290,8 @@ namespace Framework
         AddSystem(collisionSystem);
         AddSystem(projectileSystem);
         AddSystem(graphicsSystem);
-        AddSystem(imguiSystem);
         AddSystem(audioSystem);
+        AddSystem(imguiSystem);
         AddSystem(animationSystem);
         AddSystem(uiSystem);
         AddSystem(eventSystem);

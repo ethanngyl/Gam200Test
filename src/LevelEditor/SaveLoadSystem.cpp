@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:          SaveLoadSystem.cpp
  Author:        Ge Yongqi
@@ -29,6 +29,8 @@
 #include "Grid/GridTile.h"
 #include "Pathfinding.h"
 #include "GraphicsSystemV2.h"
+#include "PrefabEditor/PrefabTracker.h"
+#include "PrefabEditor/PrefabSerializer.h"
 #include <fstream>
 #include <filesystem>
 #include <chrono>
@@ -66,9 +68,9 @@ namespace Framework {
     // ============================================================================
     // SAVE TO JSON
     // ============================================================================
-    bool SaveLoadSystem::SaveToJSON(const std::string& filepath, 
-                                     EntityManager* entityManager,
-                                     const std::string& levelName) {
+    bool SaveLoadSystem::SaveToJSON(const std::string& filepath,
+        EntityManager* entityManager,
+        const std::string& levelName) {
         if (!entityManager) {
             LOG_ERROR("SaveLoadSystem", "Cannot save: EntityManager is null");
             return false;
@@ -108,17 +110,18 @@ namespace Framework {
         file << root.dump(2);  // 2-space indentation
         file.close();
 
-        LOG_INFO("SaveLoadSystem", "Successfully saved %zu entities to %s", 
-                 root["entities"].size(), filepath.c_str());
+        LOG_INFO("SaveLoadSystem", "Successfully saved %zu entities to %s",
+            root["entities"].size(), filepath.c_str());
         return true;
     }
 
     // ============================================================================
     // LOAD FROM JSON
     // ============================================================================
-    bool SaveLoadSystem::LoadFromJSON(const std::string& filepath, 
-                                       EntityManager* entityManager, 
-                                       bool clearExisting) {
+    bool SaveLoadSystem::LoadFromJSON(const std::string& filepath,
+        EntityManager* entityManager,
+        bool clearExisting,
+        bool applyPrefabUpdates) {
         if (!entityManager) {
             LOG_ERROR("SaveLoadSystem", "Cannot load: EntityManager is null");
             return false;
@@ -158,11 +161,33 @@ namespace Framework {
         }
 
         int loadedCount = 0;
+        std::vector<std::pair<Entity, std::string>> prefabInstances;  // Store for later prefab updates
+
         for (const auto& entityJson : root["entities"]) {
             Entity entity = DeserializeEntity(entityJson, entityManager);
             if (entity.IsValid()) {
                 loadedCount++;
+
+                // Track prefab instances for optional updates
+                if (applyPrefabUpdates && entityJson.contains("prefabSource")) {
+                    std::string prefabPath = entityJson["prefabSource"].get<std::string>();
+                    prefabInstances.push_back({ entity, prefabPath });
+                }
             }
+        }
+
+        // Apply latest prefab values to instances if requested
+        if (applyPrefabUpdates && !prefabInstances.empty()) {
+            LOG_INFO("SaveLoadSystem", "Applying prefab updates to %zu instances...", prefabInstances.size());
+            int updatedCount = 0;
+            for (const auto& [entity, prefabPath] : prefabInstances) {
+                if (std::filesystem::exists(prefabPath)) {
+                    if (PrefabSerializer::ApplyPrefabToEntity(*entityManager, entity, prefabPath, true)) {
+                        updatedCount++;
+                    }
+                }
+            }
+            LOG_INFO("SaveLoadSystem", "Applied prefab updates to %d instances", updatedCount);
         }
 
         LOG_INFO("SaveLoadSystem", "Successfully loaded %d entities from %s", loadedCount, filepath.c_str());
@@ -224,6 +249,12 @@ namespace Framework {
         nlohmann::json entityJson;
         entityJson["id"] = entity.GetID();
         entityJson["components"] = nlohmann::json::object();
+
+        // Check if this entity is a prefab instance and save the prefab source
+        std::string prefabSource = PrefabInstanceTracker::Get().GetPrefabOf(entity);
+        if (!prefabSource.empty()) {
+            entityJson["prefabSource"] = prefabSource;
+        }
 
         // Transform
         if (em->HasComponent<Transform>(entity)) {
@@ -479,7 +510,17 @@ namespace Framework {
     Entity SaveLoadSystem::DeserializeEntity(const nlohmann::json& json, EntityManager* em) {
         Entity entity = em->CreateEntity();
 
+        // Check if this entity has a prefab source - register it with the tracker
+        std::string prefabSource;
+        if (json.contains("prefabSource")) {
+            prefabSource = json["prefabSource"].get<std::string>();
+        }
+
         if (!json.contains("components")) {
+            // Still register with tracker if it has a prefab source
+            if (!prefabSource.empty()) {
+                PrefabInstanceTracker::Get().RegisterInstance(entity, prefabSource);
+            }
             return entity;
         }
 
@@ -536,6 +577,13 @@ namespace Framework {
         }
         if (components.contains("GridTiles")) {
             DeserializeGridTiles(components["GridTiles"], entity, em);
+        }
+
+        // Register with prefab tracker if this entity came from a prefab
+        if (!prefabSource.empty()) {
+            PrefabInstanceTracker::Get().RegisterInstance(entity, prefabSource);
+            LOG_INFO("SaveLoadSystem", "Registered entity %u as instance of prefab: %s",
+                entity.GetID(), prefabSource.c_str());
         }
 
         return entity;
@@ -727,6 +775,183 @@ namespace Framework {
         gt.tileW = j.value("tileW", 1.0f);
         gt.tileH = j.value("tileH", 1.0f);
         gt.entity = entity;
+    }
+
+    nlohmann::json SaveLoadSystem::SerializePrefabSource(const std::string& prefabPath) {
+        return { {"path", prefabPath} };
+    }
+
+    // ============================================================================
+    // PREFAB CROSS-SCENE UPDATE SYSTEM
+    // ============================================================================
+
+    std::vector<std::string> SaveLoadSystem::GetAllSceneFiles(const std::string& directory) {
+        std::vector<std::string> sceneFiles;
+
+        if (!std::filesystem::exists(directory)) {
+            LOG_WARN("SaveLoadSystem", "Directory does not exist: %s", directory.c_str());
+            return sceneFiles;
+        }
+
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(directory)) {
+            if (entry.is_regular_file()) {
+                std::string ext = entry.path().extension().string();
+                if (ext == ".json") {
+                    sceneFiles.push_back(entry.path().string());
+                }
+            }
+        }
+
+        LOG_INFO("SaveLoadSystem", "Found %zu scene files in %s", sceneFiles.size(), directory.c_str());
+        return sceneFiles;
+    }
+
+    int SaveLoadSystem::ApplyPrefabToAllScenes(const std::string& prefabPath,
+        const std::string& scenesDirectory) {
+        LOG_INFO("SaveLoadSystem", "========================================");
+        LOG_INFO("SaveLoadSystem", "Applying prefab to all scenes: %s", prefabPath.c_str());
+        LOG_INFO("SaveLoadSystem", "========================================");
+
+        // Load the prefab JSON to get the updated component values
+        std::ifstream prefabFile(prefabPath);
+        if (!prefabFile.is_open()) {
+            LOG_ERROR("SaveLoadSystem", "Failed to open prefab file: %s", prefabPath.c_str());
+            return 0;
+        }
+
+        nlohmann::json prefabData;
+        try {
+            prefabFile >> prefabData;
+        }
+        catch (const nlohmann::json::parse_error& e) {
+            LOG_ERROR("SaveLoadSystem", "Failed to parse prefab JSON: %s", e.what());
+            return 0;
+        }
+        prefabFile.close();
+
+        if (!prefabData.contains("components")) {
+            LOG_ERROR("SaveLoadSystem", "Prefab file missing 'components' section");
+            return 0;
+        }
+
+        const auto& prefabComponents = prefabData["components"];
+
+        // Get all scene files
+        std::vector<std::string> sceneFiles = GetAllSceneFiles(scenesDirectory);
+        int updatedSceneCount = 0;
+
+        for (const auto& sceneFilePath : sceneFiles) {
+            // Skip auto-save files if needed (optional)
+            // if (sceneFilePath.find("_autosave") != std::string::npos) continue;
+
+            std::ifstream sceneFile(sceneFilePath);
+            if (!sceneFile.is_open()) {
+                LOG_WARN("SaveLoadSystem", "Could not open scene file: %s", sceneFilePath.c_str());
+                continue;
+            }
+
+            nlohmann::json sceneData;
+            try {
+                sceneFile >> sceneData;
+            }
+            catch (const nlohmann::json::parse_error& e) {
+                LOG_WARN("SaveLoadSystem", "Failed to parse scene: %s - %s", sceneFilePath.c_str(), e.what());
+                sceneFile.close();
+                continue;
+            }
+            sceneFile.close();
+
+            if (!sceneData.contains("entities") || !sceneData["entities"].is_array()) {
+                continue;
+            }
+
+            bool sceneModified = false;
+            int instancesUpdated = 0;
+
+            // Iterate through all entities in the scene
+            for (auto& entityJson : sceneData["entities"]) {
+                // Check if this entity is an instance of our prefab
+                if (!entityJson.contains("prefabSource")) {
+                    continue;
+                }
+
+                std::string entityPrefabSource = entityJson["prefabSource"].get<std::string>();
+
+                // Normalize paths for comparison (handle forward/backward slashes)
+                std::string normalizedPrefabPath = prefabPath;
+                std::string normalizedEntityPrefab = entityPrefabSource;
+                std::replace(normalizedPrefabPath.begin(), normalizedPrefabPath.end(), '\\', '/');
+                std::replace(normalizedEntityPrefab.begin(), normalizedEntityPrefab.end(), '\\', '/');
+
+                if (normalizedEntityPrefab != normalizedPrefabPath) {
+                    continue;
+                }
+
+                // This entity is an instance of our prefab - update its components
+                if (!entityJson.contains("components")) {
+                    entityJson["components"] = nlohmann::json::object();
+                }
+
+                auto& entityComponents = entityJson["components"];
+
+                // Save the entity's position before updating (we preserve position per-instance)
+                float posX = 0.0f, posY = 0.0f;
+                if (entityComponents.contains("Transform")) {
+                    posX = entityComponents["Transform"].value("posX", 0.0f);
+                    posY = entityComponents["Transform"].value("posY", 0.0f);
+                }
+
+                // Update all components from prefab (except position)
+                for (auto it = prefabComponents.begin(); it != prefabComponents.end(); ++it) {
+                    const std::string& componentName = it.key();
+                    const auto& componentData = it.value();
+
+                    if (componentName == "Transform") {
+                        // For Transform, preserve position but update scale and rotation
+                        if (!entityComponents.contains("Transform")) {
+                            entityComponents["Transform"] = componentData;
+                        }
+                        entityComponents["Transform"]["posX"] = posX;  // Preserve position
+                        entityComponents["Transform"]["posY"] = posY;
+                        // Copy scale and rotation from prefab
+                        if (componentData.contains("scaleX"))
+                            entityComponents["Transform"]["scaleX"] = componentData["scaleX"];
+                        if (componentData.contains("scaleY"))
+                            entityComponents["Transform"]["scaleY"] = componentData["scaleY"];
+                        if (componentData.contains("rotation"))
+                            entityComponents["Transform"]["rotation"] = componentData["rotation"];
+                    }
+                    else {
+                        // For other components, completely replace with prefab data
+                        entityComponents[componentName] = componentData;
+                    }
+                }
+
+                instancesUpdated++;
+                sceneModified = true;
+            }
+
+            // Save the modified scene back to disk
+            if (sceneModified) {
+                std::ofstream outFile(sceneFilePath);
+                if (outFile.is_open()) {
+                    outFile << sceneData.dump(2);
+                    outFile.close();
+                    updatedSceneCount++;
+                    LOG_INFO("SaveLoadSystem", "Updated %d instances in scene: %s",
+                        instancesUpdated, sceneFilePath.c_str());
+                }
+                else {
+                    LOG_ERROR("SaveLoadSystem", "Failed to write updated scene: %s", sceneFilePath.c_str());
+                }
+            }
+        }
+
+        LOG_INFO("SaveLoadSystem", "========================================");
+        LOG_INFO("SaveLoadSystem", "Prefab update complete: %d scenes modified", updatedSceneCount);
+        LOG_INFO("SaveLoadSystem", "========================================");
+
+        return updatedSceneCount;
     }
 
 } // namespace Framework
