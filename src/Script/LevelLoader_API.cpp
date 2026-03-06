@@ -4062,6 +4062,9 @@ namespace Framework {
             em->AddComponent<Inventory>(player);
         }
 
+        // Register the player on the grid so its tile is marked as occupied
+        SpatialPartitioningInsert(player);
+
         lua_pushnumber(L, player.GetID());
         return 1;
     }
@@ -4111,6 +4114,11 @@ namespace Framework {
         }
 
         Entity enemy = spawner->SpawnEnemy(Vector2D(worldX, worldY));
+
+        // Register the enemy on the grid so its tile is marked as occupied.
+        // Without this, IsTileOccupied() returns false on the first turn,
+        // allowing the player to walk through the enemy.
+        SpatialPartitioningInsert(enemy);
 
         lua_pushnumber(L, enemy.GetID());
         return 1;
