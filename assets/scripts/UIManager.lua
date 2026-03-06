@@ -59,6 +59,7 @@ local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 local TurnScrollUI = require("ScrollOpen")
+local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")
 
 -- ============================================================================
 -- STATE
@@ -187,6 +188,17 @@ function UIManager.Init(config)
         textEndFrame = 28
     })
 
+    -- Create Skill Bubble Holder (far right side - placeholder for skill icons)
+    UIManager.components.skillBubbleHolder = SkillBubbleHolderUI:New()
+    UIManager.components.skillBubbleHolder:Init({
+        offsetX = 0.82,
+        offsetY = -0.35,
+        scaleX = 0.15,
+        scaleY = 0.15,
+        layer = 4,
+        texture = "assets/new assets/skill_bubble_holder.png"
+    })
+
     -- TODO: Add more components as needed:
     -- - ChestProgressUI
     -- - PlayerIconsUI (boots, sword)
@@ -230,6 +242,9 @@ function UIManager.Update(dt)
     -- Amended for now
     if UIManager.components.health then
         UIManager.components.health:SetEnabled(not isEnemyTurn)  -- Always enabled
+    end
+    if UIManager.components.skillBubbleHolder then
+        UIManager.components.skillBubbleHolder:SetEnabled(not isEnemyTurn)
     end
 
     -- Update all components
