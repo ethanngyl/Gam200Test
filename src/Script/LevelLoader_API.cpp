@@ -3249,6 +3249,21 @@ namespace Framework {
                 amount -= reduction;
                 if (amount < 0) amount = 0;
             }
+
+            // 5. Futile Resistance: if attacker has <40% HP, reduce damage by 1
+            if (effects.HasEffect("futileResistance") && attackerID > 0) {
+                Entity attacker(static_cast<uint32_t>(attackerID));
+                if (em->HasComponent<Health>(attacker)) {
+                    auto& attackerHP = em->GetComponent<Health>(attacker);
+                    float hpPercent = static_cast<float>(attackerHP.currentHealth) / static_cast<float>(attackerHP.maxHealth);
+                    if (hpPercent < 0.4f) {
+                        LOG_INFO("StatusEffect", "Futile Resistance: attacker %u HP %.0f%% < 40%%, reducing damage by 1",
+                            attackerID, hpPercent * 100.0f);
+                        amount -= 1;
+                        if (amount < 0) amount = 0;
+                    }
+                }
+            }
         }
 
         // === ATTACKER DAMAGE MODIFIER (e.g., Knight Commander's Bolstered Morale) ===
@@ -3284,6 +3299,20 @@ namespace Framework {
 
         LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
             entity.GetID(), amount, prevHP, health.currentHealth);
+
+        // === DARK OMENS CHECK (prevent lethal damage) - from teammate ===
+        if (health.currentHealth <= 0 && em->HasComponent<StatusEffects>(entity)) {
+            auto& effects = em->GetComponent<StatusEffects>(entity);
+            if (effects.HasEffect("darkOmens")) {
+                health.currentHealth = 1;
+                effects.RemoveEffect("darkOmens");
+                effects.AddEffect("darkOmensTriggered", 2, 0, 0, 0);
+                LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered applied",
+                    entity.GetID());
+                lua_pushboolean(L, 1);
+                return 1;
+            }
+        }
 
         // === DEATH CHECK ===
 
