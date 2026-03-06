@@ -54,7 +54,7 @@ local Direction = {
     @return table - Array of {x, y} offsets
 ]]--
 function SkillPatterns.GetPattern(patternType, direction, range, flipX)
-    range = range or 1
+    if range == nil then range = 1 end
     flipX = flipX or false
     direction = direction or Direction.Front
 
@@ -153,11 +153,16 @@ function SkillPatterns.Cone(direction, range, flipX)
     return tiles
 end
 
--- 3x3 area centered on target
+-- 3x3 area: range=0 = centered on caster (self), range>0 = centered on tile in facing direction
 function SkillPatterns.Area3x3(direction, range, flipX)
-    local dx, dy = SkillPatterns.GetDirectionVector(direction, flipX)
-    local centerX = dx * range
-    local centerY = dy * range
+    local centerX, centerY
+    if range == 0 or range == nil then
+        centerX, centerY = 0, 0  -- Centered on self
+    else
+        local dx, dy = SkillPatterns.GetDirectionVector(direction, flipX)
+        centerX = dx * range
+        centerY = dy * range
+    end
 
     local tiles = {}
     for offsetY = -1, 1 do
