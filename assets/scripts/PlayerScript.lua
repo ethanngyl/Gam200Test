@@ -187,8 +187,8 @@ local SkillDefs = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Thrust", ["2"] = "Guard" },
-    [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
+    [1] = { ["1"] = "Thrust", ["2"] = "SoulRend" },
+    [2] = { ["1"] = "Fireball", ["2"] = "SoulRend" },
     [3] = { ["1"] = "SwiftBlow" },
 }
 
@@ -1460,9 +1460,12 @@ local function getSoulMergeBonusDamage()
 end
 
 -- Helper: after damaging an enemy, check for soulRend (heal all players) and kill heal
-local function checkPostDamageEffects(enemyID)
-    -- Soul Rend: if enemy has soulRend, heal all players for 1 HP
-    if HasStatusEffect and HasStatusEffect(enemyID, "soulRend") then
+-- hadSoulRend: must be checked BEFORE DamageEntity, because killing the enemy destroys the entity
+--              and HasStatusEffect would fail on a destroyed entity
+local function checkPostDamageEffects(enemyID, hadSoulRend)
+    -- Soul Rend: if enemy HAD soulRend (before damage), heal all players for 1 HP
+    -- Works even when the attack kills the enemy
+    if hadSoulRend then
         local allPlayers = GetAllPlayers()
         if allPlayers then
             for _, pid in ipairs(allPlayers) do
@@ -1487,9 +1490,11 @@ end
 -- Helper: damage an enemy with soulMergeBuff bonus and post-damage effects
 local function damageEnemyWithEffects(enemyID, baseDamage)
     local damage = baseDamage + getSoulMergeBonusDamage()
+    -- Check soulRend BEFORE damage: if attack kills enemy, entity is destroyed and HasStatusEffect would fail
+    local hadSoulRend = HasStatusEffect and HasStatusEffect(enemyID, "soulRend")
     local success = DamageEntity(enemyID, damage)
     if success then
-        checkPostDamageEffects(enemyID)
+        checkPostDamageEffects(enemyID, hadSoulRend)
     end
     return success
 end
@@ -1821,7 +1826,9 @@ function ExecuteSkill(skillID)
             skill.damage or 1,
             skill.pierce or false,
             tintR, tintG, tintB, tintA,
-            spritePath
+            spritePath,
+            false,    -- isEnemyProjectile
+            entityID  -- sourceEntityID (for Soul Rend, Soul Merge kill heal)
         )
         if not projID then
             print("[PlayerScript] ERROR: SpawnSkillProjectile returned nil")

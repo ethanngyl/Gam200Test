@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -27,6 +27,7 @@
 #include "Precompiled.h"
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
+#include "Script/LevelLoader.h"
 #include "Collision/Quadtree.h"
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
@@ -330,31 +331,44 @@ namespace Framework
 
                 if (check_collision(projShape, enemyShape))
                 {
-                    // Use configurable damage from the projectile component
                     const int damageDealt = projMovement.damage;
-                    enemyHealth.TakeDamage(damageDealt);
+                    const auto hitPos = enemyTransform.position;
+
+                    // Use full damage pipeline (DamageEntity) for Soul Rend, status effects, etc.
+                    bool success = false;
+                    if (Framework::LevelLoader::GetInstance().IsLevelLoaded()) {
+                        success = Framework::LevelLoader::GetInstance().ApplyProjectileDamageToEnemy(
+                            enemy.GetID(), damageDealt, projMovement.sourceEntityID);
+                    }
+                    if (!success) {
+                        enemyHealth.TakeDamage(damageDealt);
+                    }
+
+                    int hpAfter = 0;
+                    if (entityManager->HasComponent<Health>(enemy)) {
+                        hpAfter = entityManager->GetComponent<Health>(enemy).currentHealth;
+                    }
 
                     if (eventSystem) {
                         eventSystem->QueueMessage(new EnemyDamagedMessage(
-                            enemy, projectile, damageDealt, enemyHealth.currentHealth, enemyTransform.position));
+                            enemy, projectile, damageDealt, hpAfter, hitPos));
                     }
 
-                    if (enemyHealth.isDead)
+                    if (!entityManager->HasComponent<Health>(enemy) || entityManager->GetComponent<Health>(enemy).isDead)
                     {
                         if (eventSystem) {
                             eventSystem->QueueMessage(new EnemyDeathMessage(
-                                enemy, projectile, enemyTransform.position));
+                                enemy, projectile, hitPos));
                         }
-                        entitiesToDestroy.push_back(enemy);
+                        if (entityManager->HasComponent<Transform>(enemy)) {
+                            entitiesToDestroy.push_back(enemy);
+                        }
                     }
 
-                    // Pierce: projectile continues through enemies
-                    // Non-pierce: projectile destroyed on first hit
                     if (!projMovement.pierce) {
                         entitiesToDestroy.push_back(projectile);
                         break;
                     }
-                    // If piercing, continue checking next enemies (don't break)
                 }
             }
 

@@ -78,6 +78,40 @@ CharacterConfig = {
 }
 
 -- ============================================================================
+-- PROJECTILE DAMAGE (Soul Rend, Soul Merge - called from C++ ProjectileSystem)
+-- ============================================================================
+--[[
+    ApplyProjectileDamage(enemyID, damage, attackerID)
+    Called when a player projectile hits an enemy. Uses full damage pipeline
+    (DamageEntity) and triggers Soul Rend heal + Soul Merge kill heal.
+]]
+function ApplyProjectileDamage(enemyID, damage, attackerID)
+    local hadSoulRend = HasStatusEffect and HasStatusEffect(enemyID, "soulRend")
+    local success = DamageEntity(enemyID, damage, attackerID or 0)
+    if success and hadSoulRend then
+        local allPlayers = GetAllPlayers()
+        if allPlayers then
+            for _, pid in ipairs(allPlayers) do
+                local hp, maxHP = GetEntityHP(pid)
+                if hp and maxHP and hp > 0 and hp < maxHP then
+                    SetEntityHP(pid, math.min(hp + 1, maxHP))
+                end
+            end
+        end
+    end
+    if success and attackerID and attackerID > 0 and HasStatusEffect and HasStatusEffect(attackerID, "soulMergeBuff") then
+        local hp = GetEntityHP(enemyID)
+        if hp == nil or hp <= 0 then
+            local ahp, amax = GetEntityHP(attackerID)
+            if ahp and amax and ahp > 0 and ahp < amax then
+                SetEntityHP(attackerID, math.min(ahp + 1, amax))
+            end
+        end
+    end
+    return success
+end
+
+-- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 

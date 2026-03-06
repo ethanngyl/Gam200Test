@@ -93,6 +93,9 @@ namespace Framework {
         // State queries
         bool IsLevelLoaded() const { return levelLoaded; }
         std::string GetCurrentLevelPath() const { return currentLevelPath; }
+
+        // Called from ProjectileSystem when player projectile hits enemy (Soul Rend, Soul Merge)
+        bool ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID);
         static int Lua_ToggleEditor(lua_State* L);
         static int Lua_IsEditorEnabled(lua_State* L);
         static int Lua_SetEditorMode(lua_State* L);
