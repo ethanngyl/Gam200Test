@@ -192,9 +192,9 @@ function UIManager.Init(config)
     UIManager.components.skillBubbleHolder = SkillBubbleHolderUI:New()
     UIManager.components.skillBubbleHolder:Init({
         offsetX = 0.82,
-        offsetY = -0.35,
+        offsetY = -0.15,
         scaleX = 0.15,
-        scaleY = 0.15,
+        scaleY = 0.55,
         layer = 4,
         texture = "assets/new assets/skill_bubble_holder.png"
     })
