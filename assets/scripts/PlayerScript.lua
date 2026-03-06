@@ -214,6 +214,9 @@ local lastSpaceKeyDown = false
 -- nil when no preview is showing; { skillID, tiles = {{x,y},...} } when active
 local activePreview = nil
 
+-- Which skill slot key ("1"-"4") is currently being previewed (nil when none)
+local activeSkillSlotKey = nil
+
 -- Dash skill state: when a dash skill is previewed, WASD picks direction instead of moving
 -- nil when not in dash mode; { skillID = ..., dirX = 0, dirY = 0 } when active
 local dashMode = nil
@@ -514,6 +517,7 @@ local function createPlayerStates(fsm)
                     local skill = SkillDefs[skillID]
                     local currentAttackAP = GetEntityAttackAP(entityID)
                     if skill and currentAttackAP >= skill.apCost then
+                        activeSkillSlotKey = key
                         ShowSkillPreview(skillID)
                     else
                         PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
@@ -1432,6 +1436,7 @@ function ClearActivePreview()
         end
     end
     activePreview = nil
+    activeSkillSlotKey = nil
     dashMode = nil
     allyTargetMode = nil
     enemyTargetMode = nil
@@ -2239,3 +2244,35 @@ end
 
 _G.GetPlayerState = GetPlayerState
 _G.GetPlayerFSM = GetPlayerFSM
+
+-- Skill UI state accessors (used by SkillBubbleHolderUI)
+-- Returns the slot key ("1"-"4") of the currently previewed skill, or nil
+function GetActiveSkillSlotKey()
+    return activeSkillSlotKey
+end
+
+-- Returns the equipped skills table for the active character { ["1"] = "SkillID", ... }
+function GetActiveCharacterSkills()
+    local idx = getPlayerIndex()
+    if idx and IsActiveCharacter(entityID) then
+        return PlayerSkills[idx] or {}
+    end
+    return nil
+end
+
+-- Returns whether a skill has enough AP to be used (not on "cooldown")
+-- Returns true if usable, false if insufficient AP
+function CanUseSkill(slotKey)
+    if not IsActiveCharacter(entityID) then return false end
+    local mySkills = getMySkills()
+    local skillID = mySkills[slotKey]
+    if not skillID then return false end
+    local skill = SkillDefs[skillID]
+    if not skill then return false end
+    local currentAttackAP = GetEntityAttackAP(entityID)
+    return currentAttackAP >= skill.apCost
+end
+
+_G.GetActiveSkillSlotKey = GetActiveSkillSlotKey
+_G.GetActiveCharacterSkills = GetActiveCharacterSkills
+_G.CanUseSkill = CanUseSkill
