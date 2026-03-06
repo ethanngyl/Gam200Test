@@ -79,6 +79,9 @@ function SkillPatterns.GetPattern(patternType, direction, range, flipX)
     elseif patternType == "area5x5" then
         return SkillPatterns.Area5x5(direction, range, flipX)
 
+    elseif patternType == "area5x5_self" then
+        return SkillPatterns.Area5x5Self()
+
     elseif patternType == "diagonal" then
         return SkillPatterns.Diagonal()
 
@@ -187,6 +190,19 @@ function SkillPatterns.Area5x5(direction, range, flipX)
         end
     end
 
+    return tiles
+end
+
+-- 5x5 area centered on caster (self)
+function SkillPatterns.Area5x5Self()
+    local tiles = {}
+    for offsetY = -2, 2 do
+        for offsetX = -2, 2 do
+            if offsetX ~= 0 or offsetY ~= 0 then  -- exclude caster's own tile
+                table.insert(tiles, {x = offsetX, y = offsetY})
+            end
+        end
+    end
     return tiles
 end
 

@@ -117,6 +117,7 @@ namespace Framework {
 
         // === COMBAT STATS ===
         int apCost = 1;                     // Action points to use
+        int hpCost = 0;                     // Health points to use
         int cooldown = 0;                   // Turns before can reuse
         int damage = 0;                     // Base damage/heal value
         float damageMultiplier = 1.0f;      // Scaling factor
@@ -292,17 +293,74 @@ namespace Framework {
             // =============================================================
             auto& berserker = classSkills[static_cast<int>(CharacterClass::Berserker)];
 
-            // Starting skills
-            berserker.push_back(SkillData(17, "Berserker Skill 1", CharacterClass::Berserker, 0));
-            berserker.push_back(SkillData(18, "Berserker Skill 2", CharacterClass::Berserker, 1));
-            berserker.push_back(SkillData(19, "Berserker Skill 3", CharacterClass::Berserker, 2));
-            berserker.push_back(SkillData(20, "Berserker Skill 4", CharacterClass::Berserker, 3));
+            // Starting skills (unlockOrder 0-3)
+            {
+                SkillData s(17, "Slam", CharacterClass::Berserker, 0);
+                s.skillType = "melee"; s.damage = 2; s.apCost = 1; s.range = 2;
+                s.description = "Two tiles forward, 2 damage. Costs 1 AP and 1 HP";
+                s.effectType = SkillEffectType::Physical;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(18, "Siphon Charge", CharacterClass::Berserker, 1);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "First attack next turn consumes all AP and recovers 3 HP";
+                s.statusEffect = "siphonCharge"; s.statusDuration = 2;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(19, "Futile Resistance", CharacterClass::Berserker, 2);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "Enemies with <40% HP deal 1 less damage for 2 turns. Costs 1 HP";
+                s.statusEffect = "futileResistance"; s.statusDuration = 2;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(20, "Dark Omens", CharacterClass::Berserker, 3);
+                s.skillType = "buff_ally"; s.apCost = 3;
+                s.description = "If lethal damage taken, HP set to 1. Next turn: 2 free skills, then die. Once per level";
+                s.statusEffect = "darkOmens"; s.statusDuration = 1;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
 
-            // Unlockable skills
-            berserker.push_back(SkillData(21, "Berserker Skill 5", CharacterClass::Berserker, 4));
-            berserker.push_back(SkillData(22, "Berserker Skill 6", CharacterClass::Berserker, 5));
-            berserker.push_back(SkillData(23, "Berserker Skill 7", CharacterClass::Berserker, 6));
-            berserker.push_back(SkillData(24, "Berserker Skill 8", CharacterClass::Berserker, 7));
+            // Unlockable skills (unlockOrder 4-7)
+            {
+                SkillData s(21, "Cannibalism", CharacterClass::Berserker, 4);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "Select ally: ally loses 1 HP, you heal 2 HP";
+                s.targetType = SkillTargetType::SingleAlly;
+                s.effectType = SkillEffectType::Healing;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(22, "Groundshatter", CharacterClass::Berserker, 5);
+                s.skillType = "melee"; s.damage = 3; s.apCost = 3; s.areaSize = 5;
+                s.description = "5x5 AoE, damages all characters for 3. Costs 3 HP. Self stunned next turn";
+                s.statusEffect = "stun"; s.statusDuration = 1;
+                s.effectType = SkillEffectType::Physical;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(23, "Bloody Warcry", CharacterClass::Berserker, 6);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "Next turn: all characters first move free, next skill +1 dmg -1 HP. Costs 2 HP";
+                s.statusEffect = "bloodyWarcry"; s.statusDuration = 2;
+                s.targetType = SkillTargetType::AllAllies;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(24, "Bladed Whirlwind", CharacterClass::Berserker, 7);
+                s.skillType = "projectile"; s.damage = 1; s.apCost = 1; s.range = 7;
+                s.description = "Projectile in facing direction, 1 damage. Enemy takes 1 additional damage at end of turn";
+                s.requiresLineOfSight = true; s.projectileSpeed = 3.0f;
+                s.statusEffect = "bladedWhirlwindDot"; s.statusDuration = 1;
+                s.effectType = SkillEffectType::Physical;
+                berserker.push_back(s);
+            }
 
             // =============================================================
             // ENEMY KNIGHT SKILLS (IDs 100-101)

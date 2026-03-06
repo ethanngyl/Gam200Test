@@ -328,6 +328,16 @@ function NextCharacterTurn()
     -- Mark current character as having acted
     PartyMembers[ActiveCharacterIndex].hasActed = true
 
+    -- Dark Omens Triggered: kill this character at end of their turn
+    local currentEntity = PartyMembers[ActiveCharacterIndex].entityID
+    if HasStatusEffect and HasStatusEffect(currentEntity, "darkOmensTriggered") then
+        print(string.format("[PartyTurnManager] %s has DARK OMENS TRIGGERED - dying at end of turn!",
+            PartyMembers[ActiveCharacterIndex].name))
+        RemoveStatusEffect(currentEntity, "darkOmensTriggered")
+        SetEntityHP(currentEntity, 0)
+        DamageEntity(currentEntity, 0)  -- trigger death cleanup
+    end
+
     print(string.format("[PartyTurnManager] %s marked as ACTED",
         PartyMembers[ActiveCharacterIndex].name))
 

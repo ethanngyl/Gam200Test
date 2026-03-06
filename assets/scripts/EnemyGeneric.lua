@@ -1039,6 +1039,21 @@ function OnUpdate(dt)
 
     if DecrementStatusEffects then DecrementStatusEffects(entityID) end
 
+    -- Bladed Whirlwind DOT: take 1 damage at start of turn
+    if HasStatusEffect and HasStatusEffect(entityID, "bladedWhirlwindDot") then
+        local hp = GetEntityHP(entityID)
+        if hp and hp > 0 then
+            DamageEntity(entityID, 1)
+            print("[" .. GetLogTag() .. " " .. entityID .. "] Bladed Whirlwind DOT: 1 damage")
+            -- Check if died from DOT
+            local hpAfter = GetEntityHP(entityID)
+            if not hpAfter or hpAfter <= 0 then
+                FinishAction()
+                return
+            end
+        end
+    end
+
     -- Move timer
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
