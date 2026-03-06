@@ -2096,10 +2096,12 @@ function ExecuteSkill(skillID)
 
         local tintR, tintG, tintB, tintA = 1, 1, 1, 1
         local spritePath = nil
+        local explosionOnHit = false
         if getPlayerIndex() == 2
            and (skillID == "Fireball" or skillID == "PiercingShot") then
             tintR, tintG, tintB, tintA = 1, 0, 0, 1
             spritePath = ""
+            explosionOnHit = true
         end
 
         local rangeTiles = skill.range or 0

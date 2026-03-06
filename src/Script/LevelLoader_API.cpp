@@ -985,7 +985,7 @@ namespace Framework {
 
         // Load sprite sheet texture
         anim.spriteSheet = gfx->GetResourceManager().LoadTexture(texture);
-        
+
         // Calculate frame dimensions from texture size (CRITICAL for animation to work!)
         Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
         if (tex) {
@@ -993,12 +993,13 @@ namespace Framework {
             int texH = tex->GetHeight();
             anim.frameWidth = texW / columns;
             anim.frameHeight = texH / rows;
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "Failed to load texture for animated sprite: %s", texture);
         }
 
-        LOG_INFO("LevelLoader", "Spawned animated sprite: %s (rows=%d, cols=%d, frames=%d)", 
-                 texture, rows, columns, frameCount);
+        LOG_INFO("LevelLoader", "Spawned animated sprite: %s (rows=%d, cols=%d, frames=%d)",
+            texture, rows, columns, frameCount);
 
         lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
         return 1;
@@ -1058,20 +1059,21 @@ namespace Framework {
 
         // Load sprite sheet texture
         anim.spriteSheet = gfx->GetResourceManager().LoadTexture(texture);
-        
+
         // Calculate frame dimensions from texture size (CRITICAL for animation to work!)
         Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
         if (tex) {
             anim.frameWidth = tex->GetWidth() / columns;
             anim.frameHeight = tex->GetHeight() / rows;
-            LOG_INFO("LevelLoader", "Animation texture: %dx%d, frame: %dx%d", 
-                     tex->GetWidth(), tex->GetHeight(), anim.frameWidth, anim.frameHeight);
-        } else {
+            LOG_INFO("LevelLoader", "Animation texture: %dx%d, frame: %dx%d",
+                tex->GetWidth(), tex->GetHeight(), anim.frameWidth, anim.frameHeight);
+        }
+        else {
             LOG_WARN("LevelLoader", "Failed to load texture for animation: %s", texture);
         }
 
-        LOG_INFO("LevelLoader", "Set animation sheet on entity %lld: %s (rows=%d, cols=%d, frames=%d)", 
-                 entityID, texture, rows, columns, frameCount);
+        LOG_INFO("LevelLoader", "Set animation sheet on entity %lld: %s (rows=%d, cols=%d, frames=%d)",
+            entityID, texture, rows, columns, frameCount);
 
         lua_pushboolean(L, true);
         return 1;
@@ -1168,7 +1170,8 @@ namespace Framework {
                 tileEntity.GetID(), gridX, gridY,
                 oldTint.r, oldTint.g, oldTint.b, oldTint.a,
                 r, g, b, a);
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "TintTile: Tile entity %u at (%d, %d) has no MeshRenderer component",
                 tileEntity.GetID(), gridX, gridY);
         }
@@ -1668,7 +1671,7 @@ namespace Framework {
 
         auto& hp = em->GetComponent<Health>(entity);
         LOG_INFO("LevelLoader", "GetEntityHP: Entity %d has HP=%d/%d",
-                 entityID, hp.currentHealth, hp.maxHealth);
+            entityID, hp.currentHealth, hp.maxHealth);
         lua_pushinteger(L, hp.currentHealth);
         lua_pushinteger(L, hp.maxHealth);
         return 2;
@@ -1746,7 +1749,7 @@ namespace Framework {
         lua_pop(levelL, 1);  // Pop return value
 
         LOG_INFO("LevelLoader", "[Bridge] IsActiveCharacter: Entity %d is %s",
-                 entityID, isActive ? "ACTIVE" : "INACTIVE");
+            entityID, isActive ? "ACTIVE" : "INACTIVE");
 
         // Return the result in the entity's Lua state
         lua_pushboolean(L, isActive);
@@ -1799,7 +1802,7 @@ namespace Framework {
         hp.isDead = (hp.currentHealth <= 0);
 
         LOG_INFO("LevelLoader", "SetEntityHP: Entity %d HP set to %d/%d (dead=%d)",
-                 entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
+            entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
 
         // If entity died, destroy it
         if (hp.isDead) {
@@ -1963,13 +1966,17 @@ namespace Framework {
         std::string mode(blendModeStr);
         if (mode == "Opaque") {
             mat->blendMode = BlendMode::Opaque;
-        } else if (mode == "AlphaBlend") {
+        }
+        else if (mode == "AlphaBlend") {
             mat->blendMode = BlendMode::AlphaBlend;
-        } else if (mode == "Additive") {
+        }
+        else if (mode == "Additive") {
             mat->blendMode = BlendMode::Additive;
-        } else if (mode == "Multiply") {
+        }
+        else if (mode == "Multiply") {
             mat->blendMode = BlendMode::Multiply;
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "SetSpriteBlendMode: Unknown blend mode '%s', use: Opaque, AlphaBlend, Additive, or Multiply", blendModeStr);
             return 0;
         }
@@ -1978,7 +1985,7 @@ namespace Framework {
         mat->forceOpaqueAlpha = forceOpaqueAlpha;
 
         LOG_INFO("LevelLoader", "SetSpriteBlendMode: Entity %d set to %s, forceOpaqueAlpha=%s",
-                 entityID, blendModeStr, forceOpaqueAlpha ? "true" : "false");
+            entityID, blendModeStr, forceOpaqueAlpha ? "true" : "false");
         return 0;
     }
 
@@ -2021,8 +2028,9 @@ namespace Framework {
         if (tex) {
             tex->SetFilterMode(useNearest);
             LOG_INFO("LevelLoader", "SetSpriteFilterMode: Entity %d set to %s filtering",
-                     entityID, useNearest ? "NEAREST" : "LINEAR");
-        } else {
+                entityID, useNearest ? "NEAREST" : "LINEAR");
+        }
+        else {
             LOG_WARN("LevelLoader", "SetSpriteFilterMode: Failed to get texture for entity %d", entityID);
         }
 
@@ -2056,14 +2064,14 @@ namespace Framework {
     /**
      * @brief Check if gameplay should be disabled (buttons grayed out, etc.)
      * @return boolean - true if gameplay should be disabled
-     * 
+     *
      * Returns true when:
      * - In editor mode AND not playing (STOP state)
-     * 
+     *
      * Returns false when:
      * - Not in editor mode (normal gameplay)
      * - In editor mode but playing (PLAY button was clicked)
-     * 
+     *
      * Usage in Lua:
      *   if ShouldDisableGameplay() then
      *       -- Gray out buttons, disable input
@@ -2074,13 +2082,13 @@ namespace Framework {
             lua_pushboolean(L, false);
             return 1;
         }
-        
+
         bool isEditorMode = CORE->IsEditorMode();
         bool isPlaying = CORE->IsPlaying();
-        
+
         // Disable gameplay only when in editor mode AND not playing
         bool shouldDisable = isEditorMode && !isPlaying;
-        
+
         lua_pushboolean(L, shouldDisable);
         return 1;
     }
@@ -2363,7 +2371,7 @@ namespace Framework {
 
         // Get tile entity at grid position
         const Grid& grid = GetGrid();
-        if (!InBounds(GridCoord{x, y})) {
+        if (!InBounds(GridCoord{ x, y })) {
             LOG_WARN("PulseTile", "Grid position (%d, %d) out of bounds", x, y);
             return 0;
         }
@@ -2454,10 +2462,11 @@ namespace Framework {
         if (em->HasComponent<AP>(player)) {
             auto& ap = em->GetComponent<AP>(player);
             LOG_INFO("LevelLoader", "RefillPlayerAP: Before refill - AP=%d, MaxAP=%d",
-                     ap.actionPoints, ap.maxActionPoints);
+                ap.actionPoints, ap.maxActionPoints);
             ap.actionPoints = ap.maxActionPoints;
             LOG_INFO("LevelLoader", "RefillPlayerAP: After refill - AP=%d", ap.actionPoints);
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "RefillPlayerAP: Player has no AP component");
         }
 
@@ -2568,9 +2577,10 @@ namespace Framework {
         if (tileEntity.IsValid() && em->HasComponent<Chest>(tileEntity)) {
             hasChest = true;
             LOG_INFO("LevelLoader", "HasChestAtTile(%d, %d): Found chest at entity %u", x, y, tileEntity.GetID());
-        } else {
+        }
+        else {
             LOG_INFO("LevelLoader", "HasChestAtTile(%d, %d): No chest (entity valid=%d)",
-                     x, y, tileEntity.IsValid());
+                x, y, tileEntity.IsValid());
         }
 
         lua_pushboolean(L, hasChest);
@@ -2661,7 +2671,7 @@ namespace Framework {
 
         auto& ap = em->GetComponent<AP>(entity);
         LOG_INFO("LevelLoader", "GetEntityAP: Entity %d has AP=%d/%d",
-                 entityID, ap.actionPoints, ap.maxActionPoints);
+            entityID, ap.actionPoints, ap.maxActionPoints);
         lua_pushinteger(L, ap.actionPoints);
         lua_pushinteger(L, ap.maxActionPoints);
         return 2;
@@ -2695,7 +2705,7 @@ namespace Framework {
 
         auto& attackAP = em->GetComponent<AttackAP>(entity);
         LOG_INFO("LevelLoader", "GetEntityAttackAP: Entity %d has AttackAP=%d/%d",
-                 entityID, attackAP.points, attackAP.maxPoints);
+            entityID, attackAP.points, attackAP.maxPoints);
         lua_pushinteger(L, attackAP.points);
         lua_pushinteger(L, attackAP.maxPoints);
         return 2;
@@ -2752,7 +2762,7 @@ namespace Framework {
         int oldAP = ap.actionPoints;
         ap.actionPoints = ap.maxActionPoints;
         LOG_INFO("LevelLoader", "RefillEntityAP: Entity %d AP refilled %d -> %d",
-                 entityID, oldAP, ap.actionPoints);
+            entityID, oldAP, ap.actionPoints);
 
         return 0;
     }
@@ -2885,15 +2895,15 @@ namespace Framework {
 
         if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
             std::cout << "[GetEntityWorldPosition] ERROR: Entity " << entityID
-                      << " invalid or missing Transform!" << std::endl;
+                << " invalid or missing Transform!" << std::endl;
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
-        std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
-                  << transform.position.x << ", " << transform.position.y << ")" << std::endl;
+        //std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
+            //<< transform.position.x << ", " << transform.position.y << ")" << std::endl;
 
         lua_pushnumber(L, transform.position.x);
         lua_pushnumber(L, transform.position.y);
@@ -2942,14 +2952,14 @@ namespace Framework {
 
         if (!Framework::InBounds(targetCoord)) {
             LOG_WARN("LevelLoader", "MoveEntityToTile: Entity %d target (%d, %d) out of bounds",
-                     entityID, x, y);
+                entityID, x, y);
             lua_pushboolean(L, false);
             return 1;
         }
 
         if (!Framework::IsWalkable(targetCoord)) {
             LOG_WARN("LevelLoader", "MoveEntityToTile: Entity %d target (%d, %d) not walkable",
-                     entityID, x, y);
+                entityID, x, y);
             lua_pushboolean(L, false);
             return 1;
         }
@@ -2960,7 +2970,7 @@ namespace Framework {
         auto currentTileOpt = Framework::WorldToTile(transform.position);
         if (currentTileOpt.has_value()) {
             LOG_INFO("LevelLoader", "MoveEntityToTile: Entity %d clearing occupancy at (%d, %d)",
-                     entityID, currentTileOpt->x, currentTileOpt->y);
+                entityID, currentTileOpt->x, currentTileOpt->y);
             Framework::SetOccupant(*currentTileOpt, Framework::Entity{ Framework::INVALID_ENTITY });
         }
 
@@ -2969,7 +2979,7 @@ namespace Framework {
         Framework::SetOccupant(targetCoord, entity);
 
         LOG_INFO("LevelLoader", "MoveEntityToTile: Entity %d moved to (%d, %d) successfully",
-                 entityID, x, y);
+            entityID, x, y);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -3012,7 +3022,7 @@ namespace Framework {
         }
 
         LOG_INFO("LevelLoader", "ConsumeEntityAP: Entity %d AP consumed %d -> %d (-%d)",
-                 entityID, oldAP, ap.actionPoints, amount);
+            entityID, oldAP, ap.actionPoints, amount);
 
         return 0;
     }
@@ -3055,7 +3065,7 @@ namespace Framework {
         }
 
         LOG_INFO("LevelLoader", "ConsumeEntityAttackAP: Entity %d AttackAP consumed %d -> %d (-%d)",
-                 entityID, oldAP, attackAP.points, amount);
+            entityID, oldAP, attackAP.points, amount);
 
         return 0;
     }
@@ -3085,7 +3095,7 @@ namespace Framework {
         int oldAP = attackAP.points;
         attackAP.points = attackAP.maxPoints;
         LOG_INFO("LevelLoader", "RefillEntityAttackAP: Entity %d AttackAP refilled %d -> %d",
-                 entityID, oldAP, attackAP.points);
+            entityID, oldAP, attackAP.points);
 
         return 0;
     }
@@ -3339,6 +3349,23 @@ namespace Framework {
             if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
 
             LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
+
+            // Call Lua OnDestroy before entity destruction (cleans up health bars, etc.)
+            if (em->HasComponent<ScriptComponent>(entity)) {
+                auto& script = em->GetComponent<ScriptComponent>(entity);
+                if (script.hasOnDestroy && script.L) {
+                    lua_getglobal(script.L, "OnDestroy");
+                    if (lua_isfunction(script.L, -1)) {
+                        if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                            lua_pop(script.L, 1);
+                        }
+                    }
+                    else {
+                        lua_pop(script.L, 1);
+                    }
+                }
+            }
+
             em->DestroyEntity(entity);
             LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
             LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
@@ -3508,10 +3535,11 @@ namespace Framework {
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
 
         bool success = SaveLoadSystem::SaveToJSON(filepath, em, levelName);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Scene saved to: %s", filepath);
-        } else {
+        }
+        else {
             LOG_ERROR("LevelLoader", "Failed to save scene to: %s", filepath);
         }
 
@@ -3548,12 +3576,13 @@ namespace Framework {
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
 
         bool success = SaveLoadSystem::LoadFromJSON(filepath, em, clearExisting);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Scene loaded from: %s", filepath);
             // Rebuild spatial partition after loading
             RebuildSpatialPartition();
-        } else {
+        }
+        else {
             LOG_ERROR("LevelLoader", "Failed to load scene from: %s", filepath);
         }
 
@@ -3585,7 +3614,7 @@ namespace Framework {
 
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
         bool success = SaveLoadSystem::AutoSave(em, levelName);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Auto-saved: %s", levelName);
         }
@@ -3618,7 +3647,7 @@ namespace Framework {
 
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
         bool success = SaveLoadSystem::LoadAutoSave(em, levelName);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Loaded auto-save: %s", levelName);
             RebuildSpatialPartition();
@@ -3656,9 +3685,9 @@ namespace Framework {
         return 1;
     }
 
-// ============================================================================
-// PROCEDURAL MAP API
-// ============================================================================
+    // ============================================================================
+    // PROCEDURAL MAP API
+    // ============================================================================
 
     int LevelLoader::Lua_LoadProceduralMap(lua_State* L) {
         std::cout << "[Lua_LoadProceduralMap] Called!\n";
@@ -4023,7 +4052,8 @@ namespace Framework {
             em->AddComponent<Movement>(player);
             auto& movement = em->GetComponent<Movement>(player);
             movement.moveSpeed = 0.2f;
-        } else {
+        }
+        else {
             std::cout << "[SpawnPlayerAt] Entity " << player.GetID() << " already has Movement component" << std::endl;
         }
 
@@ -4175,17 +4205,17 @@ namespace Framework {
      * Lua states) to call the EndCharacterTurn() function in the LevelLoader's
      * Lua state where PartyTurnManager is running.
      */
-    /**
-     * @brief Generic bridge: call any global function in the level Lua state.
-     *
-     * Usage from entity scripts:
-     *   CallLevelFunction("FunctionName")              -- no args, no return
-     *   local r = CallLevelFunction("Foo", 42)         -- int arg, 1 return
-     *   local a,b = CallLevelFunction("Bar", "x", 3)   -- mixed args, 2 returns
-     *
-     * Supported argument types: number, string, boolean, nil.
-     * Return values are forwarded back to the caller (up to LUA_MULTRET).
-     */
+     /**
+      * @brief Generic bridge: call any global function in the level Lua state.
+      *
+      * Usage from entity scripts:
+      *   CallLevelFunction("FunctionName")              -- no args, no return
+      *   local r = CallLevelFunction("Foo", 42)         -- int arg, 1 return
+      *   local a,b = CallLevelFunction("Bar", "x", 3)   -- mixed args, 2 returns
+      *
+      * Supported argument types: number, string, boolean, nil.
+      * Return values are forwarded back to the caller (up to LUA_MULTRET).
+      */
     int LevelLoader::Lua_CallLevelFunction(lua_State* L) {
         const char* funcName = luaL_checkstring(L, 1);
         int nargs = lua_gettop(L) - 1;  // everything after the function name
@@ -4212,10 +4242,10 @@ namespace Framework {
         // Forward arguments from entity state → level state
         for (int i = 2; i <= nargs + 1; ++i) {
             switch (lua_type(L, i)) {
-                case LUA_TNUMBER:  lua_pushnumber(levelL, lua_tonumber(L, i));   break;
-                case LUA_TSTRING:  lua_pushstring(levelL, lua_tostring(L, i));   break;
-                case LUA_TBOOLEAN: lua_pushboolean(levelL, lua_toboolean(L, i)); break;
-                default:           lua_pushnil(levelL);                          break;
+            case LUA_TNUMBER:  lua_pushnumber(levelL, lua_tonumber(L, i));   break;
+            case LUA_TSTRING:  lua_pushstring(levelL, lua_tostring(L, i));   break;
+            case LUA_TBOOLEAN: lua_pushboolean(levelL, lua_toboolean(L, i)); break;
+            default:           lua_pushnil(levelL);                          break;
             }
         }
 
@@ -4233,11 +4263,11 @@ namespace Framework {
         int nresults = lua_gettop(levelL) - topBefore;
         for (int i = topBefore + 1; i <= topBefore + nresults; ++i) {
             switch (lua_type(levelL, i)) {
-                case LUA_TNUMBER:  lua_pushnumber(L, lua_tonumber(levelL, i));   break;
-                case LUA_TSTRING:  lua_pushstring(L, lua_tostring(levelL, i));   break;
-                case LUA_TBOOLEAN: lua_pushboolean(L, lua_toboolean(levelL, i)); break;
-                case LUA_TNIL:     lua_pushnil(L);                               break;
-                default:           lua_pushnil(L);                               break;
+            case LUA_TNUMBER:  lua_pushnumber(L, lua_tonumber(levelL, i));   break;
+            case LUA_TSTRING:  lua_pushstring(L, lua_tostring(levelL, i));   break;
+            case LUA_TBOOLEAN: lua_pushboolean(L, lua_toboolean(levelL, i)); break;
+            case LUA_TNIL:     lua_pushnil(L);                               break;
+            default:           lua_pushnil(L);                               break;
             }
         }
         lua_pop(levelL, nresults);  // clean level state stack
@@ -4720,7 +4750,37 @@ namespace Framework {
     }
 
     /**
-     * @brief Set whether animation should loop
+     * @brief Set animation prefix for per-entity animation overrides
+     * Lua usage: SetAnimationPrefix(entityID, prefix)
+     * @param entityID Entity ID
+     * @param prefix String prefix (e.g. "Mage_") applied before animation key lookup
+     *
+     * If the entity does not yet have a SpriteAnimation component, one is added
+     * automatically (SpawnPlayer defers SpriteAnimation creation to LoadPlayerAnimation).
+     */
+    int LevelLoader::Lua_SetAnimationPrefix(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* prefix = luaL_checkstring(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+
+        // Add SpriteAnimation if not present (SpawnPlayer doesn't add it)
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            em->AddComponent<SpriteAnimation>(e);
+            LOG_INFO("LUA_ANIM", "SetAnimationPrefix: Added SpriteAnimation to entity %lld", entityID);
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.animPrefix = prefix ? prefix : "";
+
+        LOG_INFO("LUA_ANIM", "SetAnimationPrefix: entity %lld prefix='%s'", entityID, anim.animPrefix.c_str());
+        return 0;
+    }
+
+    /**
      * Lua usage: SetAnimationLoop(entityID, loop)
      * @param entityID Entity ID
      * @param loop true to loop, false for one-shot
@@ -4780,7 +4840,7 @@ namespace Framework {
         }
 
         LOG_INFO("LUA_ANIM", "SetAnimationFrameRange: Entity %lld -> startFrame=%d, frameCount=%d",
-                 entityID, startFrame, frameCount);
+            entityID, startFrame, frameCount);
 
         return 0;
     }
@@ -5059,8 +5119,9 @@ namespace Framework {
 
         if (success) {
             LOG_INFO("LevelLoader", "SetTileOccupant: Tile (%d, %d) occupant set to entity %d",
-                     gridX, gridY, entityID);
-        } else {
+                gridX, gridY, entityID);
+        }
+        else {
             LOG_WARN("LevelLoader", "SetTileOccupant: Failed to set occupant at (%d, %d)", gridX, gridY);
         }
 
@@ -5185,9 +5246,9 @@ namespace Framework {
     int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
         float worldY = static_cast<float>(luaL_checknumber(L, 2));
-        float dirX   = static_cast<float>(luaL_checknumber(L, 3));
-        float dirY   = static_cast<float>(luaL_checknumber(L, 4));
-        float speed  = static_cast<float>(luaL_optnumber(L, 5, 3.0));
+        float dirX = static_cast<float>(luaL_checknumber(L, 3));
+        float dirY = static_cast<float>(luaL_checknumber(L, 4));
+        float speed = static_cast<float>(luaL_optnumber(L, 5, 3.0));
         int   damage = static_cast<int>(luaL_optinteger(L, 6, 1));
         bool  pierce = lua_toboolean(L, 7) != 0;
 
@@ -5201,12 +5262,14 @@ namespace Framework {
         // Optional sprite path (arg 12, default = bullet.png)
         const char* spriteArg = luaL_optstring(L, 12, nullptr);
         std::string spritePath = spriteArg ? std::string(spriteArg)
-                                           : std::string("assets/new assets/bullet.png");
+            : std::string("assets/new assets/bullet.png");
 
         // Optional enemy projectile flag (arg 13) and source entity ID (arg 14)
         bool isEnemyProjectile = lua_toboolean(L, 13) != 0;
         uint32_t sourceEntityID = static_cast<uint32_t>(luaL_optinteger(L, 14, 0));
 
+        // Optional explosion VFX flag (arg 15, default false)
+        bool spawnExplosionOnHit = lua_toboolean(L, 15) != 0;
         // Optional max range in tiles (arg 15, 0=unlimited) and line-only (arg 16) for Fireball
         int maxRangeTiles = static_cast<int>(luaL_optinteger(L, 15, 0));
         bool lineOnly = lua_toboolean(L, 16) != 0;
@@ -5243,6 +5306,7 @@ namespace Framework {
             movement.pierce = pierce;
             movement.isEnemyProjectile = isEnemyProjectile;
             movement.sourceEntityID = sourceEntityID;
+            movement.spawnExplosionOnHit = spawnExplosionOnHit;
             movement.spawnPosition = Vector2D(worldX, worldY);
             movement.maxRangeTiles = maxRangeTiles;
             movement.lineOnly = lineOnly;
@@ -5432,7 +5496,8 @@ namespace Framework {
         const auto* effect = effects.GetEffect(type);
         if (effect) {
             lua_pushinteger(L, effect->sourceEntity);
-        } else {
+        }
+        else {
             lua_pushnil(L);
         }
         return 1;

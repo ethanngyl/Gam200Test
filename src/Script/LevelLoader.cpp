@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader.cpp
 Author:      GE YONGQI, Sim Kah Yan
@@ -212,19 +212,20 @@ namespace Framework {
         // 1. Fresh load from Open Level menu - editor mode ON, simulation OFF
         // 2. Level transition while playing - editor mode ON, simulation ON (preserve playing state)
         extern bool g_preservePlayingState;
-        
+
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // If game was playing when transitioning, keep it playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Preserving playing state for level transition");
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
             }
-            
+
             GlobalPause::SetPaused(false);
             // Enable ImGui when loading in editor mode
             if (coreEngine->GetImGuiSystem()) {
@@ -247,14 +248,15 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
             }
-            
+
             GlobalPause::SetPaused(false);
             // Ensure ImGui stays enabled
             if (coreEngine->GetImGuiSystem()) {
@@ -290,22 +292,23 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Editor mode with playing state preserved");
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
                 LOG_INFO("LevelLoader", "Editor mode enabled - simulation stopped");
             }
-            
+
             GlobalPause::SetPaused(false);
             // Final ensure ImGui is enabled after OnInit
             if (coreEngine->GetImGuiSystem()) {
                 coreEngine->GetImGuiSystem()->Enable();
             }
-            
+
             // Reset the preserve playing state flag after use
             g_preservePlayingState = false;
         }
@@ -641,6 +644,7 @@ namespace Framework {
         lua_register(L, "SetAnimationDirection", Lua_SetAnimationDirection);
         lua_register(L, "SetAnimationFlipX", Lua_SetAnimationFlipX);
         lua_register(L, "SetAnimationPlaying", Lua_SetAnimationPlaying);
+        lua_register(L, "SetAnimationPrefix", Lua_SetAnimationPrefix);
         lua_register(L, "SetAnimationLoop", Lua_SetAnimationLoop);
         lua_register(L, "SetAnimationFrameRange", Lua_SetAnimationFrameRange);
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);

@@ -33,6 +33,10 @@
 #include "Grid/GridECS.h"
 #include "Pathfinding/Pathfinding.h"
 #include "TagHelper.h"
+#include "Core/Core.h"
+#include "EntitySpawner.h"
+#include <lua.h>
+#include <lauxlib.h>
 #include <algorithm>
 namespace Framework
 {
@@ -307,10 +311,12 @@ namespace Framework
                     if (entityManager->HasComponent<CircleCollider>(player)) {
                         auto& playerCircle = entityManager->GetComponent<CircleCollider>(player);
                         playerShape = Collider::create_circle(playerCircle.radius, playerTransform.position + playerCircle.offset);
-                    } else if (entityManager->HasComponent<BoxCollider>(player)) {
+                    }
+                    else if (entityManager->HasComponent<BoxCollider>(player)) {
                         auto& playerBox = entityManager->GetComponent<BoxCollider>(player);
                         playerShape = Collider::create_rect(playerBox.size.x, playerBox.size.y, playerTransform.position);
-                    } else {
+                    }
+                    else {
                         continue;
                     }
 
@@ -331,7 +337,7 @@ namespace Framework
                         }
 
                         std::cout << "[ProjectileSystem] Enemy projectile hit Player " << player.GetID()
-                                  << " for " << damageDealt << " damage! HP=" << playerHealth.currentHealth << "\n";
+                            << " for " << damageDealt << " damage! HP=" << playerHealth.currentHealth << "\n";
 
                         if (playerHealth.isDead)
                         {
@@ -429,7 +435,51 @@ namespace Framework
                             enemy, projectile, damageDealt, hpAfter, hitPos));
                     }
 
-                    if (!entityManager->HasComponent<Health>(enemy) || entityManager->GetComponent<Health>(enemy).isDead)
+                    // =============================================
+                    // SPAWN EXPLOSION EFFECT AT IMPACT POSITION
+                    // Only for projectiles flagged for it (e.g. Mage)
+                    // =============================================
+                    if (projMovement.spawnExplosionOnHit &&
+                        CORE && CORE->GetSpawner() && CORE->GetGraphicsSystem()) {
+                        auto* spawner = CORE->GetSpawner();
+                        auto* gfx = CORE->GetGraphicsSystem();
+
+                        const std::string explosionTexture = "assets/Explosion-Sheet.png";
+                        Vector2D hitPos = enemyTransform.position;
+                        Vector2D effectScale(0.12f, 0.12f);
+
+                        Entity explosion = spawner->SpawnSprite(explosionTexture, hitPos, effectScale);
+
+                        // Configure as render layer above enemies
+                        if (entityManager->HasComponent<MeshRenderer>(explosion)) {
+                            auto& mr = entityManager->GetComponent<MeshRenderer>(explosion);
+                            mr.layer = RenderLayers::Effects;  // render above characters
+                        }
+
+                        // Add one-shot animation that auto-destroys
+                        entityManager->AddComponent<SpriteAnimation>(explosion);
+                        auto& anim = entityManager->GetComponent<SpriteAnimation>(explosion);
+                        anim.rows = 1;
+                        anim.columns = 10;
+                        anim.frameCount = 10;
+                        anim.frameTime = 0.06f;
+                        anim.loop = false;
+                        anim.playing = true;
+                        anim.currentFrame = 0;
+                        anim.elapsedTime = 0.0f;
+                        anim.useJsonConfig = false;
+                        anim.autoDestroyOnFinish = true;
+
+                        // Load the texture handle into the animation
+                        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(explosionTexture);
+                        Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+                        if (tex) {
+                            anim.frameWidth = tex->GetWidth() / anim.columns;
+                            anim.frameHeight = tex->GetHeight() / anim.rows;
+                        }
+                    }
+
+                    if (enemyHealth.isDead)
                     {
                         if (eventSystem) {
                             eventSystem->QueueMessage(new EnemyDeathMessage(
@@ -455,6 +505,26 @@ namespace Framework
             // Check for a core component before destroying
             if (entityManager->HasComponent<Transform>(entity))
             {
+                // =============================================
+                // FIX: Call Lua OnDestroy before entity destruction
+                // This cleans up child entities (health bars, etc.)
+                // that the script spawned and tracks locally.
+                // =============================================
+                if (entityManager->HasComponent<ScriptComponent>(entity)) {
+                    auto& script = entityManager->GetComponent<ScriptComponent>(entity);
+                    if (script.hasOnDestroy && script.L) {
+                        lua_getglobal(script.L, "OnDestroy");
+                        if (lua_isfunction(script.L, -1)) {
+                            if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                                lua_pop(script.L, 1);  // pop error
+                            }
+                        }
+                        else {
+                            lua_pop(script.L, 1);  // pop non-function
+                        }
+                    }
+                }
+
                 // Clear tile occupancy before destroying so the tile becomes walkable
                 SpatialPartitioningRemove(entity);
                 entityManager->DestroyEntity(entity);

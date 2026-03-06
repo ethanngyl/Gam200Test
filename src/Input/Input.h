@@ -70,7 +70,7 @@ namespace Framework
         KEY_F9 = VK_F9,
 
         //Delete key
-		KEY_DELETE = VK_DELETE,
+        KEY_DELETE = VK_DELETE,
 
         //Shift Key
         KEY_SHIFT = VK_SHIFT,
@@ -79,7 +79,9 @@ namespace Framework
         KEY_TAB = VK_TAB,
 
         KEY_LEFT_CONTROL = VK_LCONTROL,
-        KEY_RIGHT_CONTROL = VK_RCONTROL
+        KEY_RIGHT_CONTROL = VK_RCONTROL,
+        KEY_LEFT_SHIFT = VK_LSHIFT,
+        KEY_RIGHT_SHIFT = VK_RSHIFT
     };
 
     /**

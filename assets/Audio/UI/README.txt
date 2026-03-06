@@ -1,0 +1,1 @@
+Sound effects in Click and Hover are the exact same, you can use either as the sound effects. 
