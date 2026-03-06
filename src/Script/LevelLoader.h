@@ -97,6 +97,9 @@ namespace Framework {
         // Called from ProjectileSystem when player projectile hits enemy (Soul Rend, Soul Merge)
         bool ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID);
 
+        // Called from ProjectileSystem when enemy projectile hits player (Parry, Guard, etc.)
+        bool ApplyDamageToEntity(uint32_t targetID, int damage, uint32_t attackerID);
+
         // Defer entity destruction to avoid crash when destroying Lua caller (e.g., Parry kills attacker)
         void DeferEntityDestruction(uint32_t entityID);
         static int Lua_ToggleEditor(lua_State* L);

@@ -278,7 +278,18 @@ namespace Framework
                     if (check_collision(projShape, playerShape))
                     {
                         const int damageDealt = projMovement.damage;
-                        playerHealth.TakeDamage(damageDealt);
+                        uint32_t attackerID = projMovement.sourceEntityID;
+
+                        auto& levelLoader = LevelLoader::GetInstance();
+                        if (levelLoader.IsLevelLoaded() &&
+                            levelLoader.ApplyDamageToEntity(player.GetID(), damageDealt, attackerID))
+                        {
+                            // Damage handled by Lua (Parry, Guard, etc.)
+                        }
+                        else
+                        {
+                            playerHealth.TakeDamage(damageDealt);
+                        }
 
                         std::cout << "[ProjectileSystem] Enemy projectile hit Player " << player.GetID()
                                   << " for " << damageDealt << " damage! HP=" << playerHealth.currentHealth << "\n";
