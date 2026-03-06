@@ -131,25 +131,25 @@ end
 function SkillPatterns.Cone(direction, range, flipX)
     local tiles = {}
 
-    if direction == Direction.Front then  -- Facing down
-        table.insert(tiles, {x = 0, y = range})    -- Center
-        table.insert(tiles, {x = -1, y = range})   -- Left
-        table.insert(tiles, {x = 1, y = range})    -- Right
+    if direction == Direction.Front then  -- Facing down (-Y)
+        table.insert(tiles, {x = 0, y = -range})    -- Center
+        table.insert(tiles, {x = -1, y = -range})   -- Left
+        table.insert(tiles, {x = 1, y = -range})    -- Right
 
-    elseif direction == Direction.Back then  -- Facing up
-        table.insert(tiles, {x = 0, y = -range})   -- Center
-        table.insert(tiles, {x = -1, y = -range})  -- Left
-        table.insert(tiles, {x = 1, y = -range})   -- Right
+    elseif direction == Direction.Back then  -- Facing up (+Y)
+        table.insert(tiles, {x = 0, y = range})     -- Center
+        table.insert(tiles, {x = -1, y = range})    -- Left
+        table.insert(tiles, {x = 1, y = range})     -- Right
 
     elseif direction == Direction.Side then  -- Facing left/right
-        if flipX then  -- Facing left
-            table.insert(tiles, {x = -range, y = 0})   -- Center
-            table.insert(tiles, {x = -range, y = -1})  -- Up
-            table.insert(tiles, {x = -range, y = 1})   -- Down
-        else  -- Facing right
+        if flipX then  -- Facing right (+X)
             table.insert(tiles, {x = range, y = 0})    -- Center
             table.insert(tiles, {x = range, y = -1})   -- Up
-            table.insert(tiles, {x = range, y = 1})    -- Down
+            table.insert(tiles, {x = range, y = 1})     -- Down
+        else  -- Facing left (-X)
+            table.insert(tiles, {x = -range, y = 0})   -- Center
+            table.insert(tiles, {x = -range, y = -1})  -- Up
+            table.insert(tiles, {x = -range, y = 1})    -- Down
         end
     end
 
@@ -229,17 +229,17 @@ end
 -- Helper: Convert direction enum to vector
 function SkillPatterns.GetDirectionVector(direction, flipX)
     if direction == Direction.Front then
-        return 0, 1  -- Down
+        return 0, -1  -- Down (Front = facing camera = -Y)
     elseif direction == Direction.Back then
-        return 0, -1  -- Up
+        return 0, 1   -- Up (Back = facing away = +Y)
     elseif direction == Direction.Side then
         if flipX then
-            return -1, 0  -- Left
+            return 1, 0   -- Right (flipX=true = facing right)
         else
-            return 1, 0  -- Right
+            return -1, 0  -- Left (flipX=false = facing left)
         end
     else
-        return 0, 1  -- Default to down
+        return 0, -1  -- Default to down
     end
 end
 

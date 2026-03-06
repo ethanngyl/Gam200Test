@@ -1746,6 +1746,12 @@ function ExecuteSkill(skillID)
         local enemies = FindEnemiesInPattern(skillID)
         if #enemies == 0 then
             print("[PlayerScript] No enemies in " .. skill.name .. " range")
+            -- Refund HP cost since no enemies were hit
+            if hpCost > 0 then
+                local currentHP = GetEntityHP(entityID)
+                SetEntityHP(entityID, currentHP + hpCost)
+                print("[PlayerScript] Refunded " .. hpCost .. " HP (no targets)")
+            end
             ClearActivePreview()
             return
         end
@@ -1776,6 +1782,12 @@ function ExecuteSkill(skillID)
         local enemies = FindEnemiesInPattern(skillID)
         if #enemies == 0 then
             print("[PlayerScript] No enemies in " .. skill.name .. " range")
+            -- Refund HP cost since no enemies were hit
+            if hpCost > 0 then
+                local currentHP = GetEntityHP(entityID)
+                SetEntityHP(entityID, currentHP + hpCost)
+                print("[PlayerScript] Refunded " .. hpCost .. " HP (no targets)")
+            end
             ClearActivePreview()
             return
         end
@@ -2169,6 +2181,12 @@ function ExecuteSkill(skillID)
     local enemies = FindEnemiesInPattern(skillID)
     if #enemies == 0 then
         print("[PlayerScript] No enemies in " .. skill.name .. " range")
+        -- Refund HP cost since no enemies were hit
+        if hpCost > 0 then
+            local currentHP = GetEntityHP(entityID)
+            SetEntityHP(entityID, currentHP + hpCost)
+            print("[PlayerScript] Refunded " .. hpCost .. " HP (no targets)")
+        end
         ClearActivePreview()
         return
     end
