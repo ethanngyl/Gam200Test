@@ -89,11 +89,36 @@ namespace Framework
                 auto& movement = entityManager->GetComponent<ProjectileMovement>(entity);
 
                 // Apply movement
+                Vector2D prevPos = transform.position;
                 if (!movement.blocked) {
                     transform.position += movement.direction * movement.moveSpeed * dt;
                 }
                 else {
                     transform.position -= movement.direction * movement.moveSpeed * dt;
+                }
+
+                // Check if projectile passed through any blocked tile (prevents wall penetration)
+                {
+                    auto prevTile = WorldToTile(prevPos);
+                    auto currTile = WorldToTile(transform.position);
+                    if (prevTile.has_value() && currTile.has_value()) {
+                        int x0 = prevTile->x, y0 = prevTile->y;
+                        int x1 = currTile->x, y1 = currTile->y;
+                        int dx = std::abs(x1 - x0), dy = std::abs(y1 - y0);
+                        int sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1;
+                        int err = dx - dy;
+                        while (true) {
+                            GridCoord c{ x0, y0 };
+                            if (IsTileStaticBlocked(c)) {
+                                offScreenToDestroy.push_back(entity);
+                                break;
+                            }
+                            if (x0 == x1 && y0 == y1) break;
+                            int e2 = 2 * err;
+                            if (e2 > -dy) { err -= dy; x0 += sx; }
+                            if (e2 < dx) { err += dx; y0 += sy; }
+                        }
+                    }
                 }
 
                 // Check max range (Fireball: 5 tiles) - use grid distance, not world units

@@ -119,7 +119,7 @@
       "skillType": "projectile",
       "apCost": 1,
       "damage": 5,
-      "range": 7,
+      "range": 10,
       "pattern": "pierce",
       "projSpeed": 4.0,
       "pierce": true,
