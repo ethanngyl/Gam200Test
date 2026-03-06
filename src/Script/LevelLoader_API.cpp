@@ -3134,10 +3134,10 @@ namespace Framework {
      *
      * Status effect handling order:
      *   1. Guard   -> absorb all damage, consume effect, return
-     *   2. Knight's Oath -> redirect damage to the oath source (knight)
-     *   3. Vulnerable -> increase damage by extraData amount
-     *   4. Apply damage
-     *   5. Parry   -> deal original damage back to attacker, consume effect
+     *   2. Parry   -> reflect damage to attacker, target takes 0, return (requires attackerID)
+     *   3. Knight's Oath -> redirect damage to the oath source (knight)
+     *   4. Vulnerable -> increase damage by extraData amount
+     *   5. Apply damage
      *
      * Usage: DamageEntity(targetID, 1)
      *        DamageEntity(targetID, 1, attackerID)
@@ -3186,7 +3186,28 @@ namespace Framework {
                 return 1;
             }
 
-            // 2. Knight's Oath: redirect damage to the protecting knight
+            // 2. Parry: reflect damage to attacker, target takes NO damage (must have attackerID)
+            if (attackerID > 0 && effects.HasEffect("parry")) {
+                effects.RemoveEffect("parry");
+                Entity attacker(static_cast<uint32_t>(attackerID));
+                if (em->HasComponent<Health>(attacker)) {
+                    auto& attackerHP = em->GetComponent<Health>(attacker);
+                    attackerHP.currentHealth -= amount;
+                    LOG_INFO("StatusEffect", "PARRY! Entity %u reflects %d damage to attacker %u (target takes 0)",
+                        entity.GetID(), amount, attackerID);
+
+                    if (attackerHP.currentHealth <= 0) {
+                        attackerHP.currentHealth = 0;
+                        attackerHP.isDead = true;
+                        LOG_WARN("LevelLoader", "!!! Attacker %u DIED from parried damage !!!", attackerID);
+                        loader->DeferEntityDestruction(attackerID);
+                    }
+                }
+                lua_pushboolean(L, 1);
+                return 1;
+            }
+
+            // 4. Knight's Oath: redirect damage to the protecting knight
             const auto* oathEffect = effects.GetEffect("knightsOath");
             if (oathEffect) {
                 uint32_t knightID = oathEffect->sourceEntity;
@@ -3202,15 +3223,7 @@ namespace Framework {
                         knightHP.currentHealth = 0;
                         knightHP.isDead = true;
                         LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-
-                        if (em->HasComponent<Transform>(knight)) {
-                            auto& transform = em->GetComponent<Transform>(knight);
-                            auto tileOpt = Framework::WorldToTile(transform.position);
-                            if (tileOpt.has_value()) {
-                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                            }
-                        }
-                        em->DestroyEntity(knight);
+                        loader->DeferEntityDestruction(knightID);
                     }
 
                     lua_pushboolean(L, 1);
@@ -3218,7 +3231,7 @@ namespace Framework {
                 }
             }
 
-            // 3. Vulnerable: increase incoming damage
+            // 5. Vulnerable: increase incoming damage
             const auto* vulnEffect = effects.GetEffect("vulnerable");
             if (vulnEffect) {
                 int extraDmg = vulnEffect->extraData;
@@ -3227,7 +3240,7 @@ namespace Framework {
                 amount += extraDmg;
             }
 
-            // 4. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
+            // 6. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
             const auto* reductionEffect = effects.GetEffect("damageReduction");
             if (reductionEffect) {
                 int reduction = reductionEffect->extraData;
@@ -3271,37 +3284,6 @@ namespace Framework {
 
         LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
             entity.GetID(), amount, prevHP, health.currentHealth);
-
-        // === PARRY CHECK (after damage is applied) ===
-
-        if (attackerID > 0 && em->HasComponent<StatusEffects>(entity)) {
-            auto& effects = em->GetComponent<StatusEffects>(entity);
-            if (effects.HasEffect("parry")) {
-                effects.RemoveEffect("parry");
-                Entity attacker(static_cast<uint32_t>(attackerID));
-                if (em->HasComponent<Health>(attacker)) {
-                    auto& attackerHP = em->GetComponent<Health>(attacker);
-                    attackerHP.currentHealth -= amount;
-                    LOG_INFO("StatusEffect", "PARRY! Entity %u reflects %d damage back to attacker %u",
-                        entity.GetID(), amount, attackerID);
-
-                    if (attackerHP.currentHealth <= 0) {
-                        attackerHP.currentHealth = 0;
-                        attackerHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Attacker %u DIED from parried damage !!!", attackerID);
-
-                        if (em->HasComponent<Transform>(attacker)) {
-                            auto& transform = em->GetComponent<Transform>(attacker);
-                            auto tileOpt = Framework::WorldToTile(transform.position);
-                            if (tileOpt.has_value()) {
-                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                            }
-                        }
-                        em->DestroyEntity(attacker);
-                    }
-                }
-            }
-        }
 
         // === DEATH CHECK ===
 

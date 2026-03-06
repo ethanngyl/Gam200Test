@@ -63,6 +63,7 @@ Technology is prohibited.
 #include "Pause/GlobalPauseManager.h"
 #include "Component.h"     // CircleCollider, AP components
 #include "ECS/TagHelper.h" // FindFirstByTag, FindAllByTag
+#include "Grid/GridECS.h"  // WorldToTile, SetOccupant for ProcessDeferredDestructions
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -338,6 +339,7 @@ namespace Framework {
             }
         }
 
+        deferredEntitiesToDestroy.clear();
         levelLoaded = false;
         currentLevelPath.clear();
 
@@ -363,8 +365,45 @@ namespace Framework {
     // LIFECYCLE CALLS
     // ========================================================================
 
+    void LevelLoader::DeferEntityDestruction(uint32_t entityID) {
+        deferredEntitiesToDestroy.push_back(entityID);
+    }
+
+    void LevelLoader::ProcessDeferredDestructions() {
+        if (!coreEngine) return;
+        auto* em = coreEngine->GetEntityManager();
+        if (!em) return;
+
+        for (uint32_t id : deferredEntitiesToDestroy) {
+            Entity entity(id);
+            if (em->HasComponent<TagComponent>(entity) &&
+                em->GetComponent<TagComponent>(entity).tag == "Enemy" &&
+                L && HasLuaFunction("SyncEnemyTurnBeforeEntityDestroyed")) {
+                lua_getglobal(L, "SyncEnemyTurnBeforeEntityDestroyed");
+                lua_pushinteger(L, static_cast<lua_Integer>(id));
+                if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+                    const char* err = lua_tostring(L, -1);
+                    LOG_WARN("LevelLoader", "SyncEnemyTurnBeforeEntityDestroyed error: %s", err ? err : "unknown");
+                    lua_pop(L, 1);
+                }
+            }
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                }
+            }
+            em->DestroyEntity(entity);
+        }
+        deferredEntitiesToDestroy.clear();
+    }
+
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
+
+        // Process entities queued for destruction (avoids crash when Parry/Knight Oath kills caller)
+        ProcessDeferredDestructions();
 
         // Update tile tints (restore expired tints)
         UpdateTileTints();

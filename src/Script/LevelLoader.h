@@ -96,6 +96,9 @@ namespace Framework {
 
         // Called from ProjectileSystem when player projectile hits enemy (Soul Rend, Soul Merge)
         bool ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID);
+
+        // Defer entity destruction to avoid crash when destroying Lua caller (e.g., Parry kills attacker)
+        void DeferEntityDestruction(uint32_t entityID);
         static int Lua_ToggleEditor(lua_State* L);
         static int Lua_IsEditorEnabled(lua_State* L);
         static int Lua_SetEditorMode(lua_State* L);
@@ -124,6 +127,10 @@ namespace Framework {
         CoreEngine* coreEngine = nullptr;
         bool levelLoaded = false;
         std::string currentLevelPath;
+
+        // Deferred entity destruction (avoids crash when destroying caller during Lua C callback)
+        std::vector<uint32_t> deferredEntitiesToDestroy;
+        void ProcessDeferredDestructions();
 
         // Cached subsystem pointers (for fast access in API)
         UISystem* uiSystem = nullptr;

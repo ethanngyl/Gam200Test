@@ -261,6 +261,25 @@ function MarkEnemyActionComplete()
     NextEnemyTurn()
 end
 
+-- Called from C++ ProcessDeferredDestructions before destroying an enemy.
+-- Adjusts ActiveEnemyIndex so we don't skip an enemy when the list shrinks.
+function SyncEnemyTurnBeforeEntityDestroyed(entityID)
+    if not EnemyTurnActive or ActiveEnemyIndex <= 0 then
+        return
+    end
+    local enemies = GetAllEnemies()
+    if not enemies then return end
+    for i = 1, #enemies do
+        if enemies[i] == entityID then
+            if i < ActiveEnemyIndex then
+                ActiveEnemyIndex = ActiveEnemyIndex - 1
+                print("[EnemyTurnManager] SyncEnemyTurnBeforeEntityDestroyed: Enemy " .. entityID .. " was at index " .. i .. ", decremented ActiveEnemyIndex to " .. ActiveEnemyIndex)
+            end
+            return
+        end
+    end
+end
+
 -- ============================================================================
 -- GLOBAL EXPORTS
 -- ============================================================================
@@ -274,6 +293,7 @@ _G.EndAllEnemyTurns = EndAllEnemyTurns
 _G.UpdateEnemyTurnManager = UpdateEnemyTurnManager
 _G.IsEnemyActionReady = IsEnemyActionReady
 _G.MarkEnemyActionComplete = MarkEnemyActionComplete
+_G.SyncEnemyTurnBeforeEntityDestroyed = SyncEnemyTurnBeforeEntityDestroyed
 
 print("============================================================")
 print("========== EnemyTurnManager.lua LOADED SUCCESSFULLY ==========")
