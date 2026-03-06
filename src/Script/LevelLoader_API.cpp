@@ -5179,6 +5179,8 @@ namespace Framework {
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,0,0,1, "")
      *   -- with enemy projectile flag (arg 13) and source entity (arg 14):
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 1, false, r,g,b,a, "", true, sourceID)
+     *   -- with max range in tiles (arg 15) and line-only (arg 16) for Fireball:
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 5, false, 1,1,1,1, "", false, 0, 5, true)
      */
     int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
@@ -5204,6 +5206,10 @@ namespace Framework {
         // Optional enemy projectile flag (arg 13) and source entity ID (arg 14)
         bool isEnemyProjectile = lua_toboolean(L, 13) != 0;
         uint32_t sourceEntityID = static_cast<uint32_t>(luaL_optinteger(L, 14, 0));
+
+        // Optional max range in tiles (arg 15, 0=unlimited) and line-only (arg 16) for Fireball
+        int maxRangeTiles = static_cast<int>(luaL_optinteger(L, 15, 0));
+        bool lineOnly = lua_toboolean(L, 16) != 0;
 
         // Normalize direction
         float len = std::sqrt(dirX * dirX + dirY * dirY);
@@ -5237,6 +5243,9 @@ namespace Framework {
             movement.pierce = pierce;
             movement.isEnemyProjectile = isEnemyProjectile;
             movement.sourceEntityID = sourceEntityID;
+            movement.spawnPosition = Vector2D(worldX, worldY);
+            movement.maxRangeTiles = maxRangeTiles;
+            movement.lineOnly = lineOnly;
         }
 
         lua_pushinteger(L, projectile.GetID());

@@ -65,6 +65,9 @@ namespace Framework
         bool pierce = false;   // If true, passes through enemies instead of stopping
         bool isEnemyProjectile = false;  // If true, damages players instead of enemies
         uint32_t sourceEntityID = 0;     // Entity that spawned this projectile (skip self-hit)
+        Vector2D spawnPosition{};         // Starting position (for range and line checks)
+        int maxRangeTiles = 0;            // Max travel in tiles (0 = unlimited)
+        bool lineOnly = false;            // If true, only hit enemies on the line (not adjacent)
     };
 
     enum class AnimGroup {

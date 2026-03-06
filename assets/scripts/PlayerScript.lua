@@ -2102,6 +2102,8 @@ function ExecuteSkill(skillID)
             spritePath = ""
         end
 
+        local rangeTiles = skill.range or 0
+        local lineOnly = (skill.pattern == "line" and not (skill.pierce or false))
         local projID = SpawnSkillProjectile(
             worldX, worldY,
             dirX, dirY,
@@ -2111,7 +2113,9 @@ function ExecuteSkill(skillID)
             tintR, tintG, tintB, tintA,
             spritePath,
             false,    -- isEnemyProjectile
-            entityID  -- sourceEntityID (for Soul Rend, Soul Merge kill heal)
+            entityID,  -- sourceEntityID (for Soul Rend, Soul Merge kill heal)
+            rangeTiles > 0 and rangeTiles or 0,  -- maxRangeTiles (Fireball=5, PiercingShot=0 unlimited)
+            lineOnly   -- lineOnly: Fireball hits only on line, PiercingShot pierces all in path
         )
         if not projID then
             print("[PlayerScript] ERROR: SpawnSkillProjectile returned nil")

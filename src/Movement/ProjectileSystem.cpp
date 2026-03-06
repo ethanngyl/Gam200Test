@@ -96,6 +96,20 @@ namespace Framework
                     transform.position -= movement.direction * movement.moveSpeed * dt;
                 }
 
+                // Check max range (Fireball: 5 tiles) - use grid distance, not world units
+                if (movement.maxRangeTiles > 0) {
+                    auto spawnTile = WorldToTile(movement.spawnPosition);
+                    auto currTile = WorldToTile(transform.position);
+                    if (spawnTile.has_value() && currTile.has_value()) {
+                        int dx = std::abs(currTile->x - spawnTile->x);
+                        int dy = std::abs(currTile->y - spawnTile->y);
+                        int tileDist = (dx > dy) ? dx : dy;  // Chebyshev: max(dx,dy)
+                        if (tileDist >= movement.maxRangeTiles) {
+                            offScreenToDestroy.push_back(entity);
+                        }
+                    }
+                }
+
                 // Check if projectile hit a wall (blocked tile or out-of-bounds)
                 // Uses IsTileStaticBlocked instead of IsWalkable so projectiles
                 // pass through entity-occupied tiles and only stop on walls.
@@ -342,6 +356,31 @@ namespace Framework
 
                 if (check_collision(projShape, enemyShape))
                 {
+                    // Line-only (Fireball): enemy must be on the line from spawn to projectile
+                    if (projMovement.lineOnly) {
+                        bool onLine = false;
+                        const Vector2D S = projMovement.spawnPosition;
+                        const Vector2D P = projTransform.position;
+                        const Vector2D E = enemyTransform.position;
+                        Vector2D SP(P.x - S.x, P.y - S.y);
+                        float lenSq = SP.x * SP.x + SP.y * SP.y;
+                        if (lenSq >= 0.0001f) {
+                            Vector2D SE(E.x - S.x, E.y - S.y);
+                            float t = (SE.x * SP.x + SE.y * SP.y) / lenSq;
+                            if (t >= -0.1f) {
+                                Vector2D closest(S.x + t * SP.x, S.y + t * SP.y);
+                                float dx = E.x - closest.x, dy = E.y - closest.y;
+                                float distSq = dx * dx + dy * dy;
+                                const Grid& g = GetGrid();
+                                float tileSize = (g.spacing.x + g.spacing.y) * 0.5f;
+                                if (tileSize <= 0.0f) tileSize = 1.0f;
+                                float tol = 0.45f * tileSize;
+                                onLine = (distSq <= tol * tol);
+                            }
+                        }
+                        if (!onLine) continue;
+                    }
+
                     const int damageDealt = projMovement.damage;
                     const auto hitPos = enemyTransform.position;
 
