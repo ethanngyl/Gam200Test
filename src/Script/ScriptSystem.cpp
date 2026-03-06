@@ -238,6 +238,13 @@ namespace Framework {
         script->initialized = false;
         lua_pushinteger(script->L, entity.GetID());
         lua_setglobal(script->L, "self");
+
+        // Pass configType to script's Lua state if set
+        if (!script->configType.empty()) {
+            lua_pushstring(script->L, script->configType.c_str());
+            lua_setglobal(script->L, "configType");
+        }
+
         // Load the script file
         if (luaL_dofile(script->L, scriptPath.c_str()) != LUA_OK) {
             const char* error = lua_tostring(script->L, -1);
@@ -527,6 +534,8 @@ namespace Framework {
         lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
+        lua_register(L, "GetDamageModifier", LevelLoader::Lua_GetDamageModifier);
+        lua_register(L, "SetDamageModifier", LevelLoader::Lua_SetDamageModifier);
         lua_register(L, "FindPathToTarget", LevelLoader::Lua_FindPathToTarget);
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
@@ -586,6 +595,11 @@ namespace Framework {
         lua_register(L, "RemoveStatusEffect", LevelLoader::Lua_RemoveStatusEffect);
         lua_register(L, "DecrementStatusEffects", LevelLoader::Lua_DecrementStatusEffects);
         lua_register(L, "GetStatusEffectSource", LevelLoader::Lua_GetStatusEffectSource);
+
+        // Unified Skill Database API
+        lua_register(L, "GetSkillByID", LevelLoader::Lua_GetSkillByID);
+        lua_register(L, "GetClassSkills", LevelLoader::Lua_GetClassSkills);
+        lua_register(L, "GetSkillCount", LevelLoader::Lua_GetSkillCount);
     }
 
     /**

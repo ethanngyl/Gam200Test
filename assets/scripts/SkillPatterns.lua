@@ -54,7 +54,7 @@ local Direction = {
     @return table - Array of {x, y} offsets
 ]]--
 function SkillPatterns.GetPattern(patternType, direction, range, flipX)
-    range = range or 1
+    if range == nil then range = 1 end
     flipX = flipX or false
     direction = direction or Direction.Front
 
@@ -78,6 +78,9 @@ function SkillPatterns.GetPattern(patternType, direction, range, flipX)
 
     elseif patternType == "area5x5" then
         return SkillPatterns.Area5x5(direction, range, flipX)
+
+    elseif patternType == "area5x5_self" then
+        return SkillPatterns.Area5x5Self()
 
     elseif patternType == "diagonal" then
         return SkillPatterns.Diagonal()
@@ -153,11 +156,16 @@ function SkillPatterns.Cone(direction, range, flipX)
     return tiles
 end
 
--- 3x3 area centered on target
+-- 3x3 area: range=0 = centered on caster (self), range>0 = centered on tile in facing direction
 function SkillPatterns.Area3x3(direction, range, flipX)
-    local dx, dy = SkillPatterns.GetDirectionVector(direction, flipX)
-    local centerX = dx * range
-    local centerY = dy * range
+    local centerX, centerY
+    if range == 0 or range == nil then
+        centerX, centerY = 0, 0  -- Centered on self
+    else
+        local dx, dy = SkillPatterns.GetDirectionVector(direction, flipX)
+        centerX = dx * range
+        centerY = dy * range
+    end
 
     local tiles = {}
     for offsetY = -1, 1 do
@@ -182,6 +190,19 @@ function SkillPatterns.Area5x5(direction, range, flipX)
         end
     end
 
+    return tiles
+end
+
+-- 5x5 area centered on caster (self)
+function SkillPatterns.Area5x5Self()
+    local tiles = {}
+    for offsetY = -2, 2 do
+        for offsetX = -2, 2 do
+            if offsetX ~= 0 or offsetY ~= 0 then  -- exclude caster's own tile
+                table.insert(tiles, {x = offsetX, y = offsetY})
+            end
+        end
+    end
     return tiles
 end
 

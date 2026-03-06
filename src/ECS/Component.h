@@ -66,6 +66,9 @@ namespace Framework
         bool isEnemyProjectile = false;  // If true, damages players instead of enemies
         uint32_t sourceEntityID = 0;     // Entity that spawned this projectile (skip self-hit)
         bool spawnExplosionOnHit = false; // If true, spawn explosion VFX on impact
+        Vector2D spawnPosition{};         // Starting position (for range and line checks)
+        int maxRangeTiles = 0;            // Max travel in tiles (0 = unlimited)
+        bool lineOnly = false;            // If true, only hit enemies on the line (not adjacent)
     };
 
     enum class AnimGroup {
@@ -193,6 +196,7 @@ namespace Framework
     struct ScriptComponent : public Component<ScriptComponent>
     {
         std::string scriptPath;
+        std::string configType;   // Optional config type passed to script (e.g. "mage", "tank")
         lua_State* L = nullptr;
         bool initialized = false;
         float updateTimer = 0.0f;
@@ -251,6 +255,7 @@ namespace Framework
         int maxHealth = 50;
         int currentHealth = 50;
         bool isDead = false;
+        int damageModifier = 0;  // Flat bonus to incoming damage (e.g., Knight Commander passive)
 
         Health() = default;
         Health(int max) : maxHealth(max), currentHealth(max) {}

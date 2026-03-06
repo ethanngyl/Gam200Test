@@ -1,4 +1,4 @@
-﻿/**
+/**
  ===============================================================================
  File:           Input.h (FIXED VERSION)
  Author:         Josh Ong (Modified by GE YONGQI)
@@ -74,6 +74,9 @@ namespace Framework
 
         //Shift Key
         KEY_SHIFT = VK_SHIFT,
+
+        //Tab Key (for target cycling)
+        KEY_TAB = VK_TAB,
 
         KEY_LEFT_CONTROL = VK_LCONTROL,
         KEY_RIGHT_CONTROL = VK_RCONTROL,

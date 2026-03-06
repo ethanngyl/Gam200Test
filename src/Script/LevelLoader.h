@@ -93,6 +93,15 @@ namespace Framework {
         // State queries
         bool IsLevelLoaded() const { return levelLoaded; }
         std::string GetCurrentLevelPath() const { return currentLevelPath; }
+
+        // Called from ProjectileSystem when player projectile hits enemy (Soul Rend, Soul Merge)
+        bool ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID);
+
+        // Called from ProjectileSystem when enemy projectile hits player (Parry, Guard, etc.)
+        bool ApplyDamageToEntity(uint32_t targetID, int damage, uint32_t attackerID);
+
+        // Defer entity destruction to avoid crash when destroying Lua caller (e.g., Parry kills attacker)
+        void DeferEntityDestruction(uint32_t entityID);
         static int Lua_ToggleEditor(lua_State* L);
         static int Lua_IsEditorEnabled(lua_State* L);
         static int Lua_SetEditorMode(lua_State* L);
@@ -121,6 +130,10 @@ namespace Framework {
         CoreEngine* coreEngine = nullptr;
         bool levelLoaded = false;
         std::string currentLevelPath;
+
+        // Deferred entity destruction (avoids crash when destroying caller during Lua C callback)
+        std::vector<uint32_t> deferredEntitiesToDestroy;
+        void ProcessDeferredDestructions();
 
         // Cached subsystem pointers (for fast access in API)
         UISystem* uiSystem = nullptr;
@@ -276,6 +289,8 @@ namespace Framework {
         static int Lua_MoveEntityToTile(lua_State* L);
         static int Lua_ConsumeEnemyAP(lua_State* L);
         static int Lua_DamageEntity(lua_State* L);
+        static int Lua_GetDamageModifier(lua_State* L);  // GetDamageModifier(entityID)
+        static int Lua_SetDamageModifier(lua_State* L);  // SetDamageModifier(entityID, modifier)
         static int Lua_FindPathToTarget(lua_State* L);
 
         // Tile Occupancy API
@@ -292,6 +307,7 @@ namespace Framework {
 
         // Grid Conversion API
         static int Lua_TileToWorld(lua_State* L);
+        static int Lua_ScreenToTile(lua_State* L);  // Convert screen coords to grid tile (for mouse target selection)
 
         // Script Component Management API
         static int Lua_AddScriptComponentToEntity(lua_State* L);
@@ -333,6 +349,11 @@ namespace Framework {
         static int Lua_RemoveStatusEffect(lua_State* L);   // RemoveStatusEffect(entityID, type)
         static int Lua_DecrementStatusEffects(lua_State* L);// DecrementStatusEffects(entityID)
         static int Lua_GetStatusEffectSource(lua_State* L); // GetStatusEffectSource(entityID, type) -> sourceEntityID or nil
+
+        // Unified Skill Database API
+        static int Lua_GetSkillByID(lua_State* L);         // GetSkillByID(skillID) -> table or nil
+        static int Lua_GetClassSkills(lua_State* L);       // GetClassSkills(className) -> table of skill tables
+        static int Lua_GetSkillCount(lua_State* L);        // GetSkillCount(className) -> int
 
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

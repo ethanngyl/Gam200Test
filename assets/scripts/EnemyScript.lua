@@ -123,7 +123,7 @@ local healthBarFG = nil        -- Foreground bar entity (colored)
 local healthBarWidth = 0.1     -- Total bar width in world units
 local healthBarHeight = 0.02  -- Bar height in world units
 local healthBarOffsetY = 0.05  -- How far above enemy center
-local healthBarLayer = 50      -- Render layer (above entities, below UI)
+local healthBarLayer = 4       -- Render layer (above entities, below UI)
 
 -- ============================================================================
 -- ENEMY ANIMATION (manual sprite sheet switching)
@@ -510,18 +510,8 @@ function OnUpdate(dt)
         -- Timer finished: apply damage now
         pendingAttack = false
 
-        -- Apply Bolstered Morale bonus
-        local bonusDmg = 0
-        if _G.KnightCommanderIDs then
-            for _, cid in ipairs(_G.KnightCommanderIDs) do
-                local chp = GetEntityHP(cid)
-                if chp and chp > 0 then
-                    bonusDmg = bonusDmg + 1
-                    break  -- Only +1 total from Bolstered Morale
-                end
-            end
-        end
-        local totalDmg = pendingAttackDamage + bonusDmg
+        -- damageModifier on target already handles Bolstered Morale
+        local totalDmg = pendingAttackDamage
 
         print("[Enemy " .. entityID .. "] ATTACK HIT Player " .. pendingAttackTarget .. " for " .. totalDmg .. " damage")
 

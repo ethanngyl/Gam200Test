@@ -330,12 +330,13 @@ end
 
 -- Enemy type assignment order: ensures at least one of each new type spawns.
 -- Index 1 = Knight Commander (yellow), 2 = Knight, 3 = Mage (blue),
--- 4 = Tank (green). Any additional enemies are regular EnemyScript knights.
-local ENEMY_TYPE_SCRIPTS = {
-    "assets/scripts/EnemyKnightCommanderScript.lua",  -- 1: Knight Commander
-    "assets/scripts/EnemyKnightScript.lua",            -- 2: Knight
-    "assets/scripts/EnemyMageScript.lua",              -- 3: Mage
-    "assets/scripts/EnemyTankScript.lua",              -- 4: Tank
+-- 4 = Tank (green). Additional enemies cycle through these types.
+-- All enemy types now use EnemyGeneric.lua with JSON configs.
+local ENEMY_TYPE_CONFIGS = {
+    "knight_commander",  -- 1: Knight Commander
+    "knight",            -- 2: Knight
+    "mage",              -- 3: Mage
+    "tank",              -- 4: Tank
 }
 
 local ENEMY_TYPE_NAMES = {
@@ -374,26 +375,20 @@ function SetupProceduralEnemies(mapData)
         local enemyID = SpawnEnemyAt(ex, ey)
 
         if enemyID and enemyID ~= 0 then
-            -- Assign enemy type: first 4 get unique types, rest are regular
-            local scriptPath
-            local typeName
-            if i <= #ENEMY_TYPE_SCRIPTS then
-                scriptPath = ENEMY_TYPE_SCRIPTS[i]
-                typeName = ENEMY_TYPE_NAMES[i]
-            else
-                scriptPath = "assets/scripts/EnemyScript.lua"
-                typeName = "Regular"
-            end
+            -- Assign enemy type: cycle through the 4 types via config
+            local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
+            local configType = ENEMY_TYPE_CONFIGS[typeIndex]
+            local typeName = ENEMY_TYPE_NAMES[typeIndex]
 
             Log("  Enemy " .. i .. " [" .. typeName .. "] at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
 
-            -- Attach enemy script (OnInit runs and sets stats/tint)
-            AddScriptComponentToEntity(enemyID, scriptPath)
+            -- Attach unified enemy script with config type
+            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
 
             -- Set target (C++ side)
             SetEnemyTarget(enemyID, playerID)
 
-            Log("  Enemy " .. enemyID .. " " .. typeName .. " script attached + target set to " .. tostring(playerID))
+            Log("  Enemy " .. enemyID .. " " .. typeName .. " (" .. configType .. ") script attached + target set to " .. tostring(playerID))
 
             table.insert(spawnedEnemies, enemyID)
         else

@@ -594,18 +594,33 @@ function SetupEnemies()
 
     print("[SetupEnemies] Step 3: Configuring " .. enemyCount .. " enemies...")
 
+    -- Enemy type configs for unified EnemyGeneric.lua
+    local ENEMY_TYPE_CONFIGS = {
+        "knight_commander",
+        "knight",
+        "mage",
+        "tank",
+    }
+    local ENEMY_TYPE_NAMES = {
+        "Knight Commander", "Knight", "Mage", "Tank"
+    }
+
     -- Configure each enemy
     for i, enemyID in ipairs(enemies) do
-        print("[SetupEnemies]   === Configuring Enemy " .. i .. " (Entity " .. enemyID .. ") ===")
+        local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
+        local configType = ENEMY_TYPE_CONFIGS[typeIndex]
+        local typeName = ENEMY_TYPE_NAMES[typeIndex]
+
+        print("[SetupEnemies]   === Configuring Enemy " .. i .. " [" .. typeName .. "] (Entity " .. enemyID .. ") ===")
 
         -- Set target
         print("[SetupEnemies]     Calling SetEnemyTarget(" .. enemyID .. ", " .. playerID .. ")...")
         local targetSuccess = SetEnemyTarget(enemyID, playerID)
         print("[SetupEnemies]     SetEnemyTarget result: " .. tostring(targetSuccess))
 
-        -- Attach enemy script
-        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", 'EnemyScript.lua')...")
-        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+        -- Attach unified enemy script with config type passed as 3rd parameter
+        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", '" .. typeName .. "' config=" .. configType .. ")...")
+        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
         print("[SetupEnemies]     AddScriptComponentToEntity result: " .. tostring(scriptSuccess))
 
         if targetSuccess and scriptSuccess then

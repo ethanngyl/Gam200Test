@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -67,6 +67,7 @@ Technology is prohibited.
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
 #include "MapGenerator/ProceduralMapLoader.h"
+#include "Skills/SkillComponent.h"  // SkillDatabase, SkillData
 #include <Windows.h>      // For GetTickCount64()    
 
 // Fix for Windows min/max macro conflicts
@@ -569,6 +570,7 @@ namespace Framework {
         else if (strcmp(keyName, "Escape") == 0) keyCode = KEY_ESCAPE;
         else if (strcmp(keyName, "Enter") == 0) keyCode = KEY_ENTER;
         else if (strcmp(keyName, "Shift") == 0) keyCode = KEY_SHIFT;
+        else if (strcmp(keyName, "Tab") == 0) keyCode = KEY_TAB;
 
         // Arrow keys
         else if (strcmp(keyName, "Up") == 0) keyCode = KEY_UP;
@@ -1825,6 +1827,53 @@ namespace Framework {
         return 0;
     }
 
+    /**
+     * @brief Get the damage modifier for an entity
+     * Lua usage: local mod = GetDamageModifier(entityID)
+     */
+    int LevelLoader::Lua_GetDamageModifier(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) { lua_pushinteger(L, 0); return 1; }
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) { lua_pushinteger(L, 0); return 1; }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Health>(entity)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& hp = em->GetComponent<Health>(entity);
+        lua_pushinteger(L, hp.damageModifier);
+        return 1;
+    }
+
+    /**
+     * @brief Set the damage modifier for an entity
+     * Lua usage: SetDamageModifier(entityID, modifier)
+     */
+    int LevelLoader::Lua_SetDamageModifier(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        int modifier = static_cast<int>(luaL_checknumber(L, 2));
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Health>(entity)) return 0;
+
+        auto& hp = em->GetComponent<Health>(entity);
+        hp.damageModifier = modifier;
+
+        LOG_INFO("LevelLoader", "SetDamageModifier: Entity %d damageModifier set to %d",
+                 entityID, modifier);
+        return 0;
+    }
+
     int LevelLoader::Lua_GetPlayerHP(lua_State* L)
     {
         LevelLoader* loader = GetLevelLoader(L);
@@ -2052,14 +2101,16 @@ namespace Framework {
      * @brief Add a ScriptComponent to an entity with specified script path
      * @param entityID (number) The entity ID to add component to
      * @param scriptPath (string) Path to the Lua script file
+     * @param configType (string, optional) Config type passed to the script as a global
      * @return true if successful
      *
-     * Usage: AddScriptComponentToEntity(entityID, "assets/scripts/PlayerScript.lua")
+     * Usage: AddScriptComponentToEntity(entityID, "assets/scripts/EnemyGeneric.lua", "mage")
      */
     int LevelLoader::Lua_AddScriptComponentToEntity(lua_State* L) {
         // Get parameters
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
         const char* scriptPath = luaL_checkstring(L, 2);
+        const char* configType = lua_isstring(L, 3) ? lua_tostring(L, 3) : nullptr;
 
         // Get entity manager
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
@@ -2086,8 +2137,12 @@ namespace Framework {
         // Add ScriptComponent
         auto& script = em->AddComponent<ScriptComponent>(entity);
         script.scriptPath = scriptPath;
+        if (configType) {
+            script.configType = configType;
+        }
 
-        LOG_INFO("LevelLoader", "Added ScriptComponent to entity %d: %s", entityID, scriptPath);
+        LOG_INFO("LevelLoader", "Added ScriptComponent to entity %d: %s (config: %s)",
+            entityID, scriptPath, configType ? configType : "none");
 
         lua_pushboolean(L, true);
         return 1;
@@ -3089,10 +3144,10 @@ namespace Framework {
      *
      * Status effect handling order:
      *   1. Guard   -> absorb all damage, consume effect, return
-     *   2. Knight's Oath -> redirect damage to the oath source (knight)
-     *   3. Vulnerable -> increase damage by extraData amount
-     *   4. Apply damage
-     *   5. Parry   -> deal original damage back to attacker, consume effect
+     *   2. Parry   -> reflect damage to attacker, target takes 0, return (requires attackerID)
+     *   3. Knight's Oath -> redirect damage to the oath source (knight)
+     *   4. Vulnerable -> increase damage by extraData amount
+     *   5. Apply damage
      *
      * Usage: DamageEntity(targetID, 1)
      *        DamageEntity(targetID, 1, attackerID)
@@ -3141,7 +3196,28 @@ namespace Framework {
                 return 1;
             }
 
-            // 2. Knight's Oath: redirect damage to the protecting knight
+            // 2. Parry: reflect damage to attacker, target takes NO damage (must have attackerID)
+            if (attackerID > 0 && effects.HasEffect("parry")) {
+                effects.RemoveEffect("parry");
+                Entity attacker(static_cast<uint32_t>(attackerID));
+                if (em->HasComponent<Health>(attacker)) {
+                    auto& attackerHP = em->GetComponent<Health>(attacker);
+                    attackerHP.currentHealth -= amount;
+                    LOG_INFO("StatusEffect", "PARRY! Entity %u reflects %d damage to attacker %u (target takes 0)",
+                        entity.GetID(), amount, attackerID);
+
+                    if (attackerHP.currentHealth <= 0) {
+                        attackerHP.currentHealth = 0;
+                        attackerHP.isDead = true;
+                        LOG_WARN("LevelLoader", "!!! Attacker %u DIED from parried damage !!!", attackerID);
+                        loader->DeferEntityDestruction(attackerID);
+                    }
+                }
+                lua_pushboolean(L, 1);
+                return 1;
+            }
+
+            // 4. Knight's Oath: redirect damage to the protecting knight
             const auto* oathEffect = effects.GetEffect("knightsOath");
             if (oathEffect) {
                 uint32_t knightID = oathEffect->sourceEntity;
@@ -3157,15 +3233,7 @@ namespace Framework {
                         knightHP.currentHealth = 0;
                         knightHP.isDead = true;
                         LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-
-                        if (em->HasComponent<Transform>(knight)) {
-                            auto& transform = em->GetComponent<Transform>(knight);
-                            auto tileOpt = Framework::WorldToTile(transform.position);
-                            if (tileOpt.has_value()) {
-                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                            }
-                        }
-                        em->DestroyEntity(knight);
+                        loader->DeferEntityDestruction(knightID);
                     }
 
                     lua_pushboolean(L, 1);
@@ -3173,7 +3241,7 @@ namespace Framework {
                 }
             }
 
-            // 3. Vulnerable: increase incoming damage
+            // 5. Vulnerable: increase incoming damage
             const auto* vulnEffect = effects.GetEffect("vulnerable");
             if (vulnEffect) {
                 int extraDmg = vulnEffect->extraData;
@@ -3182,7 +3250,7 @@ namespace Framework {
                 amount += extraDmg;
             }
 
-            // 4. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
+            // 6. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
             const auto* reductionEffect = effects.GetEffect("damageReduction");
             if (reductionEffect) {
                 int reduction = reductionEffect->extraData;
@@ -3191,45 +3259,68 @@ namespace Framework {
                 amount -= reduction;
                 if (amount < 0) amount = 0;
             }
+
+            // 5. Futile Resistance: if attacker has <40% HP, reduce damage by 1
+            if (effects.HasEffect("futileResistance") && attackerID > 0) {
+                Entity attacker(static_cast<uint32_t>(attackerID));
+                if (em->HasComponent<Health>(attacker)) {
+                    auto& attackerHP = em->GetComponent<Health>(attacker);
+                    float hpPercent = static_cast<float>(attackerHP.currentHealth) / static_cast<float>(attackerHP.maxHealth);
+                    if (hpPercent < 0.4f) {
+                        LOG_INFO("StatusEffect", "Futile Resistance: attacker %u HP %.0f%% < 40%%, reducing damage by 1",
+                            attackerID, hpPercent * 100.0f);
+                        amount -= 1;
+                        if (amount < 0) amount = 0;
+                    }
+                }
+            }
+        }
+
+        // === ATTACKER DAMAGE MODIFIER (e.g., Knight Commander's Bolstered Morale) ===
+        // The damageModifier on the ATTACKER increases outgoing damage
+
+        if (attackerID > 0) {
+            Entity attacker(static_cast<uint32_t>(attackerID));
+            if (em->HasComponent<Health>(attacker)) {
+                auto& attackerHealth = em->GetComponent<Health>(attacker);
+                if (attackerHealth.damageModifier != 0) {
+                    LOG_INFO("StatusEffect", "Attacker %u has damageModifier=%d, base damage=%d",
+                        attacker.GetID(), attackerHealth.damageModifier, amount);
+                    amount += attackerHealth.damageModifier;
+                    if (amount < 0) amount = 0;
+                }
+            }
+        }
+
+        // === TARGET DAMAGE MODIFIER (legacy: modifier on the target entity) ===
+
+        auto& health = em->GetComponent<Health>(entity);
+        if (health.damageModifier != 0) {
+            LOG_INFO("StatusEffect", "Target %u has damageModifier=%d, base damage=%d",
+                entity.GetID(), health.damageModifier, amount);
+            amount += health.damageModifier;
+            if (amount < 0) amount = 0;
         }
 
         // === APPLY DAMAGE ===
 
-        auto& health = em->GetComponent<Health>(entity);
         int prevHP = health.currentHealth;
         health.currentHealth -= amount;
 
         LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
             entity.GetID(), amount, prevHP, health.currentHealth);
 
-        // === PARRY CHECK (after damage is applied) ===
-
-        if (attackerID > 0 && em->HasComponent<StatusEffects>(entity)) {
+        // === DARK OMENS CHECK (prevent lethal damage) - from teammate ===
+        if (health.currentHealth <= 0 && em->HasComponent<StatusEffects>(entity)) {
             auto& effects = em->GetComponent<StatusEffects>(entity);
-            if (effects.HasEffect("parry")) {
-                effects.RemoveEffect("parry");
-                Entity attacker(static_cast<uint32_t>(attackerID));
-                if (em->HasComponent<Health>(attacker)) {
-                    auto& attackerHP = em->GetComponent<Health>(attacker);
-                    attackerHP.currentHealth -= amount;
-                    LOG_INFO("StatusEffect", "PARRY! Entity %u reflects %d damage back to attacker %u",
-                        entity.GetID(), amount, attackerID);
-
-                    if (attackerHP.currentHealth <= 0) {
-                        attackerHP.currentHealth = 0;
-                        attackerHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Attacker %u DIED from parried damage !!!", attackerID);
-
-                        if (em->HasComponent<Transform>(attacker)) {
-                            auto& transform = em->GetComponent<Transform>(attacker);
-                            auto tileOpt = Framework::WorldToTile(transform.position);
-                            if (tileOpt.has_value()) {
-                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                            }
-                        }
-                        em->DestroyEntity(attacker);
-                    }
-                }
+            if (effects.HasEffect("darkOmens")) {
+                health.currentHealth = 1;
+                effects.RemoveEffect("darkOmens");
+                effects.AddEffect("darkOmensTriggered", 2, 0, 0, 0);
+                LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered applied",
+                    entity.GetID());
+                lua_pushboolean(L, 1);
+                return 1;
             }
         }
 
@@ -3345,6 +3436,41 @@ namespace Framework {
     // ========================================================================
     // GRID CONVERSION API
     // ========================================================================
+
+    /**
+     * @brief Convert screen coordinates to grid tile (for mouse target selection)
+     * @param screenX Screen X (from GetMousePosition)
+     * @param screenY Screen Y (from GetMousePosition)
+     * @param useViewportCoords Optional: use ImGui viewport coords (default false)
+     * @return tileX, tileY (two numbers, or nil,nil if out of bounds)
+     *
+     * Usage: local mx, my = GetMousePosition(); local tx, ty = ScreenToTile(mx, my)
+     */
+    int LevelLoader::Lua_ScreenToTile(lua_State* L) {
+        float screenX = static_cast<float>(luaL_checknumber(L, 1));
+        float screenY = static_cast<float>(luaL_checknumber(L, 2));
+        bool useViewportCoords = lua_toboolean(L, 3) != 0;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->uiSystem) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        Framework::Vector2D worldPos = loader->uiSystem->ScreenToWorld(screenX, screenY, useViewportCoords);
+        auto tileOpt = Framework::WorldToTile(worldPos);
+
+        if (!tileOpt || !Framework::InBounds(*tileOpt)) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        lua_pushinteger(L, tileOpt->x);
+        lua_pushinteger(L, tileOpt->y);
+        return 2;
+    }
 
     /**
      * @brief Convert grid tile coordinates to world position
@@ -5114,6 +5240,8 @@ namespace Framework {
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,0,0,1, "")
      *   -- with enemy projectile flag (arg 13) and source entity (arg 14):
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 1, false, r,g,b,a, "", true, sourceID)
+     *   -- with max range in tiles (arg 15) and line-only (arg 16) for Fireball:
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 5, false, 1,1,1,1, "", false, 0, 5, true)
      */
     int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
@@ -5142,6 +5270,9 @@ namespace Framework {
 
         // Optional explosion VFX flag (arg 15, default false)
         bool spawnExplosionOnHit = lua_toboolean(L, 15) != 0;
+        // Optional max range in tiles (arg 15, 0=unlimited) and line-only (arg 16) for Fireball
+        int maxRangeTiles = static_cast<int>(luaL_optinteger(L, 15, 0));
+        bool lineOnly = lua_toboolean(L, 16) != 0;
 
         // Normalize direction
         float len = std::sqrt(dirX * dirX + dirY * dirY);
@@ -5176,6 +5307,9 @@ namespace Framework {
             movement.isEnemyProjectile = isEnemyProjectile;
             movement.sourceEntityID = sourceEntityID;
             movement.spawnExplosionOnHit = spawnExplosionOnHit;
+            movement.spawnPosition = Vector2D(worldX, worldY);
+            movement.maxRangeTiles = maxRangeTiles;
+            movement.lineOnly = lineOnly;
         }
 
         lua_pushinteger(L, projectile.GetID());
@@ -5366,6 +5500,131 @@ namespace Framework {
         else {
             lua_pushnil(L);
         }
+        return 1;
+    }
+
+    // ========================================================================
+    // UNIFIED SKILL DATABASE API
+    // ========================================================================
+
+    // Helper: push a SkillData as a Lua table onto the stack
+    static void PushSkillDataToLua(lua_State* L, const SkillData& skill) {
+        lua_newtable(L);
+
+        lua_pushinteger(L, skill.skillID);          lua_setfield(L, -2, "skillID");
+        lua_pushstring(L, skill.skillName.c_str());  lua_setfield(L, -2, "name");
+        lua_pushstring(L, skill.description.c_str()); lua_setfield(L, -2, "description");
+        lua_pushinteger(L, skill.apCost);            lua_setfield(L, -2, "apCost");
+        lua_pushinteger(L, skill.cooldown);          lua_setfield(L, -2, "cooldownMax");
+        lua_pushinteger(L, skill.damage);            lua_setfield(L, -2, "damage");
+        lua_pushnumber(L, skill.damageMultiplier);   lua_setfield(L, -2, "damageMultiplier");
+        lua_pushinteger(L, skill.range);             lua_setfield(L, -2, "range");
+        lua_pushinteger(L, skill.areaSize);          lua_setfield(L, -2, "areaSize");
+        lua_pushstring(L, skill.skillType.c_str());  lua_setfield(L, -2, "type");
+        lua_pushboolean(L, skill.multiAttack);       lua_setfield(L, -2, "multiAttack");
+        lua_pushboolean(L, skill.requiresLineOfSight); lua_setfield(L, -2, "requiresLineOfSight");
+        lua_pushinteger(L, skill.preferredDistance);  lua_setfield(L, -2, "preferredDistance");
+        lua_pushnumber(L, skill.projectileSpeed);    lua_setfield(L, -2, "projectileSpeed");
+        lua_pushstring(L, skill.statusEffect.c_str()); lua_setfield(L, -2, "statusEffect");
+        lua_pushinteger(L, skill.statusDuration);    lua_setfield(L, -2, "statusDuration");
+        lua_pushstring(L, skill.summonConfig.c_str()); lua_setfield(L, -2, "summonConfig");
+        lua_pushinteger(L, skill.summonDeathThreshold); lua_setfield(L, -2, "summonDeathThreshold");
+        lua_pushstring(L, skill.condition.c_str());  lua_setfield(L, -2, "condition");
+        lua_pushnumber(L, skill.conditionThreshold); lua_setfield(L, -2, "conditionThreshold");
+        lua_pushboolean(L, skill.targetSelfIfNoAlly); lua_setfield(L, -2, "targetSelfIfNoAlly");
+        lua_pushstring(L, skill.iconPath.c_str());   lua_setfield(L, -2, "iconPath");
+        lua_pushstring(L, skill.animationName.c_str()); lua_setfield(L, -2, "animationName");
+
+        // Target type as string
+        const char* targetStr = "none";
+        switch (skill.targetType) {
+            case SkillTargetType::Self: targetStr = "self"; break;
+            case SkillTargetType::SingleEnemy: targetStr = "single_enemy"; break;
+            case SkillTargetType::AllEnemies: targetStr = "all_enemies"; break;
+            case SkillTargetType::SingleAlly: targetStr = "single_ally"; break;
+            case SkillTargetType::AllAllies: targetStr = "all_allies"; break;
+            case SkillTargetType::Area: targetStr = "area"; break;
+            default: break;
+        }
+        lua_pushstring(L, targetStr); lua_setfield(L, -2, "targetType");
+
+        // Effect type as string
+        const char* effectStr = "none";
+        switch (skill.effectType) {
+            case SkillEffectType::Physical: effectStr = "physical"; break;
+            case SkillEffectType::Magical: effectStr = "magical"; break;
+            case SkillEffectType::Healing: effectStr = "healing"; break;
+            case SkillEffectType::Buff: effectStr = "buff"; break;
+            case SkillEffectType::Debuff: effectStr = "debuff"; break;
+            case SkillEffectType::Utility: effectStr = "utility"; break;
+            default: break;
+        }
+        lua_pushstring(L, effectStr); lua_setfield(L, -2, "effectType");
+
+        // Owner class as string
+        lua_pushstring(L, SkillDatabase::GetClassName(skill.ownerClass));
+        lua_setfield(L, -2, "ownerClass");
+    }
+
+    // Helper: convert class name string to CharacterClass enum
+    static CharacterClass ClassNameToEnum(const std::string& name) {
+        if (name == "Swordmaster") return CharacterClass::Swordmaster;
+        if (name == "Magus") return CharacterClass::Magus;
+        if (name == "Berserker") return CharacterClass::Berserker;
+        if (name == "EnemyKnight") return CharacterClass::EnemyKnight;
+        if (name == "EnemyMage") return CharacterClass::EnemyMage;
+        if (name == "EnemyTank") return CharacterClass::EnemyTank;
+        if (name == "EnemyKnightCommander") return CharacterClass::EnemyKnightCommander;
+        return CharacterClass::None;
+    }
+
+    /**
+     * Lua: GetSkillByID(skillID) -> table or nil
+     * Returns a table with all skill properties, or nil if not found.
+     */
+    int LevelLoader::Lua_GetSkillByID(lua_State* L) {
+        int skillID = static_cast<int>(luaL_checkinteger(L, 1));
+        const SkillData* skill = SkillDatabase::GetInstance().GetSkillByID(skillID);
+        if (skill) {
+            PushSkillDataToLua(L, *skill);
+        } else {
+            lua_pushnil(L);
+        }
+        return 1;
+    }
+
+    /**
+     * Lua: GetClassSkills(className) -> table of skill tables
+     * className: "Swordmaster", "Magus", "Berserker", "EnemyKnight", "EnemyMage", etc.
+     */
+    int LevelLoader::Lua_GetClassSkills(lua_State* L) {
+        const char* className = luaL_checkstring(L, 1);
+        CharacterClass charClass = ClassNameToEnum(className);
+        if (charClass == CharacterClass::None) {
+            lua_newtable(L);  // Return empty table
+            return 1;
+        }
+
+        const auto& skills = SkillDatabase::GetInstance().GetClassSkills(charClass);
+        lua_newtable(L);
+        for (size_t i = 0; i < skills.size(); ++i) {
+            PushSkillDataToLua(L, skills[i]);
+            lua_rawseti(L, -2, static_cast<int>(i + 1));
+        }
+        return 1;
+    }
+
+    /**
+     * Lua: GetSkillCount(className) -> int
+     */
+    int LevelLoader::Lua_GetSkillCount(lua_State* L) {
+        const char* className = luaL_checkstring(L, 1);
+        CharacterClass charClass = ClassNameToEnum(className);
+        if (charClass == CharacterClass::None) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+        lua_pushinteger(L, SkillDatabase::GetInstance().GetSkillCount(charClass));
         return 1;
     }
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -27,6 +27,7 @@
 #include "Precompiled.h"
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
+#include "Script/LevelLoader.h"
 #include "Collision/Quadtree.h"
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
@@ -97,6 +98,20 @@ namespace Framework
                 }
                 else {
                     transform.position -= movement.direction * movement.moveSpeed * dt;
+                }
+
+                // Check max range (Fireball: 5 tiles) - use grid distance, not world units
+                if (movement.maxRangeTiles > 0) {
+                    auto spawnTile = WorldToTile(movement.spawnPosition);
+                    auto currTile = WorldToTile(transform.position);
+                    if (spawnTile.has_value() && currTile.has_value()) {
+                        int dx = std::abs(currTile->x - spawnTile->x);
+                        int dy = std::abs(currTile->y - spawnTile->y);
+                        int tileDist = (dx > dy) ? dx : dy;  // Chebyshev: max(dx,dy)
+                        if (tileDist >= movement.maxRangeTiles) {
+                            offScreenToDestroy.push_back(entity);
+                        }
+                    }
                 }
 
                 // Check if projectile hit a wall (blocked tile or out-of-bounds)
@@ -283,7 +298,18 @@ namespace Framework
                     if (check_collision(projShape, playerShape))
                     {
                         const int damageDealt = projMovement.damage;
-                        playerHealth.TakeDamage(damageDealt);
+                        uint32_t attackerID = projMovement.sourceEntityID;
+
+                        auto& levelLoader = LevelLoader::GetInstance();
+                        if (levelLoader.IsLevelLoaded() &&
+                            levelLoader.ApplyDamageToEntity(player.GetID(), damageDealt, attackerID))
+                        {
+                            // Damage handled by Lua (Parry, Guard, etc.)
+                        }
+                        else
+                        {
+                            playerHealth.TakeDamage(damageDealt);
+                        }
 
                         std::cout << "[ProjectileSystem] Enemy projectile hit Player " << player.GetID()
                             << " for " << damageDealt << " damage! HP=" << playerHealth.currentHealth << "\n";
@@ -336,13 +362,52 @@ namespace Framework
 
                 if (check_collision(projShape, enemyShape))
                 {
-                    // Use configurable damage from the projectile component
+                    // Line-only (Fireball): enemy must be on the line from spawn to projectile
+                    if (projMovement.lineOnly) {
+                        bool onLine = false;
+                        const Vector2D S = projMovement.spawnPosition;
+                        const Vector2D P = projTransform.position;
+                        const Vector2D E = enemyTransform.position;
+                        Vector2D SP(P.x - S.x, P.y - S.y);
+                        float lenSq = SP.x * SP.x + SP.y * SP.y;
+                        if (lenSq >= 0.0001f) {
+                            Vector2D SE(E.x - S.x, E.y - S.y);
+                            float t = (SE.x * SP.x + SE.y * SP.y) / lenSq;
+                            if (t >= -0.1f) {
+                                Vector2D closest(S.x + t * SP.x, S.y + t * SP.y);
+                                float dx = E.x - closest.x, dy = E.y - closest.y;
+                                float distSq = dx * dx + dy * dy;
+                                const Grid& g = GetGrid();
+                                float tileSize = (g.spacing.x + g.spacing.y) * 0.5f;
+                                if (tileSize <= 0.0f) tileSize = 1.0f;
+                                float tol = 0.45f * tileSize;
+                                onLine = (distSq <= tol * tol);
+                            }
+                        }
+                        if (!onLine) continue;
+                    }
+
                     const int damageDealt = projMovement.damage;
-                    enemyHealth.TakeDamage(damageDealt);
+                    const auto hitPos = enemyTransform.position;
+
+                    // Use full damage pipeline (DamageEntity) for Soul Rend, status effects, etc.
+                    bool success = false;
+                    if (Framework::LevelLoader::GetInstance().IsLevelLoaded()) {
+                        success = Framework::LevelLoader::GetInstance().ApplyProjectileDamageToEnemy(
+                            enemy.GetID(), damageDealt, projMovement.sourceEntityID);
+                    }
+                    if (!success) {
+                        enemyHealth.TakeDamage(damageDealt);
+                    }
+
+                    int hpAfter = 0;
+                    if (entityManager->HasComponent<Health>(enemy)) {
+                        hpAfter = entityManager->GetComponent<Health>(enemy).currentHealth;
+                    }
 
                     if (eventSystem) {
                         eventSystem->QueueMessage(new EnemyDamagedMessage(
-                            enemy, projectile, damageDealt, enemyHealth.currentHealth, enemyTransform.position));
+                            enemy, projectile, damageDealt, hpAfter, hitPos));
                     }
 
                     // =============================================
@@ -393,18 +458,17 @@ namespace Framework
                     {
                         if (eventSystem) {
                             eventSystem->QueueMessage(new EnemyDeathMessage(
-                                enemy, projectile, enemyTransform.position));
+                                enemy, projectile, hitPos));
                         }
-                        entitiesToDestroy.push_back(enemy);
+                        if (entityManager->HasComponent<Transform>(enemy)) {
+                            entitiesToDestroy.push_back(enemy);
+                        }
                     }
 
-                    // Pierce: projectile continues through enemies
-                    // Non-pierce: projectile destroyed on first hit
                     if (!projMovement.pierce) {
                         entitiesToDestroy.push_back(projectile);
                         break;
                     }
-                    // If piercing, continue checking next enemies (don't break)
                 }
             }
 
