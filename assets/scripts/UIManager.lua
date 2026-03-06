@@ -192,9 +192,9 @@ function UIManager.Init(config)
     UIManager.components.skillBubbleHolder = SkillBubbleHolderUI:New()
     UIManager.components.skillBubbleHolder:Init({
         offsetX = 0.82,
-        offsetY = -0.35,
+        offsetY = -0.15,
         scaleX = 0.15,
-        scaleY = 0.15,
+        scaleY = 0.55,
         layer = 4,
         texture = "assets/new assets/skill_bubble_holder.png"
     })
@@ -243,9 +243,8 @@ function UIManager.Update(dt)
     if UIManager.components.health then
         UIManager.components.health:SetEnabled(not isEnemyTurn)  -- Always enabled
     end
-    if UIManager.components.skillBubbleHolder then
-        UIManager.components.skillBubbleHolder:SetEnabled(not isEnemyTurn)
-    end
+    -- Keep skill bubble holder visible during enemy turn
+    -- so players can still see skill info
 
     -- Update all components
     for name, component in pairs(UIManager.components) do
