@@ -243,9 +243,8 @@ function UIManager.Update(dt)
     if UIManager.components.health then
         UIManager.components.health:SetEnabled(not isEnemyTurn)  -- Always enabled
     end
-    if UIManager.components.skillBubbleHolder then
-        UIManager.components.skillBubbleHolder:SetEnabled(not isEnemyTurn)
-    end
+    -- Keep skill bubble holder visible during enemy turn
+    -- so players can still see skill info
 
     -- Update all components
     for name, component in pairs(UIManager.components) do
