@@ -355,6 +355,9 @@ namespace Framework {
         static int Lua_GetClassSkills(lua_State* L);       // GetClassSkills(className) -> table of skill tables
         static int Lua_GetSkillCount(lua_State* L);        // GetSkillCount(className) -> int
 
+        // Particle Emitter API
+        static int Lua_SpawnParticleEmitter(lua_State* L);  // SpawnParticleEmitter(x, y, emitRadius, rate, duration, r, g, b, a) -> entityID
+
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

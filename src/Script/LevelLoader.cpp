@@ -752,6 +752,9 @@ namespace Framework {
         lua_register(L, "GetClassSkills", Lua_GetClassSkills);
         lua_register(L, "GetSkillCount", Lua_GetSkillCount);
 
+        // Particle Emitter API
+        lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
+
         LOG_INFO("LevelLoader", "API registered");
     }
 

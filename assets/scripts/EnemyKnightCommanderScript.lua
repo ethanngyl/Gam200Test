@@ -194,11 +194,25 @@ end
 local function ApplyBolsteredMorale()
     local enemies = GetAllEnemies()
     if not enemies then return end
+    _G.BolsteredMoraleParticles = _G.BolsteredMoraleParticles or {}
     for _, eid in ipairs(enemies) do
         if eid ~= entityID then
             local current = GetDamageModifier(eid) or 0
             SetDamageModifier(eid, current + 1)
             print("[KnightCommander " .. entityID .. "] Bolstered Morale: +1 damageModifier on enemy " .. eid)
+
+            -- Spawn yellow particle emitter around the buffed enemy
+            if SpawnParticleEmitter then
+                local wx, wy = GetEntityWorldPosition(eid)
+                if wx and wy then
+                    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0)
+                    if emitterID and emitterID > 0 then
+                        local key = entityID .. "_" .. eid
+                        _G.BolsteredMoraleParticles[key] = emitterID
+                        print("[KnightCommander " .. entityID .. "] Spawned morale particles (entity " .. emitterID .. ") on enemy " .. eid)
+                    end
+                end
+            end
         end
     end
 end
@@ -213,6 +227,17 @@ local function RemoveBolsteredMorale()
             local newVal = current - 1
             if newVal < 0 then newVal = 0 end
             SetDamageModifier(eid, newVal)
+
+            -- Remove particle emitter for this enemy
+            if _G.BolsteredMoraleParticles and DestroyEntity then
+                local key = entityID .. "_" .. eid
+                local emitterID = _G.BolsteredMoraleParticles[key]
+                if emitterID and emitterID > 0 then
+                    DestroyEntity(emitterID)
+                    _G.BolsteredMoraleParticles[key] = nil
+                    print("[KnightCommander " .. entityID .. "] Removed morale particles from enemy " .. eid)
+                end
+            end
         end
     end
 end
@@ -348,6 +373,19 @@ end
 
 function OnUpdate(dt)
     UpdateHealthBar()
+
+    -- Update Bolstered Morale particle positions to follow this enemy
+    if _G.BolsteredMoraleParticles and SetSpritePosition then
+        local wx, wy = GetEntityWorldPosition(entityID)
+        if wx and wy then
+            for key, emitterID in pairs(_G.BolsteredMoraleParticles) do
+                local targetID = key:match("_(%d+)$")
+                if targetID and tonumber(targetID) == entityID then
+                    SetSpritePosition(emitterID, wx, wy)
+                end
+            end
+        end
+    end
 
     local currentTurn = GetCurrentTurn()
 
