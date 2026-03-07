@@ -256,6 +256,12 @@ local lastActiveState = false
 -- Cached player index (1, 2, or 3)
 local myPlayerIndex = nil
 
+-- Global particle tracking for skill effects
+-- Keys: "effectName_entityID" -> emitterID
+if not _G.EffectParticles then
+    _G.EffectParticles = {}
+end
+
 -- Global registry so UI accessors can find the active player's data
 if not _G._playerRegistry then
     _G._playerRegistry = {}
@@ -459,6 +465,8 @@ local function createPlayerStates(fsm)
                 end
                 if HasStatusEffect and HasStatusEffect(entityID, "darkOmensTriggered") then
                     darkOmensSkillsRemaining = 2
+                    -- Spawn purple particles for triggered state (darkOmens particles auto-cleaned)
+                    spawnEffectParticles(entityID, "darkOmensTriggered", 0.6, 0.0, 0.8)
                     print("[PlayerScript] Dark Omens Triggered: 2 free skills this turn, then death")
                 end
                 if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
@@ -1085,6 +1093,11 @@ function OnUpdate(dt)
     end
     
     -- ========================================================================
+    -- EFFECT PARTICLE CLEANUP: remove particles for expired status effects
+    -- ========================================================================
+    cleanupEffectParticles()
+
+    -- ========================================================================
     -- DEATH CHECK: Stop processing if entity is dead
     -- ========================================================================
 
@@ -1613,6 +1626,49 @@ local function faceToward(targetX, targetY)
     end
 end
 
+-- Helper: spawn particle emitter on an entity for a status effect
+local function spawnEffectParticles(targetID, effectName, r, g, b)
+    if not SpawnParticleEmitter then return end
+    local wx, wy = GetEntityWorldPosition(targetID)
+    if not wx or not wy then return end
+    _G.EffectParticles = _G.EffectParticles or {}
+    local key = effectName .. "_" .. targetID
+    if _G.EffectParticles[key] then return end  -- don't double-spawn
+    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
+    if emitterID and emitterID > 0 then
+        _G.EffectParticles[key] = emitterID
+        print("[PlayerScript] Spawned " .. effectName .. " particles on entity " .. targetID)
+    end
+end
+
+-- Helper: remove particle emitter for a specific effect on an entity
+local function removeEffectParticles(targetID, effectName)
+    if not _G.EffectParticles then return end
+    local key = effectName .. "_" .. targetID
+    local emitterID = _G.EffectParticles[key]
+    if emitterID and emitterID > 0 and DestroyEntity then
+        pcall(DestroyEntity, emitterID)
+        _G.EffectParticles[key] = nil
+        print("[PlayerScript] Removed " .. effectName .. " particles from entity " .. targetID)
+    end
+end
+
+-- Helper: cleanup all effect particles where the status effect has expired
+local function cleanupEffectParticles()
+    if not _G.EffectParticles or not HasStatusEffect then return end
+    for key, emitterID in pairs(_G.EffectParticles) do
+        local effectName, targetIDStr = key:match("^(.+)_(%d+)$")
+        local targetID = tonumber(targetIDStr)
+        if targetID and effectName then
+            local stillHasEffect = HasStatusEffect(targetID, effectName)
+            if not stillHasEffect then
+                if DestroyEntity then pcall(DestroyEntity, emitterID) end
+                _G.EffectParticles[key] = nil
+            end
+        end
+    end
+end
+
 -- Execute any skill based on its skillType
 -- Helper: heal a specific entity by amount (capped at max HP)
 local function healEntity(targetID, amount)
@@ -1763,6 +1819,7 @@ function ExecuteSkill(skillID)
         -- Dark Omens: mark as used this level
         if skill.effect == "darkOmens" then
             darkOmensUsedThisLevel = true
+            spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
         end
 
         -- Siphon Charge: activate for next attack
@@ -1777,9 +1834,12 @@ function ExecuteSkill(skillID)
                 for _, pid in ipairs(allPlayers) do
                     if pid ~= entityID then
                         ApplyStatusEffect(pid, "bloodyWarcry", skill.duration, entityID)
+                        spawnEffectParticles(pid, "bloodyWarcry", 1.0, 0.0, 0.0)
                     end
                 end
             end
+            -- Red particles on self too
+            spawnEffectParticles(entityID, "bloodyWarcry", 1.0, 0.0, 0.0)
             print("[PlayerScript] Bloody Warcry: applied to all party members")
         end
 
@@ -1983,6 +2043,11 @@ function ExecuteSkill(skillID)
             -- 5. +1 Attack AP (add to current; PartyTurnManager handles future turns)
             ConsumeEntityAttackAP(allyID, -1)
 
+            -- Spawn white particles on sacrificed unit
+            spawnEffectParticles(entityID, "soulMerge", 1.0, 1.0, 1.0)
+            -- Spawn white particles on buffed ally
+            spawnEffectParticles(allyID, "soulMergeBuff", 1.0, 1.0, 1.0)
+
             consumeAttackAPAndAnimate(skill.apCost)
             print("[PlayerScript] Soul Merge: " .. entityID .. " sacrificed for ally " .. allyID)
             playAttackAnimation()
@@ -2087,6 +2152,7 @@ function ExecuteSkill(skillID)
         ConsumeEntityAttackAP(entityID, -apGain)
         -- Apply overload: next turn AP won't refill
         ApplyStatusEffect(entityID, "overload", 1, entityID)
+        spawnEffectParticles(entityID, "overload", 0.0, 0.4, 1.0)
         if skill.apCost > 0 then
             consumeAttackAPAndAnimate(skill.apCost)
         end
@@ -2113,6 +2179,13 @@ function ExecuteSkill(skillID)
         ApplyStatusEffect(targetID, skill.effect, skill.effectDuration, entityID, 0, extra)
         if ex and ey then
             PulseTile(ex, ey, 0.5, 0.8, 0.3, 1.0)  -- purple pulse for debuff
+        end
+
+        -- Spawn colored particles based on the effect type
+        if skill.effect == "earthenBind" then
+            spawnEffectParticles(targetID, "earthenBind", 0.55, 0.35, 0.15)  -- brown
+        elseif skill.effect == "soulRend" then
+            spawnEffectParticles(targetID, "soulRend", 0.0, 0.8, 0.2)  -- green
         end
 
         -- Apply damage if any
