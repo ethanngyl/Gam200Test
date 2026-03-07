@@ -42,7 +42,6 @@
 #include <queue>
 #include <algorithm>
 #include "GlobalPauseManager.h"
-#include "TagHelper.h"
 
 
 namespace Framework {
@@ -108,8 +107,7 @@ namespace Framework {
         // Regenerate AP for all enemies at the start of a new enemy turn
         if (globalTurn.turnIndex > lastEnemyTurnIndex) {
             for (Entity entity : entityManager->GetAllEntities()) {
-                if (entityManager->HasComponent<TagComponent>(entity) &&
-                    entityManager->GetComponent<TagComponent>(entity).tag == "Enemy" &&
+                if (entityManager->HasComponent<EnemyAI>(entity) &&
                     entityManager->HasComponent<Health>(entity) &&
                     entityManager->HasComponent<AP>(entity)) {
                     auto& hp = entityManager->GetComponent<Health>(entity);
