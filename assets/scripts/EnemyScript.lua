@@ -103,6 +103,10 @@ local moveTimer = 0.0           -- Timer for next move
 local moveDelay = 0.55           -- Delay between moves in seconds (0.3s = visible movement)
 local movesThisTurn = 0         -- Track how many moves made this turn
 
+-- Safety: track how long this enemy has been active to detect stuck state
+local activeTimer = 0.0         -- Time spent as active enemy this turn
+local maxActiveTime = 8.0       -- Max seconds before force-finishing turn
+
 -- Smooth glide state (lerps sprite between tiles)
 local glideActive = false
 local glideElapsed = 0.0
@@ -112,6 +116,14 @@ local glideStartY = 0.0
 local glideEndX = 0.0
 local glideEndY = 0.0
 local pendingFinishAfterGlide = false  -- When true, FinishEnemyAction() is called after glide ends
+
+-- Health bar state
+local healthBarBG = nil        -- Background bar entity (dark)
+local healthBarFG = nil        -- Foreground bar entity (colored)
+local healthBarWidth = 0.1     -- Total bar width in world units
+local healthBarHeight = 0.02  -- Bar height in world units
+local healthBarOffsetY = 0.05  -- How far above enemy center
+local healthBarLayer = 4       -- Render layer (above entities, below UI)
 
 -- ============================================================================
 -- ENEMY ANIMATION (manual sprite sheet switching)
@@ -252,9 +264,68 @@ function OnInit()
     else
         Log("[EnemyScript] WARNING: Enemy " .. entityID .. " could not find player")
     end
+
+    -- Spawn health bar sprites above enemy
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if wx and wy then
+        local barY = wy + healthBarOffsetY
+        -- Background (dark gray)
+        healthBarBG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer)
+        if healthBarBG and healthBarBG > 0 then
+            SetSpriteColor(healthBarBG, 0.15, 0.15, 0.15, 0.85)
+        end
+        -- Foreground (green, drawn on top)
+        healthBarFG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer + 1)
+        if healthBarFG and healthBarFG > 0 then
+            SetSpriteColor(healthBarFG, 0.0, 0.85, 0.0, 1.0)
+        end
+        Log("[EnemyScript] Enemy " .. entityID .. " health bar spawned (BG=" .. tostring(healthBarBG) .. " FG=" .. tostring(healthBarFG) .. ")")
+    end
+end
+
+-- Update health bar position and fill based on current HP
+local function UpdateHealthBar()
+    if not healthBarBG or not healthBarFG then return end
+    if healthBarBG <= 0 or healthBarFG <= 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if not wx or not wy then return end
+
+    local barY = wy + healthBarOffsetY
+
+    -- Position background (always full width, centered on enemy)
+    SetSpritePosition(healthBarBG, wx, barY)
+
+    -- Get HP ratio
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or not maxHP or maxHP <= 0 then return end
+
+    local ratio = currentHP / maxHP
+    if ratio < 0 then ratio = 0 end
+    if ratio > 1 then ratio = 1 end
+
+    -- Scale foreground width by HP ratio, offset to align left edges
+    local fgWidth = healthBarWidth * ratio
+    local fgX = wx - (healthBarWidth - fgWidth) * 0.5
+    SetSpritePosition(healthBarFG, fgX, barY)
+    SetScale(healthBarFG, fgWidth, healthBarHeight)
+
+    -- Color: green -> yellow -> red based on HP
+    local r, g, b = 0.0, 0.85, 0.0
+    if ratio <= 0.25 then
+        r, g, b = 0.9, 0.1, 0.1       -- red
+    elseif ratio <= 0.5 then
+        r, g, b = 0.95, 0.65, 0.0      -- orange
+    elseif ratio <= 0.75 then
+        r, g, b = 0.95, 0.95, 0.0      -- yellow
+    end
+    SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
 function OnUpdate(dt)
+    -- Update health bar every frame (runs regardless of turn)
+    UpdateHealthBar()
+
     -- Enemy AI only runs during enemy turn
     local currentTurn = GetCurrentTurn()
 
@@ -272,6 +343,7 @@ function OnUpdate(dt)
             isMyTurnToAct = false
             moveTimer = 0.0
             movesThisTurn = 0
+            activeTimer = 0.0
             -- Snap glide to end position if interrupted by turn change
             if glideActive then
                 SetSpritePosition(entityID, glideEndX, glideEndY)
@@ -361,6 +433,33 @@ function OnUpdate(dt)
         return
     end
 
+    -- Check if this enemy is stunned
+    if HasStatusEffect and HasStatusEffect(entityID, "stun") then
+        print("[Enemy " .. entityID .. "] STUNNED - skipping turn")
+        DecrementStatusEffects(entityID)
+        FinishEnemyAction()
+        return
+    end
+
+    -- Earthen Bind: consume extra AP to reduce movement this turn
+    if HasStatusEffect and HasStatusEffect(entityID, "earthenBind") then
+        local reduction = 2  -- movement points reduced
+        ConsumeEnemyAP(entityID, reduction)
+        print("[Enemy " .. entityID .. "] EARTHEN BIND - movement AP reduced by " .. reduction)
+    end
+
+    -- Mana Drain: consume AP to reduce available actions this turn
+    if HasStatusEffect and HasStatusEffect(entityID, "manaDrain") then
+        local reduction = 1
+        ConsumeEnemyAP(entityID, reduction)
+        print("[Enemy " .. entityID .. "] MANA DRAIN - AP reduced by " .. reduction)
+    end
+
+    -- Decrement status effects at turn start (vulnerability, earthenBind, manaDrain, etc.)
+    if DecrementStatusEffects then
+        DecrementStatusEffects(entityID)
+    end
+
     -- Update move timer
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
@@ -372,10 +471,19 @@ function OnUpdate(dt)
 
     
 
+    -- Safety: track active time and force-finish if stuck
+    activeTimer = activeTimer + dt
+    if activeTimer >= maxActiveTime then
+        print("[Enemy " .. entityID .. "] SAFETY: Active for " .. string.format("%.1f", activeTimer) .. "s, force-finishing turn!")
+        FinishEnemyAction()
+        return
+    end
+
     -- First time acting - set up turn
     if not isMyTurnToAct then
         isMyTurnToAct = true
         movesThisTurn = 0
+        activeTimer = 0.0  -- Reset active timer at turn start
         print("[Enemy " .. entityID .. "] ========== STARTING TURN ==========")
         print("[Enemy " .. entityID .. "] glideActive=" .. tostring(glideActive) .. " moveTimer=" .. moveTimer .. " hasActed=" .. tostring(hasActedThisTurn))
 
@@ -402,12 +510,15 @@ function OnUpdate(dt)
         -- Timer finished: apply damage now
         pendingAttack = false
 
-        print("[Enemy " .. entityID .. "] ATTACK HIT Player " .. pendingAttackTarget .. " for " .. pendingAttackDamage .. " damage")
+        -- damageModifier on target already handles Bolstered Morale
+        local totalDmg = pendingAttackDamage
+
+        print("[Enemy " .. entityID .. "] ATTACK HIT Player " .. pendingAttackTarget .. " for " .. totalDmg .. " damage")
 
         local hpBefore, maxHP = GetEntityHP(pendingAttackTarget)
         print("[Enemy " .. entityID .. "] Player " .. pendingAttackTarget .. " HP BEFORE: " .. tostring(hpBefore) .. "/" .. tostring(maxHP))
 
-        local success = DamageEntity(pendingAttackTarget, pendingAttackDamage)
+        local success = DamageEntity(pendingAttackTarget, totalDmg, entityID)
         print("[Enemy " .. entityID .. "] DamageEntity returned: " .. tostring(success))
 
         if success then
@@ -421,7 +532,7 @@ function OnUpdate(dt)
             if PopupManager and PopupManager.ShowDamageNumber then
                 local worldX, worldY = GetEntityWorldPosition(pendingAttackTarget)
                 if worldX then
-                    PopupManager.ShowDamageNumber(worldX, worldY + 0.2, pendingAttackDamage)
+                    PopupManager.ShowDamageNumber(worldX, worldY + 0.2, totalDmg)
                 end
             end
 
@@ -464,12 +575,23 @@ function OnUpdate(dt)
         end
 
         -- Continue AI after resolving hit (may move if AP left)
-        ProcessAITurn()
+        local ok, err = pcall(ProcessAITurn)
+        if not ok then
+            print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn (post-attack): " .. tostring(err))
+            FinishEnemyAction()
+        end
         return
     end
 
     -- Execute AI decision making (will make ONE move per frame)
-    ProcessAITurn()
+    -- Wrapped in pcall to catch errors and prevent stuck turns
+    local aiOk, aiErr = pcall(ProcessAITurn)
+    if not aiOk then
+        print("[Enemy " .. entityID .. "] ERROR in ProcessAITurn: " .. tostring(aiErr))
+        print("[Enemy " .. entityID .. "] Force-finishing turn due to error")
+        FinishEnemyAction()
+        return
+    end
 
 end
 
@@ -483,6 +605,16 @@ function OnDestroy()
             Log("[EnemyScript] Enemy " .. entityID .. " cleared occupancy at (" .. enemyX .. ", " .. enemyY .. ")")
         end
     end
+    -- Clean up health bar sprites
+    if healthBarBG and healthBarBG > 0 then
+        DestroyEntity(healthBarBG)
+        healthBarBG = nil
+    end
+    if healthBarFG and healthBarFG > 0 then
+        DestroyEntity(healthBarFG)
+        healthBarFG = nil
+    end
+
     Log("[EnemyScript] Enemy " .. entityID .. " destroyed")
 end
 
@@ -1041,6 +1173,10 @@ function FinishEnemyAction()
     moveTimer = 0.0    -- Reset timer
     glideActive = false -- Reset glide
     pendingFinishAfterGlide = false  -- Reset pending flag
+    pendingAttack = false -- Reset pending attack
+    activeTimer = 0.0  -- Reset active timer
+    currentPath = {}   -- Clear stale path
+    pathIndex = 1
     Log("[Enemy " .. entityID .. "] Finished turn")
     MarkEnemyActionComplete()  -- Advance to next enemy in sequence
 end

@@ -329,10 +329,12 @@ namespace Framework {
                         newMat->u0, newMat->v0, newMat->u1, newMat->v1);
 
                     mr.material = playerMat;  // Use unique instance
-                } else {
+                }
+                else {
                     LOG_ERROR("SPAWN_PLAYER", "  FAILED: Material2 is NULL!");
                 }
-            } else {
+            }
+            else {
                 LOG_ERROR("SPAWN_PLAYER", "  FAILED: CORE or GraphicsSystem is NULL!");
             }
 
@@ -343,7 +345,7 @@ namespace Framework {
                 auto& transform = entityManager->GetComponent<Transform>(player);
                 transform.position = position;
                 transform.scale = Vector2D(0.1f, 0.1f);
-			}*/
+            }*/
 
             // Add Movement component so GetAllPlayers() can find this entity
             entityManager->AddComponent<Movement>(player);
@@ -354,15 +356,17 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-			entityManager->AddComponent<Inventory>(player);
+            entityManager->AddComponent<Inventory>(player);
 
-			entityManager->AddComponent<Health>(player, 5); // max 5 health points
+            entityManager->AddComponent<Health>(player, 5); // max 5 health points
 
-			entityManager->AddComponent<AttackAP>(player, 3); // max 3 attack points
+            entityManager->AddComponent<AttackAP>(player, 3); // max 3 attack points
 
-			entityManager->AddComponent<AP>(player, 5); // max 5 action points
+            entityManager->AddComponent<AP>(player, 5); // max 5 action points
 
-			//entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
+            entityManager->AddComponent<TagComponent>(player, "Player");
+
+            //entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
 
             // NOTE: SpriteAnimation component is now loaded via Lua (LoadPlayerAnimation)
             // This allows for more flexible animation management per level
@@ -438,7 +442,7 @@ namespace Framework {
             anim.useJsonConfig = false;   // IMPORTANT: enemy uses manual sheet swaps (not JSON groupMap)
 
             // load texture + compute frame sizes
-            
+
             if (CORE && CORE->GetGraphicsSystem())
             {
                 auto* gfx = CORE->GetGraphicsSystem();
@@ -465,6 +469,8 @@ namespace Framework {
             // This matches what TileMapLoader.cpp does when spawning enemies (lines 286-291)
             entityManager->AddComponent<EnemyAI>(enemy);
 
+            entityManager->AddComponent<TagComponent>(enemy, "Enemy");
+
             // *** Add AP component for turn-based combat ***
             entityManager->AddComponent<AP>(enemy, 3);  // 3 AP by default (matches TileMapLoader)
 
@@ -475,7 +481,10 @@ namespace Framework {
             if (entityManager->HasComponent<BoxCollider>(enemy))
             {
                 auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
-                collider.size = size * 1.2f; // or size * 1.2f if you want slightly bigger
+                // FIX: Collider must fit within one grid tile (spacing = 0.1).
+                // Old value (size * 1.2 = 0.3) spanned 3 tiles, causing projectiles
+                // to hit enemies in adjacent rows/columns.
+                collider.size = Vector2D(0.08f, 0.08f);
             }
 
             std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << " with EnemyAI and AP components\n";
@@ -562,7 +571,7 @@ namespace Framework {
 
             entityManager->AddComponent<CircleCollider>(projectile);
             auto& collider = entityManager->GetComponent<CircleCollider>(projectile);
-            collider.radius = 0.05f;
+            collider.radius = 0.02f;  // Tight radius to avoid hitting adjacent tile rows
 
             std::cout << "[EntitySpawner] Spawned projectile on layer " << RenderLayers::Projectiles << "\n";
             return projectile;
@@ -874,7 +883,7 @@ namespace Framework {
     private:
         /// Pointer to entity manager for ECS operations (non-owning)
         EntityManager* entityManager = nullptr;
-        
+
     };
 
 } // namespace Framework

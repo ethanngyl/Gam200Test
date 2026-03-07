@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           AnimationSystem.h
  Author:         TAN WEI LEONG
@@ -40,7 +40,7 @@ Example:
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
 #include "Component.h"
-
+#include <unordered_set>
 namespace Framework {
 
     class GraphicsSystemV2; // Forward Declaration
@@ -247,6 +247,8 @@ namespace Framework {
         float default_zero;
         int anim_current_frame;
         int anim_frame_mod;
+
+        std::unordered_set<std::string> animNameSet;
 	};
 
 } // namespace Framework

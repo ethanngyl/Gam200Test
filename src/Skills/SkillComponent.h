@@ -47,11 +47,16 @@ namespace Framework {
      * Add new classes here as needed
      */
     enum class CharacterClass : uint8_t {
-        // === ADD YOUR CLASSES HERE ===
+        // === PLAYER CLASSES ===
         Swordmaster = 0,
         Magus = 1,
         Berserker = 2,
-        // Add more: Archer, Healer, etc.
+
+        // === ENEMY CLASSES ===
+        EnemyKnight = 3,
+        EnemyMage = 4,
+        EnemyTank = 5,
+        EnemyKnightCommander = 6,
 
         Count,          // Keep this last - used for iteration
         None = 255
@@ -112,6 +117,7 @@ namespace Framework {
 
         // === COMBAT STATS ===
         int apCost = 1;                     // Action points to use
+        int hpCost = 0;                     // Health points to use
         int cooldown = 0;                   // Turns before can reuse
         int damage = 0;                     // Base damage/heal value
         float damageMultiplier = 1.0f;      // Scaling factor
@@ -129,10 +135,27 @@ namespace Framework {
         std::string animationName = "";
         std::string soundEffect = "";
 
-        // === ADD MORE PROPERTIES BELOW ===
-        // Example: int manaCost = 0;
-        // Example: float critChance = 0.0f;
-        // Example: std::vector<int> statusEffectIDs;
+        // === SKILL BEHAVIOR ===
+        std::string skillType = "melee";     // "melee", "projectile", "buff_ally", "summon", "rallying_cry", "taunt"
+        bool multiAttack = false;            // Can attack multiple times if AP allows
+        bool requiresLineOfSight = false;    // Projectile needs clear LOS
+        int preferredDistance = 0;           // For ranged AI positioning
+        float projectileSpeed = 0.0f;        // Speed for projectile skills
+
+        // === STATUS EFFECTS ===
+        std::string statusEffect = "";       // Status to apply ("stun", "guard", "knightsOath", etc.)
+        int statusDuration = 0;              // How many turns the effect lasts (-1 = permanent)
+
+        // === SUMMON ===
+        std::string summonConfig = "";       // Config type for summoned enemy
+        int summonDeathThreshold = 0;        // Min deaths before summon available
+
+        // === CONDITION ===
+        std::string condition = "";          // "ally_low_health", etc.
+        float conditionThreshold = 0.0f;     // Threshold for condition check
+
+        // === TARGETING ===
+        bool targetSelfIfNoAlly = false;     // For buff skills: target self if no ally found
 
         // === CONSTRUCTORS ===
         SkillData() = default;
@@ -189,7 +212,10 @@ namespace Framework {
             case CharacterClass::Swordmaster: return "Swordmaster";
             case CharacterClass::Magus: return "Magus";
             case CharacterClass::Berserker: return "Berserker";
-                // Add more cases as you add classes
+            case CharacterClass::EnemyKnight: return "EnemyKnight";
+            case CharacterClass::EnemyMage: return "EnemyMage";
+            case CharacterClass::EnemyTank: return "EnemyTank";
+            case CharacterClass::EnemyKnightCommander: return "EnemyKnightCommander";
             default: return "Unknown";
             }
         }
@@ -267,17 +293,150 @@ namespace Framework {
             // =============================================================
             auto& berserker = classSkills[static_cast<int>(CharacterClass::Berserker)];
 
-            // Starting skills
-            berserker.push_back(SkillData(17, "Berserker Skill 1", CharacterClass::Berserker, 0));
-            berserker.push_back(SkillData(18, "Berserker Skill 2", CharacterClass::Berserker, 1));
-            berserker.push_back(SkillData(19, "Berserker Skill 3", CharacterClass::Berserker, 2));
-            berserker.push_back(SkillData(20, "Berserker Skill 4", CharacterClass::Berserker, 3));
+            // Starting skills (unlockOrder 0-3)
+            {
+                SkillData s(17, "Slam", CharacterClass::Berserker, 0);
+                s.skillType = "melee"; s.damage = 2; s.apCost = 1; s.range = 2;
+                s.description = "Two tiles forward, 2 damage. Costs 1 AP and 1 HP";
+                s.effectType = SkillEffectType::Physical;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(18, "Siphon Charge", CharacterClass::Berserker, 1);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "First attack next turn consumes all AP and recovers 3 HP";
+                s.statusEffect = "siphonCharge"; s.statusDuration = 2;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(19, "Futile Resistance", CharacterClass::Berserker, 2);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "Enemies with <40% HP deal 1 less damage for 2 turns. Costs 1 HP";
+                s.statusEffect = "futileResistance"; s.statusDuration = 2;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(20, "Dark Omens", CharacterClass::Berserker, 3);
+                s.skillType = "buff_ally"; s.apCost = 3;
+                s.description = "If lethal damage taken, HP set to 1. Next turn: 2 free skills, then die. Once per level";
+                s.statusEffect = "darkOmens"; s.statusDuration = 1;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
 
-            // Unlockable skills
-            berserker.push_back(SkillData(21, "Berserker Skill 5", CharacterClass::Berserker, 4));
-            berserker.push_back(SkillData(22, "Berserker Skill 6", CharacterClass::Berserker, 5));
-            berserker.push_back(SkillData(23, "Berserker Skill 7", CharacterClass::Berserker, 6));
-            berserker.push_back(SkillData(24, "Berserker Skill 8", CharacterClass::Berserker, 7));
+            // Unlockable skills (unlockOrder 4-7)
+            {
+                SkillData s(21, "Cannibalism", CharacterClass::Berserker, 4);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "Select ally: ally loses 1 HP, you heal 2 HP";
+                s.targetType = SkillTargetType::SingleAlly;
+                s.effectType = SkillEffectType::Healing;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(22, "Groundshatter", CharacterClass::Berserker, 5);
+                s.skillType = "melee"; s.damage = 3; s.apCost = 3; s.areaSize = 5;
+                s.description = "5x5 AoE, damages all characters for 3. Costs 3 HP. Self stunned next turn";
+                s.statusEffect = "stun"; s.statusDuration = 1;
+                s.effectType = SkillEffectType::Physical;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(23, "Bloody Warcry", CharacterClass::Berserker, 6);
+                s.skillType = "buff_ally"; s.apCost = 2;
+                s.description = "Next turn: all characters first move free, next skill +1 dmg -1 HP. Costs 2 HP";
+                s.statusEffect = "bloodyWarcry"; s.statusDuration = 2;
+                s.targetType = SkillTargetType::AllAllies;
+                s.effectType = SkillEffectType::Buff;
+                berserker.push_back(s);
+            }
+            {
+                SkillData s(24, "Bladed Whirlwind", CharacterClass::Berserker, 7);
+                s.skillType = "projectile"; s.damage = 1; s.apCost = 1; s.range = 7;
+                s.description = "Projectile in facing direction, 1 damage. Enemy takes 1 additional damage at end of turn";
+                s.requiresLineOfSight = true; s.projectileSpeed = 3.0f;
+                s.statusEffect = "bladedWhirlwindDot"; s.statusDuration = 1;
+                s.effectType = SkillEffectType::Physical;
+                berserker.push_back(s);
+            }
+
+            // =============================================================
+            // ENEMY KNIGHT SKILLS (IDs 100-101)
+            // =============================================================
+            auto& eKnight = classSkills[static_cast<int>(CharacterClass::EnemyKnight)];
+            {
+                SkillData s(100, "Strike", CharacterClass::EnemyKnight, 0);
+                s.skillType = "melee"; s.damage = 1; s.apCost = 1; s.range = 1;
+                s.multiAttack = true; s.effectType = SkillEffectType::Physical;
+                eKnight.push_back(s);
+            }
+            {
+                SkillData s(101, "Summon Reinforcements", CharacterClass::EnemyKnight, 1);
+                s.skillType = "summon"; s.apCost = 2; s.cooldown = 2;
+                s.summonConfig = "knight"; s.summonDeathThreshold = 2;
+                s.effectType = SkillEffectType::Utility;
+                eKnight.push_back(s);
+            }
+
+            // =============================================================
+            // ENEMY MAGE SKILLS (IDs 110-111)
+            // =============================================================
+            auto& eMage = classSkills[static_cast<int>(CharacterClass::EnemyMage)];
+            {
+                SkillData s(110, "Arcane Bolt", CharacterClass::EnemyMage, 0);
+                s.skillType = "projectile"; s.damage = 1; s.apCost = 2; s.range = 7;
+                s.multiAttack = true; s.requiresLineOfSight = true;
+                s.preferredDistance = 3; s.projectileSpeed = 3.0f;
+                s.effectType = SkillEffectType::Magical;
+                eMage.push_back(s);
+            }
+            {
+                SkillData s(111, "Barrier", CharacterClass::EnemyMage, 1);
+                s.skillType = "buff_ally"; s.apCost = 2; s.cooldown = 2;
+                s.statusEffect = "guard"; s.statusDuration = -1;
+                s.targetSelfIfNoAlly = true;
+                s.effectType = SkillEffectType::Buff;
+                eMage.push_back(s);
+            }
+
+            // =============================================================
+            // ENEMY TANK SKILLS (IDs 120-121)
+            // =============================================================
+            auto& eTank = classSkills[static_cast<int>(CharacterClass::EnemyTank)];
+            {
+                SkillData s(120, "Shield Bash", CharacterClass::EnemyTank, 0);
+                s.skillType = "melee"; s.damage = 2; s.apCost = 3; s.range = 1;
+                s.statusEffect = "stun"; s.statusDuration = 1;
+                s.effectType = SkillEffectType::Physical;
+                eTank.push_back(s);
+            }
+            {
+                SkillData s(121, "Taunt", CharacterClass::EnemyTank, 1);
+                s.skillType = "taunt"; s.apCost = 2;
+                s.statusEffect = "knightsOath"; s.statusDuration = -1;
+                s.condition = "ally_low_health"; s.conditionThreshold = 0.5f;
+                s.effectType = SkillEffectType::Utility;
+                eTank.push_back(s);
+            }
+
+            // =============================================================
+            // ENEMY KNIGHT COMMANDER SKILLS (IDs 130-131)
+            // =============================================================
+            auto& eCommander = classSkills[static_cast<int>(CharacterClass::EnemyKnightCommander)];
+            {
+                SkillData s(130, "Strike", CharacterClass::EnemyKnightCommander, 0);
+                s.skillType = "melee"; s.damage = 1; s.apCost = 1; s.range = 1;
+                s.multiAttack = true; s.effectType = SkillEffectType::Physical;
+                eCommander.push_back(s);
+            }
+            {
+                SkillData s(131, "Rallying Cry", CharacterClass::EnemyKnightCommander, 1);
+                s.skillType = "rallying_cry"; s.apCost = 2; s.cooldown = 3;
+                s.effectType = SkillEffectType::Buff;
+                eCommander.push_back(s);
+            }
 
             // =============================================================
             // ADD MORE CLASS SKILLS BELOW

@@ -641,6 +641,9 @@ namespace Framework {
             // Must be floor tile
             if (map.getTile(pos.x, pos.y) != TileType::FLOOR) return false;
 
+            // Players cannot spawn in the boss arena
+            if (map.isInArena(pos.x, pos.y)) return false;
+
             // Must have walkable neighbors for pathfinding
             if (!hasWalkableNeighbors(map, pos)) return false;
 
@@ -678,6 +681,9 @@ namespace Framework {
 
             // Must be floor tile
             if (map.getTile(pos.x, pos.y) != TileType::FLOOR) return false;
+
+            // Regular enemies cannot spawn in the boss arena
+            if (map.isInArena(pos.x, pos.y)) return false;
 
             // Not in player safe zone
             if (isInSafeZone(pos, playerPos, config.playerSafeZoneRadius)) return false;
@@ -998,7 +1004,7 @@ namespace Framework {
 
         void Generator::printMap(const GeneratedMap& map) {
             std::cout << "\n[MapGen] Map Preview:\n";
-            std::cout << "W = Wall, . = Floor, P = Player, E = Enemy, C = Chest, G = Goal\n\n";
+            std::cout << "W = Wall, . = Floor, P = Player, E = Enemy, C = Chest, G = Goal, B = Boss, a = Arena\n\n";
 
             for (int y = 0; y < map.height; y++) {
                 for (int x = 0; x < map.width; x++) {
@@ -1008,6 +1014,9 @@ namespace Framework {
                     Position pos(x, y);
                     if (pos == map.playerSpawn) {
                         c = 'P';
+                    }
+                    else if (map.hasArena && pos == map.arenaCenter) {
+                        c = 'B';
                     }
                     else if (pos == map.goalSpawn) {
                         c = 'G';
@@ -1022,7 +1031,13 @@ namespace Framework {
                                 if (ch == pos) { c = 'C'; break; }
                             }
                             if (c == '?') {
-                                c = (map.getTile(x, y) == TileType::WALL) ? 'W' : '.';
+                                if (map.getTile(x, y) == TileType::WALL) {
+                                    c = 'W';
+                                } else if (map.isInArena(x, y)) {
+                                    c = 'a';
+                                } else {
+                                    c = '.';
+                                }
                             }
                         }
                     }

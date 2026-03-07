@@ -49,6 +49,7 @@
 ]]--
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
+local SkillSwapUI = require("SkillSwapUI")
 
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)
@@ -88,6 +89,10 @@ local kSpacingY = 0.1
 -- Audio configuration
 local audioConfig = nil
 
+-- Level progression (read from LevelProgress.json)
+local currentLevel = 1
+local totalLevels  = 3
+
 -- ============================================================================
 -- GOAL STATE
 -- ============================================================================
@@ -101,8 +106,15 @@ local goalTransitionDelay = 0
 -- ============================================================================
 
 function OnInit()
+    -- Read level progression
+    local progress = LoadJSON("assets/JSON/LevelProgress.json")
+    if progress then
+        currentLevel = progress.currentLevel or 1
+        totalLevels  = progress.totalLevels  or 3
+    end
+
     Log("========================================")
-    Log("LEVEL 3: PROCEDURAL MAP VERSION")
+    Log("LEVEL " .. currentLevel .. " / " .. totalLevels .. ": PROCEDURAL MAP")
     Log("========================================")
 
     -- Initialize pause menu
@@ -177,7 +189,10 @@ function OnInit()
 
     -- Setup enemies
     SetupProceduralEnemies(mapData)
-    
+
+    -- Spawn boss in arena
+    SpawnProceduralBoss(mapData)
+
     -- Spawn chests and goal
     SpawnProceduralChestsAndGoal(mapData)
 
@@ -187,19 +202,24 @@ function OnInit()
     -- Setup Party UI
     SetupPartyUI()
 
-    -- CRITICAL: Disable grid movement
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    Log("!!! DISABLING grid movement !!!")
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    -- CRITICAL: Disable C++ grid movement (Lua handles movement via PartyTurnManager)
     SetGridMovementEnabled(false)
-    
-    -- IMPORTANT: Set camera to follow first party member
-    -- NOTE: SetCameraFollowEntity may not be registered - check if it exists
-    if partyMembers[1] then
-        -- Try to use the graphics system's follow target if available
-        Log("First party member entity: " .. partyMembers[1])
-        -- SetCameraFollowEntity is not exposed to Lua - camera will stay at 0,0
+
+    -- Remove WASD movement from all players (grid movement handled by Lua scripts)
+    for _, pid in ipairs(partyMembers) do
+        RemoveMovementComponent(pid)
+        Log("Removed Movement component from player " .. pid)
     end
+
+    -- Set camera to follow first party member
+    if partyMembers[1] then
+        SetCameraFollowTarget(partyMembers[1])
+        Log("Camera following player " .. partyMembers[1])
+    end
+
+    -- Initialize turn system (Player phase, not busy)
+    InitializeTurnSystem()
+    Log("Turn system initialized: Player phase")
 
     initialized = true
     Log("========================================")
@@ -257,6 +277,8 @@ function SetupProceduralParty(mapData)
     local player1 = SpawnPlayerAt(mapData.partySpawns[1].worldX, mapData.partySpawns[1].worldY)
     local player2 = SpawnPlayerAt(mapData.partySpawns[2].worldX, mapData.partySpawns[2].worldY)
     local player3 = SpawnPlayerAt(mapData.partySpawns[3].worldX, mapData.partySpawns[3].worldY)
+
+    SetAnimationPrefix(player2, "Mage_")
 
     if not player1 or player1 == 0 then
         Log("ERROR: Failed to spawn Player 1!")
@@ -320,6 +342,21 @@ end
 -- HELPER: Setup Procedural Enemies
 -- ============================================================================
 
+-- Enemy type assignment order: ensures at least one of each new type spawns.
+-- Index 1 = Knight Commander (yellow), 2 = Knight, 3 = Mage (blue),
+-- 4 = Tank (green). Additional enemies cycle through these types.
+-- All enemy types now use EnemyGeneric.lua with JSON configs.
+local ENEMY_TYPE_CONFIGS = {
+    "knight_commander",  -- 1: Knight Commander
+    "knight",            -- 2: Knight
+    "mage",              -- 3: Mage
+    "tank",              -- 4: Tank
+}
+
+local ENEMY_TYPE_NAMES = {
+    "Knight Commander", "Knight", "Mage", "Tank"
+}
+
 function SetupProceduralEnemies(mapData)
     Log("========================================")
     Log("Spawning procedural enemies...")
@@ -336,6 +373,12 @@ function SetupProceduralEnemies(mapData)
         return false
     end
 
+    -- Reset global enemy death counter for this level
+    _G.EnemiesDeadThisLevel = 0
+    _G.KnightCommanderIDs = {}
+    _G.RallyingCryActive = false
+    _G.RallyingCryPending = false
+
     Log("Spawning " .. #mapData.enemies .. " enemies:")
 
     local spawnedEnemies = {}
@@ -344,19 +387,23 @@ function SetupProceduralEnemies(mapData)
         local ex = enemy.worldX
         local ey = enemy.worldY
         local enemyID = SpawnEnemyAt(ex, ey)
-        
+
         if enemyID and enemyID ~= 0 then
-            Log("  Enemy " .. i .. " at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
-            
-            -- Attach enemy script FIRST (so OnInit runs immediately with this setup)
-            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+            -- Assign enemy type: cycle through the 4 types via config
+            local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
+            local configType = ENEMY_TYPE_CONFIGS[typeIndex]
+            local typeName = ENEMY_TYPE_NAMES[typeIndex]
+
+            Log("  Enemy " .. i .. " [" .. typeName .. "] at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
+
+            -- Attach unified enemy script with config type
+            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
 
             -- Set target (C++ side)
             SetEnemyTarget(enemyID, playerID)
 
-            Log("  Enemy " .. enemyID .. " script attached + target set to " .. tostring(playerID))
+            Log("  Enemy " .. enemyID .. " " .. typeName .. " (" .. configType .. ") script attached + target set to " .. tostring(playerID))
 
-            
             table.insert(spawnedEnemies, enemyID)
         else
             Log("  Enemy " .. i .. " FAILED to spawn!")
@@ -364,6 +411,65 @@ function SetupProceduralEnemies(mapData)
     end
 
     Log("Spawned " .. #spawnedEnemies .. " enemies successfully")
+    Log("========================================")
+    return true
+end
+
+-- ============================================================================
+-- HELPER: Spawn Boss in Arena
+-- ============================================================================
+
+function SpawnProceduralBoss(mapData)
+    if not mapData.hasArena then
+        Log("No boss arena in this level")
+        return true
+    end
+
+    Log("========================================")
+    Log("Spawning boss in arena...")
+    Log("========================================")
+
+    local bx = mapData.arenaWorldX
+    local by = mapData.arenaWorldY
+
+    if not bx or not by then
+        Log("ERROR: Arena world coordinates missing!")
+        return false
+    end
+
+    local playerID = partyMembers[1]
+    if not playerID or playerID == 0 then
+        Log("ERROR: Cannot configure boss without player")
+        return false
+    end
+
+    -- Spawn boss as an enemy entity (same stats as regular enemies)
+    local bossID = SpawnEnemyAt(bx, by)
+
+    if not bossID or bossID == 0 then
+        Log("ERROR: Failed to spawn boss!")
+        return false
+    end
+
+    Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
+
+    -- Attach BossScript instead of EnemyScript
+    AddScriptComponentToEntity(bossID, "assets/scripts/BossScript.lua")
+
+    -- Set target (C++ side)
+    SetEnemyTarget(bossID, playerID)
+
+    -- Store arena boundaries globally so BossScript can check player positions
+    _G.ArenaBounds = {
+        minX = mapData.arenaMinX or (mapData.arenaX - 3),
+        minY = mapData.arenaMinY or (mapData.arenaY - 3),
+        maxX = mapData.arenaMaxX or (mapData.arenaX + 4),
+        maxY = mapData.arenaMaxY or (mapData.arenaY + 4),
+    }
+    Log("Arena bounds set: (" .. _G.ArenaBounds.minX .. "," .. _G.ArenaBounds.minY
+        .. ") to (" .. _G.ArenaBounds.maxX .. "," .. _G.ArenaBounds.maxY .. ")")
+
+    Log("Boss " .. bossID .. " BossScript attached + target set to " .. tostring(playerID))
     Log("========================================")
     return true
 end
@@ -472,22 +578,37 @@ function HandleGoalTransition(dt)
         -- Check if any player reached the goal
         if CheckGoalReached() then
             goalReached = true
-            
+
             -- Play victory sound if available
             if PlaySound then
                 pcall(function()
                     PlaySound("victory", false, 1.0)
                 end)
             end
-            
-            Log("GOAL REACHED - Transitioning to Main Menu immediately...")
-            
-            -- Transition to main menu immediately
-            if SetNextGameState then
-                SetNextGameState("LEVEL_END")
-            else
-                Log("ERROR: No game state transition function available!")
-            end
+
+            Log("GOAL REACHED - Opening skill swap screen...")
+
+            -- Show skill swap UI; when player clicks Continue, advance and transition
+            SkillSwapUI.Show(function()
+                -- Advance level progress for next play
+                local nextLevel = currentLevel + 1
+                local f = io.open("assets/JSON/LevelProgress.json", "w")
+                if f then
+                    f:write("{\n")
+                    f:write("  \"currentLevel\": " .. nextLevel .. ",\n")
+                    f:write("  \"totalLevels\": " .. totalLevels .. "\n")
+                    f:write("}\n")
+                    f:close()
+                    Log("[LevelProgress] Advanced to level " .. nextLevel .. " / " .. totalLevels)
+                end
+
+                Log("Skill swap complete - Transitioning to level end screen...")
+                if SetNextGameState then
+                    SetNextGameState("LEVEL_END")
+                else
+                    Log("ERROR: No game state transition function available!")
+                end
+            end)
         end
     end
 end
@@ -506,12 +627,15 @@ function OnUpdate(dt)
     -- Handle pause menu
     PauseMenu.Update(dt)
 
+    -- Update skill swap UI (runs while paused, handles its own input)
+    SkillSwapUI.Update(dt)
+
     -- Update party UI
     if partyUI then
         partyUI:OnUpdate(dt)
     end
 
-    -- Skip game logic if paused
+    -- Skip game logic if paused (SkillSwapUI pauses the game while active)
     if IsPaused() then
         return
     end
@@ -593,18 +717,24 @@ end
 function OnDraw()
     PauseMenu.Draw()
 
+    -- Render skill swap UI overlay
+    SkillSwapUI.Draw()
+
     -- Render UI components (including scroll animation text)
     UIManager.Draw()
+
+    -- Level indicator (top-right corner)
+    local fbW, fbH = GetFramebufferSize()
+    if fbW and fbW > 0 then
+        local scaleRef = fbW / 1920
+        DrawText("Jersey20Regular", "Level " .. currentLevel .. " / " .. totalLevels,
+            fbW - 220 * scaleRef, 30 * scaleRef, 0.6 * scaleRef, 0.9, 0.9, 0.7)
+    end
 
     -- Check if IsEditorMode exists
     if IsEditorMode and IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
-    
-    -- Show controls
-    --[[
-    DrawText("Playfair48", "WASD to move, P to pause", 50, 100, 0.8, 0.8, 0.8, 1.0)
-    ]]
 end
 
 -- ============================================================================
