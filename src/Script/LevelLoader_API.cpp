@@ -66,6 +66,7 @@ Technology is prohibited.
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
 #include "MapGenerator/ProceduralMapLoader.h"
+#include "MapSerializer/MapSerializer.h"
 #include <Windows.h>      // For GetTickCount64()    
 
 // Fix for Windows min/max macro conflicts
@@ -3446,6 +3447,9 @@ namespace Framework {
 // PROCEDURAL MAP API
 // ============================================================================
 
+    static Framework::MapGen::GeneratedMap s_lastGeneratedMap;
+    static Framework::MapGen::Config       s_lastGeneratedConfig;
+
     int LevelLoader::Lua_LoadProceduralMap(lua_State* L) {
         std::cout << "[Lua_LoadProceduralMap] Called!\n";
 
@@ -3479,6 +3483,9 @@ namespace Framework {
         MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
             config, spawner, em, startPos, spacing, tileSize
         );
+
+        s_lastGeneratedMap = map;
+        s_lastGeneratedConfig = config;
 
         // ========================================
         // NEW: RETURN SPAWN POSITIONS AS LUA TABLE
@@ -3761,6 +3768,217 @@ namespace Framework {
 
         std::cout << "[Lua_LoadProceduralMap] Added " << partySpawns.size() << " spaced party spawns\n";
 
+        return 1;
+    }
+
+    // ========================================================================
+    // MAP SERIALIZER API
+    // ========================================================================
+
+    int LevelLoader::Lua_SaveCurrentMap(lua_State* L) {
+        std::cout << "[MapSerializer] SaveCurrentMap called from Lua\n";
+
+        if (s_lastGeneratedMap.width == 0 || s_lastGeneratedMap.height == 0) {
+            std::cout << "[MapSerializer] ERROR: No map to save!\n";
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        std::string filepath;
+        if (lua_gettop(L) >= 1 && lua_isstring(L, 1)) {
+            filepath = lua_tostring(L, 1);
+        }
+
+        if (filepath.empty()) {
+            std::string saved = Framework::MapSerializer::QuickSave(
+                s_lastGeneratedMap, s_lastGeneratedConfig, "assets/maps/"
+            );
+            if (!saved.empty()) {
+                std::cout << "[MapSerializer] Map saved to: " << saved << "\n";
+                lua_pushboolean(L, 1);
+                lua_pushstring(L, saved.c_str());
+                return 2;
+            }
+            else {
+                lua_pushboolean(L, 0);
+                return 1;
+            }
+        }
+        else {
+            bool success = Framework::MapSerializer::Save(
+                s_lastGeneratedMap, s_lastGeneratedConfig, filepath
+            );
+            lua_pushboolean(L, success ? 1 : 0);
+            if (success) { lua_pushstring(L, filepath.c_str()); return 2; }
+            return 1;
+        }
+    }
+
+    int LevelLoader::Lua_LoadSavedMap(lua_State* L) {
+        std::cout << "[MapSerializer] LoadSavedMap called from Lua\n";
+
+        if (lua_gettop(L) < 1 || !lua_isstring(L, 1)) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        std::string filepath = lua_tostring(L, 1);
+
+        Framework::MapGen::GeneratedMap map;
+        Framework::MapGen::Config config;
+
+        if (!Framework::MapSerializer::Load(filepath, map, config)) {
+            std::cout << "[MapSerializer] ERROR: Failed to load: " << filepath << "\n";
+            lua_pushnil(L);
+            return 1;
+        }
+
+        s_lastGeneratedMap = map;
+        s_lastGeneratedConfig = config;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        CoreEngine* core = loader->coreEngine;
+        EntitySpawner* spawner = core->GetSpawner();
+        EntityManager* em = core->GetEntityManager();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "EntitySpawner or EntityManager not available");
+        }
+
+        Vector2D startPos(-0.6f, -0.4f);
+        Vector2D spacing(0.1f, 0.1f);
+        const float TILE_SIZE = 128.0f;
+        Vector2D tileSize(TILE_SIZE, TILE_SIZE);
+
+        MapGen::Generator::printMap(map);
+
+        ProceduralMapLoader::LoadFromGeneratedMap(
+            map, spawner, em, startPos, spacing, tileSize
+        );
+
+        // Build the SAME Lua table as Lua_LoadProceduralMap returns.
+        // This is a direct copy of the table-building code from that function.
+        lua_newtable(L);
+
+        lua_pushstring(L, "playerX");  lua_pushnumber(L, map.playerSpawn.x);  lua_settable(L, -3);
+        lua_pushstring(L, "playerY");  lua_pushnumber(L, map.playerSpawn.y);  lua_settable(L, -3);
+        lua_pushstring(L, "goalX");    lua_pushnumber(L, map.goalSpawn.x);    lua_settable(L, -3);
+        lua_pushstring(L, "goalY");    lua_pushnumber(L, map.goalSpawn.y);    lua_settable(L, -3);
+
+        float playerWorldX = startPos.x + (map.playerSpawn.x * spacing.x);
+        float playerWorldY = startPos.y + (map.playerSpawn.y * spacing.y);
+        lua_pushstring(L, "playerWorldX"); lua_pushnumber(L, playerWorldX); lua_settable(L, -3);
+        lua_pushstring(L, "playerWorldY"); lua_pushnumber(L, playerWorldY); lua_settable(L, -3);
+
+        float goalWorldX = startPos.x + (map.goalSpawn.x * spacing.x);
+        float goalWorldY = startPos.y + (map.goalSpawn.y * spacing.y);
+        lua_pushstring(L, "goalWorldX"); lua_pushnumber(L, goalWorldX); lua_settable(L, -3);
+        lua_pushstring(L, "goalWorldY"); lua_pushnumber(L, goalWorldY); lua_settable(L, -3);
+
+        // Enemies
+        lua_pushstring(L, "enemies");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.enemySpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+            lua_pushstring(L, "x");      lua_pushnumber(L, map.enemySpawns[i].x);                              lua_settable(L, -3);
+            lua_pushstring(L, "y");      lua_pushnumber(L, map.enemySpawns[i].y);                              lua_settable(L, -3);
+            lua_pushstring(L, "worldX"); lua_pushnumber(L, startPos.x + (map.enemySpawns[i].x * spacing.x));   lua_settable(L, -3);
+            lua_pushstring(L, "worldY"); lua_pushnumber(L, startPos.y + (map.enemySpawns[i].y * spacing.y));   lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Chests
+        lua_pushstring(L, "chests");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.chestSpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+            lua_pushstring(L, "x");      lua_pushnumber(L, map.chestSpawns[i].x);                              lua_settable(L, -3);
+            lua_pushstring(L, "y");      lua_pushnumber(L, map.chestSpawns[i].y);                              lua_settable(L, -3);
+            lua_pushstring(L, "worldX"); lua_pushnumber(L, startPos.x + (map.chestSpawns[i].x * spacing.x));   lua_settable(L, -3);
+            lua_pushstring(L, "worldY"); lua_pushnumber(L, startPos.y + (map.chestSpawns[i].y * spacing.y));   lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Party spawns (same search logic as Lua_LoadProceduralMap)
+        std::vector<MapGen::Position> partySpawns;
+        partySpawns.push_back(map.playerSpawn);
+
+        const int offsets[][2] = {
+            {2,0},{-2,0},{0,2},{0,-2},{2,1},{2,-1},{-2,1},{-2,-1},
+            {1,2},{-1,2},{1,-2},{-1,-2},{2,2},{-2,2},{2,-2},{-2,-2},
+            {3,0},{-3,0},{0,3},{0,-3},{3,1},{3,-1},{-3,1},{-3,-1},
+            {1,3},{-1,3},{1,-3},{-1,-3},
+            {1,0},{-1,0},{0,1},{0,-1},{1,1},{-1,1},{1,-1},{-1,-1},
+        };
+        const int nOff = sizeof(offsets) / sizeof(offsets[0]);
+
+        for (int i = 0; i < nOff && partySpawns.size() < 3; i++) {
+            int tx = map.playerSpawn.x + offsets[i][0];
+            int ty = map.playerSpawn.y + offsets[i][1];
+            if (tx < 0 || tx >= map.width || ty < 0 || ty >= map.height) continue;
+            if (map.getTile(tx, ty) != MapGen::TileType::FLOOR) continue;
+            bool tooClose = false;
+            for (const auto& p : partySpawns) {
+                if (std::abs(tx - p.x) + std::abs(ty - p.y) < 2) { tooClose = true; break; }
+            }
+            if (!tooClose) partySpawns.push_back(MapGen::Position(tx, ty));
+        }
+        if (partySpawns.size() < 3) {
+            for (int i = 0; i < nOff && partySpawns.size() < 3; i++) {
+                int tx = map.playerSpawn.x + offsets[i][0];
+                int ty = map.playerSpawn.y + offsets[i][1];
+                if (tx < 0 || tx >= map.width || ty < 0 || ty >= map.height) continue;
+                if (map.getTile(tx, ty) != MapGen::TileType::FLOOR) continue;
+                bool used = false;
+                for (const auto& p : partySpawns) if (p.x == tx && p.y == ty) { used = true; break; }
+                if (!used) partySpawns.push_back(MapGen::Position(tx, ty));
+            }
+        }
+        while (partySpawns.size() < 3) partySpawns.push_back(map.playerSpawn);
+
+        lua_pushstring(L, "partySpawns");
+        lua_newtable(L);
+        for (size_t i = 0; i < partySpawns.size(); i++) {
+            lua_pushnumber(L, static_cast<lua_Number>(i + 1));
+            lua_newtable(L);
+            lua_pushstring(L, "x");      lua_pushnumber(L, partySpawns[i].x);                                lua_settable(L, -3);
+            lua_pushstring(L, "y");      lua_pushnumber(L, partySpawns[i].y);                                lua_settable(L, -3);
+            lua_pushstring(L, "worldX"); lua_pushnumber(L, startPos.x + (partySpawns[i].x * spacing.x));     lua_settable(L, -3);
+            lua_pushstring(L, "worldY"); lua_pushnumber(L, startPos.y + (partySpawns[i].y * spacing.y));     lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "width");  lua_pushnumber(L, map.width);  lua_settable(L, -3);
+        lua_pushstring(L, "height"); lua_pushnumber(L, map.height); lua_settable(L, -3);
+
+        if (map.hasArena) {
+            lua_pushstring(L, "hasArena"); lua_pushboolean(L, 1); lua_settable(L, -3);
+            lua_pushstring(L, "arenaX");      lua_pushnumber(L, map.arenaCenter.x);                                lua_settable(L, -3);
+            lua_pushstring(L, "arenaY");      lua_pushnumber(L, map.arenaCenter.y);                                lua_settable(L, -3);
+            lua_pushstring(L, "arenaWorldX"); lua_pushnumber(L, startPos.x + (map.arenaCenter.x * spacing.x));     lua_settable(L, -3);
+            lua_pushstring(L, "arenaWorldY"); lua_pushnumber(L, startPos.y + (map.arenaCenter.y * spacing.y));     lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    int LevelLoader::Lua_ListSavedMaps(lua_State* L) {
+        std::string dir = "assets/maps/";
+        if (lua_gettop(L) >= 1 && lua_isstring(L, 1)) dir = lua_tostring(L, 1);
+
+        auto maps = Framework::MapSerializer::ListSavedMaps(dir);
+
+        lua_newtable(L);
+        for (int i = 0; i < static_cast<int>(maps.size()); i++) {
+            lua_pushinteger(L, i + 1);
+            lua_pushstring(L, maps[i].c_str());
+            lua_settable(L, -3);
+        }
         return 1;
     }
 

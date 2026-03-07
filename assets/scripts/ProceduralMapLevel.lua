@@ -67,6 +67,11 @@ dofile("assets/scripts/EnemyTurnManager.lua")
 local initialized = false
 local editorToggleCooldown = 0
 
+local mapSaveCooldown = 0
+local MAP_SAVE_COOLDOWN_TIME = 1.0
+local USE_SAVED_MAP = false
+local SAVED_MAP_PATH = "assets/maps/my_map.map.json"
+
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
 local partyUI = nil
@@ -123,8 +128,17 @@ function OnInit()
     -- ========================================
     -- PROCEDURAL MAP GENERATION
     -- ========================================
-    Log("Generating procedural map...")
-    local mapData = LoadProceduralMap(35, 35, "rooms_arena")
+    local mapData = nil
+    if USE_SAVED_MAP then
+         Log("Loading saved map: " .. SAVED_MAP_PATH)
+         mapData = LoadSavedMap(SAVED_MAP_PATH)
+         if not mapData then
+             Log("ERROR: Failed! Falling back to procedural.")
+             mapData = LoadProceduralMap(35, 35, "rooms_arena")
+         end
+     else
+         mapData = LoadProceduralMap(35, 35, "rooms_arena")
+     end
 
     -- Debug output
     Log("DEBUG: mapData = " .. tostring(mapData))

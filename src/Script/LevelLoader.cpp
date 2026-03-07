@@ -622,6 +622,11 @@ namespace Framework {
         // Procedural Map API
         lua_register(L, "LoadProceduralMap", Lua_LoadProceduralMap);
 
+        // Map Serializer API
+        lua_register(L, "SaveCurrentMap",  Lua_SaveCurrentMap);
+        lua_register(L, "LoadSavedMap",    Lua_LoadSavedMap);
+        lua_register(L, "ListSavedMaps",   Lua_ListSavedMaps);
+
         // Entity Spawning API
         lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
         lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);

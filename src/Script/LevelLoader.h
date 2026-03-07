@@ -309,6 +309,11 @@ namespace Framework {
         // Procedural Map API
         static int Lua_LoadProceduralMap(lua_State* L);
 
+        // Map Serializer API
+        static int Lua_SaveCurrentMap(lua_State* L);
+        static int Lua_LoadSavedMap(lua_State* L);
+        static int Lua_ListSavedMaps(lua_State* L);
+
         // Entity Spawning API
         static int Lua_SpawnPlayerAt(lua_State* L);
         static int Lua_SpawnEnemyAt(lua_State* L);
