@@ -148,6 +148,14 @@ local moveCooldown = 0.0
 local moveCooldownTime = 0.2
 local apCostPerMove = 1
 
+-- Helper: get actual movement cost (0 if Bloody Warcry free move is active)
+local function getMovementCost()
+    if bloodyWarcryFreeMove then
+        return 0
+    end
+    return apCostPerMove
+end
+
 -- Animation state
 local currentAnimGroup = AnimGroup.Idle
 local currentAnimDirection = AnimDirection.Front
@@ -187,9 +195,9 @@ local SkillDefs = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Thrust", ["2"] = "Guard" },
+    [1] = { ["1"] = "Thrust", ["2"] = "SweepingSlash" },
     [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
-    [3] = { ["1"] = "SwiftBlow" },
+    [3] = { ["1"] = "Slam", ["2"] = "SiphonCharge" },
 }
 
 -- All keys that can be bound to skills (used for preview selection)
@@ -206,20 +214,58 @@ local lastSpaceKeyDown = false
 -- nil when no preview is showing; { skillID, tiles = {{x,y},...} } when active
 local activePreview = nil
 
+-- Which skill slot key ("1"-"4") is currently being previewed (nil when none)
+local activeSkillSlotKey = nil
+
 -- Dash skill state: when a dash skill is previewed, WASD picks direction instead of moving
 -- nil when not in dash mode; { skillID = ..., dirX = 0, dirY = 0 } when active
 local dashMode = nil
 
--- Ally targeting state: when an ally_target skill is previewed, click an ally to select
--- nil when not targeting; { skillID = ... } when active
+-- Ally targeting state: when an ally_target skill is previewed, Tab/Shift+Tab to cycle
+-- nil when not targeting; { skillID, targets, currentIndex, selectedAlly } when active
 local allyTargetMode = nil
 
--- Enemy targeting state: when an enemy_target skill is previewed, click an enemy to select
--- nil when not targeting; { skillID = ..., selectedEnemy = nil } when active
+-- Enemy targeting state: when an enemy_target skill is previewed, Tab/Shift+Tab to cycle
+-- nil when not targeting; { skillID, targets = {eid,...}, currentIndex, selectedEnemy } when active
 local enemyTargetMode = nil
+
+-- Tab key state for edge detection (Tab/Shift+Tab cycling)
+local lastTabKeyDown = false
+
+-- Berserker: Dark Omens once-per-level tracking
+local darkOmensUsedThisLevel = false
+
+-- Berserker: Siphon Charge state tracking (next attack consumes all AP + heals)
+local siphonChargeActive = false
+local siphonTriggeredThisSkill = false
+
+-- Berserker: Bloody Warcry tracking (first move free, next skill +1 dmg -1 HP)
+local bloodyWarcryFreeMove = false
+local bloodyWarcryDamageBonus = false
+
+-- Berserker: Dark Omens triggered tracking (2 free skills, then die)
+local darkOmensSkillsRemaining = 0
+
+-- Berserker: current warcry damage bonus (set per-skill in ExecuteSkill)
+local currentWarcryBonus = 0
+
+-- Turn start initialization flag (resets when character becomes active)
+local turnStartInitialized = false
+local lastActiveState = false
 
 -- Cached player index (1, 2, or 3)
 local myPlayerIndex = nil
+
+-- Global particle tracking for skill effects
+-- Keys: "effectName_entityID" -> emitterID
+if not _G.EffectParticles then
+    _G.EffectParticles = {}
+end
+
+-- Global registry so UI accessors can find the active player's data
+if not _G._playerRegistry then
+    _G._playerRegistry = {}
+end
 
 local function getPlayerIndex()
     if myPlayerIndex then return myPlayerIndex end
@@ -402,7 +448,32 @@ local function createPlayerStates(fsm)
 
         update = function(self, dt)
             -- Only process if active character
-            if not IsActiveCharacter(entityID) then return end
+            local isActive = IsActiveCharacter(entityID)
+            if not isActive then
+                lastActiveState = false
+                return
+            end
+
+            -- Detect turn start (transition from inactive to active)
+            if not lastActiveState then
+                lastActiveState = true
+                -- Initialize Berserker turn-start effects
+                if HasStatusEffect and HasStatusEffect(entityID, "bloodyWarcry") then
+                    bloodyWarcryFreeMove = true
+                    bloodyWarcryDamageBonus = true
+                    print("[PlayerScript] Bloody Warcry active: first move free, next skill +1 dmg -1 HP")
+                end
+                if HasStatusEffect and HasStatusEffect(entityID, "darkOmensTriggered") then
+                    darkOmensSkillsRemaining = 2
+                    -- Spawn purple particles for triggered state (darkOmens particles auto-cleaned)
+                    spawnEffectParticles(entityID, "darkOmensTriggered", 0.6, 0.0, 0.8)
+                    print("[PlayerScript] Dark Omens Triggered: 2 free skills this turn, then death")
+                end
+                if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
+                    siphonChargeActive = true
+                    print("[PlayerScript] Siphon Charge active: first attack consumes all AP + heals 3 HP")
+                end
+            end
 
             -- Update blocked keys
             updateBlockedKeys()
@@ -460,6 +531,12 @@ local function createPlayerStates(fsm)
                     local currentAttackAP = GetEntityAttackAP(entityID)
                     if skill and currentAttackAP >= skill.apCost then
                         ShowSkillPreview(skillID)
+                        -- Set active slot AFTER ShowSkillPreview, because ShowSkillPreview
+                        -- calls ClearActivePreview() which resets activeSkillSlotKey to nil
+                        activeSkillSlotKey = key
+                        if CallLevelFunction then
+                            CallLevelFunction("SetSkillUIActiveSlot", getPlayerIndex() or 0, key)
+                        end
                     else
                         PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                     end
@@ -555,43 +632,33 @@ local function createPlayerStates(fsm)
             end
 
             -- ============================================================
-            -- ALLY TARGET MODE: click to select an ally
+            -- ALLY TARGET MODE: Tab/Shift+Tab to cycle, Space to confirm
             -- ============================================================
             if allyTargetMode then
-                if IsMouseButtonPressed and IsMouseButtonPressed(0) then
-                    local mouseX, mouseY = GetMousePosition()
-                    if mouseX and mouseY then
-                        -- Find which ally (if any) is at or near the click position
-                        local allPlayers = GetAllPlayers()
-                        if allPlayers then
-                            for _, pid in ipairs(allPlayers) do
-                                if pid ~= entityID then
-                                    local wx, wy = GetEntityWorldPosition(pid)
-                                    if wx and wy then
-                                        local dist = math.sqrt((mouseX - wx)^2 + (mouseY - wy)^2)
-                                        if dist < 0.5 then  -- click within 0.5 world units of ally
-                                            allyTargetMode.selectedAlly = pid
-                                            print("[PlayerScript] Ally selected: " .. pid .. ", Space to confirm")
+                local tabDown = IsKeyDown("Tab")
+                local tabPressed = tabDown and not lastTabKeyDown
+                lastTabKeyDown = tabDown
 
-                                            -- Re-tint: highlight selected ally
-                                            if activePreview and activePreview.tiles then
-                                                for _, tile in ipairs(activePreview.tiles) do
-                                                    TintTile(tile.x, tile.y, 0.3, 1.0, 0.3, 0.4)
-                                                end
-                                            end
-                                            local apx, apy = GetEntityGridPosition(pid)
-                                            if apx and apy then
-                                                TintTile(apx, apy, 0.0, 1.0, 0.0, 0.9)  -- bright green for selected
-                                            end
-                                            break
-                                        end
-                                    end
-                                end
-                            end
-                        end
+                if tabPressed and #allyTargetMode.targets > 0 then
+                    local n = #allyTargetMode.targets
+                    local idx = allyTargetMode.currentIndex
+                    if IsKeyDown("Shift") then
+                        idx = idx - 1
+                        if idx < 1 then idx = n end
+                    else
+                        idx = idx + 1
+                        if idx > n then idx = 1 end
                     end
+                    allyTargetMode.currentIndex = idx
+                    allyTargetMode.selectedAlly = allyTargetMode.targets[idx]
+                    -- Re-tint: highlight selected (selected=bold green, unselected=very dim)
+                    for i, t in ipairs(activePreview and activePreview.tiles or {}) do
+                        local bright = (i == idx)
+                        TintTile(t.x, t.y, bright and 0.0 or 0.1, bright and 1.0 or 0.15, bright and 0.0 or 0.1, bright and 0.95 or 0.35)
+                    end
+                    print("[PlayerScript] Ally selected: " .. tostring(allyTargetMode.selectedAlly) .. " (" .. idx .. "/" .. n .. "), Space to confirm")
                 end
-                -- Update key states but don't process movement
+
                 local wDown = IsKeyDown("W") and not blockedKeys["W"]
                 local sDown = IsKeyDown("S") and not blockedKeys["S"]
                 local aDown = IsKeyDown("A") and not blockedKeys["A"]
@@ -604,40 +671,33 @@ local function createPlayerStates(fsm)
             end
 
             -- ============================================================
-            -- ENEMY TARGET MODE: click to select an enemy
+            -- ENEMY TARGET MODE: Tab/Shift+Tab to cycle, Space to confirm
             -- ============================================================
             if enemyTargetMode then
-                if IsMouseButtonPressed and IsMouseButtonPressed(0) then
-                    local mouseX, mouseY = GetMousePosition()
-                    if mouseX and mouseY then
-                        local enemies = GetAllEnemies()
-                        if enemies then
-                            for _, eID in ipairs(enemies) do
-                                local wx, wy = GetEntityWorldPosition(eID)
-                                if wx and wy then
-                                    local dist = math.sqrt((mouseX - wx)^2 + (mouseY - wy)^2)
-                                    if dist < 0.5 then
-                                        enemyTargetMode.selectedEnemy = eID
-                                        print("[PlayerScript] Enemy selected: " .. eID .. ", Space to confirm")
+                local tabDown = IsKeyDown("Tab")
+                local tabPressed = tabDown and not lastTabKeyDown
+                lastTabKeyDown = tabDown
 
-                                        -- Re-tint: highlight selected enemy
-                                        if activePreview and activePreview.tiles then
-                                            for _, tile in ipairs(activePreview.tiles) do
-                                                TintTile(tile.x, tile.y, 1.0, 0.3, 0.3, 0.4)
-                                            end
-                                        end
-                                        local ex, ey = GetEntityGridPosition(eID)
-                                        if ex and ey then
-                                            TintTile(ex, ey, 1.0, 0.0, 0.0, 0.9)  -- bright red for selected
-                                        end
-                                        break
-                                    end
-                                end
-                            end
-                        end
+                if tabPressed and #enemyTargetMode.targets > 0 then
+                    local n = #enemyTargetMode.targets
+                    local idx = enemyTargetMode.currentIndex
+                    if IsKeyDown("Shift") then
+                        idx = idx - 1
+                        if idx < 1 then idx = n end
+                    else
+                        idx = idx + 1
+                        if idx > n then idx = 1 end
                     end
+                    enemyTargetMode.currentIndex = idx
+                    enemyTargetMode.selectedEnemy = enemyTargetMode.targets[idx]
+                    -- Re-tint: highlight selected (selected=bold red, unselected=very dim)
+                    for i, t in ipairs(activePreview and activePreview.tiles or {}) do
+                        local bright = (i == idx)
+                        TintTile(t.x, t.y, bright and 1.0 or 0.15, bright and 0.0 or 0.1, bright and 0.0 or 0.1, bright and 0.95 or 0.35)
+                    end
+                    print("[PlayerScript] Enemy selected: " .. tostring(enemyTargetMode.selectedEnemy) .. " (" .. idx .. "/" .. n .. "), Space to execute")
                 end
-                -- Update key states but don't process movement
+
                 local wDown = IsKeyDown("W") and not blockedKeys["W"]
                 local sDown = IsKeyDown("S") and not blockedKeys["S"]
                 local aDown = IsKeyDown("A") and not blockedKeys["A"]
@@ -775,8 +835,9 @@ local function createPlayerStates(fsm)
                 return
             end
 
+            local actualMoveCost = getMovementCost()
             local currentAP, maxAP = GetEntityAP(entityID)
-            if currentAP < apCostPerMove then
+            if currentAP < actualMoveCost then
                 print("[PlayerScript] FAILED: Not enough AP!")
                 PulseTile(self.targetX, self.targetY, 0.3, 1.0, 1.0, 0.3)
                 self.fsm:changeState("WaitingForInput")
@@ -793,7 +854,8 @@ local function createPlayerStates(fsm)
             if not sx or not sy then
                 print("[MOVING] WARNING: Could not get start position, falling back to instant")
                 MoveEntityToTile(entityID, self.targetX, self.targetY)
-                ConsumeEntityAP(entityID, apCostPerMove)
+                ConsumeEntityAP(entityID, actualMoveCost)
+                if bloodyWarcryFreeMove then bloodyWarcryFreeMove = false end
                 self.fsm:changeState("WaitingForInput")
                 return
             end
@@ -812,7 +874,8 @@ local function createPlayerStates(fsm)
             local ex, ey = GetEntityWorldPosition(entityID)
             if not ex or not ey then
                 print("[MOVING] WARNING: Could not get end position")
-                ConsumeEntityAP(entityID, apCostPerMove)
+                ConsumeEntityAP(entityID, actualMoveCost)
+                if bloodyWarcryFreeMove then bloodyWarcryFreeMove = false end
                 self.fsm:changeState("WaitingForInput")
                 return
             end
@@ -822,8 +885,12 @@ local function createPlayerStates(fsm)
             -- 4) Yank the sprite BACK to the start position (grid is already updated)
             SetSpritePosition(entityID, self.startWorldX, self.startWorldY)
 
-            -- 5) Consume AP
-            ConsumeEntityAP(entityID, apCostPerMove)
+            -- 5) Consume AP (Bloody Warcry: first move is free)
+            ConsumeEntityAP(entityID, actualMoveCost)
+            if bloodyWarcryFreeMove then
+                print("[PlayerScript] Bloody Warcry: free movement!")
+                bloodyWarcryFreeMove = false
+            end
             local newAP, _ = GetEntityAP(entityID)
             print("[PlayerScript] AP consumed. Remaining: " .. tostring(newAP))
 
@@ -947,6 +1014,39 @@ function OnInit(id)
         print("[PlayerScript] No SkillLoadout.json found, using default skills")
     end
 
+    -- Register this player in the global registry for UI accessors
+    local idx = getPlayerIndex()
+    if idx then
+        _G._playerRegistry[idx] = {
+            entityID = entityID,
+            getSkills = function() return PlayerSkills[idx] or {} end,
+            getActiveSlotKey = function() return activeSkillSlotKey end,
+            canUseSkill = function(slotKey)
+                local mySkills = PlayerSkills[idx] or {}
+                local skillID = mySkills[slotKey]
+                if not skillID then return false end
+                local skill = SkillDefs[skillID]
+                if not skill then return false end
+                local currentAttackAP = GetEntityAttackAP(entityID)
+                return currentAttackAP >= skill.apCost
+            end,
+        }
+    end
+
+    -- Push skill data to level Lua state for SkillBubbleHolderUI
+    if idx and CallLevelFunction then
+        local mySkills = PlayerSkills[idx] or {}
+        local s1 = mySkills["1"] or ""
+        local s2 = mySkills["2"] or ""
+        local s3 = mySkills["3"] or ""
+        local s4 = mySkills["4"] or ""
+        local ap1 = (s1 ~= "" and SkillDefs[s1]) and SkillDefs[s1].apCost or 0
+        local ap2 = (s2 ~= "" and SkillDefs[s2]) and SkillDefs[s2].apCost or 0
+        local ap3 = (s3 ~= "" and SkillDefs[s3]) and SkillDefs[s3].apCost or 0
+        local ap4 = (s4 ~= "" and SkillDefs[s4]) and SkillDefs[s4].apCost or 0
+        CallLevelFunction("RegisterPlayerSkills", idx, entityID, s1, s2, s3, s4, ap1, ap2, ap3, ap4)
+    end
+
     -- Apply scale to ALL players (unified scaling)
     SetScale(entityID, 0.25, 0.25)
     print("[PlayerScript] Scaled Player " .. entityID .. " to 0.25x0.25")
@@ -993,6 +1093,11 @@ function OnUpdate(dt)
     end
     
     -- ========================================================================
+    -- EFFECT PARTICLE CLEANUP: remove particles for expired status effects
+    -- ========================================================================
+    cleanupEffectParticles()
+
+    -- ========================================================================
     -- DEATH CHECK: Stop processing if entity is dead
     -- ========================================================================
 
@@ -1038,6 +1143,7 @@ function OnUpdate(dt)
                 lastSkillKeyDown[key] = false
             end
             lastSpaceKeyDown = false
+            lastTabKeyDown = false
             -- Reset movement key states
             lastWKeyDown = false
             lastSKeyDown = false
@@ -1209,6 +1315,23 @@ function ShowSkillPreview(skillID)
 
     print("[PlayerScript] Showing preview for " .. skill.name .. " at (" .. currentX .. ", " .. currentY .. ")")
 
+    -- Dark Omens: block preview if already used this level
+    if skill.oncePerLevel and darkOmensUsedThisLevel then
+        print("[PlayerScript] " .. skill.name .. " already used this level!")
+        PulseTile(currentX, currentY, 0.3, 0.5, 0.5, 0.5)
+        return
+    end
+
+    -- HP cost check: block preview if not enough HP
+    if skill.hpCost and skill.hpCost > 0 then
+        local currentHP = GetEntityHP(entityID)
+        if not currentHP or currentHP <= skill.hpCost then
+            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= cost:" .. skill.hpCost .. ")")
+            PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
+            return
+        end
+    end
+
     -- Projectile skills: no tile preview, just register as active for Space to execute
     if skill.skillType == "projectile" then
         activePreview = { skillID = skillID, tiles = {} }
@@ -1250,30 +1373,59 @@ function ShowSkillPreview(skillID)
         return
     end
 
-    -- Enemy target skills (Earthen Bind, Mana Drain, Soul Rend): click an enemy to select
+    -- Groundshatter: 5x5 area centered on self, tint all surrounding tiles
+    if skill.skillType == "groundshatter" then
+        local pattern = SkillPatterns.GetPattern(skill.pattern, currentAnimDirection, skill.range, isFlippedX)
+        local tiles = {}
+        for _, offset in ipairs(pattern) do
+            local tileX = currentX + offset.x
+            local tileY = currentY + offset.y
+            if IsValidGridPosition(tileX, tileY) then
+                TintTile(tileX, tileY, 1.0, 0.3, 0.0, 0.7)  -- orange-red for AoE damage
+                table.insert(tiles, {x = tileX, y = tileY})
+            end
+        end
+        -- Also tint self tile (caster is stunned but not damaged by own skill)
+        TintTile(currentX, currentY, 1.0, 0.5, 0.0, 0.7)
+        table.insert(tiles, {x = currentX, y = currentY})
+        activePreview = { skillID = skillID, tiles = tiles }
+        print("[PlayerScript] Preview active (groundshatter 5x5): " .. skill.name .. " (" .. #tiles .. " tiles)")
+        return
+    end
+
+    -- Enemy target skills (Earthen Bind, Mana Drain, Soul Rend): Tab to cycle, Space to confirm
     if skill.skillType == "enemy_target" then
-        enemyTargetMode = { skillID = skillID }
-        -- Tint all enemy tiles red
+        local targets = {}
         local tiles = {}
         local enemies = GetAllEnemies()
         if enemies then
             for _, eID in ipairs(enemies) do
                 local ex, ey = GetEntityGridPosition(eID)
                 if ex and ey then
-                    TintTile(ex, ey, 1.0, 0.3, 0.3, 0.7)  -- red tint on enemies
+                    table.insert(targets, eID)
                     table.insert(tiles, {x = ex, y = ey})
                 end
             end
         end
+        if #targets == 0 then
+            print("[PlayerScript] No enemies to target")
+            PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
+            return
+        end
+        local idx = 1
+        enemyTargetMode = { skillID = skillID, targets = targets, currentIndex = idx, selectedEnemy = targets[idx] }
         activePreview = { skillID = skillID, tiles = tiles }
-        print("[PlayerScript] Enemy target mode: click an enemy to select, Space to execute")
+        -- Tint: dim all, highlight first (selected=bold red, unselected=very dim)
+        for i, t in ipairs(tiles) do
+            TintTile(t.x, t.y, (i == idx) and 1.0 or 0.15, (i == idx) and 0.0 or 0.1, (i == idx) and 0.0 or 0.1, (i == idx) and 0.95 or 0.35)
+        end
+        print("[PlayerScript] Enemy target mode: Tab/Shift+Tab to cycle, Space to execute")
         return
     end
 
-    -- Ally target skills (Knight's Oath, Soul Merge): enter ally targeting mode
+    -- Ally target skills (Knight's Oath, Soul Merge): Tab to cycle, Space to confirm
     if skill.skillType == "ally_target" then
-        allyTargetMode = { skillID = skillID }
-        -- Tint all ally tiles green
+        local targets = {}
         local tiles = {}
         local allPlayers = GetAllPlayers()
         if allPlayers then
@@ -1281,14 +1433,25 @@ function ShowSkillPreview(skillID)
                 if pid ~= entityID then
                     local px, py = GetEntityGridPosition(pid)
                     if px and py then
-                        TintTile(px, py, 0.3, 1.0, 0.3, 0.7)  -- green tint on allies
+                        table.insert(targets, pid)
                         table.insert(tiles, {x = px, y = py})
                     end
                 end
             end
         end
+        if #targets == 0 then
+            print("[PlayerScript] No allies to target")
+            PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
+            return
+        end
+        local idx = 1
+        allyTargetMode = { skillID = skillID, targets = targets, currentIndex = idx, selectedAlly = targets[idx] }
         activePreview = { skillID = skillID, tiles = tiles }
-        print("[PlayerScript] Ally target mode: click an ally to select, Space to cancel")
+        -- Tint: dim all, highlight first (selected=bold green, unselected=very dim)
+        for i, t in ipairs(tiles) do
+            TintTile(t.x, t.y, (i == idx) and 0.0 or 0.1, (i == idx) and 1.0 or 0.15, (i == idx) and 0.0 or 0.1, (i == idx) and 0.95 or 0.35)
+        end
+        print("[PlayerScript] Ally target mode: Tab/Shift+Tab to cycle, Space to confirm")
         return
     end
 
@@ -1329,9 +1492,14 @@ function ClearActivePreview()
         end
     end
     activePreview = nil
+    activeSkillSlotKey = nil
+    if CallLevelFunction then
+        CallLevelFunction("SetSkillUIActiveSlot", getPlayerIndex() or 0, "")
+    end
     dashMode = nil
     allyTargetMode = nil
     enemyTargetMode = nil
+    lastTabKeyDown = false
 end
 
 -- Find all enemies within a skill's pattern
@@ -1383,6 +1551,33 @@ end
 
 -- Helper: consume attack AP and trigger UI animation
 local function consumeAttackAPAndAnimate(cost)
+    -- Dark Omens Triggered: free skills cost 0 AP
+    if darkOmensSkillsRemaining > 0 then
+        print("[PlayerScript] Dark Omens: skill costs 0 AP (" .. darkOmensSkillsRemaining .. " remaining)")
+        return
+    end
+
+    -- Siphon Charge: consume ALL remaining AP instead of normal cost
+    if siphonTriggeredThisSkill then
+        local remainingAP = GetEntityAttackAP(entityID)
+        if remainingAP and remainingAP > 0 then
+            ConsumeEntityAttackAP(entityID, remainingAP)
+            for i = 1, remainingAP do
+                if UIManager and UIManager.GetComponent then
+                    local comp = UIManager.GetComponent("attackAP")
+                    if comp and comp.ConsumeOneAP then
+                        pcall(function() comp:ConsumeOneAP() end)
+                    end
+                else
+                    pcall(function() TriggerAttackAPAnimation() end)
+                end
+            end
+            print("[PlayerScript] Siphon Charge: consumed all " .. remainingAP .. " AP")
+        end
+        siphonTriggeredThisSkill = false
+        return
+    end
+
     ConsumeEntityAttackAP(entityID, cost)
     for i = 1, cost do
         if UIManager and UIManager.GetComponent then
@@ -1431,6 +1626,49 @@ local function faceToward(targetX, targetY)
     end
 end
 
+-- Helper: spawn particle emitter on an entity for a status effect
+local function spawnEffectParticles(targetID, effectName, r, g, b)
+    if not SpawnParticleEmitter then return end
+    local wx, wy = GetEntityWorldPosition(targetID)
+    if not wx or not wy then return end
+    _G.EffectParticles = _G.EffectParticles or {}
+    local key = effectName .. "_" .. targetID
+    if _G.EffectParticles[key] then return end  -- don't double-spawn
+    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
+    if emitterID and emitterID > 0 then
+        _G.EffectParticles[key] = emitterID
+        print("[PlayerScript] Spawned " .. effectName .. " particles on entity " .. targetID)
+    end
+end
+
+-- Helper: remove particle emitter for a specific effect on an entity
+local function removeEffectParticles(targetID, effectName)
+    if not _G.EffectParticles then return end
+    local key = effectName .. "_" .. targetID
+    local emitterID = _G.EffectParticles[key]
+    if emitterID and emitterID > 0 and DestroyEntity then
+        pcall(DestroyEntity, emitterID)
+        _G.EffectParticles[key] = nil
+        print("[PlayerScript] Removed " .. effectName .. " particles from entity " .. targetID)
+    end
+end
+
+-- Helper: cleanup all effect particles where the status effect has expired
+local function cleanupEffectParticles()
+    if not _G.EffectParticles or not HasStatusEffect then return end
+    for key, emitterID in pairs(_G.EffectParticles) do
+        local effectName, targetIDStr = key:match("^(.+)_(%d+)$")
+        local targetID = tonumber(targetIDStr)
+        if targetID and effectName then
+            local stillHasEffect = HasStatusEffect(targetID, effectName)
+            if not stillHasEffect then
+                if DestroyEntity then pcall(DestroyEntity, emitterID) end
+                _G.EffectParticles[key] = nil
+            end
+        end
+    end
+end
+
 -- Execute any skill based on its skillType
 -- Helper: heal a specific entity by amount (capped at max HP)
 local function healEntity(targetID, amount)
@@ -1452,9 +1690,12 @@ local function getSoulMergeBonusDamage()
 end
 
 -- Helper: after damaging an enemy, check for soulRend (heal all players) and kill heal
-local function checkPostDamageEffects(enemyID)
-    -- Soul Rend: if enemy has soulRend, heal all players for 1 HP
-    if HasStatusEffect and HasStatusEffect(enemyID, "soulRend") then
+-- hadSoulRend: must be checked BEFORE DamageEntity, because killing the enemy destroys the entity
+--              and HasStatusEffect would fail on a destroyed entity
+local function checkPostDamageEffects(enemyID, hadSoulRend)
+    -- Soul Rend: if enemy HAD soulRend (before damage), heal all players for 1 HP
+    -- Works even when the attack kills the enemy
+    if hadSoulRend then
         local allPlayers = GetAllPlayers()
         if allPlayers then
             for _, pid in ipairs(allPlayers) do
@@ -1478,10 +1719,12 @@ end
 
 -- Helper: damage an enemy with soulMergeBuff bonus and post-damage effects
 local function damageEnemyWithEffects(enemyID, baseDamage)
-    local damage = baseDamage + getSoulMergeBonusDamage()
+    local damage = baseDamage + getSoulMergeBonusDamage() + currentWarcryBonus
+    -- Check soulRend BEFORE damage: if attack kills enemy, entity is destroyed and HasStatusEffect would fail
+    local hadSoulRend = HasStatusEffect and HasStatusEffect(enemyID, "soulRend")
     local success = DamageEntity(enemyID, damage)
     if success then
-        checkPostDamageEffects(enemyID)
+        checkPostDamageEffects(enemyID, hadSoulRend)
     end
     return success
 end
@@ -1495,19 +1738,111 @@ function ExecuteSkill(skillID)
 
     print("[PlayerScript] ===== EXECUTING: " .. skill.name .. " =====")
 
-    -- Check AP
-    local currentAP, maxAP = GetEntityAttackAP(entityID)
-    if not currentAP or currentAP < skill.apCost then
-        print("[PlayerScript] Not enough Attack AP (" .. tostring(currentAP) .. " < " .. skill.apCost .. ")")
+    -- Dark Omens Triggered: skills cost 0 AP, but only 2 skills allowed
+    local darkOmensFreeSkill = (darkOmensSkillsRemaining > 0)
+    if darkOmensFreeSkill and darkOmensSkillsRemaining <= 0 then
+        print("[PlayerScript] Dark Omens: no more free skills this turn!")
         ClearActivePreview()
         return
     end
 
+    -- Check AP (skip if Dark Omens free skill)
+    local currentAP, maxAP = GetEntityAttackAP(entityID)
+    if not darkOmensFreeSkill then
+        if not currentAP or currentAP < skill.apCost then
+            print("[PlayerScript] Not enough Attack AP (" .. tostring(currentAP) .. " < " .. skill.apCost .. ")")
+            ClearActivePreview()
+            return
+        end
+    end
+
+    -- Check HP cost (Berserker skills)
+    local hpCost = skill.hpCost or 0
+    if hpCost > 0 then
+        local currentHP, maxHP = GetEntityHP(entityID)
+        if not currentHP or currentHP <= hpCost then
+            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= cost:" .. hpCost .. ")")
+            ClearActivePreview()
+            return
+        end
+    end
+
+    -- Dark Omens: once per level check
+    if skill.oncePerLevel and darkOmensUsedThisLevel then
+        print("[PlayerScript] " .. skill.name .. " already used this level!")
+        ClearActivePreview()
+        return
+    end
+
+    -- Siphon Charge: if active, first attack consumes all AP and heals 3 HP
+    siphonTriggeredThisSkill = false
+    if siphonChargeActive and skill.damage and skill.damage > 0 then
+        print("[PlayerScript] Siphon Charge triggered! Will consume all AP and heal 3 HP")
+        siphonTriggeredThisSkill = true
+        siphonChargeActive = false
+        RemoveStatusEffect(entityID, "siphonCharge")
+        healEntity(entityID, 3)
+    end
+
+    -- Deduct HP cost
+    if hpCost > 0 then
+        local currentHP = GetEntityHP(entityID)
+        SetEntityHP(entityID, currentHP - hpCost)
+        print("[PlayerScript] " .. skill.name .. " HP cost: -" .. hpCost .. " HP (now " .. (currentHP - hpCost) .. ")")
+    end
+
+    -- Bloody Warcry: next skill gets +1 damage and costs 1 HP
+    currentWarcryBonus = 0
+    if bloodyWarcryDamageBonus and skill.damage and skill.damage > 0 then
+        currentWarcryBonus = 1
+        bloodyWarcryDamageBonus = false
+        RemoveStatusEffect(entityID, "bloodyWarcry")
+        local currentHP = GetEntityHP(entityID)
+        if currentHP and currentHP > 1 then
+            SetEntityHP(entityID, currentHP - 1)
+            print("[PlayerScript] Bloody Warcry: +1 damage, -1 HP (now " .. (currentHP - 1) .. ")")
+        end
+    end
+
+    -- Dark Omens Triggered: track skill usage (2 free skills)
+    if darkOmensSkillsRemaining > 0 then
+        darkOmensSkillsRemaining = darkOmensSkillsRemaining - 1
+        print("[PlayerScript] Dark Omens: " .. darkOmensSkillsRemaining .. " free skills remaining")
+    end
+
     -- ================================================================
-    -- SELF-BUFF skills (Guard, Parry)
+    -- SELF-BUFF skills (Guard, Parry, Siphon Charge, Futile Resistance, Dark Omens, Bloody Warcry)
     -- ================================================================
     if skill.skillType == "self_buff" then
         ApplyStatusEffect(entityID, skill.effect, skill.duration, entityID)
+
+        -- Dark Omens: mark as used this level
+        if skill.effect == "darkOmens" then
+            darkOmensUsedThisLevel = true
+            spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
+        end
+
+        -- Siphon Charge: activate for next attack
+        if skill.effect == "siphonCharge" then
+            siphonChargeActive = true
+        end
+
+        -- Bloody Warcry: apply warcry buff to ALL party members
+        if skill.effect == "bloodyWarcry" then
+            local allPlayers = GetAllPlayers()
+            if allPlayers then
+                for _, pid in ipairs(allPlayers) do
+                    if pid ~= entityID then
+                        ApplyStatusEffect(pid, "bloodyWarcry", skill.duration, entityID)
+                        spawnEffectParticles(pid, "bloodyWarcry", 1.0, 0.0, 0.0)
+                    end
+                end
+            end
+            -- Red particles on self too
+            spawnEffectParticles(entityID, "bloodyWarcry", 1.0, 0.0, 0.0)
+            print("[PlayerScript] Bloody Warcry: applied to all party members")
+        end
+
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to self")
         playAttackAnimation()
@@ -1522,6 +1857,12 @@ function ExecuteSkill(skillID)
         local enemies = FindEnemiesInPattern(skillID)
         if #enemies == 0 then
             print("[PlayerScript] No enemies in " .. skill.name .. " range")
+            -- Refund HP cost since no enemies were hit
+            if hpCost > 0 then
+                local currentHP = GetEntityHP(entityID)
+                SetEntityHP(entityID, currentHP + hpCost)
+                print("[PlayerScript] Refunded " .. hpCost .. " HP (no targets)")
+            end
             ClearActivePreview()
             return
         end
@@ -1552,6 +1893,12 @@ function ExecuteSkill(skillID)
         local enemies = FindEnemiesInPattern(skillID)
         if #enemies == 0 then
             print("[PlayerScript] No enemies in " .. skill.name .. " range")
+            -- Refund HP cost since no enemies were hit
+            if hpCost > 0 then
+                local currentHP = GetEntityHP(entityID)
+                SetEntityHP(entityID, currentHP + hpCost)
+                print("[PlayerScript] Refunded " .. hpCost .. " HP (no targets)")
+            end
             ClearActivePreview()
             return
         end
@@ -1647,7 +1994,7 @@ function ExecuteSkill(skillID)
     end
 
     -- ================================================================
-    -- ALLY TARGET skills (Knight's Oath, Soul Merge)
+    -- ALLY TARGET skills (Knight's Oath, Soul Merge, Cannibalism)
     -- ================================================================
     if skill.skillType == "ally_target" then
         if not allyTargetMode or not allyTargetMode.selectedAlly then
@@ -1656,6 +2003,24 @@ function ExecuteSkill(skillID)
         end
 
         local allyID = allyTargetMode.selectedAlly
+
+        if skill.effect == "cannibalism" then
+            -- Cannibalism: ally loses 1 HP, caster heals 2 HP
+            local allyHP = GetEntityHP(allyID)
+            if allyHP and allyHP > 1 then
+                SetEntityHP(allyID, allyHP - 1)
+                healEntity(entityID, 2)
+                print("[PlayerScript] Cannibalism: ally " .. allyID .. " lost 1 HP, healed self for 2 HP")
+            else
+                print("[PlayerScript] Cannibalism: ally " .. allyID .. " HP too low (" .. tostring(allyHP) .. ")")
+                ClearActivePreview()
+                return
+            end
+            consumeAttackAPAndAnimate(skill.apCost)
+            playAttackAnimation()
+            ClearActivePreview()
+            return
+        end
 
         if skill.effect == "soulMerge" then
             -- Soul Merge: sacrifice self, permanently buff the ally
@@ -1678,6 +2043,11 @@ function ExecuteSkill(skillID)
             -- 5. +1 Attack AP (add to current; PartyTurnManager handles future turns)
             ConsumeEntityAttackAP(allyID, -1)
 
+            -- Spawn white particles on sacrificed unit
+            spawnEffectParticles(entityID, "soulMerge", 1.0, 1.0, 1.0)
+            -- Spawn white particles on buffed ally
+            spawnEffectParticles(allyID, "soulMergeBuff", 1.0, 1.0, 1.0)
+
             consumeAttackAPAndAnimate(skill.apCost)
             print("[PlayerScript] Soul Merge: " .. entityID .. " sacrificed for ally " .. allyID)
             playAttackAnimation()
@@ -1689,6 +2059,60 @@ function ExecuteSkill(skillID)
         ApplyStatusEffect(allyID, skill.effect, skill.duration, entityID, allyID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": protecting ally " .. allyID .. " for " .. skill.duration .. " turns")
+        playAttackAnimation()
+        ClearActivePreview()
+        return
+    end
+
+    -- ================================================================
+    -- GROUNDSHATTER (5x5 AoE centered on self, hits ALL characters, stuns self)
+    -- ================================================================
+    if skill.skillType == "groundshatter" then
+        local px, py = GetEntityGridPosition(entityID)
+        if not px or not py then
+            ClearActivePreview()
+            return
+        end
+
+        local totalHit = 0
+
+        -- Damage all enemies in 5x5 area
+        local enemies = GetAllEnemies()
+        if enemies then
+            for _, eID in ipairs(enemies) do
+                local ex, ey = GetEntityGridPosition(eID)
+                if ex and ey and math.abs(ex - px) <= 2 and math.abs(ey - py) <= 2 then
+                    damageEnemyWithEffects(eID, skill.damage)
+                    PulseTile(ex, ey, 0.5, 1.0, 0.0, 0.0)
+                    totalHit = totalHit + 1
+                end
+            end
+        end
+
+        -- Damage all allies in 5x5 area (including self excluded from pattern but still affected)
+        local allPlayers = GetAllPlayers()
+        if allPlayers then
+            for _, pid in ipairs(allPlayers) do
+                if pid ~= entityID then
+                    local ax, ay = GetEntityGridPosition(pid)
+                    if ax and ay and math.abs(ax - px) <= 2 and math.abs(ay - py) <= 2 then
+                        local allyHP = GetEntityHP(pid)
+                        if allyHP and allyHP > 0 then
+                            SetEntityHP(pid, math.max(allyHP - skill.damage, 0))
+                            PulseTile(ax, ay, 0.5, 1.0, 0.5, 0.0)
+                            totalHit = totalHit + 1
+                            print("[PlayerScript] Groundshatter: ally " .. pid .. " took " .. skill.damage .. " damage")
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Stun self for next turn
+        ApplyStatusEffect(entityID, "stun", 1, entityID)
+
+        consumeAttackAPAndAnimate(skill.apCost)
+        print("[PlayerScript] Groundshatter: hit " .. totalHit .. " characters for " .. skill.damage .. " damage, self stunned")
         playAttackAnimation()
         ClearActivePreview()
         return
@@ -1728,6 +2152,7 @@ function ExecuteSkill(skillID)
         ConsumeEntityAttackAP(entityID, -apGain)
         -- Apply overload: next turn AP won't refill
         ApplyStatusEffect(entityID, "overload", 1, entityID)
+        spawnEffectParticles(entityID, "overload", 0.0, 0.4, 1.0)
         if skill.apCost > 0 then
             consumeAttackAPAndAnimate(skill.apCost)
         end
@@ -1754,6 +2179,13 @@ function ExecuteSkill(skillID)
         ApplyStatusEffect(targetID, skill.effect, skill.effectDuration, entityID, 0, extra)
         if ex and ey then
             PulseTile(ex, ey, 0.5, 0.8, 0.3, 1.0)  -- purple pulse for debuff
+        end
+
+        -- Spawn colored particles based on the effect type
+        if skill.effect == "earthenBind" then
+            spawnEffectParticles(targetID, "earthenBind", 0.55, 0.35, 0.15)  -- brown
+        elseif skill.effect == "soulRend" then
+            spawnEffectParticles(targetID, "soulRend", 0.0, 0.8, 0.2)  -- green
         end
 
         -- Apply damage if any
@@ -1800,12 +2232,16 @@ function ExecuteSkill(skillID)
 
         local tintR, tintG, tintB, tintA = 1, 1, 1, 1
         local spritePath = nil
+        local explosionOnHit = false
         if getPlayerIndex() == 2
            and (skillID == "Fireball" or skillID == "PiercingShot") then
             tintR, tintG, tintB, tintA = 1, 0, 0, 1
             spritePath = ""
+            explosionOnHit = true
         end
 
+        local rangeTiles = skill.range or 0
+        local lineOnly = (skill.pattern == "line" and not (skill.pierce or false))
         local projID = SpawnSkillProjectile(
             worldX, worldY,
             dirX, dirY,
@@ -1813,7 +2249,11 @@ function ExecuteSkill(skillID)
             skill.damage or 1,
             skill.pierce or false,
             tintR, tintG, tintB, tintA,
-            spritePath
+            spritePath,
+            false,    -- isEnemyProjectile
+            entityID,  -- sourceEntityID (for Soul Rend, Soul Merge kill heal)
+            rangeTiles > 0 and rangeTiles or 0,  -- maxRangeTiles (Fireball=5, PiercingShot=0 unlimited)
+            lineOnly   -- lineOnly: Fireball hits only on line, PiercingShot pierces all in path
         )
         if not projID then
             print("[PlayerScript] ERROR: SpawnSkillProjectile returned nil")
@@ -1827,6 +2267,32 @@ function ExecuteSkill(skillID)
             .. " dmg=" .. skill.damage
             .. " pierce=" .. tostring(skill.pierce or false))
 
+        -- Bladed Whirlwind: apply DOT to enemies in the projectile path
+        if skill.effect and skill.effectDuration then
+            local enemies = GetAllEnemies()
+            if enemies then
+                local range = skill.range or 7
+                for _, eID in ipairs(enemies) do
+                    local ex, ey = GetEntityGridPosition(eID)
+                    if ex and ey then
+                        -- Check if enemy is in the line of fire
+                        local dx = ex - px
+                        local dy = ey - py
+                        local inLine = false
+                        if gridDirX ~= 0 and gridDirY == 0 then
+                            inLine = (dy == 0 and dx * gridDirX > 0 and math.abs(dx) <= range)
+                        elseif gridDirY ~= 0 and gridDirX == 0 then
+                            inLine = (dx == 0 and dy * gridDirY > 0 and math.abs(dy) <= range)
+                        end
+                        if inLine then
+                            ApplyStatusEffect(eID, skill.effect, skill.effectDuration, entityID)
+                            print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' DOT to enemy " .. eID)
+                        end
+                    end
+                end
+            end
+        end
+
         consumeAttackAPAndAnimate(skill.apCost)
         playAttackAnimation()
         ClearActivePreview()
@@ -1839,6 +2305,12 @@ function ExecuteSkill(skillID)
     local enemies = FindEnemiesInPattern(skillID)
     if #enemies == 0 then
         print("[PlayerScript] No enemies in " .. skill.name .. " range")
+        -- Refund HP cost since no enemies were hit
+        if hpCost > 0 then
+            local currentHP = GetEntityHP(entityID)
+            SetEntityHP(entityID, currentHP + hpCost)
+            print("[PlayerScript] Refunded " .. hpCost .. " HP (no targets)")
+        end
         ClearActivePreview()
         return
     end
@@ -1891,3 +2363,43 @@ end
 
 _G.GetPlayerState = GetPlayerState
 _G.GetPlayerFSM = GetPlayerFSM
+
+-- Skill UI state accessors (used by SkillBubbleHolderUI)
+-- These iterate the global registry to find the active player's data,
+-- so they work regardless of which PlayerScript instance defined them last.
+
+-- Helper: find the active player entry in the registry
+local function findActivePlayerEntry()
+    for _, entry in pairs(_G._playerRegistry or {}) do
+        if entry.entityID and IsActiveCharacter(entry.entityID) then
+            return entry
+        end
+    end
+    return nil
+end
+
+-- Returns the slot key ("1"-"4") of the currently previewed skill, or nil
+function GetActiveSkillSlotKey()
+    local entry = findActivePlayerEntry()
+    if entry then return entry.getActiveSlotKey() end
+    return nil
+end
+
+-- Returns the equipped skills table for the active character { ["1"] = "SkillID", ... }
+function GetActiveCharacterSkills()
+    local entry = findActivePlayerEntry()
+    if entry then return entry.getSkills() end
+    return nil
+end
+
+-- Returns whether a skill has enough AP to be used (not on "cooldown")
+-- Returns true if usable, false if insufficient AP
+function CanUseSkill(slotKey)
+    local entry = findActivePlayerEntry()
+    if not entry then return false end
+    return entry.canUseSkill(slotKey)
+end
+
+_G.GetActiveSkillSlotKey = GetActiveSkillSlotKey
+_G.GetActiveCharacterSkills = GetActiveCharacterSkills
+_G.CanUseSkill = CanUseSkill

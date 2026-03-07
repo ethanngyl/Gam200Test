@@ -54,7 +54,7 @@ local Direction = {
     @return table - Array of {x, y} offsets
 ]]--
 function SkillPatterns.GetPattern(patternType, direction, range, flipX)
-    range = range or 1
+    if range == nil then range = 1 end
     flipX = flipX or false
     direction = direction or Direction.Front
 
@@ -78,6 +78,9 @@ function SkillPatterns.GetPattern(patternType, direction, range, flipX)
 
     elseif patternType == "area5x5" then
         return SkillPatterns.Area5x5(direction, range, flipX)
+
+    elseif patternType == "area5x5_self" then
+        return SkillPatterns.Area5x5Self()
 
     elseif patternType == "diagonal" then
         return SkillPatterns.Diagonal()
@@ -128,36 +131,41 @@ end
 function SkillPatterns.Cone(direction, range, flipX)
     local tiles = {}
 
-    if direction == Direction.Front then  -- Facing down
-        table.insert(tiles, {x = 0, y = range})    -- Center
-        table.insert(tiles, {x = -1, y = range})   -- Left
-        table.insert(tiles, {x = 1, y = range})    -- Right
+    if direction == Direction.Front then  -- Facing down (-Y)
+        table.insert(tiles, {x = 0, y = -range})    -- Center
+        table.insert(tiles, {x = -1, y = -range})   -- Left
+        table.insert(tiles, {x = 1, y = -range})    -- Right
 
-    elseif direction == Direction.Back then  -- Facing up
-        table.insert(tiles, {x = 0, y = -range})   -- Center
-        table.insert(tiles, {x = -1, y = -range})  -- Left
-        table.insert(tiles, {x = 1, y = -range})   -- Right
+    elseif direction == Direction.Back then  -- Facing up (+Y)
+        table.insert(tiles, {x = 0, y = range})     -- Center
+        table.insert(tiles, {x = -1, y = range})    -- Left
+        table.insert(tiles, {x = 1, y = range})     -- Right
 
     elseif direction == Direction.Side then  -- Facing left/right
-        if flipX then  -- Facing left
-            table.insert(tiles, {x = -range, y = 0})   -- Center
-            table.insert(tiles, {x = -range, y = -1})  -- Up
-            table.insert(tiles, {x = -range, y = 1})   -- Down
-        else  -- Facing right
+        if flipX then  -- Facing right (+X)
             table.insert(tiles, {x = range, y = 0})    -- Center
             table.insert(tiles, {x = range, y = -1})   -- Up
-            table.insert(tiles, {x = range, y = 1})    -- Down
+            table.insert(tiles, {x = range, y = 1})     -- Down
+        else  -- Facing left (-X)
+            table.insert(tiles, {x = -range, y = 0})   -- Center
+            table.insert(tiles, {x = -range, y = -1})  -- Up
+            table.insert(tiles, {x = -range, y = 1})    -- Down
         end
     end
 
     return tiles
 end
 
--- 3x3 area centered on target
+-- 3x3 area: range=0 = centered on caster (self), range>0 = centered on tile in facing direction
 function SkillPatterns.Area3x3(direction, range, flipX)
-    local dx, dy = SkillPatterns.GetDirectionVector(direction, flipX)
-    local centerX = dx * range
-    local centerY = dy * range
+    local centerX, centerY
+    if range == 0 or range == nil then
+        centerX, centerY = 0, 0  -- Centered on self
+    else
+        local dx, dy = SkillPatterns.GetDirectionVector(direction, flipX)
+        centerX = dx * range
+        centerY = dy * range
+    end
 
     local tiles = {}
     for offsetY = -1, 1 do
@@ -185,6 +193,19 @@ function SkillPatterns.Area5x5(direction, range, flipX)
     return tiles
 end
 
+-- 5x5 area centered on caster (self)
+function SkillPatterns.Area5x5Self()
+    local tiles = {}
+    for offsetY = -2, 2 do
+        for offsetX = -2, 2 do
+            if offsetX ~= 0 or offsetY ~= 0 then  -- exclude caster's own tile
+                table.insert(tiles, {x = offsetX, y = offsetY})
+            end
+        end
+    end
+    return tiles
+end
+
 -- 4 diagonal tiles
 function SkillPatterns.Diagonal()
     return {
@@ -208,17 +229,17 @@ end
 -- Helper: Convert direction enum to vector
 function SkillPatterns.GetDirectionVector(direction, flipX)
     if direction == Direction.Front then
-        return 0, 1  -- Down
+        return 0, -1  -- Down (Front = facing camera = -Y)
     elseif direction == Direction.Back then
-        return 0, -1  -- Up
+        return 0, 1   -- Up (Back = facing away = +Y)
     elseif direction == Direction.Side then
         if flipX then
-            return -1, 0  -- Left
+            return 1, 0   -- Right (flipX=true = facing right)
         else
-            return 1, 0  -- Right
+            return -1, 0  -- Left (flipX=false = facing left)
         end
     else
-        return 0, 1  -- Default to down
+        return 0, -1  -- Default to down
     end
 end
 

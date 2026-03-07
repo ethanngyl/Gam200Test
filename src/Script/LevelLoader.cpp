@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader.cpp
 Author:      GE YONGQI, Sim Kah Yan
@@ -63,6 +63,7 @@ Technology is prohibited.
 #include "Pause/GlobalPauseManager.h"
 #include "Component.h"     // CircleCollider, AP components
 #include "ECS/TagHelper.h" // FindFirstByTag, FindAllByTag
+#include "Grid/GridECS.h"  // WorldToTile, SetOccupant for ProcessDeferredDestructions
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -211,19 +212,20 @@ namespace Framework {
         // 1. Fresh load from Open Level menu - editor mode ON, simulation OFF
         // 2. Level transition while playing - editor mode ON, simulation ON (preserve playing state)
         extern bool g_preservePlayingState;
-        
+
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // If game was playing when transitioning, keep it playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Preserving playing state for level transition");
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
             }
-            
+
             GlobalPause::SetPaused(false);
             // Enable ImGui when loading in editor mode
             if (coreEngine->GetImGuiSystem()) {
@@ -246,14 +248,15 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
             }
-            
+
             GlobalPause::SetPaused(false);
             // Ensure ImGui stays enabled
             if (coreEngine->GetImGuiSystem()) {
@@ -289,22 +292,23 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Editor mode with playing state preserved");
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
                 LOG_INFO("LevelLoader", "Editor mode enabled - simulation stopped");
             }
-            
+
             GlobalPause::SetPaused(false);
             // Final ensure ImGui is enabled after OnInit
             if (coreEngine->GetImGuiSystem()) {
                 coreEngine->GetImGuiSystem()->Enable();
             }
-            
+
             // Reset the preserve playing state flag after use
             g_preservePlayingState = false;
         }
@@ -338,6 +342,7 @@ namespace Framework {
             }
         }
 
+        deferredEntitiesToDestroy.clear();
         levelLoaded = false;
         currentLevelPath.clear();
 
@@ -363,8 +368,45 @@ namespace Framework {
     // LIFECYCLE CALLS
     // ========================================================================
 
+    void LevelLoader::DeferEntityDestruction(uint32_t entityID) {
+        deferredEntitiesToDestroy.push_back(entityID);
+    }
+
+    void LevelLoader::ProcessDeferredDestructions() {
+        if (!coreEngine) return;
+        auto* em = coreEngine->GetEntityManager();
+        if (!em) return;
+
+        for (uint32_t id : deferredEntitiesToDestroy) {
+            Entity entity(id);
+            if (em->HasComponent<TagComponent>(entity) &&
+                em->GetComponent<TagComponent>(entity).tag == "Enemy" &&
+                L && HasLuaFunction("SyncEnemyTurnBeforeEntityDestroyed")) {
+                lua_getglobal(L, "SyncEnemyTurnBeforeEntityDestroyed");
+                lua_pushinteger(L, static_cast<lua_Integer>(id));
+                if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+                    const char* err = lua_tostring(L, -1);
+                    LOG_WARN("LevelLoader", "SyncEnemyTurnBeforeEntityDestroyed error: %s", err ? err : "unknown");
+                    lua_pop(L, 1);
+                }
+            }
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                }
+            }
+            em->DestroyEntity(entity);
+        }
+        deferredEntitiesToDestroy.clear();
+    }
+
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
+
+        // Process entities queued for destruction (avoids crash when Parry/Knight Oath kills caller)
+        ProcessDeferredDestructions();
 
         // Update tile tints (restore expired tints)
         UpdateTileTints();
@@ -422,6 +464,66 @@ namespace Framework {
         }
 
         return true;
+    }
+
+    bool LevelLoader::ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID) {
+        if (!levelLoaded || !L) return false;
+
+        lua_getglobal(L, "ApplyProjectileDamage");
+        if (!lua_isfunction(L, -1)) {
+            lua_pop(L, 1);
+            lua_getglobal(L, "DamageEntity");
+            if (!lua_isfunction(L, -1)) {
+                lua_pop(L, 1);
+                return false;
+            }
+            lua_pushinteger(L, static_cast<lua_Integer>(enemyID));
+            lua_pushinteger(L, static_cast<lua_Integer>(damage));
+            lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
+            int result = lua_pcall(L, 3, 1, 0);
+            bool success = false;
+            if (result == LUA_OK && lua_isboolean(L, -1)) {
+                success = lua_toboolean(L, -1) != 0;
+            }
+            lua_pop(L, 1);
+            return success;
+        }
+        lua_pushinteger(L, static_cast<lua_Integer>(enemyID));
+        lua_pushinteger(L, static_cast<lua_Integer>(damage));
+        lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
+        int result = lua_pcall(L, 3, 1, 0);
+        bool success = false;
+        if (result == LUA_OK && lua_isboolean(L, -1)) {
+            success = lua_toboolean(L, -1) != 0;
+        } else if (result != LUA_OK) {
+            const char* err = lua_tostring(L, -1);
+            LOG_ERROR("LevelLoader", "ApplyProjectileDamage error: %s", err ? err : "unknown");
+        }
+        lua_pop(L, 1);
+        return success;
+    }
+
+    bool LevelLoader::ApplyDamageToEntity(uint32_t targetID, int damage, uint32_t attackerID) {
+        if (!levelLoaded || !L) return false;
+
+        lua_getglobal(L, "DamageEntity");
+        if (!lua_isfunction(L, -1)) {
+            lua_pop(L, 1);
+            return false;
+        }
+        lua_pushinteger(L, static_cast<lua_Integer>(targetID));
+        lua_pushinteger(L, static_cast<lua_Integer>(damage));
+        lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
+        int result = lua_pcall(L, 3, 1, 0);
+        bool success = false;
+        if (result == LUA_OK && lua_isboolean(L, -1)) {
+            success = lua_toboolean(L, -1) != 0;
+        } else if (result != LUA_OK) {
+            const char* err = lua_tostring(L, -1);
+            LOG_ERROR("LevelLoader", "DamageEntity error: %s", err ? err : "unknown");
+        }
+        lua_pop(L, 1);
+        return success;
     }
 
     LevelLoader* LevelLoader::GetLevelLoader(lua_State* L) {
@@ -542,6 +644,7 @@ namespace Framework {
         lua_register(L, "SetAnimationDirection", Lua_SetAnimationDirection);
         lua_register(L, "SetAnimationFlipX", Lua_SetAnimationFlipX);
         lua_register(L, "SetAnimationPlaying", Lua_SetAnimationPlaying);
+        lua_register(L, "SetAnimationPrefix", Lua_SetAnimationPrefix);
         lua_register(L, "SetAnimationLoop", Lua_SetAnimationLoop);
         lua_register(L, "SetAnimationFrameRange", Lua_SetAnimationFrameRange);
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
@@ -601,6 +704,7 @@ namespace Framework {
 
         // Grid Conversion API
         lua_register(L, "TileToWorld", Lua_TileToWorld);
+        lua_register(L, "ScreenToTile", Lua_ScreenToTile);
 
         // Entity-specific APIs (proper naming)
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
@@ -647,6 +751,9 @@ namespace Framework {
         lua_register(L, "GetSkillByID", Lua_GetSkillByID);
         lua_register(L, "GetClassSkills", Lua_GetClassSkills);
         lua_register(L, "GetSkillCount", Lua_GetSkillCount);
+
+        // Particle Emitter API
+        lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
 
         LOG_INFO("LevelLoader", "API registered");
     }

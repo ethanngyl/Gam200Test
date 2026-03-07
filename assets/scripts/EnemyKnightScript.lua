@@ -105,7 +105,7 @@ local healthBarFG = nil
 local healthBarWidth = 0.1
 local healthBarHeight = 0.02
 local healthBarOffsetY = 0.05
-local healthBarLayer = 50
+local healthBarLayer = 4
 
 -- ============================================================================
 -- ANIMATION

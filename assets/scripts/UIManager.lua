@@ -59,6 +59,7 @@ local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 local TurnScrollUI = require("ScrollOpen")
+local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")
 
 -- ============================================================================
 -- STATE
@@ -67,6 +68,51 @@ local TurnScrollUI = require("ScrollOpen")
 UIManager.components = {}
 UIManager.initialized = false
 UIManager.cameraMoveThreshold = 0.01
+
+-- ============================================================================
+-- SKILL UI STATE BRIDGE
+-- ============================================================================
+-- Shared state between entity Lua states (PlayerScript) and level Lua state
+-- (SkillBubbleHolderUI). PlayerScript pushes data here via CallLevelFunction,
+-- and SkillBubbleHolderUI reads from it directly (same Lua state).
+
+_G._skillUIState = {
+    -- Per-player skill assignments: [playerIndex] = { ["1"] = "SkillID", ... }
+    players = {},
+    -- Per-player AP costs: [playerIndex] = { ["1"] = apCost, ... }
+    apCosts = {},
+    -- Per-player entity IDs: [playerIndex] = entityID
+    entityIDs = {},
+    -- Currently active (previewed) skill slot key ("1"-"4") or nil
+    activeSlotKey = nil,
+    -- Which player index is currently active
+    activePlayerIndex = nil,
+}
+
+-- Called by PlayerScript (via CallLevelFunction) to register a player's skills
+-- Args: playerIndex, entityID, slot1SkillID, slot2SkillID, slot3SkillID, slot4SkillID,
+--        slot1APCost, slot2APCost, slot3APCost, slot4APCost
+function _G.RegisterPlayerSkills(playerIndex, entityID, s1, s2, s3, s4, ap1, ap2, ap3, ap4)
+    _G._skillUIState.players[playerIndex] = {}
+    _G._skillUIState.apCosts[playerIndex] = {}
+    _G._skillUIState.entityIDs[playerIndex] = entityID
+    local slots = { s1, s2, s3, s4 }
+    local costs = { ap1, ap2, ap3, ap4 }
+    for i = 1, 4 do
+        local key = tostring(i)
+        if slots[i] and slots[i] ~= "" then
+            _G._skillUIState.players[playerIndex][key] = slots[i]
+            _G._skillUIState.apCosts[playerIndex][key] = costs[i] or 1
+        end
+    end
+end
+
+-- Called by PlayerScript (via CallLevelFunction) when a skill slot is selected
+function _G.SetSkillUIActiveSlot(playerIndex, slotKey)
+    _G._skillUIState.activePlayerIndex = playerIndex
+    if slotKey == "" then slotKey = nil end
+    _G._skillUIState.activeSlotKey = slotKey
+end
 
 -- ============================================================================
 -- INITIALIZATION
@@ -187,6 +233,17 @@ function UIManager.Init(config)
         textEndFrame = 28
     })
 
+    -- Create Skill Bubble Holder (far right side - placeholder for skill icons)
+    UIManager.components.skillBubbleHolder = SkillBubbleHolderUI:New()
+    UIManager.components.skillBubbleHolder:Init({
+        offsetX = 0.82,
+        offsetY = -0.15,
+        scaleX = 0.15,
+        scaleY = 0.55,
+        layer = 4,
+        texture = "assets/new assets/skill_bubble_holder.png"
+    })
+
     -- TODO: Add more components as needed:
     -- - ChestProgressUI
     -- - PlayerIconsUI (boots, sword)
@@ -231,6 +288,8 @@ function UIManager.Update(dt)
     if UIManager.components.health then
         UIManager.components.health:SetEnabled(not isEnemyTurn)  -- Always enabled
     end
+    -- Keep skill bubble holder visible during enemy turn
+    -- so players can still see skill info
 
     -- Update all components
     for name, component in pairs(UIManager.components) do

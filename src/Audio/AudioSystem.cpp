@@ -31,7 +31,7 @@
 namespace Framework {
 
     /**
-     * @brief To check for FMOD Errors 
+     * @brief To check for FMOD Errors
      * @params result, Takes in the FMOD error code
      * @params message, Takes in a message, can be used to specify where exactly the error occurs
      * @return the type of fmod error
@@ -54,7 +54,7 @@ namespace Framework {
     AudioSystem::AudioSystem() {
         std::cout << "[Audio] AudioSystem created\n";
     }
-    
+
     /**
      * @brief Default destructor for AudioSystem
      * -  Logs destruction message. Does not clean up FMOD resources automatically.
@@ -166,7 +166,7 @@ namespace Framework {
      * - As with the other components, we must first retrive all entities and scan through if they possess the audio component before running the audio system
      * - FMOD Sound* retrieves the pointer associated with the name from the map entry
      * - FMOD Channel* is set to a nullptr to ensure its in a safe state before we use it
-     * - playSound that takes in 4 parameters, the audio data, the channel group, which in this case since we don't have one it will default to the master channel, 
+     * - playSound that takes in 4 parameters, the audio data, the channel group, which in this case since we don't have one it will default to the master channel,
      the pause state(in this case we want it to start playing so we set it to be false), and the channel which is auto assigned by the function
      * - After playSound is verified, we can use functions in the library to set the properties of our audio(volume, pitch, mode)
      * - Currently audio looping is disabled since loop is initialized to be false within the struct, so FMOD_LOOP_OFF is used
@@ -277,15 +277,15 @@ namespace Framework {
      * @param filepath - Path to the audio file (e.g., "assets/sounds/jump.wav")
      * @param name - Unique identifier for accessing this sound later
      * @return True if the createSound has successfully loaded, false if not
-     * 
+     *
      * Implementation details:
      * - Verify that FMOD and if the sound is already loaded
      * - sound is set to a nullptr to ensure its safe state
      * - createSound is a function the fmod library used to load audio data from a file
-     * - It takes in the filepath, the mode, optional info and where FMOD should store the pointer 
+     * - It takes in the filepath, the mode, optional info and where FMOD should store the pointer
      * - FMOD_2D and FMOD_DEFAULT are the flags that configures the behaviour of our audio
      * - In this case, we want 2D audio(No positional calculations for now) and to use the default settings
-     * - The default in this case basically merges FMOD_CREATESAMPLE and FMOD_LOOP_OFF 
+     * - The default in this case basically merges FMOD_CREATESAMPLE and FMOD_LOOP_OFF
      * - FMOD_CREATE_SAMPLE loads the whole sound into memory
      * - We don't have any optional info we ant to pass in so that parameter is set to a nullptr
      */
@@ -355,7 +355,7 @@ namespace Framework {
      * - returns if the key/name of the sound cannot be found
      * - FMOD Channel* is set to a nullptr to ensure its in a safe state before we use it
      * - playSound that takes in 4 parameters, the audio data, the channel group, which in this case since we don't have one it will default to the master channel,
-     the pause state(in this case we want it to start playing so we set it to be false), and the channel which is auto assigned by the function  
+     the pause state(in this case we want it to start playing so we set it to be false), and the channel which is auto assigned by the function
      * - Depending on the boolean value of the loop parameter, we will either set the audio to be looped or just to be played as normal
      */
     void AudioSystem::PlaySound(const std::string& soundName, bool loop) {
@@ -408,7 +408,7 @@ namespace Framework {
      *
      * Implementation details:
      * - Verifies that the masterGroup exists
-     * - setVolume() is a function from the fmod() to set the volume of the 
+     * - setVolume() is a function from the fmod() to set the volume of the
      */
     void AudioSystem::SetMasterVolume(float volume) {
         if (masterGroup) {
@@ -568,92 +568,92 @@ namespace Framework {
     // This function converts the mouse cursor's screen position (pixels) into 
     // Game World coordinates, accounting for the camera and editor viewport.
     void AudioSystem::ReloadAudioLibrary() {
-    std::cout << "[AudioSystem] Reloading from AudioConfig.json...\n";
+        std::cout << "[AudioSystem] Reloading from AudioConfig.json...\n";
 
-    // 1. Cleanup old sounds
-    StopAllSounds();
-    for (auto& [name, sound] : sounds) {
-        if (sound) sound->release();
-    }
-    sounds.clear();
+        // 1. Cleanup old sounds
+        StopAllSounds();
+        for (auto& [name, sound] : sounds) {
+            if (sound) sound->release();
+        }
+        sounds.clear();
 
-    // 2. Read File
-    std::ifstream file("assets/JSON/AudioConfig.json");
-    if (!file.is_open()) {
-        std::cerr << "[AudioSystem] Failed to open config file!\n";
-        return;
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string json = buffer.str();
-
-    // --- PARSING LOGIC ---
-
-    // 1. Locate the "sounds" array
-    size_t soundsPos = json.find("\"sounds\"");
-    size_t arrayStart = json.find("[", soundsPos);
-    if (soundsPos == std::string::npos || arrayStart == std::string::npos) {
-        std::cout << "[AudioSystem] No 'sounds' array found.\n";
-        return;
-    }
-
-    // 2. Loop through objects inside the array
-    size_t currentPos = arrayStart;
-    int loadedCount = 0;
-
-    while (true) {
-        // Find start of next object
-        size_t objStart = json.find("{", currentPos);
-        size_t objEnd = json.find("}", objStart);
-
-        // Stop if no more objects or we passed the end of the array
-        // (A simple heuristic: if we find ']' before the next '{', we are done)
-        size_t arrayClose = json.find("]", currentPos);
-        if (objStart == std::string::npos || (arrayClose != std::string::npos && objStart > arrayClose)) {
-            break;
+        // 2. Read File
+        std::ifstream file("assets/JSON/AudioConfig.json");
+        if (!file.is_open()) {
+            std::cerr << "[AudioSystem] Failed to open config file!\n";
+            return;
         }
 
-        // Extract the single object string: { "name": "...", "filepath": "..." }
-        std::string entry = json.substr(objStart, objEnd - objStart + 1);
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string json = buffer.str();
 
-        // Parse "name"
-        std::string nameVal, pathVal;
+        // --- PARSING LOGIC ---
 
-        size_t nKey = entry.find("\"name\"");
-        if (nKey != std::string::npos) {
-            size_t nColon = entry.find(":", nKey);
-            size_t nQ1 = entry.find("\"", nColon);
-            size_t nQ2 = entry.find("\"", nQ1 + 1);
-            if (nQ1 != std::string::npos && nQ2 != std::string::npos) {
-                nameVal = entry.substr(nQ1 + 1, nQ2 - nQ1 - 1);
+        // 1. Locate the "sounds" array
+        size_t soundsPos = json.find("\"sounds\"");
+        size_t arrayStart = json.find("[", soundsPos);
+        if (soundsPos == std::string::npos || arrayStart == std::string::npos) {
+            std::cout << "[AudioSystem] No 'sounds' array found.\n";
+            return;
+        }
+
+        // 2. Loop through objects inside the array
+        size_t currentPos = arrayStart;
+        int loadedCount = 0;
+
+        while (true) {
+            // Find start of next object
+            size_t objStart = json.find("{", currentPos);
+            size_t objEnd = json.find("}", objStart);
+
+            // Stop if no more objects or we passed the end of the array
+            // (A simple heuristic: if we find ']' before the next '{', we are done)
+            size_t arrayClose = json.find("]", currentPos);
+            if (objStart == std::string::npos || (arrayClose != std::string::npos && objStart > arrayClose)) {
+                break;
             }
-        }
 
-        // Parse "filepath"
-        size_t pKey = entry.find("\"filepath\"");
-        if (pKey != std::string::npos) {
-            size_t pColon = entry.find(":", pKey);
-            size_t pQ1 = entry.find("\"", pColon);
-            size_t pQ2 = entry.find("\"", pQ1 + 1);
-            if (pQ1 != std::string::npos && pQ2 != std::string::npos) {
-                pathVal = entry.substr(pQ1 + 1, pQ2 - pQ1 - 1);
+            // Extract the single object string: { "name": "...", "filepath": "..." }
+            std::string entry = json.substr(objStart, objEnd - objStart + 1);
+
+            // Parse "name"
+            std::string nameVal, pathVal;
+
+            size_t nKey = entry.find("\"name\"");
+            if (nKey != std::string::npos) {
+                size_t nColon = entry.find(":", nKey);
+                size_t nQ1 = entry.find("\"", nColon);
+                size_t nQ2 = entry.find("\"", nQ1 + 1);
+                if (nQ1 != std::string::npos && nQ2 != std::string::npos) {
+                    nameVal = entry.substr(nQ1 + 1, nQ2 - nQ1 - 1);
+                }
             }
-        }
 
-        // Load if valid
-        if (!nameVal.empty() && !pathVal.empty()) {
-            if (LoadSound(pathVal, nameVal)) {
-                loadedCount++;
+            // Parse "filepath"
+            size_t pKey = entry.find("\"filepath\"");
+            if (pKey != std::string::npos) {
+                size_t pColon = entry.find(":", pKey);
+                size_t pQ1 = entry.find("\"", pColon);
+                size_t pQ2 = entry.find("\"", pQ1 + 1);
+                if (pQ1 != std::string::npos && pQ2 != std::string::npos) {
+                    pathVal = entry.substr(pQ1 + 1, pQ2 - pQ1 - 1);
+                }
             }
+
+            // Load if valid
+            if (!nameVal.empty() && !pathVal.empty()) {
+                if (LoadSound(pathVal, nameVal)) {
+                    loadedCount++;
+                }
+            }
+
+            // Move cursor past this object
+            currentPos = objEnd + 1;
         }
 
-        // Move cursor past this object
-        currentPos = objEnd + 1;
+        std::cout << "[AudioSystem] Reload Complete. Loaded " << loadedCount << " sounds.\n";
     }
-
-    std::cout << "[AudioSystem] Reload Complete. Loaded " << loadedCount << " sounds.\n";
-}
 
     void AudioSystem::PlayMusic(const std::string& soundName, float fadeInSec, bool loop)
     {

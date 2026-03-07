@@ -78,6 +78,40 @@ CharacterConfig = {
 }
 
 -- ============================================================================
+-- PROJECTILE DAMAGE (Soul Rend, Soul Merge - called from C++ ProjectileSystem)
+-- ============================================================================
+--[[
+    ApplyProjectileDamage(enemyID, damage, attackerID)
+    Called when a player projectile hits an enemy. Uses full damage pipeline
+    (DamageEntity) and triggers Soul Rend heal + Soul Merge kill heal.
+]]
+function ApplyProjectileDamage(enemyID, damage, attackerID)
+    local hadSoulRend = HasStatusEffect and HasStatusEffect(enemyID, "soulRend")
+    local success = DamageEntity(enemyID, damage, attackerID or 0)
+    if success and hadSoulRend then
+        local allPlayers = GetAllPlayers()
+        if allPlayers then
+            for _, pid in ipairs(allPlayers) do
+                local hp, maxHP = GetEntityHP(pid)
+                if hp and maxHP and hp > 0 and hp < maxHP then
+                    SetEntityHP(pid, math.min(hp + 1, maxHP))
+                end
+            end
+        end
+    end
+    if success and attackerID and attackerID > 0 and HasStatusEffect and HasStatusEffect(attackerID, "soulMergeBuff") then
+        local hp = GetEntityHP(enemyID)
+        if hp == nil or hp <= 0 then
+            local ahp, amax = GetEntityHP(attackerID)
+            if ahp and amax and ahp > 0 and ahp < amax then
+                SetEntityHP(attackerID, math.min(ahp + 1, amax))
+            end
+        end
+    end
+    return success
+end
+
+-- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
@@ -293,6 +327,16 @@ function NextCharacterTurn()
 
     -- Mark current character as having acted
     PartyMembers[ActiveCharacterIndex].hasActed = true
+
+    -- Dark Omens Triggered: kill this character at end of their turn
+    local currentEntity = PartyMembers[ActiveCharacterIndex].entityID
+    if HasStatusEffect and HasStatusEffect(currentEntity, "darkOmensTriggered") then
+        print(string.format("[PartyTurnManager] %s has DARK OMENS TRIGGERED - dying at end of turn!",
+            PartyMembers[ActiveCharacterIndex].name))
+        RemoveStatusEffect(currentEntity, "darkOmensTriggered")
+        SetEntityHP(currentEntity, 0)
+        DamageEntity(currentEntity, 0)  -- trigger death cleanup
+    end
 
     print(string.format("[PartyTurnManager] %s marked as ACTED",
         PartyMembers[ActiveCharacterIndex].name))

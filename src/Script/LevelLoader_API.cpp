@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -570,6 +570,7 @@ namespace Framework {
         else if (strcmp(keyName, "Escape") == 0) keyCode = KEY_ESCAPE;
         else if (strcmp(keyName, "Enter") == 0) keyCode = KEY_ENTER;
         else if (strcmp(keyName, "Shift") == 0) keyCode = KEY_SHIFT;
+        else if (strcmp(keyName, "Tab") == 0) keyCode = KEY_TAB;
 
         // Arrow keys
         else if (strcmp(keyName, "Up") == 0) keyCode = KEY_UP;
@@ -984,7 +985,7 @@ namespace Framework {
 
         // Load sprite sheet texture
         anim.spriteSheet = gfx->GetResourceManager().LoadTexture(texture);
-        
+
         // Calculate frame dimensions from texture size (CRITICAL for animation to work!)
         Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
         if (tex) {
@@ -992,12 +993,13 @@ namespace Framework {
             int texH = tex->GetHeight();
             anim.frameWidth = texW / columns;
             anim.frameHeight = texH / rows;
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "Failed to load texture for animated sprite: %s", texture);
         }
 
-        LOG_INFO("LevelLoader", "Spawned animated sprite: %s (rows=%d, cols=%d, frames=%d)", 
-                 texture, rows, columns, frameCount);
+        LOG_INFO("LevelLoader", "Spawned animated sprite: %s (rows=%d, cols=%d, frames=%d)",
+            texture, rows, columns, frameCount);
 
         lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
         return 1;
@@ -1057,20 +1059,21 @@ namespace Framework {
 
         // Load sprite sheet texture
         anim.spriteSheet = gfx->GetResourceManager().LoadTexture(texture);
-        
+
         // Calculate frame dimensions from texture size (CRITICAL for animation to work!)
         Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
         if (tex) {
             anim.frameWidth = tex->GetWidth() / columns;
             anim.frameHeight = tex->GetHeight() / rows;
-            LOG_INFO("LevelLoader", "Animation texture: %dx%d, frame: %dx%d", 
-                     tex->GetWidth(), tex->GetHeight(), anim.frameWidth, anim.frameHeight);
-        } else {
+            LOG_INFO("LevelLoader", "Animation texture: %dx%d, frame: %dx%d",
+                tex->GetWidth(), tex->GetHeight(), anim.frameWidth, anim.frameHeight);
+        }
+        else {
             LOG_WARN("LevelLoader", "Failed to load texture for animation: %s", texture);
         }
 
-        LOG_INFO("LevelLoader", "Set animation sheet on entity %lld: %s (rows=%d, cols=%d, frames=%d)", 
-                 entityID, texture, rows, columns, frameCount);
+        LOG_INFO("LevelLoader", "Set animation sheet on entity %lld: %s (rows=%d, cols=%d, frames=%d)",
+            entityID, texture, rows, columns, frameCount);
 
         lua_pushboolean(L, true);
         return 1;
@@ -1167,7 +1170,8 @@ namespace Framework {
                 tileEntity.GetID(), gridX, gridY,
                 oldTint.r, oldTint.g, oldTint.b, oldTint.a,
                 r, g, b, a);
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "TintTile: Tile entity %u at (%d, %d) has no MeshRenderer component",
                 tileEntity.GetID(), gridX, gridY);
         }
@@ -1667,7 +1671,7 @@ namespace Framework {
 
         auto& hp = em->GetComponent<Health>(entity);
         LOG_INFO("LevelLoader", "GetEntityHP: Entity %d has HP=%d/%d",
-                 entityID, hp.currentHealth, hp.maxHealth);
+            entityID, hp.currentHealth, hp.maxHealth);
         lua_pushinteger(L, hp.currentHealth);
         lua_pushinteger(L, hp.maxHealth);
         return 2;
@@ -1745,7 +1749,7 @@ namespace Framework {
         lua_pop(levelL, 1);  // Pop return value
 
         LOG_INFO("LevelLoader", "[Bridge] IsActiveCharacter: Entity %d is %s",
-                 entityID, isActive ? "ACTIVE" : "INACTIVE");
+            entityID, isActive ? "ACTIVE" : "INACTIVE");
 
         // Return the result in the entity's Lua state
         lua_pushboolean(L, isActive);
@@ -1798,7 +1802,7 @@ namespace Framework {
         hp.isDead = (hp.currentHealth <= 0);
 
         LOG_INFO("LevelLoader", "SetEntityHP: Entity %d HP set to %d/%d (dead=%d)",
-                 entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
+            entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
 
         // If entity died, destroy it
         if (hp.isDead) {
@@ -1962,13 +1966,17 @@ namespace Framework {
         std::string mode(blendModeStr);
         if (mode == "Opaque") {
             mat->blendMode = BlendMode::Opaque;
-        } else if (mode == "AlphaBlend") {
+        }
+        else if (mode == "AlphaBlend") {
             mat->blendMode = BlendMode::AlphaBlend;
-        } else if (mode == "Additive") {
+        }
+        else if (mode == "Additive") {
             mat->blendMode = BlendMode::Additive;
-        } else if (mode == "Multiply") {
+        }
+        else if (mode == "Multiply") {
             mat->blendMode = BlendMode::Multiply;
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "SetSpriteBlendMode: Unknown blend mode '%s', use: Opaque, AlphaBlend, Additive, or Multiply", blendModeStr);
             return 0;
         }
@@ -1977,7 +1985,7 @@ namespace Framework {
         mat->forceOpaqueAlpha = forceOpaqueAlpha;
 
         LOG_INFO("LevelLoader", "SetSpriteBlendMode: Entity %d set to %s, forceOpaqueAlpha=%s",
-                 entityID, blendModeStr, forceOpaqueAlpha ? "true" : "false");
+            entityID, blendModeStr, forceOpaqueAlpha ? "true" : "false");
         return 0;
     }
 
@@ -2020,8 +2028,9 @@ namespace Framework {
         if (tex) {
             tex->SetFilterMode(useNearest);
             LOG_INFO("LevelLoader", "SetSpriteFilterMode: Entity %d set to %s filtering",
-                     entityID, useNearest ? "NEAREST" : "LINEAR");
-        } else {
+                entityID, useNearest ? "NEAREST" : "LINEAR");
+        }
+        else {
             LOG_WARN("LevelLoader", "SetSpriteFilterMode: Failed to get texture for entity %d", entityID);
         }
 
@@ -2055,14 +2064,14 @@ namespace Framework {
     /**
      * @brief Check if gameplay should be disabled (buttons grayed out, etc.)
      * @return boolean - true if gameplay should be disabled
-     * 
+     *
      * Returns true when:
      * - In editor mode AND not playing (STOP state)
-     * 
+     *
      * Returns false when:
      * - Not in editor mode (normal gameplay)
      * - In editor mode but playing (PLAY button was clicked)
-     * 
+     *
      * Usage in Lua:
      *   if ShouldDisableGameplay() then
      *       -- Gray out buttons, disable input
@@ -2073,13 +2082,13 @@ namespace Framework {
             lua_pushboolean(L, false);
             return 1;
         }
-        
+
         bool isEditorMode = CORE->IsEditorMode();
         bool isPlaying = CORE->IsPlaying();
-        
+
         // Disable gameplay only when in editor mode AND not playing
         bool shouldDisable = isEditorMode && !isPlaying;
-        
+
         lua_pushboolean(L, shouldDisable);
         return 1;
     }
@@ -2362,7 +2371,7 @@ namespace Framework {
 
         // Get tile entity at grid position
         const Grid& grid = GetGrid();
-        if (!InBounds(GridCoord{x, y})) {
+        if (!InBounds(GridCoord{ x, y })) {
             LOG_WARN("PulseTile", "Grid position (%d, %d) out of bounds", x, y);
             return 0;
         }
@@ -2453,10 +2462,11 @@ namespace Framework {
         if (em->HasComponent<AP>(player)) {
             auto& ap = em->GetComponent<AP>(player);
             LOG_INFO("LevelLoader", "RefillPlayerAP: Before refill - AP=%d, MaxAP=%d",
-                     ap.actionPoints, ap.maxActionPoints);
+                ap.actionPoints, ap.maxActionPoints);
             ap.actionPoints = ap.maxActionPoints;
             LOG_INFO("LevelLoader", "RefillPlayerAP: After refill - AP=%d", ap.actionPoints);
-        } else {
+        }
+        else {
             LOG_WARN("LevelLoader", "RefillPlayerAP: Player has no AP component");
         }
 
@@ -2567,9 +2577,10 @@ namespace Framework {
         if (tileEntity.IsValid() && em->HasComponent<Chest>(tileEntity)) {
             hasChest = true;
             LOG_INFO("LevelLoader", "HasChestAtTile(%d, %d): Found chest at entity %u", x, y, tileEntity.GetID());
-        } else {
+        }
+        else {
             LOG_INFO("LevelLoader", "HasChestAtTile(%d, %d): No chest (entity valid=%d)",
-                     x, y, tileEntity.IsValid());
+                x, y, tileEntity.IsValid());
         }
 
         lua_pushboolean(L, hasChest);
@@ -2660,7 +2671,7 @@ namespace Framework {
 
         auto& ap = em->GetComponent<AP>(entity);
         LOG_INFO("LevelLoader", "GetEntityAP: Entity %d has AP=%d/%d",
-                 entityID, ap.actionPoints, ap.maxActionPoints);
+            entityID, ap.actionPoints, ap.maxActionPoints);
         lua_pushinteger(L, ap.actionPoints);
         lua_pushinteger(L, ap.maxActionPoints);
         return 2;
@@ -2694,7 +2705,7 @@ namespace Framework {
 
         auto& attackAP = em->GetComponent<AttackAP>(entity);
         LOG_INFO("LevelLoader", "GetEntityAttackAP: Entity %d has AttackAP=%d/%d",
-                 entityID, attackAP.points, attackAP.maxPoints);
+            entityID, attackAP.points, attackAP.maxPoints);
         lua_pushinteger(L, attackAP.points);
         lua_pushinteger(L, attackAP.maxPoints);
         return 2;
@@ -2751,7 +2762,7 @@ namespace Framework {
         int oldAP = ap.actionPoints;
         ap.actionPoints = ap.maxActionPoints;
         LOG_INFO("LevelLoader", "RefillEntityAP: Entity %d AP refilled %d -> %d",
-                 entityID, oldAP, ap.actionPoints);
+            entityID, oldAP, ap.actionPoints);
 
         return 0;
     }
@@ -2884,15 +2895,15 @@ namespace Framework {
 
         if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
             std::cout << "[GetEntityWorldPosition] ERROR: Entity " << entityID
-                      << " invalid or missing Transform!" << std::endl;
+                << " invalid or missing Transform!" << std::endl;
             lua_pushnil(L);
             lua_pushnil(L);
             return 2;
         }
 
         auto& transform = em->GetComponent<Transform>(entity);
-        std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
-                  << transform.position.x << ", " << transform.position.y << ")" << std::endl;
+        //std::cout << "[GetEntityWorldPosition] Entity " << entityID << " world position: ("
+            //<< transform.position.x << ", " << transform.position.y << ")" << std::endl;
 
         lua_pushnumber(L, transform.position.x);
         lua_pushnumber(L, transform.position.y);
@@ -2941,14 +2952,14 @@ namespace Framework {
 
         if (!Framework::InBounds(targetCoord)) {
             LOG_WARN("LevelLoader", "MoveEntityToTile: Entity %d target (%d, %d) out of bounds",
-                     entityID, x, y);
+                entityID, x, y);
             lua_pushboolean(L, false);
             return 1;
         }
 
         if (!Framework::IsWalkable(targetCoord)) {
             LOG_WARN("LevelLoader", "MoveEntityToTile: Entity %d target (%d, %d) not walkable",
-                     entityID, x, y);
+                entityID, x, y);
             lua_pushboolean(L, false);
             return 1;
         }
@@ -2959,7 +2970,7 @@ namespace Framework {
         auto currentTileOpt = Framework::WorldToTile(transform.position);
         if (currentTileOpt.has_value()) {
             LOG_INFO("LevelLoader", "MoveEntityToTile: Entity %d clearing occupancy at (%d, %d)",
-                     entityID, currentTileOpt->x, currentTileOpt->y);
+                entityID, currentTileOpt->x, currentTileOpt->y);
             Framework::SetOccupant(*currentTileOpt, Framework::Entity{ Framework::INVALID_ENTITY });
         }
 
@@ -2968,7 +2979,7 @@ namespace Framework {
         Framework::SetOccupant(targetCoord, entity);
 
         LOG_INFO("LevelLoader", "MoveEntityToTile: Entity %d moved to (%d, %d) successfully",
-                 entityID, x, y);
+            entityID, x, y);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -3011,7 +3022,7 @@ namespace Framework {
         }
 
         LOG_INFO("LevelLoader", "ConsumeEntityAP: Entity %d AP consumed %d -> %d (-%d)",
-                 entityID, oldAP, ap.actionPoints, amount);
+            entityID, oldAP, ap.actionPoints, amount);
 
         return 0;
     }
@@ -3054,7 +3065,7 @@ namespace Framework {
         }
 
         LOG_INFO("LevelLoader", "ConsumeEntityAttackAP: Entity %d AttackAP consumed %d -> %d (-%d)",
-                 entityID, oldAP, attackAP.points, amount);
+            entityID, oldAP, attackAP.points, amount);
 
         return 0;
     }
@@ -3084,7 +3095,7 @@ namespace Framework {
         int oldAP = attackAP.points;
         attackAP.points = attackAP.maxPoints;
         LOG_INFO("LevelLoader", "RefillEntityAttackAP: Entity %d AttackAP refilled %d -> %d",
-                 entityID, oldAP, attackAP.points);
+            entityID, oldAP, attackAP.points);
 
         return 0;
     }
@@ -3133,10 +3144,10 @@ namespace Framework {
      *
      * Status effect handling order:
      *   1. Guard   -> absorb all damage, consume effect, return
-     *   2. Knight's Oath -> redirect damage to the oath source (knight)
-     *   3. Vulnerable -> increase damage by extraData amount
-     *   4. Apply damage
-     *   5. Parry   -> deal original damage back to attacker, consume effect
+     *   2. Parry   -> reflect damage to attacker, target takes 0, return (requires attackerID)
+     *   3. Knight's Oath -> redirect damage to the oath source (knight)
+     *   4. Vulnerable -> increase damage by extraData amount
+     *   5. Apply damage
      *
      * Usage: DamageEntity(targetID, 1)
      *        DamageEntity(targetID, 1, attackerID)
@@ -3185,7 +3196,28 @@ namespace Framework {
                 return 1;
             }
 
-            // 2. Knight's Oath: redirect damage to the protecting knight
+            // 2. Parry: reflect damage to attacker, target takes NO damage (must have attackerID)
+            if (attackerID > 0 && effects.HasEffect("parry")) {
+                effects.RemoveEffect("parry");
+                Entity attacker(static_cast<uint32_t>(attackerID));
+                if (em->HasComponent<Health>(attacker)) {
+                    auto& attackerHP = em->GetComponent<Health>(attacker);
+                    attackerHP.currentHealth -= amount;
+                    LOG_INFO("StatusEffect", "PARRY! Entity %u reflects %d damage to attacker %u (target takes 0)",
+                        entity.GetID(), amount, attackerID);
+
+                    if (attackerHP.currentHealth <= 0) {
+                        attackerHP.currentHealth = 0;
+                        attackerHP.isDead = true;
+                        LOG_WARN("LevelLoader", "!!! Attacker %u DIED from parried damage !!!", attackerID);
+                        loader->DeferEntityDestruction(attackerID);
+                    }
+                }
+                lua_pushboolean(L, 1);
+                return 1;
+            }
+
+            // 4. Knight's Oath: redirect damage to the protecting knight
             const auto* oathEffect = effects.GetEffect("knightsOath");
             if (oathEffect) {
                 uint32_t knightID = oathEffect->sourceEntity;
@@ -3201,15 +3233,7 @@ namespace Framework {
                         knightHP.currentHealth = 0;
                         knightHP.isDead = true;
                         LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-
-                        if (em->HasComponent<Transform>(knight)) {
-                            auto& transform = em->GetComponent<Transform>(knight);
-                            auto tileOpt = Framework::WorldToTile(transform.position);
-                            if (tileOpt.has_value()) {
-                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                            }
-                        }
-                        em->DestroyEntity(knight);
+                        loader->DeferEntityDestruction(knightID);
                     }
 
                     lua_pushboolean(L, 1);
@@ -3217,7 +3241,7 @@ namespace Framework {
                 }
             }
 
-            // 3. Vulnerable: increase incoming damage
+            // 5. Vulnerable: increase incoming damage
             const auto* vulnEffect = effects.GetEffect("vulnerable");
             if (vulnEffect) {
                 int extraDmg = vulnEffect->extraData;
@@ -3226,7 +3250,7 @@ namespace Framework {
                 amount += extraDmg;
             }
 
-            // 4. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
+            // 6. Damage Reduction (e.g., Heavy Armor): reduce incoming damage
             const auto* reductionEffect = effects.GetEffect("damageReduction");
             if (reductionEffect) {
                 int reduction = reductionEffect->extraData;
@@ -3234,6 +3258,21 @@ namespace Framework {
                     entity.GetID(), amount, reduction);
                 amount -= reduction;
                 if (amount < 0) amount = 0;
+            }
+
+            // 5. Futile Resistance: if attacker has <40% HP, reduce damage by 1
+            if (effects.HasEffect("futileResistance") && attackerID > 0) {
+                Entity attacker(static_cast<uint32_t>(attackerID));
+                if (em->HasComponent<Health>(attacker)) {
+                    auto& attackerHP = em->GetComponent<Health>(attacker);
+                    float hpPercent = static_cast<float>(attackerHP.currentHealth) / static_cast<float>(attackerHP.maxHealth);
+                    if (hpPercent < 0.4f) {
+                        LOG_INFO("StatusEffect", "Futile Resistance: attacker %u HP %.0f%% < 40%%, reducing damage by 1",
+                            attackerID, hpPercent * 100.0f);
+                        amount -= 1;
+                        if (amount < 0) amount = 0;
+                    }
+                }
             }
         }
 
@@ -3271,34 +3310,17 @@ namespace Framework {
         LOG_INFO("LevelLoader", "DamageEntity: Entity %u took %d damage, HP: %d -> %d",
             entity.GetID(), amount, prevHP, health.currentHealth);
 
-        // === PARRY CHECK (after damage is applied) ===
-
-        if (attackerID > 0 && em->HasComponent<StatusEffects>(entity)) {
+        // === DARK OMENS CHECK (prevent lethal damage) - from teammate ===
+        if (health.currentHealth <= 0 && em->HasComponent<StatusEffects>(entity)) {
             auto& effects = em->GetComponent<StatusEffects>(entity);
-            if (effects.HasEffect("parry")) {
-                effects.RemoveEffect("parry");
-                Entity attacker(static_cast<uint32_t>(attackerID));
-                if (em->HasComponent<Health>(attacker)) {
-                    auto& attackerHP = em->GetComponent<Health>(attacker);
-                    attackerHP.currentHealth -= amount;
-                    LOG_INFO("StatusEffect", "PARRY! Entity %u reflects %d damage back to attacker %u",
-                        entity.GetID(), amount, attackerID);
-
-                    if (attackerHP.currentHealth <= 0) {
-                        attackerHP.currentHealth = 0;
-                        attackerHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Attacker %u DIED from parried damage !!!", attackerID);
-
-                        if (em->HasComponent<Transform>(attacker)) {
-                            auto& transform = em->GetComponent<Transform>(attacker);
-                            auto tileOpt = Framework::WorldToTile(transform.position);
-                            if (tileOpt.has_value()) {
-                                Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                            }
-                        }
-                        em->DestroyEntity(attacker);
-                    }
-                }
+            if (effects.HasEffect("darkOmens")) {
+                health.currentHealth = 1;
+                effects.RemoveEffect("darkOmens");
+                effects.AddEffect("darkOmensTriggered", 2, 0, 0, 0);
+                LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered applied",
+                    entity.GetID());
+                lua_pushboolean(L, 1);
+                return 1;
             }
         }
 
@@ -3327,6 +3349,23 @@ namespace Framework {
             if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
 
             LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
+
+            // Call Lua OnDestroy before entity destruction (cleans up health bars, etc.)
+            if (em->HasComponent<ScriptComponent>(entity)) {
+                auto& script = em->GetComponent<ScriptComponent>(entity);
+                if (script.hasOnDestroy && script.L) {
+                    lua_getglobal(script.L, "OnDestroy");
+                    if (lua_isfunction(script.L, -1)) {
+                        if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                            lua_pop(script.L, 1);
+                        }
+                    }
+                    else {
+                        lua_pop(script.L, 1);
+                    }
+                }
+            }
+
             em->DestroyEntity(entity);
             LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
             LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
@@ -3399,6 +3438,41 @@ namespace Framework {
     // ========================================================================
 
     /**
+     * @brief Convert screen coordinates to grid tile (for mouse target selection)
+     * @param screenX Screen X (from GetMousePosition)
+     * @param screenY Screen Y (from GetMousePosition)
+     * @param useViewportCoords Optional: use ImGui viewport coords (default false)
+     * @return tileX, tileY (two numbers, or nil,nil if out of bounds)
+     *
+     * Usage: local mx, my = GetMousePosition(); local tx, ty = ScreenToTile(mx, my)
+     */
+    int LevelLoader::Lua_ScreenToTile(lua_State* L) {
+        float screenX = static_cast<float>(luaL_checknumber(L, 1));
+        float screenY = static_cast<float>(luaL_checknumber(L, 2));
+        bool useViewportCoords = lua_toboolean(L, 3) != 0;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->uiSystem) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        Framework::Vector2D worldPos = loader->uiSystem->ScreenToWorld(screenX, screenY, useViewportCoords);
+        auto tileOpt = Framework::WorldToTile(worldPos);
+
+        if (!tileOpt || !Framework::InBounds(*tileOpt)) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        lua_pushinteger(L, tileOpt->x);
+        lua_pushinteger(L, tileOpt->y);
+        return 2;
+    }
+
+    /**
      * @brief Convert grid tile coordinates to world position
      * @param tileX Grid X coordinate
      * @param tileY Grid Y coordinate
@@ -3461,10 +3535,11 @@ namespace Framework {
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
 
         bool success = SaveLoadSystem::SaveToJSON(filepath, em, levelName);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Scene saved to: %s", filepath);
-        } else {
+        }
+        else {
             LOG_ERROR("LevelLoader", "Failed to save scene to: %s", filepath);
         }
 
@@ -3501,12 +3576,13 @@ namespace Framework {
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
 
         bool success = SaveLoadSystem::LoadFromJSON(filepath, em, clearExisting);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Scene loaded from: %s", filepath);
             // Rebuild spatial partition after loading
             RebuildSpatialPartition();
-        } else {
+        }
+        else {
             LOG_ERROR("LevelLoader", "Failed to load scene from: %s", filepath);
         }
 
@@ -3538,7 +3614,7 @@ namespace Framework {
 
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
         bool success = SaveLoadSystem::AutoSave(em, levelName);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Auto-saved: %s", levelName);
         }
@@ -3571,7 +3647,7 @@ namespace Framework {
 
         SaveLoadSystem::SetGraphicsSystem(loader->graphicsSystem);
         bool success = SaveLoadSystem::LoadAutoSave(em, levelName);
-        
+
         if (success) {
             LOG_INFO("LevelLoader", "Loaded auto-save: %s", levelName);
             RebuildSpatialPartition();
@@ -3609,9 +3685,9 @@ namespace Framework {
         return 1;
     }
 
-// ============================================================================
-// PROCEDURAL MAP API
-// ============================================================================
+    // ============================================================================
+    // PROCEDURAL MAP API
+    // ============================================================================
 
     int LevelLoader::Lua_LoadProceduralMap(lua_State* L) {
         std::cout << "[Lua_LoadProceduralMap] Called!\n";
@@ -3976,7 +4052,8 @@ namespace Framework {
             em->AddComponent<Movement>(player);
             auto& movement = em->GetComponent<Movement>(player);
             movement.moveSpeed = 0.2f;
-        } else {
+        }
+        else {
             std::cout << "[SpawnPlayerAt] Entity " << player.GetID() << " already has Movement component" << std::endl;
         }
 
@@ -3984,6 +4061,9 @@ namespace Framework {
         if (!em->HasComponent<Inventory>(player)) {
             em->AddComponent<Inventory>(player);
         }
+
+        // Register the player on the grid so its tile is marked as occupied
+        SpatialPartitioningInsert(player);
 
         lua_pushnumber(L, player.GetID());
         return 1;
@@ -4034,6 +4114,11 @@ namespace Framework {
         }
 
         Entity enemy = spawner->SpawnEnemy(Vector2D(worldX, worldY));
+
+        // Register the enemy on the grid so its tile is marked as occupied.
+        // Without this, IsTileOccupied() returns false on the first turn,
+        // allowing the player to walk through the enemy.
+        SpatialPartitioningInsert(enemy);
 
         lua_pushnumber(L, enemy.GetID());
         return 1;
@@ -4128,17 +4213,17 @@ namespace Framework {
      * Lua states) to call the EndCharacterTurn() function in the LevelLoader's
      * Lua state where PartyTurnManager is running.
      */
-    /**
-     * @brief Generic bridge: call any global function in the level Lua state.
-     *
-     * Usage from entity scripts:
-     *   CallLevelFunction("FunctionName")              -- no args, no return
-     *   local r = CallLevelFunction("Foo", 42)         -- int arg, 1 return
-     *   local a,b = CallLevelFunction("Bar", "x", 3)   -- mixed args, 2 returns
-     *
-     * Supported argument types: number, string, boolean, nil.
-     * Return values are forwarded back to the caller (up to LUA_MULTRET).
-     */
+     /**
+      * @brief Generic bridge: call any global function in the level Lua state.
+      *
+      * Usage from entity scripts:
+      *   CallLevelFunction("FunctionName")              -- no args, no return
+      *   local r = CallLevelFunction("Foo", 42)         -- int arg, 1 return
+      *   local a,b = CallLevelFunction("Bar", "x", 3)   -- mixed args, 2 returns
+      *
+      * Supported argument types: number, string, boolean, nil.
+      * Return values are forwarded back to the caller (up to LUA_MULTRET).
+      */
     int LevelLoader::Lua_CallLevelFunction(lua_State* L) {
         const char* funcName = luaL_checkstring(L, 1);
         int nargs = lua_gettop(L) - 1;  // everything after the function name
@@ -4165,10 +4250,10 @@ namespace Framework {
         // Forward arguments from entity state → level state
         for (int i = 2; i <= nargs + 1; ++i) {
             switch (lua_type(L, i)) {
-                case LUA_TNUMBER:  lua_pushnumber(levelL, lua_tonumber(L, i));   break;
-                case LUA_TSTRING:  lua_pushstring(levelL, lua_tostring(L, i));   break;
-                case LUA_TBOOLEAN: lua_pushboolean(levelL, lua_toboolean(L, i)); break;
-                default:           lua_pushnil(levelL);                          break;
+            case LUA_TNUMBER:  lua_pushnumber(levelL, lua_tonumber(L, i));   break;
+            case LUA_TSTRING:  lua_pushstring(levelL, lua_tostring(L, i));   break;
+            case LUA_TBOOLEAN: lua_pushboolean(levelL, lua_toboolean(L, i)); break;
+            default:           lua_pushnil(levelL);                          break;
             }
         }
 
@@ -4186,11 +4271,11 @@ namespace Framework {
         int nresults = lua_gettop(levelL) - topBefore;
         for (int i = topBefore + 1; i <= topBefore + nresults; ++i) {
             switch (lua_type(levelL, i)) {
-                case LUA_TNUMBER:  lua_pushnumber(L, lua_tonumber(levelL, i));   break;
-                case LUA_TSTRING:  lua_pushstring(L, lua_tostring(levelL, i));   break;
-                case LUA_TBOOLEAN: lua_pushboolean(L, lua_toboolean(levelL, i)); break;
-                case LUA_TNIL:     lua_pushnil(L);                               break;
-                default:           lua_pushnil(L);                               break;
+            case LUA_TNUMBER:  lua_pushnumber(L, lua_tonumber(levelL, i));   break;
+            case LUA_TSTRING:  lua_pushstring(L, lua_tostring(levelL, i));   break;
+            case LUA_TBOOLEAN: lua_pushboolean(L, lua_toboolean(levelL, i)); break;
+            case LUA_TNIL:     lua_pushnil(L);                               break;
+            default:           lua_pushnil(L);                               break;
             }
         }
         lua_pop(levelL, nresults);  // clean level state stack
@@ -4673,7 +4758,37 @@ namespace Framework {
     }
 
     /**
-     * @brief Set whether animation should loop
+     * @brief Set animation prefix for per-entity animation overrides
+     * Lua usage: SetAnimationPrefix(entityID, prefix)
+     * @param entityID Entity ID
+     * @param prefix String prefix (e.g. "Mage_") applied before animation key lookup
+     *
+     * If the entity does not yet have a SpriteAnimation component, one is added
+     * automatically (SpawnPlayer defers SpriteAnimation creation to LoadPlayerAnimation).
+     */
+    int LevelLoader::Lua_SetAnimationPrefix(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* prefix = luaL_checkstring(L, 2);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) return 0;
+
+        Entity e(static_cast<EntityID>(entityID));
+
+        // Add SpriteAnimation if not present (SpawnPlayer doesn't add it)
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            em->AddComponent<SpriteAnimation>(e);
+            LOG_INFO("LUA_ANIM", "SetAnimationPrefix: Added SpriteAnimation to entity %lld", entityID);
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        anim.animPrefix = prefix ? prefix : "";
+
+        LOG_INFO("LUA_ANIM", "SetAnimationPrefix: entity %lld prefix='%s'", entityID, anim.animPrefix.c_str());
+        return 0;
+    }
+
+    /**
      * Lua usage: SetAnimationLoop(entityID, loop)
      * @param entityID Entity ID
      * @param loop true to loop, false for one-shot
@@ -4733,7 +4848,7 @@ namespace Framework {
         }
 
         LOG_INFO("LUA_ANIM", "SetAnimationFrameRange: Entity %lld -> startFrame=%d, frameCount=%d",
-                 entityID, startFrame, frameCount);
+            entityID, startFrame, frameCount);
 
         return 0;
     }
@@ -5012,8 +5127,9 @@ namespace Framework {
 
         if (success) {
             LOG_INFO("LevelLoader", "SetTileOccupant: Tile (%d, %d) occupant set to entity %d",
-                     gridX, gridY, entityID);
-        } else {
+                gridX, gridY, entityID);
+        }
+        else {
             LOG_WARN("LevelLoader", "SetTileOccupant: Failed to set occupant at (%d, %d)", gridX, gridY);
         }
 
@@ -5132,13 +5248,15 @@ namespace Framework {
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,0,0,1, "")
      *   -- with enemy projectile flag (arg 13) and source entity (arg 14):
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 1, false, r,g,b,a, "", true, sourceID)
+     *   -- with max range in tiles (arg 15) and line-only (arg 16) for Fireball:
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 5, false, 1,1,1,1, "", false, 0, 5, true)
      */
     int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
         float worldY = static_cast<float>(luaL_checknumber(L, 2));
-        float dirX   = static_cast<float>(luaL_checknumber(L, 3));
-        float dirY   = static_cast<float>(luaL_checknumber(L, 4));
-        float speed  = static_cast<float>(luaL_optnumber(L, 5, 3.0));
+        float dirX = static_cast<float>(luaL_checknumber(L, 3));
+        float dirY = static_cast<float>(luaL_checknumber(L, 4));
+        float speed = static_cast<float>(luaL_optnumber(L, 5, 3.0));
         int   damage = static_cast<int>(luaL_optinteger(L, 6, 1));
         bool  pierce = lua_toboolean(L, 7) != 0;
 
@@ -5152,11 +5270,17 @@ namespace Framework {
         // Optional sprite path (arg 12, default = bullet.png)
         const char* spriteArg = luaL_optstring(L, 12, nullptr);
         std::string spritePath = spriteArg ? std::string(spriteArg)
-                                           : std::string("assets/new assets/bullet.png");
+            : std::string("assets/new assets/bullet.png");
 
         // Optional enemy projectile flag (arg 13) and source entity ID (arg 14)
         bool isEnemyProjectile = lua_toboolean(L, 13) != 0;
         uint32_t sourceEntityID = static_cast<uint32_t>(luaL_optinteger(L, 14, 0));
+
+        // Optional explosion VFX flag (arg 15, default false)
+        bool spawnExplosionOnHit = lua_toboolean(L, 15) != 0;
+        // Optional max range in tiles (arg 15, 0=unlimited) and line-only (arg 16) for Fireball
+        int maxRangeTiles = static_cast<int>(luaL_optinteger(L, 15, 0));
+        bool lineOnly = lua_toboolean(L, 16) != 0;
 
         // Normalize direction
         float len = std::sqrt(dirX * dirX + dirY * dirY);
@@ -5190,6 +5314,10 @@ namespace Framework {
             movement.pierce = pierce;
             movement.isEnemyProjectile = isEnemyProjectile;
             movement.sourceEntityID = sourceEntityID;
+            movement.spawnExplosionOnHit = spawnExplosionOnHit;
+            movement.spawnPosition = Vector2D(worldX, worldY);
+            movement.maxRangeTiles = maxRangeTiles;
+            movement.lineOnly = lineOnly;
         }
 
         lua_pushinteger(L, projectile.GetID());
@@ -5376,7 +5504,8 @@ namespace Framework {
         const auto* effect = effects.GetEffect(type);
         if (effect) {
             lua_pushinteger(L, effect->sourceEntity);
-        } else {
+        }
+        else {
             lua_pushnil(L);
         }
         return 1;
@@ -5504,6 +5633,105 @@ namespace Framework {
             return 1;
         }
         lua_pushinteger(L, SkillDatabase::GetInstance().GetSkillCount(charClass));
+        return 1;
+    }
+
+    // =========================================================================
+    // Particle Emitter API
+    // =========================================================================
+
+    /**
+     * @brief Spawns a particle emitter entity at a world position
+     * @params x, y, emitRadius, rate, duration, r, g, b, a, followEntityID
+     * @return integer (Entity ID)
+     *
+     * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, targetID)
+     *   - duration=0 means infinite (emitter persists until destroyed)
+     *   - followEntityID (optional): if provided, emitter follows that entity's position
+     *   - Returns entity ID so caller can track and destroy it later
+     */
+    int LevelLoader::Lua_SpawnParticleEmitter(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Parse parameters
+        float x = static_cast<float>(luaL_checknumber(L, 1));
+        float y = static_cast<float>(luaL_checknumber(L, 2));
+        float emitRadius = static_cast<float>(luaL_optnumber(L, 3, 0.04));
+        float rate = static_cast<float>(luaL_optnumber(L, 4, 8.0));
+        float duration = static_cast<float>(luaL_optnumber(L, 5, 0.0));
+        float r = static_cast<float>(luaL_optnumber(L, 6, 1.0));
+        float g = static_cast<float>(luaL_optnumber(L, 7, 1.0));
+        float b = static_cast<float>(luaL_optnumber(L, 8, 0.0));
+        float a = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        EntityID followTarget = static_cast<EntityID>(luaL_optinteger(L, 10, 0));
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "SpawnParticleEmitter failed: no entity manager");
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        Entity entity = em->CreateEntity();
+        if (entity.GetID() == INVALID_ENTITY) {
+            LOG_ERROR("LevelLoader", "SpawnParticleEmitter failed: could not create entity");
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Add Transform
+        em->AddComponent<Transform>(entity, Vector2D(x, y));
+
+        // Add ParticleEmitter with configured properties
+        em->AddComponent<ParticleEmitter>(entity);
+        auto& emitter = em->GetComponent<ParticleEmitter>(entity);
+
+        emitter.maxParticles = 50;
+        emitter.emissionRate = rate;
+        emitter.emit = true;
+        emitter.worldSpace = true;
+        emitter.layer = 15;  // Above enemies
+
+        // Circle emit shape around the entity
+        emitter.emitShape = ParticleEmitShape::Circle;
+        emitter.emitRadius = emitRadius;
+
+        // Gentle upward drift
+        emitter.velocityMin = glm::vec2(-0.01f, 0.01f);
+        emitter.velocityMax = glm::vec2(0.01f, 0.04f);
+
+        // Short-lived particles
+        emitter.lifetimeMin = 0.4f;
+        emitter.lifetimeMax = 1.0f;
+
+        // Small particles that shrink
+        emitter.sizeStart = 0.006f;
+        emitter.sizeEnd = 0.001f;
+
+        // Yellow color fading to transparent
+        emitter.colorStart = glm::vec4(r, g, b, a);
+        emitter.colorEnd = glm::vec4(r, g, b, 0.0f);
+
+        // No gravity
+        emitter.gravity = glm::vec2(0.0f, 0.0f);
+
+        // Follow target entity
+        if (followTarget != INVALID_ENTITY) {
+            emitter.followEntity = followTarget;
+            emitter.worldSpace = false;  // use local space so particles move with emitter
+        }
+
+        // Duration and auto-destroy
+        if (duration > 0.0f) {
+            emitter.duration = duration;
+            emitter.autoDestroy = true;
+        }
+
+        lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
         return 1;
     }
 

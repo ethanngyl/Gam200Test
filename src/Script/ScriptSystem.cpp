@@ -600,6 +600,9 @@ namespace Framework {
         lua_register(L, "GetSkillByID", LevelLoader::Lua_GetSkillByID);
         lua_register(L, "GetClassSkills", LevelLoader::Lua_GetClassSkills);
         lua_register(L, "GetSkillCount", LevelLoader::Lua_GetSkillCount);
+
+        // Particle Emitter API
+        lua_register(L, "SpawnParticleEmitter", LevelLoader::Lua_SpawnParticleEmitter);
     }
 
     /**

@@ -101,7 +101,7 @@ local healthBarBG = nil
 local healthBarFG = nil
 local healthBarHeight = 0.02
 local healthBarOffsetY = 0.05
-local healthBarLayer = 50
+local healthBarLayer = 4
 
 -- Animation
 local ENEMY_ANIM = {}
@@ -627,6 +627,22 @@ local function ExecuteSpecial_Taunt()
 
     print("[" .. GetLogTag() .. " " .. entityID .. "] TAUNT ACTIVATED! Redirecting ally damage to self.")
 
+    -- Spawn orange particles on the taunting enemy
+    if SpawnParticleEmitter then
+        _G.EffectParticles = _G.EffectParticles or {}
+        local key = "taunt_" .. entityID
+        if not _G.EffectParticles[key] then
+            local wx, wy = GetEntityWorldPosition(entityID)
+            if wx and wy then
+                local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, 1.0, 0.5, 0.0, 1.0, entityID)
+                if emitterID and emitterID > 0 then
+                    _G.EffectParticles[key] = emitterID
+                    print("[" .. GetLogTag() .. " " .. entityID .. "] Spawned taunt particles")
+                end
+            end
+        end
+    end
+
     if enemies then
         for _, eid in ipairs(enemies) do
             local ex, ey = GetEntityGridPosition(eid)
@@ -820,11 +836,27 @@ end
 local function ApplyBolsteredMorale()
     local enemies = GetAllEnemies()
     if not enemies then return end
+    -- Initialize global table to track particle emitters per enemy
+    _G.BolsteredMoraleParticles = _G.BolsteredMoraleParticles or {}
     for _, eid in ipairs(enemies) do
         if eid ~= entityID then
             local current = GetDamageModifier(eid) or 0
             SetDamageModifier(eid, current + 1)
             print("[" .. GetLogTag() .. " " .. entityID .. "] Bolstered Morale: +1 damageModifier on enemy " .. eid)
+
+            -- Spawn yellow particle emitter around the buffed enemy
+            if SpawnParticleEmitter then
+                local wx, wy = GetEntityWorldPosition(eid)
+                if wx and wy then
+                    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
+                    if emitterID and emitterID > 0 then
+                        -- Track emitter per source commander and target enemy
+                        local key = entityID .. "_" .. eid
+                        _G.BolsteredMoraleParticles[key] = emitterID
+                        print("[" .. GetLogTag() .. " " .. entityID .. "] Spawned morale particles (entity " .. emitterID .. ") on enemy " .. eid)
+                    end
+                end
+            end
         end
     end
 end
@@ -838,6 +870,17 @@ local function RemoveBolsteredMorale()
             local newVal = current - 1
             if newVal < 0 then newVal = 0 end
             SetDamageModifier(eid, newVal)
+
+            -- Remove particle emitter for this enemy
+            if _G.BolsteredMoraleParticles and DestroyEntity then
+                local key = entityID .. "_" .. eid
+                local emitterID = _G.BolsteredMoraleParticles[key]
+                if emitterID and emitterID > 0 then
+                    DestroyEntity(emitterID)
+                    _G.BolsteredMoraleParticles[key] = nil
+                    print("[" .. GetLogTag() .. " " .. entityID .. "] Removed morale particles from enemy " .. eid)
+                end
+            end
         end
     end
 end
@@ -978,6 +1021,17 @@ function OnDestroy()
         end
     end
 
+    -- Remove any effect particles associated with this entity
+    if _G.EffectParticles and DestroyEntity then
+        for key, emitterID in pairs(_G.EffectParticles) do
+            local targetIDStr = key:match("_(%d+)$")
+            if targetIDStr and tonumber(targetIDStr) == entityID then
+                pcall(DestroyEntity, emitterID)
+                _G.EffectParticles[key] = nil
+            end
+        end
+    end
+
     _G.EnemiesDeadThisLevel = (_G.EnemiesDeadThisLevel or 0) + 1
     local ex, ey = GetEntityGridPosition(entityID)
     if ex and ey and SetTileOccupant then SetTileOccupant(ex, ey, 0) end
@@ -992,6 +1046,20 @@ end
 
 function OnUpdate(dt)
     UpdateHealthBar()
+
+    -- Update Bolstered Morale particle positions to follow this enemy
+    if _G.BolsteredMoraleParticles and SetSpritePosition then
+        local wx, wy = GetEntityWorldPosition(entityID)
+        if wx and wy then
+            for key, emitterID in pairs(_G.BolsteredMoraleParticles) do
+                -- Check if this emitter is tracking us (key ends with _<entityID>)
+                local targetID = key:match("_(%d+)$")
+                if targetID and tonumber(targetID) == entityID then
+                    SetSpritePosition(emitterID, wx, wy)
+                end
+            end
+        end
+    end
 
     -- Type-specific per-frame updates
     if config then
@@ -1038,6 +1106,21 @@ function OnUpdate(dt)
     end
 
     if DecrementStatusEffects then DecrementStatusEffects(entityID) end
+
+    -- Bladed Whirlwind DOT: take 1 damage at start of turn
+    if HasStatusEffect and HasStatusEffect(entityID, "bladedWhirlwindDot") then
+        local hp = GetEntityHP(entityID)
+        if hp and hp > 0 then
+            DamageEntity(entityID, 1)
+            print("[" .. GetLogTag() .. " " .. entityID .. "] Bladed Whirlwind DOT: 1 damage")
+            -- Check if died from DOT
+            local hpAfter = GetEntityHP(entityID)
+            if not hpAfter or hpAfter <= 0 then
+                FinishAction()
+                return
+            end
+        end
+    end
 
     -- Move timer
     if moveTimer > 0 then
