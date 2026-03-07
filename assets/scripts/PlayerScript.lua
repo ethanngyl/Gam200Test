@@ -256,6 +256,11 @@ local lastActiveState = false
 -- Cached player index (1, 2, or 3)
 local myPlayerIndex = nil
 
+-- Global registry so UI accessors can find the active player's data
+if not _G._playerRegistry then
+    _G._playerRegistry = {}
+end
+
 local function getPlayerIndex()
     if myPlayerIndex then return myPlayerIndex end
     local allPlayers = GetAllPlayers()
@@ -994,6 +999,25 @@ function OnInit(id)
         print("[PlayerScript] Loaded skill loadout from SkillLoadout.json")
     else
         print("[PlayerScript] No SkillLoadout.json found, using default skills")
+    end
+
+    -- Register this player in the global registry for UI accessors
+    local idx = getPlayerIndex()
+    if idx then
+        _G._playerRegistry[idx] = {
+            entityID = entityID,
+            getSkills = function() return PlayerSkills[idx] or {} end,
+            getActiveSlotKey = function() return activeSkillSlotKey end,
+            canUseSkill = function(slotKey)
+                local mySkills = PlayerSkills[idx] or {}
+                local skillID = mySkills[slotKey]
+                if not skillID then return false end
+                local skill = SkillDefs[skillID]
+                if not skill then return false end
+                local currentAttackAP = GetEntityAttackAP(entityID)
+                return currentAttackAP >= skill.apCost
+            end,
+        }
     end
 
     -- Apply scale to ALL players (unified scaling)
@@ -2246,31 +2270,39 @@ _G.GetPlayerState = GetPlayerState
 _G.GetPlayerFSM = GetPlayerFSM
 
 -- Skill UI state accessors (used by SkillBubbleHolderUI)
+-- These iterate the global registry to find the active player's data,
+-- so they work regardless of which PlayerScript instance defined them last.
+
+-- Helper: find the active player entry in the registry
+local function findActivePlayerEntry()
+    for _, entry in pairs(_G._playerRegistry or {}) do
+        if entry.entityID and IsActiveCharacter(entry.entityID) then
+            return entry
+        end
+    end
+    return nil
+end
+
 -- Returns the slot key ("1"-"4") of the currently previewed skill, or nil
 function GetActiveSkillSlotKey()
-    return activeSkillSlotKey
+    local entry = findActivePlayerEntry()
+    if entry then return entry.getActiveSlotKey() end
+    return nil
 end
 
 -- Returns the equipped skills table for the active character { ["1"] = "SkillID", ... }
 function GetActiveCharacterSkills()
-    local idx = getPlayerIndex()
-    if idx and IsActiveCharacter(entityID) then
-        return PlayerSkills[idx] or {}
-    end
+    local entry = findActivePlayerEntry()
+    if entry then return entry.getSkills() end
     return nil
 end
 
 -- Returns whether a skill has enough AP to be used (not on "cooldown")
 -- Returns true if usable, false if insufficient AP
 function CanUseSkill(slotKey)
-    if not IsActiveCharacter(entityID) then return false end
-    local mySkills = getMySkills()
-    local skillID = mySkills[slotKey]
-    if not skillID then return false end
-    local skill = SkillDefs[skillID]
-    if not skill then return false end
-    local currentAttackAP = GetEntityAttackAP(entityID)
-    return currentAttackAP >= skill.apCost
+    local entry = findActivePlayerEntry()
+    if not entry then return false end
+    return entry.canUseSkill(slotKey)
 end
 
 _G.GetActiveSkillSlotKey = GetActiveSkillSlotKey
