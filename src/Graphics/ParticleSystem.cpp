@@ -65,6 +65,19 @@ namespace Framework {
             auto& emitter = entityManager->GetComponent<ParticleEmitter>(e);
             auto& transform = entityManager->GetComponent<Transform>(e);
 
+            // Follow target entity: update emitter position to match target
+            if (emitter.followEntity != INVALID_ENTITY) {
+                Entity target{ emitter.followEntity };
+                if (entityManager->HasComponent<Transform>(target)) {
+                    auto& targetTransform = entityManager->GetComponent<Transform>(target);
+                    transform.position = targetTransform.position;
+                } else {
+                    // Target entity no longer exists — stop emitting and auto-destroy
+                    emitter.emit = false;
+                    emitter.autoDestroy = true;
+                }
+            }
+
             // Lazy-initialize particle pool
             if (emitter.particles.empty() && emitter.maxParticles > 0) {
                 emitter.particles.resize(static_cast<size_t>(emitter.maxParticles));
@@ -160,7 +173,12 @@ namespace Framework {
                 break;
             }
 
-            slot->position = glm::vec2(transform.position.x, transform.position.y) + offset;
+            // World-space particles get absolute position; local-space particles stay relative to emitter
+            if (emitter.worldSpace) {
+                slot->position = glm::vec2(transform.position.x, transform.position.y) + offset;
+            } else {
+                slot->position = offset;
+            }
         }
     }
 

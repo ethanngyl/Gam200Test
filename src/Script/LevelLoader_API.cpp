@@ -5642,11 +5642,12 @@ namespace Framework {
 
     /**
      * @brief Spawns a particle emitter entity at a world position
-     * @params x, y, emitRadius, rate, duration, r, g, b, a
+     * @params x, y, emitRadius, rate, duration, r, g, b, a, followEntityID
      * @return integer (Entity ID)
      *
-     * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0)
+     * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, targetID)
      *   - duration=0 means infinite (emitter persists until destroyed)
+     *   - followEntityID (optional): if provided, emitter follows that entity's position
      *   - Returns entity ID so caller can track and destroy it later
      */
     int LevelLoader::Lua_SpawnParticleEmitter(lua_State* L) {
@@ -5666,6 +5667,7 @@ namespace Framework {
         float g = static_cast<float>(luaL_optnumber(L, 7, 1.0));
         float b = static_cast<float>(luaL_optnumber(L, 8, 0.0));
         float a = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        EntityID followTarget = static_cast<EntityID>(luaL_optinteger(L, 10, 0));
 
         auto* em = loader->coreEngine->GetEntityManager();
         if (!em) {
@@ -5716,6 +5718,12 @@ namespace Framework {
 
         // No gravity
         emitter.gravity = glm::vec2(0.0f, 0.0f);
+
+        // Follow target entity
+        if (followTarget != INVALID_ENTITY) {
+            emitter.followEntity = followTarget;
+            emitter.worldSpace = false;  // use local space so particles move with emitter
+        }
 
         // Duration and auto-destroy
         if (duration > 0.0f) {

@@ -205,7 +205,7 @@ local function ApplyBolsteredMorale()
             if SpawnParticleEmitter then
                 local wx, wy = GetEntityWorldPosition(eid)
                 if wx and wy then
-                    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0)
+                    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
                     if emitterID and emitterID > 0 then
                         local key = entityID .. "_" .. eid
                         _G.BolsteredMoraleParticles[key] = emitterID
