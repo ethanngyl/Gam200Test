@@ -59,6 +59,7 @@ namespace Framework
     class PathfindingSystem;
     class SkillSystem;
     class FSMSystem;
+    class ParticleSystem;
 
     /**
      * @class CoreEngine
@@ -191,6 +192,7 @@ namespace Framework
         SkillSystem* GetSkillSystem() const { return skillSystem; }
         LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
         FSMSystem* GetFSMSystem() const { return fsmSystem; }
+        ParticleSystem* GetParticleSystem() const { return particleSystem; }
 
 
         /**
@@ -251,6 +253,7 @@ namespace Framework
         SkillSystem* skillSystem;
         ScriptSystem* scriptSystem = nullptr;
         FSMSystem* fsmSystem;
+        ParticleSystem* particleSystem;
 
         // state
         unsigned LastTime;
