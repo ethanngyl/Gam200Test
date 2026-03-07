@@ -123,6 +123,10 @@ namespace Framework {
                 if (map.isValid(x, y)) {
                     map.setTile(x, y, TileType::FLOOR);
                 }
+                // Carve second row for 2-wide corridor
+                if (map.isValid(x, y + 1)) {
+                    map.setTile(x, y + 1, TileType::FLOOR);
+                }
             }
         }
 
@@ -132,6 +136,10 @@ namespace Framework {
             for (int y = yStart; y <= yEnd; y++) {
                 if (map.isValid(x, y)) {
                     map.setTile(x, y, TileType::FLOOR);
+                }
+                // Carve second column for 2-wide corridor
+                if (map.isValid(x + 1, y)) {
+                    map.setTile(x + 1, y, TileType::FLOOR);
                 }
             }
         }

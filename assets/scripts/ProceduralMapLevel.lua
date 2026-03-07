@@ -518,6 +518,14 @@ function OnUpdate(dt)
 
     -- Handle editor toggle
     HandleEditorToggle(dt)
+
+    if IsKeyDown("9") and mapSaveCooldown <= 0 then
+        Log("SAVING MAP (9)...")
+        local success, filepath = SaveCurrentMap()
+        if success then Log("Saved to: " .. tostring(filepath))
+        else Log("ERROR: Save failed!") end
+        mapSaveCooldown = MAP_SAVE_COOLDOWN_TIME
+    end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues
     -- HandleMapRegeneration()
