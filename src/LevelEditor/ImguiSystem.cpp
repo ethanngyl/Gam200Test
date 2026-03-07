@@ -93,12 +93,22 @@ namespace Framework {
     static bool wantSaveSceneAsModal = false;
     static std::string currentScenePath = "";
 
+    // Snapshot hooks were removed in newer branches; keep no-op stubs
+    // so editor sliders compile cleanly without undo integration.
+    static void BeginSnapshotEdit(Entity) {}
+    static void EndSnapshotEdit(Entity) {}
+
     static int GetGsmStateFromLuaName(const std::string& lowerName) {
         if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
         if (lowerName.find("level2") != std::string::npos) return LEVEL_2;
         if (lowerName.find("levelselect") != std::string::npos) return Level_select;
         if (lowerName.find("mainmenu") != std::string::npos) return mainMenu;
         if (lowerName.find("tutorial") != std::string::npos) return TUTORIAL;
+        if (lowerName.find("skillsets") != std::string::npos) return SKILL_SETS;
+        if (lowerName.find("winlevel") != std::string::npos) return WIN_SCREEN;
+        if (lowerName.find("loselevel") != std::string::npos) return LOSE_SCREEN;
+        if (lowerName.find("control2") != std::string::npos) return CONTROL2;
+        if (lowerName.find("control") != std::string::npos) return CONTROL;
         if (lowerName.find("end") != std::string::npos) return LEVEL_END;
 
         return -1;
@@ -1328,6 +1338,11 @@ namespace Framework {
             case LEVEL_2: levelName = "Level2"; break;
             case LEVEL_3: levelName = "Level3"; break;
             case TUTORIAL: levelName = "Tutorial"; break;
+            case CONTROL: levelName = "Control"; break;
+            case CONTROL2: levelName = "Control2"; break;
+            case SKILL_SETS: levelName = "SkillSets"; break;
+            case WIN_SCREEN: levelName = "WinLevel"; break;
+            case LOSE_SCREEN: levelName = "LoseLevel"; break;
             case LEVEL_END: levelName = "LevelEnd"; break;
             }
 
@@ -1395,6 +1410,11 @@ namespace Framework {
             case LEVEL_2: levelName = "Level2"; break;
             case LEVEL_3: levelName = "Level3"; break;
             case TUTORIAL: levelName = "Tutorial"; break;
+            case CONTROL: levelName = "Control"; break;
+            case CONTROL2: levelName = "Control2"; break;
+            case SKILL_SETS: levelName = "SkillSets"; break;
+            case WIN_SCREEN: levelName = "WinLevel"; break;
+            case LOSE_SCREEN: levelName = "LoseLevel"; break;
             case LEVEL_END: levelName = "LevelEnd"; break;
             }
 
@@ -4393,6 +4413,11 @@ namespace Framework {
                         case LEVEL_2: levelName = "Level2"; break;
                         case LEVEL_3: levelName = "Level3"; break;
                         case TUTORIAL: levelName = "Tutorial"; break;
+                        case CONTROL: levelName = "Control"; break;
+                        case CONTROL2: levelName = "Control2"; break;
+                        case SKILL_SETS: levelName = "SkillSets"; break;
+                        case WIN_SCREEN: levelName = "WinLevel"; break;
+                        case LOSE_SCREEN: levelName = "LoseLevel"; break;
                         case LEVEL_END: levelName = "LevelEnd"; break;
                     }
 
@@ -4438,6 +4463,11 @@ namespace Framework {
                 case LEVEL_2: currentLevelName = "Level 2"; break;
                 case LEVEL_3: currentLevelName = "Level 3"; break;
                 case TUTORIAL: currentLevelName = "Tutorial"; break;
+                case CONTROL: currentLevelName = "Control"; break;
+                case CONTROL2: currentLevelName = "Control 2"; break;
+                case SKILL_SETS: currentLevelName = "Skill Sets"; break;
+                case WIN_SCREEN: currentLevelName = "Win Screen"; break;
+                case LOSE_SCREEN: currentLevelName = "Lose Screen"; break;
                 case LEVEL_END: currentLevelName = "Level End"; break;
                 }
 

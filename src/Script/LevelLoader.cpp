@@ -767,6 +767,21 @@ namespace Framework {
         if (strcmp(stateName, "TUTORIAL") == 0) {
             next = TUTORIAL;
         }
+        else if (strcmp(stateName, "CONTROL") == 0) {
+            next = CONTROL;
+        }
+        else if (strcmp(stateName, "CONTROL2") == 0) {
+            next = CONTROL2;
+        }
+        else if (strcmp(stateName, "SKILL_SETS") == 0) {
+            next = SKILL_SETS;
+        }
+        else if (strcmp(stateName, "WIN_SCREEN") == 0) {
+            next = WIN_SCREEN;
+        }
+        else if (strcmp(stateName, "LOSE_SCREEN") == 0) {
+            next = LOSE_SCREEN;
+        }
         else if (strcmp(stateName, "LEVEL_2") == 0) {
             next = LEVEL_2;
         }

@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
 ===============================================================================
  File:           PlayerManager.cpp
  Author:         ETHAN NG YONG LE
@@ -734,7 +734,7 @@ namespace Framework {
 
                     // Trigger level completion (you can customize this)
                     // Option 1: Return to main menu
-                    GSM_SetNextState(LEVEL_END);
+                    GSM_SetNextState(WIN_SCREEN);
 
                     // Option 2: Load next level
                     // GSM_SetNextState(LEVEL_4);
