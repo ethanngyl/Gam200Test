@@ -522,11 +522,13 @@ local function createPlayerStates(fsm)
                     local skill = SkillDefs[skillID]
                     local currentAttackAP = GetEntityAttackAP(entityID)
                     if skill and currentAttackAP >= skill.apCost then
+                        ShowSkillPreview(skillID)
+                        -- Set active slot AFTER ShowSkillPreview, because ShowSkillPreview
+                        -- calls ClearActivePreview() which resets activeSkillSlotKey to nil
                         activeSkillSlotKey = key
                         if CallLevelFunction then
                             CallLevelFunction("SetSkillUIActiveSlot", getPlayerIndex() or 0, key)
                         end
-                        ShowSkillPreview(skillID)
                     else
                         PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
                     end
