@@ -70,6 +70,51 @@ UIManager.initialized = false
 UIManager.cameraMoveThreshold = 0.01
 
 -- ============================================================================
+-- SKILL UI STATE BRIDGE
+-- ============================================================================
+-- Shared state between entity Lua states (PlayerScript) and level Lua state
+-- (SkillBubbleHolderUI). PlayerScript pushes data here via CallLevelFunction,
+-- and SkillBubbleHolderUI reads from it directly (same Lua state).
+
+_G._skillUIState = {
+    -- Per-player skill assignments: [playerIndex] = { ["1"] = "SkillID", ... }
+    players = {},
+    -- Per-player AP costs: [playerIndex] = { ["1"] = apCost, ... }
+    apCosts = {},
+    -- Per-player entity IDs: [playerIndex] = entityID
+    entityIDs = {},
+    -- Currently active (previewed) skill slot key ("1"-"4") or nil
+    activeSlotKey = nil,
+    -- Which player index is currently active
+    activePlayerIndex = nil,
+}
+
+-- Called by PlayerScript (via CallLevelFunction) to register a player's skills
+-- Args: playerIndex, entityID, slot1SkillID, slot2SkillID, slot3SkillID, slot4SkillID,
+--        slot1APCost, slot2APCost, slot3APCost, slot4APCost
+function _G.RegisterPlayerSkills(playerIndex, entityID, s1, s2, s3, s4, ap1, ap2, ap3, ap4)
+    _G._skillUIState.players[playerIndex] = {}
+    _G._skillUIState.apCosts[playerIndex] = {}
+    _G._skillUIState.entityIDs[playerIndex] = entityID
+    local slots = { s1, s2, s3, s4 }
+    local costs = { ap1, ap2, ap3, ap4 }
+    for i = 1, 4 do
+        local key = tostring(i)
+        if slots[i] and slots[i] ~= "" then
+            _G._skillUIState.players[playerIndex][key] = slots[i]
+            _G._skillUIState.apCosts[playerIndex][key] = costs[i] or 1
+        end
+    end
+end
+
+-- Called by PlayerScript (via CallLevelFunction) when a skill slot is selected
+function _G.SetSkillUIActiveSlot(playerIndex, slotKey)
+    _G._skillUIState.activePlayerIndex = playerIndex
+    if slotKey == "" then slotKey = nil end
+    _G._skillUIState.activeSlotKey = slotKey
+end
+
+-- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 

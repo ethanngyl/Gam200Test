@@ -169,16 +169,29 @@ end
 function SkillBubbleHolderUI:UpdateCircleTints()
     if not SetSpriteColor then return end
 
-    -- Get the active character's skills
-    local skills = nil
-    if GetActiveCharacterSkills then
-        skills = GetActiveCharacterSkills()
+    -- Read skill UI state from the shared bridge table (set by PlayerScript via CallLevelFunction)
+    local state = _G._skillUIState
+    if not state then return end
+
+    -- Find the active player's data
+    local activeEntityID = GetActiveCharacter and GetActiveCharacter() or nil
+    local activePlayerIndex = nil
+    if activeEntityID and activeEntityID > 0 then
+        for idx, eid in pairs(state.entityIDs or {}) do
+            if eid == activeEntityID then
+                activePlayerIndex = idx
+                break
+            end
+        end
     end
 
-    -- Get which slot is currently selected
-    local activeSlot = nil
-    if GetActiveSkillSlotKey then
-        activeSlot = GetActiveSkillSlotKey()
+    local skills = activePlayerIndex and state.players[activePlayerIndex] or nil
+    local apCosts = activePlayerIndex and state.apCosts[activePlayerIndex] or nil
+    local activeSlot = state.activeSlotKey
+
+    -- Only show active slot highlight if it belongs to the active player
+    if state.activePlayerIndex ~= activePlayerIndex then
+        activeSlot = nil
     end
 
     for i = 1, 4 do
@@ -192,13 +205,17 @@ function SkillBubbleHolderUI:UpdateCircleTints()
             -- No skill assigned to this slot
             tint = TINT_BLACK
         elseif activeSlot == slotKey then
-            -- This slot is currently selected
+            -- This slot is currently selected/previewed
             tint = TINT_BLUE
-        elseif CanUseSkill and not CanUseSkill(slotKey) then
-            -- Skill assigned but not enough AP (cooldown/unavailable)
-            tint = TINT_GREY
+        elseif activeEntityID and apCosts and apCosts[slotKey] then
+            -- Check if enough attack AP to use this skill
+            local currentAttackAP = GetEntityAttackAP(activeEntityID)
+            if currentAttackAP < apCosts[slotKey] then
+                tint = TINT_GREY  -- Not enough AP (on cooldown)
+            else
+                tint = TINT_WHITE -- Available and usable
+            end
         else
-            -- Skill assigned and usable
             tint = TINT_WHITE
         end
 

@@ -523,6 +523,9 @@ local function createPlayerStates(fsm)
                     local currentAttackAP = GetEntityAttackAP(entityID)
                     if skill and currentAttackAP >= skill.apCost then
                         activeSkillSlotKey = key
+                        if CallLevelFunction then
+                            CallLevelFunction("SetSkillUIActiveSlot", getPlayerIndex() or 0, key)
+                        end
                         ShowSkillPreview(skillID)
                     else
                         PulseTile(currentX, currentY, 0.3, 1.0, 1.0, 0.3)
@@ -1020,6 +1023,20 @@ function OnInit(id)
         }
     end
 
+    -- Push skill data to level Lua state for SkillBubbleHolderUI
+    if idx and CallLevelFunction then
+        local mySkills = PlayerSkills[idx] or {}
+        local s1 = mySkills["1"] or ""
+        local s2 = mySkills["2"] or ""
+        local s3 = mySkills["3"] or ""
+        local s4 = mySkills["4"] or ""
+        local ap1 = (s1 ~= "" and SkillDefs[s1]) and SkillDefs[s1].apCost or 0
+        local ap2 = (s2 ~= "" and SkillDefs[s2]) and SkillDefs[s2].apCost or 0
+        local ap3 = (s3 ~= "" and SkillDefs[s3]) and SkillDefs[s3].apCost or 0
+        local ap4 = (s4 ~= "" and SkillDefs[s4]) and SkillDefs[s4].apCost or 0
+        CallLevelFunction("RegisterPlayerSkills", idx, entityID, s1, s2, s3, s4, ap1, ap2, ap3, ap4)
+    end
+
     -- Apply scale to ALL players (unified scaling)
     SetScale(entityID, 0.25, 0.25)
     print("[PlayerScript] Scaled Player " .. entityID .. " to 0.25x0.25")
@@ -1461,6 +1478,9 @@ function ClearActivePreview()
     end
     activePreview = nil
     activeSkillSlotKey = nil
+    if CallLevelFunction then
+        CallLevelFunction("SetSkillUIActiveSlot", getPlayerIndex() or 0, "")
+    end
     dashMode = nil
     allyTargetMode = nil
     enemyTargetMode = nil
