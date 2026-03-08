@@ -674,6 +674,11 @@ function OnUpdate(dt)
         end
     end
 
+    -- Update party turn manager (handles turn transition cooldowns and input timing)
+    if UpdatePartyTurnManager then
+        UpdatePartyTurnManager(dt)
+    end
+
     -- Update enemy turn manager (for sequential enemy turns with delays)
     if UpdateEnemyTurnManager then
         if currentTurn == "Enemy" then
