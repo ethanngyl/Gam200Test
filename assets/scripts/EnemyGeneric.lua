@@ -627,22 +627,6 @@ local function ExecuteSpecial_Taunt()
 
     print("[" .. GetLogTag() .. " " .. entityID .. "] TAUNT ACTIVATED! Redirecting ally damage to self.")
 
-    -- Spawn orange particles on the taunting enemy
-    if SpawnParticleEmitter then
-        _G.EffectParticles = _G.EffectParticles or {}
-        local key = "taunt_" .. entityID
-        if not _G.EffectParticles[key] then
-            local wx, wy = GetEntityWorldPosition(entityID)
-            if wx and wy then
-                local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, 1.0, 0.5, 0.0, 1.0, entityID)
-                if emitterID and emitterID > 0 then
-                    _G.EffectParticles[key] = emitterID
-                    print("[" .. GetLogTag() .. " " .. entityID .. "] Spawned taunt particles")
-                end
-            end
-        end
-    end
-
     if enemies then
         for _, eid in ipairs(enemies) do
             local ex, ey = GetEntityGridPosition(eid)
@@ -1017,17 +1001,6 @@ function OnDestroy()
                         end
                     end
                 end
-            end
-        end
-    end
-
-    -- Remove any effect particles associated with this entity
-    if _G.EffectParticles and DestroyEntity then
-        for key, emitterID in pairs(_G.EffectParticles) do
-            local targetIDStr = key:match("_(%d+)$")
-            if targetIDStr and tonumber(targetIDStr) == entityID then
-                pcall(DestroyEntity, emitterID)
-                _G.EffectParticles[key] = nil
             end
         end
     end
