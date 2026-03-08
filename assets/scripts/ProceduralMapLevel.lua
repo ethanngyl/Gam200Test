@@ -659,6 +659,15 @@ function OnUpdate(dt)
         end
     end
 
+    -- Must capture previousTurn BEFORE updating managers, so turn transitions
+    -- are correctly detected on the next frame
+    previousTurn = currentTurn
+
+    -- Update party turn manager (handles turn transition cooldowns and input timing)
+    if UpdatePartyTurnManager then
+        UpdatePartyTurnManager(dt)
+    end
+
     -- Update enemy turn manager (for sequential enemy turns with delays)
     if UpdateEnemyTurnManager then
         if currentTurn == "Enemy" then
@@ -666,8 +675,6 @@ function OnUpdate(dt)
         end
         UpdateEnemyTurnManager(dt)
     end
-
-    previousTurn = currentTurn
 
     -- Update UI system
     UIManager.Update(dt)
