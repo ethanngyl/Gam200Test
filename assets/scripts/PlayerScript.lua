@@ -190,6 +190,9 @@ dofile("assets/scripts/SkillPatterns.lua")
 -- skillType: nil/"melee" = instant damage, "projectile" = spawns a projectile
 local SkillDefs = {}
 
+-- Per-character skill cooldown tracking: skillID -> turnsRemaining
+local skillCooldowns = {}
+
 -- Per-player skill assignments: playerIndex -> { key -> skillID }
 -- Player index is determined by spawn order (1 = first spawned, etc.)
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
@@ -457,6 +460,18 @@ local function createPlayerStates(fsm)
             -- Detect turn start (transition from inactive to active)
             if not lastActiveState then
                 lastActiveState = true
+                -- Decrement skill cooldowns at turn start
+                for sid, cd in pairs(skillCooldowns) do
+                    if cd > 0 then
+                        skillCooldowns[sid] = cd - 1
+                        if skillCooldowns[sid] <= 0 then
+                            skillCooldowns[sid] = nil
+                            print("[PlayerScript] Skill " .. sid .. " cooldown expired")
+                        else
+                            print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
+                        end
+                    end
+                end
                 -- Initialize Berserker turn-start effects
                 if HasStatusEffect and HasStatusEffect(entityID, "bloodyWarcry") then
                     bloodyWarcryFreeMove = true
@@ -529,7 +544,8 @@ local function createPlayerStates(fsm)
                 if skillID and keyDown and not lastSkillKeyDown[key] then
                     local skill = SkillDefs[skillID]
                     local currentAttackAP = GetEntityAttackAP(entityID)
-                    if skill and currentAttackAP >= skill.apCost then
+                    local onCooldown = skillCooldowns[skillID] and skillCooldowns[skillID] > 0
+                    if skill and currentAttackAP >= skill.apCost and not onCooldown then
                         ShowSkillPreview(skillID)
                         -- Set active slot AFTER ShowSkillPreview, because ShowSkillPreview
                         -- calls ClearActivePreview() which resets activeSkillSlotKey to nil
@@ -1027,6 +1043,7 @@ function OnInit(id)
                 if not skillID then return false end
                 local skill = SkillDefs[skillID]
                 if not skill then return false end
+                if skillCooldowns[skillID] and skillCooldowns[skillID] > 0 then return false end
                 local currentAttackAP = GetEntityAttackAP(entityID)
                 return currentAttackAP >= skill.apCost
             end,
@@ -1314,6 +1331,13 @@ function ShowSkillPreview(skillID)
     if not currentX or not currentY then return end
 
     print("[PlayerScript] Showing preview for " .. skill.name .. " at (" .. currentX .. ", " .. currentY .. ")")
+
+    -- Cooldown check: block preview if skill is on cooldown
+    if skillCooldowns[skillID] and skillCooldowns[skillID] > 0 then
+        print("[PlayerScript] " .. skill.name .. " is on cooldown (" .. skillCooldowns[skillID] .. " turns remaining)")
+        PulseTile(currentX, currentY, 0.3, 0.5, 0.5, 0.5)
+        return
+    end
 
     -- Dark Omens: block preview if already used this level
     if skill.oncePerLevel and darkOmensUsedThisLevel then
@@ -1736,6 +1760,13 @@ function ExecuteSkill(skillID)
         return
     end
 
+    -- Block execution if skill is on cooldown
+    if skillCooldowns[skillID] and skillCooldowns[skillID] > 0 then
+        print("[PlayerScript] " .. skill.name .. " is on cooldown (" .. skillCooldowns[skillID] .. " turns remaining)")
+        ClearActivePreview()
+        return
+    end
+
     print("[PlayerScript] ===== EXECUTING: " .. skill.name .. " =====")
 
     -- Dark Omens Triggered: skills cost 0 AP, but only 2 skills allowed
@@ -1808,6 +1839,12 @@ function ExecuteSkill(skillID)
     if darkOmensSkillsRemaining > 0 then
         darkOmensSkillsRemaining = darkOmensSkillsRemaining - 1
         print("[PlayerScript] Dark Omens: " .. darkOmensSkillsRemaining .. " free skills remaining")
+    end
+
+    -- Set skill cooldown if defined
+    if skill.cooldown and skill.cooldown > 0 then
+        skillCooldowns[skillID] = skill.cooldown
+        print("[PlayerScript] " .. skill.name .. " on cooldown for " .. skill.cooldown .. " turns")
     end
 
     -- ================================================================
