@@ -31,7 +31,7 @@ add_definitions(-DUSE_CSD3151_AUTOMATION=0) # Used for instructor's automation
 # ======================= Source Configuration =========================
 
 set(SRC_DIR ./src)
-file(GLOB_RECURSE APP_SRC 
+file(GLOB_RECURSE APP_SRC CONFIGURE_DEPENDS
    "${SRC_DIR}/*.cpp"
    "${SRC_DIR}/*.h"
    "${SRC_DIR}/*.hpp"
