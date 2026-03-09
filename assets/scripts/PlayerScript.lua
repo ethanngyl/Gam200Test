@@ -190,6 +190,9 @@ dofile("assets/scripts/SkillPatterns.lua")
 -- skillType: nil/"melee" = instant damage, "projectile" = spawns a projectile
 local SkillDefs = {}
 
+-- Per-character skill cooldown tracking: skillID -> turnsRemaining
+local skillCooldowns = {}
+
 -- Per-player skill assignments: playerIndex -> { key -> skillID }
 -- Player index is determined by spawn order (1 = first spawned, etc.)
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
@@ -197,7 +200,7 @@ local SkillDefs = {}
 local PlayerSkills = {
     [1] = { ["1"] = "Thrust", ["2"] = "SweepingSlash" },
     [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
-    [3] = { ["1"] = "Slam", ["2"] = "SiphonCharge" },
+    [3] = { ["1"] = "Slam", ["2"] = "DarkOmens" },
 }
 
 -- All keys that can be bound to skills (used for preview selection)
@@ -296,6 +299,45 @@ local lastDKeyDown = false
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
+local function spawnEffectParticles(targetID, effectName, r, g, b)
+    if not SpawnParticleEmitter then return end
+    local wx, wy = GetEntityWorldPosition(targetID)
+    if not wx or not wy then return end
+    _G.EffectParticles = _G.EffectParticles or {}
+    local key = effectName .. "_" .. targetID
+    if _G.EffectParticles[key] then return end  -- don't double-spawn
+    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
+    if emitterID and emitterID > 0 then
+        _G.EffectParticles[key] = emitterID
+        print("[PlayerScript] Spawned " .. effectName .. " particles on entity " .. targetID)
+    end
+end
+
+local function removeEffectParticles(targetID, effectName)
+    if not _G.EffectParticles then return end
+    local key = effectName .. "_" .. targetID
+    local emitterID = _G.EffectParticles[key]
+    if emitterID and emitterID > 0 and DestroyEntity then
+        pcall(DestroyEntity, emitterID)
+        _G.EffectParticles[key] = nil
+        print("[PlayerScript] Removed " .. effectName .. " particles from entity " .. targetID)
+    end
+end
+
+local function cleanupEffectParticles()
+    if not _G.EffectParticles or not HasStatusEffect then return end
+    for key, emitterID in pairs(_G.EffectParticles) do
+        local effectName, targetIDStr = key:match("^(.+)_(%d+)$")
+        local targetID = tonumber(targetIDStr)
+        if targetID and effectName then
+            local stillHasEffect = HasStatusEffect(targetID, effectName)
+            if not stillHasEffect then
+                if DestroyEntity then pcall(DestroyEntity, emitterID) end
+                _G.EffectParticles[key] = nil
+            end
+        end
+    end
+end
 
 local function blockHeldKeys()
     blockedKeys = {}
@@ -457,17 +499,33 @@ local function createPlayerStates(fsm)
             -- Detect turn start (transition from inactive to active)
             if not lastActiveState then
                 lastActiveState = true
+                -- Decrement skill cooldowns at turn start
+                for sid, cd in pairs(skillCooldowns) do
+                    if cd > 0 then
+                        skillCooldowns[sid] = cd - 1
+                        if skillCooldowns[sid] <= 0 then
+                            skillCooldowns[sid] = nil
+                            print("[PlayerScript] Skill " .. sid .. " cooldown expired")
+                        else
+                            print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
+                        end
+                    end
+                end
                 -- Initialize Berserker turn-start effects
                 if HasStatusEffect and HasStatusEffect(entityID, "bloodyWarcry") then
                     bloodyWarcryFreeMove = true
                     bloodyWarcryDamageBonus = true
                     print("[PlayerScript] Bloody Warcry active: first move free, next skill +1 dmg -1 HP")
                 end
-                if HasStatusEffect and HasStatusEffect(entityID, "darkOmensTriggered") then
-                    darkOmensSkillsRemaining = 2
-                    -- Spawn purple particles for triggered state (darkOmens particles auto-cleaned)
-                    spawnEffectParticles(entityID, "darkOmensTriggered", 0.6, 0.0, 0.8)
-                    print("[PlayerScript] Dark Omens Triggered: 2 free skills this turn, then death")
+                if not turnStartInitialized then
+                    if HasStatusEffect(entityID, "darkOmensTriggered") then
+                        -- Only spawn if not already tracked in the global EffectParticles table
+                        local key = "darkOmensTriggered_" .. entityID
+                        if not _G.EffectParticles[key] then
+                            spawnEffectParticles(entityID, "darkOmensTriggered", 0.6, 0.0, 0.8)
+                        end
+                    end
+                    turnStartInitialized = true -- Prevent re-running this every frame
                 end
                 if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
                     siphonChargeActive = true
@@ -529,7 +587,8 @@ local function createPlayerStates(fsm)
                 if skillID and keyDown and not lastSkillKeyDown[key] then
                     local skill = SkillDefs[skillID]
                     local currentAttackAP = GetEntityAttackAP(entityID)
-                    if skill and currentAttackAP >= skill.apCost then
+                    local onCooldown = skillCooldowns[skillID] and skillCooldowns[skillID] > 0
+                    if skill and currentAttackAP >= skill.apCost and not onCooldown then
                         ShowSkillPreview(skillID)
                         -- Set active slot AFTER ShowSkillPreview, because ShowSkillPreview
                         -- calls ClearActivePreview() which resets activeSkillSlotKey to nil
@@ -1027,6 +1086,7 @@ function OnInit(id)
                 if not skillID then return false end
                 local skill = SkillDefs[skillID]
                 if not skill then return false end
+                if skillCooldowns[skillID] and skillCooldowns[skillID] > 0 then return false end
                 local currentAttackAP = GetEntityAttackAP(entityID)
                 return currentAttackAP >= skill.apCost
             end,
@@ -1314,6 +1374,13 @@ function ShowSkillPreview(skillID)
     if not currentX or not currentY then return end
 
     print("[PlayerScript] Showing preview for " .. skill.name .. " at (" .. currentX .. ", " .. currentY .. ")")
+
+    -- Cooldown check: block preview if skill is on cooldown
+    if skillCooldowns[skillID] and skillCooldowns[skillID] > 0 then
+        print("[PlayerScript] " .. skill.name .. " is on cooldown (" .. skillCooldowns[skillID] .. " turns remaining)")
+        PulseTile(currentX, currentY, 0.3, 0.5, 0.5, 0.5)
+        return
+    end
 
     -- Dark Omens: block preview if already used this level
     if skill.oncePerLevel and darkOmensUsedThisLevel then
@@ -1626,49 +1693,6 @@ local function faceToward(targetX, targetY)
     end
 end
 
--- Helper: spawn particle emitter on an entity for a status effect
-local function spawnEffectParticles(targetID, effectName, r, g, b)
-    if not SpawnParticleEmitter then return end
-    local wx, wy = GetEntityWorldPosition(targetID)
-    if not wx or not wy then return end
-    _G.EffectParticles = _G.EffectParticles or {}
-    local key = effectName .. "_" .. targetID
-    if _G.EffectParticles[key] then return end  -- don't double-spawn
-    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
-    if emitterID and emitterID > 0 then
-        _G.EffectParticles[key] = emitterID
-        print("[PlayerScript] Spawned " .. effectName .. " particles on entity " .. targetID)
-    end
-end
-
--- Helper: remove particle emitter for a specific effect on an entity
-local function removeEffectParticles(targetID, effectName)
-    if not _G.EffectParticles then return end
-    local key = effectName .. "_" .. targetID
-    local emitterID = _G.EffectParticles[key]
-    if emitterID and emitterID > 0 and DestroyEntity then
-        pcall(DestroyEntity, emitterID)
-        _G.EffectParticles[key] = nil
-        print("[PlayerScript] Removed " .. effectName .. " particles from entity " .. targetID)
-    end
-end
-
--- Helper: cleanup all effect particles where the status effect has expired
-local function cleanupEffectParticles()
-    if not _G.EffectParticles or not HasStatusEffect then return end
-    for key, emitterID in pairs(_G.EffectParticles) do
-        local effectName, targetIDStr = key:match("^(.+)_(%d+)$")
-        local targetID = tonumber(targetIDStr)
-        if targetID and effectName then
-            local stillHasEffect = HasStatusEffect(targetID, effectName)
-            if not stillHasEffect then
-                if DestroyEntity then pcall(DestroyEntity, emitterID) end
-                _G.EffectParticles[key] = nil
-            end
-        end
-    end
-end
-
 -- Execute any skill based on its skillType
 -- Helper: heal a specific entity by amount (capped at max HP)
 local function healEntity(targetID, amount)
@@ -1732,6 +1756,13 @@ end
 function ExecuteSkill(skillID)
     local skill = SkillDefs[skillID]
     if not skill then
+        ClearActivePreview()
+        return
+    end
+
+    -- Block execution if skill is on cooldown
+    if skillCooldowns[skillID] and skillCooldowns[skillID] > 0 then
+        print("[PlayerScript] " .. skill.name .. " is on cooldown (" .. skillCooldowns[skillID] .. " turns remaining)")
         ClearActivePreview()
         return
     end
@@ -1808,6 +1839,12 @@ function ExecuteSkill(skillID)
     if darkOmensSkillsRemaining > 0 then
         darkOmensSkillsRemaining = darkOmensSkillsRemaining - 1
         print("[PlayerScript] Dark Omens: " .. darkOmensSkillsRemaining .. " free skills remaining")
+    end
+
+    -- Set skill cooldown if defined
+    if skill.cooldown and skill.cooldown > 0 then
+        skillCooldowns[skillID] = skill.cooldown
+        print("[PlayerScript] " .. skill.name .. " on cooldown for " .. skill.cooldown .. " turns")
     end
 
     -- ================================================================

@@ -333,17 +333,6 @@ function OnDestroy()
         end
     end
 
-    -- Remove any effect particles associated with this entity
-    if _G.EffectParticles and DestroyEntity then
-        for key, emitterID in pairs(_G.EffectParticles) do
-            local targetIDStr = key:match("_(%d+)$")
-            if targetIDStr and tonumber(targetIDStr) == entityID then
-                pcall(DestroyEntity, emitterID)
-                _G.EffectParticles[key] = nil
-            end
-        end
-    end
-
     -- Increment death counter
     _G.EnemiesDeadThisLevel = (_G.EnemiesDeadThisLevel or 0) + 1
 

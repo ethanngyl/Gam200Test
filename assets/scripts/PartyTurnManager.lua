@@ -407,16 +407,10 @@ function NextCharacterTurn()
     -- Notify C++ about active character change
     SetActiveCharacter(newActiveEntity)
 
-    -- Check if stunned BEFORE decrementing (stun skips the entire turn)
+    -- Check if stunned (stun skips the entire turn)
+    -- Note: stun is already handled in ResetPartyTurn (marks hasActed=true),
+    -- but check here as a safety net for mid-round stun effects
     local isStunned = HasStatusEffect and HasStatusEffect(newActiveEntity, "stun")
-
-    -- Check for Overload BEFORE decrementing (overload prevents AP refill this turn)
-    local hasOverload = HasStatusEffect and HasStatusEffect(newActiveEntity, "overload")
-
-    -- Decrement status effects at turn start (guard/parry durations, overload, etc.)
-    if DecrementStatusEffects then
-        DecrementStatusEffects(newActiveEntity)
-    end
 
     -- If stunned, skip this character's turn entirely
     if isStunned then
@@ -427,22 +421,10 @@ function NextCharacterTurn()
         return
     end
 
-    -- Refill AP for the new active character (skip if overloaded)
-    if hasOverload then
-        print(string.format("[PartyTurnManager] %s has OVERLOAD - AP refill skipped this turn",
-            PartyMembers[ActiveCharacterIndex].name))
-    else
-        RefillEntityAP(newActiveEntity)
-        RefillEntityAttackAP(newActiveEntity)
-    end
-
-    -- Soul Merge Buff: grant +1 movement AP and +1 attack AP each turn
-    if HasStatusEffect and HasStatusEffect(newActiveEntity, "soulMergeBuff") then
-        ConsumeEntityAP(newActiveEntity, -1)        -- +1 movement AP
-        ConsumeEntityAttackAP(newActiveEntity, -1)  -- +1 attack AP
-        print(string.format("[PartyTurnManager] %s has SOUL MERGE BUFF - +1 movement AP, +1 attack AP",
-            PartyMembers[ActiveCharacterIndex].name))
-    end
+    -- AP refill, status effect decrementing, and Soul Merge Buff bonuses are all
+    -- handled by ResetPartyTurn at the start of each round for ALL characters.
+    -- Do NOT refill AP or apply bonuses here, as it would override the overload
+    -- AP-skip and double-apply Soul Merge Buff bonuses from ResetPartyTurn.
 
     local currentAP, maxAP = GetEntityAP(newActiveEntity)
     local currentAttackAP, maxAttackAP = GetEntityAttackAP(newActiveEntity)
@@ -550,6 +532,23 @@ function EndPartyTurn()
             for i, enemyID in ipairs(enemies) do
                 print("[PartyTurnManager]   Refilling AP for Enemy " .. enemyID .. "...")
                 RefillEntityAP(enemyID)
+
+                -- Earthen Bind: reduce movement AP after refill
+                if HasStatusEffect and HasStatusEffect(enemyID, "earthenBind") then
+                    local reduction = 2
+                    ConsumeEnemyAP(enemyID, reduction)
+                    RemoveStatusEffect(enemyID, "earthenBind")
+                    print("[PartyTurnManager]   Enemy " .. enemyID .. " EARTHEN BIND - AP reduced by " .. reduction)
+                end
+
+                -- Mana Drain: reduce AP after refill
+                if HasStatusEffect and HasStatusEffect(enemyID, "manaDrain") then
+                    local reduction = 1
+                    ConsumeEnemyAP(enemyID, reduction)
+                    RemoveStatusEffect(enemyID, "manaDrain")
+                    print("[PartyTurnManager]   Enemy " .. enemyID .. " MANA DRAIN - AP reduced by " .. reduction)
+                end
+
                 local currentAP, maxAP = GetEntityAP(enemyID)
                 print("[PartyTurnManager]   Enemy " .. enemyID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
             end
