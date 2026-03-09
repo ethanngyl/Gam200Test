@@ -1864,20 +1864,25 @@ function ExecuteSkill(skillID)
             siphonChargeActive = true
         end
 
-        -- Bloody Warcry: apply warcry buff to ALL party members
+        -- Bloody Warcry: apply as PENDING to all party members (activates next round)
+        -- Using "bloodyWarcryPending" prevents same-round characters from consuming the effect.
+        -- ResetPartyTurn converts pending -> active at the start of the next round.
         if skill.effect == "bloodyWarcry" then
+            -- Replace the self-applied "bloodyWarcry" with pending version
+            RemoveStatusEffect(entityID, "bloodyWarcry")
+            ApplyStatusEffect(entityID, "bloodyWarcryPending", skill.duration, entityID)
             local allPlayers = GetAllPlayers()
             if allPlayers then
                 for _, pid in ipairs(allPlayers) do
                     if pid ~= entityID then
-                        ApplyStatusEffect(pid, "bloodyWarcry", skill.duration, entityID)
+                        ApplyStatusEffect(pid, "bloodyWarcryPending", skill.duration, entityID)
                         spawnEffectParticles(pid, "bloodyWarcry", 1.0, 0.0, 0.0)
                     end
                 end
             end
             -- Red particles on self too
             spawnEffectParticles(entityID, "bloodyWarcry", 1.0, 0.0, 0.0)
-            print("[PlayerScript] Bloody Warcry: applied to all party members")
+            print("[PlayerScript] Bloody Warcry: applied pending to all party members (activates next round)")
         end
 
         consumeAttackAPAndAnimate(skill.apCost)

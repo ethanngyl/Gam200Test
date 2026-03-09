@@ -350,7 +350,7 @@ function NextCharacterTurn()
     print(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
 
-    -- Skip dead characters and Soul Merge sacrificed characters
+    -- Skip dead, Soul Merge, and already-acted (e.g. stunned) characters
     local skippedDead = 0
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
@@ -368,6 +368,12 @@ function NextCharacterTurn()
             print(string.format("[PartyTurnManager] %s has SOUL MERGE - turn skipped",
                 PartyMembers[ActiveCharacterIndex].name))
             PartyMembers[ActiveCharacterIndex].hasActed = true
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+            skippedDead = skippedDead + 1
+        -- Skip characters already marked as acted (e.g. stunned from Groundshatter)
+        elseif PartyMembers[ActiveCharacterIndex].hasActed then
+            print(string.format("[PartyTurnManager] %s already acted (stunned?) - skipping",
+                PartyMembers[ActiveCharacterIndex].name))
             ActiveCharacterIndex = ActiveCharacterIndex + 1
             skippedDead = skippedDead + 1
         else
@@ -533,21 +539,10 @@ function EndPartyTurn()
                 print("[PartyTurnManager]   Refilling AP for Enemy " .. enemyID .. "...")
                 RefillEntityAP(enemyID)
 
-                -- Earthen Bind: reduce movement AP after refill
-                if HasStatusEffect and HasStatusEffect(enemyID, "earthenBind") then
-                    local reduction = 2
-                    ConsumeEnemyAP(enemyID, reduction)
-                    RemoveStatusEffect(enemyID, "earthenBind")
-                    print("[PartyTurnManager]   Enemy " .. enemyID .. " EARTHEN BIND - AP reduced by " .. reduction)
-                end
-
-                -- Mana Drain: reduce AP after refill
-                if HasStatusEffect and HasStatusEffect(enemyID, "manaDrain") then
-                    local reduction = 1
-                    ConsumeEnemyAP(enemyID, reduction)
-                    RemoveStatusEffect(enemyID, "manaDrain")
-                    print("[PartyTurnManager]   Enemy " .. enemyID .. " MANA DRAIN - AP reduced by " .. reduction)
-                end
+                -- NOTE: Earthen Bind and Mana Drain are now handled in EnemyGeneric.lua
+                -- at the start of each enemy's individual turn (before DecrementStatusEffects
+                -- removes them). This ensures proper movement point reduction for Earthen Bind
+                -- (which uses mpRemaining, not AP) and AP reduction for Mana Drain.
 
                 local currentAP, maxAP = GetEntityAP(enemyID)
                 print("[PartyTurnManager]   Enemy " .. enemyID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
@@ -635,6 +630,15 @@ function ResetPartyTurn()
             ConsumeEntityAP(eid, -1)
             ConsumeEntityAttackAP(eid, -1)
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has SOUL MERGE BUFF - +1 AP bonus",
+                PartyMembers[i].name))
+        end
+
+        -- Bloody Warcry: convert pending to active at round start
+        -- (pending is applied during the casting round to prevent same-round consumption)
+        if HasStatusEffect and HasStatusEffect(eid, "bloodyWarcryPending") then
+            RemoveStatusEffect(eid, "bloodyWarcryPending")
+            ApplyStatusEffect(eid, "bloodyWarcry", -1, 0)
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s BLOODY WARCRY activated for this round",
                 PartyMembers[i].name))
         end
     end
