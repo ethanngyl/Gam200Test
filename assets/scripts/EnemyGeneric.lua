@@ -1070,23 +1070,19 @@ function OnUpdate(dt)
     if not ok2 or not actionReady then return end
     if hasActedThisTurn then return end
 
-    -- Stun check
+    -- Stun check (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[" .. GetLogTag() .. " " .. entityID .. "] STUNNED")
-        DecrementStatusEffects(entityID)
         FinishAction()
         return
     end
 
-    -- Capture next-turn effects BEFORE decrementing (duration-1 effects get removed by decrement)
+    -- Check active status effects (decrement handled centrally in ResetPartyTurn)
     local hadEarthenBind = HasStatusEffect and HasStatusEffect(entityID, "earthenBind")
     local hadManaDrain = HasStatusEffect and HasStatusEffect(entityID, "manaDrain")
     local hadBladedDot = HasStatusEffect and HasStatusEffect(entityID, "bladedWhirlwindDot")
 
-    -- Now decrement status effects (removes expired duration-1 effects)
-    if DecrementStatusEffects then DecrementStatusEffects(entityID) end
-
-    -- Bladed Whirlwind DOT: take 1 damage at start of turn (checked before decrement)
+    -- Bladed Whirlwind DOT: take 1 damage at start of turn
     if hadBladedDot then
         local hp = GetEntityHP(entityID)
         if hp and hp > 0 then
@@ -1140,7 +1136,7 @@ function OnUpdate(dt)
         local bonusMP = (_G.RallyingCryActive) and 1 or 0
         mpRemaining = config.stats.movementPoints + bonusMP
 
-        -- Earthen Bind: reduce movement points (checked before DecrementStatusEffects removed it)
+        -- Earthen Bind: reduce movement points
         if hadEarthenBind then
             local reduction = 2
             local oldMP = mpRemaining
@@ -1148,7 +1144,7 @@ function OnUpdate(dt)
             print("[" .. GetLogTag() .. " " .. entityID .. "] EARTHEN BIND: MP reduced " .. oldMP .. " -> " .. mpRemaining)
         end
 
-        -- Mana Drain: reduce AP (checked before DecrementStatusEffects removed it)
+        -- Mana Drain: reduce AP
         if hadManaDrain then
             ConsumeEnemyAP(entityID, 1)
             print("[" .. GetLogTag() .. " " .. entityID .. "] MANA DRAIN: AP reduced by 1")

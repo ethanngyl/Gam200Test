@@ -539,10 +539,9 @@ function EndPartyTurn()
                 print("[PartyTurnManager]   Refilling AP for Enemy " .. enemyID .. "...")
                 RefillEntityAP(enemyID)
 
-                -- NOTE: Earthen Bind and Mana Drain are now handled in EnemyGeneric.lua
-                -- at the start of each enemy's individual turn (before DecrementStatusEffects
-                -- removes them). This ensures proper movement point reduction for Earthen Bind
-                -- (which uses mpRemaining, not AP) and AP reduction for Mana Drain.
+                -- NOTE: Earthen Bind and Mana Drain are handled in EnemyGeneric.lua
+                -- at the start of each enemy's individual turn. Status effects are
+                -- decremented centrally in ResetPartyTurn (once per turn cycle).
 
                 local currentAP, maxAP = GetEntityAP(enemyID)
                 print("[PartyTurnManager]   Enemy " .. enemyID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
@@ -596,18 +595,15 @@ function ResetPartyTurn()
     PartyTurnComplete = false
 
     -- Reset hasActed flags and refill AP for all party members
+    -- ORDER: Check flags -> Refill AP/MP -> Decrement status effects
+    -- (Status effects trigger AFTER AP/MP refill)
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
         local eid = PartyMembers[i].entityID
 
-        -- Check for stun and Overload BEFORE decrementing
+        -- Check for stun and Overload BEFORE refilling or decrementing
         local isStunned = HasStatusEffect and HasStatusEffect(eid, "stun")
         local hasOverload = HasStatusEffect and HasStatusEffect(eid, "overload")
-
-        -- Decrement status effects for all characters at round start
-        if DecrementStatusEffects then
-            DecrementStatusEffects(eid)
-        end
 
         -- If stunned, mark as acted so their turn is skipped
         if isStunned then
@@ -616,7 +612,7 @@ function ResetPartyTurn()
                 PartyMembers[i].name))
         end
 
-        -- Refill AP (skip if overloaded)
+        -- 1) Refill AP first (skip if overloaded)
         if hasOverload then
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has OVERLOAD - AP refill skipped",
                 PartyMembers[i].name))
@@ -640,6 +636,22 @@ function ResetPartyTurn()
             ApplyStatusEffect(eid, "bloodyWarcry", -1, 0)
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s BLOODY WARCRY activated for this round",
                 PartyMembers[i].name))
+        end
+
+        -- 2) Decrement status effects AFTER AP refill
+        if DecrementStatusEffects then
+            DecrementStatusEffects(eid)
+        end
+    end
+
+    -- 3) Decrement status effects for ALL enemies (centralized, once per turn cycle)
+    -- This ensures debuffs with duration 2 last "current turn + next turn"
+    if DecrementStatusEffects then
+        local enemies = GetAllEnemies()
+        if enemies then
+            for _, enemyID in ipairs(enemies) do
+                DecrementStatusEffects(enemyID)
+            end
         end
     end
 
