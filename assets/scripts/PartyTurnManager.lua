@@ -539,9 +539,11 @@ function EndPartyTurn()
                 print("[PartyTurnManager]   Refilling AP for Enemy " .. enemyID .. "...")
                 RefillEntityAP(enemyID)
 
-                -- NOTE: Earthen Bind and Mana Drain are handled in EnemyGeneric.lua
-                -- at the start of each enemy's individual turn. Status effects are
-                -- decremented centrally in ResetPartyTurn (once per turn cycle).
+                -- Mana Drain: target starts with 3 less AP next turn
+                if HasStatusEffect and HasStatusEffect(enemyID, "manaDrain") then
+                    ConsumeEnemyAP(enemyID, 3)
+                    print("[PartyTurnManager]   Enemy " .. enemyID .. " has MANA DRAIN - AP reduced by 3")
+                end
 
                 local currentAP, maxAP = GetEntityAP(enemyID)
                 print("[PartyTurnManager]   Enemy " .. enemyID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))

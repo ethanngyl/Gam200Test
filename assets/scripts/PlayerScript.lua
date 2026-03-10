@@ -499,18 +499,10 @@ local function createPlayerStates(fsm)
             -- Detect turn start (transition from inactive to active)
             if not lastActiveState then
                 lastActiveState = true
-                -- Decrement skill cooldowns at turn start
-                for sid, cd in pairs(skillCooldowns) do
-                    if cd > 0 then
-                        skillCooldowns[sid] = cd - 1
-                        if skillCooldowns[sid] <= 0 then
-                            skillCooldowns[sid] = nil
-                            print("[PlayerScript] Skill " .. sid .. " cooldown expired")
-                        else
-                            print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
-                        end
-                    end
-                end
+                -- NOTE: Cooldown decrement moved to OnUpdate's "just became active" block
+                -- because the FSM update never runs while character is inactive,
+                -- so lastActiveState was never reset and cooldowns only decremented once.
+
                 -- Initialize Berserker turn-start effects
                 if HasStatusEffect and HasStatusEffect(entityID, "bloodyWarcry") then
                     bloodyWarcryFreeMove = true
@@ -1253,6 +1245,20 @@ function OnUpdate(dt)
     if isActive and not lastActiveCheck then
         print("[PlayerScript] Entity " .. entityID .. " just became active - checking held keys...")
         blockHeldKeys()
+
+        -- Decrement skill cooldowns at turn start (moved here from FSM because
+        -- the FSM update never runs while inactive, so lastActiveState never resets)
+        for sid, cd in pairs(skillCooldowns) do
+            if cd > 0 then
+                skillCooldowns[sid] = cd - 1
+                if skillCooldowns[sid] <= 0 then
+                    skillCooldowns[sid] = nil
+                    print("[PlayerScript] Skill " .. sid .. " cooldown expired - skill available again")
+                else
+                    print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
+                end
+            end
+        end
     end
     lastActiveCheck = isActive
 

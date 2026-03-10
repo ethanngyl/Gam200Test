@@ -1146,8 +1146,8 @@ function OnUpdate(dt)
 
         -- Mana Drain: reduce AP
         if hadManaDrain then
-            ConsumeEnemyAP(entityID, 1)
-            print("[" .. GetLogTag() .. " " .. entityID .. "] MANA DRAIN: AP reduced by 1")
+            ConsumeEnemyAP(entityID, 3)
+            print("[" .. GetLogTag() .. " " .. entityID .. "] MANA DRAIN: AP reduced by 3")
         end
 
         if specialCooldown > 0 then specialCooldown = specialCooldown - 1 end

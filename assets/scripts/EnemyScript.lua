@@ -449,7 +449,7 @@ function OnUpdate(dt)
 
     -- Mana Drain: consume AP to reduce available actions this turn
     if HasStatusEffect and HasStatusEffect(entityID, "manaDrain") then
-        local reduction = 1
+        local reduction = 3
         ConsumeEnemyAP(entityID, reduction)
         print("[Enemy " .. entityID .. "] MANA DRAIN - AP reduced by " .. reduction)
     end
