@@ -123,7 +123,7 @@ local healthBarFG = nil        -- Foreground bar entity (colored)
 local healthBarWidth = 0.1     -- Total bar width in world units
 local healthBarHeight = 0.02  -- Bar height in world units
 local healthBarOffsetY = 0.05  -- How far above enemy center
-local healthBarLayer = 4       -- Render layer (above entities, below UI)
+local healthBarLayer = 2       -- Render layer (below UI)
 
 -- ============================================================================
 -- ENEMY ANIMATION (manual sprite sheet switching)

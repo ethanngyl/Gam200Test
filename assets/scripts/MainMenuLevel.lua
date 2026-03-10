@@ -189,6 +189,16 @@ function OnHowToPlayButtonClicked()
     ButtonManager.TransitionTo("CONTROL")
 end
 
+function OnSettingsButtonClicked()
+    -- Check if button can execute (handled by ButtonManager)
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    Log("SETTINGS button clicked!")
+    ButtonManager.TransitionTo("SETTINGS")
+end
+
 function OnExitButtonClicked()
     -- Check if button can execute (handled by ButtonManager)
     if not ButtonManager.CanExecuteCallback() then

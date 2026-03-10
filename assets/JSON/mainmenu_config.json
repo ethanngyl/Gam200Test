@@ -156,6 +156,35 @@
         "callback": "OnHowToPlayButtonClicked"
       },
       {
+        "id": "settings",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 1.45,
+          "y": -0.85
+        },
+        "scale": {
+          "x": 0.6,
+          "y": 0.18
+        },
+        "layer": 2,
+        "text": {
+          "content": "SETTINGS",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -85.0,
+            "y": -14.0
+          },
+          "scale": 0.8,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          },
+          "layer": 11
+        },
+        "callback": "OnSettingsButtonClicked"
+      },
+      {
         "id": "exit",
         "texture": "assets/Menu/Ui_btn.png",
         "position": {

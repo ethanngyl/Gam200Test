@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -102,6 +102,7 @@ namespace Framework {
         if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
         if (lowerName.find("level2") != std::string::npos) return LEVEL_2;
         if (lowerName.find("levelselect") != std::string::npos) return Level_select;
+        if (lowerName.find("settings") != std::string::npos) return settingsMenu;
         if (lowerName.find("mainmenu") != std::string::npos) return mainMenu;
         if (lowerName.find("tutorial") != std::string::npos) return TUTORIAL;
         if (lowerName.find("skillsets") != std::string::npos) return SKILL_SETS;
@@ -1362,6 +1363,7 @@ namespace Framework {
             switch (current)
             {
             case mainMenu: levelName = "MainMenu"; break;
+            case settingsMenu: levelName = "Settings"; break;
             case Level_select: levelName = "LevelSelect"; break;
             case LEVEL_2: levelName = "Level2"; break;
             case LEVEL_3: levelName = "Level3"; break;
@@ -1434,6 +1436,7 @@ namespace Framework {
             switch (current)
             {
             case mainMenu: levelName = "MainMenu"; break;
+            case settingsMenu: levelName = "Settings"; break;
             case Level_select: levelName = "LevelSelect"; break;
             case LEVEL_2: levelName = "Level2"; break;
             case LEVEL_3: levelName = "Level3"; break;
@@ -4926,6 +4929,7 @@ namespace Framework {
 
                 switch (current) {
                 case mainMenu: currentLevelName = "Main Menu"; break;
+                case settingsMenu: currentLevelName = "Settings"; break;
                 case Level_select: currentLevelName = "Level Select"; break;
                 case LEVEL_2: currentLevelName = "Level 2"; break;
                 case LEVEL_3: currentLevelName = "Level 3"; break;

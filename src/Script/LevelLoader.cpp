@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader.cpp
 Author:      GE YONGQI, Sim Kah Yan
@@ -580,6 +580,7 @@ namespace Framework {
         lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
         lua_register(L, "DrawButtonText", Lua_DrawButtonText);
         lua_register(L, "DrawText", Lua_DrawText);
+        lua_register(L, "WorldToScreen", Lua_WorldToScreen);
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
@@ -600,9 +601,11 @@ namespace Framework {
         lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
+        lua_register(L, "SetScale", Lua_SetScale);
         lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
         lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
         lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
+        lua_register(L, "SetSpriteUVRect", Lua_SetSpriteUVRect);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
@@ -881,6 +884,9 @@ namespace Framework {
         }
         else if (strcmp(stateName, "CONTROL2") == 0) {
             next = CONTROL2;
+        }
+        else if (strcmp(stateName, "SETTINGS") == 0) {
+            next = settingsMenu;
         }
         else if (strcmp(stateName, "SKILL_SETS") == 0) {
             next = SKILL_SETS;
