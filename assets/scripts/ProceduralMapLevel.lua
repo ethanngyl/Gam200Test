@@ -308,6 +308,17 @@ function SetupProceduralParty(mapData)
         Log("  - Character 2: Mage (Entity " .. player2 .. ")")
         Log("  - Character 3: Rogue (Entity " .. player3 .. ")")
         Log("========================================")
+
+        -- Spawn smoke particle emitters on each player
+        print("[Particles] Spawning emitters...")
+        local players = {player1, player2, player3}
+        for i = 1, 3 do
+            local id = SpawnParticleEmitter("Smoke", players[i])
+            print("[Particles] Emitter id=" .. tostring(id) .. " for entity " .. players[i])
+        end
+        SetActivePlayerIndex(0)
+        print("[Particles] Done - player 0 active")
+
     else
         Log("FAILED to initialize party")
         return false

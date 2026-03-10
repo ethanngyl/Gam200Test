@@ -4940,22 +4940,21 @@ namespace Framework {
     // Usage from Lua: SpawnParticleEmitter("Smoke", x, y, playerID)
     // playerID: 0=P1, 1=P2, 2=P3, -1=always on
     int LevelLoader::Lua_SpawnParticleEmitter(lua_State* L) {
+        std::cout << "[Lua] SpawnParticleEmitter CALLED\n";
         const char* presetName = luaL_checkstring(L, 1);
-        float x = (float)luaL_checknumber(L, 2);
-        float y = (float)luaL_checknumber(L, 3);
-        int playerID = (int)luaL_optinteger(L, 4, -1);
+        int entityID = (int)luaL_checknumber(L, 2);  // checknumber not checkinteger
 
         auto* psm = CORE->GetParticleSystemManager();
         if (!psm) { lua_pushinteger(L, -1); return 1; }
 
-        int emitterID = psm->SpawnEmitterFromPreset(presetName, x, y, playerID);
-        lua_pushinteger(L, emitterID);
+        int id = psm->SpawnEmitterFromPreset(presetName, entityID);
+        lua_pushinteger(L, id);
         return 1;
     }
 
     // Usage from Lua: SetActivePlayerIndex(0..2 or -1 for none)
     int LevelLoader::Lua_SetActivePlayerIndex(lua_State* L) {
-        int playerIndex = (int)luaL_checkinteger(L, 1);
+        int playerIndex = (int)luaL_checknumber(L, 1);  // was luaL_checkinteger
         g_activePlayerIndex = playerIndex;
 
         auto* psm = CORE->GetParticleSystemManager();

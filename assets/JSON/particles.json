@@ -5,8 +5,8 @@
       "endTint": [ 0.15, 0.15, 0.15, 0.0 ],
       "layer": 5,
       "spawnRate": 10,
-      "size": 0.10,
-      "endSize": 0.50,
+      "size": 0.01,
+      "endSize": 0.03,
       "minLifetime": 1.0,
       "maxLifetime": 2.0,
       "minSpeed": 0.05,
@@ -40,6 +40,5 @@
       "growOverTime": true,
       "ownerPlayerID": -1
     }
-  },
- "emitters": []
+  }
 }

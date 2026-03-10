@@ -109,6 +109,25 @@ namespace Framework {
 	}
 
 	void ParticleSystemManager::Update(float dt) {
+    // Update emitter positions to follow their owner entities
+    if (CORE && CORE->GetEntityManager())
+    {
+        auto* em = CORE->GetEntityManager();
+        for (auto& ps : particleSystems)
+        {
+            int ownerID = ps.GetOwnerPlayer();
+            if (ownerID < 0) continue;  // always-on, no tracking needed
+            
+            // ownerPlayer here stores entity ID directly
+            Entity entity(static_cast<uint32_t>(ownerID));
+            if (em->HasComponent<Transform>(entity))
+            {
+                auto& t = em->GetComponent<Transform>(entity);
+                ps.SetEmitter(t.position.x, t.position.y);
+            }
+        }
+    }
+
 		// Loop through all emitters | Update all particle systems
 		for (auto& particleSystem : particleSystems) {
 			particleSystem.Update(dt);
@@ -121,41 +140,53 @@ namespace Framework {
 	}
 
 	// Creates a new emitter at runtime from a named preset
-	int ParticleSystemManager::SpawnEmitterFromPreset(const std::string& presetName, float x, float y, int ownerPlayerID)
+	int ParticleSystemManager::SpawnEmitterFromPreset(const std::string& presetName, int entityID)
 	{
-		std::cout << "[PSM] SpawnEmitterFromPreset called: " << presetName << " at (" << x << "," << y << ") owner=" << ownerPlayerID << "\n";
-
 		auto it = settings.find(presetName);
 		if (it == settings.end()) {
 			std::cout << "[PSM] Preset '" << presetName << "' not found\n";
 			return -1;
 		}
 
+    // Get initial position from entity
+    float x = 0.0f, y = 0.0f;
+    if (CORE && CORE->GetEntityManager()) {
+        Entity entity(static_cast<uint32_t>(entityID));
+        auto* em = CORE->GetEntityManager();
+        if (em->HasComponent<Transform>(entity)) {
+            auto& t = em->GetComponent<Transform>(entity);
+            x = t.position.x;
+            y = t.position.y;
+        }
+    }
+
 		auto& ps = AddParticleSystem();
 		ParticleSystem::Settings s = it->second;
-		s.ownerPlayerID = ownerPlayerID;  // override with caller's playerID
+    s.ownerPlayerID = entityID;  // store entity ID for tracking
 		ps.SetSettings(s);
 		ps.SetEmitter(x, y);
-
-		// Start inactive — only activates when SetActivePlayer is called
-		ps.SetActive(ownerPlayerID == -1);  // always-on emitters start active
+		ps.SetActive(true);  // start active immediately
 
 		int emitterID = nextEmitterId++;
 		emitterIdToIndex[emitterID] = particleSystems.size() - 1;
 
 		if (s.burstCnt > 0) ps.SpawnBurst(s.burstCnt);
 
+		std::cout << "[PSM] Spawned '" << presetName << "' tracking entity=" << entityID << "\n";
 		return emitterID;
 	}
 
 	// Activates only the emitters belonging to playerIndex; -1 = deactivate all player emitters
 	void ParticleSystemManager::SetActivePlayer(int playerIndex)
 	{
-		for (auto& ps : particleSystems) {
-			int owner = ps.GetOwnerPlayer();
-			if (owner == -1) continue;  // always-on emitters, don't touch
-			ps.SetActive(owner == playerIndex);
-		}
-		std::cout << "[PSM] Active player set to " << playerIndex << "\n";
+		// All emitters active for now - just log
+    std::cout << "[PSM] SetActivePlayer(" << playerIndex << ") - " << particleSystems.size() << " emitters\n";
+
+		// for (auto& ps : particleSystems) {
+		// 	int owner = ps.GetOwnerPlayer();
+		// 	if (owner == -1) continue;  // always-on emitters, don't touch
+		// 	ps.SetActive(owner == playerIndex);
+		// }
+		// std::cout << "[PSM] Active player set to " << playerIndex << "\n";
 	}
 } // namespace Framework

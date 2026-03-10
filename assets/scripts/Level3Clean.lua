@@ -542,17 +542,10 @@ function SetupParty()
         -- Spawn smoke particle emitters on each player
         print("[SetupParty] Step 10: Spawning particle emitters...")
         for i = 1, 3 do
-            print("[SetupParty]   About to get world pos for player " .. i .. " entity=" .. tostring(allPlayers[i]))
-            local wx, wy = GetEntityWorldPosition(allPlayers[i])
-            print("[SetupParty]   Got pos: " .. tostring(wx) .. ", " .. tostring(wy))
-            if wx ~= nil and wy ~= nil then
-                local id = SpawnParticleEmitter("Smoke", wx, wy, i - 1)
-                print("[SetupParty]   Emitter spawned id=" .. tostring(id))
-            else
-                print("[SetupParty]   SKIPPED nil pos")
-            end
+            local id = SpawnParticleEmitter("Smoke", allPlayers[i])
+            print("[SetupParty]   Emitter id=" .. tostring(id) .. " for entity " .. allPlayers[i])
         end
-        SetActivePlayerIndex(0) 
+        SetActivePlayerIndex(0)
         print("[SetupParty] Step 10: DONE")
 
     else

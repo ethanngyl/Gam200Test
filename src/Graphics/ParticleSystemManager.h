@@ -14,7 +14,7 @@ namespace Framework {
 
 		int ReloadFromJSON(const std::string& path);
 
-		int  SpawnEmitterFromPreset(const std::string& presetName, float x, float y, int ownerPlayerID);
+		int  SpawnEmitterFromPreset(const std::string& presetName, int entityID);
 		void SetActivePlayer(int playerIndex);
 
 		// Manadatory overrides
