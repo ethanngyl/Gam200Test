@@ -298,7 +298,7 @@
     },
     "BladedWhirlwind": {
       "name": "Bladed Whirlwind",
-      "description": "Projectile in facing direction, 1 damage. Enemy takes 1 additional damage at end of their turn",
+      "description": "Projectile in facing direction, 1 damage. Enemy takes 1 additional damage at the start of their turn",
       "skillType": "projectile",
       "apCost": 1,
       "damage": 1,

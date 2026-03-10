@@ -600,20 +600,20 @@ function ResetPartyTurn()
         PartyMembers[i].hasActed = false
         local eid = PartyMembers[i].entityID
 
-        -- Check for stun and Overload BEFORE decrementing
+        -- Check for stun and Overload (BEFORE any decrement - we decrement in the while loop)
         local isStunned = HasStatusEffect and HasStatusEffect(eid, "stun")
         local hasOverload = HasStatusEffect and HasStatusEffect(eid, "overload")
-
-        -- Decrement status effects for all characters at round start
-        if DecrementStatusEffects then
-            DecrementStatusEffects(eid)
-        end
 
         -- If stunned, mark as acted so their turn is skipped
         if isStunned then
             PartyMembers[i].hasActed = true
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s is STUNNED - turn skipped!",
                 PartyMembers[i].name))
+        end
+
+        -- Decrement status effects AFTER using stun/overload checks (stun consumed by skip above)
+        if DecrementStatusEffects then
+            DecrementStatusEffects(eid)
         end
 
         -- Refill AP (skip if overloaded)
@@ -643,7 +643,7 @@ function ResetPartyTurn()
         end
     end
 
-    -- Skip dead, stunned, and Soul Merge sacrificed characters when resetting turn
+    -- Find first character who is alive and not Soul Merged (may be stunned - we'll auto-skip like pressing P)
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
         local currentHP, maxHP = GetEntityHP(checkEntity)
@@ -660,11 +660,8 @@ function ResetPartyTurn()
                 PartyMembers[ActiveCharacterIndex].name))
             PartyMembers[ActiveCharacterIndex].hasActed = true
             ActiveCharacterIndex = ActiveCharacterIndex + 1
-        elseif PartyMembers[ActiveCharacterIndex].hasActed then
-            -- This character was already marked (e.g. stunned), skip
-            ActiveCharacterIndex = ActiveCharacterIndex + 1
         else
-            -- This character is alive and active, use them
+            -- This character is alive (may be stunned - hasActed=true, we'll auto EndCharacterTurn below)
             break
         end
     end
@@ -676,8 +673,16 @@ function ResetPartyTurn()
         return
     end
 
-    -- Notify C++ about active character reset (now guaranteed to be alive)
+    -- Notify C++ about active character (may be stunned - we enter their turn then auto-skip like pressing P)
     SetActiveCharacter(PartyMembers[ActiveCharacterIndex].entityID)
+
+    -- If this character is stunned, auto-skip their turn (simulate pressing P to end turn)
+    if PartyMembers[ActiveCharacterIndex].hasActed then
+        Log(string.format("[PartyTurnManager] %s is STUNNED - auto-skipping turn (like pressing P)",
+            PartyMembers[ActiveCharacterIndex].name))
+        EndCharacterTurn()
+        return  -- EndCharacterTurn already advanced to next character
+    end
 
     -- Restore attack AP crystal visuals for the active character
     if UIManager and UIManager.GetComponent then
@@ -827,8 +832,21 @@ end
 -- GLOBAL EXPORTS
 -- ============================================================================
 
+--[[
+    ApplyGroundshatterStun(entityID)
+    Called by PlayerScript (via CallLevelFunction) when casting Groundshatter.
+    Applies stun from level Lua state so HasStatusEffect sees it in ResetPartyTurn.
+]]--
+function ApplyGroundshatterStun(entityID)
+    if ApplyStatusEffect and entityID then
+        ApplyStatusEffect(entityID, "stun", 1, entityID)
+        Log(string.format("[PartyTurnManager] ApplyGroundshatterStun: entity %s stunned for next turn", tostring(entityID)))
+    end
+end
+
 -- Export functions to global scope for use in other scripts
 _G.InitializeParty = InitializeParty
+_G.ApplyGroundshatterStun = ApplyGroundshatterStun
 _G.GetActiveCharacter = GetActiveCharacter
 _G.GetActiveCharacterName = GetActiveCharacterName
 _G.IsActiveCharacter = IsActiveCharacter

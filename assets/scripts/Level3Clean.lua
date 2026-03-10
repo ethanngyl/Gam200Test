@@ -1,4 +1,4 @@
-﻿--[[
+--[[
 ===============================================================================
  File:          Level3Clean.lua
  Authors:       Padilla Carl Jameson
@@ -286,11 +286,9 @@ function OnUpdate(dt)
     -- Party system turn management
     local currentTurn = GetCurrentTurn()
 
-    -- Reset party when enemy turn ends and player turn begins
-    if previousTurn == "Enemy" and currentTurn == "Player" then
-        Log("[Level3Clean] Enemy turn ended - resetting party for new player turn")
-        OnEnemyTurnEnded()
-    end
+    -- NOTE: Do NOT call ResetPartyTurn/OnEnemyTurnEnded here!
+    -- EnemyTurnManager already calls ResetPartyTurn when the last enemy finishes.
+    -- A second call on the next frame would reset hasActed and undo stun-skip (Groundshatter bug).
 
     -- Transition to enemy turn when all party members have acted
     if currentTurn == "Player" then
