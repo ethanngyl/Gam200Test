@@ -8,8 +8,7 @@ namespace Framework {
 		// Query active graphics system to convert pixel size into world-space scale
 		// Size (pixel -> world conversion)
 		auto* graphics = CORE->GetGraphicsSystem();
-		//float worldScale = (5.0f * settings.size) / float(graphics->GetRenderHeight());
-		float worldScale = settings.size;
+		float worldScale = settings.size * 0.1f;  // size is now in tile units (1.0 = one tile)
 
 		Entity entity = CORE->GetEntityManager()->CreateEntity();
 		
