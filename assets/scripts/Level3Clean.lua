@@ -1,4 +1,4 @@
---[[
+﻿--[[
 ===============================================================================
  File:          Level3Clean.lua
  Authors:       Padilla Carl Jameson
@@ -362,7 +362,7 @@ function OnDestroy()
     end
 
     -- Stop audio
-    StopAllSounds()
+    StopMusic(0.5)
     Log(" All audio stopped")
 
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
@@ -407,8 +407,7 @@ function InitializeAudio()
 
     if bgmSound then
         Log("Starting background music: " .. bgmSound.name)
-        PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
-        Log(" Background music started: " .. bgmSound.filepath)
+        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)        Log(" Background music started: " .. bgmSound.filepath)
     else
         Log("WARNING: Background music 'igbgm' not found")
     end

@@ -566,6 +566,8 @@ namespace Framework {
 
         // Audio
         lua_register(L, "PlaySound", Lua_PlaySound);
+        lua_register(L, "PlayMusic", Lua_PlayMusic);
+        lua_register(L, "StopMusic", Lua_StopMusic);
         lua_register(L, "StopSound", Lua_StopSound);
         lua_register(L, "StopAllSounds", Lua_StopAllSounds);
         lua_register(L, "UpdateAudio", Lua_UpdateAudio);

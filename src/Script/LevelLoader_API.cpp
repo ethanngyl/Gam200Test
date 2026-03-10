@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -148,6 +148,40 @@ namespace Framework {
 
         // Play sound with loop flag
         loader->audioSystem->PlaySound(soundName, loop);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    int LevelLoader::Lua_PlayMusic(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* soundName = luaL_checkstring(L, 1);
+        float fadeInSec = static_cast<float>(luaL_optnumber(L, 2, 0.5));
+        bool loop = lua_isnoneornil(L, 3) ? true : lua_toboolean(L, 3);
+
+        loader->audioSystem->PlayMusic(soundName, fadeInSec, loop);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    int LevelLoader::Lua_StopMusic(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        float fadeOutSec = static_cast<float>(luaL_optnumber(L, 1, 0.5));
+
+        loader->audioSystem->StopMusic(fadeOutSec);
 
         lua_pushboolean(L, true);
         return 1;

@@ -1,4 +1,4 @@
---[[
+﻿--[[
 ===============================================================================
  File:          ProceduralMapLevel.lua
  Authors:       Josh Ong
@@ -738,7 +738,7 @@ function OnDestroy()
     end
 
     -- Stop audio
-    StopAllSounds()
+    StopMusic(0.5)
 
     -- Destroy UI system
     UIManager.Destroy()
@@ -775,7 +775,7 @@ function InitializeAudio()
     end
 
     if bgmSound then
-        PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
+        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)
     end
 end
 
