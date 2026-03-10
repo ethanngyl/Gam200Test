@@ -3351,7 +3351,9 @@ namespace Framework {
                 health.currentHealth = 1;
                 effects.RemoveEffect("darkOmens");
                 effects.AddEffect("darkOmensTriggered", 2, 0, 0, 0);
-                LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered applied",
+                // Grant immunity for the rest of this turn so no further damage can kill them
+                effects.AddEffect("immune", 1, 0, 0, 0);
+                LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered + immune applied",
                     entity.GetID());
                 lua_pushboolean(L, 1);
                 return 1;

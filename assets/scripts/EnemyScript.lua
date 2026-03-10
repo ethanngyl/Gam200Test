@@ -433,10 +433,9 @@ function OnUpdate(dt)
         return
     end
 
-    -- Check if this enemy is stunned
+    -- Check if this enemy is stunned (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[Enemy " .. entityID .. "] STUNNED - skipping turn")
-        DecrementStatusEffects(entityID)
         FinishEnemyAction()
         return
     end
@@ -455,10 +454,7 @@ function OnUpdate(dt)
         print("[Enemy " .. entityID .. "] MANA DRAIN - AP reduced by " .. reduction)
     end
 
-    -- Decrement status effects at turn start (vulnerability, earthenBind, manaDrain, etc.)
-    if DecrementStatusEffects then
-        DecrementStatusEffects(entityID)
-    end
+    -- Status effects are decremented centrally in ResetPartyTurn (once per turn cycle)
 
     -- Update move timer
     if moveTimer > 0 then
