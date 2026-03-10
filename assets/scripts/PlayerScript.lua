@@ -217,9 +217,9 @@ local skillCooldowns = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Thrust", ["2"] = "SweepingSlash" },
-    [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
-    [3] = { ["1"] = "Slam", ["2"] = "DarkOmens" },
+    [1] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [3] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
 }
 
 -- All keys that can be bound to skills (used for preview selection)

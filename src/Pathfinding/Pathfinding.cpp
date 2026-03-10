@@ -95,37 +95,9 @@ namespace Framework {
         // are still used by the Lua API layer and remain functional.
         // ========================================================================
 
-        // Only regenerate AP at the start of each new enemy turn
-        if (!IsEnemyTurn()) return;
-
-        const Grid& grid = GetGrid();
-        if (grid.cols <= 0 || grid.rows <= 0 || !grid.em) return;
-
-        auto& globalTurn = Turn();
-        static uint64_t lastEnemyTurnIndex = 0;
-
-        // Regenerate AP for all enemies at the start of a new enemy turn
-        if (globalTurn.turnIndex > lastEnemyTurnIndex) {
-            for (Entity entity : entityManager->GetAllEntities()) {
-                if (entityManager->HasComponent<EnemyAI>(entity) &&
-                    entityManager->HasComponent<Health>(entity) &&
-                    entityManager->HasComponent<AP>(entity)) {
-                    auto& hp = entityManager->GetComponent<Health>(entity);
-                    auto& stats = entityManager->GetComponent<AP>(entity);
-
-                    // Skip dead enemies
-                    if (hp.isDead || hp.currentHealth <= 0) continue;
-
-                    // Regenerate AP
-                    stats.actionPoints = stats.maxActionPoints;
-                }
-            }
-
-            lastEnemyTurnIndex = globalTurn.turnIndex;
-            LOG_INFO("EnemyAI", "AP regenerated for all enemies (turn %llu)", lastEnemyTurnIndex);
-        }
-
-        // All movement/pathfinding/combat is handled by Lua - do not process here
+        // Enemy AP regeneration is now handled by Lua (PartyTurnManager.EndPartyTurn).
+        // The old C++ refill here caused a race condition: it ran AFTER Lua's
+        // ManaDrain AP consumption, undoing the drain for the first active enemy.
         return;
     }
 
