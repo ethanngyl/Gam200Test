@@ -137,7 +137,7 @@ local healthBarFG = nil
 local healthBarWidth = 0.4       -- Wider bar for boss
 local healthBarHeight = 0.02     -- Slightly taller
 local healthBarOffsetY = 0.22
-local healthBarLayer = 4
+local healthBarLayer = 2
 
 -- Boss idle state: immune and does nothing until all 3 players enter the arena
 local bossActivated = false

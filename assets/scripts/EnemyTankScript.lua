@@ -106,7 +106,7 @@ local healthBarFG = nil
 local healthBarWidth = 0.12    -- Wider for tank
 local healthBarHeight = 0.02
 local healthBarOffsetY = 0.05
-local healthBarLayer = 4
+local healthBarLayer = 2
 
 -- ============================================================================
 -- ANIMATION

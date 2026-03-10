@@ -147,6 +147,8 @@ local playerFSM = nil
 local moveCooldown = 0.0
 local moveCooldownTime = 0.2
 local apCostPerMove = 1
+local uiAnimBlockTimer = 0.0
+local uiAnimMaxBlockTime = 1.0
 
 -- Helper: get actual movement cost (0 if Bloody Warcry free move is active)
 local function getMovementCost()
@@ -154,6 +156,23 @@ local function getMovementCost()
         return 0
     end
     return apCostPerMove
+end
+
+-- Safety: avoid permanent input lock if UI/scroll never finishes
+local function ShouldBlockForUIAnimation(dt)
+    if IsUIAnimating and IsUIAnimating() then
+        uiAnimBlockTimer = uiAnimBlockTimer + (dt or 0)
+        if uiAnimBlockTimer <= uiAnimMaxBlockTime then
+            return true
+        end
+    else
+        uiAnimBlockTimer = 0.0
+    end
+    return false
+end
+
+local function ShouldBlockForTurnScroll(dt)
+    return IsTurnScrollPlaying and IsTurnScrollPlaying()
 end
 
 -- Animation state
@@ -541,8 +560,8 @@ local function createPlayerStates(fsm)
                 return
             end
 
-            -- Block input during UI animation
-            if IsUIAnimating and IsUIAnimating() then
+            -- Block input during UI animation (with safety timeout)
+            if ShouldBlockForUIAnimation(dt) then
                 return
             end
 
@@ -1140,10 +1159,7 @@ function OnUpdate(dt)
     -- ========================================================================
     -- TURN SCROLL CHECK: Skip input during "Your Turn" animation
     -- ========================================================================
-    
-    -- Use C++ bridge function to check if turn scroll is playing
-    -- This bridges from entity Lua state to level Lua state's UIManager
-    if IsTurnScrollPlaying and IsTurnScrollPlaying() then
+    if ShouldBlockForTurnScroll(dt) then
         return
     end
     
@@ -1311,7 +1327,7 @@ function OnUpdate(dt)
 
     -- Check if UI is animating (AP crystals refilling)
     -- Uses C++ bridge to access UIManager in LevelLoader's Lua state
-    if IsUIAnimating and IsUIAnimating() then
+    if ShouldBlockForUIAnimation(dt) then
         print("[PlayerScript] DEBUG: Blocked by IsUIAnimating")
         -- Don't allow movement during AP refill animation
         return

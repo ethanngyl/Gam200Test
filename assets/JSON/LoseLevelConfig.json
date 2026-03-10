@@ -1,6 +1,6 @@
 {
   "menu": {
-    "name": "MainMenu",
+    "name": "LoseLevel",
     "music": {
       "name": "mmbgm",
       "volume": 1.0,
@@ -25,18 +25,6 @@
         "y": 4.0
       },
       "layer": 1
-    },
-    "logo": {
-      "texture": "assets/Menu/gamelogo.png",
-      "position": {
-        "x": 0.0,
-        "y": 0.4
-      },
-      "scale": {
-        "x": 1.5,
-        "y": 1.5
-      },
-      "layer": 3
     },
     "cornerSprites": [
       {
@@ -98,7 +86,35 @@
     ],
     "buttons": [
       {
-        "id": "play",
+        "id": "text_title",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -0.6,
+          "y": 0.2
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "YOU LOSE",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 1.5,
+          "color": {
+            "r": 1.0,
+            "g": 0.2,
+            "b": 0.2
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "back",
         "texture": "assets/Menu/Ui_btn.png",
         "position": {
           "x": 0.0,
@@ -108,110 +124,22 @@
           "x": 1.0,
           "y": 0.2
         },
-        "layer": 2,
+        "layer": 10,
         "text": {
-          "content": "PLAY",
+          "content": "BACK TO MAIN MENU",
           "font": "Jersey20Regular",
           "offset": {
-            "x": -43.0,
-            "y": -16.0
+            "x": -140.0,
+            "y": -13.0
           },
-          "scale": 1.0,
+          "scale": 0.75,
           "color": {
             "r": 1.0,
             "g": 1.0,
             "b": 1.0
-          },
-          "layer": 11
+          }
         },
-        "callback": "OnPlayButtonClicked"
-      },
-      {
-        "id": "howToPlay",
-        "texture": "assets/Menu/Ui_btn.png",
-        "position": {
-          "x": 0.0,
-          "y": -0.55
-        },
-        "scale": {
-          "x": 1.0,
-          "y": 0.2
-        },
-        "layer": 2,
-        "text": {
-          "content": "HOW TO PLAY",
-          "font": "Jersey20Regular",
-          "offset": {
-            "x": -112.0,
-            "y": -16.0
-          },
-          "scale": 1.0,
-          "color": {
-            "r": 1.0,
-            "g": 1.0,
-            "b": 1.0
-          },
-          "layer": 11
-        },
-        "callback": "OnHowToPlayButtonClicked"
-      },
-      {
-        "id": "settings",
-        "texture": "assets/Menu/Ui_btn.png",
-        "position": {
-          "x": 1.45,
-          "y": -0.85
-        },
-        "scale": {
-          "x": 0.6,
-          "y": 0.18
-        },
-        "layer": 2,
-        "text": {
-          "content": "SETTINGS",
-          "font": "Jersey20Regular",
-          "offset": {
-            "x": -85.0,
-            "y": -14.0
-          },
-          "scale": 0.8,
-          "color": {
-            "r": 1.0,
-            "g": 1.0,
-            "b": 1.0
-          },
-          "layer": 11
-        },
-        "callback": "OnSettingsButtonClicked"
-      },
-      {
-        "id": "exit",
-        "texture": "assets/Menu/Ui_btn.png",
-        "position": {
-          "x": 0.0,
-          "y": -0.8
-        },
-        "scale": {
-          "x": 1.0,
-          "y": 0.2
-        },
-        "layer": 2,
-        "text": {
-          "content": "QUIT GAME",
-          "font": "Jersey20Regular",
-          "offset": {
-            "x": -93.0,
-            "y": -16.0
-          },
-          "scale": 1.0,
-          "color": {
-            "r": 1.0,
-            "g": 1.0,
-            "b": 1.0
-          },
-          "layer": 11
-        },
-        "callback": "OnExitButtonClicked"
+        "callback": "OnBackButtonClicked"
       }
     ]
   }

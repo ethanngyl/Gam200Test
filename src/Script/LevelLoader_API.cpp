@@ -543,6 +543,24 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_WorldToScreen(lua_State* L) {
+        float worldX = static_cast<float>(luaL_checknumber(L, 1));
+        float worldY = static_cast<float>(luaL_checknumber(L, 2));
+        bool useViewportCoords = lua_toboolean(L, 3) != 0;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->uiSystem) {
+            lua_pushnil(L);
+            lua_pushnil(L);
+            return 2;
+        }
+
+        Framework::Vector2D screenPos = loader->uiSystem->WorldToScreen(worldX, worldY, useViewportCoords);
+        lua_pushnumber(L, screenPos.x);
+        lua_pushnumber(L, screenPos.y);
+        return 2;
+    }
+
     // ========================================================================
     // INPUT API (FIXED for InputSystem)
     // ========================================================================
@@ -1332,6 +1350,32 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_SetScale(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: SetScale(entityID, x, y)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        float x = luaL_checknumber(L, 2);
+        float y = luaL_checknumber(L, 3);
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!entity.IsValid() || !em->HasComponent<Transform>(entity)) {
+            LOG_WARN("LevelLoader", "SetScale: Invalid entity or no Transform (ID=%lld)", entityID);
+            return 0;
+        }
+
+        auto& transform = em->GetComponent<Transform>(entity);
+        transform.scale.x = x;
+        transform.scale.y = y;
+
+        return 0;
+    }
+
     int LevelLoader::Lua_DestroyEntity(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) return 0;
@@ -2067,6 +2111,55 @@ namespace Framework {
         else {
             LOG_WARN("LevelLoader", "SetSpriteFilterMode: Failed to get texture for entity %d", entityID);
         }
+
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetSpriteUVRect(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        // Parse parameters: SetSpriteUVRect(entityID, u0, v0, u1, v1)
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        float u0 = static_cast<float>(luaL_checknumber(L, 2));
+        float v0 = static_cast<float>(luaL_checknumber(L, 3));
+        float u1 = static_cast<float>(luaL_checknumber(L, 4));
+        float v1 = static_cast<float>(luaL_checknumber(L, 5));
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        auto* gfx = loader->coreEngine->GetGraphicsSystem();
+        if (!em || !gfx) return 0;
+
+        Entity entity(static_cast<uint32_t>(entityID));
+        if (!entity.IsValid() || !em->HasComponent<MeshRenderer>(entity)) {
+            LOG_WARN("LevelLoader", "SetSpriteUVRect: Invalid entity or no MeshRenderer (ID=%lld)", entityID);
+            return 0;
+        }
+
+        auto& mr = em->GetComponent<MeshRenderer>(entity);
+        if (!mr.material.IsValid()) {
+            LOG_WARN("LevelLoader", "SetSpriteUVRect: Entity %lld has no valid material", entityID);
+            return 0;
+        }
+
+        auto* gs = static_cast<GraphicsSystemV2*>(gfx);
+        Material* mat = gs->GetResourceManager().GetMaterial(mr.material);
+        if (!mat) {
+            LOG_WARN("LevelLoader", "SetSpriteUVRect: Failed to get material for entity %lld", entityID);
+            return 0;
+        }
+
+        // Clamp UVs to [0,1]
+        u0 = std::max(0.0f, std::min(1.0f, u0));
+        v0 = std::max(0.0f, std::min(1.0f, v0));
+        u1 = std::max(0.0f, std::min(1.0f, u1));
+        v1 = std::max(0.0f, std::min(1.0f, v1));
+
+        mat->u0 = u0;
+        mat->v0 = v0;
+        mat->u1 = u1;
+        mat->v1 = v1;
 
         return 0;
     }

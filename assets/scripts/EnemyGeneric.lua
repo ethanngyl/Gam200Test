@@ -101,7 +101,7 @@ local healthBarBG = nil
 local healthBarFG = nil
 local healthBarHeight = 0.02
 local healthBarOffsetY = 0.05
-local healthBarLayer = 4
+local healthBarLayer = 2
 
 -- Animation
 local ENEMY_ANIM = {}

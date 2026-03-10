@@ -571,30 +571,15 @@ function HandleGoalTransition(dt)
                     PlaySound("victory", false, 1.0)
                 end)
             end
-
-            Log("GOAL REACHED - Opening skill swap screen...")
-
-            -- Show skill swap UI; when player clicks Continue, advance and transition
-            SkillSwapUI.Show(function()
-                -- Advance level progress for next play
-                local nextLevel = currentLevel + 1
-                local f = io.open("assets/JSON/LevelProgress.json", "w")
-                if f then
-                    f:write("{\n")
-                    f:write("  \"currentLevel\": " .. nextLevel .. ",\n")
-                    f:write("  \"totalLevels\": " .. totalLevels .. "\n")
-                    f:write("}\n")
-                    f:close()
-                    Log("[LevelProgress] Advanced to level " .. nextLevel .. " / " .. totalLevels)
-                end
-
-                Log("Skill swap complete - Transitioning to level end screen...")
-                if SetNextGameState then
-                    SetNextGameState("LEVEL_END")
-                else
-                    Log("ERROR: No game state transition function available!")
-                end
-            end)
+            
+            Log("GOAL REACHED - Transitioning to win screen...")
+            
+            -- Transition to main menu immediately
+            if SetNextGameState then
+                SetNextGameState("WIN_SCREEN")
+            else
+                Log("ERROR: No game state transition function available!")
+            end
         end
     end
 end
