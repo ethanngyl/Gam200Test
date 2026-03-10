@@ -1070,18 +1070,20 @@ function OnUpdate(dt)
     if not ok2 or not actionReady then return end
     if hasActedThisTurn then return end
 
-    -- Stun check
+    -- Stun check (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[" .. GetLogTag() .. " " .. entityID .. "] STUNNED")
-        DecrementStatusEffects(entityID)
         FinishAction()
         return
     end
 
-    if DecrementStatusEffects then DecrementStatusEffects(entityID) end
+    -- Check active status effects (decrement handled centrally in ResetPartyTurn)
+    local hadEarthenBind = HasStatusEffect and HasStatusEffect(entityID, "earthenBind")
+    local hadManaDrain = HasStatusEffect and HasStatusEffect(entityID, "manaDrain")
+    local hadBladedDot = HasStatusEffect and HasStatusEffect(entityID, "bladedWhirlwindDot")
 
     -- Bladed Whirlwind DOT: take 1 damage at start of turn
-    if HasStatusEffect and HasStatusEffect(entityID, "bladedWhirlwindDot") then
+    if hadBladedDot then
         local hp = GetEntityHP(entityID)
         if hp and hp > 0 then
             DamageEntity(entityID, 1)
@@ -1133,6 +1135,20 @@ function OnUpdate(dt)
 
         local bonusMP = (_G.RallyingCryActive) and 1 or 0
         mpRemaining = config.stats.movementPoints + bonusMP
+
+        -- Earthen Bind: reduce movement points
+        if hadEarthenBind then
+            local reduction = 2
+            local oldMP = mpRemaining
+            mpRemaining = math.max(0, mpRemaining - reduction)
+            print("[" .. GetLogTag() .. " " .. entityID .. "] EARTHEN BIND: MP reduced " .. oldMP .. " -> " .. mpRemaining)
+        end
+
+        -- Mana Drain: reduce AP
+        if hadManaDrain then
+            ConsumeEnemyAP(entityID, 1)
+            print("[" .. GetLogTag() .. " " .. entityID .. "] MANA DRAIN: AP reduced by 1")
+        end
 
         if specialCooldown > 0 then specialCooldown = specialCooldown - 1 end
 

@@ -398,15 +398,12 @@ function OnUpdate(dt)
     if not ok2 or not actionReady then return end
     if hasActedThisTurn then return end
 
-    -- Stun check
+    -- Stun check (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[EnemyTank " .. entityID .. "] STUNNED")
-        DecrementStatusEffects(entityID)
         FinishAction()
         return
     end
-
-    if DecrementStatusEffects then DecrementStatusEffects(entityID) end
 
     if moveTimer > 0 then
         moveTimer = moveTimer - dt

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -148,6 +148,40 @@ namespace Framework {
 
         // Play sound with loop flag
         loader->audioSystem->PlaySound(soundName, loop);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    int LevelLoader::Lua_PlayMusic(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        const char* soundName = luaL_checkstring(L, 1);
+        float fadeInSec = static_cast<float>(luaL_optnumber(L, 2, 0.5));
+        bool loop = lua_isnoneornil(L, 3) ? true : lua_toboolean(L, 3);
+
+        loader->audioSystem->PlayMusic(soundName, fadeInSec, loop);
+
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    int LevelLoader::Lua_StopMusic(lua_State* L)
+    {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        float fadeOutSec = static_cast<float>(luaL_optnumber(L, 1, 0.5));
+
+        loader->audioSystem->StopMusic(fadeOutSec);
 
         lua_pushboolean(L, true);
         return 1;
@@ -3317,7 +3351,9 @@ namespace Framework {
                 health.currentHealth = 1;
                 effects.RemoveEffect("darkOmens");
                 effects.AddEffect("darkOmensTriggered", 2, 0, 0, 0);
-                LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered applied",
+                // Grant immunity for the rest of this turn so no further damage can kill them
+                effects.AddEffect("immune", 1, 0, 0, 0);
+                LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered + immune applied",
                     entity.GetID());
                 lua_pushboolean(L, 1);
                 return 1;

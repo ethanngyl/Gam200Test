@@ -169,6 +169,8 @@ namespace Framework {
 
         // Audio API
         static int Lua_PlaySound(lua_State* L);
+        static int Lua_PlayMusic(lua_State* L);
+        static int Lua_StopMusic(lua_State* L);
         static int Lua_StopSound(lua_State* L);
         static int Lua_StopAllSounds(lua_State* L);
         static int Lua_UpdateAudio(lua_State* L);

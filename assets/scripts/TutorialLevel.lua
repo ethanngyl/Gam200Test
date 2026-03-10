@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- TutorialLevel.lua
 -- Author:        GE YONGQI
 -- Email:         yongqi.ge@digipen.edu
@@ -124,7 +124,7 @@ function OnInit()
     end
 
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    PlayMusic(music.name, 0.8, music.loop)
     Log("Playing tutorial music: " .. music.name)
 
     -- ========================================================================
@@ -217,7 +217,7 @@ end
 function OnDestroy()
     Log("Tutorial cleanup...")
 
-    StopAllSounds()
+    StopMusic(0.5)
 
     -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()

@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- EndLevel.lua
 -- Author:        Josh Ong
 -- Email:         Josh.o@digipen.edu
@@ -118,7 +118,7 @@ function OnInit()
 
     -- Start menu background music from JSON config
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    PlayMusic(music.name, 0.8, music.loop)
     Log("Playing menu music: " .. music.name)
 
     -- ========================================================================
@@ -240,7 +240,7 @@ function OnDestroy()
     Log("End Level Cleanup...")
 
     -- Stop all sounds
-    StopAllSounds()
+    StopMusic(0.5)
 
     -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()

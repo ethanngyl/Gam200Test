@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- LevelSelectLevel.lua
 -- Author:        Padilla carl jameson
 -- Email:         c.Padilla@digipen.edu
@@ -135,7 +135,7 @@ function OnInit()
 
     -- Start menu background music from JSON config
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    PlayMusic(music.name, 0.8, music.loop)
     Log("Playing level select music: " .. music.name)
 
     -- ========================================================================
@@ -236,7 +236,7 @@ function OnDestroy()
     Log("LevelSelect cleanup...")
 
     -- Stop all sounds
-    StopAllSounds()
+    StopMusic(0.5)
 
     -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()

@@ -749,10 +749,13 @@ local function createPlayerStates(fsm)
                     end
                     enemyTargetMode.currentIndex = idx
                     enemyTargetMode.selectedEnemy = enemyTargetMode.targets[idx]
-                    -- Re-tint: highlight selected (selected=bold red, unselected=very dim)
+                    -- Re-tint: only selected enemy is red, unselected have no tint
                     for i, t in ipairs(activePreview and activePreview.tiles or {}) do
-                        local bright = (i == idx)
-                        TintTile(t.x, t.y, bright and 1.0 or 0.15, bright and 0.0 or 0.1, bright and 0.0 or 0.1, bright and 0.95 or 0.35)
+                        if i == idx then
+                            TintTile(t.x, t.y, 1.0, 0.0, 0.0, 0.95)
+                        else
+                            TintTile(t.x, t.y, 1.0, 1.0, 1.0, 1.0)
+                        end
                     end
                     print("[PlayerScript] Enemy selected: " .. tostring(enemyTargetMode.selectedEnemy) .. " (" .. idx .. "/" .. n .. "), Space to execute")
                 end
@@ -1482,9 +1485,13 @@ function ShowSkillPreview(skillID)
         local idx = 1
         enemyTargetMode = { skillID = skillID, targets = targets, currentIndex = idx, selectedEnemy = targets[idx] }
         activePreview = { skillID = skillID, tiles = tiles }
-        -- Tint: dim all, highlight first (selected=bold red, unselected=very dim)
+        -- Tint: only selected enemy is red, unselected have no tint
         for i, t in ipairs(tiles) do
-            TintTile(t.x, t.y, (i == idx) and 1.0 or 0.15, (i == idx) and 0.0 or 0.1, (i == idx) and 0.0 or 0.1, (i == idx) and 0.95 or 0.35)
+            if i == idx then
+                TintTile(t.x, t.y, 1.0, 0.0, 0.0, 0.95)
+            else
+                TintTile(t.x, t.y, 1.0, 1.0, 1.0, 1.0)
+            end
         end
         print("[PlayerScript] Enemy target mode: Tab/Shift+Tab to cycle, Space to execute")
         return
@@ -1864,20 +1871,25 @@ function ExecuteSkill(skillID)
             siphonChargeActive = true
         end
 
-        -- Bloody Warcry: apply warcry buff to ALL party members
+        -- Bloody Warcry: apply as PENDING to all party members (activates next round)
+        -- Using "bloodyWarcryPending" prevents same-round characters from consuming the effect.
+        -- ResetPartyTurn converts pending -> active at the start of the next round.
         if skill.effect == "bloodyWarcry" then
+            -- Replace the self-applied "bloodyWarcry" with pending version
+            RemoveStatusEffect(entityID, "bloodyWarcry")
+            ApplyStatusEffect(entityID, "bloodyWarcryPending", skill.duration, entityID)
             local allPlayers = GetAllPlayers()
             if allPlayers then
                 for _, pid in ipairs(allPlayers) do
                     if pid ~= entityID then
-                        ApplyStatusEffect(pid, "bloodyWarcry", skill.duration, entityID)
+                        ApplyStatusEffect(pid, "bloodyWarcryPending", skill.duration, entityID)
                         spawnEffectParticles(pid, "bloodyWarcry", 1.0, 0.0, 0.0)
                     end
                 end
             end
             -- Red particles on self too
             spawnEffectParticles(entityID, "bloodyWarcry", 1.0, 0.0, 0.0)
-            print("[PlayerScript] Bloody Warcry: applied to all party members")
+            print("[PlayerScript] Bloody Warcry: applied pending to all party members (activates next round)")
         end
 
         consumeAttackAPAndAnimate(skill.apCost)
@@ -2145,8 +2157,12 @@ function ExecuteSkill(skillID)
             end
         end
 
-        -- Stun self for next turn
-        ApplyStatusEffect(entityID, "stun", 1, entityID)
+        -- Stun self for next turn (use CallLevelFunction so level state sees it in ResetPartyTurn)
+        if CallLevelFunction then
+            CallLevelFunction("ApplyGroundshatterStun", entityID)
+        else
+            ApplyStatusEffect(entityID, "stun", 1, entityID)
+        end
 
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] Groundshatter: hit " .. totalHit .. " characters for " .. skill.damage .. " damage, self stunned")

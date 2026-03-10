@@ -350,7 +350,7 @@ function NextCharacterTurn()
     print(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
 
-    -- Skip dead characters and Soul Merge sacrificed characters
+    -- Skip dead, Soul Merge, and already-acted (e.g. stunned) characters
     local skippedDead = 0
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
@@ -368,6 +368,12 @@ function NextCharacterTurn()
             print(string.format("[PartyTurnManager] %s has SOUL MERGE - turn skipped",
                 PartyMembers[ActiveCharacterIndex].name))
             PartyMembers[ActiveCharacterIndex].hasActed = true
+            ActiveCharacterIndex = ActiveCharacterIndex + 1
+            skippedDead = skippedDead + 1
+        -- Skip characters already marked as acted (e.g. stunned from Groundshatter)
+        elseif PartyMembers[ActiveCharacterIndex].hasActed then
+            print(string.format("[PartyTurnManager] %s already acted (stunned?) - skipping",
+                PartyMembers[ActiveCharacterIndex].name))
             ActiveCharacterIndex = ActiveCharacterIndex + 1
             skippedDead = skippedDead + 1
         else
@@ -533,21 +539,9 @@ function EndPartyTurn()
                 print("[PartyTurnManager]   Refilling AP for Enemy " .. enemyID .. "...")
                 RefillEntityAP(enemyID)
 
-                -- Earthen Bind: reduce movement AP after refill
-                if HasStatusEffect and HasStatusEffect(enemyID, "earthenBind") then
-                    local reduction = 2
-                    ConsumeEnemyAP(enemyID, reduction)
-                    RemoveStatusEffect(enemyID, "earthenBind")
-                    print("[PartyTurnManager]   Enemy " .. enemyID .. " EARTHEN BIND - AP reduced by " .. reduction)
-                end
-
-                -- Mana Drain: reduce AP after refill
-                if HasStatusEffect and HasStatusEffect(enemyID, "manaDrain") then
-                    local reduction = 1
-                    ConsumeEnemyAP(enemyID, reduction)
-                    RemoveStatusEffect(enemyID, "manaDrain")
-                    print("[PartyTurnManager]   Enemy " .. enemyID .. " MANA DRAIN - AP reduced by " .. reduction)
-                end
+                -- NOTE: Earthen Bind and Mana Drain are handled in EnemyGeneric.lua
+                -- at the start of each enemy's individual turn. Status effects are
+                -- decremented centrally in ResetPartyTurn (once per turn cycle).
 
                 local currentAP, maxAP = GetEntityAP(enemyID)
                 print("[PartyTurnManager]   Enemy " .. enemyID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
@@ -601,18 +595,15 @@ function ResetPartyTurn()
     PartyTurnComplete = false
 
     -- Reset hasActed flags and refill AP for all party members
+    -- ORDER: Check flags -> Refill AP/MP -> Decrement status effects
+    -- (Status effects trigger AFTER AP/MP refill)
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
         local eid = PartyMembers[i].entityID
 
-        -- Check for stun and Overload BEFORE decrementing
+        -- Check for stun and Overload BEFORE refilling or decrementing
         local isStunned = HasStatusEffect and HasStatusEffect(eid, "stun")
         local hasOverload = HasStatusEffect and HasStatusEffect(eid, "overload")
-
-        -- Decrement status effects for all characters at round start
-        if DecrementStatusEffects then
-            DecrementStatusEffects(eid)
-        end
 
         -- If stunned, mark as acted so their turn is skipped
         if isStunned then
@@ -621,7 +612,7 @@ function ResetPartyTurn()
                 PartyMembers[i].name))
         end
 
-        -- Refill AP (skip if overloaded)
+        -- 1) Refill AP first (skip if overloaded)
         if hasOverload then
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has OVERLOAD - AP refill skipped",
                 PartyMembers[i].name))
@@ -637,9 +628,34 @@ function ResetPartyTurn()
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has SOUL MERGE BUFF - +1 AP bonus",
                 PartyMembers[i].name))
         end
+
+        -- Bloody Warcry: convert pending to active at round start
+        -- (pending is applied during the casting round to prevent same-round consumption)
+        if HasStatusEffect and HasStatusEffect(eid, "bloodyWarcryPending") then
+            RemoveStatusEffect(eid, "bloodyWarcryPending")
+            ApplyStatusEffect(eid, "bloodyWarcry", -1, 0)
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s BLOODY WARCRY activated for this round",
+                PartyMembers[i].name))
+        end
+
+        -- 2) Decrement status effects AFTER AP refill
+        if DecrementStatusEffects then
+            DecrementStatusEffects(eid)
+        end
     end
 
-    -- Skip dead, stunned, and Soul Merge sacrificed characters when resetting turn
+    -- 3) Decrement status effects for ALL enemies (centralized, once per turn cycle)
+    -- This ensures debuffs with duration 2 last "current turn + next turn"
+    if DecrementStatusEffects then
+        local enemies = GetAllEnemies()
+        if enemies then
+            for _, enemyID in ipairs(enemies) do
+                DecrementStatusEffects(enemyID)
+            end
+        end
+    end
+
+    -- Find first character who is alive and not Soul Merged (may be stunned - we'll auto-skip like pressing P)
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
         local currentHP, maxHP = GetEntityHP(checkEntity)
@@ -656,11 +672,8 @@ function ResetPartyTurn()
                 PartyMembers[ActiveCharacterIndex].name))
             PartyMembers[ActiveCharacterIndex].hasActed = true
             ActiveCharacterIndex = ActiveCharacterIndex + 1
-        elseif PartyMembers[ActiveCharacterIndex].hasActed then
-            -- This character was already marked (e.g. stunned), skip
-            ActiveCharacterIndex = ActiveCharacterIndex + 1
         else
-            -- This character is alive and active, use them
+            -- This character is alive (may be stunned - hasActed=true, we'll auto EndCharacterTurn below)
             break
         end
     end
@@ -672,8 +685,16 @@ function ResetPartyTurn()
         return
     end
 
-    -- Notify C++ about active character reset (now guaranteed to be alive)
+    -- Notify C++ about active character (may be stunned - we enter their turn then auto-skip like pressing P)
     SetActiveCharacter(PartyMembers[ActiveCharacterIndex].entityID)
+
+    -- If this character is stunned, auto-skip their turn (simulate pressing P to end turn)
+    if PartyMembers[ActiveCharacterIndex].hasActed then
+        Log(string.format("[PartyTurnManager] %s is STUNNED - auto-skipping turn (like pressing P)",
+            PartyMembers[ActiveCharacterIndex].name))
+        EndCharacterTurn()
+        return  -- EndCharacterTurn already advanced to next character
+    end
 
     -- Restore attack AP crystal visuals for the active character
     if UIManager and UIManager.GetComponent then
@@ -823,8 +844,21 @@ end
 -- GLOBAL EXPORTS
 -- ============================================================================
 
+--[[
+    ApplyGroundshatterStun(entityID)
+    Called by PlayerScript (via CallLevelFunction) when casting Groundshatter.
+    Applies stun from level Lua state so HasStatusEffect sees it in ResetPartyTurn.
+]]--
+function ApplyGroundshatterStun(entityID)
+    if ApplyStatusEffect and entityID then
+        ApplyStatusEffect(entityID, "stun", 1, entityID)
+        Log(string.format("[PartyTurnManager] ApplyGroundshatterStun: entity %s stunned for next turn", tostring(entityID)))
+    end
+end
+
 -- Export functions to global scope for use in other scripts
 _G.InitializeParty = InitializeParty
+_G.ApplyGroundshatterStun = ApplyGroundshatterStun
 _G.GetActiveCharacter = GetActiveCharacter
 _G.GetActiveCharacterName = GetActiveCharacterName
 _G.IsActiveCharacter = IsActiveCharacter

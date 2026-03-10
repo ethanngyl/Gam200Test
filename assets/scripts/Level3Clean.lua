@@ -286,11 +286,9 @@ function OnUpdate(dt)
     -- Party system turn management
     local currentTurn = GetCurrentTurn()
 
-    -- Reset party when enemy turn ends and player turn begins
-    if previousTurn == "Enemy" and currentTurn == "Player" then
-        Log("[Level3Clean] Enemy turn ended - resetting party for new player turn")
-        OnEnemyTurnEnded()
-    end
+    -- NOTE: Do NOT call ResetPartyTurn/OnEnemyTurnEnded here!
+    -- EnemyTurnManager already calls ResetPartyTurn when the last enemy finishes.
+    -- A second call on the next frame would reset hasActed and undo stun-skip (Groundshatter bug).
 
     -- Transition to enemy turn when all party members have acted
     if currentTurn == "Player" then
@@ -362,7 +360,7 @@ function OnDestroy()
     end
 
     -- Stop audio
-    StopAllSounds()
+    StopMusic(0.5)
     Log(" All audio stopped")
 
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
@@ -407,8 +405,7 @@ function InitializeAudio()
 
     if bgmSound then
         Log("Starting background music: " .. bgmSound.name)
-        PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
-        Log(" Background music started: " .. bgmSound.filepath)
+        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)        Log(" Background music started: " .. bgmSound.filepath)
     else
         Log("WARNING: Background music 'igbgm' not found")
     end

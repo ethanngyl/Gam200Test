@@ -511,17 +511,11 @@ function OnUpdate(dt)
 
     if hasActedThisTurn then return end
 
-    -- Check if boss is stunned
+    -- Check if boss is stunned (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[Boss " .. entityID .. "] STUNNED - skipping turn")
-        DecrementStatusEffects(entityID)
         FinishBossAction()
         return
-    end
-
-    -- Decrement status effects at turn start
-    if DecrementStatusEffects then
-        DecrementStatusEffects(entityID)
     end
 
     if moveTimer > 0 then
