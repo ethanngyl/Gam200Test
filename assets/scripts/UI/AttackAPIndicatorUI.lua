@@ -398,17 +398,6 @@ function AttackAPIndicatorUI:GetCurrentAP()
     return currentAP or 0
 end
 
--- Return the currently displayed AP and max AP based on indicator state
-function AttackAPIndicatorUI:GetDisplayedAP()
-    local count = 0
-    for i = 1, #self.indicatorStates do
-        if self.indicatorStates[i] == "filled" then
-            count = count + 1
-        end
-    end
-    return count, self.maxAP or 0
-end
-
 function AttackAPIndicatorUI:UpdatePositions(cameraPos)
     if self.useTint then
         for i = 1, #self.indicators do

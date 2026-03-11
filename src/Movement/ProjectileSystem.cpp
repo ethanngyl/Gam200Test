@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -27,16 +27,10 @@
 #include "Precompiled.h"
 #include "PlayerManager.h"
 #include "ProjectileSystem.h"
-#include "Script/LevelLoader.h"
 #include "Collision/Quadtree.h"
 #include "Grid/Grid.h"
 #include "Grid/GridECS.h"
 #include "Pathfinding/Pathfinding.h"
-#include "TagHelper.h"
-#include "Core/Core.h"
-#include "EntitySpawner.h"
-#include <lua.h>
-#include <lauxlib.h>
 #include <algorithm>
 namespace Framework
 {
@@ -93,7 +87,6 @@ namespace Framework
                 auto& movement = entityManager->GetComponent<ProjectileMovement>(entity);
 
                 // Apply movement
-                Vector2D prevPos = transform.position;
                 if (!movement.blocked) {
                     transform.position += movement.direction * movement.moveSpeed * dt;
                 }
@@ -101,55 +94,15 @@ namespace Framework
                     transform.position -= movement.direction * movement.moveSpeed * dt;
                 }
 
-                // Check if projectile passed through any blocked tile (prevents wall penetration)
-                {
-                    auto prevTile = WorldToTile(prevPos);
-                    auto currTile = WorldToTile(transform.position);
-                    if (prevTile.has_value() && currTile.has_value()) {
-                        int x0 = prevTile->x, y0 = prevTile->y;
-                        int x1 = currTile->x, y1 = currTile->y;
-                        int dx = std::abs(x1 - x0), dy = std::abs(y1 - y0);
-                        int sx = (x0 < x1) ? 1 : -1, sy = (y0 < y1) ? 1 : -1;
-                        int err = dx - dy;
-                        while (true) {
-                            GridCoord c{ x0, y0 };
-                            if (IsTileStaticBlocked(c)) {
-                                offScreenToDestroy.push_back(entity);
-                                break;
-                            }
-                            if (x0 == x1 && y0 == y1) break;
-                            int e2 = 2 * err;
-                            if (e2 > -dy) { err -= dy; x0 += sx; }
-                            if (e2 < dx) { err += dx; y0 += sy; }
-                        }
-                    }
-                }
-
-                // Check max range (Fireball: 5 tiles) - use grid distance, not world units
-                if (movement.maxRangeTiles > 0) {
-                    auto spawnTile = WorldToTile(movement.spawnPosition);
-                    auto currTile = WorldToTile(transform.position);
-                    if (spawnTile.has_value() && currTile.has_value()) {
-                        int dx = std::abs(currTile->x - spawnTile->x);
-                        int dy = std::abs(currTile->y - spawnTile->y);
-                        int tileDist = (dx > dy) ? dx : dy;  // Chebyshev: max(dx,dy)
-                        if (tileDist >= movement.maxRangeTiles) {
-                            offScreenToDestroy.push_back(entity);
-                        }
-                    }
-                }
-
                 // Check if projectile hit a wall (blocked tile or out-of-bounds)
-                // Uses IsTileStaticBlocked instead of IsWalkable so projectiles
-                // pass through entity-occupied tiles and only stop on walls.
                 auto gridCoord = WorldToTile(transform.position);
                 if (!gridCoord.has_value()) {
                     // Out of grid bounds - destroy
                     offScreenToDestroy.push_back(entity);
                 }
                 else {
-                    // Only destroy on static walls, NOT on entity-occupied tiles
-                    if (IsTileStaticBlocked(gridCoord.value())) {
+                    // Check if the tile is blocked (wall)
+                    if (!IsWalkable(gridCoord.value())) {
                         offScreenToDestroy.push_back(entity);
                     }
                 }
@@ -194,7 +147,6 @@ namespace Framework
         // 1. MANUAL FILTERING
         std::vector<Framework::Entity> activeProjectiles;
         std::vector<Framework::Entity> activeEnemies;
-        std::vector<Framework::Entity> activePlayers;
 
         for (Framework::Entity entity : entityManager->GetAllEntities())
         {
@@ -206,23 +158,13 @@ namespace Framework
                 activeProjectiles.push_back(entity);
             }
 
-            // Filter for Enemies (must have "Enemy" tag)
-            if (entityManager->HasComponent<Framework::TagComponent>(entity) &&
-                entityManager->GetComponent<Framework::TagComponent>(entity).tag == "Enemy" &&
+            // Filter for Enemies (must have EnemyAI to exclude players)
+            if (entityManager->HasComponent<EnemyAI>(entity) &&
                 entityManager->HasComponent<Transform>(entity) &&
                 entityManager->HasComponent<Health>(entity) &&
                 entityManager->HasComponent<BoxCollider>(entity))
             {
                 activeEnemies.push_back(entity);
-            }
-
-            // Filter for Players (must have "Player" tag)
-            if (entityManager->HasComponent<Framework::TagComponent>(entity) &&
-                entityManager->GetComponent<Framework::TagComponent>(entity).tag == "Player" &&
-                entityManager->HasComponent<Transform>(entity) &&
-                entityManager->HasComponent<Health>(entity))
-            {
-                activePlayers.push_back(entity);
             }
         }
 
@@ -284,87 +226,21 @@ namespace Framework
             // --- FETCH PROJECTILE COMPONENTS ---
             auto& projTransform = entityManager->GetComponent<Transform>(projectile);
             auto& projCollider = entityManager->GetComponent<CircleCollider>(projectile);
-            auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
 
             Collider projShape = Collider::create_circle(projCollider.radius, projTransform.position);
+
+            // Query candidate enemies near this projectile.
+            
+			enemyCandidates.clear();
+
+            // Match your current projectile shape: center = projTransform.position (offset ignored in your code)
             const AABB projAABB = MakeAABBFromCircle(projTransform.position, projCollider.radius);
-
-            // --- ENEMY PROJECTILE: check against players ---
-            if (projMovement.isEnemyProjectile)
-            {
-                for (Framework::Entity player : activePlayers)
-                {
-                    if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), player) != entitiesToDestroy.end())
-                        continue;
-
-                    if (!entityManager->HasComponent<Transform>(player) ||
-                        !entityManager->HasComponent<Health>(player))
-                    {
-                        continue;
-                    }
-
-                    auto& playerTransform = entityManager->GetComponent<Transform>(player);
-                    auto& playerHealth = entityManager->GetComponent<Health>(player);
-
-                    // Build player collider (use CircleCollider if available, else BoxCollider)
-                    Collider playerShape;
-                    if (entityManager->HasComponent<CircleCollider>(player)) {
-                        auto& playerCircle = entityManager->GetComponent<CircleCollider>(player);
-                        playerShape = Collider::create_circle(playerCircle.radius, playerTransform.position + playerCircle.offset);
-                    }
-                    else if (entityManager->HasComponent<BoxCollider>(player)) {
-                        auto& playerBox = entityManager->GetComponent<BoxCollider>(player);
-                        playerShape = Collider::create_rect(playerBox.size.x, playerBox.size.y, playerTransform.position);
-                    }
-                    else {
-                        continue;
-                    }
-
-                    if (check_collision(projShape, playerShape))
-                    {
-                        const int damageDealt = projMovement.damage;
-                        uint32_t attackerID = projMovement.sourceEntityID;
-
-                        auto& levelLoader = LevelLoader::GetInstance();
-                        if (levelLoader.IsLevelLoaded() &&
-                            levelLoader.ApplyDamageToEntity(player.GetID(), damageDealt, attackerID))
-                        {
-                            // Damage handled by Lua (Parry, Guard, etc.)
-                        }
-                        else
-                        {
-                            playerHealth.TakeDamage(damageDealt);
-                        }
-
-                        std::cout << "[ProjectileSystem] Enemy projectile hit Player " << player.GetID()
-                            << " for " << damageDealt << " damage! HP=" << playerHealth.currentHealth << "\n";
-
-                        if (playerHealth.isDead)
-                        {
-                            entitiesToDestroy.push_back(player);
-                        }
-
-                        if (!projMovement.pierce) {
-                            entitiesToDestroy.push_back(projectile);
-                            break;
-                        }
-                    }
-                }
-                continue;  // Enemy projectiles don't hit enemies
-            }
-
-            // --- PLAYER PROJECTILE: check against enemies (existing logic) ---
-            enemyCandidates.clear();
             enemyQt.Query(projAABB, enemyCandidates);
 
             for (Framework::Entity enemy : enemyCandidates)
             {
                 // Skip enemy if already marked for destruction
                 if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), enemy) != entitiesToDestroy.end())
-                    continue;
-
-                // Skip self-hit (source entity that spawned this projectile)
-                if (projMovement.sourceEntityID != 0 && enemy.GetID() == projMovement.sourceEntityID)
                     continue;
 
                 // Check enemy components
@@ -387,113 +263,32 @@ namespace Framework
 
                 if (check_collision(projShape, enemyShape))
                 {
-                    // Line-only (Fireball): enemy must be on the line from spawn to projectile
-                    if (projMovement.lineOnly) {
-                        bool onLine = false;
-                        const Vector2D S = projMovement.spawnPosition;
-                        const Vector2D P = projTransform.position;
-                        const Vector2D E = enemyTransform.position;
-                        Vector2D SP(P.x - S.x, P.y - S.y);
-                        float lenSq = SP.x * SP.x + SP.y * SP.y;
-                        if (lenSq >= 0.0001f) {
-                            Vector2D SE(E.x - S.x, E.y - S.y);
-                            float t = (SE.x * SP.x + SE.y * SP.y) / lenSq;
-                            if (t >= -0.1f) {
-                                Vector2D closest(S.x + t * SP.x, S.y + t * SP.y);
-                                float dx = E.x - closest.x, dy = E.y - closest.y;
-                                float distSq = dx * dx + dy * dy;
-                                const Grid& g = GetGrid();
-                                float tileSize = (g.spacing.x + g.spacing.y) * 0.5f;
-                                if (tileSize <= 0.0f) tileSize = 1.0f;
-                                float tol = 0.45f * tileSize;
-                                onLine = (distSq <= tol * tol);
-                            }
-                        }
-                        if (!onLine) continue;
-                    }
-
+                    // Use configurable damage from the projectile component
+                    auto& projMovement = entityManager->GetComponent<ProjectileMovement>(projectile);
                     const int damageDealt = projMovement.damage;
-                    const auto hitPos = enemyTransform.position;
-
-                    // Use full damage pipeline (DamageEntity) for Soul Rend, status effects, etc.
-                    bool success = false;
-                    if (Framework::LevelLoader::GetInstance().IsLevelLoaded()) {
-                        success = Framework::LevelLoader::GetInstance().ApplyProjectileDamageToEnemy(
-                            enemy.GetID(), damageDealt, projMovement.sourceEntityID);
-                    }
-                    if (!success) {
-                        enemyHealth.TakeDamage(damageDealt);
-                    }
-
-                    int hpAfter = 0;
-                    if (entityManager->HasComponent<Health>(enemy)) {
-                        hpAfter = entityManager->GetComponent<Health>(enemy).currentHealth;
-                    }
+                    enemyHealth.TakeDamage(damageDealt);
 
                     if (eventSystem) {
                         eventSystem->QueueMessage(new EnemyDamagedMessage(
-                            enemy, projectile, damageDealt, hpAfter, hitPos));
-                    }
-
-                    // =============================================
-                    // SPAWN EXPLOSION EFFECT AT IMPACT POSITION
-                    // Only for projectiles flagged for it (e.g. Mage)
-                    // =============================================
-                    if (projMovement.spawnExplosionOnHit &&
-                        CORE && CORE->GetSpawner() && CORE->GetGraphicsSystem()) {
-                        auto* spawner = CORE->GetSpawner();
-                        auto* gfx = CORE->GetGraphicsSystem();
-
-                        const std::string explosionTexture = "assets/Explosion-Sheet.png";
-                        Vector2D hitPos = enemyTransform.position;
-                        Vector2D effectScale(0.12f, 0.12f);
-
-                        Entity explosion = spawner->SpawnSprite(explosionTexture, hitPos, effectScale);
-
-                        // Configure as render layer above enemies
-                        if (entityManager->HasComponent<MeshRenderer>(explosion)) {
-                            auto& mr = entityManager->GetComponent<MeshRenderer>(explosion);
-                            mr.layer = RenderLayers::Effects;  // render above characters
-                        }
-
-                        // Add one-shot animation that auto-destroys
-                        entityManager->AddComponent<SpriteAnimation>(explosion);
-                        auto& anim = entityManager->GetComponent<SpriteAnimation>(explosion);
-                        anim.rows = 1;
-                        anim.columns = 10;
-                        anim.frameCount = 10;
-                        anim.frameTime = 0.06f;
-                        anim.loop = false;
-                        anim.playing = true;
-                        anim.currentFrame = 0;
-                        anim.elapsedTime = 0.0f;
-                        anim.useJsonConfig = false;
-                        anim.autoDestroyOnFinish = true;
-
-                        // Load the texture handle into the animation
-                        anim.spriteSheet = gfx->GetResourceManager().LoadTexture(explosionTexture);
-                        Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
-                        if (tex) {
-                            anim.frameWidth = tex->GetWidth() / anim.columns;
-                            anim.frameHeight = tex->GetHeight() / anim.rows;
-                        }
+                            enemy, projectile, damageDealt, enemyHealth.currentHealth, enemyTransform.position));
                     }
 
                     if (enemyHealth.isDead)
                     {
                         if (eventSystem) {
                             eventSystem->QueueMessage(new EnemyDeathMessage(
-                                enemy, projectile, hitPos));
+                                enemy, projectile, enemyTransform.position));
                         }
-                        if (entityManager->HasComponent<Transform>(enemy)) {
-                            entitiesToDestroy.push_back(enemy);
-                        }
+                        entitiesToDestroy.push_back(enemy);
                     }
 
+                    // Pierce: projectile continues through enemies
+                    // Non-pierce: projectile destroyed on first hit
                     if (!projMovement.pierce) {
                         entitiesToDestroy.push_back(projectile);
                         break;
                     }
+                    // If piercing, continue checking next enemies (don't break)
                 }
             }
 
@@ -505,26 +300,6 @@ namespace Framework
             // Check for a core component before destroying
             if (entityManager->HasComponent<Transform>(entity))
             {
-                // =============================================
-                // FIX: Call Lua OnDestroy before entity destruction
-                // This cleans up child entities (health bars, etc.)
-                // that the script spawned and tracks locally.
-                // =============================================
-                if (entityManager->HasComponent<ScriptComponent>(entity)) {
-                    auto& script = entityManager->GetComponent<ScriptComponent>(entity);
-                    if (script.hasOnDestroy && script.L) {
-                        lua_getglobal(script.L, "OnDestroy");
-                        if (lua_isfunction(script.L, -1)) {
-                            if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
-                                lua_pop(script.L, 1);  // pop error
-                            }
-                        }
-                        else {
-                            lua_pop(script.L, 1);  // pop non-function
-                        }
-                    }
-                }
-
                 // Clear tile occupancy before destroying so the tile becomes walkable
                 SpatialPartitioningRemove(entity);
                 entityManager->DestroyEntity(entity);

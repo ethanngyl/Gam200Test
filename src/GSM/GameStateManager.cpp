@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:          GameStateManager.cpp
  Author:        Padilla Carl Jameson Z.
@@ -50,32 +50,6 @@
 #include "Turn.h"
 #include "Pathfinding.h"  // EnemyAI component
 #include "Component.h"    // Movement, CircleCollider components
-#include "TagHelper.h"
-
-// ============================================================================
-// LEVEL SCRIPT PATH LOOKUP TABLE
-// ============================================================================
-// Centralises all Lua script paths so they can be changed in one place.
-// Index matches the GS_STATES enum (see GameStateList.h).
-// nullptr means the state has no associated Lua script.
-static const char* const g_levelScriptPaths[] = {
-    "assets/scripts/MainMenuLevel.lua",      // mainMenu       (0)
-    "assets/scripts/SettingsLevel.lua",     // settingsMenu   (1)
-    "assets/scripts/LevelSelectLevel.lua",   // Level_select   (2)
-    "assets/scripts/Level2.lua",             // LEVEL_2        (3)
-    "assets/scripts/ProceduralMapLevel.lua", // LEVEL_3        (4)
-    "assets/scripts/EndLevel.lua",           // LEVEL_END      (5)
-    "assets/scripts/TutorialLevel.lua",      // TUTORIAL       (6)
-};
-static constexpr int g_levelScriptPathCount =
-    static_cast<int>(sizeof(g_levelScriptPaths) / sizeof(g_levelScriptPaths[0]));
-
-/// Returns the Lua script path for a game state, or nullptr if none.
-static const char* GetLevelScript(int state) {
-    if (state >= 0 && state < g_levelScriptPathCount)
-        return g_levelScriptPaths[state];
-    return nullptr;
-}
 
 // ============================================================================
 // GLOBAL VARIABLE DEFINITIONS
@@ -128,12 +102,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel(GetLevelScript(mainMenu), g_loadAsEditorMode);
+            bool success = loader.LoadLevel("assets/scripts/MainMenuLevel.lua", g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load MainMenu Lua script!");
-                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(mainMenu));
+                LOG_ERROR("GSM", "Check: assets/scripts/MainMenuLevel.lua exists");
                 next = GS_QUIT;
             }
             else {
@@ -214,102 +188,6 @@ void GSM_Update()
             };
         break;
 
-    case settingsMenu:
-        LOG_INFO("GSM", "Settings Menu state (Lua-scripted)");
-
-        // ============================================================================
-        // LOAD
-        // ============================================================================
-        fpLoad = []() {
-            LOG_INFO("GSM", "Loading Settings Lua script...");
-
-            auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel(GetLevelScript(settingsMenu), g_loadAsEditorMode);
-            g_loadAsEditorMode = false;  // Reset flag after use
-
-            if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load Settings Lua script!");
-                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(settingsMenu));
-                next = GS_QUIT;
-            }
-            else {
-                LOG_INFO("GSM", "Settings Lua script loaded successfully");
-            }
-            };
-
-        // ============================================================================
-        // INITIALIZE
-        // ============================================================================
-        fpInitialize = []() {
-            LOG_INFO("GSM", "Settings ready (Lua-scripted)");
-            };
-
-        // ============================================================================
-        // UPDATE
-        // ============================================================================
-        fpUpdate = []() {
-            // Get engine pointer
-            extern Framework::CoreEngine* engine;
-
-            // F9 Hot Reload Support
-            if (engine && engine->GetInputSystem()) {
-                auto* input = engine->GetInputSystem();
-                if (input->IsKeyPressed(Framework::KEY_F9)) {
-                    LOG_INFO("GSM", "F9 pressed - Hot reloading Settings...");
-                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
-                }
-            }
-
-            // Call Lua OnUpdate with FIXED_DT from shared constant
-            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
-                Framework::Time::FIXED_DT_F
-            );
-            };
-
-        // ============================================================================
-        // DRAW
-        // ============================================================================
-        fpDraw = []() {
-            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
-            // This prevents double-rendering (once to viewport, once to main window)
-            // No-op for Lua-based levels
-            };
-
-        // ============================================================================
-        // FREE
-        // ============================================================================
-        fpFree = []() {
-            LOG_INFO("GSM", "Cleaning up Settings Lua script...");
-
-            extern Framework::CoreEngine* engine;
-
-            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
-            Framework::LevelLoader::GetInstance().ResetLuaState();
-
-            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
-            if (engine) {
-                if (auto* em = engine->GetEntityManager()) {
-                    size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
-                    em->ClearAllEntities();
-                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
-                }
-
-                // Clear camera follow
-                if (auto* gfx = engine->GetGraphicsSystem()) {
-                    gfx->ClearFollowTarget();
-                }
-            }
-            };
-
-        // ============================================================================
-        // UNLOAD
-        // ============================================================================
-        fpUnload = []() {
-            LOG_INFO("GSM", "Settings Lua script unloaded");
-            };
-        break;
-
     case Level_select:
         LOG_INFO("GSM", "Level_select state (Lua-scripted)");
 
@@ -320,12 +198,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading LevelSelect Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel(GetLevelScript(Level_select), g_loadAsEditorMode);
+            bool success = loader.LoadLevel("assets/scripts/LevelSelectLevel.lua", g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load LevelSelect Lua script!");
-                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(Level_select));
+                LOG_ERROR("GSM", "Check: assets/scripts/LevelSelectLevel.lua exists");
                 next = GS_QUIT;
             }
             else {
@@ -410,7 +288,7 @@ void GSM_Update()
         // Use LevelLoader to load Level2.lua
         fpLoad = []() {
                 Framework::LevelLoader::GetInstance().LoadLevel(
-                GetLevelScript(LEVEL_2),
+                "assets/scripts/Level2.lua",
                 g_loadAsEditorMode
             );
             g_loadAsEditorMode = false;  // Reset flag after use
@@ -442,12 +320,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Level3 Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel(GetLevelScript(LEVEL_3), g_loadAsEditorMode);
+            bool success = loader.LoadLevel("assets/scripts/ProceduralMapLevel.lua", g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Level3 Lua script!");
-                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(LEVEL_3));
+                LOG_ERROR("GSM", "Check: assets/scripts/Level3Clean.lua exists");
                 next = GS_QUIT;
             }
             else {
@@ -460,28 +338,70 @@ void GSM_Update()
         // ============================================================================
         fpInitialize = []() {
             LOG_INFO("GSM", "Level3 ready (Lua-scripted)");
-            // Player setup (Movement removal, camera follow, turn system init)
-            // is now handled by ProceduralMapLevel.lua OnInit via:
-            //   RemoveMovementComponent(), SetCameraFollowTarget(), InitializeTurnSystem()
-
-            // Configure C++ player controller with minimal plumbing so its
-            // Update() can run (even though gridMovement is disabled by Lua).
+            // Additional C++ initialization (player controller setup)
             extern Framework::CoreEngine* engine;
             if (engine) {
                 auto* em = engine->GetEntityManager();
-                auto* pc = engine->GetPlayerController();
+                auto* playerController = engine->GetPlayerController();
                 auto* spawner = engine->GetSpawner();
                 auto* input = engine->GetInputSystem();
 
-                if (em && pc && spawner && input) {
-                    Framework::Entity player = Framework::FindFirstByTag(em, "Player");
-                    if (player.GetID() != Framework::INVALID_ENTITY) {
-                        pc->SetPlayerEntity(player);
-                        pc->SetEntitySpawner(spawner);
-                        pc->SetEntityManager(em);
-                        pc->SetInputSystem(input);
-                        LOG_INFO("GSM", "Player controller configured for entity %u", player.GetID());
+                if (em && playerController && spawner && input) {
+                    // Find player entity (spawned by TileMapLoader in Lua)
+                    // Player has CircleCollider but NOT EnemyAI (distinguishes from enemies)
+                    Framework::Entity player{ Framework::INVALID_ENTITY };
+                    for (Framework::Entity e : em->GetAllEntities()) {
+                        if (em->HasComponent<Framework::CircleCollider>(e) &&
+                            !em->HasComponent<Framework::EnemyAI>(e)) {
+                            player = e;
+                            break;
+                        }
                     }
+
+                    if (player.GetID() != Framework::INVALID_ENTITY) {
+                        // DISABLE WASD movement: Remove Movement component to prevent MovementSystem from processing player
+                        // Grid movement via arrow keys only (handled by PlayerControllerSystem)
+                        if (em->HasComponent<Framework::Movement>(player)) {
+                            em->RemoveComponent<Framework::Movement>(player);
+                            LOG_INFO("GSM", "Removed Movement component from player - WASD disabled, arrow keys only");
+                        }
+
+                        // Add player stats (AP) if not already added
+                        if (!em->HasComponent<Framework::AP>(player)) {
+                            em->AddComponent<Framework::AP>(player, 5);  // 100 HP, 5 AP
+                            LOG_INFO("GSM", "Added AP component to player: 100 HP, 5 AP");
+                        }
+                        else {
+                            auto& ap = em->GetComponent<Framework::AP>(player);
+                            LOG_INFO("GSM", "Player already has AP: %d/%d AP",
+                                ap.actionPoints, ap.maxActionPoints);
+                        }
+
+                        // Configure player controller
+                        playerController->SetPlayerEntity(player);
+                        playerController->SetEntitySpawner(spawner);
+                        playerController->SetEntityManager(em);
+                        playerController->SetInputSystem(input);
+                        // DISABLED: Don't force grid movement ON - let Lua scripts control it
+                        // playerController->SetGridMovementEnabled(true);
+
+                        // Set camera follow
+                        if (auto* gfx = engine->GetGraphicsSystem()) {
+                            gfx->SetFollowTarget(player);
+                        }
+
+                        LOG_INFO("GSM", "Player controller configured for entity ID: %u", player.GetID());
+                        // LOG_INFO("GSM", "Grid movement enabled: TRUE");
+                    }
+                    else {
+                        LOG_ERROR("GSM", "No player entity found!");
+                    }
+
+                    // Initialize turn system
+                    auto& turn = Framework::Turn();
+                    turn.phase = Framework::TurnPhase::Player;
+                    turn.busy = false;
+                    LOG_INFO("GSM", "Turn system initialized: Phase=Player, Busy=false, TurnIndex=%d", turn.turnIndex);
                 }
             }
             };
@@ -521,10 +441,17 @@ void GSM_Update()
                     //engine->SetPlaying(true);
 
                     // Find and cache player entity if needed
+                    // Player has CircleCollider but NOT EnemyAI (Movement component removed for grid movement)
                     if (cachedPlayer.GetID() == Framework::INVALID_ENTITY) {
                         auto* em = engine->GetEntityManager();
                         if (em) {
-                            cachedPlayer = Framework::FindFirstByTag(em, "Player");
+                            for (Framework::Entity e : em->GetAllEntities()) {
+                                if (em->HasComponent<Framework::CircleCollider>(e) &&
+                                    !em->HasComponent<Framework::EnemyAI>(e)) {
+                                    cachedPlayer = e;
+                                    break;
+                                }
+                            }
                         }
                     }
 
@@ -639,12 +566,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Tutorial Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel(GetLevelScript(TUTORIAL), g_loadAsEditorMode);
+            bool success = loader.LoadLevel("assets/scripts/TutorialLevel.lua", g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Tutorial Lua script!");
-                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(TUTORIAL));
+                LOG_ERROR("GSM", "Check: assets/scripts/TutorialLevel.lua exists");
                 next = GS_QUIT;
             }
             else {
@@ -725,486 +652,6 @@ void GSM_Update()
             };
         break;
 
-    case CONTROL:
-        LOG_INFO("GSM", "Control state (Lua-scripted)");
-
-        // ============================================================================
-        // LOAD
-        // ============================================================================
-        fpLoad = []() {
-            LOG_INFO("GSM", "Loading Control Lua script...");
-
-            auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/ControlLevel.lua", g_loadAsEditorMode);
-            g_loadAsEditorMode = false;  // Reset flag after use
-
-            if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load Control Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/ControlLevel.lua exists");
-                next = GS_QUIT;
-            }
-            else {
-                LOG_INFO("GSM", "Control Lua script loaded successfully");
-            }
-            };
-
-        // ============================================================================
-        // INITIALIZE
-        // ============================================================================
-        fpInitialize = []() {
-            LOG_INFO("GSM", "Control page ready (Lua-scripted)");
-            };
-
-        // ============================================================================
-        // UPDATE
-        // ============================================================================
-        fpUpdate = []() {
-            // Get engine pointer
-            extern Framework::CoreEngine* engine;
-
-            // F9 Hot Reload Support
-            if (engine && engine->GetInputSystem()) {
-                auto* input = engine->GetInputSystem();
-                if (input->IsKeyPressed(Framework::KEY_F9)) {
-                    LOG_INFO("GSM", "F9 pressed - Hot reloading Control...");
-                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
-                }
-            }
-
-            // Call Lua OnUpdate with FIXED_DT from shared constant
-            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
-                Framework::Time::FIXED_DT_F
-            );
-            };
-
-        // ============================================================================
-        // DRAW
-        // ============================================================================
-        fpDraw = []() {
-            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
-            // This prevents double-rendering (once to viewport, once to main window)
-            // No-op for Lua-based levels
-            };
-
-        // ============================================================================
-        // FREE
-        // ============================================================================
-        fpFree = []() {
-            LOG_INFO("GSM", "Cleaning up Control Lua script...");
-
-            extern Framework::CoreEngine* engine;
-
-            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
-            Framework::LevelLoader::GetInstance().ResetLuaState();
-
-            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
-            if (engine) {
-                if (auto* em = engine->GetEntityManager()) {
-                    size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
-                    em->ClearAllEntities();
-                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
-                }
-
-                // Clear camera follow
-                if (auto* gfx = engine->GetGraphicsSystem()) {
-                    gfx->ClearFollowTarget();
-                }
-            }
-            };
-
-        // ============================================================================
-        // UNLOAD
-        // ============================================================================
-        fpUnload = []() {
-            LOG_INFO("GSM", "Control Lua script unloaded");
-            };
-        break;
-
-    case CONTROL2:
-        LOG_INFO("GSM", "Control2 state (Lua-scripted)");
-
-        // ============================================================================
-        // LOAD
-        // ============================================================================
-        fpLoad = []() {
-            LOG_INFO("GSM", "Loading Control2 Lua script...");
-
-            auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/Control2Level.lua", g_loadAsEditorMode);
-            g_loadAsEditorMode = false;  // Reset flag after use
-
-            if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load Control2 Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/Control2Level.lua exists");
-                next = GS_QUIT;
-            }
-            else {
-                LOG_INFO("GSM", "Control2 Lua script loaded successfully");
-            }
-            };
-
-        // ============================================================================
-        // INITIALIZE
-        // ============================================================================
-        fpInitialize = []() {
-            LOG_INFO("GSM", "Control2 page ready (Lua-scripted)");
-            };
-
-        // ============================================================================
-        // UPDATE
-        // ============================================================================
-        fpUpdate = []() {
-            // Get engine pointer
-            extern Framework::CoreEngine* engine;
-
-            // F9 Hot Reload Support
-            if (engine && engine->GetInputSystem()) {
-                auto* input = engine->GetInputSystem();
-                if (input->IsKeyPressed(Framework::KEY_F9)) {
-                    LOG_INFO("GSM", "F9 pressed - Hot reloading Control2...");
-                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
-                }
-            }
-
-            // Call Lua OnUpdate with FIXED_DT from shared constant
-            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
-                Framework::Time::FIXED_DT_F
-            );
-            };
-
-        // ============================================================================
-        // DRAW
-        // ============================================================================
-        fpDraw = []() {
-            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
-            // This prevents double-rendering (once to viewport, once to main window)
-            // No-op for Lua-based levels
-            };
-
-        // ============================================================================
-        // FREE
-        // ============================================================================
-        fpFree = []() {
-            LOG_INFO("GSM", "Cleaning up Control2 Lua script...");
-
-            extern Framework::CoreEngine* engine;
-
-            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
-            Framework::LevelLoader::GetInstance().ResetLuaState();
-
-            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
-            if (engine) {
-                if (auto* em = engine->GetEntityManager()) {
-                    size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
-                    em->ClearAllEntities();
-                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
-                }
-
-                // Clear camera follow
-                if (auto* gfx = engine->GetGraphicsSystem()) {
-                    gfx->ClearFollowTarget();
-                }
-            }
-            };
-
-        // ============================================================================
-        // UNLOAD
-        // ============================================================================
-        fpUnload = []() {
-            LOG_INFO("GSM", "Control2 Lua script unloaded");
-            };
-        break;
-
-    case SKILL_SETS:
-        LOG_INFO("GSM", "Skill sets state (Lua-scripted)");
-
-        // ============================================================================
-        // LOAD
-        // ============================================================================
-        fpLoad = []() {
-            LOG_INFO("GSM", "Loading SkillSets Lua script...");
-
-            auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/SkillSetsLevel.lua", g_loadAsEditorMode);
-            g_loadAsEditorMode = false;  // Reset flag after use
-
-            if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load SkillSets Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/SkillSetsLevel.lua exists");
-                next = GS_QUIT;
-            }
-            else {
-                LOG_INFO("GSM", "SkillSets Lua script loaded successfully");
-            }
-            };
-
-        // ============================================================================
-        // INITIALIZE
-        // ============================================================================
-        fpInitialize = []() {
-            LOG_INFO("GSM", "Skill sets page ready (Lua-scripted)");
-            };
-
-        // ============================================================================
-        // UPDATE
-        // ============================================================================
-        fpUpdate = []() {
-            // Get engine pointer
-            extern Framework::CoreEngine* engine;
-
-            // F9 Hot Reload Support
-            if (engine && engine->GetInputSystem()) {
-                auto* input = engine->GetInputSystem();
-                if (input->IsKeyPressed(Framework::KEY_F9)) {
-                    LOG_INFO("GSM", "F9 pressed - Hot reloading SkillSets...");
-                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
-                }
-            }
-
-            // Call Lua OnUpdate with FIXED_DT from shared constant
-            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
-                Framework::Time::FIXED_DT_F
-            );
-            };
-
-        // ============================================================================
-        // DRAW
-        // ============================================================================
-        fpDraw = []() {
-            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
-            // This prevents double-rendering (once to viewport, once to main window)
-            // No-op for Lua-based levels
-            };
-
-        // ============================================================================
-        // FREE
-        // ============================================================================
-        fpFree = []() {
-            LOG_INFO("GSM", "Cleaning up SkillSets Lua script...");
-
-            extern Framework::CoreEngine* engine;
-
-            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
-            Framework::LevelLoader::GetInstance().ResetLuaState();
-
-            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
-            if (engine) {
-                if (auto* em = engine->GetEntityManager()) {
-                    size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
-                    em->ClearAllEntities();
-                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
-                }
-
-                // Clear camera follow
-                if (auto* gfx = engine->GetGraphicsSystem()) {
-                    gfx->ClearFollowTarget();
-                }
-            }
-            };
-
-        // ============================================================================
-        // UNLOAD
-        // ============================================================================
-        fpUnload = []() {
-            LOG_INFO("GSM", "SkillSets Lua script unloaded");
-            };
-        break;
-
-    case WIN_SCREEN:
-        LOG_INFO("GSM", "Win screen state (Lua-scripted)");
-
-        // ============================================================================
-        // LOAD
-        // ============================================================================
-        fpLoad = []() {
-            LOG_INFO("GSM", "Loading WinLevel Lua script...");
-
-            auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/WinLevel.lua", g_loadAsEditorMode);
-            g_loadAsEditorMode = false;  // Reset flag after use
-
-            if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load WinLevel Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/WinLevel.lua exists");
-                next = GS_QUIT;
-            }
-            else {
-                LOG_INFO("GSM", "WinLevel Lua script loaded successfully");
-            }
-            };
-
-        // ============================================================================
-        // INITIALIZE
-        // ============================================================================
-        fpInitialize = []() {
-            LOG_INFO("GSM", "Win screen ready (Lua-scripted)");
-            };
-
-        // ============================================================================
-        // UPDATE
-        // ============================================================================
-        fpUpdate = []() {
-            // Get engine pointer
-            extern Framework::CoreEngine* engine;
-
-            // F9 Hot Reload Support
-            if (engine && engine->GetInputSystem()) {
-                auto* input = engine->GetInputSystem();
-                if (input->IsKeyPressed(Framework::KEY_F9)) {
-                    LOG_INFO("GSM", "F9 pressed - Hot reloading WinLevel...");
-                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
-                }
-            }
-
-            // Call Lua OnUpdate with FIXED_DT from shared constant
-            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
-                Framework::Time::FIXED_DT_F
-            );
-            };
-
-        // ============================================================================
-        // DRAW
-        // ============================================================================
-        fpDraw = []() {
-            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
-            // This prevents double-rendering (once to viewport, once to main window)
-            // No-op for Lua-based levels
-            };
-
-        // ============================================================================
-        // FREE
-        // ============================================================================
-        fpFree = []() {
-            LOG_INFO("GSM", "Cleaning up WinLevel Lua script...");
-
-            extern Framework::CoreEngine* engine;
-
-            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
-            Framework::LevelLoader::GetInstance().ResetLuaState();
-
-            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
-            if (engine) {
-                if (auto* em = engine->GetEntityManager()) {
-                    size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
-                    em->ClearAllEntities();
-                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
-                }
-
-                // Clear camera follow
-                if (auto* gfx = engine->GetGraphicsSystem()) {
-                    gfx->ClearFollowTarget();
-                }
-            }
-            };
-
-        // ============================================================================
-        // UNLOAD
-        // ============================================================================
-        fpUnload = []() {
-            LOG_INFO("GSM", "WinLevel Lua script unloaded");
-            };
-        break;
-
-    case LOSE_SCREEN:
-        LOG_INFO("GSM", "Lose screen state (Lua-scripted)");
-
-        // ============================================================================
-        // LOAD
-        // ============================================================================
-        fpLoad = []() {
-            LOG_INFO("GSM", "Loading LoseLevel Lua script...");
-
-            auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/LoseLevel.lua", g_loadAsEditorMode);
-            g_loadAsEditorMode = false;  // Reset flag after use
-
-            if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load LoseLevel Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/LoseLevel.lua exists");
-                next = GS_QUIT;
-            }
-            else {
-                LOG_INFO("GSM", "LoseLevel Lua script loaded successfully");
-            }
-            };
-
-        // ============================================================================
-        // INITIALIZE
-        // ============================================================================
-        fpInitialize = []() {
-            LOG_INFO("GSM", "Lose screen ready (Lua-scripted)");
-            };
-
-        // ============================================================================
-        // UPDATE
-        // ============================================================================
-        fpUpdate = []() {
-            // Get engine pointer
-            extern Framework::CoreEngine* engine;
-
-            // F9 Hot Reload Support
-            if (engine && engine->GetInputSystem()) {
-                auto* input = engine->GetInputSystem();
-                if (input->IsKeyPressed(Framework::KEY_F9)) {
-                    LOG_INFO("GSM", "F9 pressed - Hot reloading LoseLevel...");
-                    Framework::LevelLoader::GetInstance().ReloadCurrentLevel();
-                }
-            }
-
-            // Call Lua OnUpdate with FIXED_DT from shared constant
-            Framework::LevelLoader::GetInstance().UpdateCurrentLevel(
-                Framework::Time::FIXED_DT_F
-            );
-            };
-
-        // ============================================================================
-        // DRAW
-        // ============================================================================
-        fpDraw = []() {
-            // Drawing is now handled directly in Core.cpp via DrawCurrentLevel()
-            // This prevents double-rendering (once to viewport, once to main window)
-            // No-op for Lua-based levels
-            };
-
-        // ============================================================================
-        // FREE
-        // ============================================================================
-        fpFree = []() {
-            LOG_INFO("GSM", "Cleaning up LoseLevel Lua script...");
-
-            extern Framework::CoreEngine* engine;
-
-            // STEP 1: Reset Lua state FIRST (calls OnDestroy which may destroy entities)
-            Framework::LevelLoader::GetInstance().ResetLuaState();
-
-            // STEP 2: Clear all entities AFTER Lua cleanup (final cleanup)
-            if (engine) {
-                if (auto* em = engine->GetEntityManager()) {
-                    size_t count = em->GetAllEntities().size();
-                    LOG_INFO("GSM", "Final cleanup: Clearing %zu remaining entities...", count);
-                    em->ClearAllEntities();
-                    LOG_INFO("GSM", "All entities cleared. Remaining: %zu", em->GetAllEntities().size());
-                }
-
-                // Clear camera follow
-                if (auto* gfx = engine->GetGraphicsSystem()) {
-                    gfx->ClearFollowTarget();
-                }
-            }
-            };
-
-        // ============================================================================
-        // UNLOAD
-        // ============================================================================
-        fpUnload = []() {
-            LOG_INFO("GSM", "LoseLevel Lua script unloaded");
-            };
-        break;
-
     case LEVEL_END:
         LOG_INFO("GSM", "Main Menu state (Lua-scripted)");
 
@@ -1215,12 +662,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading MainMenu Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel(GetLevelScript(LEVEL_END), g_loadAsEditorMode);
+            bool success = loader.LoadLevel("assets/scripts/EndLevel.lua", g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
-                LOG_ERROR("GSM", "CRITICAL: Failed to load EndLevel Lua script!");
-                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(LEVEL_END));
+                LOG_ERROR("GSM", "CRITICAL: Failed to load MainMenu Lua script!");
+                LOG_ERROR("GSM", "Check: assets/scripts/EndLevel.lua exists");
                 next = GS_QUIT;
             }
             else {

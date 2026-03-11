@@ -287,9 +287,11 @@ function OnUpdate(dt)
     -- Party system turn management
     local currentTurn = GetCurrentTurn()
 
-    -- NOTE: Do NOT call ResetPartyTurn/OnEnemyTurnEnded here!
-    -- EnemyTurnManager already calls ResetPartyTurn when the last enemy finishes.
-    -- A second call on the next frame would reset hasActed and undo stun-skip (Groundshatter bug).
+    -- Reset party when enemy turn ends and player turn begins
+    if previousTurn == "Enemy" and currentTurn == "Player" then
+        Log("[Level3Clean] Enemy turn ended - resetting party for new player turn")
+        OnEnemyTurnEnded()
+    end
 
     -- Transition to enemy turn when all party members have acted
     if currentTurn == "Player" then
@@ -361,7 +363,7 @@ function OnDestroy()
     end
 
     -- Stop audio
-    StopMusic(0.5)
+    StopAllSounds()
     Log(" All audio stopped")
 
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
@@ -407,7 +409,8 @@ function InitializeAudio()
 
     if bgmSound then
         Log("Starting background music: " .. bgmSound.name)
-        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)        Log(" Background music started: " .. bgmSound.filepath)
+        --PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
+        Log(" Background music started: " .. bgmSound.filepath)
     else
         Log("WARNING: Background music 'igbgm' not found")
     end
@@ -603,33 +606,18 @@ function SetupEnemies()
 
     print("[SetupEnemies] Step 3: Configuring " .. enemyCount .. " enemies...")
 
-    -- Enemy type configs for unified EnemyGeneric.lua
-    local ENEMY_TYPE_CONFIGS = {
-        "knight_commander",
-        "knight",
-        "mage",
-        "tank",
-    }
-    local ENEMY_TYPE_NAMES = {
-        "Knight Commander", "Knight", "Mage", "Tank"
-    }
-
     -- Configure each enemy
     for i, enemyID in ipairs(enemies) do
-        local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
-        local configType = ENEMY_TYPE_CONFIGS[typeIndex]
-        local typeName = ENEMY_TYPE_NAMES[typeIndex]
-
-        print("[SetupEnemies]   === Configuring Enemy " .. i .. " [" .. typeName .. "] (Entity " .. enemyID .. ") ===")
+        print("[SetupEnemies]   === Configuring Enemy " .. i .. " (Entity " .. enemyID .. ") ===")
 
         -- Set target
         print("[SetupEnemies]     Calling SetEnemyTarget(" .. enemyID .. ", " .. playerID .. ")...")
         local targetSuccess = SetEnemyTarget(enemyID, playerID)
         print("[SetupEnemies]     SetEnemyTarget result: " .. tostring(targetSuccess))
 
-        -- Attach unified enemy script with config type passed as 3rd parameter
-        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", '" .. typeName .. "' config=" .. configType .. ")...")
-        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
+        -- Attach enemy script
+        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", 'EnemyScript.lua')...")
+        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
         print("[SetupEnemies]     AddScriptComponentToEntity result: " .. tostring(scriptSuccess))
 
         if targetSuccess and scriptSuccess then

@@ -616,10 +616,10 @@ namespace PrefabSerializer
         return e;
     }
 
-    bool ApplyPrefabToEntity(Framework::EntityManager& em,
-        Framework::Entity entity,
-        const std::string& prefabPath,
-        bool preservePosition)
+    bool ApplyPrefabToEntity(Framework::EntityManager& em, 
+                             Framework::Entity entity, 
+                             const std::string& prefabPath,
+                             bool preservePosition)
     {
         if (!entity.IsValid()) {
             std::cerr << "[PrefabSerializer] ApplyPrefabToEntity: Invalid entity\n";
@@ -663,11 +663,10 @@ namespace PrefabSerializer
                 em.AddComponent<Transform>(entity);
             }
             auto& c = em.GetComponent<Transform>(entity);
-
+            
             if (preservePosition) {
                 c.position = savedPosition;  // Keep original position
-            }
-            else {
+            } else {
                 c.position = { t["position"][0], t["position"][1] };
             }
             c.scale = { t["scale"][0], t["scale"][1] };
@@ -756,15 +755,15 @@ namespace PrefabSerializer
             audio.playOnStart = audioData.value("playOnStart", false);
         }
 
-        std::cout << "[PrefabSerializer] Applied prefab '" << prefabPath
-            << "' to entity " << entity.GetID() << "\n";
+        std::cout << "[PrefabSerializer] Applied prefab '" << prefabPath 
+                  << "' to entity " << entity.GetID() << "\n";
 
         return true;
     }
 
-    bool RevertToPrefab(Framework::EntityManager& em,
-        Framework::Entity entity,
-        const std::string& prefabPath)
+    bool RevertToPrefab(Framework::EntityManager& em, 
+                        Framework::Entity entity, 
+                        const std::string& prefabPath)
     {
         return ApplyPrefabToEntity(em, entity, prefabPath, true);
     }

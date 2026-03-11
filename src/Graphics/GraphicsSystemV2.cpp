@@ -667,25 +667,7 @@ namespace Framework {
             wireframeQMat->depthWrite = false;
         }
 
-        // Particle material (additive blend for glowing particles)
-        particleMaterial = resourceManager.CreateMaterial("particle_mat", defaultShader);
-        auto* particleMat = resourceManager.GetMaterial(particleMaterial);
-        if (particleMat) {
-            particleMat->blendMode = BlendMode::Additive;
-            particleMat->depthTest = false;
-            particleMat->depthWrite = false;
-        }
-
-        // Particle material with alpha blend (for smoke, dust, etc.)
-        particleAlphaMaterial = resourceManager.CreateMaterial("particle_alpha_mat", defaultShader);
-        auto* particleAlphaMat = resourceManager.GetMaterial(particleAlphaMaterial);
-        if (particleAlphaMat) {
-            particleAlphaMat->blendMode = BlendMode::AlphaBlend;
-            particleAlphaMat->depthTest = false;
-            particleAlphaMat->depthWrite = false;
-        }
-
-        std::cout << "Created " << 7 << " default materials\n";
+        std::cout << "Created " << 5 << " default materials\n";
     }
 
     // SetupBackground: Load texture, assign quad mesh, and create a background material.
@@ -1083,56 +1065,6 @@ namespace Framework {
                 mat->albedoTexture = anim.spriteSheet;
 
             renderQueue.Submit(cmd);
-        }
-
-        // ---------- PARTICLE EMITTER PASS ----------
-        // Each alive particle becomes its own RenderCommand (quad)
-        for (Entity e : entityManager->GetAllEntities()) {
-            if (!entityManager->HasComponent<ParticleEmitter>(e)) continue;
-            if (!entityManager->HasComponent<Transform>(e)) continue;
-
-            auto& emitter = entityManager->GetComponent<ParticleEmitter>(e);
-            auto& emitterTransform = entityManager->GetComponent<Transform>(e);
-
-            // Choose material: user-specified, or default based on blend mode
-            MaterialHandle matHandle = emitter.material;
-            if (!matHandle.IsValid()) {
-                matHandle = (emitter.blendMode == BlendMode::Additive)
-                    ? particleMaterial
-                    : particleAlphaMaterial;
-            }
-
-            for (const auto& p : emitter.particles) {
-                if (!p.alive) continue;
-
-                RenderCommand cmd;
-                cmd.mesh = quadMesh;
-                cmd.material = matHandle;
-                cmd.texture = emitter.texture;
-                cmd.layer = emitter.layer;
-                cmd.tint = p.color;
-                cmd.visible = true;
-
-                // Local-space particles are offset by the emitter's current transform
-                glm::vec2 worldPos = p.position;
-                if (!emitter.worldSpace) {
-                    worldPos += glm::vec2(emitterTransform.position.x, emitterTransform.position.y);
-                }
-
-                glm::mat4 model(1.0f);
-                float zDepth = emitter.layer * 0.01f;
-                model = glm::translate(model, { worldPos.x, worldPos.y, zDepth });
-                model = glm::rotate(model, p.rotation, { 0, 0, 1 });
-                model = glm::scale(model, { p.size, p.size, 1.0f });
-                cmd.modelMatrix = model;
-
-                cmd.depth = glm::distance(
-                    glm::vec3(worldPos.x, worldPos.y, zDepth),
-                    mainCamera.GetPosition()
-                );
-
-                renderQueue.Submit(cmd);
-            }
         }
     }
 

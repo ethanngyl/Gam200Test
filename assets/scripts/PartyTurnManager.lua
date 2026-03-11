@@ -78,40 +78,6 @@ CharacterConfig = {
 }
 
 -- ============================================================================
--- PROJECTILE DAMAGE (Soul Rend, Soul Merge - called from C++ ProjectileSystem)
--- ============================================================================
---[[
-    ApplyProjectileDamage(enemyID, damage, attackerID)
-    Called when a player projectile hits an enemy. Uses full damage pipeline
-    (DamageEntity) and triggers Soul Rend heal + Soul Merge kill heal.
-]]
-function ApplyProjectileDamage(enemyID, damage, attackerID)
-    local hadSoulRend = HasStatusEffect and HasStatusEffect(enemyID, "soulRend")
-    local success = DamageEntity(enemyID, damage, attackerID or 0)
-    if success and hadSoulRend then
-        local allPlayers = GetAllPlayers()
-        if allPlayers then
-            for _, pid in ipairs(allPlayers) do
-                local hp, maxHP = GetEntityHP(pid)
-                if hp and maxHP and hp > 0 and hp < maxHP then
-                    SetEntityHP(pid, math.min(hp + 1, maxHP))
-                end
-            end
-        end
-    end
-    if success and attackerID and attackerID > 0 and HasStatusEffect and HasStatusEffect(attackerID, "soulMergeBuff") then
-        local hp = GetEntityHP(enemyID)
-        if hp == nil or hp <= 0 then
-            local ahp, amax = GetEntityHP(attackerID)
-            if ahp and amax and ahp > 0 and ahp < amax then
-                SetEntityHP(attackerID, math.min(ahp + 1, amax))
-            end
-        end
-    end
-    return success
-end
-
--- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
@@ -328,16 +294,6 @@ function NextCharacterTurn()
     -- Mark current character as having acted
     PartyMembers[ActiveCharacterIndex].hasActed = true
 
-    -- Dark Omens Triggered: kill this character at end of their turn
-    local currentEntity = PartyMembers[ActiveCharacterIndex].entityID
-    if HasStatusEffect and HasStatusEffect(currentEntity, "darkOmensTriggered") then
-        print(string.format("[PartyTurnManager] %s has DARK OMENS TRIGGERED - dying at end of turn!",
-            PartyMembers[ActiveCharacterIndex].name))
-        RemoveStatusEffect(currentEntity, "darkOmensTriggered")
-        SetEntityHP(currentEntity, 0)
-        DamageEntity(currentEntity, 0)  -- trigger death cleanup
-    end
-
     print(string.format("[PartyTurnManager] %s marked as ACTED",
         PartyMembers[ActiveCharacterIndex].name))
 
@@ -350,40 +306,27 @@ function NextCharacterTurn()
     print(string.format("[PartyTurnManager DEBUG] AFTER increment: ActiveCharacterIndex = %d, #PartyMembers = %d",
         ActiveCharacterIndex, #PartyMembers))
 
-    -- Skip dead, Soul Merge, and already-acted (e.g. stunned) characters
+    -- Skip dead characters
     local skippedDead = 0
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
-        -- Skip dead characters
-        if not currentHP or currentHP <= 0 then
+        if currentHP and currentHP > 0 then
+            -- This character is alive, use them
+            break
+        else
+            -- This character is dead, skip to next
             print(string.format("[PartyTurnManager] %s is DEAD (HP: %s), skipping...",
                 PartyMembers[ActiveCharacterIndex].name, tostring(currentHP)))
-            PartyMembers[ActiveCharacterIndex].hasActed = true
+            PartyMembers[ActiveCharacterIndex].hasActed = true  -- Mark as acted so they don't block
             ActiveCharacterIndex = ActiveCharacterIndex + 1
             skippedDead = skippedDead + 1
-        -- Skip Soul Merge sacrificed characters (turn permanently skipped)
-        elseif HasStatusEffect and HasStatusEffect(checkEntity, "soulMerge") then
-            print(string.format("[PartyTurnManager] %s has SOUL MERGE - turn skipped",
-                PartyMembers[ActiveCharacterIndex].name))
-            PartyMembers[ActiveCharacterIndex].hasActed = true
-            ActiveCharacterIndex = ActiveCharacterIndex + 1
-            skippedDead = skippedDead + 1
-        -- Skip characters already marked as acted (e.g. stunned from Groundshatter)
-        elseif PartyMembers[ActiveCharacterIndex].hasActed then
-            print(string.format("[PartyTurnManager] %s already acted (stunned?) - skipping",
-                PartyMembers[ActiveCharacterIndex].name))
-            ActiveCharacterIndex = ActiveCharacterIndex + 1
-            skippedDead = skippedDead + 1
-        else
-            -- This character is alive and active, use them
-            break
         end
     end
 
     if skippedDead > 0 then
-        print(string.format("[PartyTurnManager] Skipped %d dead/merged character(s)", skippedDead))
+        print(string.format("[PartyTurnManager] Skipped %d dead character(s)", skippedDead))
     end
 
     print(string.format("[PartyTurnManager DEBUG] Check: %d > %d = %s",
@@ -413,28 +356,12 @@ function NextCharacterTurn()
     -- Notify C++ about active character change
     SetActiveCharacter(newActiveEntity)
 
-    -- Check if stunned (stun skips the entire turn)
-    -- Note: stun is already handled in ResetPartyTurn (marks hasActed=true),
-    -- but check here as a safety net for mid-round stun effects
-    local isStunned = HasStatusEffect and HasStatusEffect(newActiveEntity, "stun")
-
-    -- If stunned, skip this character's turn entirely
-    if isStunned then
-        print(string.format("[PartyTurnManager] %s is STUNNED - skipping turn!",
-            PartyMembers[ActiveCharacterIndex].name))
-        PartyMembers[ActiveCharacterIndex].hasActed = true
-        NextCharacterTurn()
-        return
-    end
-
-    -- AP refill, status effect decrementing, and Soul Merge Buff bonuses are all
-    -- handled by ResetPartyTurn at the start of each round for ALL characters.
-    -- Do NOT refill AP or apply bonuses here, as it would override the overload
-    -- AP-skip and double-apply Soul Merge Buff bonuses from ResetPartyTurn.
-
+    -- Refill AP for the new active character
+    RefillEntityAP(newActiveEntity)
+    RefillEntityAttackAP(newActiveEntity)
     local currentAP, maxAP = GetEntityAP(newActiveEntity)
     local currentAttackAP, maxAttackAP = GetEntityAttackAP(newActiveEntity)
-    print(string.format("[PartyTurnManager] %s AP: %d/%d, AttackAP: %d/%d",
+    print(string.format("[PartyTurnManager] %s AP refilled to %d/%d, AttackAP refilled to %d/%d",
         PartyMembers[ActiveCharacterIndex].name,
         currentAP,
         maxAP,
@@ -538,13 +465,6 @@ function EndPartyTurn()
             for i, enemyID in ipairs(enemies) do
                 print("[PartyTurnManager]   Refilling AP for Enemy " .. enemyID .. "...")
                 RefillEntityAP(enemyID)
-
-                -- Mana Drain: target starts with 3 less AP next turn
-                if HasStatusEffect and HasStatusEffect(enemyID, "manaDrain") then
-                    ConsumeEnemyAP(enemyID, 3)
-                    print("[PartyTurnManager]   Enemy " .. enemyID .. " has MANA DRAIN - AP reduced by 3")
-                end
-
                 local currentAP, maxAP = GetEntityAP(enemyID)
                 print("[PartyTurnManager]   Enemy " .. enemyID .. " AP: " .. tostring(currentAP) .. "/" .. tostring(maxAP))
             end
@@ -601,86 +521,26 @@ function ResetPartyTurn()
     PartyTurnComplete = false
 
     -- Reset hasActed flags and refill AP for all party members
-    -- ORDER: Check flags -> Refill AP/MP -> Decrement status effects
-    -- (Status effects trigger AFTER AP/MP refill)
     for i = 1, #PartyMembers do
         PartyMembers[i].hasActed = false
-        local eid = PartyMembers[i].entityID
-
-        -- Check for stun and Overload BEFORE refilling or decrementing
-        local isStunned = HasStatusEffect and HasStatusEffect(eid, "stun")
-        local hasOverload = HasStatusEffect and HasStatusEffect(eid, "overload")
-
-        -- If stunned, mark as acted so their turn is skipped
-        if isStunned then
-            PartyMembers[i].hasActed = true
-            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s is STUNNED - turn skipped!",
-                PartyMembers[i].name))
-        end
-
-        -- 1) Refill AP first (skip if overloaded)
-        if hasOverload then
-            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has OVERLOAD - AP refill skipped",
-                PartyMembers[i].name))
-        else
-            RefillEntityAP(eid)
-            RefillEntityAttackAP(eid)
-        end
-
-        -- Soul Merge Buff: grant +1 movement AP and +1 attack AP
-        if HasStatusEffect and HasStatusEffect(eid, "soulMergeBuff") then
-            ConsumeEntityAP(eid, -1)
-            ConsumeEntityAttackAP(eid, -1)
-            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has SOUL MERGE BUFF - +1 AP bonus",
-                PartyMembers[i].name))
-        end
-
-        -- Bloody Warcry: convert pending to active at round start
-        -- (pending is applied during the casting round to prevent same-round consumption)
-        if HasStatusEffect and HasStatusEffect(eid, "bloodyWarcryPending") then
-            RemoveStatusEffect(eid, "bloodyWarcryPending")
-            ApplyStatusEffect(eid, "bloodyWarcry", -1, 0)
-            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s BLOODY WARCRY activated for this round",
-                PartyMembers[i].name))
-        end
-
-        -- 2) Decrement status effects AFTER AP refill
-        if DecrementStatusEffects then
-            DecrementStatusEffects(eid)
-        end
+        RefillEntityAP(PartyMembers[i].entityID)
+        RefillEntityAttackAP(PartyMembers[i].entityID)
     end
 
-    -- 3) Decrement status effects for ALL enemies (centralized, once per turn cycle)
-    -- This ensures debuffs with duration 2 last "current turn + next turn"
-    if DecrementStatusEffects then
-        local enemies = GetAllEnemies()
-        if enemies then
-            for _, enemyID in ipairs(enemies) do
-                DecrementStatusEffects(enemyID)
-            end
-        end
-    end
-
-    -- Find first character who is alive and not Soul Merged (may be stunned - we'll auto-skip like pressing P)
+    -- Skip dead characters when resetting turn
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
-        if not currentHP or currentHP <= 0 then
-            -- This character is dead, skip
+        if currentHP and currentHP > 0 then
+            -- This character is alive, use them
+            break
+        else
+            -- This character is dead, skip to next
             Log(string.format("[PartyTurnManager] ResetPartyTurn: %s is DEAD (HP: %s), skipping...",
                 PartyMembers[ActiveCharacterIndex].name, tostring(currentHP)))
-            PartyMembers[ActiveCharacterIndex].hasActed = true
+            PartyMembers[ActiveCharacterIndex].hasActed = true  -- Mark as acted
             ActiveCharacterIndex = ActiveCharacterIndex + 1
-        elseif HasStatusEffect and HasStatusEffect(checkEntity, "soulMerge") then
-            -- This character is Soul Merged, skip permanently
-            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has SOUL MERGE - skipping",
-                PartyMembers[ActiveCharacterIndex].name))
-            PartyMembers[ActiveCharacterIndex].hasActed = true
-            ActiveCharacterIndex = ActiveCharacterIndex + 1
-        else
-            -- This character is alive (may be stunned - hasActed=true, we'll auto EndCharacterTurn below)
-            break
         end
     end
 
@@ -691,16 +551,8 @@ function ResetPartyTurn()
         return
     end
 
-    -- Notify C++ about active character (may be stunned - we enter their turn then auto-skip like pressing P)
+    -- Notify C++ about active character reset (now guaranteed to be alive)
     SetActiveCharacter(PartyMembers[ActiveCharacterIndex].entityID)
-
-    -- If this character is stunned, auto-skip their turn (simulate pressing P to end turn)
-    if PartyMembers[ActiveCharacterIndex].hasActed then
-        Log(string.format("[PartyTurnManager] %s is STUNNED - auto-skipping turn (like pressing P)",
-            PartyMembers[ActiveCharacterIndex].name))
-        EndCharacterTurn()
-        return  -- EndCharacterTurn already advanced to next character
-    end
 
     -- Restore attack AP crystal visuals for the active character
     if UIManager and UIManager.GetComponent then
@@ -857,21 +709,8 @@ end
 -- GLOBAL EXPORTS
 -- ============================================================================
 
---[[
-    ApplyGroundshatterStun(entityID)
-    Called by PlayerScript (via CallLevelFunction) when casting Groundshatter.
-    Applies stun from level Lua state so HasStatusEffect sees it in ResetPartyTurn.
-]]--
-function ApplyGroundshatterStun(entityID)
-    if ApplyStatusEffect and entityID then
-        ApplyStatusEffect(entityID, "stun", 1, entityID)
-        Log(string.format("[PartyTurnManager] ApplyGroundshatterStun: entity %s stunned for next turn", tostring(entityID)))
-    end
-end
-
 -- Export functions to global scope for use in other scripts
 _G.InitializeParty = InitializeParty
-_G.ApplyGroundshatterStun = ApplyGroundshatterStun
 _G.GetActiveCharacter = GetActiveCharacter
 _G.GetActiveCharacterName = GetActiveCharacterName
 _G.IsActiveCharacter = IsActiveCharacter

@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           Input.cpp (FIXED VERSION)
  Author:         Josh Ong (Modified by GE YONGQI)
@@ -85,7 +85,6 @@ namespace Framework
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
         UpdateKeyState(KEY_P, GetAsyncKeyState(KEY_P));
-        UpdateKeyState(KEY_TAB, GetAsyncKeyState(KEY_TAB));
 
         UpdateKeyState(KEY_M, GetAsyncKeyState(KEY_M));
         UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));

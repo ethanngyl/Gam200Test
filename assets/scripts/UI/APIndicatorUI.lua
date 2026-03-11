@@ -420,11 +420,6 @@ function APIndicatorUI:ForceUpdate()
     print("[APIndicatorUI] ForceUpdate complete - now showing " .. currentAP .. " AP")
 end
 
--- Return the currently displayed AP and max AP
-function APIndicatorUI:GetDisplayedAP()
-    return self.lastKnownAP or 0, self.maxAP or 0
-end
-
 -- Alias for consistency with AttackAPIndicatorUI
 function APIndicatorUI:RestoreAllAP()
     self:ForceUpdate()

@@ -53,9 +53,6 @@
 #include "RenderComponents.h"
 #include "GraphicsSystemV2.h"
 
-//Particles
-#include "Graphics/ParticleSystem.h"
-
 //Animations
 #include "AnimationSystem.h"
 

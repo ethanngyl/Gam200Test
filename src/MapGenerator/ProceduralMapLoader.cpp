@@ -147,27 +147,13 @@ namespace Framework {
                     blocked = true;
                 }
                 else {
-                    // Check if this tile is inside the boss arena
-                    bool inArena = false;
-                    if (map.hasArena) {
-                        inArena = (x >= map.arenaMin.x && x < map.arenaMax.x &&
-                            y >= map.arenaMin.y && y < map.arenaMax.y);
-                    }
-
-                    if (inArena) {
-                        // Arena tiles: always dark grass, no variation
-                        isDarkGrass = true;
-                        texture = grassDark;
-                        darkGrassCount++;
-                    }
-                    else {
-                        // Normal tiles: random dark/light grass
-                        isDarkGrass = (grassTypeDist(rng) == 0);
-                        texture = isDarkGrass ? grassDark : grassLight;
-                        if (isDarkGrass) darkGrassCount++;
-                        else lightGrassCount++;
-                    }
+                    // Randomly choose dark or light grass (50/50)
+                    isDarkGrass = (grassTypeDist(rng) == 0);
+                    texture = isDarkGrass ? grassDark : grassLight;
                     blocked = false;
+
+                    if (isDarkGrass) darkGrassCount++;
+                    else lightGrassCount++;
                 }
 
                 // Spawn the base tile
@@ -200,37 +186,28 @@ namespace Framework {
                 gridTile.occupant = INVALID_ENTITY;
 
                 // ========================================
-                // DECORATIVE ROCKS (only on floor tiles, NOT in arena)
+                // DECORATIVE ROCKS (only on floor tiles)
                 // ========================================
                 if (type == MapGen::TileType::FLOOR) {
-                    // Skip rocks in the boss arena (keep it clean)
-                    bool inArena = false;
-                    if (map.hasArena) {
-                        inArena = (x >= map.arenaMin.x && x < map.arenaMax.x &&
-                            y >= map.arenaMin.y && y < map.arenaMax.y);
-                    }
+                    int roll = rockChanceDist(rng);
 
-                    if (!inArena) {
-                        int roll = rockChanceDist(rng);
+                    if (roll < ROCK_CHANCE_PERCENT) {
+                        // Pick a random rock type (1-3)
+                        int rockType = rockTypeDist(rng) - 1;  // 0, 1, or 2 for array index
 
-                        if (roll < ROCK_CHANCE_PERCENT) {
-                            // Pick a random rock type (1-3)
-                            int rockType = rockTypeDist(rng) - 1;  // 0, 1, or 2 for array index
+                        // Match rock variant to grass type (dark rocks on dark grass, etc.)
+                        std::string rockTexture = isDarkGrass ? rocksDark[rockType] : rocksLight[rockType];
 
-                            // Match rock variant to grass type (dark rocks on dark grass, etc.)
-                            std::string rockTexture = isDarkGrass ? rocksDark[rockType] : rocksLight[rockType];
+                        // Spawn rock decoration at same position
+                        Entity rockEntity = spawner->SpawnSprite(rockTexture, worldPos, tileScale);
 
-                            // Spawn rock decoration at same position
-                            Entity rockEntity = spawner->SpawnSprite(rockTexture, worldPos, tileScale);
-
-                            // Set rock to Props layer (layer 1) - above Ground, below Enemies/Player
-                            if (em->HasComponent<MeshRenderer>(rockEntity)) {
-                                auto& rockMr = em->GetComponent<MeshRenderer>(rockEntity);
-                                rockMr.layer = RenderLayers::Props;
-                            }
-
-                            rockCount++;
+                        // Set rock to Props layer (layer 1) - above Ground, below Enemies/Player
+                        if (em->HasComponent<MeshRenderer>(rockEntity)) {
+                            auto& rockMr = em->GetComponent<MeshRenderer>(rockEntity);
+                            rockMr.layer = RenderLayers::Props;
                         }
+
+                        rockCount++;
                     }
                 }
             }

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          UISystem.cpp
  Author:        GE YONGQI
@@ -528,67 +528,6 @@ namespace Framework {
         */
 
         return Vector2D(worldPos.x, worldPos.y);
-    }
-
-    Vector2D UISystem::WorldToScreen(float worldX, float worldY, bool useViewportCoords)
-    {
-        if (!engine) return Vector2D(0, 0);
-
-        auto graphics = engine->GetGraphicsSystem();
-        auto windowSystem = engine->GetWindowSystem();
-
-        if (!graphics || !windowSystem) return Vector2D(0, 0);
-
-        GLFWwindow* window = windowSystem->GetWindow();
-        if (!window) return Vector2D(0, 0);
-
-        int fbWidth, fbHeight;
-        int windowWidth, windowHeight;
-
-        if (useViewportCoords) {
-            auto imguiSystem = engine->GetImGuiSystem();
-            if (imguiSystem && imguiSystem->IsRenderingToViewport()) {
-                ImVec2 viewportSize = imguiSystem->GetViewportSize();
-                fbWidth = static_cast<int>(viewportSize.x);
-                fbHeight = static_cast<int>(viewportSize.y);
-                windowWidth = fbWidth;
-                windowHeight = fbHeight;
-            }
-            else {
-                glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-                glfwGetWindowSize(window, &windowWidth, &windowHeight);
-            }
-        }
-        else {
-            glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
-            glfwGetWindowSize(window, &windowWidth, &windowHeight);
-        }
-
-        if (fbWidth <= 0 || fbHeight <= 0) {
-            return Vector2D(0, 0);
-        }
-
-        glm::mat4 viewProj;
-        if (engine->IsPlaying()) {
-            viewProj = graphics->GetCamera().GetViewProjectionMatrix();
-        }
-        else {
-            viewProj = graphics->GetEditorCamera().GetViewProjectionMatrix();
-        }
-
-        glm::vec4 clipPos = viewProj * glm::vec4(worldX, worldY, 0.0f, 1.0f);
-        if (clipPos.w == 0.0f) {
-            return Vector2D(0, 0);
-        }
-
-        float ndcX = clipPos.x / clipPos.w;
-        float ndcY = clipPos.y / clipPos.w;
-
-        // Convert NDC (-1..1) to framebuffer coordinates (origin bottom-left)
-        float fbX = (ndcX + 1.0f) * 0.5f * static_cast<float>(fbWidth);
-        float fbY = (ndcY + 1.0f) * 0.5f * static_cast<float>(fbHeight);
-
-        return Vector2D(fbX, fbY);
     }
 
     // ========================================================================

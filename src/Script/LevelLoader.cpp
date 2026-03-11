@@ -62,8 +62,6 @@ Technology is prohibited.
 #include "GameStateList.h"
 #include "Pause/GlobalPauseManager.h"
 #include "Component.h"     // CircleCollider, AP components
-#include "ECS/TagHelper.h" // FindFirstByTag, FindAllByTag
-#include "Grid/GridECS.h"  // WorldToTile, SetOccupant for ProcessDeferredDestructions
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -212,20 +210,19 @@ namespace Framework {
         // 1. Fresh load from Open Level menu - editor mode ON, simulation OFF
         // 2. Level transition while playing - editor mode ON, simulation ON (preserve playing state)
         extern bool g_preservePlayingState;
-
+        
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-
+            
             // If game was playing when transitioning, keep it playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Preserving playing state for level transition");
-            }
-            else {
+            } else {
                 coreEngine->SetPlaying(false);
             }
-
+            
             GlobalPause::SetPaused(false);
             // Enable ImGui when loading in editor mode
             if (coreEngine->GetImGuiSystem()) {
@@ -248,15 +245,14 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-
+            
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
-            }
-            else {
+            } else {
                 coreEngine->SetPlaying(false);
             }
-
+            
             GlobalPause::SetPaused(false);
             // Ensure ImGui stays enabled
             if (coreEngine->GetImGuiSystem()) {
@@ -292,23 +288,22 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-
+            
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Editor mode with playing state preserved");
-            }
-            else {
+            } else {
                 coreEngine->SetPlaying(false);
                 LOG_INFO("LevelLoader", "Editor mode enabled - simulation stopped");
             }
-
+            
             GlobalPause::SetPaused(false);
             // Final ensure ImGui is enabled after OnInit
             if (coreEngine->GetImGuiSystem()) {
                 coreEngine->GetImGuiSystem()->Enable();
             }
-
+            
             // Reset the preserve playing state flag after use
             g_preservePlayingState = false;
         }
@@ -342,7 +337,6 @@ namespace Framework {
             }
         }
 
-        deferredEntitiesToDestroy.clear();
         levelLoaded = false;
         currentLevelPath.clear();
 
@@ -368,45 +362,8 @@ namespace Framework {
     // LIFECYCLE CALLS
     // ========================================================================
 
-    void LevelLoader::DeferEntityDestruction(uint32_t entityID) {
-        deferredEntitiesToDestroy.push_back(entityID);
-    }
-
-    void LevelLoader::ProcessDeferredDestructions() {
-        if (!coreEngine) return;
-        auto* em = coreEngine->GetEntityManager();
-        if (!em) return;
-
-        for (uint32_t id : deferredEntitiesToDestroy) {
-            Entity entity(id);
-            if (em->HasComponent<TagComponent>(entity) &&
-                em->GetComponent<TagComponent>(entity).tag == "Enemy" &&
-                L && HasLuaFunction("SyncEnemyTurnBeforeEntityDestroyed")) {
-                lua_getglobal(L, "SyncEnemyTurnBeforeEntityDestroyed");
-                lua_pushinteger(L, static_cast<lua_Integer>(id));
-                if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
-                    const char* err = lua_tostring(L, -1);
-                    LOG_WARN("LevelLoader", "SyncEnemyTurnBeforeEntityDestroyed error: %s", err ? err : "unknown");
-                    lua_pop(L, 1);
-                }
-            }
-            if (em->HasComponent<Transform>(entity)) {
-                auto& transform = em->GetComponent<Transform>(entity);
-                auto tileOpt = Framework::WorldToTile(transform.position);
-                if (tileOpt.has_value()) {
-                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
-                }
-            }
-            em->DestroyEntity(entity);
-        }
-        deferredEntitiesToDestroy.clear();
-    }
-
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
-
-        // Process entities queued for destruction (avoids crash when Parry/Knight Oath kills caller)
-        ProcessDeferredDestructions();
 
         // Update tile tints (restore expired tints)
         UpdateTileTints();
@@ -466,66 +423,6 @@ namespace Framework {
         return true;
     }
 
-    bool LevelLoader::ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID) {
-        if (!levelLoaded || !L) return false;
-
-        lua_getglobal(L, "ApplyProjectileDamage");
-        if (!lua_isfunction(L, -1)) {
-            lua_pop(L, 1);
-            lua_getglobal(L, "DamageEntity");
-            if (!lua_isfunction(L, -1)) {
-                lua_pop(L, 1);
-                return false;
-            }
-            lua_pushinteger(L, static_cast<lua_Integer>(enemyID));
-            lua_pushinteger(L, static_cast<lua_Integer>(damage));
-            lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
-            int result = lua_pcall(L, 3, 1, 0);
-            bool success = false;
-            if (result == LUA_OK && lua_isboolean(L, -1)) {
-                success = lua_toboolean(L, -1) != 0;
-            }
-            lua_pop(L, 1);
-            return success;
-        }
-        lua_pushinteger(L, static_cast<lua_Integer>(enemyID));
-        lua_pushinteger(L, static_cast<lua_Integer>(damage));
-        lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
-        int result = lua_pcall(L, 3, 1, 0);
-        bool success = false;
-        if (result == LUA_OK && lua_isboolean(L, -1)) {
-            success = lua_toboolean(L, -1) != 0;
-        } else if (result != LUA_OK) {
-            const char* err = lua_tostring(L, -1);
-            LOG_ERROR("LevelLoader", "ApplyProjectileDamage error: %s", err ? err : "unknown");
-        }
-        lua_pop(L, 1);
-        return success;
-    }
-
-    bool LevelLoader::ApplyDamageToEntity(uint32_t targetID, int damage, uint32_t attackerID) {
-        if (!levelLoaded || !L) return false;
-
-        lua_getglobal(L, "DamageEntity");
-        if (!lua_isfunction(L, -1)) {
-            lua_pop(L, 1);
-            return false;
-        }
-        lua_pushinteger(L, static_cast<lua_Integer>(targetID));
-        lua_pushinteger(L, static_cast<lua_Integer>(damage));
-        lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
-        int result = lua_pcall(L, 3, 1, 0);
-        bool success = false;
-        if (result == LUA_OK && lua_isboolean(L, -1)) {
-            success = lua_toboolean(L, -1) != 0;
-        } else if (result != LUA_OK) {
-            const char* err = lua_tostring(L, -1);
-            LOG_ERROR("LevelLoader", "DamageEntity error: %s", err ? err : "unknown");
-        }
-        lua_pop(L, 1);
-        return success;
-    }
-
     LevelLoader* LevelLoader::GetLevelLoader(lua_State* L) {
         lua_getglobal(L, "__level_loader_ptr");
         LevelLoader* loader = static_cast<LevelLoader*>(lua_touserdata(L, -1));
@@ -566,8 +463,6 @@ namespace Framework {
 
         // Audio
         lua_register(L, "PlaySound", Lua_PlaySound);
-        lua_register(L, "PlayMusic", Lua_PlayMusic);
-        lua_register(L, "StopMusic", Lua_StopMusic);
         lua_register(L, "StopSound", Lua_StopSound);
         lua_register(L, "StopAllSounds", Lua_StopAllSounds);
         lua_register(L, "UpdateAudio", Lua_UpdateAudio);
@@ -580,7 +475,6 @@ namespace Framework {
         lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
         lua_register(L, "DrawButtonText", Lua_DrawButtonText);
         lua_register(L, "DrawText", Lua_DrawText);
-        lua_register(L, "WorldToScreen", Lua_WorldToScreen);
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
@@ -601,11 +495,9 @@ namespace Framework {
         lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
-        lua_register(L, "SetScale", Lua_SetScale);
         lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
         lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
         lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
-        lua_register(L, "SetSpriteUVRect", Lua_SetSpriteUVRect);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
@@ -649,7 +541,6 @@ namespace Framework {
         lua_register(L, "SetAnimationDirection", Lua_SetAnimationDirection);
         lua_register(L, "SetAnimationFlipX", Lua_SetAnimationFlipX);
         lua_register(L, "SetAnimationPlaying", Lua_SetAnimationPlaying);
-        lua_register(L, "SetAnimationPrefix", Lua_SetAnimationPrefix);
         lua_register(L, "SetAnimationLoop", Lua_SetAnimationLoop);
         lua_register(L, "SetAnimationFrameRange", Lua_SetAnimationFrameRange);
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
@@ -674,7 +565,6 @@ namespace Framework {
         lua_register(L, "GetPlayerGridPosition", Lua_GetPlayerGridPosition);
         lua_register(L, "IsValidGridPosition", Lua_IsValidGridPosition);
         lua_register(L, "IsWalkableTile", Lua_IsWalkableTile);
-        lua_register(L, "IsTileWall", Lua_IsTileWall);
         lua_register(L, "MovePlayerToTile", Lua_MovePlayerToTile);
         lua_register(L, "SetGridMovementEnabled", Lua_SetGridMovementEnabled);
         lua_register(L, "ShowTileBorder", Lua_ShowTileBorder);
@@ -684,7 +574,6 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", Lua_EndEnemyTurn);
-        lua_register(L, "CallLevelFunction", Lua_CallLevelFunction);
         lua_register(L, "SetPlayerFlipX", Lua_SetPlayerFlipX);
         lua_register(L, "HasChestAtTile", Lua_HasChestAtTile);
         lua_register(L, "CollectChest", Lua_CollectChest);
@@ -698,8 +587,6 @@ namespace Framework {
         lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", Lua_DamageEntity);
-        lua_register(L, "GetDamageModifier", Lua_GetDamageModifier);
-        lua_register(L, "SetDamageModifier", Lua_SetDamageModifier);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
         // Tile Occupancy API
@@ -709,13 +596,11 @@ namespace Framework {
 
         // Grid Conversion API
         lua_register(L, "TileToWorld", Lua_TileToWorld);
-        lua_register(L, "ScreenToTile", Lua_ScreenToTile);
 
         // Entity-specific APIs (proper naming)
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
-        lua_register(L, "SetEntityMaxAP", Lua_SetEntityMaxAP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
         lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
@@ -743,26 +628,11 @@ namespace Framework {
 
         // Entity Spawning API
         lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
-        lua_register(L, "RemoveMovementComponent", Lua_RemoveMovementComponent);
-        lua_register(L, "InitializeTurnSystem", Lua_InitializeTurnSystem);
         lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);
         lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
         lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
-
-        // Status Effect API
-        lua_register(L, "ApplyStatusEffect", Lua_ApplyStatusEffect);
-        lua_register(L, "HasStatusEffect", Lua_HasStatusEffect);
-        lua_register(L, "RemoveStatusEffect", Lua_RemoveStatusEffect);
-        lua_register(L, "DecrementStatusEffects", Lua_DecrementStatusEffects);
-        lua_register(L, "GetStatusEffectSource", Lua_GetStatusEffectSource);
-
-        // Unified Skill Database API
-        lua_register(L, "GetSkillByID", Lua_GetSkillByID);
-        lua_register(L, "GetClassSkills", Lua_GetClassSkills);
-        lua_register(L, "GetSkillCount", Lua_GetSkillCount);
-
-        // Particle Emitter API
-        lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
+        lua_register(L, "SetEnemyConfig", Lua_SetEnemyConfig);
+        lua_register(L, "GetEnemyConfig", Lua_GetEnemyConfig);
 
         LOG_INFO("LevelLoader", "API registered");
     }
@@ -883,24 +753,6 @@ namespace Framework {
         if (strcmp(stateName, "TUTORIAL") == 0) {
             next = TUTORIAL;
         }
-        else if (strcmp(stateName, "CONTROL") == 0) {
-            next = CONTROL;
-        }
-        else if (strcmp(stateName, "CONTROL2") == 0) {
-            next = CONTROL2;
-        }
-        else if (strcmp(stateName, "SETTINGS") == 0) {
-            next = settingsMenu;
-        }
-        else if (strcmp(stateName, "SKILL_SETS") == 0) {
-            next = SKILL_SETS;
-        }
-        else if (strcmp(stateName, "WIN_SCREEN") == 0) {
-            next = WIN_SCREEN;
-        }
-        else if (strcmp(stateName, "LOSE_SCREEN") == 0) {
-            next = LOSE_SCREEN;
-        }
         else if (strcmp(stateName, "LEVEL_2") == 0) {
             next = LEVEL_2;
         }
@@ -987,10 +839,18 @@ namespace Framework {
         const char* animName = luaL_checkstring(L, 1);
         LOG_INFO("LOAD_ANIM", "=== LoadPlayerAnimation called: '%s' ===", animName);
 
-        // Find ALL player entities by tag
-        auto players = Framework::FindAllByTag(em, "Player");
-        for (Entity e : players) {
-            LOG_INFO("LOAD_ANIM", "Found player entity: %u", e.GetID());
+        // Find ALL player entities (AP + CircleCollider = player)
+        // Players have: AP, CircleCollider, Health components
+        // Enemies have: EnemyAI component (which players don't have)
+        std::vector<Entity> players;
+        for (Entity e : em->GetAllEntities()) {
+            bool hasAP = em->HasComponent<AP>(e);
+            bool hasCircleCollider = em->HasComponent<CircleCollider>(e);
+
+            if (hasAP && hasCircleCollider) {
+                players.push_back(e);
+                LOG_INFO("LOAD_ANIM", "Found player entity: %u", e.GetID());
+            }
         }
 
         if (players.empty()) {
@@ -1120,10 +980,13 @@ namespace Framework {
         const char* animName = luaL_checkstring(L, 1);
         LOG_INFO("ANIM_API", "=== LoadAnimationForAllPlayers: '%s' ===", animName);
 
-        // Find ALL players by tag
-        auto players = Framework::FindAllByTag(em, "Player");
-        for (Entity e : players) {
-            LOG_INFO("ANIM_API", "  Found player entity: %u", e.GetID());
+        // Find ALL players (entities with CircleCollider)
+        std::vector<Entity> players;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<CircleCollider>(e)) {
+                players.push_back(e);
+                LOG_INFO("ANIM_API", "  Found player entity: %u", e.GetID());
+            }
         }
 
         if (players.empty()) {
@@ -1178,10 +1041,13 @@ namespace Framework {
         const char* animName = luaL_checkstring(L, 1);
         LOG_INFO("ANIM_API", "=== LoadAnimationForAllEnemies: '%s' ===", animName);
 
-        // Find ALL enemies by tag
-        auto enemies = Framework::FindAllByTag(em, "Enemy");
-        for (Entity e : enemies) {
-            LOG_INFO("ANIM_API", "  Found enemy entity: %u", e.GetID());
+        // Find ALL enemies (entities with BoxCollider but NOT CircleCollider)
+        std::vector<Entity> enemies;
+        for (Entity e : em->GetAllEntities()) {
+            if (em->HasComponent<BoxCollider>(e) && !em->HasComponent<CircleCollider>(e)) {
+                enemies.push_back(e);
+                LOG_INFO("ANIM_API", "  Found enemy entity: %u", e.GetID());
+            }
         }
 
         if (enemies.empty()) {

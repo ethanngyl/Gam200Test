@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- LevelSelectLevel.lua
 -- Author:        Padilla carl jameson
 -- Email:         c.Padilla@digipen.edu
@@ -135,7 +135,7 @@ function OnInit()
 
     -- Start menu background music from JSON config
     local music = config.menu.music
-    PlayMusic(music.name, 0.8, music.loop)
+    PlaySound(music.name, music.loop, music.volume)
     Log("Playing level select music: " .. music.name)
 
     -- ========================================================================
@@ -167,15 +167,6 @@ function OnLevel3ButtonClicked()
     end
 
     Log("DEMO button clicked!")
-
-    -- Reset level progress to level 1 when starting a new game
-    local f = io.open("assets/JSON/LevelProgress.json", "w")
-    if f then
-        f:write("{\n  \"currentLevel\": 1,\n  \"totalLevels\": 3\n}\n")
-        f:close()
-        Log("[LevelSelect] Level progress reset to 1")
-    end
-
     ButtonManager.TransitionTo("LEVEL_3")
 end
 
@@ -236,7 +227,7 @@ function OnDestroy()
     Log("LevelSelect cleanup...")
 
     -- Stop all sounds
-    StopMusic(0.5)
+    StopAllSounds()
 
     -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -93,23 +93,12 @@ namespace Framework {
     static bool wantSaveSceneAsModal = false;
     static std::string currentScenePath = "";
 
-    // Snapshot hooks were removed in newer branches; keep no-op stubs
-    // so editor sliders compile cleanly without undo integration.
-    static void BeginSnapshotEdit(Entity) {}
-    static void EndSnapshotEdit(Entity) {}
-
     static int GetGsmStateFromLuaName(const std::string& lowerName) {
         if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
         if (lowerName.find("level2") != std::string::npos) return LEVEL_2;
         if (lowerName.find("levelselect") != std::string::npos) return Level_select;
-        if (lowerName.find("settings") != std::string::npos) return settingsMenu;
         if (lowerName.find("mainmenu") != std::string::npos) return mainMenu;
         if (lowerName.find("tutorial") != std::string::npos) return TUTORIAL;
-        if (lowerName.find("skillsets") != std::string::npos) return SKILL_SETS;
-        if (lowerName.find("winlevel") != std::string::npos) return WIN_SCREEN;
-        if (lowerName.find("loselevel") != std::string::npos) return LOSE_SCREEN;
-        if (lowerName.find("control2") != std::string::npos) return CONTROL2;
-        if (lowerName.find("control") != std::string::npos) return CONTROL;
         if (lowerName.find("end") != std::string::npos) return LEVEL_END;
 
         return -1;
@@ -146,10 +135,10 @@ namespace Framework {
             return;
         }
 
-        //// Stop all audio if audio system exists
-        //if (audioSystem) {
-        //    audioSystem->StopAllSounds();
-        //}
+        // Stop all audio if audio system exists
+        if (audioSystem) {
+            audioSystem->StopAllSounds();
+        }
 
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
@@ -240,7 +229,7 @@ namespace Framework {
 
         // this is to declare a input file stream called readFile and open the file
         std::ifstream readFile(file);
-
+        
         // check if the file is open, display error message if not
         if (!readFile.is_open()) {
             std::cerr << "[ImGuiError] Could not open file for reading: " << file << "\n";
@@ -293,7 +282,7 @@ namespace Framework {
             if (word == "Transform") {
                 float px, py, sx, sy;
                 float rot = 0.0f;
-                if (iss >> px >> py >> sx >> sy) {
+                if (iss >> px >> py >> sx >> sy ) {
 
                     if (!(iss >> rot)) {
                         iss.clear(); // Clear the error state if the 5th read failed
@@ -494,8 +483,8 @@ namespace Framework {
                 auto& transform = entityManager->GetComponent<Transform>(entity);
                 //write position (x,y) and the scale(x,y)
                 writeFile << "Transform " << transform.position.x << " " << transform.position.y << " "
-                    << transform.scale.x << " " << transform.scale.y << " "
-                    << transform.rotation << "\n";
+                    << transform.scale.x << " " << transform.scale.y << " " 
+					<< transform.rotation <<"\n";
             }
 
             //this if else condition is to check if entity has sprite component
@@ -507,8 +496,8 @@ namespace Framework {
                 //write the sprite name with tint
                 if (!meshRenderer.spriteName.empty()) {
                     writeFile << "Sprite " << meshRenderer.spriteName << " "
-                        << meshRenderer.tint.r << " " << meshRenderer.tint.g << " "
-                        << meshRenderer.tint.b << " " << meshRenderer.tint.a << "\n";
+                             << meshRenderer.tint.r << " " << meshRenderer.tint.g << " "
+                             << meshRenderer.tint.b << " " << meshRenderer.tint.a << "\n";
                 }
             }
 
@@ -519,8 +508,8 @@ namespace Framework {
                 if (!sprite.texturePath.empty()) {
                     // Save sprite with tint values (r g b a)
                     writeFile << "Sprite " << sprite.texturePath << " "
-                        << sprite.tint.r << " " << sprite.tint.g << " "
-                        << sprite.tint.b << " " << sprite.tint.a << "\n";
+                             << sprite.tint.r << " " << sprite.tint.g << " "
+                             << sprite.tint.b << " " << sprite.tint.a << "\n";
                 }
 
             }
@@ -899,7 +888,7 @@ namespace Framework {
             // =================================================================
             if (path.extension() == ".lua") {
                 if (ImGui::IsItemHovered()) {
-
+                    
 
                     if (ImGui::IsMouseDoubleClicked(0)) {
                         std::string filename = path.filename().string();
@@ -915,7 +904,7 @@ namespace Framework {
                         if (isLevel) {
                             // Loading level from double-click
 
-                            currentLuaLevelPath = fullPath;
+							currentLuaLevelPath = fullPath;
                             pendingLuaGsmState = GetGsmStateFromLuaName(lowerName);
 
                             // 1. Clear Game Viewport
@@ -1018,7 +1007,7 @@ namespace Framework {
             return Framework::Vector2D(0.0f, 0.0f);
         }
         // Get the actual OS window handle (GLFW window)
-        GLFWwindow* window1 = windowSystem->GetWindow();
+        GLFWwindow* window1= windowSystem->GetWindow();
         if (!window1) {
             return Framework::Vector2D(0.0f, 0.0f);
         }
@@ -1136,7 +1125,7 @@ namespace Framework {
         //ImGui_ImplOpenGL3_NewFrame();
         //ImGui_ImplGlfw_NewFrame();
 
-
+        
 
         // ========================================================================
         // SETUP DOCKSPACE - Handle docking layout and menu bar
@@ -1175,8 +1164,8 @@ namespace Framework {
                     PerformRedo();
                 }
             }
-
-            bool isCtrlHeld = input->IsKeyDown(KEY_LEFT_CONTROL) || input->IsKeyDown(KEY_RIGHT_CONTROL);
+			
+			bool isCtrlHeld = input->IsKeyDown(KEY_LEFT_CONTROL) || input->IsKeyDown(KEY_RIGHT_CONTROL);
             bool isCPressed = input->IsKeyPressed(KEY_C);
             if (isCtrlHeld && isCPressed) {
                 CopyEntity();
@@ -1189,7 +1178,7 @@ namespace Framework {
             }
         }
 
-
+        
         //delete button to delete selected entity
         if (CORE->IsEditorMode() && entityManager) {
             InputSystem* input = Framework::CORE->GetInputSystem();
@@ -1363,16 +1352,10 @@ namespace Framework {
             switch (current)
             {
             case mainMenu: levelName = "MainMenu"; break;
-            case settingsMenu: levelName = "Settings"; break;
             case Level_select: levelName = "LevelSelect"; break;
             case LEVEL_2: levelName = "Level2"; break;
             case LEVEL_3: levelName = "Level3"; break;
             case TUTORIAL: levelName = "Tutorial"; break;
-            case CONTROL: levelName = "Control"; break;
-            case CONTROL2: levelName = "Control2"; break;
-            case SKILL_SETS: levelName = "SkillSets"; break;
-            case WIN_SCREEN: levelName = "WinLevel"; break;
-            case LOSE_SCREEN: levelName = "LoseLevel"; break;
             case LEVEL_END: levelName = "LevelEnd"; break;
             }
 
@@ -1436,16 +1419,10 @@ namespace Framework {
             switch (current)
             {
             case mainMenu: levelName = "MainMenu"; break;
-            case settingsMenu: levelName = "Settings"; break;
             case Level_select: levelName = "LevelSelect"; break;
             case LEVEL_2: levelName = "Level2"; break;
             case LEVEL_3: levelName = "Level3"; break;
             case TUTORIAL: levelName = "Tutorial"; break;
-            case CONTROL: levelName = "Control"; break;
-            case CONTROL2: levelName = "Control2"; break;
-            case SKILL_SETS: levelName = "SkillSets"; break;
-            case WIN_SCREEN: levelName = "WinLevel"; break;
-            case LOSE_SCREEN: levelName = "LoseLevel"; break;
             case LEVEL_END: levelName = "LevelEnd"; break;
             }
 
@@ -1558,8 +1535,8 @@ namespace Framework {
             if (ImGui::Button("Import & Load", ImVec2(120, 0))) {
                 if (audioSystem && strlen(newAudioKeyBuffer) > 0) {
                     std::string keyName = newAudioKeyBuffer;
-                    std::string ext = pendingAudioPath.extension().string();
-                    std::string fileName = keyName + ext;
+					std::string ext = pendingAudioPath.extension().string();
+					std::string fileName = keyName + ext;
 
                     // 1. Copy file to assets folder
                     std::filesystem::path destPath = pendingAudioDestDir / fileName;
@@ -1614,7 +1591,7 @@ namespace Framework {
         ShowScriptBrowserPopup();
         ShowLevelBrowserPopup();
         if (showGameViewport) ShowGameViewport();
-
+        
         // Show FPS overlay in corner
         ShowFPSOverlay();
     }
@@ -1696,7 +1673,7 @@ namespace Framework {
                 //strncpy(buffer, sc.scriptPath.c_str(), 511);
                 strncpy_s(buffer, sizeof(buffer), sc.scriptPath.c_str(), _TRUNCATE);
                 buffer[511] = '\0';
-
+                
                 ImGui::PushItemWidth(-100);
                 if (ImGui::InputText("##ScriptPath", buffer, 512)) {
                     sc.scriptPath = buffer;
@@ -1767,7 +1744,7 @@ namespace Framework {
         // SEARCH AND FILTER SECTION
         // ========================================================================
         ImGui::Text("Total Entities: %d", totalEntities);
-
+        
         // Search box
         ImGui::SetNextItemWidth(200);
         ImGui::InputTextWithHint("##EntitySearch", "Search by ID...", entitySearchBuffer, sizeof(entitySearchBuffer));
@@ -1784,7 +1761,7 @@ namespace Framework {
         if (showFilterPanel) {
             ImGui::BeginChild("FilterPanel", ImVec2(0, 120), true);
             ImGui::Text("Filter by Component:");
-
+            
             // Row 1
             ImGui::Checkbox("Transform", &filterByTransform);
             ImGui::SameLine(150);
@@ -2573,12 +2550,12 @@ namespace Framework {
                     ImGui::Separator();
                     ImGui::TextColored(ImVec4(0.5f, 0.8f, 0.5f, 1.0f), "Prefab: %s",
                         std::filesystem::path(prefabSource).filename().string().c_str());
-
+                    
                     // Revert to Prefab button - resets this entity to prefab values
                     if (ImGui::Button("Revert to Prefab##RevertBtn")) {
                         if (PrefabSerializer::RevertToPrefab(*entityManager, entity, prefabSource)) {
-                            std::cout << "[Inspector] Reverted entity " << entity.GetID()
-                                << " to prefab: " << prefabSource << "\n";
+                            std::cout << "[Inspector] Reverted entity " << entity.GetID() 
+                                      << " to prefab: " << prefabSource << "\n";
                         }
                     }
                     if (ImGui::IsItemHovered()) {
@@ -2600,7 +2577,7 @@ namespace Framework {
                 // ------------------------------------------------------------------
                 if (ImGui::Button("Delete##DelBtn")) {
                     //Record the deletion here immediately
-
+                    
 
                     entityToDelete = entity;
                     shouldDelete = true;
@@ -2620,11 +2597,11 @@ namespace Framework {
                 // ------------------------------------------------------------------
                 if (ImGui::Button("Save Prefab##SavePrefabBtn")) {
                     std::string entityPrefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
-
+                    
                     if (!entityPrefabSource.empty()) {
                         // This entity is a prefab instance - update all instances and save
                         auto instances = Framework::PrefabInstanceTracker::Get().GetInstancesOf(entityPrefabSource);
-
+                        
                         // Propagate this entity's values to all other instances
                         for (auto& inst : instances) {
                             if (!inst.IsValid() || inst.GetID() == entity.GetID())
@@ -3212,26 +3189,25 @@ namespace Framework {
                 //   - Preserves per-instance positions
                 ImGui::Separator();
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Cross-Scene Update:");
-
+                
                 if (ImGui::Button("Apply Prefab to ALL Scenes##ApplyAllScenes", ImVec2(-1, 0))) {
                     // First save the current prefab
                     PrefabSerializer::SavePrefab(*entityManager, templateEntity, prefabPath);
-
+                    
                     // Then apply to all scene files
                     int updatedCount = Framework::SaveLoadSystem::ApplyPrefabToAllScenes(prefabPath, "assets/saves/");
-
+                    
                     // Show result in a tooltip or log
                     if (updatedCount > 0) {
                         std::cout << "[Prefab] Updated " << updatedCount << " scene files with prefab changes.\n";
-                    }
-                    else {
+                    } else {
                         std::cout << "[Prefab] No scene files needed updating (or no instances found).\n";
                     }
                 }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip("Applies this prefab's changes to ALL scene files.\n"
-                        "This updates entities in scenes that are NOT currently loaded.\n"
-                        "Position is preserved for each instance.");
+                                      "This updates entities in scenes that are NOT currently loaded.\n"
+                                      "Position is preserved for each instance.");
                 }
             }
         }
@@ -3407,7 +3383,7 @@ namespace Framework {
      *
      * Intended for editor usage only (not gameplay UI).
      */
-
+    
 
     void ImGuiSystem::ShowLayersWindow()
     {
@@ -3508,10 +3484,10 @@ namespace Framework {
     void ImGuiSystem::ShowFPSOverlay()
     {
         // Set window flags for overlay: no title bar, no resize, always on top, no background
-        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration
-            | ImGuiWindowFlags_AlwaysAutoResize
-            | ImGuiWindowFlags_NoSavedSettings
-            | ImGuiWindowFlags_NoFocusOnAppearing
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration 
+            | ImGuiWindowFlags_AlwaysAutoResize 
+            | ImGuiWindowFlags_NoSavedSettings 
+            | ImGuiWindowFlags_NoFocusOnAppearing 
             | ImGuiWindowFlags_NoNav
             | ImGuiWindowFlags_NoMove;
 
@@ -4013,7 +3989,7 @@ namespace Framework {
         if (entitySearchBuffer[0] != '\0') {
             std::string searchStr(entitySearchBuffer);
             std::string idStr = std::to_string(entity.GetID());
-
+            
             // Check if ID contains the search string
             if (idStr.find(searchStr) == std::string::npos) {
                 // Also check sprite name if available
@@ -4047,7 +4023,7 @@ namespace Framework {
         if (filterBySpriteAnimation && !entityManager->HasComponent<SpriteAnimation>(entity)) return false;
         if (filterByAudioSource && !entityManager->HasComponent<AudioSource>(entity)) return false;
         if (filterByScriptComponent && !entityManager->HasComponent<ScriptComponent>(entity)) return false;
-
+        
         // Check prefab filter
         if (filterByPrefab) {
             std::string prefabSource = Framework::PrefabInstanceTracker::Get().GetPrefabOf(entity);
@@ -4060,10 +4036,10 @@ namespace Framework {
     std::vector<Entity> ImGuiSystem::GetFilteredEntities(const std::vector<Entity>& allEntities) {
         // If no filters active, return all entities
         bool anyFilterActive = (entitySearchBuffer[0] != '\0') ||
-            filterByTransform || filterBySprite || filterByMeshRenderer ||
-            filterByMovement || filterByBoxCollider || filterByCircleCollider ||
-            filterByHealth || filterByAP || filterBySpriteAnimation ||
-            filterByAudioSource || filterByScriptComponent || filterByPrefab;
+                               filterByTransform || filterBySprite || filterByMeshRenderer ||
+                               filterByMovement || filterByBoxCollider || filterByCircleCollider ||
+                               filterByHealth || filterByAP || filterBySpriteAnimation ||
+                               filterByAudioSource || filterByScriptComponent || filterByPrefab;
 
         if (!anyFilterActive) {
             return allEntities;
@@ -4284,8 +4260,8 @@ namespace Framework {
                 }
                 continue;
             }
-
-            //LUA SCRIPT DROP HANDLING
+            
+			//LUA SCRIPT DROP HANDLING
             if (path.extension() == ".lua") {
                 std::string filename = path.filename().string();
                 std::string fullPath = path.string();
@@ -4477,45 +4453,45 @@ namespace Framework {
         // ---------------------------------------------------------
     // STEP 1: Find the "sounds" array
     // ---------------------------------------------------------
-        size_t soundsPos = jsonContent.find("\"sounds\"");
-        if (soundsPos == std::string::npos) {
-            std::cerr << "[JSON]  Could not find 'sounds' array\n";
-            return false;
-        }
+    size_t soundsPos = jsonContent.find("\"sounds\"");
+    if (soundsPos == std::string::npos) {
+        std::cerr << "[JSON]  Could not find 'sounds' array\n";
+        return false;
+    }
 
-        // Find the start of the array '['
-        size_t arrayStart = jsonContent.find("[", soundsPos);
-        if (arrayStart == std::string::npos) return false;
+    // Find the start of the array '['
+    size_t arrayStart = jsonContent.find("[", soundsPos);
+    if (arrayStart == std::string::npos) return false;
 
-        // ---------------------------------------------------------
-        // STEP 2: Find the END of the "sounds" array ']'
-        // ---------------------------------------------------------
-        // We can't just look for the first ']', because nested objects use them too.
-        // We scan forward counting brackets.
-        size_t arrayEnd = std::string::npos;
-        int bracketCount = 0;
-
-        for (size_t i = arrayStart; i < jsonContent.length(); ++i) {
-            if (jsonContent[i] == '[') bracketCount++;
-            else if (jsonContent[i] == ']') {
-                bracketCount--;
-                if (bracketCount == 0) {
-                    arrayEnd = i; // Found the closing bracket of "sounds"
-                    break;
-                }
+    // ---------------------------------------------------------
+    // STEP 2: Find the END of the "sounds" array ']'
+    // ---------------------------------------------------------
+    // We can't just look for the first ']', because nested objects use them too.
+    // We scan forward counting brackets.
+    size_t arrayEnd = std::string::npos;
+    int bracketCount = 0;
+    
+    for (size_t i = arrayStart; i < jsonContent.length(); ++i) {
+        if (jsonContent[i] == '[') bracketCount++;
+        else if (jsonContent[i] == ']') {
+            bracketCount--;
+            if (bracketCount == 0) {
+                arrayEnd = i; // Found the closing bracket of "sounds"
+                break;
             }
         }
+    }
 
-        if (arrayEnd == std::string::npos) {
-            std::cerr << "[JSON]  Malformed JSON (missing closing bracket)\n";
-            return false;
-        }
+    if (arrayEnd == std::string::npos) {
+        std::cerr << "[JSON]  Malformed JSON (missing closing bracket)\n";
+        return false;
+    }
 
-        // ---------------------------------------------------------
-        // STEP 3: Construct the new JSON Object
-        // ---------------------------------------------------------
-        // Note: We add a comma at the start because we assume the list isn't empty.
-        std::string newEntry = R"(,
+    // ---------------------------------------------------------
+    // STEP 3: Construct the new JSON Object
+    // ---------------------------------------------------------
+    // Note: We add a comma at the start because we assume the list isn't empty.
+    std::string newEntry = R"(,
     {
       "name": ")" + audioName + R"(",
       "filepath": "assets/)" + fileName + R"(",
@@ -4523,19 +4499,19 @@ namespace Framework {
       "preload": true
     })";
 
-        // ---------------------------------------------------------
-        // STEP 4: Insert it BEFORE the closing bracket ']'
-        // ---------------------------------------------------------
-        jsonContent.insert(arrayEnd, newEntry);
+    // ---------------------------------------------------------
+    // STEP 4: Insert it BEFORE the closing bracket ']'
+    // ---------------------------------------------------------
+    jsonContent.insert(arrayEnd, newEntry);
 
-        // ---------------------------------------------------------
-        // STEP 5: Save File
-        // ---------------------------------------------------------
-        std::ofstream writeFile(jsonPath);
-        if (!writeFile.is_open()) {
-            std::cerr << "[JSON]  Could not open file for writing\n";
-            return false;
-        }
+    // ---------------------------------------------------------
+    // STEP 5: Save File
+    // ---------------------------------------------------------
+    std::ofstream writeFile(jsonPath);
+    if (!writeFile.is_open()) {
+        std::cerr << "[JSON]  Could not open file for writing\n";
+        return false;
+    }
 
 
         writeFile << jsonContent;
@@ -4709,7 +4685,7 @@ namespace Framework {
             //File bar
             if (ImGui::BeginMenu("File")) {
 
-
+                
                 // Open Level
                 if (ImGui::MenuItem("Open Level...", "Ctrl+O")) {
                     showLevelBrowser = true;
@@ -4725,12 +4701,12 @@ namespace Framework {
                     extern int current;
                     std::string levelName = "Unknown";
                     switch (current) {
-                    case mainMenu: levelName = "MainMenu"; break;
-                    case Level_select: levelName = "LevelSelect"; break;
-                    case LEVEL_2: levelName = "Level2"; break;
-                    case LEVEL_3: levelName = "Level3"; break;
-                    case TUTORIAL: levelName = "Tutorial"; break;
-                    case LEVEL_END: levelName = "LevelEnd"; break;
+                        case mainMenu: levelName = "MainMenu"; break;
+                        case Level_select: levelName = "LevelSelect"; break;
+                        case LEVEL_2: levelName = "Level2"; break;
+                        case LEVEL_3: levelName = "Level3"; break;
+                        case TUTORIAL: levelName = "Tutorial"; break;
+                        case LEVEL_END: levelName = "LevelEnd"; break;
                     }
 
                     // Save Scene (JSON)
@@ -4771,16 +4747,10 @@ namespace Framework {
 
                 switch (current) {
                 case mainMenu: currentLevelName = "Main Menu"; break;
-                case settingsMenu: currentLevelName = "Settings"; break;
                 case Level_select: currentLevelName = "Level Select"; break;
                 case LEVEL_2: currentLevelName = "Level 2"; break;
                 case LEVEL_3: currentLevelName = "Level 3"; break;
                 case TUTORIAL: currentLevelName = "Tutorial"; break;
-                case CONTROL: currentLevelName = "Control"; break;
-                case CONTROL2: currentLevelName = "Control 2"; break;
-                case SKILL_SETS: currentLevelName = "Skill Sets"; break;
-                case WIN_SCREEN: currentLevelName = "Win Screen"; break;
-                case LOSE_SCREEN: currentLevelName = "Lose Screen"; break;
                 case LEVEL_END: currentLevelName = "Level End"; break;
                 }
 
@@ -4820,10 +4790,10 @@ namespace Framework {
                         // Exit editor mode
                         CORE->SetEditorMode(false);
 
-                        GlobalPause::SetPaused(false);
+						GlobalPause::SetPaused(false);
                         //  CRITICAL: Use RequestToggle() instead of Disable()
                         // This schedules the disable for AFTER this frame completes
-
+                        
                         /*if (!currentLuaLevelPath.empty()) {
 
                             // If we can map it to a GSM state, transition GSM so Level3 init runs correctly
@@ -4843,7 +4813,7 @@ namespace Framework {
                                 Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
                             }
                             currentLuaLevelPath.clear();
-                            pendingLuaGsmState = -1;
+							pendingLuaGsmState = -1;
                         }
 
                         else if (!currentLevelPath.empty()) {
@@ -4962,7 +4932,7 @@ namespace Framework {
     void ImGuiSystem::ShowScriptBrowserPopup() {
         if (showScriptBrowser) {
             ImGui::OpenPopup("Script Browser");
-            showScriptBrowser = false;
+            showScriptBrowser = false;  
         }
 
         ImGui::SetNextWindowSize(ImVec2(600, 450), ImGuiCond_FirstUseEver);
@@ -5036,7 +5006,7 @@ namespace Framework {
 
             ImGui::EndChild();
 
-
+            
             ImGui::Separator();
             ImGui::Spacing();
 
@@ -5141,7 +5111,7 @@ namespace Framework {
 
         extern int next;
         extern bool g_loadAsEditorMode;
-
+        
         next = gameState;
         g_loadAsEditorMode = true;  // Tell GSM to load in editor mode
 

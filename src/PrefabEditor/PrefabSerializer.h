@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        PrefabSerializer.h
 Author:      Sim Kah Yan
@@ -45,21 +45,21 @@ namespace PrefabSerializer
     bool SavePrefab(Framework::EntityManager& em,
         Framework::Entity entity,
         const std::string& outPath);
-
+    
     // Reads a prefab and spawns a new entity with its components
     Framework::Entity LoadPrefab(Framework::EntityManager& em, const std::string& path);
 
     // Apply prefab values to an existing entity (preserves entity's position)
     // Returns true if successful
-    bool ApplyPrefabToEntity(Framework::EntityManager& em,
-        Framework::Entity entity,
-        const std::string& prefabPath,
-        bool preservePosition = true);
+    bool ApplyPrefabToEntity(Framework::EntityManager& em, 
+                             Framework::Entity entity, 
+                             const std::string& prefabPath,
+                             bool preservePosition = true);
 
     // Revert an entity to its original prefab values
     // Same as ApplyPrefabToEntity but with clearer naming
-    bool RevertToPrefab(Framework::EntityManager& em,
-        Framework::Entity entity,
-        const std::string& prefabPath);
+    bool RevertToPrefab(Framework::EntityManager& em, 
+                        Framework::Entity entity, 
+                        const std::string& prefabPath);
 }
 

@@ -1,8 +1,0 @@
-MD Boss1Attack1_GreatswordSlashBasic
-MD Boss1Attack2_GreatswordCrossslashGroundStab
-MD Boss1Attack2_GreatswordCrosslashWave
-MD Boss1Attack3_Taunt
-MD Boss1Attack3_TauntReceived
-MD Boss1Attack4_ChargeState
-MD Boss1Attack4_Teleport
-MD Boss1Attack5_ExecuteBloody
