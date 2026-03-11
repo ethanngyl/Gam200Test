@@ -1,5 +1,12 @@
 #pragma once
 
+#include "Vector2D.h"
+#include "ECSEntity.h"
+
+#include <string>
+#include <vector>
+#include <glm/glm.hpp>
+
 namespace Framework {
 	class ParticleSystem {
 	public:
