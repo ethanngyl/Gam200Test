@@ -5837,15 +5837,6 @@ namespace Framework {
         int emitterId = psm->CreateEmitterRaw(settings, x, y, follow);
         lua_pushinteger(L, emitterId);
         return 1;
-        
-        // // For duration-based emitters, create a temporary effect
-        // if (duration > 0.0f) {
-        //     // Use a simple timer approach - mark inactive after duration
-        //     // (handled by the manager's temporary effects system in future)
-        // }
-
-        // lua_pushinteger(L, 1); // Return a non-zero value to indicate success
-        // return 1;
     }
 
     // =========================================================================
