@@ -2693,6 +2693,27 @@ namespace Framework {
     }
 
     /**
+     * @brief Tell C++ whether the Lua skill preview is active
+     * When active, the C++ basic attack (HandleAttackAction) is disabled
+     * to prevent it from interfering with the Lua skill system.
+     * @param active true when Lua skill preview is shown, false when cleared
+     * Usage: SetSkillPreviewActive(true) / SetSkillPreviewActive(false)
+     */
+    int LevelLoader::Lua_SetSkillPreviewActive(lua_State* L) {
+        bool active = lua_toboolean(L, 1);
+
+        auto* pc = CORE ? CORE->GetPlayerController() : nullptr;
+        if (!pc) {
+            LOG_WARN("LevelLoader", "SetSkillPreviewActive: No PlayerController");
+            return 0;
+        }
+
+        pc->SetLuaSkillPreviewActive(active);
+
+        return 0;
+    }
+
+    /**
      * @brief Check if chest exists at tile
      * @param x, y Grid coordinates
      * @return true if chest exists

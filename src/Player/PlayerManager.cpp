@@ -650,6 +650,14 @@ namespace Framework {
         LOG_INFO("PlayerController", "Grid movement %s", enabled ? "ENABLED" : "DISABLED");
     }
 
+    void PlayerControllerSystem::SetLuaSkillPreviewActive(bool active) {
+        luaSkillPreviewActive = active;
+        // Clear any stale C++ attack preview when Lua skill system takes over
+        if (active && attackPreviewActive) {
+            ClearAttackPreview();
+        }
+    }
+
     /**
  * @brief Checks and handles chest collection and goal interaction
  * @param nextTile The tile the player is moving to
@@ -875,6 +883,9 @@ namespace Framework {
     void PlayerControllerSystem::HandleAttackAction() {
         if (!inputSystem || !entityManager) return;
         if (!IsPlayerTurn()) return;
+
+        // Skip C++ basic attack when Lua skill system is handling input
+        if (luaSkillPreviewActive) return;
 
         if (spaceAttackCooldown > 0.0f) {
             LOG_INFO("PlayerAttack", "SPACE attack blocked by cooldown (%.3fs remaining)", spaceAttackCooldown);

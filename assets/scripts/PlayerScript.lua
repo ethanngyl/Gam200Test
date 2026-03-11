@@ -598,6 +598,10 @@ local function createPlayerStates(fsm)
                     local onCooldown = skillCooldowns[skillID] and skillCooldowns[skillID] > 0
                     if skill and currentAttackAP >= skill.apCost and not onCooldown then
                         ShowSkillPreview(skillID)
+                        -- Tell C++ to disable basic attack while Lua skill preview is active
+                        if activePreview and SetSkillPreviewActive then
+                            SetSkillPreviewActive(true)
+                        end
                         -- Set active slot AFTER ShowSkillPreview, because ShowSkillPreview
                         -- calls ClearActivePreview() which resets activeSkillSlotKey to nil
                         activeSkillSlotKey = key
@@ -1600,6 +1604,10 @@ function ClearActivePreview()
     allyTargetMode = nil
     enemyTargetMode = nil
     lastTabKeyDown = false
+    -- Tell C++ to re-enable basic attack handling
+    if SetSkillPreviewActive then
+        SetSkillPreviewActive(false)
+    end
 end
 
 -- Find all enemies within a skill's pattern
