@@ -351,7 +351,7 @@ namespace Framework {
         bool m_isViewportFocused = false;        // Is viewport focused?
 
         //undo step - jiahao
-        
+
 
         static constexpr size_t kUndoLimit = 30;
 
@@ -370,7 +370,7 @@ namespace Framework {
 
         void PerformRedo();
 
-        
+
 
         void PushSnapshotStep(Framework::Entity entity,
             const std::string& beforePath,
@@ -415,8 +415,8 @@ namespace Framework {
         std::filesystem::path pendingAudioDestDir = "assets/Audio/";
 
         void ShowLayersWindow();
-		bool showLayersWindow = false;
-		std::unordered_set<int> hiddenRenderLayers;
+        bool showLayersWindow = false;
+        std::unordered_set<int> hiddenRenderLayers;
     };
 
 } // namespace Framework

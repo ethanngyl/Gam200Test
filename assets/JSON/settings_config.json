@@ -1,0 +1,103 @@
+{
+  "menu": {
+    "name": "Settings",
+    "music": {
+      "name": "mmbgm",
+      "volume": 1.0,
+      "loop": true
+    },
+    "camera": {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "zoom": 1.0
+    },
+    "background": {
+      "texture": "assets/Menu/WoodBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 4.0,
+        "y": 4.0
+      },
+      "layer": 1
+    },
+    "overlaySprites": [
+      {
+        "id": "scrollOverlay",
+        "texture": "assets/Menu/Scroll Overlay.png",
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "scale": {
+          "x": 4.7,
+          "y": 2.5
+        },
+        "layer": 2
+      }
+    ],
+    "buttons": [
+      {
+        "id": "text_title",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.27,
+          "y": 0.5
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "SETTINGS",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 1.2,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "back",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 0.0,
+          "y": -0.66
+        },
+        "scale": {
+          "x": 0.8,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "BACK",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -50.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnBackButtonClicked"
+      }
+    ]
+  }
+}

@@ -35,6 +35,10 @@ EnemyTurnActive = false     -- True when in enemy turn phase
 EnemyActionDelay = 0.5      -- Delay in seconds between enemy actions
 EnemyActionTimer = 0.0      -- Current action timer
 
+-- Safety timeout: auto-advance if an enemy gets stuck (e.g. no path, script error)
+EnemyStuckTimeout = 10.0    -- Max seconds an enemy can be active before auto-advancing
+EnemyStuckTimer = 0.0       -- Tracks how long current enemy has been active
+
 -- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
@@ -54,6 +58,7 @@ function InitializeEnemyTurn()
     ActiveEnemyIndex = 1
     EnemyTurnActive = true
     EnemyActionTimer = 0.0  -- Start immediately
+    EnemyStuckTimer = 0.0   -- Reset stuck timer
 
     local firstEnemy = enemies[1]
     print("[EnemyTurnManager] Starting with enemy " .. firstEnemy)
@@ -163,6 +168,7 @@ function NextEnemyTurn()
 
     -- Reset action timer for next enemy
     EnemyActionTimer = EnemyActionDelay
+    EnemyStuckTimer = 0.0  -- Reset stuck timer for new enemy
 
     print("[EnemyTurnManager] ======================================")
 end
@@ -214,7 +220,7 @@ function UpdateEnemyTurnManager(dt)
         print("[EnemyTurnManager] ========================================")
         print("[EnemyTurnManager] ALL ENEMIES DEAD - Auto-ending enemy turn!")
         print("[EnemyTurnManager] ========================================")
-        SetNextGameState("LEVEL_END")
+        SetNextGameState("WIN_SCREEN")
         --EndAllEnemyTurns()
         return
     end
@@ -230,6 +236,18 @@ function UpdateEnemyTurnManager(dt)
             print("[EnemyTurnManager] Action timer ready! (was " .. string.format("%.3f", oldTimer) .. ", now 0.0)")
         end
     end
+
+    -- Safety timeout: auto-advance if an enemy is stuck too long
+    EnemyStuckTimer = EnemyStuckTimer + dt
+    if EnemyStuckTimer >= EnemyStuckTimeout then
+        local activeEnemy = GetActiveEnemy()
+        print("[EnemyTurnManager] ========================================")
+        print("[EnemyTurnManager] SAFETY TIMEOUT: Enemy " .. tostring(activeEnemy) .. " stuck for " .. string.format("%.1f", EnemyStuckTimer) .. "s!")
+        print("[EnemyTurnManager] Auto-advancing to next enemy...")
+        print("[EnemyTurnManager] ========================================")
+        EnemyStuckTimer = 0.0
+        NextEnemyTurn()
+    end
 end
 
 function IsEnemyActionReady()
@@ -241,6 +259,25 @@ end
 function MarkEnemyActionComplete()
     print("[EnemyTurnManager] Enemy action complete, advancing to next enemy")
     NextEnemyTurn()
+end
+
+-- Called from C++ ProcessDeferredDestructions before destroying an enemy.
+-- Adjusts ActiveEnemyIndex so we don't skip an enemy when the list shrinks.
+function SyncEnemyTurnBeforeEntityDestroyed(entityID)
+    if not EnemyTurnActive or ActiveEnemyIndex <= 0 then
+        return
+    end
+    local enemies = GetAllEnemies()
+    if not enemies then return end
+    for i = 1, #enemies do
+        if enemies[i] == entityID then
+            if i < ActiveEnemyIndex then
+                ActiveEnemyIndex = ActiveEnemyIndex - 1
+                print("[EnemyTurnManager] SyncEnemyTurnBeforeEntityDestroyed: Enemy " .. entityID .. " was at index " .. i .. ", decremented ActiveEnemyIndex to " .. ActiveEnemyIndex)
+            end
+            return
+        end
+    end
 end
 
 -- ============================================================================
@@ -256,6 +293,7 @@ _G.EndAllEnemyTurns = EndAllEnemyTurns
 _G.UpdateEnemyTurnManager = UpdateEnemyTurnManager
 _G.IsEnemyActionReady = IsEnemyActionReady
 _G.MarkEnemyActionComplete = MarkEnemyActionComplete
+_G.SyncEnemyTurnBeforeEntityDestroyed = SyncEnemyTurnBeforeEntityDestroyed
 
 print("============================================================")
 print("========== EnemyTurnManager.lua LOADED SUCCESSFULLY ==========")

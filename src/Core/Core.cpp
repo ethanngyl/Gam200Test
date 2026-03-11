@@ -48,6 +48,7 @@
 
 #include "StateMachine.h"
 #include "FSMSystem.h"
+#include "Graphics/ParticleSystem.h"
 
 namespace Framework
 {
@@ -74,6 +75,7 @@ namespace Framework
         , pathfindingSystem(nullptr)
         , skillSystem(nullptr)
         , fsmSystem(nullptr)
+        , particleSystem(nullptr)
         , particleSystemManager(nullptr)
     {
         CORE = this;
@@ -167,13 +169,14 @@ namespace Framework
         scriptSystem = new ScriptSystem();
         fsmSystem = new FSMSystem();
         particleSystemManager = new ParticleSystemManager();
+        particleSystem = new ParticleSystem();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !skillSystem || !fsmSystem) {
+            !scriptSystem || !skillSystem || !fsmSystem || !particleSystem) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -197,6 +200,7 @@ namespace Framework
             delete skillSystem;
             delete scriptSystem;
             delete fsmSystem;
+            delete particleSystem;
             delete particleSystemManager;
 
             throw std::runtime_error("System allocation failure");
@@ -226,6 +230,8 @@ namespace Framework
         pathfindingSystem->SetEntityManager(entityManager);
         skillSystem->SetEntityManager(entityManager);
         fsmSystem->SetEntityManager(entityManager);
+        particleSystem->SetEntityManager(entityManager);
+        particleSystem->SetGraphicsSystem(graphicsSystem);
 
 
         // Wire InputSystem
@@ -294,14 +300,15 @@ namespace Framework
         AddSystem(collisionSystem);
         AddSystem(projectileSystem);
         AddSystem(graphicsSystem);
-        AddSystem(imguiSystem);
         AddSystem(audioSystem);
+        AddSystem(imguiSystem);
         AddSystem(animationSystem);
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
         AddSystem(skillSystem);
         AddSystem(fsmSystem);
+        AddSystem(particleSystem);
 
         AddSystem(particleSystemManager);
 

@@ -106,6 +106,10 @@
       "frameCount": 7,
       "frameTime": 0.08,
       "loop": false
-    }
+    },
+    "Mage_Attack_front": { "sprite": "assets/Mage/FrontView/Mage_Attack_Front-Sheet.png", "group": "Attack", "direction": "Front", "rows": 1, "columns": 8, "frameCount": 8, "frameTime": 0.08, "loop": false },
+    "Mage_Attack_back":  { "sprite": "assets/Mage/BackView/Mage_Attack_Back-Sheet.png",  "group": "Attack", "direction": "Back",  "rows": 1, "columns": 8, "frameCount": 8, "frameTime": 0.08, "loop": false },
+    "Mage_Attack_side":  { "sprite": "assets/Mage/SideView/Mage_Attack_Side-Sheet.png",  "group": "Attack", "direction": "Side",  "rows": 1, "columns": 7, "frameCount": 7, "frameTime": 0.08, "loop": false }
+
   }
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:          SaveLoadSystem.cpp
  Author:        Ge Yongqi
@@ -68,9 +68,9 @@ namespace Framework {
     // ============================================================================
     // SAVE TO JSON
     // ============================================================================
-    bool SaveLoadSystem::SaveToJSON(const std::string& filepath, 
-                                     EntityManager* entityManager,
-                                     const std::string& levelName) {
+    bool SaveLoadSystem::SaveToJSON(const std::string& filepath,
+        EntityManager* entityManager,
+        const std::string& levelName) {
         if (!entityManager) {
             LOG_ERROR("SaveLoadSystem", "Cannot save: EntityManager is null");
             return false;
@@ -110,18 +110,18 @@ namespace Framework {
         file << root.dump(2);  // 2-space indentation
         file.close();
 
-        LOG_INFO("SaveLoadSystem", "Successfully saved %zu entities to %s", 
-                 root["entities"].size(), filepath.c_str());
+        LOG_INFO("SaveLoadSystem", "Successfully saved %zu entities to %s",
+            root["entities"].size(), filepath.c_str());
         return true;
     }
 
     // ============================================================================
     // LOAD FROM JSON
     // ============================================================================
-    bool SaveLoadSystem::LoadFromJSON(const std::string& filepath, 
-                                       EntityManager* entityManager, 
-                                       bool clearExisting,
-                                       bool applyPrefabUpdates) {
+    bool SaveLoadSystem::LoadFromJSON(const std::string& filepath,
+        EntityManager* entityManager,
+        bool clearExisting,
+        bool applyPrefabUpdates) {
         if (!entityManager) {
             LOG_ERROR("SaveLoadSystem", "Cannot load: EntityManager is null");
             return false;
@@ -167,11 +167,11 @@ namespace Framework {
             Entity entity = DeserializeEntity(entityJson, entityManager);
             if (entity.IsValid()) {
                 loadedCount++;
-                
+
                 // Track prefab instances for optional updates
                 if (applyPrefabUpdates && entityJson.contains("prefabSource")) {
                     std::string prefabPath = entityJson["prefabSource"].get<std::string>();
-                    prefabInstances.push_back({entity, prefabPath});
+                    prefabInstances.push_back({ entity, prefabPath });
                 }
             }
         }
@@ -582,8 +582,8 @@ namespace Framework {
         // Register with prefab tracker if this entity came from a prefab
         if (!prefabSource.empty()) {
             PrefabInstanceTracker::Get().RegisterInstance(entity, prefabSource);
-            LOG_INFO("SaveLoadSystem", "Registered entity %u as instance of prefab: %s", 
-                     entity.GetID(), prefabSource.c_str());
+            LOG_INFO("SaveLoadSystem", "Registered entity %u as instance of prefab: %s",
+                entity.GetID(), prefabSource.c_str());
         }
 
         return entity;
@@ -787,7 +787,7 @@ namespace Framework {
 
     std::vector<std::string> SaveLoadSystem::GetAllSceneFiles(const std::string& directory) {
         std::vector<std::string> sceneFiles;
-        
+
         if (!std::filesystem::exists(directory)) {
             LOG_WARN("SaveLoadSystem", "Directory does not exist: %s", directory.c_str());
             return sceneFiles;
@@ -806,8 +806,8 @@ namespace Framework {
         return sceneFiles;
     }
 
-    int SaveLoadSystem::ApplyPrefabToAllScenes(const std::string& prefabPath, 
-                                                const std::string& scenesDirectory) {
+    int SaveLoadSystem::ApplyPrefabToAllScenes(const std::string& prefabPath,
+        const std::string& scenesDirectory) {
         LOG_INFO("SaveLoadSystem", "========================================");
         LOG_INFO("SaveLoadSystem", "Applying prefab to all scenes: %s", prefabPath.c_str());
         LOG_INFO("SaveLoadSystem", "========================================");
@@ -876,7 +876,7 @@ namespace Framework {
                 }
 
                 std::string entityPrefabSource = entityJson["prefabSource"].get<std::string>();
-                
+
                 // Normalize paths for comparison (handle forward/backward slashes)
                 std::string normalizedPrefabPath = prefabPath;
                 std::string normalizedEntityPrefab = entityPrefabSource;
@@ -914,11 +914,11 @@ namespace Framework {
                         entityComponents["Transform"]["posX"] = posX;  // Preserve position
                         entityComponents["Transform"]["posY"] = posY;
                         // Copy scale and rotation from prefab
-                        if (componentData.contains("scaleX")) 
+                        if (componentData.contains("scaleX"))
                             entityComponents["Transform"]["scaleX"] = componentData["scaleX"];
-                        if (componentData.contains("scaleY")) 
+                        if (componentData.contains("scaleY"))
                             entityComponents["Transform"]["scaleY"] = componentData["scaleY"];
-                        if (componentData.contains("rotation")) 
+                        if (componentData.contains("rotation"))
                             entityComponents["Transform"]["rotation"] = componentData["rotation"];
                     }
                     else {
@@ -938,8 +938,8 @@ namespace Framework {
                     outFile << sceneData.dump(2);
                     outFile.close();
                     updatedSceneCount++;
-                    LOG_INFO("SaveLoadSystem", "Updated %d instances in scene: %s", 
-                             instancesUpdated, sceneFilePath.c_str());
+                    LOG_INFO("SaveLoadSystem", "Updated %d instances in scene: %s",
+                        instancesUpdated, sceneFilePath.c_str());
                 }
                 else {
                     LOG_ERROR("SaveLoadSystem", "Failed to write updated scene: %s", sceneFilePath.c_str());

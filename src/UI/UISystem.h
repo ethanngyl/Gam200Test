@@ -199,6 +199,12 @@ namespace Framework {
          */
         Vector2D ScreenToWorld(float screenX, float screenY, bool useViewportCoords = false);
 
+        /**
+         * @brief Convert world coordinates to screen (framebuffer) coordinates
+         * Returns pixel coordinates with origin at bottom-left.
+         */
+        Vector2D WorldToScreen(float worldX, float worldY, bool useViewportCoords = false);
+
         // ====================================================================
         // UTILITY
         // ====================================================================

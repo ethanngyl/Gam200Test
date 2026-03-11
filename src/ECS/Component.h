@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           Component.h
  Author:         ETHAN NG YONG LE
@@ -6,7 +6,7 @@
  Date:           2025-09-30
  Contribution:   100%
  ------------------------------------------------------------------------------
- 
+
   Design notes:
   Contains all component data structures used in the Entity Component System.
  * Components are pure data containers with no behavior - systems operate on them.
@@ -89,6 +89,12 @@ namespace Framework
         bool blocked = false;
         int damage = 10;       // Configurable damage dealt on hit
         bool pierce = false;   // If true, passes through enemies instead of stopping
+        bool isEnemyProjectile = false;  // If true, damages players instead of enemies
+        uint32_t sourceEntityID = 0;     // Entity that spawned this projectile (skip self-hit)
+        bool spawnExplosionOnHit = false; // If true, spawn explosion VFX on impact
+        Vector2D spawnPosition{};         // Starting position (for range and line checks)
+        int maxRangeTiles = 0;            // Max travel in tiles (0 = unlimited)
+        bool lineOnly = false;            // If true, only hit enemies on the line (not adjacent)
     };
 
     enum class AnimGroup {
@@ -114,7 +120,7 @@ namespace Framework
 
         /** The animation name that maps to JSON key */
         std::string animName;     // final JSON animation key
-
+        std::string animPrefix; // e.g. "Mage_" to override animation keys per-entity
         /** Handle to the full sprite sheet */
         TextureHandle spriteSheet;
 
@@ -138,9 +144,12 @@ namespace Framework
         bool loop = true;
         bool playing = true;
         bool flipX = false;
-        
+
         /** If false, skip JSON-based animation selection (for UI elements, etc.) */
         bool useJsonConfig = true;
+
+        /** If true and loop==false, entity is destroyed when animation finishes */
+        bool autoDestroyOnFinish = false;
     };
 
     /**
@@ -203,9 +212,8 @@ namespace Framework
         void* fmodChannel = nullptr;
     };
 
-    struct TagComponent {
+    struct TagComponent : public Component<TagComponent> {
         std::string tag;           // e.g., "Player", "Enemy", "Collectible"
-        std::vector<std::string> groups;  // Multiple groups: {"Damageable", "Physics"}
 
         TagComponent() = default;
         TagComponent(const std::string& t) : tag(t) {}
@@ -214,7 +222,8 @@ namespace Framework
     struct ScriptComponent : public Component<ScriptComponent>
     {
         std::string scriptPath;
-        lua_State* L = nullptr; 
+        std::string configType;   // Optional config type passed to script (e.g. "mage", "tank")
+        lua_State* L = nullptr;
         bool initialized = false;
         float updateTimer = 0.0f;
 
@@ -272,6 +281,7 @@ namespace Framework
         int maxHealth = 50;
         int currentHealth = 50;
         bool isDead = false;
+        int damageModifier = 0;  // Flat bonus to incoming damage (e.g., Knight Commander passive)
 
         Health() = default;
         Health(int max) : maxHealth(max), currentHealth(max) {}
@@ -301,7 +311,7 @@ namespace Framework
         int maxActionPoints = 3;
 
         AP() = default;
-		AP(int maxAP) : actionPoints(maxAP), maxActionPoints(maxAP) {}
+        AP(int maxAP) : actionPoints(maxAP), maxActionPoints(maxAP) {}
     };
 
     struct AttackRangeComponent : public Component<AttackRangeComponent> {
@@ -360,6 +370,69 @@ namespace Framework
         int maxPoints = 3; //max attack points per player turn
 
         AttackAP(int start = 1) : points(start), maxPoints(start) {}
+    };
+
+    /**
+     * @brief Status effects component - tracks active buffs/debuffs on an entity
+     *
+     * Effect types:
+     *   "guard"       - blocks next damage instance (duration -1 = until consumed)
+     *   "parry"       - reflects next damage to attacker (duration -1 = until consumed)
+     *   "stun"        - skip next turn(s)
+     *   "vulnerable"  - take extra damage from all sources
+     *   "knightsOath" - damage redirected to sourceEntity
+     */
+    struct StatusEffects : public Component<StatusEffects> {
+        struct Effect {
+            std::string type;
+            int turnsRemaining;       // -1 = permanent / until consumed
+            uint32_t sourceEntity;    // who applied this effect
+            uint32_t targetEntity;    // for knightsOath: which ally is protected
+            int extraData;            // for vulnerable: +N extra damage
+        };
+
+        std::vector<Effect> effects;
+
+        bool HasEffect(const std::string& type) const {
+            for (const auto& e : effects) {
+                if (e.type == type) return true;
+            }
+            return false;
+        }
+
+        const Effect* GetEffect(const std::string& type) const {
+            for (const auto& e : effects) {
+                if (e.type == type) return &e;
+            }
+            return nullptr;
+        }
+
+        void AddEffect(const std::string& type, int turns, uint32_t source = 0,
+            uint32_t target = 0, int extra = 0) {
+            // Remove existing effect of same type before adding
+            RemoveEffect(type);
+            effects.push_back({ type, turns, source, target, extra });
+        }
+
+        void RemoveEffect(const std::string& type) {
+            effects.erase(
+                std::remove_if(effects.begin(), effects.end(),
+                    [&](const Effect& e) { return e.type == type; }),
+                effects.end());
+        }
+
+        void DecrementTurns() {
+            for (auto& e : effects) {
+                if (e.turnsRemaining > 0) {
+                    e.turnsRemaining--;
+                }
+            }
+            // Remove expired (reached 0)
+            effects.erase(
+                std::remove_if(effects.begin(), effects.end(),
+                    [](const Effect& e) { return e.turnsRemaining == 0; }),
+                effects.end());
+        }
     };
 
 } // namespace Framework

@@ -1,4 +1,16 @@
+/*
+===============================================================================
+File:        ParticleSystem.h
+-------------------------------------------------------------------------------
+Brief:
+ParticleSystem manages the lifecycle of all particles in the engine.
+It iterates entities with ParticleEmitter + Transform, spawns new particles
+based on emission rate, updates positions/colors/sizes over lifetime,
+and removes dead particles. Rendering is handled by GraphicsSystemV2.
+===============================================================================
+*/
 #pragma once
+#include "Interface.h"
 
 namespace Framework {
 	class ParticleSystem {
@@ -29,11 +41,17 @@ namespace Framework {
 			int         ownerPlayerID{ -1 };  // -1 = always active, 0-2 = specific player
 		};
 
+    class EntityManager;
+    class GraphicsSystemV2;
 		void CreateParticle();
 		void Update(float dt);
 
 		void SetEmitter(float x, float y) { emitter = { x, y }; }
 		void SetSettings(const Settings& s) { settings = s; }
+    class ParticleSystem : public EngineSystem {
+    public:
+        ParticleSystem();
+        ~ParticleSystem() override;
 
 		const Settings& GetSettings() const { return settings; }
 		Vector2D GetEmitter() const { return emitter; }
@@ -44,17 +62,27 @@ namespace Framework {
 		size_t GetParticle() const { return particles.size(); } // Get particle count
 
 		void SpawnBurst(int count) { for (int i{ 0 }; i < count; ++i) CreateParticle(); } // Burst spawning
+        void Initialize() override;
+        void Update(float dt) override;
+        void SendEngineMessage(Message* message) override;
 
+        void SetEntityManager(EntityManager* em) { entityManager = em; }
+        void SetGraphicsSystem(GraphicsSystemV2* gs) { graphicsSystem = gs; }
 		void SetOwnerPlayer(int playerID) { settings.ownerPlayerID = playerID; }
 		int GetOwnerPlayer() const { return settings.ownerPlayerID; }
 
-	private:
+    private:
 		std::vector<Entity> particles;
 		Vector2D emitter { 0.0f, 0.0f };
 				
 		float spawnAcc = 0.0f;   // accumulator
 		bool active = true;	     // toggle controlled emitter
+        void SpawnParticles(struct ParticleEmitter& emitter, const struct Transform& transform, float dt);
+        void UpdateParticles(struct ParticleEmitter& emitter, float dt);
 
+        EntityManager* entityManager = nullptr;
+        GraphicsSystemV2* graphicsSystem = nullptr;
 		Settings settings;
-	};
+    };
+
 } // namespace Framework
