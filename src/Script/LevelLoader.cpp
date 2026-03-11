@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader.cpp
 Author:      GE YONGQI, Sim Kah Yan
@@ -566,6 +566,8 @@ namespace Framework {
 
         // Audio
         lua_register(L, "PlaySound", Lua_PlaySound);
+        lua_register(L, "PlayMusic", Lua_PlayMusic);
+        lua_register(L, "StopMusic", Lua_StopMusic);
         lua_register(L, "StopSound", Lua_StopSound);
         lua_register(L, "StopAllSounds", Lua_StopAllSounds);
         lua_register(L, "UpdateAudio", Lua_UpdateAudio);
@@ -578,6 +580,7 @@ namespace Framework {
         lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
         lua_register(L, "DrawButtonText", Lua_DrawButtonText);
         lua_register(L, "DrawText", Lua_DrawText);
+        lua_register(L, "WorldToScreen", Lua_WorldToScreen);
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
@@ -598,9 +601,11 @@ namespace Framework {
         lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
+        lua_register(L, "SetScale", Lua_SetScale);
         lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
         lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
         lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
+        lua_register(L, "SetSpriteUVRect", Lua_SetSpriteUVRect);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "IsEntityValid", Lua_IsEntityValid);
         lua_register(L, "SetEntityRotation", Lua_SetEntityRotation);
@@ -883,6 +888,24 @@ namespace Framework {
         }
         if (strcmp(stateName, "TUTORIAL") == 0) {
             next = TUTORIAL;
+        }
+        else if (strcmp(stateName, "CONTROL") == 0) {
+            next = CONTROL;
+        }
+        else if (strcmp(stateName, "CONTROL2") == 0) {
+            next = CONTROL2;
+        }
+        else if (strcmp(stateName, "SETTINGS") == 0) {
+            next = settingsMenu;
+        }
+        else if (strcmp(stateName, "SKILL_SETS") == 0) {
+            next = SKILL_SETS;
+        }
+        else if (strcmp(stateName, "WIN_SCREEN") == 0) {
+            next = WIN_SCREEN;
+        }
+        else if (strcmp(stateName, "LOSE_SCREEN") == 0) {
+            next = LOSE_SCREEN;
         }
         else if (strcmp(stateName, "LEVEL_2") == 0) {
             next = LEVEL_2;

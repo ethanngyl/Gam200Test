@@ -123,7 +123,7 @@ local healthBarFG = nil        -- Foreground bar entity (colored)
 local healthBarWidth = 0.1     -- Total bar width in world units
 local healthBarHeight = 0.02  -- Bar height in world units
 local healthBarOffsetY = 0.05  -- How far above enemy center
-local healthBarLayer = 4       -- Render layer (above entities, below UI)
+local healthBarLayer = 2       -- Render layer (below UI)
 
 -- ============================================================================
 -- ENEMY ANIMATION (manual sprite sheet switching)
@@ -433,10 +433,9 @@ function OnUpdate(dt)
         return
     end
 
-    -- Check if this enemy is stunned
+    -- Check if this enemy is stunned (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[Enemy " .. entityID .. "] STUNNED - skipping turn")
-        DecrementStatusEffects(entityID)
         FinishEnemyAction()
         return
     end
@@ -450,15 +449,12 @@ function OnUpdate(dt)
 
     -- Mana Drain: consume AP to reduce available actions this turn
     if HasStatusEffect and HasStatusEffect(entityID, "manaDrain") then
-        local reduction = 1
+        local reduction = 3
         ConsumeEnemyAP(entityID, reduction)
         print("[Enemy " .. entityID .. "] MANA DRAIN - AP reduced by " .. reduction)
     end
 
-    -- Decrement status effects at turn start (vulnerability, earthenBind, manaDrain, etc.)
-    if DecrementStatusEffects then
-        DecrementStatusEffects(entityID)
-    end
+    -- Status effects are decremented centrally in ResetPartyTurn (once per turn cycle)
 
     -- Update move timer
     if moveTimer > 0 then

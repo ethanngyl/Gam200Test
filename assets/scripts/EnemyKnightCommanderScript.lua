@@ -103,7 +103,7 @@ local healthBarFG = nil
 local healthBarWidth = 0.1
 local healthBarHeight = 0.02
 local healthBarOffsetY = 0.05
-local healthBarLayer = 4
+local healthBarLayer = 2
 
 -- Turn phase tracking for Rallying Cry lifecycle
 local lastTurnPhase = nil
@@ -432,16 +432,12 @@ function OnUpdate(dt)
     if not ok2 or not actionReady then return end
     if hasActedThisTurn then return end
 
-    -- Stun check
+    -- Stun check (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[KnightCommander " .. entityID .. "] STUNNED")
-        DecrementStatusEffects(entityID)
         FinishAction()
         return
     end
-
-    -- Status effects
-    if DecrementStatusEffects then DecrementStatusEffects(entityID) end
 
     -- Move timer
     if moveTimer > 0 then

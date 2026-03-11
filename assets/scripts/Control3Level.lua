@@ -1,17 +1,11 @@
-﻿-- ============================================================================
--- TutorialLevel.lua
--- Author:        GE YONGQI
--- Email:         yongqi.ge@digipen.edu
--- Date:          2025-11-13
+-- ============================================================================
+-- Control3Level.lua
+-- Author:        Sim Kah Yan
+-- Email:         kahyan.sim@digipen.edu
+-- Date:          2026-02-24
 -- Contribution:  100%
---
--- REFACTORED:    2025-12-21 (Using ButtonManager module)
 -- ----------------------------------------------------------------------------
---  JSON-Driven Tutorial Level with ButtonManager Integration
---
---  Purpose:
---  Tutorial level that demonstrates game mechanics using JSON configuration
---  with centralized button management via ButtonManager module.
+--  JSON-Driven Control Page (Page 3) with ButtonManager Integration
 -- ============================================================================
 
 -- Load ButtonManager module
@@ -24,20 +18,17 @@ local ButtonManager = require("assets/scripts/ButtonManager")
 local initialized = false
 local config = nil
 local backgroundSpriteID = 0
-local scrollOverlayID = 0
 local overlaySprites = {}
-local cornerSpriteIDs = {}
-local enemyAnimSpriteID = 0  -- Animated enemy sprite (replaces static enemy.png)
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit()
-    Log("Tutorial Level Script Initialized (ButtonManager Version)")
+    Log("Control3 Level Script Initialized (ButtonManager Version)")
     Log("Loading configuration from JSON file...")
 
-    config = LoadJSON("assets/JSON/tutorial_config.json")
+    config = LoadJSON("assets/JSON/control3_config.json")
 
     if not config then
         Log("ERROR: Failed to load JSON configuration!")
@@ -71,7 +62,7 @@ function OnInit()
         Log("WARNING: Failed to create background sprite")
     end
 
-    -- Create overlay sprites
+    -- Create overlay sprites (scroll, etc.)
     if config.menu.overlaySprites then
         Log("Creating overlay sprites...")
 
@@ -97,79 +88,15 @@ function OnInit()
         Log("Overlay sprites complete!")
     end
 
-    -- Create corner sprites
-    if config.menu.cornerSprites then
-        Log("Creating corner decorations...")
-
-        for i, corner in ipairs(config.menu.cornerSprites) do
-            local spriteID = SpawnSprite(
-                corner.texture,
-                corner.offset.x,
-                corner.offset.y,
-                corner.scale.x,
-                corner.scale.y,
-                corner.layer,
-                corner.rotation
-            )
-
-            if spriteID > 0 then
-                cornerSpriteIDs[corner.id] = spriteID
-                Log("  Corner sprite '" .. corner.id .. "' created (ID: " .. spriteID .. ", rotation: " .. corner.rotation .. " degrees)")
-            else
-                Log("  FAILED to create corner sprite: " .. corner.id)
-            end
-        end
-
-        Log("Corner decorations complete!")
-    end
-
     local music = config.menu.music
-    PlayMusic(music.name, 0.8, music.loop)
-    Log("Playing tutorial music: " .. music.name)
+    PlaySound(music.name, music.loop, music.volume)
+    Log("Playing control page music: " .. music.name)
 
-    -- ========================================================================
-    -- INITIALIZE BUTTON MANAGER
-    -- ========================================================================
+    -- Initialize buttons
     ButtonManager.Initialize(config.menu.buttons)
 
-    -- ========================================================================
-    -- CREATE ANIMATED ENEMY SPRITE (replaces static enemy.png from JSON)
-    -- ========================================================================
-    -- Position and scale match the "label_enemyLabel" button in JSON
-    local enemyX = 0.8
-    local enemyY = -0.08
-    local enemyScaleX = 0.5
-    local enemyScaleY = 0.5
-    local enemyLayer = 11  -- Above the label button (layer 10)
-
-    -- Sprite sheet config: 1 row, 12 columns
-    local enemyRows = 1
-    local enemyCols = 12
-    local enemyFrameTime = 0.1  -- Animation speed
-
-    enemyAnimSpriteID = SpawnAnimatedSprite(
-        "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",
-        enemyX, enemyY,
-        enemyScaleX, enemyScaleY,
-        enemyLayer,
-        enemyRows,
-        enemyCols,
-        enemyRows * enemyCols,  -- Total frames: 12
-        enemyFrameTime,
-        true  -- Loop animation
-    )
-
-    if enemyAnimSpriteID > 0 then
-        Log("Animated enemy sprite created (ID: " .. enemyAnimSpriteID .. ")")
-        -- Start the animation
-        SetAnimationPlaying(enemyAnimSpriteID, true)
-        SetAnimationLoop(enemyAnimSpriteID, true)
-    else
-        Log("WARNING: Failed to create animated enemy sprite")
-    end
-
     initialized = true
-    Log("Tutorial initialization complete")
+    Log("Control3 page initialization complete")
     Log("Press F1 to toggle editor mode")
 end
 
@@ -177,13 +104,22 @@ end
 -- BUTTON CALLBACKS
 -- ============================================================================
 
+function OnBackButtonClicked()
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    Log("BACK button clicked!")
+    ButtonManager.TransitionTo("CONTROL2")
+end
+
 function OnNextButtonClicked()
     if not ButtonManager.CanExecuteCallback() then
         return
     end
 
     Log("NEXT button clicked!")
-    ButtonManager.TransitionTo("Level_select")
+    ButtonManager.TransitionTo("SKILL_SETS")
 end
 
 -- ============================================================================
@@ -192,8 +128,6 @@ end
 
 function OnUpdate(dt)
     UpdateAudio(dt)
-
-    -- ButtonManager handles F1 toggle and state transitions
     ButtonManager.Update(dt)
 end
 
@@ -206,7 +140,6 @@ function OnDraw()
         return
     end
 
-    -- ButtonManager handles all button rendering and editor mode visuals
     ButtonManager.DrawAll()
 end
 
@@ -215,22 +148,15 @@ end
 -- ============================================================================
 
 function OnDestroy()
-    Log("Tutorial cleanup...")
+    Log("Control3 page cleanup...")
 
-    StopMusic(0.5)
+    StopAllSounds()
 
-    -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()
 
     if backgroundSpriteID > 0 then
         DestroyEntity(backgroundSpriteID)
         Log("Background sprite destroyed")
-    end
-
-    -- Destroy animated enemy sprite
-    if enemyAnimSpriteID > 0 then
-        DestroyEntity(enemyAnimSpriteID)
-        Log("Animated enemy sprite destroyed")
     end
 
     for overlayID, spriteID in pairs(overlaySprites) do
@@ -240,21 +166,12 @@ function OnDestroy()
         end
     end
 
-    for cornerID, spriteID in pairs(cornerSpriteIDs) do
-        if spriteID > 0 then
-            DestroyEntity(spriteID)
-            Log("Corner sprite '" .. cornerID .. "' destroyed")
-        end
-    end
-
     config = nil
     initialized = false
     backgroundSpriteID = 0
-    enemyAnimSpriteID = 0
     overlaySprites = {}
-    cornerSpriteIDs = {}
 
-    Log("Tutorial cleanup complete")
+    Log("Control3 page cleanup complete")
 end
 
 -- ============================================================================
@@ -268,7 +185,7 @@ function PrintConfig()
     end
 
     Log("═══════════════════════════════════════")
-    Log("Tutorial Configuration:")
+    Log("Control3 Configuration:")
     Log("  Menu Name: " .. config.menu.name)
     Log("  Music: " .. config.menu.music.name)
     Log("  Camera Zoom: " .. config.menu.camera.zoom)

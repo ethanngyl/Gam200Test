@@ -17,13 +17,19 @@ integration, color/size interpolation over lifetime, and cleanup.
 namespace Framework {
 
     // Thread-local RNG for particle randomization
+    //thread_local prevents crashes in the event that multiple threads accesses the same rng state
+    //mt19937 prevents patterns from forming in the randomness
+    //random_device ensures every starting seed of the particle is random
     static thread_local std::mt19937 s_rng{ std::random_device{}() };
 
+
+    //Gets a random value between min and max, ensures all values has an equal chance to get selected
     static float RandomFloat(float min, float max) {
         std::uniform_real_distribution<float> dist(min, max);
         return dist(s_rng);
     }
 
+    //Generates a random 2D coordinate in a circle, sqrt is used to ensure even distribution so that the particles do not clump together
     static glm::vec2 RandomInCircle(float radius) {
         float angle = RandomFloat(0.0f, glm::two_pi<float>());
         float r = radius * std::sqrt(RandomFloat(0.0f, 1.0f));
@@ -52,16 +58,19 @@ namespace Framework {
     // Main update
     // =========================================================================
 
+    //dt is used here as the time passed since the last frame
     void ParticleSystem::Update(float dt) {
         if (!entityManager) return;
 
         // Collect entities to destroy after iteration
         std::vector<Entity> toDestroy;
 
+        //Loops through every entity to check for the particle emitter component
         for (Entity e : entityManager->GetAllEntities()) {
             if (!entityManager->HasComponent<ParticleEmitter>(e)) continue;
             if (!entityManager->HasComponent<Transform>(e)) continue;
 
+            //Grabbing entity data
             auto& emitter = entityManager->GetComponent<ParticleEmitter>(e);
             auto& transform = entityManager->GetComponent<Transform>(e);
 
@@ -78,12 +87,13 @@ namespace Framework {
                 }
             }
 
-            // Lazy-initialize particle pool
+            // Lazy-initialization particle pool
+            // Memory is not allocated for particles until the first time it is needed
             if (emitter.particles.empty() && emitter.maxParticles > 0) {
                 emitter.particles.resize(static_cast<size_t>(emitter.maxParticles));
             }
 
-            // Handle duration
+            // Handles particle duration
             if (emitter.duration > 0.0f) {
                 emitter.elapsed += dt;
                 if (emitter.elapsed >= emitter.duration) {
@@ -121,6 +131,7 @@ namespace Framework {
     void ParticleSystem::SpawnParticles(ParticleEmitter& emitter, const Transform& transform, float dt) {
         if (!emitter.emit) return;
 
+        //Calculated based on burst/continuous setting
         int toSpawn = 0;
 
         // Burst mode
@@ -131,11 +142,14 @@ namespace Framework {
         }
         else if (emitter.burstCount == 0) {
             // Continuous emission
-            emitter.emitAccumulator += emitter.emissionRate * dt;
+            emitter.emitAccumulator += emitter.emissionRate * dt; //In the event that the frame rate is faster than the emission rate
             toSpawn = static_cast<int>(emitter.emitAccumulator);
             emitter.emitAccumulator -= static_cast<float>(toSpawn);
         }
 
+
+        // This looks for an existing particle in the list that is currently 
+        // inacitve/not alive and reactivates it to reduce memory fragmentation
         for (int i = 0; i < toSpawn; ++i) {
             // Find a dead particle slot
             Particle* slot = nullptr;
@@ -173,10 +187,12 @@ namespace Framework {
                 break;
             }
 
-            // World-space particles get absolute position; local-space particles stay relative to emitter
+            // World-space makes the particle stay in the position it was created even if the emitter moves
             if (emitter.worldSpace) {
                 slot->position = glm::vec2(transform.position.x, transform.position.y) + offset;
-            } else {
+            } 
+            // Local-space makes the particle move with its emitter
+            else {
                 slot->position = offset;
             }
         }
@@ -192,13 +208,13 @@ namespace Framework {
 
             p.lifetime += dt;
 
-            // Kill expired particles
+            // Kill expired particles if they have exceeded their lifetime
             if (p.lifetime >= p.maxLifetime) {
                 p.alive = false;
                 continue;
             }
 
-            // Normalized age [0, 1]
+            // Normalized particle lifetime
             float t = p.lifetime / p.maxLifetime;
 
             // Apply gravity
@@ -213,7 +229,7 @@ namespace Framework {
             // Interpolate color
             p.color = glm::mix(emitter.colorStart, emitter.colorEnd, t);
 
-            // Rotate
+            // Particle Rotation Speed
             p.rotation += p.rotationSpeed * dt;
         }
     }

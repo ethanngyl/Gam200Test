@@ -137,7 +137,7 @@ local healthBarFG = nil
 local healthBarWidth = 0.4       -- Wider bar for boss
 local healthBarHeight = 0.02     -- Slightly taller
 local healthBarOffsetY = 0.22
-local healthBarLayer = 4
+local healthBarLayer = 2
 
 -- Boss idle state: immune and does nothing until all 3 players enter the arena
 local bossActivated = false
@@ -529,17 +529,11 @@ function OnUpdate(dt)
 
     if hasActedThisTurn then return end
 
-    -- Check if boss is stunned
+    -- Check if boss is stunned (status effects are decremented centrally in ResetPartyTurn)
     if HasStatusEffect and HasStatusEffect(entityID, "stun") then
         print("[Boss " .. entityID .. "] STUNNED - skipping turn")
-        DecrementStatusEffects(entityID)
         FinishBossAction()
         return
-    end
-
-    -- Decrement status effects at turn start
-    if DecrementStatusEffects then
-        DecrementStatusEffects(entityID)
     end
 
     if moveTimer > 0 then

@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader.h
 Author:      GE YONGQI, Sim Kah Yan
@@ -172,6 +172,8 @@ namespace Framework {
 
         // Audio API
         static int Lua_PlaySound(lua_State* L);
+        static int Lua_PlayMusic(lua_State* L);
+        static int Lua_StopMusic(lua_State* L);
         static int Lua_StopSound(lua_State* L);
         static int Lua_StopAllSounds(lua_State* L);
         static int Lua_UpdateAudio(lua_State* L);
@@ -184,6 +186,7 @@ namespace Framework {
         static int Lua_ClearAllButtons(lua_State* L);
         static int Lua_DrawButtonText(lua_State* L);
         static int Lua_DrawText(lua_State* L);
+        static int Lua_WorldToScreen(lua_State* L);
 
         // Input API
         static int Lua_IsKeyDown(lua_State* L);
@@ -206,9 +209,11 @@ namespace Framework {
         static int Lua_SetSpriteGray(lua_State* L);
         static int Lua_SetSpriteTexture(lua_State* L);
         static int Lua_SetSpritePosition(lua_State* L);
+        static int Lua_SetScale(lua_State* L);
         static int Lua_SetSpriteVisibility(lua_State* L);
         static int Lua_SetSpriteBlendMode(lua_State* L);
         static int Lua_SetSpriteFilterMode(lua_State* L);
+        static int Lua_SetSpriteUVRect(lua_State* L);      // Set sprite UV rect (u0,v0,u1,v1)
         static int Lua_DestroyEntity(lua_State* L);
         static int Lua_IsEntityValid(lua_State* L);
         static int Lua_SetEntityRotation(lua_State* L);

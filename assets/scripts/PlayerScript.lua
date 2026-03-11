@@ -147,6 +147,8 @@ local playerFSM = nil
 local moveCooldown = 0.0
 local moveCooldownTime = 0.2
 local apCostPerMove = 1
+local uiAnimBlockTimer = 0.0
+local uiAnimMaxBlockTime = 1.0
 
 -- Helper: get actual movement cost (0 if Bloody Warcry free move is active)
 local function getMovementCost()
@@ -154,6 +156,23 @@ local function getMovementCost()
         return 0
     end
     return apCostPerMove
+end
+
+-- Safety: avoid permanent input lock if UI/scroll never finishes
+local function ShouldBlockForUIAnimation(dt)
+    if IsUIAnimating and IsUIAnimating() then
+        uiAnimBlockTimer = uiAnimBlockTimer + (dt or 0)
+        if uiAnimBlockTimer <= uiAnimMaxBlockTime then
+            return true
+        end
+    else
+        uiAnimBlockTimer = 0.0
+    end
+    return false
+end
+
+local function ShouldBlockForTurnScroll(dt)
+    return IsTurnScrollPlaying and IsTurnScrollPlaying()
 end
 
 -- Animation state
@@ -198,9 +217,9 @@ local skillCooldowns = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Thrust", ["2"] = "SweepingSlash" },
-    [2] = { ["1"] = "Fireball", ["2"] = "PiercingShot" },
-    [3] = { ["1"] = "Slam", ["2"] = "DarkOmens" },
+    [1] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [3] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
 }
 
 -- All keys that can be bound to skills (used for preview selection)
@@ -499,18 +518,10 @@ local function createPlayerStates(fsm)
             -- Detect turn start (transition from inactive to active)
             if not lastActiveState then
                 lastActiveState = true
-                -- Decrement skill cooldowns at turn start
-                for sid, cd in pairs(skillCooldowns) do
-                    if cd > 0 then
-                        skillCooldowns[sid] = cd - 1
-                        if skillCooldowns[sid] <= 0 then
-                            skillCooldowns[sid] = nil
-                            print("[PlayerScript] Skill " .. sid .. " cooldown expired")
-                        else
-                            print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
-                        end
-                    end
-                end
+                -- NOTE: Cooldown decrement moved to OnUpdate's "just became active" block
+                -- because the FSM update never runs while character is inactive,
+                -- so lastActiveState was never reset and cooldowns only decremented once.
+
                 -- Initialize Berserker turn-start effects
                 if HasStatusEffect and HasStatusEffect(entityID, "bloodyWarcry") then
                     bloodyWarcryFreeMove = true
@@ -549,8 +560,8 @@ local function createPlayerStates(fsm)
                 return
             end
 
-            -- Block input during UI animation
-            if IsUIAnimating and IsUIAnimating() then
+            -- Block input during UI animation (with safety timeout)
+            if ShouldBlockForUIAnimation(dt) then
                 return
             end
 
@@ -749,10 +760,13 @@ local function createPlayerStates(fsm)
                     end
                     enemyTargetMode.currentIndex = idx
                     enemyTargetMode.selectedEnemy = enemyTargetMode.targets[idx]
-                    -- Re-tint: highlight selected (selected=bold red, unselected=very dim)
+                    -- Re-tint: only selected enemy is red, unselected have no tint
                     for i, t in ipairs(activePreview and activePreview.tiles or {}) do
-                        local bright = (i == idx)
-                        TintTile(t.x, t.y, bright and 1.0 or 0.15, bright and 0.0 or 0.1, bright and 0.0 or 0.1, bright and 0.95 or 0.35)
+                        if i == idx then
+                            TintTile(t.x, t.y, 1.0, 0.0, 0.0, 0.95)
+                        else
+                            TintTile(t.x, t.y, 1.0, 1.0, 1.0, 1.0)
+                        end
                     end
                     print("[PlayerScript] Enemy selected: " .. tostring(enemyTargetMode.selectedEnemy) .. " (" .. idx .. "/" .. n .. "), Space to execute")
                 end
@@ -1145,10 +1159,7 @@ function OnUpdate(dt)
     -- ========================================================================
     -- TURN SCROLL CHECK: Skip input during "Your Turn" animation
     -- ========================================================================
-    
-    -- Use C++ bridge function to check if turn scroll is playing
-    -- This bridges from entity Lua state to level Lua state's UIManager
-    if IsTurnScrollPlaying and IsTurnScrollPlaying() then
+    if ShouldBlockForTurnScroll(dt) then
         return
     end
     
@@ -1250,6 +1261,20 @@ function OnUpdate(dt)
     if isActive and not lastActiveCheck then
         print("[PlayerScript] Entity " .. entityID .. " just became active - checking held keys...")
         blockHeldKeys()
+
+        -- Decrement skill cooldowns at turn start (moved here from FSM because
+        -- the FSM update never runs while inactive, so lastActiveState never resets)
+        for sid, cd in pairs(skillCooldowns) do
+            if cd > 0 then
+                skillCooldowns[sid] = cd - 1
+                if skillCooldowns[sid] <= 0 then
+                    skillCooldowns[sid] = nil
+                    print("[PlayerScript] Skill " .. sid .. " cooldown expired - skill available again")
+                else
+                    print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
+                end
+            end
+        end
     end
     lastActiveCheck = isActive
 
@@ -1302,7 +1327,7 @@ function OnUpdate(dt)
 
     -- Check if UI is animating (AP crystals refilling)
     -- Uses C++ bridge to access UIManager in LevelLoader's Lua state
-    if IsUIAnimating and IsUIAnimating() then
+    if ShouldBlockForUIAnimation(dt) then
         print("[PlayerScript] DEBUG: Blocked by IsUIAnimating")
         -- Don't allow movement during AP refill animation
         return
@@ -1482,9 +1507,13 @@ function ShowSkillPreview(skillID)
         local idx = 1
         enemyTargetMode = { skillID = skillID, targets = targets, currentIndex = idx, selectedEnemy = targets[idx] }
         activePreview = { skillID = skillID, tiles = tiles }
-        -- Tint: dim all, highlight first (selected=bold red, unselected=very dim)
+        -- Tint: only selected enemy is red, unselected have no tint
         for i, t in ipairs(tiles) do
-            TintTile(t.x, t.y, (i == idx) and 1.0 or 0.15, (i == idx) and 0.0 or 0.1, (i == idx) and 0.0 or 0.1, (i == idx) and 0.95 or 0.35)
+            if i == idx then
+                TintTile(t.x, t.y, 1.0, 0.0, 0.0, 0.95)
+            else
+                TintTile(t.x, t.y, 1.0, 1.0, 1.0, 1.0)
+            end
         end
         print("[PlayerScript] Enemy target mode: Tab/Shift+Tab to cycle, Space to execute")
         return
@@ -1864,20 +1893,25 @@ function ExecuteSkill(skillID)
             siphonChargeActive = true
         end
 
-        -- Bloody Warcry: apply warcry buff to ALL party members
+        -- Bloody Warcry: apply as PENDING to all party members (activates next round)
+        -- Using "bloodyWarcryPending" prevents same-round characters from consuming the effect.
+        -- ResetPartyTurn converts pending -> active at the start of the next round.
         if skill.effect == "bloodyWarcry" then
+            -- Replace the self-applied "bloodyWarcry" with pending version
+            RemoveStatusEffect(entityID, "bloodyWarcry")
+            ApplyStatusEffect(entityID, "bloodyWarcryPending", skill.duration, entityID)
             local allPlayers = GetAllPlayers()
             if allPlayers then
                 for _, pid in ipairs(allPlayers) do
                     if pid ~= entityID then
-                        ApplyStatusEffect(pid, "bloodyWarcry", skill.duration, entityID)
+                        ApplyStatusEffect(pid, "bloodyWarcryPending", skill.duration, entityID)
                         spawnEffectParticles(pid, "bloodyWarcry", 1.0, 0.0, 0.0)
                     end
                 end
             end
             -- Red particles on self too
             spawnEffectParticles(entityID, "bloodyWarcry", 1.0, 0.0, 0.0)
-            print("[PlayerScript] Bloody Warcry: applied to all party members")
+            print("[PlayerScript] Bloody Warcry: applied pending to all party members (activates next round)")
         end
 
         consumeAttackAPAndAnimate(skill.apCost)
@@ -2145,8 +2179,12 @@ function ExecuteSkill(skillID)
             end
         end
 
-        -- Stun self for next turn
-        ApplyStatusEffect(entityID, "stun", 1, entityID)
+        -- Stun self for next turn (use CallLevelFunction so level state sees it in ResetPartyTurn)
+        if CallLevelFunction then
+            CallLevelFunction("ApplyGroundshatterStun", entityID)
+        else
+            ApplyStatusEffect(entityID, "stun", 1, entityID)
+        end
 
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] Groundshatter: hit " .. totalHit .. " characters for " .. skill.damage .. " damage, self stunned")

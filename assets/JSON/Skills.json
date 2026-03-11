@@ -153,12 +153,13 @@
     },
     "ManaDrain": {
       "name": "Mana Drain",
-      "description": "Target enemy starts with 1 less AP next turn",
+      "description": "Target enemy starts with 3 less AP next turn. 2 turn cooldown",
       "skillType": "enemy_target",
       "effect": "manaDrain",
       "effectDuration": 1,
       "extraData": 1,
       "apCost": 1,
+      "cooldown": 3,
       "damage": 0,
       "range": 0,
       "pattern": "none",
@@ -298,7 +299,7 @@
     },
     "BladedWhirlwind": {
       "name": "Bladed Whirlwind",
-      "description": "Projectile in facing direction, 1 damage. Enemy takes 1 additional damage at end of their turn",
+      "description": "Projectile in facing direction, 1 damage. Enemy takes 1 additional damage at the start of their turn",
       "skillType": "projectile",
       "apCost": 1,
       "damage": 1,

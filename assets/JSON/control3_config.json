@@ -1,0 +1,213 @@
+{
+  "menu": {
+    "name": "Control3",
+    "music": {
+      "name": "mmbgm",
+      "volume": 1.0,
+      "loop": true
+    },
+    "camera": {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "zoom": 1.0
+    },
+    "background": {
+      "texture": "assets/Menu/WoodBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 4.0,
+        "y": 4.0
+      },
+      "layer": 1
+    },
+    "overlaySprites": [
+      {
+        "id": "scrollOverlay",
+        "texture": "assets/Menu/Scroll Overlay.png",
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "scale": {
+          "x": 4.7,
+          "y": 2.5
+        },
+        "layer": 2
+      },
+      {
+        "id": "attackApIcon",
+        "texture": "assets/UI/AP_Crystal(old).png",
+        "position": {
+          "x": -1.05,
+          "y": 0.35
+        },
+        "scale": {
+          "x": 0.22,
+          "y": 0.22
+        },
+        "layer": 10
+      },
+      {
+        "id": "moveApIcon",
+        "texture": "assets/UI/MovP.png",
+        "position": {
+          "x": -1.05,
+          "y": 0.05
+        },
+        "scale": {
+          "x": 0.22,
+          "y": 0.22
+        },
+        "layer": 10
+      }
+    ],
+    "buttons": [
+      {
+        "id": "text_title",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.27,
+          "y": 0.5
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "ICONS",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 1.1,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_attack_ap",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -0.65,
+          "y": 0.15
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "AP crystal: shows number of attacks available.",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -5.0,
+            "y": 80
+          },
+          "scale": 0.85,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_move_ap",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -0.65,
+          "y": -0.1
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "Move points: shows how many steps you can move.",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -5.0,
+            "y": 80
+          },
+          "scale": 0.85,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "next",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 1.0,
+          "y": -0.66
+        },
+        "scale": {
+          "x": 0.8,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "NEXT",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -50.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnNextButtonClicked"
+      },
+      {
+        "id": "back",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": -1.0,
+          "y": -0.66
+        },
+        "scale": {
+          "x": 0.8,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "BACK",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -50.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnBackButtonClicked"
+      }
+    ]
+  }
+}

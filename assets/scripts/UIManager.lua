@@ -130,6 +130,34 @@ local function GetActiveCharacterAP()
     return GetPlayerAP()
 end
 
+local function GetActiveCharacterAttackAP()
+    if GetActiveCharacter then
+        local activeEntityID = GetActiveCharacter()
+        if activeEntityID and activeEntityID > 0 and GetEntityAttackAP then
+            return GetEntityAttackAP(activeEntityID)
+        end
+    end
+    if GetPlayerAttackAP then
+        return GetPlayerAttackAP()
+    end
+    return 0, 0
+end
+
+-- UI-driven AP getters for the new bars (fallback to entity values)
+local function GetAttackAPForBars()
+    if UIManager.components.attackAP and UIManager.components.attackAP.GetDisplayedAP then
+        return UIManager.components.attackAP:GetDisplayedAP()
+    end
+    return GetActiveCharacterAttackAP()
+end
+
+local function GetMoveAPForBars()
+    if UIManager.components.movementAP and UIManager.components.movementAP.GetDisplayedAP then
+        return UIManager.components.movementAP:GetDisplayedAP()
+    end
+    return GetActiveCharacterAP()
+end
+
 function UIManager.Init(config)
     config = config or {}
 
@@ -137,65 +165,98 @@ function UIManager.Init(config)
     Log("[UIManager] Initializing UI System...")
     Log("========================================")
 
-    -- Create Movement AP Indicator
+    -- Create Movement AP UI (hidden, kept for logic/animations)
     UIManager.components.movementAP = APIndicatorUI:New()
     UIManager.components.movementAP:Init({
         maxAP = 5,
-        size = 0.06,
-        spacing = 0.1,
-        offsetX = -0.82,
-        offsetY = -0.42,
-        layer = 4,
+        size = 0.001,      -- Hidden: effectively invisible
+        spacing = 0.001,
+        offsetX = 5.0,     -- Off-screen
+        offsetY = 5.0,
+        layer = 1,
         filledTexture = "assets/UI/MovP.png",
+        emptyTexture = "assets/UI/MovP.png",
         useTint = true,
+        filledTint = { r = 1.0, g = 1.0, b = 1.0 },
+        emptyTint = { r = 0.3, g = 0.3, b = 0.3 },
         useGray = true,
-        emptyGrayAmount = 1.0,
         filledGrayAmount = 0.0,
-        emptyTint = { r = 0.45, g = 0.45, b = 0.45 },
-        getAPFunc = GetActiveCharacterAP  -- Use active character's AP
+        emptyGrayAmount = 0.8,
+        getAPFunc = GetActiveCharacterAP,
+        showEmpty = false,
+        useMaxFromAP = true
     })
 
-    -- Create Attack AP Indicator
-    -- AP_Crystal.png is a 4x4 sprite sheet with two animation sequences:
-    --   Rows 1-2 (frames 0-7): Idle/filled animation (loops)
-    --   Rows 3-4 (frames 8-15): Consume animation (plays once when AP spent)
+    -- Create Attack AP UI (hidden, kept for logic/animations)
     UIManager.components.attackAP = AttackAPIndicatorUI:New()
     UIManager.components.attackAP:Init({
         maxAP = 3,
-        size = 0.06,
-        spacing = 0.1,
-        offsetX = -0.64,
-        offsetY = -0.32,
-        layer = 4,
+        size = 0.001,      -- Hidden: effectively invisible
+        spacing = 0.001,
+        offsetX = 5.0,     -- Off-screen
+        offsetY = 5.0,
+        layer = 1,
+        emptyTexture = "assets/UI/AP_Empty.png",
         filledTexture = "assets/UI/AP_Crystal.png",
-        useTint = true,
-        useGray = true,
-        emptyGrayAmount = 1.0,
-        filledGrayAmount = 0.0,
-        emptyTint = { r = 0.45, g = 0.45, b = 0.45 },
-        filledTint = { r = 0.75, g = 0.85, b = 1.0 },
-        -- Sprite sheet config (4 columns x 5 rows, but only 4 rows have content)
-        -- Image is 1280x1600, with 320x320 frames. Bottom row (row 5) is empty.
         useAnimatedSprite = true,
-        spriteRows = 5,  -- 1600 / 320 = 5 rows (last row is empty)
-        spriteCols = 4,  -- 1280 / 320 = 4 columns
-        -- Filled animation: frames 0-7 (rows 1-2), loops
+        spriteRows = 4,
+        spriteCols = 4,
         filledStartFrame = 0,
         filledFrameCount = 8,
-        -- Consume animation: frames 8-19 (rows 3-5), plays once
         consumeStartFrame = 8,
-        consumeFrameCount = 12,  -- 3 rows × 4 columns = 12 frames
-        frameTime = 0.1,     -- 100ms per frame
-        animationLoop = true
+        consumeFrameCount = 8,
+        frameTime = 0.1,
+        useTint = true,
+        filledTint = { r = 1.0, g = 1.0, b = 1.0 },
+        emptyTint = { r = 0.3, g = 0.3, b = 0.3 },
+        useGray = true,
+        filledGrayAmount = 0.0,
+        emptyGrayAmount = 0.8
     })
 
     -- Create Health UI
     UIManager.components.health = HealthUI:New()
     UIManager.components.health:Init({
         maxHP = 5,
-        scale = 0.10,
-        offsetX = -0.82,
-        offsetY = -0.32,
+        holderTexture = "assets/UI/health_ap_movement_holder.png",
+        holderFrameTexture = "assets/UI/health_ap_movement_holder frame only.png",
+        holderOnly = false,
+        enableHPFill = true,
+        enableAttackFill = true,
+        enableMoveFill = true,
+        holderScaleX = 0.55,
+        holderScaleY = 0.23,
+        holderOffsetX = -0.60,
+        holderOffsetY = -0.38,
+        holderFrameScaleX = 0.55,
+        holderFrameScaleY = 0.23,
+        holderFrameOffsetX = -0.583,
+        holderFrameOffsetY = -0.373,
+        hpFillOffsetX = -0.189,
+        hpFillOffsetY = 0.05,
+        hpFillWidth = 0.085,
+        hpFillHeight = 0.085,
+        hpFillColor = { r = 0.9, g = 0.1, b = 0.1, a = 1.0 },
+        hpFillTexture = "assets/UI/skill_circle.png",
+        hpTextShowPercent = false,
+        hpTextOffsetY = 0.0097,
+        hpTextOffsetX = 0.0025,
+        attackFillOffsetX = 0.0429,
+        attackFillOffsetY = 0.05,
+        attackFillWidth = 0.365,
+        attackFillHeight = 0.07,
+        attackFillColor = { r = 0.1, g = 0.25, b = 0.7, a = 1.0 },
+        attackTextOffsetY = 0.010,
+        moveTextOffsetY = 0.010,
+        moveFillOffsetX = 0.015,
+        moveFillOffsetY = -0.047,
+        moveFillWidth = 0.427,
+        moveFillHeight = 0.07,
+        moveFillColor = { r = 0.65, g = 0.35, b = 0.15, a = 1.0 },
+        textColor = { r = 0.0, g = 0.0, b = 0.0, a = 1.0 },
+        textScale = 0.80,
+        getMovementAPFunc = GetMoveAPForBars,
+        getAttackAPFunc = GetAttackAPForBars,
         layer = 4,
         textureBasePath = "assets/UI/Health_"
     })
@@ -274,19 +335,10 @@ function UIManager.Update(dt)
     local currentTurn = GetCurrentTurn and GetCurrentTurn() or "Player"
     local isEnemyTurn = (currentTurn == "Enemy")
 
-    -- Hide AP indicators during enemy turn (player can't use AP anyway)
-    if UIManager.components.movementAP then
-        UIManager.components.movementAP:SetEnabled(not isEnemyTurn)
-    end
-    if UIManager.components.attackAP then
-        UIManager.components.attackAP:SetEnabled(not isEnemyTurn)
-    end
     -- IMPORTANT: Keep HealthUI enabled even during enemy turn!
     -- This allows players to see their HP decrease when enemies attack
-    -- Health is ALWAYS visible (unlike AP which is only relevant during player turn)
-    -- Amended for now
     if UIManager.components.health then
-        UIManager.components.health:SetEnabled(not isEnemyTurn)  -- Always enabled
+        UIManager.components.health:SetEnabled(true)
     end
     -- Keep skill bubble holder visible during enemy turn
     -- so players can still see skill info
@@ -325,12 +377,16 @@ function UIManager.IsAPAnimating()
         return false
     end
 
-    -- Check if movement AP is animating
     if UIManager.components.movementAP and UIManager.components.movementAP.IsAnimating then
         return UIManager.components.movementAP:IsAnimating()
     end
 
     return false
+end
+
+-- Check if any UI animation is currently playing (AP refill or turn scroll)
+function UIManager.IsAnyAnimationPlaying()
+    return UIManager.IsAPAnimating() or UIManager.IsTurnScrollPlaying()
 end
 
 -- Check if the turn scroll animation is currently playing
