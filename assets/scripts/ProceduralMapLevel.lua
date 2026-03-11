@@ -685,6 +685,11 @@ end
 -- ============================================================================
 
 function OnUpdate(dt)
+    -- Process deferred deaths FIRST (Dark Omens etc.) - must run when Lua stack is clear
+    if ProcessDeferredDeaths then
+        ProcessDeferredDeaths()
+    end
+
     -- CRITICAL: Force grid movement to stay disabled
     SetGridMovementEnabled(false)
 

@@ -2,7 +2,7 @@
 ===============================================================================
  File:          HealthUI.lua
  Authors:       
- Co-Authors:    
+ Co-Authors:    kahyan.sim
  Date:          
  Contribution:  
  ------------------------------------------------------------------------------
@@ -602,6 +602,7 @@ function HealthUI:Draw()
     if not self.holderTexture or self.holderOnly then return end
     if not self.showValueText then return end
     if not DrawText or not WorldToScreen then return end
+    if IsPaused and IsPaused() then return end
 
     local fbW, fbH = GetFramebufferSize()
     if not fbW or fbW <= 0 or not fbH or fbH <= 0 then return end

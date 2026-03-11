@@ -219,7 +219,7 @@
     },
     "SiphonCharge": {
       "name": "Siphon Charge",
-      "description": "The first attack next turn consumes all AP and recovers 3 HP",
+      "description": "Your next attack costs 1 more HP. If it kills, restore 3 HP",
       "skillType": "self_buff",
       "effect": "siphonCharge",
       "duration": 2,
@@ -247,7 +247,7 @@
     },
     "DarkOmens": {
       "name": "Dark Omens",
-      "description": "For 1 turn, if lethal damage is taken, HP is set to 1. Next turn limited to 2 free skills, then die. Once per level",
+      "description": "For 1 turn, if lethal damage is taken, HP is set to 1. Next turn act normally, but die when you end your turn (press P). Once per level",
       "skillType": "self_buff",
       "effect": "darkOmens",
       "duration": 1,

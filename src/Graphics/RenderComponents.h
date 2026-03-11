@@ -69,12 +69,11 @@ namespace Framework {
 
     // New name, same type. Can attach/get MeshRenderer in ECS code
     using MeshRenderer = Renderable;
-
-    /**
+     /**
      * @struct Particle
      * @brief Individual particle data (stored in flat array inside emitter)
      */
-    struct Particle {
+    struct ParticleEthan {
         glm::vec2 position{ 0.0f };
         glm::vec2 velocity{ 0.0f };
         glm::vec4 color{ 1.0f };
@@ -96,13 +95,6 @@ namespace Framework {
         Box
     };
 
-    /**
-     * @struct ParticleEmitter
-     * @brief Component for particle effects with built-in particle pool
-     *
-     * Stores all particles in a flat array for cache-friendly iteration.
-     * ParticleSystem updates particles; GraphicsSystemV2 renders them.
-     */
     struct ParticleEmitter : public Component<ParticleEmitter> {
         // --- Emitter config ---
         int maxParticles = 100;
@@ -139,7 +131,7 @@ namespace Framework {
         BlendMode blendMode = BlendMode::Additive;
 
         // --- Runtime state ---
-        std::vector<Particle> particles;
+        std::vector<ParticleEthan> particles;
         float emitAccumulator = 0.0f;     // fractional particle accumulation
 
         // --- Burst mode ---
@@ -154,5 +146,4 @@ namespace Framework {
         float elapsed = 0.0f;
         bool autoDestroy = false;         // destroy entity when duration expires and all particles dead
     };
-
 } // namespace Framework
