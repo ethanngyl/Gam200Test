@@ -25,6 +25,7 @@ namespace Framework {
 			// directional emission (for smoke up / explosion radial)
 			Vector2D	direction		{ 0.0f, 0.0f }; // (0,0) = radial/random
 			float		directionFuzz	{ 0.0f };		// 0 = straight, 1 = wide cone
+			float		spawnRadius		{ 0.0f };		// random offset from emitter position
 
 			glm::vec4	endTint{ 1.0f, 1.0f, 1.0f, 0.0f }; // For fade out
 			float		endSize{ 0.0f }; // For size change

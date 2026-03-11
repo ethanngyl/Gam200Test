@@ -33,7 +33,17 @@ namespace Framework {
 
 		CORE->GetEntityManager()->AddComponent<Transform>(entity, emitter);
 		auto& transform = CORE->GetEntityManager()->GetComponent<Transform>(entity);
-		transform.position = emitter;
+
+		// Randomize spawn position within spawnRadius
+		Vector2D spawnPos = emitter;
+		if (settings.spawnRadius > 0.0f) {
+			auto frandLocal = []() { return float(std::rand()) / float(RAND_MAX); };
+			float angle = frandLocal() * 2.0f * 3.14159265f;
+			float radius = frandLocal() * settings.spawnRadius;
+			spawnPos.x += std::cos(angle) * radius;
+			spawnPos.y += std::sin(angle) * radius;
+		}
+		transform.position = spawnPos;
 		transform.scale = { worldScale , worldScale };	// Size
 
 		CORE->GetEntityManager()->AddComponent<Particle>(entity);

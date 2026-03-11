@@ -32,6 +32,7 @@ namespace Framework {
 			s.direction.y = j["direction"][1].get<float>();
 		}
 		s.directionFuzz = j.value("directionFuzz", 0.0f);
+		s.spawnRadius = j.value("spawnRadius", 0.0f);
 
 		if (j.contains("endTint")) s.endTint = ReadTint(j["endTint"]);
 		s.endSize = j.value("endSize", 0.0f);
