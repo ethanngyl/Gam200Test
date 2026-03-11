@@ -1411,11 +1411,18 @@ function ShowSkillPreview(skillID)
         return
     end
 
-    -- HP cost check: block preview if not enough HP
-    if skill.hpCost and skill.hpCost > 0 then
+    -- HP cost check: block preview if not enough HP (including additional costs from effects)
+    local previewHPCost = skill.hpCost or 0
+    if siphonChargeActive and skill.damage and skill.damage > 0 then
+        previewHPCost = previewHPCost + 1
+    end
+    if bloodyWarcryDamageBonus and skill.damage and skill.damage > 0 then
+        previewHPCost = previewHPCost + 1
+    end
+    if previewHPCost > 0 then
         local currentHP = GetEntityHP(entityID)
-        if not currentHP or currentHP <= skill.hpCost then
-            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= cost:" .. skill.hpCost .. ")")
+        if not currentHP or currentHP <= previewHPCost then
+            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= total cost:" .. previewHPCost .. ")")
             PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
             return
         end
@@ -1786,12 +1793,23 @@ function ExecuteSkill(skillID)
         return
     end
 
-    -- Check HP cost (Berserker skills)
+    -- Calculate total HP cost including additional effects
     local hpCost = skill.hpCost or 0
-    if hpCost > 0 then
+    local totalHPCost = hpCost
+    local hasSiphonCost = siphonChargeActive and skill.damage and skill.damage > 0
+    local hasWarcryCost = bloodyWarcryDamageBonus and skill.damage and skill.damage > 0
+    if hasSiphonCost then
+        totalHPCost = totalHPCost + 1
+    end
+    if hasWarcryCost then
+        totalHPCost = totalHPCost + 1
+    end
+
+    -- Check total HP cost (base + Siphon Charge + Bloody Warcry)
+    if totalHPCost > 0 then
         local currentHP, maxHP = GetEntityHP(entityID)
-        if not currentHP or currentHP <= hpCost then
-            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= cost:" .. hpCost .. ")")
+        if not currentHP or currentHP <= totalHPCost then
+            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= total cost:" .. totalHPCost .. ")")
             ClearActivePreview()
             return
         end
@@ -1806,7 +1824,7 @@ function ExecuteSkill(skillID)
 
     -- Siphon Charge: if active, first attack costs +1 HP; if it kills, heal 3 HP
     siphonTriggeredThisSkill = false
-    if siphonChargeActive and skill.damage and skill.damage > 0 then
+    if hasSiphonCost then
         print("[PlayerScript] Siphon Charge triggered! +1 HP cost, kills heal 3 HP")
         siphonTriggeredThisSkill = true
         siphonChargeActive = false
@@ -1828,7 +1846,7 @@ function ExecuteSkill(skillID)
 
     -- Bloody Warcry: next skill gets +1 damage and costs 1 HP
     currentWarcryBonus = 0
-    if bloodyWarcryDamageBonus and skill.damage and skill.damage > 0 then
+    if hasWarcryCost then
         currentWarcryBonus = 1
         bloodyWarcryDamageBonus = false
         RemoveStatusEffect(entityID, "bloodyWarcry")
