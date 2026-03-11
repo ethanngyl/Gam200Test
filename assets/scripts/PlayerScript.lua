@@ -219,7 +219,7 @@ local skillCooldowns = {}
 local PlayerSkills = {
     [1] = { ["1"] = "Fireball", ["2"] = "DarkOmens" },
     [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
-    [3] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [3] = { ["1"] = "Slam", ["2"] = "SiphonCharge" },
 }
 
 -- All keys that can be bound to skills (used for preview selection)
