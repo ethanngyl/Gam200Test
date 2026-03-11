@@ -1,5 +1,5 @@
 #pragma once
-#include "ParticleSystem.h"
+#include "ParticleSystem1.h"
 #include <nlohmann/json.hpp>
 
 using nlohmann::json;
@@ -22,9 +22,9 @@ namespace Framework {
 				
 	private:
 		// Internal data (emitters, particle systems)
-		std::unordered_map<std::string, ParticleSystem::Settings> settings;     // table: "smoke" -> settings, "explosion" -> settings
+		std::unordered_map<std::string, ParticleSystem::Settings> settings;
 		std::vector<ParticleSystem> particleSystems;
-		std::unordered_map<int, size_t> emitterIdToIndex; // NEW: Map IDs to indices
+		std::unordered_map<int, size_t> emitterIdToIndex;
 		int nextEmitterId{ 1 };
 	};
 } // namespace Framework
