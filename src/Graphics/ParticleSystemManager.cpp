@@ -106,6 +106,19 @@ namespace Framework {
 		return created;
 	}
 
+	int ParticleSystemManager::CreateEmitterRaw(const ParticleSystem::Settings& s, float x, float y, EntityID followTarget) {
+		auto& ps = AddParticleSystem();
+		ps.SetSettings(s);
+		ps.SetEmitter(x, y);
+		if (followTarget != INVALID_ENTITY)
+			ps.SetFollowEntity(followTarget);
+		if (s.burstCnt > 0)
+			ps.SpawnBurst(s.burstCnt);
+		int emitterId = nextEmitterId++;
+		emitterIdToIndex[emitterId] = particleSystems.size() - 1;
+		return emitterId;
+	}
+
 	// Lua-friendly emitter creation
 	int ParticleSystemManager::CreateEmitter(const std::string& presetName, float x, float y) {
 		auto it = settings.find(presetName);
@@ -177,6 +190,12 @@ namespace Framework {
 			temporaryEffects.push_back({ emitterId, duration });
 		}
 		return emitterId;
+	}
+
+	void ParticleSystemManager::SetFollowEntity(int emitterId, EntityID targetID) {
+		auto it = emitterIdToIndex.find(emitterId);
+		if (it == emitterIdToIndex.end()) return;
+		particleSystems[it->second].SetFollowEntity(targetID);
 	}
 
 	void ParticleSystemManager::SetEmitterOwner(int emitterId, int playerID) {

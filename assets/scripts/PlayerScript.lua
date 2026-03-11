@@ -319,13 +319,13 @@ local lastDKeyDown = false
 -- HELPER FUNCTIONS
 -- ============================================================================
 local function spawnEffectParticles(targetID, effectName, r, g, b)
-    if not SpawnParticleEmitterEthan then return end
+    if not SpawnParticleEmitter then return end
     local wx, wy = GetEntityWorldPosition(targetID)
     if not wx or not wy then return end
     _G.EffectParticles = _G.EffectParticles or {}
     local key = effectName .. "_" .. targetID
     if _G.EffectParticles[key] then return end  -- don't double-spawn
-    local emitterID = SpawnParticleEmitterEthan(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
+    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
     if emitterID and emitterID > 0 then
         _G.EffectParticles[key] = emitterID
         print("[PlayerScript] Spawned " .. effectName .. " particles on entity " .. targetID)

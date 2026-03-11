@@ -58,12 +58,11 @@ namespace Framework {
 		particle.shrinkOverTime = settings.shrinkOverTime;
 		particle.growOverTime = settings.growOverTime;
 
-		// Sprite
-		CORE->GetEntityManager()->AddComponent<Sprite>(entity);
-		auto& sprite = CORE->GetEntityManager()->GetComponent<Sprite>(entity);
-		sprite.texturePath = settings.texturePath;
-		sprite.layer = settings.layer;
-		sprite.tint = settings.tint;
+		// Mesh Renderer
+		CORE->GetEntityManager()->AddComponent<MeshRenderer>(entity);
+		auto& mr = CORE->GetEntityManager()->GetComponent<MeshRenderer>(entity);
+		mr.layer = settings.layer;
+		mr.tint = settings.tint;
 
 		// frand: gives any random number from 0.0f to 1.0f
 		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };
@@ -110,6 +109,15 @@ namespace Framework {
 		EntityManager* entityManager = CORE->GetEntityManager();
 		if (!entityManager) return;
 
+		// Follow target entity: keep emitter position in sync every frame
+		if (followEntity != INVALID_ENTITY) {
+			Entity target{ followEntity };
+			if (entityManager->HasComponent<Transform>(target)) {
+				auto& targetTransform = entityManager->GetComponent<Transform>(target);
+				emitter = targetTransform.position;
+			}
+		}
+
 		// spawn new particles over time
 		if (settings.spawnRate > 0.0f) {
 			spawnAcc += dt * settings.spawnRate; // how many particles we "owe"
@@ -131,7 +139,7 @@ namespace Framework {
 
 			auto& transform = entityManager->GetComponent<Transform>(entity);
 			auto& particle = entityManager->GetComponent<Particle>(entity);
-			auto& sprite = entityManager->GetComponent<Sprite>(entity);
+			auto& mr = entityManager->GetComponent<MeshRenderer>(entity);
 
 			// Apply physics
 			if (particle.gravity.x != 0.0f || particle.gravity.y != 0.0f) {
@@ -153,13 +161,13 @@ namespace Framework {
 			if (lifeProgress >= 0.0f && lifeProgress <= 1.0f) {
 				if (particle.fadeOut) {
 					// Fade out tint
-					sprite.tint.r = particle.startTint.r +
+					mr.tint.r = particle.startTint.r +
 						(particle.endTint.r - particle.startTint.r) * lifeProgress;
-					sprite.tint.g = particle.startTint.g +
+					mr.tint.g = particle.startTint.g +
 						(particle.endTint.g - particle.startTint.g) * lifeProgress;
-					sprite.tint.b = particle.startTint.b +
+					mr.tint.b = particle.startTint.b +
 						(particle.endTint.b - particle.startTint.b) * lifeProgress;
-					sprite.tint.a = particle.startTint.a +
+					mr.tint.a = particle.startTint.a +
 						(particle.endTint.a - particle.startTint.a) * lifeProgress;
 				}
 

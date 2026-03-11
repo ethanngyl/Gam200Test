@@ -5803,20 +5803,25 @@ namespace Framework {
         // Parse parameters
         float x = static_cast<float>(luaL_checknumber(L, 1));
         float y = static_cast<float>(luaL_checknumber(L, 2));
+        float spawnRadius = static_cast<float>(luaL_optnumber(L, 3, 0.04));
         float rate = static_cast<float>(luaL_optnumber(L, 4, 8.0));
         float duration = static_cast<float>(luaL_optnumber(L, 5, 0.0));
         float r = static_cast<float>(luaL_optnumber(L, 6, 1.0));
         float g = static_cast<float>(luaL_optnumber(L, 7, 1.0));
         float b = static_cast<float>(luaL_optnumber(L, 8, 0.0));
         float a = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        int followTarget = (int)luaL_optnumber(L, 10, -1);
 
         // Create an inline emitter using the ParticleSystemManager
+        auto* psm = CORE->GetParticleSystemManager();
+        if (!psm) { lua_pushinteger(L, -1); return 1; }
         auto& ps = pm->AddParticleSystem();
         ParticleSystem::Settings settings;
         settings.spawnRate = rate;
         settings.tint = glm::vec4(r, g, b, a);
         settings.endTint = glm::vec4(r, g, b, 0.0f);
         settings.layer = 15;
+        settings.spawnRadius = spawnRadius;
         settings.size = 6.0f;
         settings.endSize = 0.001f;
         settings.minLifetime = 0.4f;
@@ -5827,17 +5832,20 @@ namespace Framework {
         settings.directionFuzz = 1.0f;
         settings.fadeOut = true;
         settings.shrinkOverTime = true;
-        ps.SetSettings(settings);
-        ps.SetEmitter(x, y);
 
-        // For duration-based emitters, create a temporary effect
-        if (duration > 0.0f) {
-            // Use a simple timer approach - mark inactive after duration
-            // (handled by the manager's temporary effects system in future)
-        }
-
-        lua_pushinteger(L, 1); // Return a non-zero value to indicate success
+        EntityID follow = (followTarget >= 0) ? static_cast<EntityID>(followTarget) : INVALID_ENTITY;
+        int emitterId = psm->CreateEmitterRaw(settings, x, y, follow);
+        lua_pushinteger(L, emitterId);
         return 1;
+        
+        // // For duration-based emitters, create a temporary effect
+        // if (duration > 0.0f) {
+        //     // Use a simple timer approach - mark inactive after duration
+        //     // (handled by the manager's temporary effects system in future)
+        // }
+
+        // lua_pushinteger(L, 1); // Return a non-zero value to indicate success
+        // return 1;
     }
 
     // =========================================================================

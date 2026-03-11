@@ -41,6 +41,7 @@ namespace Framework {
 		void Update(float dt);
 
 		void SetEmitter(float x, float y) { emitter = { x, y }; }
+		void SetFollowEntity(EntityID id) { followEntity = id; }
 		void SetSettings(const Settings& s) { settings = s; }
 
 		const Settings& GetSettings() const { return settings; }
@@ -59,7 +60,7 @@ namespace Framework {
 	private:
 		std::vector<Entity> particles;
 		Vector2D emitter { 0.0f, 0.0f };
-
+		EntityID followEntity = INVALID_ENTITY;  // if set, emitter tracks this entity every frame
 		float spawnAcc = 0.0f;   // accumulator
 		bool active = true;	     // toggle controlled emitter
 

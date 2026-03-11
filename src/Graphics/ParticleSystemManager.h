@@ -16,11 +16,13 @@ namespace Framework {
 
 		// Lua-friendly interface
 		int CreateEmitter(const std::string& presetName, float x = 0.0f, float y = 0.0f);
+		int CreateEmitterRaw(const ParticleSystem::Settings& s, float x, float y, EntityID followTarget = INVALID_ENTITY);
 		void DestroyEmitter(int emitterId);
 		void SetEmitterPosition(int emitterId, float x, float y);
 		void SetEmitterActive(int emitterId, bool active);
 		void SpawnBurst(int emitterId, int count);
 		void SetEmitterOwner(int emitterId, int playerID);
+		void SetFollowEntity(int emitterId, EntityID targetID);
 		int CreateTemporaryEffect(const std::string& presetName, float x, float y, float duration = 0.0f);
 
 		// Mandatory overrides
