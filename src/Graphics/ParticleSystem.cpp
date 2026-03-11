@@ -135,7 +135,6 @@ namespace Framework {
 
 				if (particle.shrinkOverTime || particle.growOverTime)
 				{
-					lifeProgress = particle.age / particle.maxLifetime;
 					float currentSize = particle.startSize +
 						(particle.endSize - particle.startSize) * lifeProgress;
 					transform.scale = { currentSize, currentSize };
