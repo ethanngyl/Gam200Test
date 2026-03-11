@@ -255,7 +255,7 @@ namespace Framework
         ScriptSystem* scriptSystem = nullptr;
         ParticleSystemManager* particleSystemManager;
         FSMSystem* fsmSystem;
-        ParticleSystem* particleSystemEthan;
+        ParticleSystemEthan* particleSystemEthan;
 
         // state
         unsigned LastTime;
