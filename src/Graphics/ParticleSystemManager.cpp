@@ -57,7 +57,6 @@ namespace Framework {
 		particleSystems.clear();
 		settings.clear();
 		emitterIdToIndex.clear();
-		temporaryEffects.clear();
 		nextEmitterId = 1;
 
 		std::ifstream file(path);
@@ -78,31 +77,6 @@ namespace Framework {
 		}
 
 		int created = 0;
-
-		// spawn emitters from JSON (POSITIONS FROM JSON)
-		if (root.contains("emitters")) {
-			for (auto& emitter : root["emitters"]) {
-				std::string settingName = emitter.value("setting", "");
-				auto it = settings.find(settingName);
-				if (it == settings.end()) continue;
-
-				auto& ps = AddParticleSystem();
-				ps.SetSettings(it->second);
-
-				auto pos = emitter["emitter"];
-				ps.SetEmitter(pos[0].get<float>(), pos[1].get<float>());
-
-				int emitterId = nextEmitterId++;
-				emitterIdToIndex[emitterId] = particleSystems.size() - 1;
-
-				int burst = ps.GetSettings().burstCnt;
-				if (burst > 0) ps.SpawnBurst(burst);
-
-				created++;
-			}
-		}
-
-		controlled = 0;
 		return created;
 	}
 
@@ -119,98 +93,11 @@ namespace Framework {
 		return emitterId;
 	}
 
-	// Lua-friendly emitter creation
-	int ParticleSystemManager::CreateEmitter(const std::string& presetName, float x, float y) {
-		auto it = settings.find(presetName);
-		if (it == settings.end()) {
-			std::cout << "[PSM] Unknown preset: " << presetName << std::endl;
-			return -1;
-		}
-
-		auto& ps = AddParticleSystem();
-		ps.SetSettings(it->second);
-		ps.SetEmitter(x, y);
-
-		int emitterId = nextEmitterId++;
-		emitterIdToIndex[emitterId] = particleSystems.size() - 1;
-
-		// If it's a burst emitter, spawn immediately
-		if (ps.GetSettings().burstCnt > 0) {
-			ps.SpawnBurst(ps.GetSettings().burstCnt);
-		}
-
-		return emitterId;
-	}
-
-	void ParticleSystemManager::DestroyEmitter(int emitterId) {
-		auto it = emitterIdToIndex.find(emitterId);
-		if (it != emitterIdToIndex.end()) {
-			size_t index = it->second;
-			if (index < particleSystems.size()) {
-				// Mark as inactive
-				particleSystems[index].SetActive(false);
-				emitterIdToIndex.erase(it);
-			}
-		}
-	}
-
-	void ParticleSystemManager::SetEmitterPosition(int emitterId, float x, float y) {
-		auto it = emitterIdToIndex.find(emitterId);
-		if (it != emitterIdToIndex.end()) {
-			size_t index = it->second;
-			if (index < particleSystems.size()) {
-				particleSystems[index].SetEmitter(x, y);
-			}
-		}
-	}
-
-	void ParticleSystemManager::SetEmitterActive(int emitterId, bool active) {
-		auto it = emitterIdToIndex.find(emitterId);
-		if (it != emitterIdToIndex.end()) {
-			size_t index = it->second;
-			if (index < particleSystems.size()) {
-				particleSystems[index].SetActive(active);
-			}
-		}
-	}
-
-	void ParticleSystemManager::SpawnBurst(int emitterId, int count) {
-		auto it = emitterIdToIndex.find(emitterId);
-		if (it != emitterIdToIndex.end()) {
-			size_t index = it->second;
-			if (index < particleSystems.size()) {
-				particleSystems[index].SpawnBurst(count);
-			}
-		}
-	}
-
-	int ParticleSystemManager::CreateTemporaryEffect(const std::string& presetName, float x, float y, float duration) {
-		int emitterId = CreateEmitter(presetName, x, y);
-		if (emitterId > 0 && duration > 0.0f) {
-			temporaryEffects.push_back({ emitterId, duration });
-		}
-		return emitterId;
-	}
-
+	// Lua-friendly functions
 	void ParticleSystemManager::SetFollowEntity(int emitterId, EntityID targetID) {
 		auto it = emitterIdToIndex.find(emitterId);
 		if (it == emitterIdToIndex.end()) return;
 		particleSystems[it->second].SetFollowEntity(targetID);
-	}
-
-	void ParticleSystemManager::SetEmitterOwner(int emitterId, int playerID) {
-		auto it = emitterIdToIndex.find(emitterId);
-		if (it == emitterIdToIndex.end()) {
-			std::cerr << "[ParticleSystemManager] Invalid emitter ID: " << emitterId << std::endl;
-			return;
-		}
-
-		size_t index = it->second;
-		if (index < particleSystems.size()) {
-			particleSystems[index].SetOwnerPlayer(playerID);
-			std::cout << "[ParticleSystemManager] Set emitter " << emitterId
-				<< " owner to player " << playerID << std::endl;
-		}
 	}
 
 	void ParticleSystemManager::Initialize() {
@@ -218,18 +105,6 @@ namespace Framework {
 	}
 
 	void ParticleSystemManager::Update(float dt) {
-		// Update temporary effects
-		for (auto it = temporaryEffects.begin(); it != temporaryEffects.end(); ) {
-			it->remainingTime -= dt;
-			if (it->remainingTime <= 0.0f) {
-				DestroyEmitter(it->emitterId);
-				it = temporaryEffects.erase(it);
-			}
-			else {
-				++it;
-			}
-		}
-
 		// Loop through all emitters | Update all particle systems
 		for (auto& particleSystem : particleSystems) {
 			particleSystem.Update(dt);

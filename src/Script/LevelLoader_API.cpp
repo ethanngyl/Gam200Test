@@ -5840,133 +5840,18 @@ namespace Framework {
     }
 
     // =========================================================================
-    // New Particle System Manager API
+    // Particle Emitter API
     // =========================================================================
-
     /**
-     * @brief Creates a particle emitter from a preset
-     * Lua: local id = CreateParticleEmitter("smoke", x, y)
+     * @brief Spawns a particle emitter entity at a world position
+     * @params x, y, emitRadius, rate, duration, r, g, b, a, followEntityID
+     * @return integer (Entity ID)
+     *
+     * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, targetID)
+     *   - duration=0 means infinite (emitter persists until destroyed)
+     *   - followEntityID (optional): if provided, emitter follows that entity's position
+     *   - Returns entity ID so caller can track and destroy it later
      */
-    int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
-        if (!CORE) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        const char* preset = luaL_checkstring(L, 1);
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-
-        int id = pm->CreateEmitter(preset, x, y);
-        lua_pushinteger(L, id);
-        return 1;
-    }
-
-    /**
-     * @brief Destroys a particle emitter
-     * Lua: DestroyParticleEmitter(id)
-     */
-    int LevelLoader::Lua_DestroyParticleEmitter(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = static_cast<int>(luaL_checkinteger(L, 1));
-        pm->DestroyEmitter(id);
-        return 0;
-    }
-
-    /**
-     * @brief Sets emitter position
-     * Lua: SetParticleEmitterPosition(id, x, y)
-     */
-    int LevelLoader::Lua_SetParticleEmitterPosition(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = static_cast<int>(luaL_checkinteger(L, 1));
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-
-        pm->SetEmitterPosition(id, x, y);
-        return 0;
-    }
-
-    /**
-     * @brief Sets which player owns this emitter
-     * Lua: SetParticleEmitterOwner(id, playerIndex)
-     */
-    int LevelLoader::Lua_SetParticleEmitterOwner(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = static_cast<int>(luaL_checkinteger(L, 1));
-        int playerID = static_cast<int>(luaL_checkinteger(L, 2));
-
-        pm->SetEmitterOwner(id, playerID);
-        return 0;
-    }
-
-    /**
-     * @brief Creates temporary particle effect
-     * Lua: CreateParticleEffect("Explosion", x, y, duration)
-     */
-    int LevelLoader::Lua_CreateParticleEffect(lua_State* L) {
-        if (!CORE) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        const char* preset = luaL_checkstring(L, 1);
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-        float duration = static_cast<float>(luaL_optnumber(L, 4, 1.0));
-
-        int id = pm->CreateTemporaryEffect(preset, x, y, duration);
-        lua_pushinteger(L, id);
-        return 1;
-    }
-
-    /**
-     * @brief Sets which player is currently active (for particle system)
-     * Lua: SetActivePlayerIndex(0)  -- 0, 1, 2, or -1
-     */
-    int LevelLoader::Lua_SetActivePlayerIndex(lua_State* L) {
-        g_activePlayerIndex = static_cast<int>(luaL_checkinteger(L, 1));
-        return 0;
-    }
-
-    // =========================================================================
-        // Particle Emitter API
-        // =========================================================================
-
-        /**
-         * @brief Spawns a particle emitter entity at a world position
-         * @params x, y, emitRadius, rate, duration, r, g, b, a, followEntityID
-         * @return integer (Entity ID)
-         *
-         * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, targetID)
-         *   - duration=0 means infinite (emitter persists until destroyed)
-         *   - followEntityID (optional): if provided, emitter follows that entity's position
-         *   - Returns entity ID so caller can track and destroy it later
-         */
     int LevelLoader::Lua_SpawnParticleEmitterEthan(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
