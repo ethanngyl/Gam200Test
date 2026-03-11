@@ -60,6 +60,7 @@ namespace Framework
     class SkillSystem;
     class ParticleSystemManager;
     class FSMSystem;
+    class ParticleSystemEthan;
 
     /**
      * @class CoreEngine
@@ -193,7 +194,7 @@ namespace Framework
         LevelLoader& GetLevelLoader() { return LevelLoader::GetInstance(); }
         ParticleSystemManager* GetParticleSystemManager() const { return particleSystemManager; }
         FSMSystem* GetFSMSystem() const { return fsmSystem; }
-
+        ParticleSystemEthan* GetParticleSystemEthan() const { return particleSystemEthan; }
 
         /**
          * @brief Initializes the added system
@@ -254,6 +255,7 @@ namespace Framework
         ScriptSystem* scriptSystem = nullptr;
         ParticleSystemManager* particleSystemManager;
         FSMSystem* fsmSystem;
+        ParticleSystem* particleSystemEthan;
 
         // state
         unsigned LastTime;
