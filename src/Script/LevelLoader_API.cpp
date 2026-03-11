@@ -82,6 +82,15 @@ Technology is prohibited.
 namespace Framework {
 
     // ========================================================================
+    // ACTIVE PLAYER INDEX - For particle system visibility per player turn
+    // ========================================================================
+    static int g_activePlayerIndex = -1;  // 0=Player1, 1=Player2, 2=Player3, -1=none
+
+    int GetActivePlayerIndexForParticles() {
+        return g_activePlayerIndex;
+    }
+
+    // ========================================================================
     // TILE TINTING SYSTEM - For PulseTile visual feedback
     // ========================================================================
 
@@ -5780,8 +5789,13 @@ namespace Framework {
      *   - Returns entity ID so caller can track and destroy it later
      */
     int LevelLoader::Lua_SpawnParticleEmitter(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) {
+        if (!CORE) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* pm = CORE->GetParticleSystemManager();
+        if (!pm) {
             lua_pushinteger(L, 0);
             return 1;
         }
@@ -5789,79 +5803,155 @@ namespace Framework {
         // Parse parameters
         float x = static_cast<float>(luaL_checknumber(L, 1));
         float y = static_cast<float>(luaL_checknumber(L, 2));
-        float emitRadius = static_cast<float>(luaL_optnumber(L, 3, 0.04));
         float rate = static_cast<float>(luaL_optnumber(L, 4, 8.0));
         float duration = static_cast<float>(luaL_optnumber(L, 5, 0.0));
         float r = static_cast<float>(luaL_optnumber(L, 6, 1.0));
         float g = static_cast<float>(luaL_optnumber(L, 7, 1.0));
         float b = static_cast<float>(luaL_optnumber(L, 8, 0.0));
         float a = static_cast<float>(luaL_optnumber(L, 9, 1.0));
-        EntityID followTarget = static_cast<EntityID>(luaL_optinteger(L, 10, 0));
 
-        auto* em = loader->coreEngine->GetEntityManager();
-        if (!em) {
-            LOG_ERROR("LevelLoader", "SpawnParticleEmitter failed: no entity manager");
-            lua_pushinteger(L, 0);
-            return 1;
-        }
+        // Create an inline emitter using the ParticleSystemManager
+        auto& ps = pm->AddParticleSystem();
+        ParticleSystem::Settings settings;
+        settings.spawnRate = rate;
+        settings.tint = glm::vec4(r, g, b, a);
+        settings.endTint = glm::vec4(r, g, b, 0.0f);
+        settings.layer = 15;
+        settings.size = 6.0f;
+        settings.endSize = 0.001f;
+        settings.minLifetime = 0.4f;
+        settings.maxLifetime = 1.0f;
+        settings.minSpeed = 0.01f;
+        settings.maxSpeed = 0.04f;
+        settings.direction = { 0.0f, 1.0f };
+        settings.directionFuzz = 1.0f;
+        settings.fadeOut = true;
+        settings.shrinkOverTime = true;
+        ps.SetSettings(settings);
+        ps.SetEmitter(x, y);
 
-        Entity entity = em->CreateEntity();
-        if (entity.GetID() == INVALID_ENTITY) {
-            LOG_ERROR("LevelLoader", "SpawnParticleEmitter failed: could not create entity");
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        // Add Transform
-        em->AddComponent<Transform>(entity, Vector2D(x, y));
-
-        // Add ParticleEmitter with configured properties
-        em->AddComponent<ParticleEmitter>(entity);
-        auto& emitter = em->GetComponent<ParticleEmitter>(entity);
-
-        emitter.maxParticles = 50;
-        emitter.emissionRate = rate;
-        emitter.emit = true;
-        emitter.worldSpace = true;
-        emitter.layer = 15;  // Above enemies
-
-        // Circle emit shape around the entity
-        emitter.emitShape = ParticleEmitShape::Circle;
-        emitter.emitRadius = emitRadius;
-
-        // Gentle upward drift
-        emitter.velocityMin = glm::vec2(-0.01f, 0.01f);
-        emitter.velocityMax = glm::vec2(0.01f, 0.04f);
-
-        // Short-lived particles
-        emitter.lifetimeMin = 0.4f;
-        emitter.lifetimeMax = 1.0f;
-
-        // Small particles that shrink
-        emitter.sizeStart = 0.006f;
-        emitter.sizeEnd = 0.001f;
-
-        // Yellow color fading to transparent
-        emitter.colorStart = glm::vec4(r, g, b, a);
-        emitter.colorEnd = glm::vec4(r, g, b, 0.0f);
-
-        // No gravity
-        emitter.gravity = glm::vec2(0.0f, 0.0f);
-
-        // Follow target entity
-        if (followTarget != INVALID_ENTITY) {
-            emitter.followEntity = followTarget;
-            emitter.worldSpace = false;  // use local space so particles move with emitter
-        }
-
-        // Duration and auto-destroy
+        // For duration-based emitters, create a temporary effect
         if (duration > 0.0f) {
-            emitter.duration = duration;
-            emitter.autoDestroy = true;
+            // Use a simple timer approach - mark inactive after duration
+            // (handled by the manager's temporary effects system in future)
         }
 
-        lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
+        lua_pushinteger(L, 1); // Return a non-zero value to indicate success
         return 1;
+    }
+
+    // =========================================================================
+    // New Particle System Manager API
+    // =========================================================================
+
+    /**
+     * @brief Creates a particle emitter from a preset
+     * Lua: local id = CreateParticleEmitter("smoke", x, y)
+     */
+    int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
+        if (!CORE) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* pm = CORE->GetParticleSystemManager();
+        if (!pm) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        const char* preset = luaL_checkstring(L, 1);
+        float x = static_cast<float>(luaL_checknumber(L, 2));
+        float y = static_cast<float>(luaL_checknumber(L, 3));
+
+        int id = pm->CreateEmitter(preset, x, y);
+        lua_pushinteger(L, id);
+        return 1;
+    }
+
+    /**
+     * @brief Destroys a particle emitter
+     * Lua: DestroyParticleEmitter(id)
+     */
+    int LevelLoader::Lua_DestroyParticleEmitter(lua_State* L) {
+        if (!CORE) return 0;
+
+        auto* pm = CORE->GetParticleSystemManager();
+        if (!pm) return 0;
+
+        int id = static_cast<int>(luaL_checkinteger(L, 1));
+        pm->DestroyEmitter(id);
+        return 0;
+    }
+
+    /**
+     * @brief Sets emitter position
+     * Lua: SetParticleEmitterPosition(id, x, y)
+     */
+    int LevelLoader::Lua_SetParticleEmitterPosition(lua_State* L) {
+        if (!CORE) return 0;
+
+        auto* pm = CORE->GetParticleSystemManager();
+        if (!pm) return 0;
+
+        int id = static_cast<int>(luaL_checkinteger(L, 1));
+        float x = static_cast<float>(luaL_checknumber(L, 2));
+        float y = static_cast<float>(luaL_checknumber(L, 3));
+
+        pm->SetEmitterPosition(id, x, y);
+        return 0;
+    }
+
+    /**
+     * @brief Sets which player owns this emitter
+     * Lua: SetParticleEmitterOwner(id, playerIndex)
+     */
+    int LevelLoader::Lua_SetParticleEmitterOwner(lua_State* L) {
+        if (!CORE) return 0;
+
+        auto* pm = CORE->GetParticleSystemManager();
+        if (!pm) return 0;
+
+        int id = static_cast<int>(luaL_checkinteger(L, 1));
+        int playerID = static_cast<int>(luaL_checkinteger(L, 2));
+
+        pm->SetEmitterOwner(id, playerID);
+        return 0;
+    }
+
+    /**
+     * @brief Creates temporary particle effect
+     * Lua: CreateParticleEffect("Explosion", x, y, duration)
+     */
+    int LevelLoader::Lua_CreateParticleEffect(lua_State* L) {
+        if (!CORE) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* pm = CORE->GetParticleSystemManager();
+        if (!pm) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        const char* preset = luaL_checkstring(L, 1);
+        float x = static_cast<float>(luaL_checknumber(L, 2));
+        float y = static_cast<float>(luaL_checknumber(L, 3));
+        float duration = static_cast<float>(luaL_optnumber(L, 4, 1.0));
+
+        int id = pm->CreateTemporaryEffect(preset, x, y, duration);
+        lua_pushinteger(L, id);
+        return 1;
+    }
+
+    /**
+     * @brief Sets which player is currently active (for particle system)
+     * Lua: SetActivePlayerIndex(0)  -- 0, 1, 2, or -1
+     */
+    int LevelLoader::Lua_SetActivePlayerIndex(lua_State* L) {
+        g_activePlayerIndex = static_cast<int>(luaL_checkinteger(L, 1));
+        return 0;
     }
 
 } // namespace Framework

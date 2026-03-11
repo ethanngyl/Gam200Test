@@ -56,6 +56,31 @@ namespace Framework
         bool blocked = false;
     };
 
+    struct Particle : public Component<Particle>
+    {
+        // Movement
+        Vector2D velocity{ 0.0f, 0.0f };   // particle movement
+
+        // Lifetime
+        float lifetime = 0.0f;      // seconds remaining
+        float age = 0.0f;           // seconds alive
+        float maxLifetime = 0.0f;   // total lifetime (for interpolation)
+
+        // Visual interpolation
+        glm::vec4 startTint{ 1.0f, 1.0f, 1.0f, 1.0f };
+        glm::vec4 endTint{ 1.0f, 1.0f, 1.0f, 0.0f };
+        float startSize = 1.0f;
+        float endSize = 0.0f;
+
+        // Physics
+        Vector2D gravity{ 0.0f, 0.0f };
+
+        // Behavior flags
+        bool fadeOut = true;
+        bool shrinkOverTime = false;
+        bool growOverTime = false;
+    };
+
     struct ProjectileMovement : public Component<Movement>
     {
         float moveSpeed = 100.0f;
