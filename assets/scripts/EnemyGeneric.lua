@@ -1021,14 +1021,14 @@ function OnUpdate(dt)
     UpdateHealthBar()
 
     -- Update Bolstered Morale particle positions to follow this enemy
-    if _G.BolsteredMoraleParticles and SetParticleEmitterPosition then
+    if _G.BolsteredMoraleParticles and SetSpritePosition then
         local wx, wy = GetEntityWorldPosition(entityID)
         if wx and wy then
             for key, emitterID in pairs(_G.BolsteredMoraleParticles) do
                 -- Check if this emitter is tracking us (key ends with _<entityID>)
                 local targetID = key:match("_(%d+)$")
                 if targetID and tonumber(targetID) == entityID then
-                    SetParticleEmitterPosition(emitterID, wx, wy)
+                    SetSpritePosition(emitterID, wx, wy)
                 end
             end
         end
