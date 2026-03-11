@@ -1863,9 +1863,10 @@ function ExecuteSkill(skillID)
             spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
         end
 
-        -- Siphon Charge: activate for next attack
+        -- Siphon Charge: apply as PENDING (activates next round, not this turn)
         if skill.effect == "siphonCharge" then
-            siphonChargeActive = true
+            RemoveStatusEffect(entityID, "siphonCharge")
+            ApplyStatusEffect(entityID, "siphonChargePending", skill.duration, entityID)
         end
 
         -- Bloody Warcry: apply as PENDING to all party members (activates next round)
