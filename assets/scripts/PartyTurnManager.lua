@@ -614,12 +614,12 @@ function ResetPartyTurn()
                 PartyMembers[i].name))
         end
 
-        -- 1) Refill AP first (skip if overloaded)
+        -- 1) Refill AP: always refill movement AP (MP); skip Attack AP only if overloaded
+        RefillEntityAP(eid)
         if hasOverload then
-            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has OVERLOAD - AP refill skipped",
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s has OVERLOAD - Attack AP refill skipped (MP still refilled)",
                 PartyMembers[i].name))
         else
-            RefillEntityAP(eid)
             RefillEntityAttackAP(eid)
         end
 
