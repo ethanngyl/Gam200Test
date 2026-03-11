@@ -354,6 +354,7 @@ namespace Framework {
         static int Lua_RemoveStatusEffect(lua_State* L);   // RemoveStatusEffect(entityID, type)
         static int Lua_DecrementStatusEffects(lua_State* L);// DecrementStatusEffects(entityID)
         static int Lua_GetStatusEffectSource(lua_State* L); // GetStatusEffectSource(entityID, type) -> sourceEntityID or nil
+        static int Lua_GetEffectDuration(lua_State* L);   // GetEffectDuration(entityID, type) -> turnsRemaining or 0
 
         // Unified Skill Database API
         static int Lua_GetSkillByID(lua_State* L);         // GetSkillByID(skillID) -> table or nil

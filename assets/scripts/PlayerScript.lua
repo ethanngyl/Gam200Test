@@ -217,7 +217,7 @@ local skillCooldowns = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [1] = { ["1"] = "Fireball", ["2"] = "DarkOmens" },
     [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
     [3] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
 }
@@ -264,9 +264,6 @@ local siphonTriggeredThisSkill = false
 -- Berserker: Bloody Warcry tracking (first move free, next skill +1 dmg -1 HP)
 local bloodyWarcryFreeMove = false
 local bloodyWarcryDamageBonus = false
-
--- Berserker: Dark Omens triggered tracking (2 free skills, then die)
-local darkOmensSkillsRemaining = 0
 
 -- Berserker: current warcry damage bonus (set per-skill in ExecuteSkill)
 local currentWarcryBonus = 0
@@ -530,7 +527,7 @@ local function createPlayerStates(fsm)
                 end
                 if not turnStartInitialized then
                     if HasStatusEffect(entityID, "darkOmensTriggered") then
-                        -- Only spawn if not already tracked in the global EffectParticles table
+                        -- Visual indicator: will die at end of this turn
                         local key = "darkOmensTriggered_" .. entityID
                         if not _G.EffectParticles[key] then
                             spawnEffectParticles(entityID, "darkOmensTriggered", 0.6, 0.0, 0.8)
@@ -1647,12 +1644,6 @@ end
 
 -- Helper: consume attack AP and trigger UI animation
 local function consumeAttackAPAndAnimate(cost)
-    -- Dark Omens Triggered: free skills cost 0 AP
-    if darkOmensSkillsRemaining > 0 then
-        print("[PlayerScript] Dark Omens: skill costs 0 AP (" .. darkOmensSkillsRemaining .. " remaining)")
-        return
-    end
-
     -- Siphon Charge: consume ALL remaining AP instead of normal cost
     if siphonTriggeredThisSkill then
         local remainingAP = GetEntityAttackAP(entityID)
@@ -1798,22 +1789,12 @@ function ExecuteSkill(skillID)
 
     print("[PlayerScript] ===== EXECUTING: " .. skill.name .. " =====")
 
-    -- Dark Omens Triggered: skills cost 0 AP, but only 2 skills allowed
-    local darkOmensFreeSkill = (darkOmensSkillsRemaining > 0)
-    if darkOmensFreeSkill and darkOmensSkillsRemaining <= 0 then
-        print("[PlayerScript] Dark Omens: no more free skills this turn!")
+    -- Check AP
+    local currentAP, maxAP = GetEntityAttackAP(entityID)
+    if not currentAP or currentAP < skill.apCost then
+        print("[PlayerScript] Not enough Attack AP (" .. tostring(currentAP) .. " < " .. skill.apCost .. ")")
         ClearActivePreview()
         return
-    end
-
-    -- Check AP (skip if Dark Omens free skill)
-    local currentAP, maxAP = GetEntityAttackAP(entityID)
-    if not darkOmensFreeSkill then
-        if not currentAP or currentAP < skill.apCost then
-            print("[PlayerScript] Not enough Attack AP (" .. tostring(currentAP) .. " < " .. skill.apCost .. ")")
-            ClearActivePreview()
-            return
-        end
     end
 
     -- Check HP cost (Berserker skills)
@@ -1862,12 +1843,6 @@ function ExecuteSkill(skillID)
             SetEntityHP(entityID, currentHP - 1)
             print("[PlayerScript] Bloody Warcry: +1 damage, -1 HP (now " .. (currentHP - 1) .. ")")
         end
-    end
-
-    -- Dark Omens Triggered: track skill usage (2 free skills)
-    if darkOmensSkillsRemaining > 0 then
-        darkOmensSkillsRemaining = darkOmensSkillsRemaining - 1
-        print("[PlayerScript] Dark Omens: " .. darkOmensSkillsRemaining .. " free skills remaining")
     end
 
     -- Set skill cooldown if defined

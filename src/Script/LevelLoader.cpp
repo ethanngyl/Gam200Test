@@ -369,6 +369,13 @@ namespace Framework {
     // ========================================================================
 
     void LevelLoader::DeferEntityDestruction(uint32_t entityID) {
+        // Deduplicate: prevent double-destruction crash if called multiple times for same entity
+        for (uint32_t existing : deferredEntitiesToDestroy) {
+            if (existing == entityID) {
+                LOG_WARN("LevelLoader", "DeferEntityDestruction: Entity %u already queued, ignoring duplicate", entityID);
+                return;
+            }
+        }
         deferredEntitiesToDestroy.push_back(entityID);
     }
 
@@ -395,6 +402,21 @@ namespace Framework {
                 auto tileOpt = Framework::WorldToTile(transform.position);
                 if (tileOpt.has_value()) {
                     Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                }
+            }
+            // Call OnDestroy before DestroyEntity (Lua call stack is fully unwound now - safe)
+            if (em->HasComponent<ScriptComponent>(entity)) {
+                auto& script = em->GetComponent<ScriptComponent>(entity);
+                if (script.hasOnDestroy && script.L) {
+                    lua_getglobal(script.L, "OnDestroy");
+                    if (lua_isfunction(script.L, -1)) {
+                        if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                            lua_pop(script.L, 1);
+                        }
+                    }
+                    else {
+                        lua_pop(script.L, 1);
+                    }
                 }
             }
             em->DestroyEntity(entity);
@@ -751,6 +773,7 @@ namespace Framework {
         lua_register(L, "RemoveStatusEffect", Lua_RemoveStatusEffect);
         lua_register(L, "DecrementStatusEffects", Lua_DecrementStatusEffects);
         lua_register(L, "GetStatusEffectSource", Lua_GetStatusEffectSource);
+        lua_register(L, "GetEffectDuration", Lua_GetEffectDuration);
 
         // Unified Skill Database API
         lua_register(L, "GetSkillByID", Lua_GetSkillByID);

@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -595,6 +595,7 @@ namespace Framework {
         lua_register(L, "RemoveStatusEffect", LevelLoader::Lua_RemoveStatusEffect);
         lua_register(L, "DecrementStatusEffects", LevelLoader::Lua_DecrementStatusEffects);
         lua_register(L, "GetStatusEffectSource", LevelLoader::Lua_GetStatusEffectSource);
+        lua_register(L, "GetEffectDuration", LevelLoader::Lua_GetEffectDuration);
 
         // Unified Skill Database API
         lua_register(L, "GetSkillByID", LevelLoader::Lua_GetSkillByID);

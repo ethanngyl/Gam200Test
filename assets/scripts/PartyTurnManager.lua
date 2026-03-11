@@ -55,6 +55,10 @@ PartyTurnComplete = false   -- True when all 3 characters have acted
 TurnTransitionCooldown = 0.0         -- Current cooldown timer
 TurnTransitionCooldownTime = 0.0     -- Delay in seconds after turn switch (0 = instant with per-key blocking)
 
+-- Deferred death queue: entities to kill at start of next frame (avoids Lua VM crash
+-- when destroying entity whose script is still on the call stack, e.g. Dark Omens)
+DeferredDeathQueue = {}
+
 -- Character definitions (can be customized)
 CharacterConfig = {
     {
@@ -76,6 +80,24 @@ CharacterConfig = {
         role = "Balanced"
     }
 }
+
+-- ============================================================================
+-- DEFERRED DEATH (Dark Omens - process at start of frame when Lua stack is clear)
+-- ============================================================================
+--[[
+    ProcessDeferredDeaths()
+    Call at the very start of OnUpdate. Processes entities queued for death.
+    Must be called when no entity script is on the call stack.
+]]
+function ProcessDeferredDeaths()
+    if #DeferredDeathQueue == 0 then return end
+    for _, entityID in ipairs(DeferredDeathQueue) do
+        if DamageEntity then
+            DamageEntity(entityID, 0)
+        end
+    end
+    DeferredDeathQueue = {}
+end
 
 -- ============================================================================
 -- PROJECTILE DAMAGE (Soul Rend, Soul Merge - called from C++ ProjectileSystem)
@@ -328,14 +350,14 @@ function NextCharacterTurn()
     -- Mark current character as having acted
     PartyMembers[ActiveCharacterIndex].hasActed = true
 
-    -- Dark Omens Triggered: kill this character at end of their turn
+    -- Dark Omens Triggered: defer death to next frame (avoids crash when entity script on call stack)
     local currentEntity = PartyMembers[ActiveCharacterIndex].entityID
     if HasStatusEffect and HasStatusEffect(currentEntity, "darkOmensTriggered") then
-        print(string.format("[PartyTurnManager] %s has DARK OMENS TRIGGERED - dying at end of turn!",
+        print(string.format("[PartyTurnManager] %s has DARK OMENS TRIGGERED - queuing death for next frame",
             PartyMembers[ActiveCharacterIndex].name))
         RemoveStatusEffect(currentEntity, "darkOmensTriggered")
         SetEntityHP(currentEntity, 0)
-        DamageEntity(currentEntity, 0)  -- trigger death cleanup
+        table.insert(DeferredDeathQueue, currentEntity)
     end
 
     print(string.format("[PartyTurnManager] %s marked as ACTED",
