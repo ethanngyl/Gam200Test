@@ -611,6 +611,8 @@ namespace Framework {
         lua_register(L, "SetParticleEmitterOwner", LevelLoader::Lua_SetParticleEmitterOwner);
         lua_register(L, "CreateParticleEffect", LevelLoader::Lua_CreateParticleEffect);
         lua_register(L, "SetActivePlayerIndex", LevelLoader::Lua_SetActivePlayerIndex);
+
+        lua_register(L, "SpawnParticleEmitterEthan", LevelLoader::Lua_SpawnParticleEmitterEthan);
     }
 
     /**
