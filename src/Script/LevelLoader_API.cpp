@@ -1322,6 +1322,88 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_IsEntityValid(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        Entity entity(static_cast<uint32_t>(entityID));
+        bool valid = entity.IsValid() && em->HasComponent<Transform>(entity);
+        lua_pushboolean(L, valid);
+        return 1;
+    }
+
+    int LevelLoader::Lua_SetEntityRotation(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        uint32_t entityID = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+        float rotation = static_cast<float>(luaL_checknumber(L, 2));
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(entityID);
+        if (em->HasComponent<Transform>(entity)) {
+            em->GetComponent<Transform>(entity).rotation = rotation;
+        }
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetEntityScale(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        uint32_t entityID = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+        float sx = static_cast<float>(luaL_checknumber(L, 2));
+        float sy = static_cast<float>(luaL_checknumber(L, 3));
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(entityID);
+        if (em->HasComponent<Transform>(entity)) {
+            auto& t = em->GetComponent<Transform>(entity);
+            t.scale.x = sx;
+            t.scale.y = sy;
+        }
+        return 0;
+    }
+
+    // SetSharedInt(key, value) - store an int accessible from both level and entity scripts
+    int LevelLoader::Lua_SetSharedInt(lua_State* L) {
+        const char* key = luaL_checkstring(L, 1);
+        int value = static_cast<int>(luaL_checkinteger(L, 2));
+        LevelLoader::GetInstance().sharedIntStore[key] = value;
+        return 0;
+    }
+
+    // GetSharedInt(key, default) - retrieve a shared int, returns default if not found
+    int LevelLoader::Lua_GetSharedInt(lua_State* L) {
+        const char* key = luaL_checkstring(L, 1);
+        int defaultVal = 0;
+        if (lua_gettop(L) >= 2) {
+            defaultVal = static_cast<int>(luaL_checkinteger(L, 2));
+        }
+        auto& store = LevelLoader::GetInstance().sharedIntStore;
+        auto it = store.find(key);
+        if (it != store.end()) {
+            lua_pushinteger(L, it->second);
+        } else {
+            lua_pushinteger(L, defaultVal);
+        }
+        return 1;
+    }
+
     int LevelLoader::Lua_ClearAllEntities(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -3715,8 +3797,8 @@ namespace Framework {
         config.width = width;
         config.height = height;
         config.algorithm = algorithm;
-        config.minEnemies = 4;   // Ensure at least 4 enemies for all enemy types
-        config.maxEnemies = 6;
+        config.minEnemies = 3;
+        config.maxEnemies = 5;
 
         // Grid parameters - MATCH YOUR TileMap.json
         const float TILE_SIZE = 128.0f;

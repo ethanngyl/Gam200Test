@@ -480,6 +480,10 @@ namespace Framework {
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "IsEntityValid", Lua_IsEntityValid);
 
+        // Shared state (cross-script communication)
+        lua_register(L, "SetSharedInt", LevelLoader::Lua_SetSharedInt);
+        lua_register(L, "GetSharedInt", LevelLoader::Lua_GetSharedInt);
+
         // Utility
         lua_register(L, "Log", Lua_Log);
         lua_register(L, "GetDeltaTime", Lua_GetDeltaTime);

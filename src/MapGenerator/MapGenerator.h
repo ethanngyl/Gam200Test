@@ -177,6 +177,7 @@ namespace Framework {
             void carveVerticalCorridor(GeneratedMap& map, int y1, int y2, int x);
             void createCorridor(GeneratedMap& map, const Room& r1, const Room& r2);
             void generateRooms(GeneratedMap& map, const Config& config);
+            void ensureFullConnectivity(GeneratedMap& map);
 
             // Cellular
             int countAdjacentWalls(const GeneratedMap& map, int x, int y) const;

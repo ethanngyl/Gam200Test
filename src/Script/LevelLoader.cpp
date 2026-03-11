@@ -602,6 +602,11 @@ namespace Framework {
         lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
         lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
+        lua_register(L, "IsEntityValid", Lua_IsEntityValid);
+        lua_register(L, "SetEntityRotation", Lua_SetEntityRotation);
+        lua_register(L, "SetEntityScale", Lua_SetEntityScale);
+        lua_register(L, "SetSharedInt", Lua_SetSharedInt);
+        lua_register(L, "GetSharedInt", Lua_GetSharedInt);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
         lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
@@ -883,7 +888,12 @@ namespace Framework {
             next = LEVEL_2;
         }
         else if (strcmp(stateName, "LEVEL_3") == 0) {
-            next = LEVEL_3;
+            // If already in LEVEL_3, use GS_RESTART to trigger full reload
+            if (current == LEVEL_3) {
+                next = GS_RESTART;
+            } else {
+                next = LEVEL_3;
+            }
         }
         else if (strcmp(stateName, "LEVEL_END") == 0) {
             next = LEVEL_END;

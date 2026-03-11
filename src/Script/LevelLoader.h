@@ -135,6 +135,9 @@ namespace Framework {
         std::vector<uint32_t> deferredEntitiesToDestroy;
         void ProcessDeferredDestructions();
 
+        // Shared key-value store accessible from both level and entity scripts
+        std::unordered_map<std::string, int> sharedIntStore;
+
         // Cached subsystem pointers (for fast access in API)
         UISystem* uiSystem = nullptr;
         AudioSystem* audioSystem = nullptr;
@@ -207,6 +210,11 @@ namespace Framework {
         static int Lua_SetSpriteBlendMode(lua_State* L);
         static int Lua_SetSpriteFilterMode(lua_State* L);
         static int Lua_DestroyEntity(lua_State* L);
+        static int Lua_IsEntityValid(lua_State* L);
+        static int Lua_SetEntityRotation(lua_State* L);
+        static int Lua_SetEntityScale(lua_State* L);
+        static int Lua_SetSharedInt(lua_State* L);
+        static int Lua_GetSharedInt(lua_State* L);
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
         static int Lua_FindPlayer(lua_State* L);

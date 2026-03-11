@@ -50,6 +50,7 @@
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 local SkillSwapUI = require("SkillSwapUI")
+_G.SkillSwapUI = SkillSwapUI
 
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)
@@ -99,7 +100,11 @@ local totalLevels  = 3
 local goalPosition = nil  -- {gridX, gridY, worldX, worldY}
 local goalReached = false
 local goalTransitionDelay = 0
---local GOAL_TRANSITION_TIME = 0.5  -- Seconds before transitioning to menu
+
+-- Boss tracking - portal only spawns after boss is defeated
+local bossEntityID = nil
+local bossDefeated = false
+local pendingGoalData = nil  -- Stores goal spawn data until boss dies
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -459,15 +464,24 @@ function SpawnProceduralBoss(mapData)
     -- Set target (C++ side)
     SetEnemyTarget(bossID, playerID)
 
-    -- Store arena boundaries globally so BossScript can check player positions
-    _G.ArenaBounds = {
-        minX = mapData.arenaMinX or (mapData.arenaX - 3),
-        minY = mapData.arenaMinY or (mapData.arenaY - 3),
-        maxX = mapData.arenaMaxX or (mapData.arenaX + 4),
-        maxY = mapData.arenaMaxY or (mapData.arenaY + 4),
-    }
-    Log("Arena bounds set: (" .. _G.ArenaBounds.minX .. "," .. _G.ArenaBounds.minY
-        .. ") to (" .. _G.ArenaBounds.maxX .. "," .. _G.ArenaBounds.maxY .. ")")
+    -- Store arena boundaries in shared C++ store so BossScript can access them
+    local arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3)
+    local arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3)
+    local arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4)
+    local arenaMaxY = mapData.arenaMaxY or (mapData.arenaY + 4)
+    SetSharedInt("arenaMinX", arenaMinX)
+    SetSharedInt("arenaMinY", arenaMinY)
+    SetSharedInt("arenaMaxX", arenaMaxX)
+    SetSharedInt("arenaMaxY", arenaMaxY)
+    Log("Arena bounds set: (" .. arenaMinX .. "," .. arenaMinY
+        .. ") to (" .. arenaMaxX .. "," .. arenaMaxY .. ")")
+
+    -- Track boss entity and arena position so portal spawns here after boss dies
+    bossEntityID = bossID
+    bossArenaGridX = mapData.arenaX
+    bossArenaGridY = mapData.arenaY
+    bossArenaWorldX = bx
+    bossArenaWorldY = by
 
     Log("Boss " .. bossID .. " BossScript attached + target set to " .. tostring(playerID))
     Log("========================================")
@@ -494,22 +508,21 @@ function SpawnProceduralChestsAndGoal(mapData)
         --end
     --end
 
-    -- Spawn goal
+    -- Defer goal/portal spawn until boss is defeated
     if mapData.goalX and mapData.goalY then
-        local gx = mapData.goalWorldX  -- From C++!
-        local gy = mapData.goalWorldY
-        local goalID = SpawnGoalAt(gx, gy)
-
-        -- Store goal position for collision checking
-        goalPosition = {
-            gridX = mapData.goalX,
-            gridY = mapData.goalY,
-            worldX = gx,
-            worldY = gy,
-            entityID = goalID
+        pendingGoalData = {
+            goalX = mapData.goalX,
+            goalY = mapData.goalY,
+            goalWorldX = mapData.goalWorldX,
+            goalWorldY = mapData.goalWorldY
         }
 
-        Log("Goal spawned at grid (" .. mapData.goalX .. ", " .. mapData.goalY .. ") -> Entity " .. goalID)
+        if bossEntityID then
+            Log("Portal will appear after boss is defeated")
+        else
+            -- No boss on this level, spawn portal immediately
+            SpawnPortalNow()
+        end
     end
 
     Log("========================================")
@@ -533,6 +546,50 @@ function SetupPartyUI()
 
     Log("Party status UI created")
     Log("========================================")
+end
+
+-- ============================================================================
+-- PORTAL SPAWN (deferred until boss defeated)
+-- ============================================================================
+
+function SpawnPortalNow()
+    if not pendingGoalData then return end
+
+    local gx = pendingGoalData.goalWorldX
+    local gy = pendingGoalData.goalWorldY
+    local goalID = SpawnGoalAt(gx, gy)
+
+    goalPosition = {
+        gridX = pendingGoalData.goalX,
+        gridY = pendingGoalData.goalY,
+        worldX = gx,
+        worldY = gy,
+        entityID = goalID
+    }
+
+    Log("Portal spawned at grid (" .. pendingGoalData.goalX .. ", " .. pendingGoalData.goalY .. ") -> Entity " .. goalID)
+    pendingGoalData = nil
+end
+
+function CheckBossDefeated()
+    if bossDefeated or not bossEntityID then return end
+
+    if not IsEntityValid(bossEntityID) then
+        bossDefeated = true
+        Log("BOSS DEFEATED - Spawning portal in boss room!")
+
+        -- Spawn portal at boss arena center
+        local goalID = SpawnGoalAt(bossArenaWorldX, bossArenaWorldY)
+        goalPosition = {
+            gridX = bossArenaGridX,
+            gridY = bossArenaGridY,
+            worldX = bossArenaWorldX,
+            worldY = bossArenaWorldY,
+            entityID = goalID
+        }
+        pendingGoalData = nil
+        Log("Portal spawned in boss room at grid (" .. bossArenaGridX .. ", " .. bossArenaGridY .. ") -> Entity " .. goalID)
+    end
 end
 
 -- ============================================================================
@@ -586,29 +643,39 @@ function HandleGoalTransition(dt)
                 end)
             end
 
-            Log("GOAL REACHED - Opening skill swap screen...")
+            Log("GOAL REACHED! Level " .. currentLevel .. " / " .. totalLevels)
 
-            -- Show skill swap UI; when player clicks Continue, advance and transition
-            SkillSwapUI.Show(function()
-                -- Advance level progress for next play
-                local nextLevel = currentLevel + 1
-                local f = io.open("assets/JSON/LevelProgress.json", "w")
-                if f then
-                    f:write("{\n")
-                    f:write("  \"currentLevel\": " .. nextLevel .. ",\n")
-                    f:write("  \"totalLevels\": " .. totalLevels .. "\n")
-                    f:write("}\n")
-                    f:close()
-                    Log("[LevelProgress] Advanced to level " .. nextLevel .. " / " .. totalLevels)
-                end
-
-                Log("Skill swap complete - Transitioning to level end screen...")
+            if currentLevel >= totalLevels then
+                -- Final level complete - go to end screen
+                Log("All levels complete - going to end screen")
                 if SetNextGameState then
                     SetNextGameState("LEVEL_END")
-                else
-                    Log("ERROR: No game state transition function available!")
                 end
-            end)
+            else
+                -- Levels 1-2: show skill swap UI then load next level
+                -- Level 1 fills slot 3, level 2 fills slot 4
+                local skillSlot = currentLevel + 2
+                Log("Opening skill swap for slot " .. skillSlot)
+
+                SkillSwapUI.Show(function()
+                    -- Advance level progress
+                    local nextLevel = currentLevel + 1
+                    local f = io.open("assets/JSON/LevelProgress.json", "w")
+                    if f then
+                        f:write("{\n")
+                        f:write("  \"currentLevel\": " .. nextLevel .. ",\n")
+                        f:write("  \"totalLevels\": " .. totalLevels .. "\n")
+                        f:write("}\n")
+                        f:close()
+                        Log("[LevelProgress] Advanced to level " .. nextLevel .. " / " .. totalLevels)
+                    end
+
+                    Log("Skill swap complete - Loading next procedural map...")
+                    if SetNextGameState then
+                        SetNextGameState("LEVEL_3")
+                    end
+                end, skillSlot)
+            end
         end
     end
 end
@@ -650,9 +717,23 @@ function OnUpdate(dt)
         else Log("ERROR: Save failed!") end
         mapSaveCooldown = MAP_SAVE_COOLDOWN_TIME
     end
+
+     -- ========================================
+    -- TEST: Skill Swap UI (press 0)
+    -- ========================================
+    if IsKeyDown("0") and not SkillSwapUI.IsActive() then
+        SkillSwapUI.Show(function()
+            Log("Skill swap done! Would transition to next level here.")
+        end)
+    end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues
     -- HandleMapRegeneration()
+
+    -- ========================================
+    -- CHECK BOSS DEFEATED -> SPAWN PORTAL
+    -- ========================================
+    CheckBossDefeated()
 
     -- ========================================
     -- CHECK FOR GOAL INTERACTION (NEW)
