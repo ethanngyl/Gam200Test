@@ -257,7 +257,7 @@ local lastTabKeyDown = false
 -- Berserker: Dark Omens once-per-level tracking
 local darkOmensUsedThisLevel = false
 
--- Berserker: Siphon Charge state tracking (next attack consumes all AP + heals)
+-- Berserker: Siphon Charge state tracking (next attack costs +1 HP, kills heal 3)
 local siphonChargeActive = false
 local siphonTriggeredThisSkill = false
 
@@ -537,7 +537,7 @@ local function createPlayerStates(fsm)
                 end
                 if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
                     siphonChargeActive = true
-                    print("[PlayerScript] Siphon Charge active: first attack consumes all AP + heals 3 HP")
+                    print("[PlayerScript] Siphon Charge active: next attack costs +1 HP, kills heal 3 HP")
                 end
             end
 
@@ -1644,27 +1644,6 @@ end
 
 -- Helper: consume attack AP and trigger UI animation
 local function consumeAttackAPAndAnimate(cost)
-    -- Siphon Charge: consume ALL remaining AP instead of normal cost
-    if siphonTriggeredThisSkill then
-        local remainingAP = GetEntityAttackAP(entityID)
-        if remainingAP and remainingAP > 0 then
-            ConsumeEntityAttackAP(entityID, remainingAP)
-            for i = 1, remainingAP do
-                if UIManager and UIManager.GetComponent then
-                    local comp = UIManager.GetComponent("attackAP")
-                    if comp and comp.ConsumeOneAP then
-                        pcall(function() comp:ConsumeOneAP() end)
-                    end
-                else
-                    pcall(function() TriggerAttackAPAnimation() end)
-                end
-            end
-            print("[PlayerScript] Siphon Charge: consumed all " .. remainingAP .. " AP")
-        end
-        siphonTriggeredThisSkill = false
-        return
-    end
-
     ConsumeEntityAttackAP(entityID, cost)
     for i = 1, cost do
         if UIManager and UIManager.GetComponent then
@@ -1759,6 +1738,16 @@ local function checkPostDamageEffects(enemyID, hadSoulRend)
             end
         end
     end
+
+    -- Siphon Charge: if triggered this skill and enemy died, heal 3 HP
+    if siphonTriggeredThisSkill then
+        local hp = GetEntityHP(enemyID)
+        if hp and hp <= 0 then
+            if healEntity(entityID, 3) then
+                print("[PlayerScript] Siphon Charge: kill heal +3 HP for player " .. entityID)
+            end
+        end
+    end
 end
 
 -- Helper: damage an enemy with soulMergeBuff bonus and post-damage effects
@@ -1815,14 +1804,19 @@ function ExecuteSkill(skillID)
         return
     end
 
-    -- Siphon Charge: if active, first attack consumes all AP and heals 3 HP
+    -- Siphon Charge: if active, first attack costs +1 HP; if it kills, heal 3 HP
     siphonTriggeredThisSkill = false
     if siphonChargeActive and skill.damage and skill.damage > 0 then
-        print("[PlayerScript] Siphon Charge triggered! Will consume all AP and heal 3 HP")
+        print("[PlayerScript] Siphon Charge triggered! +1 HP cost, kills heal 3 HP")
         siphonTriggeredThisSkill = true
         siphonChargeActive = false
         RemoveStatusEffect(entityID, "siphonCharge")
-        healEntity(entityID, 3)
+        -- Extra 1 HP cost for the attack
+        local currentHP = GetEntityHP(entityID)
+        if currentHP then
+            SetEntityHP(entityID, currentHP - 1)
+            print("[PlayerScript] Siphon Charge: -1 HP (now " .. (currentHP - 1) .. ")")
+        end
     end
 
     -- Deduct HP cost
