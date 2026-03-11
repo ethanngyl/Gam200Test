@@ -337,12 +337,10 @@ namespace Framework {
         // Particle materials
         MaterialHandle particleMaterial;       // Additive blend
         MaterialHandle particleAlphaMaterial;   // Alpha blend
-
-    public:
+        public:
         MaterialHandle GetParticleMaterial() const { return particleMaterial; }
         MaterialHandle GetParticleAlphaMaterial() const { return particleAlphaMaterial; }
-    private:
-
+        private:
         // Debug rendering
         bool debugRenderingEnabled;
         MeshHandle debugLineMesh;

@@ -675,8 +675,7 @@ namespace Framework {
             particleAlphaMat->depthTest = false;
             particleAlphaMat->depthWrite = false;
         }
-
-        std::cout << "Created " << 7 << " default materials\n";
+        std::cout << "Created " << 5 << " default materials\n";
     }
 
     // SetupBackground: Load texture, assign quad mesh, and create a background material.
@@ -1075,7 +1074,6 @@ namespace Framework {
 
             renderQueue.Submit(cmd);
         }
-
         // ---------- PARTICLE EMITTER PASS ----------
         // Each alive particle becomes its own RenderCommand (quad)
         for (Entity e : entityManager->GetAllEntities()) {
@@ -1084,7 +1082,6 @@ namespace Framework {
 
             auto& emitter = entityManager->GetComponent<ParticleEmitter>(e);
             auto& emitterTransform = entityManager->GetComponent<Transform>(e);
-
             // Choose material: user-specified, or default based on blend mode
             MaterialHandle matHandle = emitter.material;
             if (!matHandle.IsValid()) {

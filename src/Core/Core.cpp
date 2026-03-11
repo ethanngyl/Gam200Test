@@ -48,7 +48,8 @@
 
 #include "StateMachine.h"
 #include "FSMSystem.h"
-#include "Graphics/ParticleSystem.h"
+#include "Graphics/ParticleSystemEthan.h"
+#include "Graphics/ParticleSystemManager.h"
 
 namespace Framework
 {
@@ -74,8 +75,9 @@ namespace Framework
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
         , skillSystem(nullptr)
+        , particleSystemManager(nullptr)
         , fsmSystem(nullptr)
-        , particleSystem(nullptr)
+        , particleSystemEthan(nullptr)
     {
         CORE = this;
     }
@@ -167,14 +169,15 @@ namespace Framework
         skillSystem = new SkillSystem();
         scriptSystem = new ScriptSystem();
         fsmSystem = new FSMSystem();
-        particleSystem = new ParticleSystem();
+        particleSystemManager = new ParticleSystemManager();
+        particleSystemEthan = new ParticleSystemEthan();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !skillSystem || !fsmSystem || !particleSystem) {
+            !scriptSystem || !skillSystem || !fsmSystem || !particleSystemManager || !particleSystemEthan) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -198,7 +201,8 @@ namespace Framework
             delete skillSystem;
             delete scriptSystem;
             delete fsmSystem;
-            delete particleSystem;
+            delete particleSystemManager;
+            delete particleSystemEthan;
 
             throw std::runtime_error("System allocation failure");
         }
@@ -227,8 +231,8 @@ namespace Framework
         pathfindingSystem->SetEntityManager(entityManager);
         skillSystem->SetEntityManager(entityManager);
         fsmSystem->SetEntityManager(entityManager);
-        particleSystem->SetEntityManager(entityManager);
-        particleSystem->SetGraphicsSystem(graphicsSystem);
+        particleSystemEthan->SetEntityManager(entityManager);
+        particleSystemEthan->SetGraphicsSystem(graphicsSystem);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -304,8 +308,8 @@ namespace Framework
         AddSystem(pathfindingSystem);
         AddSystem(skillSystem);
         AddSystem(fsmSystem);
-        AddSystem(particleSystem);
-
+        AddSystem(particleSystemManager);
+        AddSystem(particleSystemEthan);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
