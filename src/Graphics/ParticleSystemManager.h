@@ -13,9 +13,7 @@ namespace Framework {
 		ParticleSystem& AddParticleSystem();
 
 		int ReloadFromJSON(const std::string& path);
-
 		int  SpawnEmitterFromPreset(const std::string& presetName, int entityID);
-		void SetActivePlayer(int playerIndex);
 
 		// Manadatory overrides
 		virtual void Initialize() override;
@@ -27,7 +25,6 @@ namespace Framework {
 		std::unordered_map<std::string, ParticleSystem::Settings> settings;     // table: "smoke" -> settings, "explosion" -> settings
 		std::vector<ParticleSystem> particleSystems;
 		std::unordered_map<int, size_t> emitterIdToIndex; // NEW: Map IDs to indices
-		size_t controlled{ 0 };
 		int nextEmitterId{ 1 };
 	};
 } // namespace Framework

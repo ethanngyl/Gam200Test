@@ -5,9 +5,6 @@ namespace Framework {
 		if (!active) return;
 		if (!CORE || !CORE->GetGraphicsSystem() || !CORE->GetEntityManager()) return; // safety check
 
-		// Query active graphics system to convert pixel size into world-space scale
-		// Size (pixel -> world conversion)
-		auto* graphics = CORE->GetGraphicsSystem();
 		float worldScale = settings.size * 0.1f;  // size is now in tile units (1.0 = one tile)
 
 		Entity entity = CORE->GetEntityManager()->CreateEntity();
@@ -63,11 +60,8 @@ namespace Framework {
 			direction = settings.direction;
 
 			// scale up by 2 then shift by -1 (Range: -1 to 1)
-			//direction.x += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
-			//direction.y += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
-
-			direction.y = std::abs(direction.y); // push mostly upward for smoke
-			direction.x += ((frand() * 2.0f) - 1.0f) * 0.2f; // a bit more sideways
+			direction.x += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
+			direction.y += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
 
 			// direction normalized
 			direction.normalize();
@@ -79,7 +73,7 @@ namespace Framework {
 	}
 
 	void ParticleSystem::Update(float dt) {
-		if (dt <= 0.0f) return; // saftey check
+		if (dt <= 0.0f) return; // safety check
 
 		if (!active) { spawnAcc = 0.0f; return; }
 
@@ -141,7 +135,7 @@ namespace Framework {
 
 				if (particle.shrinkOverTime || particle.growOverTime)
 				{
-					float lifeProgress = particle.age / particle.maxLifetime;
+					lifeProgress = particle.age / particle.maxLifetime;
 					float currentSize = particle.startSize +
 						(particle.endSize - particle.startSize) * lifeProgress;
 					transform.scale = { currentSize, currentSize };

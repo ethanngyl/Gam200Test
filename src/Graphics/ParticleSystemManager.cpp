@@ -100,7 +100,6 @@ namespace Framework {
 			}
 		}
 
-		controlled = 0;
 		return created;
 	}
 
@@ -174,19 +173,5 @@ namespace Framework {
 
 		std::cout << "[PSM] Spawned '" << presetName << "' tracking entity=" << entityID << "\n";
 		return emitterID;
-	}
-
-	// Activates only the emitters belonging to playerIndex; -1 = deactivate all player emitters
-	void ParticleSystemManager::SetActivePlayer(int playerIndex)
-	{
-		// All emitters active for now - just log
-    std::cout << "[PSM] SetActivePlayer(" << playerIndex << ") - " << particleSystems.size() << " emitters\n";
-
-		// for (auto& ps : particleSystems) {
-		// 	int owner = ps.GetOwnerPlayer();
-		// 	if (owner == -1) continue;  // always-on emitters, don't touch
-		// 	ps.SetActive(owner == playerIndex);
-		// }
-		// std::cout << "[PSM] Active player set to " << playerIndex << "\n";
 	}
 } // namespace Framework

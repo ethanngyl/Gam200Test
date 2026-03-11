@@ -4957,9 +4957,6 @@ namespace Framework {
         int playerIndex = (int)luaL_checknumber(L, 1);  // was luaL_checkinteger
         g_activePlayerIndex = playerIndex;
 
-        auto* psm = CORE->GetParticleSystemManager();
-        if (psm) psm->SetActivePlayer(playerIndex);
-
         return 0;
     }
 
