@@ -1078,9 +1078,10 @@ namespace Framework {
         // Each alive particle becomes its own RenderCommand (quad)
         for (Entity e : entityManager->GetAllEntities()) {
             if (!entityManager->HasComponent<ParticleEmitter>(e)) continue;
+            if (!entityManager->HasComponent<Transform>(e)) continue;
 
             auto& emitter = entityManager->GetComponent<ParticleEmitter>(e);
-
+            auto& emitterTransform = entityManager->GetComponent<Transform>(e);
             // Choose material: user-specified, or default based on blend mode
             MaterialHandle matHandle = emitter.material;
             if (!matHandle.IsValid()) {
@@ -1100,15 +1101,21 @@ namespace Framework {
                 cmd.tint = p.color;
                 cmd.visible = true;
 
+                // Local-space particles are offset by the emitter's current transform
+                glm::vec2 worldPos = p.position;
+                if (!emitter.worldSpace) {
+                    worldPos += glm::vec2(emitterTransform.position.x, emitterTransform.position.y);
+                }
+
                 glm::mat4 model(1.0f);
                 float zDepth = emitter.layer * 0.01f;
-                model = glm::translate(model, { p.position.x, p.position.y, zDepth });
+                model = glm::translate(model, { worldPos.x, worldPos.y, zDepth });
                 model = glm::rotate(model, p.rotation, { 0, 0, 1 });
                 model = glm::scale(model, { p.size, p.size, 1.0f });
                 cmd.modelMatrix = model;
 
                 cmd.depth = glm::distance(
-                    glm::vec3(p.position.x, p.position.y, zDepth),
+                    glm::vec3(worldPos.x, worldPos.y, zDepth),
                     mainCamera.GetPosition()
                 );
 

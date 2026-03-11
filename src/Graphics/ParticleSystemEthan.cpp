@@ -80,8 +80,7 @@ namespace Framework {
                 if (entityManager->HasComponent<Transform>(target)) {
                     auto& targetTransform = entityManager->GetComponent<Transform>(target);
                     transform.position = targetTransform.position;
-                }
-                else {
+                } else {
                     // Target entity no longer exists — stop emitting and auto-destroy
                     emitter.emit = false;
                     emitter.autoDestroy = true;
@@ -153,7 +152,7 @@ namespace Framework {
         // inacitve/not alive and reactivates it to reduce memory fragmentation
         for (int i = 0; i < toSpawn; ++i) {
             // Find a dead particle slot
-            Particle* slot = nullptr;
+            ParticleEthan* slot = nullptr;
             for (auto& p : emitter.particles) {
                 if (!p.alive) {
                     slot = &p;

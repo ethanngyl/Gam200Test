@@ -5954,4 +5954,103 @@ namespace Framework {
         return 0;
     }
 
+    // =========================================================================
+        // Particle Emitter API
+        // =========================================================================
+
+        /**
+         * @brief Spawns a particle emitter entity at a world position
+         * @params x, y, emitRadius, rate, duration, r, g, b, a, followEntityID
+         * @return integer (Entity ID)
+         *
+         * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, targetID)
+         *   - duration=0 means infinite (emitter persists until destroyed)
+         *   - followEntityID (optional): if provided, emitter follows that entity's position
+         *   - Returns entity ID so caller can track and destroy it later
+         */
+    int LevelLoader::Lua_SpawnParticleEmitterEthan(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Parse parameters
+        float x = static_cast<float>(luaL_checknumber(L, 1));
+        float y = static_cast<float>(luaL_checknumber(L, 2));
+        float emitRadius = static_cast<float>(luaL_optnumber(L, 3, 0.04));
+        float rate = static_cast<float>(luaL_optnumber(L, 4, 8.0));
+        float duration = static_cast<float>(luaL_optnumber(L, 5, 0.0));
+        float r = static_cast<float>(luaL_optnumber(L, 6, 1.0));
+        float g = static_cast<float>(luaL_optnumber(L, 7, 1.0));
+        float b = static_cast<float>(luaL_optnumber(L, 8, 0.0));
+        float a = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        EntityID followTarget = static_cast<EntityID>(luaL_optinteger(L, 10, 0));
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("LevelLoader", "SpawnParticleEmitter failed: no entity manager");
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        Entity entity = em->CreateEntity();
+        if (entity.GetID() == INVALID_ENTITY) {
+            LOG_ERROR("LevelLoader", "SpawnParticleEmitter failed: could not create entity");
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        // Add Transform
+        em->AddComponent<Transform>(entity, Vector2D(x, y));
+
+        // Add ParticleEmitter with configured properties
+        em->AddComponent<ParticleEmitter>(entity);
+        auto& emitter = em->GetComponent<ParticleEmitter>(entity);
+
+        emitter.maxParticles = 50;
+        emitter.emissionRate = rate;
+        emitter.emit = true;
+        emitter.worldSpace = true;
+        emitter.layer = 15;  // Above enemies
+
+        // Circle emit shape around the entity
+        emitter.emitShape = ParticleEmitShape::Circle;
+        emitter.emitRadius = emitRadius;
+
+        // Gentle upward drift
+        emitter.velocityMin = glm::vec2(-0.01f, 0.01f);
+        emitter.velocityMax = glm::vec2(0.01f, 0.04f);
+
+        // Short-lived particles
+        emitter.lifetimeMin = 0.4f;
+        emitter.lifetimeMax = 1.0f;
+
+        // Small particles that shrink
+        emitter.sizeStart = 0.006f;
+        emitter.sizeEnd = 0.001f;
+
+        // Yellow color fading to transparent
+        emitter.colorStart = glm::vec4(r, g, b, a);
+        emitter.colorEnd = glm::vec4(r, g, b, 0.0f);
+
+        // No gravity
+        emitter.gravity = glm::vec2(0.0f, 0.0f);
+
+        // Follow target entity
+        if (followTarget != INVALID_ENTITY) {
+            emitter.followEntity = followTarget;
+            emitter.worldSpace = false;  // use local space so particles move with emitter
+        }
+
+        // Duration and auto-destroy
+        if (duration > 0.0f) {
+            emitter.duration = duration;
+            emitter.autoDestroy = true;
+        }
+
+        lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
+        return 1;
+    }
+
 } // namespace Framework

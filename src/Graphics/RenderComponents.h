@@ -22,6 +22,7 @@ Used by:
 */
 #pragma once
 #include "ECSComponent.h"
+#include "ECSEntity.h"
 #include "ResourceHandle.h"
 #include "Material.h"
 #include <glm/glm.hpp>
@@ -136,6 +137,9 @@ namespace Framework {
         // --- Burst mode ---
         int burstCount = 0;               // if > 0, emit this many immediately then stop
         bool burstFired = false;
+
+        // --- Follow target (emitter follows another entity's position) ---
+        EntityID followEntity = INVALID_ENTITY;  // entity to follow, 0 = none
 
         // --- Lifetime (optional: auto-destroy emitter entity after duration) ---
         float duration = 0.0f;            // 0 = infinite

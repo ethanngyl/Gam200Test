@@ -369,6 +369,8 @@ namespace Framework {
         static int Lua_CreateParticleEffect(lua_State* L);
         static int Lua_SetActivePlayerIndex(lua_State* L);
 
+        //Ethan's Particle Emitter
+        static int Lua_SpawnParticleEmitterEthan(lua_State* L);
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };
