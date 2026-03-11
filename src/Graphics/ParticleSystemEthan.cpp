@@ -1,4 +1,5 @@
 #include "Precompiled.h"
+#include "ParticleSystemEthan.h"
 
 namespace Framework {
 	void ParticleSystemEthan::CreateParticle() {
