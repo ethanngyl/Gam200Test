@@ -62,13 +62,13 @@ local charAnims = {
         frameTime = 0.55, loop = true
     },
     [2] = {
-        sprite = "assets/Warrior/FrontView/WarriorTopDownView.png",
+        sprite = "assets/Mage/FrontView/Mage_Idle_Front-Sheet.png",
         rows = 1, columns = 12, frameCount = 12,
         frameTime = 0.55, loop = true
     },
     [3] = {
-        sprite = "assets/Warrior/FrontView/WarriorTopDownView.png",
-        rows = 1, columns = 12, frameCount = 12,
+        sprite = "assets/Berserker/FrontView/Berserker_Walk_Front-Sheet.png",
+        rows = 1, columns = 6, frameCount = 6,
         frameTime = 0.55, loop = true
     },
 }
