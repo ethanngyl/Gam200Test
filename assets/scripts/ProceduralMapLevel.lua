@@ -290,7 +290,7 @@ function SetupProceduralParty(mapData)
     local player3 = SpawnPlayerAt(mapData.partySpawns[3].worldX, mapData.partySpawns[3].worldY)
 
     SetAnimationPrefix(player2, "Mage_")
-
+    SetAnimationPrefix(player3, "Berserker_")
     if not player1 or player1 == 0 then
         Log("ERROR: Failed to spawn Player 1!")
         return false
@@ -699,9 +699,6 @@ function OnUpdate(dt)
     -- CRITICAL: Force grid movement to stay disabled
     SetGridMovementEnabled(false)
 
-    -- Update audio
-    UpdateAudio(dt)
-
     -- Handle pause menu
     PauseMenu.Update(dt)
 
@@ -717,6 +714,9 @@ function OnUpdate(dt)
     if IsPaused() then
         return
     end
+
+    -- Update audio
+    UpdateAudio(dt)
 
     -- Handle editor toggle
     HandleEditorToggle(dt)

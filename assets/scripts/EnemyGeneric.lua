@@ -188,22 +188,43 @@ local function ApplySheet(animKey, flipX)
     lastFlipX = flipX and true or false
 end
 
-local function SetFacingFromDelta(dx, dy)
+local function SetFacingFromDelta(dx, dy, isMoving)
+    local animKey = nil
+    local flipX = false
+
     if math.abs(dx) > math.abs(dy) then
-        ApplySheet("idleSide", dx < 0)
+        if isMoving and ENEMY_ANIM["walkSide"] then
+            animKey = "walkSide"
+        else
+            animKey = "idleSide"
+        end
+
+        flipX = (dx > 0)
         facingDirX = dx > 0 and 1 or -1
         facingDirY = 0
     else
         if dy > 0 then
-            ApplySheet("idleBack", false)
+            if isMoving and ENEMY_ANIM["walkBack"] then
+                animKey = "walkBack"
+            else
+                animKey = "idleBack"
+            end
+
             facingDirX = 0
             facingDirY = 1
         else
-            ApplySheet("idleFront", false)
+            if isMoving and ENEMY_ANIM["walkFront"] then
+                animKey = "walkFront"
+            else
+                animKey = "idleFront"
+            end
+
             facingDirX = 0
             facingDirY = -1
         end
     end
+
+    ApplySheet(animKey, flipX)
 end
 
 local function SetAttackFacing(ex, ey, px, py)
@@ -428,7 +449,7 @@ local function MoveOneStep()
                 fleeY = ey + (dy > 0 and 1 or -1)
             end
             if IsWalkableTile(fleeX, fleeY) and not IsTileOccupied(fleeX, fleeY) then
-                SetFacingFromDelta(fleeX - ex, fleeY - ey)
+                SetFacingFromDelta(fleeX - ex, fleeY - ey, true)
                 local sx, sy = GetEntityWorldPosition(entityID)
                 local success = MoveEntityToTile(entityID, fleeX, fleeY)
                 if success then
@@ -463,7 +484,7 @@ local function MoveOneStep()
             return false, "blocked"
         end
 
-        SetFacingFromDelta(nextTile.x - ex, nextTile.y - ey)
+        SetFacingFromDelta(nextTile.x - ex, nextTile.y - ey, true)
         local sx, sy = GetEntityWorldPosition(entityID)
         local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
         if success then

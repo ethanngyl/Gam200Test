@@ -193,7 +193,7 @@ end
 function TurnScrollUI:Update(dt, cameraPos)
     if not self.enabled then return end
     if not self.scrollID or self.scrollID == 0 then return end
-    
+    if IsPaused and IsPaused() then return end
     -- Prevent C++ animation system from auto-playing
     if SetAnimationPlaying then
         SetAnimationPlaying(self.scrollID, false)
@@ -217,9 +217,18 @@ function TurnScrollUI:Update(dt, cameraPos)
     local phase = GetCurrentTurn() or "Player"
 
     if self.state == "idle" then
-        -- Check if we should trigger the animation
+        local gameplayDisabled = false
+        if ShouldDisableGameplay then
+            gameplayDisabled = ShouldDisableGameplay()
+        end
+
+        if gameplayDisabled then
+            self.lastTurnPhase = phase
+            return
+        end
+
         local shouldTrigger = false
-        
+
         if not self.hasTriggeredOnce and phase == "Player" then
             shouldTrigger = true
             self.hasTriggeredOnce = true
@@ -228,11 +237,11 @@ function TurnScrollUI:Update(dt, cameraPos)
             shouldTrigger = true
             Log("[ScrollOpen] Turn change: Enemy -> Player")
         end
-        
+
         if shouldTrigger then
             self:StartAnimation()
         end
-        
+
         self.lastTurnPhase = phase
         
     elseif self.state == "playing" then

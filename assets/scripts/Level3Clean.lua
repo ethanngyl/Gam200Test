@@ -264,9 +264,6 @@ function OnUpdate(dt)
     -- Something keeps re-enabling it, so we force it off continuously
     SetGridMovementEnabled(false)
 
-    -- Update audio
-    UpdateAudio(dt)
-
     -- Handle pause menu (always runs)
     PauseMenu.Update(dt)
 
@@ -279,6 +276,9 @@ function OnUpdate(dt)
     if IsPaused() then
         return
     end
+
+    -- Update audio
+    UpdateAudio(dt)
 
     -- Handle editor toggle
     HandleEditorToggle(dt)
