@@ -26,7 +26,6 @@ namespace Framework {
 		// Query active graphics system to convert pixel size into world-space scale
 		// Size (pixel -> world conversion)
 		auto* graphics = CORE->GetGraphicsSystem();
-		//float pixelSize = 15.0f; // desired size in pixels
 		float worldScale = (2.0f * settings.size) / float(graphics->GetRenderHeight());
 
 		Entity entity = CORE->GetEntityManager()->CreateEntity();
@@ -52,7 +51,7 @@ namespace Framework {
 		particle.startTint = settings.tint;
 		particle.endTint = settings.endTint;
 		particle.startSize = worldScale;
-		particle.endSize = settings.endSize;
+		particle.endSize = settings.endSize * worldScale;
 		particle.gravity = settings.gravity;
 		particle.fadeOut = settings.fadeOut;
 		particle.shrinkOverTime = settings.shrinkOverTime;
