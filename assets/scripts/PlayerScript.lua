@@ -150,6 +150,11 @@ local apCostPerMove = 1
 local uiAnimBlockTimer = 0.0
 local uiAnimMaxBlockTime = 1.0
 
+-- Berserker: Bloody Warcry tracking (must be declared before getMovementCost uses it)
+local bloodyWarcryFreeMove = false
+local bloodyWarcryDamageBonus = false
+local currentWarcryBonus = 0
+
 -- Helper: get actual movement cost (0 if Bloody Warcry free move is active)
 local function getMovementCost()
     if bloodyWarcryFreeMove then
@@ -260,13 +265,6 @@ local darkOmensUsedThisLevel = false
 -- Berserker: Siphon Charge state tracking (next attack costs +1 HP, kills heal 3)
 local siphonChargeActive = false
 local siphonTriggeredThisSkill = false
-
--- Berserker: Bloody Warcry tracking (first move free, next skill +1 dmg -1 HP)
-local bloodyWarcryFreeMove = false
-local bloodyWarcryDamageBonus = false
-
--- Berserker: current warcry damage bonus (set per-skill in ExecuteSkill)
-local currentWarcryBonus = 0
 
 -- Turn start initialization flag (resets when character becomes active)
 local turnStartInitialized = false
@@ -540,6 +538,11 @@ local function createPlayerStates(fsm)
                     print("[PlayerScript] Siphon Charge active: next attack costs +1 HP, kills heal 3 HP")
                 end
             end
+            -- NOTE: Turn-start initialization (BloodyWarcry, SiphonCharge, DarkOmens particles)
+            -- has been moved to OnUpdate's "just became active" block (isActive and not lastActiveCheck).
+            -- Reason: playerFSM:update is never called while inactive (OnUpdate returns early),
+            -- so lastActiveState was never reliably reset between turns.
+            -- The OnUpdate block uses lastActiveCheck which is correctly managed.
 
             -- Update blocked keys
             updateBlockedKeys()
@@ -1218,6 +1221,12 @@ function OnUpdate(dt)
             -- Just became inactive
             lastActiveCheck = false
             hasLoggedActive = false
+            -- Reset FSM turn-start flag so it fires again next time this character activates.
+            -- NOTE: lastActiveState cannot be reset inside playerFSM:update because OnUpdate
+            -- returns early (not isActive) before calling playerFSM:update, making the
+            -- reset at FSM line 509 dead code. We reset it here instead.
+            lastActiveState = false
+            turnStartInitialized = false
             blockedKeys = {}
             lastPKeyDown = false
             for _, key in ipairs(skillSlotKeys) do
@@ -1282,6 +1291,33 @@ function OnUpdate(dt)
                     print("[PlayerScript] Skill " .. sid .. " cooldown expired - skill available again")
                 else
                     print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
+                end
+            end
+        end
+
+        -- Initialize turn-start status effects here (not in FSM) because playerFSM:update
+        -- is never called while inactive, making the FSM's lastActiveState check unreliable.
+
+        -- Berserker: Bloody Warcry - free move + damage bonus for this turn
+        if HasStatusEffect and HasStatusEffect(entityID, "bloodyWarcry") then
+            bloodyWarcryFreeMove = true
+            bloodyWarcryDamageBonus = true
+            print("[PlayerScript] Bloody Warcry active: first move free, next skill +1 dmg -1 HP")
+        end
+
+        -- Berserker: Siphon Charge - first attack consumes all AP and heals
+        if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
+            siphonChargeActive = true
+            print("[PlayerScript] Siphon Charge active: first attack consumes all AP + heals 3 HP")
+        end
+
+        -- Dark Omens: spawn visual particles (player will die at end of this turn)
+        if not turnStartInitialized then
+            turnStartInitialized = true
+            if HasStatusEffect and HasStatusEffect(entityID, "darkOmensTriggered") then
+                local key = "darkOmensTriggered_" .. entityID
+                if not _G.EffectParticles[key] then
+                    spawnEffectParticles(entityID, "darkOmensTriggered", 0.6, 0.0, 0.8)
                 end
             end
         end
