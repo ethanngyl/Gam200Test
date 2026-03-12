@@ -17,7 +17,6 @@ namespace Framework {
 	static ParticleSystem::Settings ReadSettings(const json& j) {
 		ParticleSystem::Settings s;
 
-		s.texturePath = j.value("texturePath", "");
 		s.layer = j.value("layer", 5);
 		if (j.contains("tint")) s.tint = ReadTint(j["tint"]);
 		s.spawnRate = j.value("spawnRate", 0.0f);

@@ -11,7 +11,6 @@ namespace Framework {
 	class ParticleSystem {
 	public:
 		struct Settings {
-			std::string texturePath	{""};
 			glm::vec4	tint		{ 0.0f, 0.0f, 0.0f, 1.0f };
 			int			layer		{ 0 };
 			float		spawnRate	{ 0.0f };
