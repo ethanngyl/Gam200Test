@@ -1,26 +1,7 @@
 #include "Precompiled.h"
 
-namespace {
-	// Get active player index from Lua
-	int GetCurrentActivePlayer() {
-		return Framework::GetActivePlayerIndexForParticles();
-	}
-
-	// Check if particle should be active based on current turn
-	bool ShouldBeActive(int ownerPlayerID) {
-		if (ownerPlayerID < 0) return true;  // Always active
-		int currentPlayer = GetCurrentActivePlayer();
-		if (currentPlayer < 0) return true;  // No active player = show all
-		return currentPlayer == ownerPlayerID;
-	}
-}
-
 namespace Framework {
-    // Access to active player index (defined in LevelLoader_API.cpp)
-	int GetActivePlayerIndexForParticles();  // Forward declaration
-
 	void ParticleSystem::CreateParticle() {
-		if (!active || !ShouldBeActive(settings.ownerPlayerID)) return;
 		if (!CORE || !CORE->GetGraphicsSystem() || !CORE->GetEntityManager()) return; // safety check
 
 		// Query active graphics system to convert pixel size into world-space scale
@@ -29,7 +10,6 @@ namespace Framework {
 		float worldScale = (2.0f * settings.size) / float(graphics->GetRenderHeight());
 
 		Entity entity = CORE->GetEntityManager()->CreateEntity();
-
 		CORE->GetEntityManager()->AddComponent<Transform>(entity, emitter);
 		auto& transform = CORE->GetEntityManager()->GetComponent<Transform>(entity);
 

@@ -84,10 +84,8 @@ namespace Framework {
 		auto& ps = AddParticleSystem();
 		ps.SetSettings(s);
 		ps.SetEmitter(x, y);
-		if (followTarget != INVALID_ENTITY)
-			ps.SetFollowEntity(followTarget);
-		if (s.burstCnt > 0)
-			ps.SpawnBurst(s.burstCnt);
+		if (followTarget != INVALID_ENTITY) ps.SetFollowEntity(followTarget);
+		if (s.burstCnt > 0) ps.SpawnBurst(s.burstCnt);
 		int emitterId = nextEmitterId++;
 		emitterIdToIndex[emitterId] = particleSystems.size() - 1;
 		return emitterId;

@@ -28,7 +28,6 @@ namespace Framework {
 		std::unordered_map<std::string, ParticleSystem::Settings> settings;     // table: "smoke" -> settings, "explosion" -> settings
 		std::vector<ParticleSystem> particleSystems;
 		std::unordered_map<int, size_t> emitterIdToIndex; // Map IDs to indices
-		size_t controlled{ 0 };
 		int nextEmitterId{ 1 };
 	};
 } // namespace Framework
