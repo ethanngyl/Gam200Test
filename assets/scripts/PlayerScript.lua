@@ -217,7 +217,7 @@ local skillCooldowns = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Fireball", ["2"] = "DarkOmens" },
+    [1] = { ["1"] = "Fireball", ["2"] = "SiphonCharge" },
     [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
     [3] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
 }
@@ -536,8 +536,7 @@ local function createPlayerStates(fsm)
                     turnStartInitialized = true -- Prevent re-running this every frame
                 end
                 if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
-                    siphonChargeActive = true
-                    print("[PlayerScript] Siphon Charge active: first attack consumes all AP + heals 3 HP")
+                    RemoveStatusEffect(entityID, "siphonCharge")
                 end
             end
 
@@ -1815,15 +1814,7 @@ function ExecuteSkill(skillID)
         return
     end
 
-    -- Siphon Charge: if active, first attack consumes all AP and heals 3 HP
     siphonTriggeredThisSkill = false
-    if siphonChargeActive and skill.damage and skill.damage > 0 then
-        print("[PlayerScript] Siphon Charge triggered! Will consume all AP and heal 3 HP")
-        siphonTriggeredThisSkill = true
-        siphonChargeActive = false
-        RemoveStatusEffect(entityID, "siphonCharge")
-        healEntity(entityID, 3)
-    end
 
     -- Deduct HP cost
     if hpCost > 0 then
@@ -1863,9 +1854,11 @@ function ExecuteSkill(skillID)
             spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
         end
 
-        -- Siphon Charge: activate for next attack
+        -- Siphon Charge: immediately heal 2 HP
         if skill.effect == "siphonCharge" then
-            siphonChargeActive = true
+            healEntity(entityID, 2)
+            print("[PlayerScript] Siphon Charge: healed 2 HP")
+            RemoveStatusEffect(entityID, "siphonCharge")
         end
 
         -- Bloody Warcry: apply as PENDING to all party members (activates next round)
