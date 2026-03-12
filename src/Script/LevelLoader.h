@@ -376,15 +376,10 @@ namespace Framework {
 
         // Particle Emitter API
         static int Lua_SpawnParticleEmitter(lua_State* L);  // SpawnParticleEmitter(x, y, emitRadius, rate, duration, r, g, b, a) -> entityID
-        static int Lua_CreateParticleEmitter(lua_State* L);
-        static int Lua_DestroyParticleEmitter(lua_State* L);
-        static int Lua_SetParticleEmitterPosition(lua_State* L);
-        static int Lua_SetParticleEmitterOwner(lua_State* L);
-        static int Lua_CreateParticleEffect(lua_State* L);
-        static int Lua_SetActivePlayerIndex(lua_State* L);
 
         //Ethan's Particle Emitter
         static int Lua_SpawnParticleEmitterEthan(lua_State* L);
+        
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

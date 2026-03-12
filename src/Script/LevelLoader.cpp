@@ -794,14 +794,8 @@ namespace Framework {
         lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
 
         // Particles (new ParticleSystemManager API)
-        lua_register(L, "CreateParticleEmitter", Lua_CreateParticleEmitter);
-        lua_register(L, "DestroyParticleEmitter", Lua_DestroyParticleEmitter);
-        lua_register(L, "SetParticleEmitterPosition", Lua_SetParticleEmitterPosition);
-        lua_register(L, "SetParticleEmitterOwner", Lua_SetParticleEmitterOwner);
-        lua_register(L, "CreateParticleEffect", Lua_CreateParticleEffect);
-        lua_register(L, "SetActivePlayerIndex", Lua_SetActivePlayerIndex);
-
         lua_register(L, "SpawnParticleEmitterEthan", Lua_SpawnParticleEmitterEthan);
+        
         LOG_INFO("LevelLoader", "API registered");
     }
 

@@ -850,10 +850,10 @@ local function ApplyBolsteredMorale()
             print("[" .. GetLogTag() .. " " .. entityID .. "] Bolstered Morale: +1 damageModifier on enemy " .. eid)
 
             -- Spawn yellow particle emitter around the buffed enemy
-            if SpawnParticleEmitterEthan then
+            if SpawnParticleEmitter then
                 local wx, wy = GetEntityWorldPosition(eid)
                 if wx and wy then
-                    local emitterID = SpawnParticleEmitterEthan(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
+                    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
                     if emitterID and emitterID > 0 then
                         -- Track emitter per source commander and target enemy
                         local key = entityID .. "_" .. eid
