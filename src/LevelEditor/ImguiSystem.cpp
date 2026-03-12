@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -93,10 +93,6 @@ namespace Framework {
     static bool wantSaveSceneAsModal = false;
     static std::string currentScenePath = "";
 
-    // Snapshot hooks were removed in newer branches; keep no-op stubs
-    // so editor sliders compile cleanly without undo integration.
-    static void BeginSnapshotEdit(Entity) {}
-    static void EndSnapshotEdit(Entity) {}
 
     static int GetGsmStateFromLuaName(const std::string& lowerName) {
         if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
@@ -2911,7 +2907,16 @@ namespace Framework {
                                 t.position.x += 0.5f;
                                 t.position.y += 0.5f;
                             }
-                            // Entity duplicated
+                            // Snapshot undo: entity did not exist before, exists after duplicate
+                            std::string afterPath = MakeUndoPath("duplicate_after");
+                            PrefabSerializer::SavePrefab(*entityManager, newEntity, afterPath);
+                            PushSnapshotStep(newEntity, "", afterPath);
+
+                            selectedEntity = newEntity;
+                            RebuildSpatialPartition();
+
+                            std::cout << "[Editor] Duplicated entity " << entity.GetID()
+                                << " -> " << newEntity.GetID() << "\n";
                         }
                     }
                 }
@@ -4158,6 +4163,12 @@ namespace Framework {
         TrimHistory(undoStack);
 
         selectedEntity = newEntity;
+
+        draggingEntity = Framework::Entity{};
+        isDraggingEntity = false;
+        isScalingEntity = false;
+        isRotatingEntity = false;
+        RebuildSpatialPartition();
     }
 
     // ============================================================================
@@ -4286,11 +4297,15 @@ namespace Framework {
                 t.position.y += 0.1f;
             }
 
-            // Record for undo
-            //RecordCreationStep(newEntity);
+            // Snapshot undo: entity did not exist before, exists after paste
+            std::string afterPath = MakeUndoPath("paste_after");
+            PrefabSerializer::SavePrefab(*entityManager, newEntity, afterPath);
+            PushSnapshotStep(newEntity, "", afterPath);
 
             // Select the newly pasted entity
             selectedEntity = newEntity;
+
+            RebuildSpatialPartition();
 
             std::cout << "[Clipboard] Pasted new entity " << newEntity.GetID() << "\n";
         }

@@ -109,7 +109,14 @@ namespace PrefabSerializer
             writeComma();
             out << "    \"Sprite\": {"
                 << "\"texturePath\":\"" << s.texturePath << "\","
-                << "\"layer\":" << s.layer
+                << "\"layer\":" << s.layer << ","
+                << "\"flipX\":" << (s.flipX ? "true" : "false") << ","
+                << "\"flipY\":" << (s.flipY ? "true" : "false") << ","
+                << "\"tint\":["
+                << f2(s.tint.r) << ","
+                << f2(s.tint.g) << ","
+                << f2(s.tint.b) << ","
+                << f2(s.tint.a) << "]"
                 << "}";
         }
 
@@ -396,6 +403,16 @@ namespace PrefabSerializer
             auto& c = em.GetComponent<Sprite>(e);
             c.texturePath = s.value("texturePath", "");
             c.layer = s.value("layer", 0);
+            c.flipX = s.value("flipX", false);
+            c.flipY = s.value("flipY", false);
+
+            if (s.contains("tint") && s["tint"].is_array() && s["tint"].size() >= 4)
+            {
+                c.tint.r = s["tint"][0].get<float>();
+                c.tint.g = s["tint"][1].get<float>();
+                c.tint.b = s["tint"][2].get<float>();
+                c.tint.a = s["tint"][3].get<float>();
+            }
         }
 
         // MeshRenderer
