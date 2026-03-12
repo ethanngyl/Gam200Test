@@ -1,3 +1,15 @@
+/**
+===============================================================================
+ File:           ParticleSystemManager.h
+ Author:         TAN WEI LEONG
+ Email:          weileong.tan@digipen.edu
+ Date:           2026-03-12
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+===============================================================================
+ */
+
 #pragma once
 #include "ParticleSystem.h"
 #include <nlohmann/json.hpp>

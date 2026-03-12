@@ -1,3 +1,15 @@
+/**
+===============================================================================
+ File:           ParticleSystem.cpp
+ Author:         TAN WEI LEONG
+ Email:          weileong.tan@digipen.edu
+ Date:           2026-03-12
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+===============================================================================
+ */
+
 #include "Precompiled.h"
 
 namespace Framework {
@@ -82,7 +94,7 @@ namespace Framework {
 		particles.push_back(entity);
 	}
 
-	void ParticleSystem::Update(float dt) {
+	void ParticleSystem::UpdateParticle(float dt) {
 		if (dt <= 0.0f) return; // safety check
 
 		EntityManager* entityManager = CORE->GetEntityManager();

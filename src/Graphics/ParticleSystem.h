@@ -1,3 +1,15 @@
+/**
+===============================================================================
+ File:           ParticleSystem.h
+ Author:         TAN WEI LEONG
+ Email:          weileong.tan@digipen.edu
+ Date:           2026-03-12
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+===============================================================================
+ */
+
 #pragma once
 
 #include "Vector2D.h"
@@ -37,7 +49,7 @@ namespace Framework {
 		};
 
 		void CreateParticle();
-		void Update(float dt);
+		void UpdateParticle(float dt);
 
 		void SetEmitter(float x, float y) { emitter = { x, y }; }
 		void SetFollowEntity(EntityID id) { followEntity = id; }

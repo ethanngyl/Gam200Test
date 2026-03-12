@@ -1,3 +1,15 @@
+/**
+===============================================================================
+ File:           ParticleSystemManager.cpp
+ Author:         TAN WEI LEONG
+ Email:          weileong.tan@digipen.edu
+ Date:           2026-03-12
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+===============================================================================
+ */
+
 #include "Precompiled.h"
 
 namespace Framework {
@@ -104,7 +116,7 @@ namespace Framework {
 	void ParticleSystemManager::Update(float dt) {
 		// Loop through all emitters | Update all particle systems
 		for (auto& particleSystem : particleSystems) {
-			particleSystem.Update(dt);
+			particleSystem.UpdateParticle(dt);
 		}
 	}
 
