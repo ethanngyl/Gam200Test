@@ -107,8 +107,8 @@ namespace Framework {
             int maxPlacementAttempts = 100;
 
             // Boss arena (used with "rooms_arena" algorithm)
-            int arenaWidth = 9;       // Width of the boss arena
-            int arenaHeight = 9;      // Height of the boss arena
+            int arenaWidth = 8;       // Width of the boss arena
+            int arenaHeight = 8;      // Height of the boss arena
             int minArenaDistFromPlayer = 8;  // Min distance from player spawn to arena center
         };
 

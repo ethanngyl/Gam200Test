@@ -1,0 +1,16 @@
+{
+  "players": {
+    "1": {
+      "1": "Thrust",
+      "2": "Guard"
+    },
+    "2": {
+      "1": "LightningStrike",
+      "2": "ManaDrain"
+    },
+    "3": {
+      "1": "Slam",
+      "2": "SiphonCharge"
+    }
+  }
+}

@@ -4,11 +4,13 @@
  Description:   Between-level skill selection, one character at a time.
 
  Flow:
-    Warrior -> pick skill -> NEXT -> Mage -> pick -> NEXT -> Rogue -> FINISH
+    Warrior -> pick skill -> NEXT -> Mage -> pick -> NEXT -> Berserker -> FINISH
 
  Layout:
-    Left:  Large animated character sprite + name
-    Right: Current skills + 3 offers + nav button (scroll overlay buttons)
+    Left:       Large animated character sprite + name + scroll backdrop
+    Center:     Current skills (stacked)
+    Right:      "Pick a new skill" label + offer buttons (beside current skills)
+    Bot-Right:  Nav button (NEXT / FINISH)
 
  Usage:
     local SkillSwapUI = require("SkillSwapUI")
@@ -45,11 +47,12 @@ local allSkillIDs  = {}
 local skillOffers  = { {}, {}, {} }
 local chosenSkill  = { nil, nil, nil }
 
-local charNames = { "Warrior", "Mage", "Rogue" }
+-- CHANGED: "Rogue" -> "Berserker"
+local charNames = { "Warrior", "Mage", "Berserker" }
 local charColors = {
     { 1.0, 0.7, 0.3 },
     { 0.4, 0.6, 1.0 },
-    { 0.3, 1.0, 0.5 },
+    { 0.3, 1.0, 0.5 },  -- CHANGED: Berserker keeps green, change if you want a different color
 }
 
 local charAnims = {
@@ -87,24 +90,24 @@ local SPRITE_Y      = -0.05
 local SPRITE_SCALE  = 0.55
 
 -- Scroll behind character (rotated 90 degrees)
-local CHAR_SCROLL_LAYER = 51  -- Between BG and character sprite
+local CHAR_SCROLL_LAYER = 51
 
--- Right side
-local RIGHT_X           = 0.22
-
--- Existing skills
-local EXISTING_START_Y  = 0.25
-local EXISTING_SPACING  = 0.14
-local SLOT_W            = 0.42
+-- CHANGED: Current skills column (center-left of right side)
+local CURRENT_X         = 0.05
+local CURRENT_START_Y   = 0.25
+local CURRENT_SPACING   = 0.14
+local SLOT_W            = 0.32
 local SLOT_H            = 0.10
 
--- Offer skills
-local OFFER_START_Y     = -0.18
+-- CHANGED: Offer skills column (right of current skills)
+local OFFER_X           = 0.42
+local OFFER_START_Y     = 0.25   -- CHANGED: same Y as current skills (side by side)
 local OFFER_SPACING     = 0.14
 
--- Nav button
-local NAV_BTN_Y = -0.45
-local NAV_BTN_W = 0.42
+-- CHANGED: Nav button (bottom-right corner, above level counter)
+local NAV_BTN_X = 0.42
+local NAV_BTN_Y = -0.35   -- CHANGED: moved up from -0.45
+local NAV_BTN_W = 0.32
 local NAV_BTN_H = 0.10
 
 local BG_SCALE = 5.0
@@ -143,8 +146,8 @@ local function loadExistingLoadout()
         Log("[SkillSwapUI] Loaded existing loadout")
     else
         loadout[1] = { ["1"] = "Thrust",       ["2"] = "Guard" }
-        loadout[2] = { ["1"] = "Fireball",     ["2"] = "PiercingShot" }
-        loadout[3] = { ["1"] = "SwiftBlow" }
+        loadout[2] = { ["1"] = "Fireball",     ["2"] = "ManaDrain" }
+        loadout[3] = { ["1"] = "Slam",         ["2"] = "SiphonCharge" }
         Log("[SkillSwapUI] Using default loadout")
     end
 end
@@ -158,9 +161,10 @@ local function getSkillName(skillID)
 end
 
 local function saveLoadout()
+    print("[SkillSwapUI] saveLoadout() called")
     local f = io.open("assets/JSON/SkillLoadout.json", "w")
     if not f then
-        Log("[SkillSwapUI] ERROR: Cannot write SkillLoadout.json")
+        print("[SkillSwapUI] ERROR: Cannot open assets/JSON/SkillLoadout.json for writing!")
         return
     end
     f:write("{\n  \"players\": {\n")
@@ -182,7 +186,14 @@ local function saveLoadout()
     end
     f:write("  }\n}\n")
     f:close()
-    Log("[SkillSwapUI] Saved loadout")
+    for i = 1, 3 do
+        local skills = {}
+        for slot = 1, 4 do
+            local sid = loadout[i][tostring(slot)]
+            if sid then table.insert(skills, slot .. "=" .. sid) end
+        end
+        print("[SkillSwapUI] Saved " .. charNames[i] .. ": " .. table.concat(skills, ", "))
+    end
 end
 
 -- Character-specific skill pools (matches Skills.json order)
@@ -191,7 +202,7 @@ local charSkillPools = {
     { "Thrust", "SweepingSlash", "Guard", "SwiftBlow", "KnightsOath", "Parry", "ExploitWeakness", "Bash" },
     -- Mage (next 8)
     { "Fireball", "PiercingShot", "LightningStrike", "EarthenBind", "ManaDrain", "Overload", "SoulRend", "SoulMerge" },
-    -- Rogue (last 8)
+    -- CHANGED: Berserker (last 8)
     { "Slam", "SiphonCharge", "FutileResistance", "DarkOmens", "Cannibalism", "Groundshatter", "BloodyWarcry", "BladedWhirlwind" },
 }
 
@@ -201,14 +212,12 @@ local function generateOffers()
     math.randomseed(os.time())
 
     for pi = 1, 3 do
-        -- Collect skills already in this character's loadout
         local existing = {}
         for slot = 1, 4 do
             local sid = loadout[pi][tostring(slot)]
             if sid then existing[sid] = true end
         end
 
-        -- Filter to character-specific pool, excluding already owned skills
         local pool = {}
         for _, sid in ipairs(charSkillPools[pi]) do
             if not existing[sid] then
@@ -216,13 +225,11 @@ local function generateOffers()
             end
         end
 
-        -- Shuffle
         for i = #pool, 2, -1 do
             local j = math.random(1, i)
             pool[i], pool[j] = pool[j], pool[i]
         end
 
-        -- Pick offers
         skillOffers[pi] = {}
         for i = 1, math.min(NUM_OFFERS, #pool) do
             table.insert(skillOffers[pi], pool[i])
@@ -243,13 +250,9 @@ local existingBtnMap = {}
 local offerBtnMap = {}
 local navBtnID = 0
 
-local function destroyCharPage()
-    ClearAllButtons()
-    buttonIDs = {}
-    existingBtnMap = {}
-    offerBtnMap = {}
-    navBtnID = 0
+local targetSlot = "3"
 
+local function destroyCharPage()
     if charScrollID and charScrollID > 0 then
         DestroyEntity(charScrollID)
         charScrollID = 0
@@ -259,7 +262,13 @@ local function destroyCharPage()
         charSpriteID = 0
     end
 
-    for si = 1, 2 do _G["OnExisting_" .. si] = nil end
+    ClearAllButtons()
+    buttonIDs = {}
+    existingBtnMap = {}
+    offerBtnMap = {}
+    navBtnID = 0
+
+    for si = 1, 4 do _G["OnExisting_" .. si] = nil end
     for oi = 1, NUM_OFFERS do _G["OnOffer_" .. oi] = nil end
     _G["OnNavBtn"] = nil
 end
@@ -280,7 +289,7 @@ local function buildCharPage()
         CHAR_SCROLL_LAYER
     )
     if charScrollID and charScrollID > 0 then
-        SetEntityRotation(charScrollID, 1.9199)  -- ~110 degrees
+        SetEntityRotation(charScrollID, 1.9199)
     end
 
     -- Animated character sprite (left, big)
@@ -295,15 +304,16 @@ local function buildCharPage()
         anim.loop
     )
 
-    -- Existing skills (scroll buttons, read-only)
-    for si = 1, 2 do
-        local slotY = camY + EXISTING_START_Y - (si - 1) * EXISTING_SPACING
+    -- CHANGED: Current skills (center column)
+    local numExisting = tonumber(targetSlot) - 1
+    for si = 1, numExisting do
+        local slotY = camY + CURRENT_START_Y - (si - 1) * CURRENT_SPACING
         local cbName = "OnExisting_" .. si
         _G[cbName] = function() end
 
         local btnID = CreateButton(
             SCROLL_TEXTURE,
-            camX + RIGHT_X, slotY,
+            camX + CURRENT_X, slotY,
             SLOT_W, SLOT_H,
             cbName,
             BTN_LAYER
@@ -312,21 +322,27 @@ local function buildCharPage()
         table.insert(buttonIDs, btnID)
     end
 
-    -- Offer skills (scroll buttons, clickable)
+    -- CHANGED: Offer skills (right column, aligned with current skills row by row)
+    -- Offers start at the same Y as current skills so they sit side by side
     for oi = 1, NUM_OFFERS do
-        local offerY = camY + OFFER_START_Y - (oi - 1) * OFFER_SPACING
+        local offerY = camY + CURRENT_START_Y - (oi - 1) * CURRENT_SPACING
         local cbName = "OnOffer_" .. oi
         _G[cbName] = function()
+            print("[SkillSwapUI] CLICK: " .. cbName .. " fired for " .. charNames[pi])
             local offeredSkill = skillOffers[pi][oi]
-            if not offeredSkill then return end
+            if not offeredSkill then
+                print("[SkillSwapUI] ERROR: No offered skill for " .. charNames[pi] .. " offer " .. oi)
+                return
+            end
             chosenSkill[pi] = offeredSkill
             loadout[pi][targetSlot] = offeredSkill
-            Log("[SkillSwapUI] " .. charNames[pi] .. " chose: " .. getSkillName(offeredSkill))
+            print("[SkillSwapUI] " .. charNames[pi] .. " chose: " .. getSkillName(offeredSkill) .. " -> slot " .. targetSlot)
         end
+        print("[SkillSwapUI] Registered callback: " .. cbName .. " for " .. charNames[pi])
 
         local btnID = CreateButton(
             SCROLL_TEXTURE,
-            camX + RIGHT_X, offerY,
+            camX + OFFER_X, offerY,    -- CHANGED: uses OFFER_X (right column)
             SLOT_W, SLOT_H,
             cbName,
             BTN_LAYER
@@ -335,7 +351,7 @@ local function buildCharPage()
         table.insert(buttonIDs, btnID)
     end
 
-    -- Nav button
+    -- CHANGED: Nav button (bottom-right)
     _G["OnNavBtn"] = function()
         if not chosenSkill[pi] then
             Log("[SkillSwapUI] Must choose a skill first!")
@@ -355,7 +371,7 @@ local function buildCharPage()
 
     navBtnID = CreateButton(
         SCROLL_TEXTURE,
-        camX + RIGHT_X, camY + NAV_BTN_Y,
+        camX + NAV_BTN_X, camY + NAV_BTN_Y,   -- CHANGED: bottom-right position
         NAV_BTN_W, NAV_BTN_H,
         "OnNavBtn",
         BTN_LAYER
@@ -370,9 +386,6 @@ end
 function SkillSwapUI.IsActive()
     return active
 end
-
--- Which loadout slot to fill (set by caller, defaults to 3)
-local targetSlot = "3"
 
 function SkillSwapUI.Show(doneCallback, slot)
     if active then return end
@@ -464,40 +477,43 @@ function SkillSwapUI.Draw()
         1.4 * scaleRef, cr, cg, cb)
 
     -- ========================================
-    -- RIGHT: Current Skills label
+    -- CHANGED: Center column label - "Current Skills:"
     -- ========================================
-    local rightScreenX = fbW * 0.55
-    local existLabelY = fbH - 110 * scaleRef
+    local currentScreenX = fbW * 0.42
+    local existLabelY = fbH - 145 * scaleRef
     DrawText("Jersey20Regular", "Current Skills:",
-        rightScreenX - 75 * scaleRef, existLabelY,
+        currentScreenX - 50 * scaleRef, existLabelY,
         0.7 * scaleRef, 0.8, 0.8, 0.8)
 
-    -- Existing skill text
-    for si = 1, 2 do
+    -- Existing skill text (CHANGED: centered dynamically)
+    local numExisting = tonumber(targetSlot) - 1
+    for si = 1, numExisting do
         local skillID = loadout[pi][tostring(si)]
         local skillName = getSkillName(skillID)
 
         if existingBtnMap[si] then
+            local textOffsetX = -string.len(skillName) * 4.5 * scaleRef  -- CHANGED: center based on text length
             DrawButtonText(
                 existingBtnMap[si],
                 "Jersey20Regular",
                 skillName,
-                -35 * scaleRef, -5 * scaleRef,
-                0.42 * scaleRef,
+                textOffsetX, -5 * scaleRef,
+                0.38 * scaleRef,
                 0.2, 0.15, 0.1
             )
         end
     end
 
     -- ========================================
-    -- RIGHT: Pick one label
+    -- CHANGED: Right column label - "Pick a new skill:"
     -- ========================================
-    local offerLabelY = fbH - 500 * scaleRef
+    local offerScreenX = fbW * 0.72
+    local offerLabelY = fbH - 145 * scaleRef   -- CHANGED: same Y as "Current Skills:" label
     DrawText("Jersey20Regular", "Pick a new skill:",
-        rightScreenX - 90 * scaleRef, offerLabelY,
+        offerScreenX - 65 * scaleRef, offerLabelY,
         0.7 * scaleRef, 1.0, 0.9, 0.5)
 
-    -- Offer skill text
+    -- Offer skill text (CHANGED: centered dynamically)
     for oi = 1, NUM_OFFERS do
         local offeredSkill = skillOffers[pi][oi]
         local skillName = getSkillName(offeredSkill)
@@ -508,19 +524,20 @@ function SkillSwapUI.Draw()
         end
 
         if offerBtnMap[oi] then
+            local textOffsetX = -string.len(skillName) * 4.5 * scaleRef  -- CHANGED: center based on text length
             DrawButtonText(
                 offerBtnMap[oi],
                 "Jersey20Regular",
                 skillName,
-                -35 * scaleRef, -5 * scaleRef,
-                0.42 * scaleRef,
+                textOffsetX, -5 * scaleRef,
+                0.38 * scaleRef,
                 sr, sg, sb
             )
         end
     end
 
     -- ========================================
-    -- NAV BUTTON TEXT
+    -- CHANGED: NAV BUTTON TEXT (bottom-right)
     -- ========================================
     if navBtnID and navBtnID ~= 0 then
         local navLabel = "SELECT A SKILL"
@@ -535,12 +552,13 @@ function SkillSwapUI.Draw()
             nr, ng, nb = 0.1, 0.5, 0.1
         end
 
+        local textOffsetX = -string.len(navLabel) * 4.5 * scaleRef  -- CHANGED: center based on text length
         DrawButtonText(
             navBtnID,
             "Jersey20Regular",
             navLabel,
-            -40 * scaleRef, -6 * scaleRef,
-            0.5 * scaleRef,
+            textOffsetX, -6 * scaleRef,
+            0.45 * scaleRef,
             nr, ng, nb
         )
     end

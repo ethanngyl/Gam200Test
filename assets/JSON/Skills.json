@@ -131,7 +131,7 @@
       "description": "Damages all enemies regardless of their location",
       "skillType": "global_damage",
       "apCost": 3,
-      "damage": 1,
+      "damage": 10,
       "range": 0,
       "pattern": "none",
       "animationName": "Attack",

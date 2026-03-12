@@ -118,6 +118,12 @@ function OnInit()
         totalLevels  = progress.totalLevels  or 3
     end
 
+    -- Reset skill loadout on level 1 so PlayerScript uses its defaults (2 skills each)
+    if currentLevel == 1 then
+        os.remove("assets/JSON/SkillLoadout.json")
+        Log("[ProceduralMapLevel] Skill loadout reset for new game")
+    end
+
     Log("========================================")
     Log("LEVEL " .. currentLevel .. " / " .. totalLevels .. ": PROCEDURAL MAP")
     Log("========================================")
@@ -151,10 +157,10 @@ function OnInit()
          mapData = LoadSavedMap(SAVED_MAP_PATH)
          if not mapData then
              Log("ERROR: Failed! Falling back to procedural.")
-             mapData = LoadProceduralMap(35, 35, "rooms_arena")
+             mapData = LoadProceduralMap(20, 20, "rooms_arena")
          end
      else
-         mapData = LoadProceduralMap(35, 35, "rooms_arena")
+         mapData = LoadProceduralMap(20, 20, "rooms_arena")
      end
 
     -- Debug output
@@ -730,6 +736,28 @@ function OnUpdate(dt)
         SkillSwapUI.Show(function()
             Log("Skill swap done! Would transition to next level here.")
         end)
+    end
+
+    -- ========================================
+    -- CHEAT: Skip to win screen (press 7)
+    -- ========================================
+    if IsKeyDown("7") then
+        SetNextGameState("WIN_SCREEN")
+        return
+    end
+
+    -- ========================================
+    -- CHEAT: Kill all enemies (press K)
+    -- ========================================
+    if IsKeyDown("K") and not goalReached then
+        local enemies = GetAllEnemies()
+        if enemies and #enemies > 0 then
+            for _, eid in ipairs(enemies) do
+                SetEntityHP(eid, 0, 0)
+                DestroyEntity(eid)
+            end
+            Log("[CHEAT] Killed all " .. #enemies .. " enemies")
+        end
     end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues

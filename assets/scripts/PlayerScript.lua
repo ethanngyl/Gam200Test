@@ -217,7 +217,7 @@ local skillCooldowns = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Fireball", ["2"] = "DarkOmens" },
+    [1] = { ["1"] = "Thrust", ["2"] = "Guard" },
     [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
     [3] = { ["1"] = "Slam", ["2"] = "SiphonCharge" },
 }
@@ -1083,7 +1083,16 @@ function OnInit(id)
                 end
             end
         end
-        print("[PlayerScript] Loaded skill loadout from SkillLoadout.json")
+        -- Debug: log what was loaded per player
+        for i = 1, 3 do
+            local skills = {}
+            local ps = PlayerSkills[i] or {}
+            for slot = 1, 4 do
+                local sid = ps[tostring(slot)]
+                if sid then table.insert(skills, slot .. "=" .. sid) end
+            end
+            print("[PlayerScript] Loaded Player " .. i .. ": " .. table.concat(skills, ", "))
+        end
     else
         print("[PlayerScript] No SkillLoadout.json found, using default skills")
     end
