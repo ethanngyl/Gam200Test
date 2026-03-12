@@ -4986,60 +4986,47 @@ namespace Framework {
 
             if (ImGui::BeginMenu("Editor")) {
                 if (!CORE->IsPlaying()) {
-                    //  In editor mode: Show "PLAY" to exit editor
                     if (ImGui::MenuItem("PLAY")) {
-
                         CORE->SetPlaying(true);
-                        // Exit editor mode
                         CORE->SetEditorMode(false);
-
                         GlobalPause::SetPaused(false);
-                        //  CRITICAL: Use RequestToggle() instead of Disable()
-                        // This schedules the disable for AFTER this frame completes
-
-                        /*if (!currentLuaLevelPath.empty()) {
-
-                            // If we can map it to a GSM state, transition GSM so Level3 init runs correctly
-                            if (pendingLuaGsmState != -1)
-                            {
-                                // If already in that state, just reload as GAME-load (IS_EDITOR_LOAD = false)
-                                if (pendingLuaGsmState == current)
-                                {
-                                    Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
-                                }
-                                else
-                                {
-                                    next = pendingLuaGsmState;
-                                }
-                            }
-                            else {
-                                Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
-                            }
-                            currentLuaLevelPath.clear();
-                            pendingLuaGsmState = -1;
-                        }
-
-                        else if (!currentLevelPath.empty()) {
-                            Framework::LevelLoader::GetInstance().LoadLevel(currentLevelPath, false);
-                        }*/
-
-                        //this->RequestToggle();
-
-                        // Play mode activated
                     }
                 }
                 else {
-                    if (ImGui::MenuItem("Stop"))
-                    {
-                        // Stop simulation, return to editing
+                    bool isPaused = GlobalPause::IsPaused();
+
+                    if (!isPaused) {
+                        if (ImGui::MenuItem("Pause")) {
+                            GlobalPause::SetPaused(true);
+                        }
+                    }
+                    else {
+                        if (ImGui::MenuItem("Resume")) {
+                            GlobalPause::SetPaused(false);
+                        }
+                    }
+
+                    if (ImGui::MenuItem("Stop")) {
                         CORE->SetPlaying(false);
                         CORE->SetEditorMode(true);
                         GlobalPause::SetPaused(false);
-                        // Not in editor mode: Show hint
-                        //ImGui::TextDisabled("Press F1 to enter editor mode"); // Re-enable the hint display
                     }
-
                 }
+
+                ImGui::Separator();
+
+                if (CORE->IsPlaying()) {
+                    if (GlobalPause::IsPaused()) {
+                        ImGui::TextDisabled("Simulation: Paused");
+                    }
+                    else {
+                        ImGui::TextDisabled("Simulation: Playing");
+                    }
+                }
+                else {
+                    ImGui::TextDisabled("Simulation: Stopped");
+                }
+
                 ImGui::EndMenu();
             }
 

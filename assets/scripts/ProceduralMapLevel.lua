@@ -597,9 +597,6 @@ function OnUpdate(dt)
     -- CRITICAL: Force grid movement to stay disabled
     SetGridMovementEnabled(false)
 
-    -- Update audio
-    UpdateAudio(dt)
-
     -- Handle pause menu
     PauseMenu.Update(dt)
 
@@ -615,6 +612,9 @@ function OnUpdate(dt)
     if IsPaused() then
         return
     end
+
+    -- Update audio
+    UpdateAudio(dt)
 
     -- Handle editor toggle
     HandleEditorToggle(dt)
