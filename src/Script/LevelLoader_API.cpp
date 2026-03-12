@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader_API.cpp
 Author:      ETHAN NG, Sim Kah Yan
@@ -1891,11 +1891,12 @@ namespace Framework {
         LOG_INFO("LevelLoader", "SetEntityHP: Entity %d HP set to %d/%d (dead=%d)",
             entityID, hp.currentHealth, hp.maxHealth, hp.isDead);
 
-        // If entity died, destroy it
+        // If entity died, defer destruction to avoid crashing any active Lua call stack
+        // (e.g. SetEntityHP called from NextCharacterTurn while entity script is still running)
         if (hp.isDead) {
-            LOG_WARN("LevelLoader", "SetEntityHP: Entity %d died - beginning cleanup", entityID);
+            LOG_WARN("LevelLoader", "SetEntityHP: Entity %d died - clearing tile and deferring destruction", entityID);
 
-            // Clear tile occupancy
+            // Clear tile occupancy immediately (safe to do, no Lua involved)
             if (em->HasComponent<Transform>(entity)) {
                 auto& transform = em->GetComponent<Transform>(entity);
                 auto tileOpt = Framework::WorldToTile(transform.position);
@@ -1906,9 +1907,10 @@ namespace Framework {
                 }
             }
 
-            // Destroy entity
-            LOG_WARN("LevelLoader", "  -> Destroying entity %d", entityID);
-            em->DestroyEntity(entity);
+            // Defer entity destruction - ProcessDeferredDestructions runs at start of next frame
+            // when no Lua call stack is active, preventing use-after-free / cl->p corruption
+            loader->DeferEntityDestruction(static_cast<uint32_t>(entityID));
+            LOG_WARN("LevelLoader", "  -> Entity %d queued for deferred destruction", entityID);
         }
 
         return 0;
@@ -2691,6 +2693,27 @@ namespace Framework {
     }
 
     /**
+     * @brief Tell C++ whether the Lua skill preview is active
+     * When active, the C++ basic attack (HandleAttackAction) is disabled
+     * to prevent it from interfering with the Lua skill system.
+     * @param active true when Lua skill preview is shown, false when cleared
+     * Usage: SetSkillPreviewActive(true) / SetSkillPreviewActive(false)
+     */
+    int LevelLoader::Lua_SetSkillPreviewActive(lua_State* L) {
+        bool active = lua_toboolean(L, 1);
+
+        auto* pc = CORE ? CORE->GetPlayerController() : nullptr;
+        if (!pc) {
+            LOG_WARN("LevelLoader", "SetSkillPreviewActive: No PlayerController");
+            return 0;
+        }
+
+        pc->SetLuaSkillPreviewActive(active);
+
+        return 0;
+    }
+
+    /**
      * @brief Check if chest exists at tile
      * @param x, y Grid coordinates
      * @return true if chest exists
@@ -3312,6 +3335,16 @@ namespace Framework {
             return 1;
         }
 
+        // === EARLY EXIT: already dead (prevents double-destruction when DamageEntity called twice) ===
+        {
+            auto& health = em->GetComponent<Health>(entity);
+            if (health.isDead) {
+                LOG_INFO("LevelLoader", "DamageEntity: Entity %u is already dead, ignoring damage", entity.GetID());
+                lua_pushboolean(L, 0);
+                return 1;
+            }
+        }
+
         // === STATUS EFFECT CHECKS ===
 
         if (em->HasComponent<StatusEffects>(entity)) {
@@ -3452,7 +3485,7 @@ namespace Framework {
             if (effects.HasEffect("darkOmens")) {
                 health.currentHealth = 1;
                 effects.RemoveEffect("darkOmens");
-                effects.AddEffect("darkOmensTriggered", 2, 0, 0, 0);
+                effects.AddEffect("darkOmensTriggered", -1, 0, 0, 0);  // -1 = until death at end of turn
                 // Grant immunity for the rest of this turn so no further damage can kill them
                 effects.AddEffect("immune", 1, 0, 0, 0);
                 LOG_INFO("StatusEffect", "Dark Omens: Entity %u survived lethal damage! HP set to 1, darkOmensTriggered + immune applied",
@@ -3486,27 +3519,11 @@ namespace Framework {
             if (em->HasComponent<AP>(entity)) LOG_INFO("LevelLoader", "     - AP");
             if (em->HasComponent<CircleCollider>(entity)) LOG_INFO("LevelLoader", "     - CircleCollider");
 
-            LOG_WARN("LevelLoader", "  -> CALLING DestroyEntity(%u)...", entity.GetID());
-
-            // Call Lua OnDestroy before entity destruction (cleans up health bars, etc.)
-            if (em->HasComponent<ScriptComponent>(entity)) {
-                auto& script = em->GetComponent<ScriptComponent>(entity);
-                if (script.hasOnDestroy && script.L) {
-                    lua_getglobal(script.L, "OnDestroy");
-                    if (lua_isfunction(script.L, -1)) {
-                        if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
-                            lua_pop(script.L, 1);
-                        }
-                    }
-                    else {
-                        lua_pop(script.L, 1);
-                    }
-                }
-            }
-
-            em->DestroyEntity(entity);
-            LOG_WARN("LevelLoader", "  -> DestroyEntity(%u) COMPLETE", entity.GetID());
-            LOG_WARN("LevelLoader", "!!! Entity %u destruction finished !!!", entity.GetID());
+            // Defer destruction to avoid crash when destroying Lua caller (e.g., Dark Omens death from PartyTurnManager)
+            // OnDestroy is called in ProcessDeferredDestructions - we must NOT run entity Lua here
+            // while the level Lua call stack is still active (causes use-after-free / cl->p corruption)
+            loader->DeferEntityDestruction(entity.GetID());
+            LOG_WARN("LevelLoader", "  -> Entity %u queued for deferred destruction", entity.GetID());
         }
 
         lua_pushboolean(L, 1);
@@ -5645,6 +5662,47 @@ namespace Framework {
         }
         else {
             lua_pushnil(L);
+        }
+        return 1;
+    }
+
+    /**
+     * @brief Get the remaining duration (turns) of a status effect
+     * @param entityID Target entity
+     * @param type Effect type string
+     * @return turnsRemaining (>=0) or 0 if not found
+     *
+     * Usage: local dur = GetEffectDuration(entityID, "darkOmensTriggered")
+     */
+    int LevelLoader::Lua_GetEffectDuration(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        int entityID = static_cast<int>(luaL_checknumber(L, 1));
+        const char* type = luaL_checkstring(L, 2);
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        if (!em->HasComponent<StatusEffects>(entity)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& effects = em->GetComponent<StatusEffects>(entity);
+        const auto* effect = effects.GetEffect(type);
+        if (effect && effect->turnsRemaining >= 0) {
+            lua_pushinteger(L, effect->turnsRemaining);
+        }
+        else {
+            lua_pushinteger(L, 0);
         }
         return 1;
     }

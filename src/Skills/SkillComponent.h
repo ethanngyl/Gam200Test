@@ -304,7 +304,7 @@ namespace Framework {
             {
                 SkillData s(18, "Siphon Charge", CharacterClass::Berserker, 1);
                 s.skillType = "buff_ally"; s.apCost = 2;
-                s.description = "First attack next turn consumes all AP and recovers 3 HP";
+                s.description = "Your next attack costs 1 more HP. If it kills, restore 3 HP";
                 s.statusEffect = "siphonCharge"; s.statusDuration = 2;
                 s.effectType = SkillEffectType::Buff;
                 berserker.push_back(s);

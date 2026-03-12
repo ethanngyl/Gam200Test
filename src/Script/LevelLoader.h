@@ -282,6 +282,7 @@ namespace Framework {
         static int Lua_RestoreAllAttackAPCrystals(lua_State* L); // Restore all attack AP crystals - bridge to UIManager
         static int Lua_SetPlayerFlipX(lua_State* L);
         static int Lua_SetGridMovementEnabled(lua_State* L);
+        static int Lua_SetSkillPreviewActive(lua_State* L);
         static int Lua_HasChestAtTile(lua_State* L);
         static int Lua_CollectChest(lua_State* L);
         static int Lua_HasGoalAtTile(lua_State* L);
@@ -354,6 +355,7 @@ namespace Framework {
         static int Lua_RemoveStatusEffect(lua_State* L);   // RemoveStatusEffect(entityID, type)
         static int Lua_DecrementStatusEffects(lua_State* L);// DecrementStatusEffects(entityID)
         static int Lua_GetStatusEffectSource(lua_State* L); // GetStatusEffectSource(entityID, type) -> sourceEntityID or nil
+        static int Lua_GetEffectDuration(lua_State* L);   // GetEffectDuration(entityID, type) -> turnsRemaining or 0
 
         // Unified Skill Database API
         static int Lua_GetSkillByID(lua_State* L);         // GetSkillByID(skillID) -> table or nil

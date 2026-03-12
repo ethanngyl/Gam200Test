@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -517,6 +517,7 @@ namespace Framework {
         lua_register(L, "IsTileWall", LevelLoader::Lua_IsTileWall);
         lua_register(L, "MovePlayerToTile", LevelLoader::Lua_MovePlayerToTile);
         lua_register(L, "SetGridMovementEnabled", LevelLoader::Lua_SetGridMovementEnabled);
+        lua_register(L, "SetSkillPreviewActive", LevelLoader::Lua_SetSkillPreviewActive);
         lua_register(L, "ShowTileBorder", LevelLoader::Lua_ShowTileBorder);
         lua_register(L, "PulseTile", LevelLoader::Lua_PulseTile);
         lua_register(L, "TintTile", LevelLoader::Lua_TintTile);  // Tile tinting for attack preview
@@ -595,6 +596,7 @@ namespace Framework {
         lua_register(L, "RemoveStatusEffect", LevelLoader::Lua_RemoveStatusEffect);
         lua_register(L, "DecrementStatusEffects", LevelLoader::Lua_DecrementStatusEffects);
         lua_register(L, "GetStatusEffectSource", LevelLoader::Lua_GetStatusEffectSource);
+        lua_register(L, "GetEffectDuration", LevelLoader::Lua_GetEffectDuration);
 
         // Unified Skill Database API
         lua_register(L, "GetSkillByID", LevelLoader::Lua_GetSkillByID);
