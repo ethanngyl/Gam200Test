@@ -4030,6 +4030,13 @@ namespace Framework {
         return "assets/prefabs/_undo/step_" + std::to_string(++undoSerial) + "_" + suffix + ".prefab";
     }
 
+    // ============================================================================
+    // Clears the redo history stack and deletes any temporary snapshot files
+    // referenced by those redo steps. Called whenever a new edit is recorded,
+    // because new edits invalidate existing redo history.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
+
     void ImGuiSystem::ClearRedo()
     {
         // delete redo temp files
@@ -4041,6 +4048,13 @@ namespace Framework {
         redoStack.clear();
     }
 
+    // ============================================================================
+    // Trims an undo/redo stack so it does not exceed the configured history limit.
+    // When old steps are removed, their temporary before/after snapshot files are
+    // also deleted from disk to avoid leaking prefab snapshot files.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
+
     void ImGuiSystem::TrimHistory(std::vector<UndoStep>& stack)
     {
         while (stack.size() > kUndoLimit)
@@ -4050,6 +4064,13 @@ namespace Framework {
             stack.erase(stack.begin());
         }
     }
+
+    // ============================================================================
+    // Records one snapshot-based undo step using the provided before/after prefab
+    // file paths. The step is pushed onto the undo stack, the stack is trimmed to
+    // the history limit, and redo history is cleared because a new edit was made.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
 
     void ImGuiSystem::PushSnapshotStep(Entity entity,
         const std::string& beforePath,
@@ -4066,6 +4087,13 @@ namespace Framework {
         ClearRedo(); // IMPORTANT: new edit invalidates redo history
     }
 
+    // ============================================================================
+    // Begins snapshot tracking for an entity before an editor modification.
+    // Saves the current entity state to a temporary prefab file so the change can
+    // later be undone. Only one snapshot edit session is active at a time.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
+
     void ImGuiSystem::BeginSnapshotEdit(Entity entity)
     {
         if (snapshotEditActive) { return; }
@@ -4077,6 +4105,13 @@ namespace Framework {
         PrefabSerializer::SavePrefab(*entityManager, entity, snapshotBeforePath);
     }
 
+
+    // ============================================================================
+    // Ends snapshot tracking for an entity after an editor modification.
+    // Saves the edited entity state to a second temporary prefab file and records
+    // the before/after pair as a new undo step.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     void ImGuiSystem::EndSnapshotEdit(Entity entity)
     {
         if (!snapshotEditActive) { return; }
@@ -4092,7 +4127,12 @@ namespace Framework {
         snapshotBeforePath.clear();
     }
 
-
+    // ============================================================================
+    // Checks whether an entity with the given ID currently exists in the entity
+    // manager. Used by undo/redo before replacing live entity state with a saved
+    // snapshot.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     bool ImGuiSystem::DoesEntityExist(EntityID id) const
     {
         if (!entityManager) { return false; }
@@ -4104,6 +4144,13 @@ namespace Framework {
         return false;
     }
 
+    // ============================================================================
+    // Applies either the before or after snapshot from an undo step. If the live
+    // entity currently exists, it is removed from spatial partitioning, destroyed,
+    // and unregistered from prefab tracking before the requested snapshot is loaded.
+    // An empty snapshot path means the entity should not exist.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     Entity ImGuiSystem::ApplySnapshotStep(const UndoStep& step, bool useBefore)
     {
         if (!entityManager) { return {}; }
@@ -4127,6 +4174,12 @@ namespace Framework {
     }
 
 
+    // ============================================================================
+    // Performs one undo operation by restoring the "before" snapshot from the
+    // latest undo step. The restored step is then pushed onto the redo stack, the
+    // editor selection is updated, and editor interaction/spatial state is reset.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     void ImGuiSystem::PerformUndo()
     {
         if (undoStack.empty()) { return; }
@@ -4149,6 +4202,12 @@ namespace Framework {
         RebuildSpatialPartition();
     }
 
+    // ============================================================================
+    // Performs one redo operation by restoring the "after" snapshot from the
+    // latest redo step. The restored step is then pushed back onto the undo stack,
+    // the editor selection is updated, and editor interaction/spatial state is reset.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     void ImGuiSystem::PerformRedo()
     {
         if (redoStack.empty()) { return; }
