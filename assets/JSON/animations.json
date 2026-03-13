@@ -218,7 +218,7 @@
       "group": "Idle",
       "direction": "Back",
       "rows": 1,
-      "columns": 12,
+      "columns": 4,
       "frameCount": 6,
       "frameTime": 0.55,
       "loop": true,
@@ -226,7 +226,7 @@
     },
 
     "Berserker_Idle_sideview": {
-      "sprite": "assets/Berserker/SideView/Berserker_Walk_Left-Sheet.png",
+      "sprite": "assets/Berserker/SideView/Berserker_Idle_Left-Sheet.png",
       "group": "Idle",
       "direction": "Side",
       "rows": 1,
