@@ -81,7 +81,7 @@ namespace Framework {
                     auto& targetTransform = entityManager->GetComponent<Transform>(target);
                     transform.position = targetTransform.position;
                 } else {
-                    // Target entity no longer exists — stop emitting and auto-destroy
+                    // Target entity no longer exists -- stop emitting and auto-destroy
                     emitter.emit = false;
                     emitter.autoDestroy = true;
                 }

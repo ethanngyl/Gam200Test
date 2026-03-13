@@ -11,7 +11,7 @@
  Brief:
     Serializes GeneratedMap data to/from JSON files using nlohmann/json.
     Allows saving procedurally generated maps that you like, then loading
-    them later as static levels — bypassing the procedural generator.
+    them later as static levels -- bypassing the procedural generator.
 
  Saved Data:
     - Map dimensions and algorithm used
