@@ -225,7 +225,7 @@ local skillCooldowns = {}
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
     [1] = { ["1"] = "Thrust", ["2"] = "Guard" },
-    [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [2] = { ["1"] = "Fireball", ["2"] = "LightningStrike" },
     [3] = { ["1"] = "Slam", ["2"] = "SiphonCharge" },
 }
 
