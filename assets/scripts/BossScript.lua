@@ -1,7 +1,8 @@
 --[[
 ===============================================================================
  File:          BossScript.lua
- Authors:       Claude (AI-generated)
+ Authors:       Ethan Ng
+ Email:         n.ethanyongle@digipen.edu
  Date:          02/25/2026
  ------------------------------------------------------------------------------
 
