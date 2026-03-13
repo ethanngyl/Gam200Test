@@ -219,15 +219,15 @@
     },
     "SiphonCharge": {
       "name": "Siphon Charge",
-      "description": "Your next attack costs 1 more HP. If it kills, restore 3 HP",
+      "description": "Consumes 2 AP to restore 2 HP immediately",
       "skillType": "self_buff",
       "effect": "siphonCharge",
-      "duration": 2,
+      "duration": 0,
       "apCost": 2,
       "damage": 0,
       "range": 0,
       "pattern": "none",
-      "healAmount": 3,
+      "healAmount": 2,
       "animationName": "Attack",
       "soundEffect": "shield_up"
     },

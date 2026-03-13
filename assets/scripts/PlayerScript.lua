@@ -2082,10 +2082,11 @@ function ExecuteSkill(skillID)
             spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
         end
 
-        -- Siphon Charge: apply as PENDING (activates next round, not this turn)
+        -- Siphon Charge: immediately heal 2 HP
         if skill.effect == "siphonCharge" then
+            healEntity(entityID, 2)
+            print("[PlayerScript] Siphon Charge: healed 2 HP")
             RemoveStatusEffect(entityID, "siphonCharge")
-            ApplyStatusEffect(entityID, "siphonChargePending", skill.duration, entityID)
         end
 
         -- Bloody Warcry: apply as PENDING to all party members (activates next round)
