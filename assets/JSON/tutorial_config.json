@@ -73,6 +73,202 @@
         "callback": "OnNextButtonClicked"
       },
       {
+        "id": "text_storyTitle",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.27,
+          "y": 0.5
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "STORY:",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 1.2,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_story1",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": 0.35
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "You are a gang of Adventurers",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_story2",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": 0.2
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "trying to escape the forest of",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_story3",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": 0.05
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "evil doppelgangers.",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_title",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.27,
+          "y": -0.15
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "OBJECTIVE:",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 1.2,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_objective1",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": -0.3
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "Reach the end goal by defeating",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_objective2",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": -0.45
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "the boss.",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
         "id": "label_goalLabel",
         "texture": "assets/Menu/Portal.png",
         "position": {
@@ -120,202 +316,6 @@
             "y": 70
           },
           "scale": 0.8,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
-      },
-      {
-        "id": "text_title",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -1.27,
-          "y": 0.4
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "OBJECTIVE:",
-          "font": "Jersey20Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 70
-          },
-          "scale": 1.2,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
-      },
-      {
-        "id": "text_objective1",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -1.22,
-          "y": 0.2
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "Reach the end goal while fighting",
-          "font": "Jacquard12Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 70
-          },
-          "scale": 0.9,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
-      },
-      {
-        "id": "text_objective2",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -1.22,
-          "y": 0.0
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "off or avoiding enemies to win.",
-          "font": "Jacquard12Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 110
-          },
-          "scale": 0.9,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
-      },
-      {
-        "id": "text_objective3",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -1.22,
-          "y": -0.2
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "",
-          "font": "Jacquard12Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 150
-          },
-          "scale": 0.9,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
-      },
-      {
-        "id": "text_enemyWarning1",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -1.22,
-          "y": -0.4
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "",
-          "font": "Jacquard12Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 100
-          },
-          "scale": 0.9,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
-      },
-      {
-        "id": "text_enemyWarning2",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -1.22,
-          "y": -0.6
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "",
-          "font": "Jacquard12Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 140
-          },
-          "scale": 0.9,
-          "color": {
-            "r": 0.0,
-            "g": 0.0,
-            "b": 0.0
-          }
-        },
-        "callback": ""
-      },
-      {
-        "id": "text_enemyWarning3",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -1.22,
-          "y": -0.8
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "",
-          "font": "Jacquard12Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 180
-          },
-          "scale": 0.9,
           "color": {
             "r": 0.0,
             "g": 0.0,
