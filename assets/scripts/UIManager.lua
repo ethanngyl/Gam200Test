@@ -1,11 +1,11 @@
 --[[
 ===============================================================================
 File:        UIManager.lua
-Author:      Ethan Ng Yong Le
+Author:      Padilla Carl Jameson Z.
 Co Author:   Sim Kah Yan
-Email:       n.ethanyongle@digipen.edu, kahyan.sim@digipen.edu
+Email:       c.Padilla@digipen.edu, kahyan.sim@digipen.edu
 Date:        2026-02-04 (yyyy-mm-dd)
-Contribution: Ethan Ng Yong Le 82%(238 Lines of 291 total) Sim Kah Yan 18% (53 lines of 291 total)
+Contribution: Padilla Carl Jameson Z. 82%(238 Lines of 291 total) Sim Kah Yan 18% (53 lines of 291 total)
 -------------------------------------------------------------------------------
 Brief:
 Central UI coordinator that creates, updates, draws, and destroys all game UI

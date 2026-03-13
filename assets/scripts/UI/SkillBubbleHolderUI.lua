@@ -1,8 +1,11 @@
 --[[
 ===============================================================================
- File:          SkillBubbleHolderUI.lua
- Date:          2026-03-06
- ------------------------------------------------------------------------------
+File:        UIManager.lua
+Author:      Padilla Carl Jameson Z.
+Email:       c.Padilla@digipen.edu
+Date:        2026-02-04 
+Contribution: Padilla Carl Jameson Z. (100%)
+-------------------------------------------------------------------------------
 
  SKILL BUBBLE HOLDER UI - Skill Slot Display Component
 
