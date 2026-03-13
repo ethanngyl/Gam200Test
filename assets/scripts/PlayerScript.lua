@@ -150,6 +150,11 @@ local apCostPerMove = 1
 local uiAnimBlockTimer = 0.0
 local uiAnimMaxBlockTime = 1.0
 
+-- Berserker: Bloody Warcry tracking (must be declared before getMovementCost uses it)
+local bloodyWarcryFreeMove = false
+local bloodyWarcryDamageBonus = false
+local currentWarcryBonus = 0
+
 -- Helper: get actual movement cost (0 if Bloody Warcry free move is active)
 local function getMovementCost()
     if bloodyWarcryFreeMove then
@@ -217,9 +222,9 @@ local skillCooldowns = {}
 -- Keys 1-4 = show skill preview, Space = execute the previewed skill
 -- Defaults are overridden by SkillLoadout.json if it exists (written by SkillSwapUI)
 local PlayerSkills = {
-    [1] = { ["1"] = "Fireball", ["2"] = "DarkOmens" },
+    [1] = { ["1"] = "Thrust", ["2"] = "Guard" },
     [2] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
-    [3] = { ["1"] = "Fireball", ["2"] = "ManaDrain" },
+    [3] = { ["1"] = "Slam", ["2"] = "SiphonCharge" },
 }
 
 -- All keys that can be bound to skills (used for preview selection)
@@ -257,16 +262,9 @@ local lastTabKeyDown = false
 -- Berserker: Dark Omens once-per-level tracking
 local darkOmensUsedThisLevel = false
 
--- Berserker: Siphon Charge state tracking (next attack consumes all AP + heals)
+-- Berserker: Siphon Charge state tracking (next attack costs +1 HP, kills heal 3)
 local siphonChargeActive = false
 local siphonTriggeredThisSkill = false
-
--- Berserker: Bloody Warcry tracking (first move free, next skill +1 dmg -1 HP)
-local bloodyWarcryFreeMove = false
-local bloodyWarcryDamageBonus = false
-
--- Berserker: current warcry damage bonus (set per-skill in ExecuteSkill)
-local currentWarcryBonus = 0
 
 -- Turn start initialization flag (resets when character becomes active)
 local turnStartInitialized = false
@@ -316,13 +314,13 @@ local lastDKeyDown = false
 -- HELPER FUNCTIONS
 -- ============================================================================
 local function spawnEffectParticles(targetID, effectName, r, g, b)
-    if not SpawnParticleEmitterEthan then return end
+    if not SpawnParticleEmitter then return end
     local wx, wy = GetEntityWorldPosition(targetID)
     if not wx or not wy then return end
     _G.EffectParticles = _G.EffectParticles or {}
     local key = effectName .. "_" .. targetID
     if _G.EffectParticles[key] then return end  -- don't double-spawn
-    local emitterID = SpawnParticleEmitterEthan(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
+    local emitterID = SpawnParticleEmitter(wx, wy, 0.04, 8, 0, r, g, b, 1.0, targetID)
     if emitterID and emitterID > 0 then
         _G.EffectParticles[key] = emitterID
         print("[PlayerScript] Spawned " .. effectName .. " particles on entity " .. targetID)
@@ -537,9 +535,14 @@ local function createPlayerStates(fsm)
                 end
                 if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
                     siphonChargeActive = true
-                    print("[PlayerScript] Siphon Charge active: first attack consumes all AP + heals 3 HP")
+                    print("[PlayerScript] Siphon Charge active: next attack costs +1 HP, kills heal 3 HP")
                 end
             end
+            -- NOTE: Turn-start initialization (BloodyWarcry, SiphonCharge, DarkOmens particles)
+            -- has been moved to OnUpdate's "just became active" block (isActive and not lastActiveCheck).
+            -- Reason: playerFSM:update is never called while inactive (OnUpdate returns early),
+            -- so lastActiveState was never reliably reset between turns.
+            -- The OnUpdate block uses lastActiveCheck which is correctly managed.
 
             -- Update blocked keys
             updateBlockedKeys()
@@ -598,6 +601,10 @@ local function createPlayerStates(fsm)
                     local onCooldown = skillCooldowns[skillID] and skillCooldowns[skillID] > 0
                     if skill and currentAttackAP >= skill.apCost and not onCooldown then
                         ShowSkillPreview(skillID)
+                        -- Tell C++ to disable basic attack while Lua skill preview is active
+                        if activePreview and SetSkillPreviewActive then
+                            SetSkillPreviewActive(true)
+                        end
                         -- Set active slot AFTER ShowSkillPreview, because ShowSkillPreview
                         -- calls ClearActivePreview() which resets activeSkillSlotKey to nil
                         activeSkillSlotKey = key
@@ -1079,7 +1086,16 @@ function OnInit(id)
                 end
             end
         end
-        print("[PlayerScript] Loaded skill loadout from SkillLoadout.json")
+        -- Debug: log what was loaded per player
+        for i = 1, 3 do
+            local skills = {}
+            local ps = PlayerSkills[i] or {}
+            for slot = 1, 4 do
+                local sid = ps[tostring(slot)]
+                if sid then table.insert(skills, slot .. "=" .. sid) end
+            end
+            print("[PlayerScript] Loaded Player " .. i .. ": " .. table.concat(skills, ", "))
+        end
     else
         print("[PlayerScript] No SkillLoadout.json found, using default skills")
     end
@@ -1205,6 +1221,12 @@ function OnUpdate(dt)
             -- Just became inactive
             lastActiveCheck = false
             hasLoggedActive = false
+            -- Reset FSM turn-start flag so it fires again next time this character activates.
+            -- NOTE: lastActiveState cannot be reset inside playerFSM:update because OnUpdate
+            -- returns early (not isActive) before calling playerFSM:update, making the
+            -- reset at FSM line 509 dead code. We reset it here instead.
+            lastActiveState = false
+            turnStartInitialized = false
             blockedKeys = {}
             lastPKeyDown = false
             for _, key in ipairs(skillSlotKeys) do
@@ -1269,6 +1291,33 @@ function OnUpdate(dt)
                     print("[PlayerScript] Skill " .. sid .. " cooldown expired - skill available again")
                 else
                     print("[PlayerScript] Skill " .. sid .. " cooldown: " .. skillCooldowns[sid] .. " turns remaining")
+                end
+            end
+        end
+
+        -- Initialize turn-start status effects here (not in FSM) because playerFSM:update
+        -- is never called while inactive, making the FSM's lastActiveState check unreliable.
+
+        -- Berserker: Bloody Warcry - free move + damage bonus for this turn
+        if HasStatusEffect and HasStatusEffect(entityID, "bloodyWarcry") then
+            bloodyWarcryFreeMove = true
+            bloodyWarcryDamageBonus = true
+            print("[PlayerScript] Bloody Warcry active: first move free, next skill +1 dmg -1 HP")
+        end
+
+        -- Berserker: Siphon Charge - first attack consumes all AP and heals
+        if HasStatusEffect and HasStatusEffect(entityID, "siphonCharge") then
+            siphonChargeActive = true
+            print("[PlayerScript] Siphon Charge active: first attack consumes all AP + heals 3 HP")
+        end
+
+        -- Dark Omens: spawn visual particles (player will die at end of this turn)
+        if not turnStartInitialized then
+            turnStartInitialized = true
+            if HasStatusEffect and HasStatusEffect(entityID, "darkOmensTriggered") then
+                local key = "darkOmensTriggered_" .. entityID
+                if not _G.EffectParticles[key] then
+                    spawnEffectParticles(entityID, "darkOmensTriggered", 0.6, 0.0, 0.8)
                 end
             end
         end
@@ -1411,11 +1460,18 @@ function ShowSkillPreview(skillID)
         return
     end
 
-    -- HP cost check: block preview if not enough HP
-    if skill.hpCost and skill.hpCost > 0 then
+    -- HP cost check: block preview if not enough HP (including additional costs from effects)
+    local previewHPCost = skill.hpCost or 0
+    if siphonChargeActive and skill.damage and skill.damage > 0 then
+        previewHPCost = previewHPCost + 1
+    end
+    if bloodyWarcryDamageBonus and skill.damage and skill.damage > 0 then
+        previewHPCost = previewHPCost + 1
+    end
+    if previewHPCost > 0 then
         local currentHP = GetEntityHP(entityID)
-        if not currentHP or currentHP <= skill.hpCost then
-            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= cost:" .. skill.hpCost .. ")")
+        if not currentHP or currentHP <= previewHPCost then
+            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= total cost:" .. previewHPCost .. ")")
             PulseTile(currentX, currentY, 0.3, 1.0, 0.5, 0.0)
             return
         end
@@ -1593,6 +1649,10 @@ function ClearActivePreview()
     allyTargetMode = nil
     enemyTargetMode = nil
     lastTabKeyDown = false
+    -- Tell C++ to re-enable basic attack handling
+    if SetSkillPreviewActive then
+        SetSkillPreviewActive(false)
+    end
 end
 
 -- Find all enemies within a skill's pattern
@@ -1644,27 +1704,6 @@ end
 
 -- Helper: consume attack AP and trigger UI animation
 local function consumeAttackAPAndAnimate(cost)
-    -- Siphon Charge: consume ALL remaining AP instead of normal cost
-    if siphonTriggeredThisSkill then
-        local remainingAP = GetEntityAttackAP(entityID)
-        if remainingAP and remainingAP > 0 then
-            ConsumeEntityAttackAP(entityID, remainingAP)
-            for i = 1, remainingAP do
-                if UIManager and UIManager.GetComponent then
-                    local comp = UIManager.GetComponent("attackAP")
-                    if comp and comp.ConsumeOneAP then
-                        pcall(function() comp:ConsumeOneAP() end)
-                    end
-                else
-                    pcall(function() TriggerAttackAPAnimation() end)
-                end
-            end
-            print("[PlayerScript] Siphon Charge: consumed all " .. remainingAP .. " AP")
-        end
-        siphonTriggeredThisSkill = false
-        return
-    end
-
     ConsumeEntityAttackAP(entityID, cost)
     for i = 1, cost do
         if UIManager and UIManager.GetComponent then
@@ -1759,6 +1798,16 @@ local function checkPostDamageEffects(enemyID, hadSoulRend)
             end
         end
     end
+
+    -- Siphon Charge: if triggered this skill and enemy died, heal 3 HP
+    if siphonTriggeredThisSkill then
+        local hp = GetEntityHP(enemyID)
+        if hp and hp <= 0 then
+            if healEntity(entityID, 3) then
+                print("[PlayerScript] Siphon Charge: kill heal +3 HP for player " .. entityID)
+            end
+        end
+    end
 end
 
 -- Helper: damage an enemy with soulMergeBuff bonus and post-damage effects
@@ -1797,12 +1846,23 @@ function ExecuteSkill(skillID)
         return
     end
 
-    -- Check HP cost (Berserker skills)
+    -- Calculate total HP cost including additional effects
     local hpCost = skill.hpCost or 0
-    if hpCost > 0 then
+    local totalHPCost = hpCost
+    local hasSiphonCost = siphonChargeActive and skill.damage and skill.damage > 0
+    local hasWarcryCost = bloodyWarcryDamageBonus and skill.damage and skill.damage > 0
+    if hasSiphonCost then
+        totalHPCost = totalHPCost + 1
+    end
+    if hasWarcryCost then
+        totalHPCost = totalHPCost + 1
+    end
+
+    -- Check total HP cost (base + Siphon Charge + Bloody Warcry)
+    if totalHPCost > 0 then
         local currentHP, maxHP = GetEntityHP(entityID)
-        if not currentHP or currentHP <= hpCost then
-            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= cost:" .. hpCost .. ")")
+        if not currentHP or currentHP <= totalHPCost then
+            print("[PlayerScript] Not enough HP for " .. skill.name .. " (HP:" .. tostring(currentHP) .. " <= total cost:" .. totalHPCost .. ")")
             ClearActivePreview()
             return
         end
@@ -1815,14 +1875,19 @@ function ExecuteSkill(skillID)
         return
     end
 
-    -- Siphon Charge: if active, first attack consumes all AP and heals 3 HP
+    -- Siphon Charge: if active, first attack costs +1 HP; if it kills, heal 3 HP
     siphonTriggeredThisSkill = false
-    if siphonChargeActive and skill.damage and skill.damage > 0 then
-        print("[PlayerScript] Siphon Charge triggered! Will consume all AP and heal 3 HP")
+    if hasSiphonCost then
+        print("[PlayerScript] Siphon Charge triggered! +1 HP cost, kills heal 3 HP")
         siphonTriggeredThisSkill = true
         siphonChargeActive = false
         RemoveStatusEffect(entityID, "siphonCharge")
-        healEntity(entityID, 3)
+        -- Extra 1 HP cost for the attack
+        local currentHP = GetEntityHP(entityID)
+        if currentHP then
+            SetEntityHP(entityID, currentHP - 1)
+            print("[PlayerScript] Siphon Charge: -1 HP (now " .. (currentHP - 1) .. ")")
+        end
     end
 
     -- Deduct HP cost
@@ -1834,7 +1899,7 @@ function ExecuteSkill(skillID)
 
     -- Bloody Warcry: next skill gets +1 damage and costs 1 HP
     currentWarcryBonus = 0
-    if bloodyWarcryDamageBonus and skill.damage and skill.damage > 0 then
+    if hasWarcryCost then
         currentWarcryBonus = 1
         bloodyWarcryDamageBonus = false
         RemoveStatusEffect(entityID, "bloodyWarcry")
@@ -1863,9 +1928,10 @@ function ExecuteSkill(skillID)
             spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
         end
 
-        -- Siphon Charge: activate for next attack
+        -- Siphon Charge: apply as PENDING (activates next round, not this turn)
         if skill.effect == "siphonCharge" then
-            siphonChargeActive = true
+            RemoveStatusEffect(entityID, "siphonCharge")
+            ApplyStatusEffect(entityID, "siphonChargePending", skill.duration, entityID)
         end
 
         -- Bloody Warcry: apply as PENDING to all party members (activates next round)

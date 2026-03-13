@@ -70,6 +70,7 @@ namespace Framework {
 
         void ResetGridState();
         void SetGridMovementEnabled(bool enabled);
+        void SetLuaSkillPreviewActive(bool active);
 		bool HandleTileInteraction(const GridCoord& tileCoord);
 
     private:
@@ -111,6 +112,7 @@ namespace Framework {
         float projectileSpeed;
         bool gridMovementEnabled = false;
 		bool attackPreviewActive = false;
+		bool luaSkillPreviewActive = false; // Set by Lua when skill preview is shown
 		bool spaceReleased = true;
 		std::vector<Entity> attackPreviewTiles;
 

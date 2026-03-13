@@ -141,18 +141,24 @@ local healthBarLayer = 2
 
 -- Boss idle state: immune and does nothing until all 3 players enter the arena
 local bossActivated = false
+local localArenaBounds = nil  -- Set in OnInit from shared C++ store
 
 -- ============================================================================
 -- ANIMATION (reuses enemy knight sheets)
 -- ============================================================================
 
 local BOSS_ANIM = {
-    idleFront = { tex = "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",  rows = 1, cols = 12, frames = 12, time = 0.08, loop = true  },
-    idleBack  = { tex = "assets/Enemy/Enemy_Knight_Idle_Back-Sheet.png",   rows = 1, cols = 4,  frames = 4,  time = 0.10, loop = true  },
-    idleSide  = { tex = "assets/Enemy/Enemy_Knight_Idle_Side-Sheet.png",   rows = 1, cols = 12, frames = 12, time = 0.08, loop = true  },
-    atkFront  = { tex = "assets/Enemy/Enemy_Knight_Attack_Front-Sheet.png", rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
-    atkBack   = { tex = "assets/Enemy/Enemy_Knight_Attack_Back-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
-    atkLeft   = { tex = "assets/Enemy/Enemy_Knight_Attack_Left-Sheet.png",  rows = 1, cols = 7, frames = 7, time = 0.07, loop = false }
+    idleFront = { tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+    idleBack  = { tex = "assets/Enemy/Boss1_Idle_Back-Sheet.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
+    idleSide  = { tex = "assets/Enemy/Boss1_Idle_Side-Sheet.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+
+    walkFront = { tex = "assets/Enemy/Boss1_Walk_Front2-Sheet.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+    walkBack  = { tex = "assets/Enemy/Boss1_Walk_Back2.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+    walkSide  = { tex = "assets/Enemy/Boss1_Walk_Side-Sheet.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+
+    atkFront  = { tex = "assets/Enemy/Boss1_Attack_Front-Sheet.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+    atkBack   = { tex = "assets/Enemy/Boss1_Attack_Back-Sheet.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+    atkLeft   = { tex = "assets/Enemy/Boss1_Attack_Left-Sheet.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
 }
 
 local lastAnimKey = nil
@@ -173,13 +179,35 @@ local function ApplySheet(animKey, flipX)
     lastFlipX = flipX and true or false
 end
 
-local function SetFacingFromDelta(dx, dy)
+local function SetFacingFromDelta(dx, dy, isMoving)
+    local animKey = nil
+    local flipX = false
+
     if math.abs(dx) > math.abs(dy) then
-        ApplySheet("idleSide", dx < 0)
+        if isMoving and BOSS_ANIM["walkSide"] then
+            animKey = "walkSide"
+        else
+            animKey = "idleSide"
+        end
+
+        flipX = (dx > 0)
     else
-        if dy > 0 then ApplySheet("idleBack", false)
-        else ApplySheet("idleFront", false) end
+        if dy > 0 then
+            if isMoving and BOSS_ANIM["walkBack"] then
+                animKey = "walkBack"
+            else
+                animKey = "idleBack"
+            end
+        else
+            if isMoving and BOSS_ANIM["walkFront"] then
+                animKey = "walkFront"
+            else
+                animKey = "idleFront"
+            end
+        end
     end
+
+    ApplySheet(animKey, flipX)
 end
 
 local function SetAttackFacing(ex, ey, px, py)
@@ -332,6 +360,24 @@ function OnInit()
 
     targetPlayerID = FindClosestPlayer() or 0
 
+    -- Read arena bounds from shared C++ store (set by ProceduralMapLevel.lua)
+    local aMinX = GetSharedInt("arenaMinX", -1)
+    local aMinY = GetSharedInt("arenaMinY", -1)
+    local aMaxX = GetSharedInt("arenaMaxX", -1)
+    local aMaxY = GetSharedInt("arenaMaxY", -1)
+    if aMinX >= 0 and aMinY >= 0 then
+        localArenaBounds = {
+            minX = aMinX,
+            minY = aMinY,
+            maxX = aMaxX,
+            maxY = aMaxY
+        }
+        print("[Boss " .. entityID .. "] Arena bounds from shared store: (" .. aMinX .. "," .. aMinY
+            .. ") to (" .. aMaxX .. "," .. aMaxY .. ")")
+    else
+        print("[Boss " .. entityID .. "] WARNING: No arena bounds in shared store!")
+    end
+
     -- Boss starts immune until all players enter the arena
     if ApplyStatusEffect then
         ApplyStatusEffect(entityID, "immune", -1, entityID)
@@ -408,9 +454,9 @@ local function UpdateHealthBar()
     SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
--- Check if all 3 players are inside the arena bounds
+-- Check if all living players are inside the arena bounds
 local function AreAllPlayersInArena()
-    local arena = _G.ArenaBounds
+    local arena = localArenaBounds
     if not arena then return false end
 
     local players = GetAllPlayers()
@@ -431,7 +477,6 @@ local function AreAllPlayersInArena()
         end
     end
 
-    -- All living players must be in the arena
     return alive > 0 and count == alive
 end
 
@@ -570,7 +615,7 @@ function OnUpdate(dt)
         local ex, ey = GetEntityGridPosition(entityID)
         if ex and targetPlayerID > 0 then
             local px, py = GetEntityGridPosition(targetPlayerID)
-            if px then SetFacingFromDelta(px - ex, py - ey) end
+            if px then SetFacingFromDelta(px - ex, py - ey, false) end
         end
 
         -- Continue to next skill or finish
@@ -748,7 +793,7 @@ function PhaseMove()
         -- Update facing
         local dx = nextTile.x - enemyX
         local dy = nextTile.y - enemyY
-        SetFacingFromDelta(dx, dy)
+        SetFacingFromDelta(dx, dy, true)
 
         -- Smooth glide
         local sx, sy = GetEntityWorldPosition(entityID)

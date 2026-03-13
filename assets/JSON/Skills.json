@@ -131,7 +131,7 @@
       "description": "Damages all enemies regardless of their location",
       "skillType": "global_damage",
       "apCost": 3,
-      "damage": 1,
+      "damage": 10,
       "range": 0,
       "pattern": "none",
       "animationName": "Attack",
@@ -219,7 +219,7 @@
     },
     "SiphonCharge": {
       "name": "Siphon Charge",
-      "description": "The first attack next turn consumes all AP and recovers 3 HP",
+      "description": "Your next attack costs 1 more HP. If it kills, restore 3 HP",
       "skillType": "self_buff",
       "effect": "siphonCharge",
       "duration": 2,

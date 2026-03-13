@@ -135,6 +135,9 @@ namespace Framework {
         std::vector<uint32_t> deferredEntitiesToDestroy;
         void ProcessDeferredDestructions();
 
+        // Shared key-value store accessible from both level and entity scripts
+        std::unordered_map<std::string, int> sharedIntStore;
+
         // Cached subsystem pointers (for fast access in API)
         UISystem* uiSystem = nullptr;
         AudioSystem* audioSystem = nullptr;
@@ -212,6 +215,11 @@ namespace Framework {
         static int Lua_SetSpriteFilterMode(lua_State* L);
         static int Lua_SetSpriteUVRect(lua_State* L);      // Set sprite UV rect (u0,v0,u1,v1)
         static int Lua_DestroyEntity(lua_State* L);
+        static int Lua_IsEntityValid(lua_State* L);
+        static int Lua_SetEntityRotation(lua_State* L);
+        static int Lua_SetEntityScale(lua_State* L);
+        static int Lua_SetSharedInt(lua_State* L);
+        static int Lua_GetSharedInt(lua_State* L);
         static int Lua_GetPlayerAP(lua_State* L);
         static int Lua_GetCameraPosition(lua_State* L);
         static int Lua_FindPlayer(lua_State* L);
@@ -282,6 +290,7 @@ namespace Framework {
         static int Lua_RestoreAllAttackAPCrystals(lua_State* L); // Restore all attack AP crystals - bridge to UIManager
         static int Lua_SetPlayerFlipX(lua_State* L);
         static int Lua_SetGridMovementEnabled(lua_State* L);
+        static int Lua_SetSkillPreviewActive(lua_State* L);
         static int Lua_HasChestAtTile(lua_State* L);
         static int Lua_CollectChest(lua_State* L);
         static int Lua_HasGoalAtTile(lua_State* L);
@@ -333,6 +342,10 @@ namespace Framework {
         // Procedural Map API
         static int Lua_LoadProceduralMap(lua_State* L);
 
+        // Map Serializer API
+        static int Lua_SaveCurrentMap(lua_State* L);
+        static int Lua_LoadSavedMap(lua_State* L);
+        static int Lua_ListSavedMaps(lua_State* L);
         // Entity Stats API
         static int Lua_SetEntityMaxAP(lua_State* L);  // SetEntityMaxAP(entityID, maxAP) - sets both max and current AP
 
@@ -363,15 +376,10 @@ namespace Framework {
 
         // Particle Emitter API
         static int Lua_SpawnParticleEmitter(lua_State* L);  // SpawnParticleEmitter(x, y, emitRadius, rate, duration, r, g, b, a) -> entityID
-        static int Lua_CreateParticleEmitter(lua_State* L);
-        static int Lua_DestroyParticleEmitter(lua_State* L);
-        static int Lua_SetParticleEmitterPosition(lua_State* L);
-        static int Lua_SetParticleEmitterOwner(lua_State* L);
-        static int Lua_CreateParticleEffect(lua_State* L);
-        static int Lua_SetActivePlayerIndex(lua_State* L);
 
         //Ethan's Particle Emitter
         static int Lua_SpawnParticleEmitterEthan(lua_State* L);
+        
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);
     };

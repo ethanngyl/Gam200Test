@@ -215,6 +215,11 @@ end
 -- ============================================================================
 
 function PauseMenu.Update(dt)
+    -- Don't process pause input when SkillSwapUI is active
+    if _G.SkillSwapUI and _G.SkillSwapUI.IsActive and _G.SkillSwapUI.IsActive() then
+        return
+    end
+
     -- If settings menu is active, let it handle input
     if SettingsMenu.IsActive() then
         SettingsMenu.Update(dt)
@@ -249,6 +254,11 @@ end
 
 function PauseMenu.Draw()
     if not IsPaused() then
+        return
+    end
+
+    -- Don't draw pause menu when SkillSwapUI is showing
+    if _G.SkillSwapUI and _G.SkillSwapUI.IsActive and _G.SkillSwapUI.IsActive() then
         return
     end
     

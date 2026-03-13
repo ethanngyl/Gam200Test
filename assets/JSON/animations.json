@@ -1,4 +1,4 @@
-{
+﻿{
   "animations": {
     "Idle_front": {
       "sprite": "assets/Warrior/FrontView/WarriorTopDownView.png",
@@ -107,9 +107,195 @@
       "frameTime": 0.08,
       "loop": false
     },
-    "Mage_Attack_front": { "sprite": "assets/Mage/FrontView/Mage_Attack_Front-Sheet.png", "group": "Attack", "direction": "Front", "rows": 1, "columns": 8, "frameCount": 8, "frameTime": 0.08, "loop": false },
-    "Mage_Attack_back":  { "sprite": "assets/Mage/BackView/Mage_Attack_Back-Sheet.png",  "group": "Attack", "direction": "Back",  "rows": 1, "columns": 8, "frameCount": 8, "frameTime": 0.08, "loop": false },
-    "Mage_Attack_side":  { "sprite": "assets/Mage/SideView/Mage_Attack_Side-Sheet.png",  "group": "Attack", "direction": "Side",  "rows": 1, "columns": 7, "frameCount": 7, "frameTime": 0.08, "loop": false }
+    "Mage_Idle_front": {
+      "sprite": "assets/Mage/FrontView/Mage_Idle_Front-Sheet.png",
+      "group": "Idle",
+      "direction": "Front",
+      "rows": 1,
+      "columns": 12,
+      "frameCount": 12,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0
+    },
+    "Mage_Idle_back": {
+      "sprite": "assets/Mage/BackView/Mage_Idle_Back-Sheet.png",
+      "group": "Idle",
+      "direction": "Back",
+      "rows": 1,
+      "columns": 4,
+      "frameCount": 4,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0
+    },
+    "Mage_Idle_sideview": {
+      "sprite": "assets/Mage/SideView/Mage_Idle_Side-Sheet.png",
+      "group": "Idle",
+      "direction": "Side",
+      "rows": 1,
+      "columns": 12,
+      "frameCount": 12,
+      "frameTime": 0.55,
+      "loop": true,
+      "uvShrinkPx": 0.0
+    },
+    "Mage_Walk_front": {
+      "sprite": "assets/Mage/FrontView/Mage_Walk_Front-Sheet.png",
+      "group": "Walk",
+      "direction": "Front",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Mage_Walk_back": {
+      "sprite": "assets/Mage/BackView/Mage_Walk_Back-Sheet.png",
+      "group": "Walk",
+      "direction": "Back",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Mage_Walk_side": {
+      "sprite": "assets/Mage/SideView/Mage_Walk_Side-Sheet.png",
+      "group": "Walk",
+      "direction": "Side",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Mage_Attack_front": {
+      "sprite": "assets/Mage/FrontView/Mage_Attack_Front-Sheet.png",
+      "group": "Attack",
+      "direction": "Front",
+      "rows": 1,
+      "columns": 8,
+      "frameCount": 8,
+      "frameTime": 0.08,
+      "loop": false
+    },
+    "Mage_Attack_back": {
+      "sprite": "assets/Mage/BackView/Mage_Attack_Back-Sheet.png",
+      "group": "Attack",
+      "direction": "Back",
+      "rows": 1,
+      "columns": 8,
+      "frameCount": 8,
+      "frameTime": 0.08,
+      "loop": false
+    },
+    "Mage_Attack_side": {
+      "sprite": "assets/Mage/SideView/Mage_Attack_Side-Sheet.png",
+      "group": "Attack",
+      "direction": "Side",
+      "rows": 1,
+      "columns": 7,
+      "frameCount": 7,
+      "frameTime": 0.08,
+      "loop": false
+    },
 
+    "Berserker_Idle_front": {
+      "sprite": "assets/Berserker/FrontView/Berserker_Walk_Front-Sheet.png",
+      "group": "Idle",
+      "direction": "Front",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true,
+      "uvShrinkPx": 0.0
+    },
+
+    "Berserker_Idle_back": {
+      "sprite": "assets/Berserker/BackView/Berserker_Walk_Back-Sheet.png",
+      "group": "Idle",
+      "direction": "Back",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true,
+      "uvShrinkPx": 0.0
+    },
+
+    "Berserker_Idle_sideview": {
+      "sprite": "assets/Berserker/SideView/Berserker_Walk_Left-Sheet.png",
+      "group": "Idle",
+      "direction": "Side",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true,
+      "uvShrinkPx": 0.0
+    },
+
+    "Berserker_Walk_front": {
+      "sprite": "assets/Berserker/FrontView/Berserker_Walk_Front-Sheet.png",
+      "group": "Walk",
+      "direction": "Front",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Berserker_Walk_back": {
+      "sprite": "assets/Berserker/BackView/Berserker_Walk_Back-Sheet.png",
+      "group": "Walk",
+      "direction": "Back",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Berserker_Walk_side": {
+      "sprite": "assets/Berserker/SideView/Berserker_Walk_Left-Sheet.png",
+      "group": "Walk",
+      "direction": "Side",
+      "rows": 1,
+      "columns": 6,
+      "frameCount": 6,
+      "frameTime": 0.1,
+      "loop": true
+    },
+    "Berserker_Attack_front": {
+      "sprite": "assets/Berserker/FrontView/Berserker_Attack_Front-Sheet.png",
+      "group": "Attack",
+      "direction": "Front",
+      "rows": 1,
+      "columns": 8,
+      "frameCount": 8,
+      "frameTime": 0.08,
+      "loop": false
+    },
+    "Berserker_Attack_back": {
+      "sprite": "assets/Berserker/BackView/Berserker_Attack_Back-Sheet.png",
+      "group": "Attack",
+      "direction": "Back",
+      "rows": 1,
+      "columns": 8,
+      "frameCount": 8,
+      "frameTime": 0.08,
+      "loop": false
+    },
+    "Berserker_Attack_side": {
+      "sprite": "assets/Berserker/SideView/Berserker_Attack_Left-Sheet.png",
+      "group": "Attack",
+      "direction": "Side",
+      "rows": 1,
+      "columns": 5,
+      "frameCount": 5,
+      "frameTime": 0.08,
+      "loop": false
+    }
   }
 }

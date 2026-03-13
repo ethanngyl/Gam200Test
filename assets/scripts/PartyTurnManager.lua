@@ -662,6 +662,15 @@ function ResetPartyTurn()
                 PartyMembers[i].name))
         end
 
+        -- Siphon Charge: convert pending to active at round start
+        -- (pending is applied during the casting round to prevent same-turn consumption)
+        if HasStatusEffect and HasStatusEffect(eid, "siphonChargePending") then
+            RemoveStatusEffect(eid, "siphonChargePending")
+            ApplyStatusEffect(eid, "siphonCharge", -1, 0)
+            Log(string.format("[PartyTurnManager] ResetPartyTurn: %s SIPHON CHARGE activated for this round",
+                PartyMembers[i].name))
+        end
+
         -- 2) Decrement status effects AFTER AP refill
         if DecrementStatusEffects then
             DecrementStatusEffects(eid)
@@ -704,8 +713,11 @@ function ResetPartyTurn()
 
     -- Check if all characters are dead
     if ActiveCharacterIndex > #PartyMembers then
-        Log("[PartyTurnManager] ERROR: All party members are dead in ResetPartyTurn!")
+        Log("[PartyTurnManager] All party members are dead - transitioning to LOSE_SCREEN")
         PartyTurnComplete = true
+        if SetNextGameState then
+            SetNextGameState("LOSE_SCREEN")
+        end
         return
     end
 

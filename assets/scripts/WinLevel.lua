@@ -17,6 +17,7 @@ local ButtonManager = require("assets/scripts/ButtonManager")
 local initialized = false
 local config = nil
 local backgroundSpriteID = 0
+local scrollOverlayID = 0     -- ADDED: Scroll overlay behind win text
 local cornerSpriteIDs = {}
 
 -- ============================================================================
@@ -59,6 +60,21 @@ function OnInit()
         Log("Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("WARNING: Failed to create background sprite")
+    end
+
+    -- ========================================================================
+    -- ADDED: CREATE SCROLL OVERLAY (behind "YOU WIN!" text from JSON config)
+    -- text_title button is at (-0.5, 0.2) - scroll centers behind it
+    -- ========================================================================
+    scrollOverlayID = SpawnSprite(
+        "assets/Menu/Scroll Overlay.png",
+        cam.position.x,
+        cam.position.y + 0.2,
+        1.2, 0.4,
+        8  -- Above background (1) and corners (5), below buttons (10)
+    )
+    if scrollOverlayID > 0 then
+        Log("Scroll overlay created (ID: " .. scrollOverlayID .. ")")
     end
 
     -- Create corner sprites
@@ -145,6 +161,11 @@ function OnDestroy()
         DestroyEntity(backgroundSpriteID)
     end
 
+    -- ADDED: Destroy scroll overlay
+    if scrollOverlayID > 0 then
+        DestroyEntity(scrollOverlayID)
+    end
+
     for cornerID, spriteID in pairs(cornerSpriteIDs) do
         if spriteID > 0 then
             DestroyEntity(spriteID)
@@ -154,6 +175,7 @@ function OnDestroy()
     config = nil
     initialized = false
     backgroundSpriteID = 0
+    scrollOverlayID = 0    -- ADDED
     cornerSpriteIDs = {}
 
     Log("Win screen cleanup complete")

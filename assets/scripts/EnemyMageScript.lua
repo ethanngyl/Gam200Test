@@ -136,7 +136,7 @@ end
 
 local function SetFacingFromDelta(dx, dy)
     if math.abs(dx) > math.abs(dy) then
-        ApplySheet("idleSide", dx < 0)
+        ApplySheet("idleSide", dx > 0)
         facingDirX = dx > 0 and 1 or -1
         facingDirY = 0
     else

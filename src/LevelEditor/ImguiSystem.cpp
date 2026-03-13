@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -93,10 +93,6 @@ namespace Framework {
     static bool wantSaveSceneAsModal = false;
     static std::string currentScenePath = "";
 
-    // Snapshot hooks were removed in newer branches; keep no-op stubs
-    // so editor sliders compile cleanly without undo integration.
-    static void BeginSnapshotEdit(Entity) {}
-    static void EndSnapshotEdit(Entity) {}
 
     static int GetGsmStateFromLuaName(const std::string& lowerName) {
         if (lowerName.find("level3") != std::string::npos) return LEVEL_3;
@@ -2911,7 +2907,16 @@ namespace Framework {
                                 t.position.x += 0.5f;
                                 t.position.y += 0.5f;
                             }
-                            // Entity duplicated
+                            // Snapshot undo: entity did not exist before, exists after duplicate
+                            std::string afterPath = MakeUndoPath("duplicate_after");
+                            PrefabSerializer::SavePrefab(*entityManager, newEntity, afterPath);
+                            PushSnapshotStep(newEntity, "", afterPath);
+
+                            selectedEntity = newEntity;
+                            RebuildSpatialPartition();
+
+                            std::cout << "[Editor] Duplicated entity " << entity.GetID()
+                                << " -> " << newEntity.GetID() << "\n";
                         }
                     }
                 }
@@ -4158,6 +4163,12 @@ namespace Framework {
         TrimHistory(undoStack);
 
         selectedEntity = newEntity;
+
+        draggingEntity = Framework::Entity{};
+        isDraggingEntity = false;
+        isScalingEntity = false;
+        isRotatingEntity = false;
+        RebuildSpatialPartition();
     }
 
     // ============================================================================
@@ -4286,11 +4297,15 @@ namespace Framework {
                 t.position.y += 0.1f;
             }
 
-            // Record for undo
-            //RecordCreationStep(newEntity);
+            // Snapshot undo: entity did not exist before, exists after paste
+            std::string afterPath = MakeUndoPath("paste_after");
+            PrefabSerializer::SavePrefab(*entityManager, newEntity, afterPath);
+            PushSnapshotStep(newEntity, "", afterPath);
 
             // Select the newly pasted entity
             selectedEntity = newEntity;
+
+            RebuildSpatialPartition();
 
             std::cout << "[Clipboard] Pasted new entity " << newEntity.GetID() << "\n";
         }
@@ -4971,60 +4986,47 @@ namespace Framework {
 
             if (ImGui::BeginMenu("Editor")) {
                 if (!CORE->IsPlaying()) {
-                    //  In editor mode: Show "PLAY" to exit editor
                     if (ImGui::MenuItem("PLAY")) {
-
                         CORE->SetPlaying(true);
-                        // Exit editor mode
                         CORE->SetEditorMode(false);
-
                         GlobalPause::SetPaused(false);
-                        //  CRITICAL: Use RequestToggle() instead of Disable()
-                        // This schedules the disable for AFTER this frame completes
-
-                        /*if (!currentLuaLevelPath.empty()) {
-
-                            // If we can map it to a GSM state, transition GSM so Level3 init runs correctly
-                            if (pendingLuaGsmState != -1)
-                            {
-                                // If already in that state, just reload as GAME-load (IS_EDITOR_LOAD = false)
-                                if (pendingLuaGsmState == current)
-                                {
-                                    Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
-                                }
-                                else
-                                {
-                                    next = pendingLuaGsmState;
-                                }
-                            }
-                            else {
-                                Framework::LevelLoader::GetInstance().LoadLevel(currentLuaLevelPath, false);
-                            }
-                            currentLuaLevelPath.clear();
-                            pendingLuaGsmState = -1;
-                        }
-
-                        else if (!currentLevelPath.empty()) {
-                            Framework::LevelLoader::GetInstance().LoadLevel(currentLevelPath, false);
-                        }*/
-
-                        //this->RequestToggle();
-
-                        // Play mode activated
                     }
                 }
                 else {
-                    if (ImGui::MenuItem("Stop"))
-                    {
-                        // Stop simulation, return to editing
+                    bool isPaused = GlobalPause::IsPaused();
+
+                    if (!isPaused) {
+                        if (ImGui::MenuItem("Pause")) {
+                            GlobalPause::SetPaused(true);
+                        }
+                    }
+                    else {
+                        if (ImGui::MenuItem("Resume")) {
+                            GlobalPause::SetPaused(false);
+                        }
+                    }
+
+                    if (ImGui::MenuItem("Stop")) {
                         CORE->SetPlaying(false);
                         CORE->SetEditorMode(true);
                         GlobalPause::SetPaused(false);
-                        // Not in editor mode: Show hint
-                        //ImGui::TextDisabled("Press F1 to enter editor mode"); // Re-enable the hint display
                     }
-
                 }
+
+                ImGui::Separator();
+
+                if (CORE->IsPlaying()) {
+                    if (GlobalPause::IsPaused()) {
+                        ImGui::TextDisabled("Simulation: Paused");
+                    }
+                    else {
+                        ImGui::TextDisabled("Simulation: Playing");
+                    }
+                }
+                else {
+                    ImGui::TextDisabled("Simulation: Stopped");
+                }
+
                 ImGui::EndMenu();
             }
 

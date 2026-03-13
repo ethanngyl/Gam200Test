@@ -107,8 +107,8 @@ namespace Framework {
             int maxPlacementAttempts = 100;
 
             // Boss arena (used with "rooms_arena" algorithm)
-            int arenaWidth = 9;       // Width of the boss arena
-            int arenaHeight = 9;      // Height of the boss arena
+            int arenaWidth = 8;       // Width of the boss arena
+            int arenaHeight = 8;      // Height of the boss arena
             int minArenaDistFromPlayer = 8;  // Min distance from player spawn to arena center
         };
 
@@ -177,6 +177,7 @@ namespace Framework {
             void carveVerticalCorridor(GeneratedMap& map, int y1, int y2, int x);
             void createCorridor(GeneratedMap& map, const Room& r1, const Room& r2);
             void generateRooms(GeneratedMap& map, const Config& config);
+            void ensureFullConnectivity(GeneratedMap& map);
 
             // Cellular
             int countAdjacentWalls(const GeneratedMap& map, int x, int y) const;

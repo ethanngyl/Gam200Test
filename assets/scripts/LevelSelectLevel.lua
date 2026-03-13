@@ -176,6 +176,7 @@ function OnLevel3ButtonClicked()
         Log("[LevelSelect] Level progress reset to 1")
     end
 
+
     ButtonManager.TransitionTo("LEVEL_3")
 end
 

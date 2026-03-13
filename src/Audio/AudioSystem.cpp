@@ -27,6 +27,7 @@
 #include <iostream>
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
+#include "GlobalPauseManager.h"
 
 namespace Framework {
 
@@ -126,37 +127,41 @@ namespace Framework {
      * - Allows use to modify the audio in real-time and processess changes requested while the game is running
      */
     void AudioSystem::Update(float dt) {
-        //(void)dt; // silence unused variable warning
-
         DBG_SCOPE_SYS("Audio System", eng::debug::Subsystem::Audio);
 
-        if (!fmodSystem) return;
+        if (!fmodSystem) {
+            return;
+        }
 
         bool shouldPlay = false;
+        bool isPaused = GlobalPause::IsPaused();
+        bool hardPauseAudio = false;
+
         if (Framework::CORE) {
-            // Audio should play when:
-            // 1. Normal gameplay: IsPlaying() = true, IsEditorMode() = false
-            // 2. Editor + PLAY mode: IsPlaying() = true, IsEditorMode() = true
-            // Audio should NOT play when:
-            // - Editor + STOP mode: IsPlaying() = false, IsEditorMode() = true
             shouldPlay = Framework::CORE->IsPlaying();
+
+            bool isEditorMode = Framework::CORE->IsEditorMode();
+
+            // Only hard-pause audio when paused inside Level Editor play mode.
+            // Demo mode should keep audio running so Lua can reduce volume instead.
+            hardPauseAudio = (!shouldPlay) || (isPaused && isEditorMode);
+        }
+        else {
+            hardPauseAudio = true;
         }
 
         if (masterGroup) {
-            masterGroup->setPaused(!shouldPlay);
+            masterGroup->setPaused(hardPauseAudio);
         }
 
-        UpdateMusicFade(dt);
-
-        // Update FMOD
-        fmodSystem->update();
-
-        if (shouldPlay) {
+        // In demo mode while paused, audio is still allowed to run
+        // because PauseMenu.lua lowers the volume instead of fully stopping it.
+        if (shouldPlay && !hardPauseAudio) {
+            UpdateMusicFade(dt);
             UpdateAudioSources();
         }
 
-        // Update all audio source components
-        UpdateAudioSources();
+        fmodSystem->update();
     }
 
     /**

@@ -480,6 +480,10 @@ namespace Framework {
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "IsEntityValid", Lua_IsEntityValid);
 
+        // Shared state (cross-script communication)
+        lua_register(L, "SetSharedInt", LevelLoader::Lua_SetSharedInt);
+        lua_register(L, "GetSharedInt", LevelLoader::Lua_GetSharedInt);
+
         // Utility
         lua_register(L, "Log", Lua_Log);
         lua_register(L, "GetDeltaTime", Lua_GetDeltaTime);
@@ -517,6 +521,7 @@ namespace Framework {
         lua_register(L, "IsTileWall", LevelLoader::Lua_IsTileWall);
         lua_register(L, "MovePlayerToTile", LevelLoader::Lua_MovePlayerToTile);
         lua_register(L, "SetGridMovementEnabled", LevelLoader::Lua_SetGridMovementEnabled);
+        lua_register(L, "SetSkillPreviewActive", LevelLoader::Lua_SetSkillPreviewActive);
         lua_register(L, "ShowTileBorder", LevelLoader::Lua_ShowTileBorder);
         lua_register(L, "PulseTile", LevelLoader::Lua_PulseTile);
         lua_register(L, "TintTile", LevelLoader::Lua_TintTile);  // Tile tinting for attack preview
@@ -605,14 +610,7 @@ namespace Framework {
         // Particle Emitter API (legacy)
         lua_register(L, "SpawnParticleEmitter", LevelLoader::Lua_SpawnParticleEmitter);
 
-        // Particles (new ParticleSystemManager API)
-        lua_register(L, "CreateParticleEmitter", LevelLoader::Lua_CreateParticleEmitter);
-        lua_register(L, "DestroyParticleEmitter", LevelLoader::Lua_DestroyParticleEmitter);
-        lua_register(L, "SetParticleEmitterPosition", LevelLoader::Lua_SetParticleEmitterPosition);
-        lua_register(L, "SetParticleEmitterOwner", LevelLoader::Lua_SetParticleEmitterOwner);
-        lua_register(L, "CreateParticleEffect", LevelLoader::Lua_CreateParticleEffect);
-        lua_register(L, "SetActivePlayerIndex", LevelLoader::Lua_SetActivePlayerIndex);
-
+        // Particles Emitter API
         lua_register(L, "SpawnParticleEmitterEthan", LevelLoader::Lua_SpawnParticleEmitterEthan);
     }
 

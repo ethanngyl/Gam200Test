@@ -123,6 +123,10 @@ namespace Framework {
                 if (map.isValid(x, y)) {
                     map.setTile(x, y, TileType::FLOOR);
                 }
+                // Carve second row for 2-wide corridor
+                if (map.isValid(x, y + 1)) {
+                    map.setTile(x, y + 1, TileType::FLOOR);
+                }
             }
         }
 
@@ -132,6 +136,10 @@ namespace Framework {
             for (int y = yStart; y <= yEnd; y++) {
                 if (map.isValid(x, y)) {
                     map.setTile(x, y, TileType::FLOOR);
+                }
+                // Carve second column for 2-wide corridor
+                if (map.isValid(x + 1, y)) {
+                    map.setTile(x + 1, y, TileType::FLOOR);
                 }
             }
         }
@@ -230,6 +238,65 @@ namespace Framework {
             }
 
             std::cout << "[MapGen] Placed " << rooms.size() << " non-overlapping rooms\n";
+        }
+
+        void Generator::ensureFullConnectivity(GeneratedMap& map) {
+            // Find all floor tiles
+            std::vector<Position> allFloors;
+            for (int y = 0; y < map.height; y++) {
+                for (int x = 0; x < map.width; x++) {
+                    if (map.getTile(x, y) == TileType::FLOOR) {
+                        allFloors.push_back(Position(x, y));
+                    }
+                }
+            }
+            if (allFloors.size() <= 1) return;
+
+            bool changed = true;
+            while (changed) {
+                changed = false;
+
+                // BFS from the first floor tile
+                auto reachable = getReachableTiles(map, allFloors[0]);
+
+                // Build reachability grid
+                std::vector<std::vector<bool>> reachGrid(map.height, std::vector<bool>(map.width, false));
+                for (const auto& pos : reachable) {
+                    reachGrid[pos.y][pos.x] = true;
+                }
+
+                // Find the first unreachable floor tile
+                Position unreachable(-1, -1);
+                for (const auto& pos : allFloors) {
+                    if (map.getTile(pos.x, pos.y) == TileType::FLOOR && !reachGrid[pos.y][pos.x]) {
+                        unreachable = pos;
+                        break;
+                    }
+                }
+
+                if (unreachable.x < 0) break; // All connected
+
+                // Find nearest reachable floor tile to connect to
+                int bestDist = 999999;
+                Position nearest(-1, -1);
+                for (const auto& pos : reachable) {
+                    int dist = abs(pos.x - unreachable.x) + abs(pos.y - unreachable.y);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        nearest = pos;
+                    }
+                }
+
+                if (nearest.x >= 0) {
+                    Room fakeA(unreachable.x, unreachable.y, 1, 1);
+                    Room fakeB(nearest.x, nearest.y, 1, 1);
+                    createCorridor(map, fakeA, fakeB);
+                    std::cout << "[MapGen] Connected isolated area at (" << unreachable.x << "," << unreachable.y
+                        << ") to (" << nearest.x << "," << nearest.y << ")\n";
+                    changed = true;
+                }
+            }
+            std::cout << "[MapGen] All floor areas verified connected.\n";
         }
 
         // ============================================================================
@@ -978,6 +1045,9 @@ namespace Framework {
 
             // Ensure borders are walls
             makeBordersWalls(map);
+
+            // Ensure all floor areas are connected
+            ensureFullConnectivity(map);
 
             // Place entities with constraints
             if (!placeEntities(map, config)) {

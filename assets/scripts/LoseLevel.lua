@@ -17,6 +17,7 @@ local ButtonManager = require("assets/scripts/ButtonManager")
 local initialized = false
 local config = nil
 local backgroundSpriteID = 0
+local scrollOverlayID = 0
 local cornerSpriteIDs = {}
 
 -- ============================================================================
@@ -91,6 +92,21 @@ function OnInit()
     PlaySound(music.name, music.loop, music.volume)
     Log("Playing lose screen music: " .. music.name)
 
+    -- Create scroll overlay from JSON config
+    if config.menu.scrollOverlay then
+        local scroll = config.menu.scrollOverlay
+        scrollOverlayID = SpawnSprite(
+            scroll.texture,
+            cam.position.x + scroll.position.x,
+            cam.position.y + scroll.position.y,
+            scroll.scale.x, scroll.scale.y,
+            scroll.layer
+        )
+        if scrollOverlayID > 0 then
+            Log("Scroll overlay created (ID: " .. scrollOverlayID .. ")")
+        end
+    end
+
     ButtonManager.Initialize(config.menu.buttons)
 
     initialized = true
@@ -129,6 +145,19 @@ function OnDraw()
     end
 
     ButtonManager.DrawAll()
+
+    -- Draw scroll overlay text from JSON config
+    if config.menu.scrollOverlay and config.menu.scrollOverlay.text then
+        local fbW, fbH = GetFramebufferSize()
+        if fbW and fbW > 0 then
+            local t = config.menu.scrollOverlay.text
+            local scaleRef = fbW / 1920
+            local approxWidth = #t.content * 48 * 0.6 * (t.scale or 1.0) * scaleRef
+            local textX = (fbW * 0.5) - (approxWidth * 0.5)
+            local textY = (fbH * 0.5) + (40 * scaleRef)
+            DrawText(t.font, t.content, textX, textY, (t.scale or 1.0) * scaleRef, t.color.r, t.color.g, t.color.b)
+        end
+    end
 end
 
 -- ============================================================================
@@ -145,6 +174,10 @@ function OnDestroy()
         DestroyEntity(backgroundSpriteID)
     end
 
+    if scrollOverlayID > 0 then
+        DestroyEntity(scrollOverlayID)
+    end
+
     for cornerID, spriteID in pairs(cornerSpriteIDs) do
         if spriteID > 0 then
             DestroyEntity(spriteID)
@@ -154,6 +187,7 @@ function OnDestroy()
     config = nil
     initialized = false
     backgroundSpriteID = 0
+    scrollOverlayID = 0
     cornerSpriteIDs = {}
 
     Log("Lose screen cleanup complete")
