@@ -8,7 +8,7 @@ Contribution: 100%
 -------------------------------------------------------------------------------
 Brief:
 Implements PrefabSerializer, the system responsible for saving and loading
-entities (prefabs) from JSON files. Each prefab stores its components�
+entities (prefabs) from JSON files. Each prefab stores its components
 properties (Transform, Sprite, MeshRenderer, Collider, etc.) so they can be
 recreated at runtime or reused across scenes.
 

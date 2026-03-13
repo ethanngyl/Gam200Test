@@ -378,7 +378,7 @@ namespace Framework {
                     }
                     else
                     {
-                        // Non-loop (one-shot) animations normally hit the end and would “freeze”
+                        // Non-loop (one-shot) animations normally hit the end and would "freeze"
                         // on the last frame forever (because the engine keeps rendering that frame).
                         // That freeze is exactly what you see after Attack: it stays on the last
                         // attack frame until something else (like movement) changes the anim group.
