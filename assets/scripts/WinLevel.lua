@@ -62,19 +62,19 @@ function OnInit()
         Log("WARNING: Failed to create background sprite")
     end
 
-    -- ========================================================================
-    -- ADDED: CREATE SCROLL OVERLAY (behind "YOU WIN!" text from JSON config)
-    -- text_title button is at (-0.5, 0.2) - scroll centers behind it
-    -- ========================================================================
-    scrollOverlayID = SpawnSprite(
-        "assets/Menu/Scroll Overlay.png",
-        cam.position.x,
-        cam.position.y + 0.2,
-        1.2, 0.4,
-        8  -- Above background (1) and corners (5), below buttons (10)
-    )
-    if scrollOverlayID > 0 then
-        Log("Scroll overlay created (ID: " .. scrollOverlayID .. ")")
+    -- Create scroll overlay from JSON config
+    if config.menu.scrollOverlay then
+        local scroll = config.menu.scrollOverlay
+        scrollOverlayID = SpawnSprite(
+            scroll.texture,
+            cam.position.x + scroll.position.x,
+            cam.position.y + scroll.position.y,
+            scroll.scale.x, scroll.scale.y,
+            scroll.layer
+        )
+        if scrollOverlayID > 0 then
+            Log("Scroll overlay created (ID: " .. scrollOverlayID .. ")")
+        end
     end
 
     -- Create corner sprites
@@ -145,6 +145,21 @@ function OnDraw()
     end
 
     ButtonManager.DrawAll()
+
+    -- Draw scroll overlay text from JSON config
+    if config.menu.scrollOverlay and config.menu.scrollOverlay.text then
+        local fbW, fbH = GetFramebufferSize()
+        if fbW and fbW > 0 then
+            local t = config.menu.scrollOverlay.text
+            local scaleRef = fbW / 1920
+            local offX = (t.offset and t.offset.x) or 0
+            local offY = (t.offset and t.offset.y) or 0
+            local approxWidth = #t.content * 48 * 0.6 * (t.scale or 1.0) * scaleRef
+            local textX = (fbW * 0.5) - (approxWidth * 0.5) + offX * scaleRef
+            local textY = (fbH * 0.5) + (40 * scaleRef) + offY * scaleRef
+            DrawText(t.font, t.content, textX, textY, (t.scale or 1.0) * scaleRef, t.color.r, t.color.g, t.color.b)
+        end
+    end
 end
 
 -- ============================================================================
