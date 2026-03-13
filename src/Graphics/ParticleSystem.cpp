@@ -186,4 +186,18 @@ namespace Framework {
 			}
 		}
 	}
+
+	void ParticleSystem::Clear() {
+		EntityManager* entityManager = CORE ? CORE->GetEntityManager() : nullptr;
+		if (entityManager) {
+			for (Entity entity : particles) {
+				entityManager->DestroyEntity(entity);
+			}
+		}
+
+		particles.clear();
+		spawnAcc = 0.0f;
+		followEntity = INVALID_ENTITY;
+		active = false;
+	}
 } // namespace Framework

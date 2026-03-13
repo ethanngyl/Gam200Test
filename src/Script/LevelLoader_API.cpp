@@ -86,6 +86,7 @@ namespace Framework {
     // ACTIVE PLAYER INDEX - For particle system visibility per player turn
     // ========================================================================
     static int g_activePlayerIndex = -1;  // 0=Player1, 1=Player2, 2=Player3, -1=none
+    static bool g_useEthanParticles = false; // Runtime-selectable particle backend
 
     int GetActivePlayerIndexForParticles() {
         return g_activePlayerIndex;
@@ -6292,6 +6293,30 @@ namespace Framework {
         }
 
         lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnParticleEmitterActive(lua_State* L) {
+        if (g_useEthanParticles) {
+            return Lua_SpawnParticleEmitterEthan(L);
+        }
+        return Lua_SpawnParticleEmitter(L);
+    }
+
+    int LevelLoader::Lua_SetUseEthanParticles(lua_State* L) {
+        g_useEthanParticles = lua_toboolean(L, 1) != 0;
+        lua_pushboolean(L, g_useEthanParticles);
+        return 1;
+    }
+
+    int LevelLoader::Lua_GetUseEthanParticles(lua_State* L) {
+        lua_pushboolean(L, g_useEthanParticles);
+        return 1;
+    }
+
+    int LevelLoader::Lua_ToggleUseEthanParticles(lua_State* L) {
+        g_useEthanParticles = !g_useEthanParticles;
+        lua_pushboolean(L, g_useEthanParticles);
         return 1;
     }
 

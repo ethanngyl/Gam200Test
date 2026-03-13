@@ -304,8 +304,24 @@ function UIManager.Init(config)
         layer = 4,
         texture = "assets/new assets/skill_bubble_holder.png",
         -- Skill icons are resolved as: skillIconMap[skillID] or skillIconBasePath..skillID..".png"
-        skillIconBasePath = "assets/UI/SkillIcons/",
-        defaultIconTexture = "assets/UI/skill_circle.png"
+        skillIconBasePath = "assets/SkillIcons/",
+        defaultIconTexture = "assets/UI/skill_circle.png",
+        -- Add/override any non-standard filenames here.
+        skillIconMap = {
+            Bash = "assets/SkillIcons/Bash.png",
+            EarthenBind = "assets/SkillIcons/EarthenBind.png",
+            ExploitWeakness = "assets/SkillIcons/ExploitWeakness.png",
+            Fireball = "assets/SkillIcons/Fireball.png",
+            Guard = "assets/SkillIcons/Guard.png",
+            KnightsOath = "assets/SkillIcons/KnightsOath.png",
+            LightningStrike = "assets/SkillIcons/LightningStrike.png",
+            ManaDrain = "assets/SkillIcons/ManaDrain.png",
+            Parry = "assets/SkillIcons/Parry.png",
+            SiphonCharge = "assets/SkillIcons/SiphonCharge.png",
+            Slam = "assets/SkillIcons/Slam.png",
+            SwiftBlow = "assets/SkillIcons/SwiftBlow.png",
+            Thrust = "assets/SkillIcons/Thrust.png"
+        }
     })
 
     -- TODO: Add more components as needed:

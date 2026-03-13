@@ -40,6 +40,16 @@ namespace Framework {
 		particleSystems[it->second].SetFollowEntity(targetID);
 	}
 
+	void ParticleSystemManager::ClearAllEmitters() {
+		for (auto& particleSystem : particleSystems) {
+			particleSystem.Clear();
+		}
+
+		particleSystems.clear();
+		emitterIdToIndex.clear();
+		nextEmitterId = 1;
+	}
+
 	void ParticleSystemManager::Initialize() {}
 
 	void ParticleSystemManager::Update(float dt) {

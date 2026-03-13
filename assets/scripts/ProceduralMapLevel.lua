@@ -68,6 +68,7 @@ dofile("assets/scripts/EnemyTurnManager.lua")
 
 local initialized = false
 local editorToggleCooldown = 0
+local lastF4Down = false
 
 local mapSaveCooldown = 0
 local MAP_SAVE_COOLDOWN_TIME = 1.0
@@ -717,6 +718,14 @@ function OnUpdate(dt)
 
     -- Update audio
     UpdateAudio(dt)
+
+    -- Toggle particle backend (F4): false = legacy, true = Ethan
+    local f4Down = IsKeyDown("F4")
+    if f4Down and not lastF4Down and ToggleUseEthanParticles then
+        local usingEthan = ToggleUseEthanParticles()
+        Log("[Particles] Backend switched to: " .. (usingEthan and "Ethan" or "Legacy"))
+    end
+    lastF4Down = f4Down
 
     -- Handle editor toggle
     HandleEditorToggle(dt)

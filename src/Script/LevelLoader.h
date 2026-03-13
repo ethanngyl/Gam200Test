@@ -379,6 +379,10 @@ namespace Framework {
 
         //Ethan's Particle Emitter
         static int Lua_SpawnParticleEmitterEthan(lua_State* L);
+        static int Lua_SpawnParticleEmitterActive(lua_State* L); // Uses currently selected backend
+        static int Lua_SetUseEthanParticles(lua_State* L);       // SetUseEthanParticles(true/false)
+        static int Lua_GetUseEthanParticles(lua_State* L);       // GetUseEthanParticles() -> bool
+        static int Lua_ToggleUseEthanParticles(lua_State* L);    // ToggleUseEthanParticles() -> bool
         
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

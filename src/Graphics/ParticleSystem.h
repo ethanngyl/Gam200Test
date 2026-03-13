@@ -64,6 +64,7 @@ namespace Framework {
 		size_t GetParticle() const { return particles.size(); } // Get particle count
 
 		void SpawnBurst(int count) { for (int i{ 0 }; i < count; ++i) CreateParticle(); } // Burst spawning
+		void Clear();
 
 		void SetOwnerPlayer(int playerID) { settings.ownerPlayerID = playerID; }
 		int GetOwnerPlayer() const { return settings.ownerPlayerID; }

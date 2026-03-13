@@ -24,6 +24,7 @@ namespace Framework {
 		// Lua-friendly interface
 		int CreateEmitterRaw(const ParticleSystem::Settings& s, float x, float y, EntityID followTarget = INVALID_ENTITY);
 		void SetFollowEntity(int emitterId, EntityID targetID);
+		void ClearAllEmitters();
 
 		// Mandatory overrides
 		virtual void Initialize() override;
