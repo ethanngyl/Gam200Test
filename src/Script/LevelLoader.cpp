@@ -804,6 +804,7 @@ namespace Framework {
         lua_register(L, "SetUseEthanParticles", Lua_SetUseEthanParticles);
         lua_register(L, "GetUseEthanParticles", Lua_GetUseEthanParticles);
         lua_register(L, "ToggleUseEthanParticles", Lua_ToggleUseEthanParticles);
+        lua_register(L, "ClearAllParticleEmitters", Lua_ClearAllParticleEmitters);
         
         LOG_INFO("LevelLoader", "API registered");
     }

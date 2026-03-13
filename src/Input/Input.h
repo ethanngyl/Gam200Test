@@ -67,6 +67,7 @@ namespace Framework
         KEY_F1 = VK_F1,
         KEY_F2 = VK_F2,
         KEY_F3 = VK_F3,
+        KEY_F4 = VK_F4,
         KEY_F9 = VK_F9,
 
         //Delete key

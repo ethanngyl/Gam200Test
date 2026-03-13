@@ -73,7 +73,6 @@ print("[Level3Clean] EnemyTurnManager.lua loaded successfully")
 
 local initialized = false
 local editorToggleCooldown = 0
-local lastF4Down = false
 
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
@@ -280,14 +279,6 @@ function OnUpdate(dt)
 
     -- Update audio
     UpdateAudio(dt)
-
-    -- Toggle particle backend (F4): false = legacy, true = Ethan
-    local f4Down = IsKeyDown("F4")
-    if f4Down and not lastF4Down and ToggleUseEthanParticles then
-        local usingEthan = ToggleUseEthanParticles()
-        Log("[Particles] Backend switched to: " .. (usingEthan and "Ethan" or "Legacy"))
-    end
-    lastF4Down = f4Down
 
     -- Handle editor toggle
     HandleEditorToggle(dt)

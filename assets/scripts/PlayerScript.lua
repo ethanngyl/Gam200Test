@@ -195,6 +195,8 @@ local blockedKeys = {}
 
 -- P key state tracking
 local lastPKeyDown = false
+local lastF4KeyDown = false
+local lastParticleBackendVersion = -1
 
 
 -- ============================================================================
@@ -279,6 +281,13 @@ if not _G.EffectParticles then
     _G.EffectParticles = {}
 end
 
+-- Particle spawn function toggle (Lua-side):
+-- "legacy" -> SpawnParticleEmitter
+-- "ethan"  -> SpawnParticleEmitterEthan
+if not _G.ActiveParticleSpawnMode then
+    _G.ActiveParticleSpawnMode = "ethan"
+end
+
 -- Global registry so UI accessors can find the active player's data
 if not _G._playerRegistry then
     _G._playerRegistry = {}
@@ -313,8 +322,16 @@ local lastDKeyDown = false
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
-local function spawnEffectParticles(targetID, effectName, r, g, b)
-    local spawnFn = SpawnParticleEmitterActive or SpawnParticleEmitter
+local function spawnEffectParticlesEthan(targetID, effectName, r, g, b)
+    local spawnFn = SpawnParticleEmitterActive
+    if not spawnFn then
+        local useEthan = GetUseEthanParticles and GetUseEthanParticles()
+        if useEthan then
+            spawnFn = SpawnParticleEmitterEthan
+        else
+            spawnFn = SpawnParticleEmitter
+        end
+    end
     if not spawnFn then return end
     local wx, wy = GetEntityWorldPosition(targetID)
     if not wx or not wy then return end
@@ -327,6 +344,7 @@ local function spawnEffectParticles(targetID, effectName, r, g, b)
         print("[PlayerScript] Spawned " .. effectName .. " particles on entity " .. targetID)
     end
 end
+local spawnEffectParticles = spawnEffectParticlesEthan
 
 local function removeEffectParticles(targetID, effectName)
     if not _G.EffectParticles then return end
@@ -349,6 +367,69 @@ local function cleanupEffectParticles()
             if not stillHasEffect then
                 if DestroyEntity then pcall(DestroyEntity, emitterID) end
                 _G.EffectParticles[key] = nil
+            end
+        end
+    end
+end
+
+local function respawnKnownEffectParticles()
+    if not HasStatusEffect then return end
+    local effectDefs = {
+        { name = "darkOmensTriggered", r = 0.6, g = 0.0, b = 0.8 },
+        { name = "darkOmens",          r = 0.6, g = 0.0, b = 0.8 },
+        { name = "bloodyWarcry",       r = 1.0, g = 0.0, b = 0.0 },
+        { name = "soulMerge",          r = 1.0, g = 1.0, b = 1.0 },
+        { name = "soulMergeBuff",      r = 1.0, g = 1.0, b = 1.0 },
+        { name = "overload",           r = 0.0, g = 0.4, b = 1.0 },
+        { name = "earthenBind",        r = 0.55, g = 0.35, b = 0.15 },
+        { name = "soulRend",           r = 0.0, g = 0.8, b = 0.2 },
+    }
+
+    local function respawnForList(entityList)
+        if not entityList then return end
+        for _, id in ipairs(entityList) do
+            for _, def in ipairs(effectDefs) do
+                if HasStatusEffect(id, def.name) then
+                    spawnEffectParticlesEthan(id, def.name, def.r, def.g, def.b)
+                end
+            end
+        end
+    end
+
+    if GetAllPlayers then respawnForList(GetAllPlayers()) end
+    if GetAllEnemies then respawnForList(GetAllEnemies()) end
+end
+
+local function respawnBolsteredMoraleParticles()
+    if not _G.KnightCommanderIDs or not GetAllEnemies then return end
+    local enemies = GetAllEnemies()
+    if not enemies then return end
+
+    local spawnFn = SpawnParticleEmitterActive
+    if not spawnFn then
+        if _G.ActiveParticleSpawnMode == "ethan" then
+            spawnFn = SpawnParticleEmitterEthan
+        else
+            spawnFn = SpawnParticleEmitter
+        end
+    end
+    if not spawnFn then return end
+
+    _G.BolsteredMoraleParticles = {}
+    for _, commanderID in ipairs(_G.KnightCommanderIDs) do
+        for _, eid in ipairs(enemies) do
+            if eid ~= commanderID then
+                local hp = GetEntityHP(eid)
+                if hp and hp > 0 then
+                    local wx, wy = GetEntityWorldPosition(eid)
+                    if wx and wy then
+                        local emitterID = spawnFn(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
+                        if emitterID and emitterID > 0 then
+                            local key = commanderID .. "_" .. eid
+                            _G.BolsteredMoraleParticles[key] = emitterID
+                        end
+                    end
+                end
             end
         end
     end
@@ -1170,6 +1251,62 @@ end
 -- ============================================================================
 
 function OnUpdate(dt)
+    -- Sync backend changes across all per-entity Lua states.
+    local backendVersion = 0
+    if GetSharedInt then
+        backendVersion = GetSharedInt("particle_backend_version") or 0
+    end
+    if backendVersion ~= lastParticleBackendVersion then
+        lastParticleBackendVersion = backendVersion
+        local useEthan = GetUseEthanParticles and GetUseEthanParticles()
+        _G.ActiveParticleSpawnMode = useEthan and "ethan" or "legacy"
+        _G.EffectParticles = {}
+        respawnKnownEffectParticles()
+    end
+
+    -- Particle function toggle (F4): SpawnParticleEmitter <-> SpawnParticleEmitterEthan
+    local f4Down = IsKeyDown("F4")
+    local canToggleParticles = IsActiveCharacter and IsActiveCharacter(entityID)
+    if canToggleParticles and f4Down and not lastF4KeyDown then
+        local useEthan = nil
+        if ToggleUseEthanParticles then
+            useEthan = ToggleUseEthanParticles()
+        elseif _G.ActiveParticleSpawnMode == "ethan" then
+            _G.ActiveParticleSpawnMode = "legacy"
+            useEthan = false
+        else
+            _G.ActiveParticleSpawnMode = "ethan"
+            useEthan = true
+        end
+
+        if useEthan == nil and GetUseEthanParticles then
+            useEthan = GetUseEthanParticles()
+        end
+        if useEthan then
+            _G.ActiveParticleSpawnMode = "ethan"
+        else
+            _G.ActiveParticleSpawnMode = "legacy"
+        end
+
+        if ClearAllParticleEmitters then
+            ClearAllParticleEmitters()
+        end
+        _G.EffectParticles = {}
+        _G.BolsteredMoraleParticles = {}
+
+        if SetSharedInt and GetSharedInt then
+            local v = (GetSharedInt("particle_backend_version") or 0) + 1
+            SetSharedInt("particle_backend_version", v)
+            lastParticleBackendVersion = v
+        end
+
+        respawnKnownEffectParticles()
+
+        local activeFn = useEthan and "SpawnParticleEmitterEthan" or "SpawnParticleEmitter"
+        print("[PlayerScript] Particle system switched to: " .. activeFn)
+    end
+    lastF4KeyDown = f4Down
+
     -- ========================================================================
     -- TURN SCROLL CHECK: Skip input during "Your Turn" animation
     -- ========================================================================
