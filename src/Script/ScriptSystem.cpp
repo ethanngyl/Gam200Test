@@ -612,6 +612,11 @@ namespace Framework {
 
         // Particles Emitter API
         lua_register(L, "SpawnParticleEmitterEthan", LevelLoader::Lua_SpawnParticleEmitterEthan);
+        lua_register(L, "SpawnParticleEmitterActive", LevelLoader::Lua_SpawnParticleEmitterActive);
+        lua_register(L, "SetUseEthanParticles", LevelLoader::Lua_SetUseEthanParticles);
+        lua_register(L, "GetUseEthanParticles", LevelLoader::Lua_GetUseEthanParticles);
+        lua_register(L, "ToggleUseEthanParticles", LevelLoader::Lua_ToggleUseEthanParticles);
+        lua_register(L, "ClearAllParticleEmitters", LevelLoader::Lua_ClearAllParticleEmitters);
     }
 
     /**

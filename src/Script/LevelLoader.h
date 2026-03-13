@@ -383,6 +383,7 @@ namespace Framework {
         static int Lua_SetUseEthanParticles(lua_State* L);       // SetUseEthanParticles(true/false)
         static int Lua_GetUseEthanParticles(lua_State* L);       // GetUseEthanParticles() -> bool
         static int Lua_ToggleUseEthanParticles(lua_State* L);    // ToggleUseEthanParticles() -> bool
+        static int Lua_ClearAllParticleEmitters(lua_State* L);   // Clear both legacy + Ethan emitters
         
         // Helper to get LevelLoader instance from Lua state
         static LevelLoader* GetLevelLoader(lua_State* L);

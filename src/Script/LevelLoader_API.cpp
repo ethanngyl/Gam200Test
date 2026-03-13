@@ -86,7 +86,7 @@ namespace Framework {
     // ACTIVE PLAYER INDEX - For particle system visibility per player turn
     // ========================================================================
     static int g_activePlayerIndex = -1;  // 0=Player1, 1=Player2, 2=Player3, -1=none
-    static bool g_useEthanParticles = false; // Runtime-selectable particle backend
+    static bool g_useEthanParticles = true; // Runtime-selectable particle backend (default Ethan for verification)
 
     int GetActivePlayerIndexForParticles() {
         return g_activePlayerIndex;
@@ -655,6 +655,7 @@ namespace Framework {
         else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
         else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
         else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;
+        else if (strcmp(keyName, "F4") == 0) keyCode = KEY_F4;
         // Check key state - use IsKeyDown for continuous input
         bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyDown(keyCode);
         lua_pushboolean(L, pressed);
@@ -6251,7 +6252,7 @@ namespace Framework {
         em->AddComponent<ParticleEmitter>(entity);
         auto& emitter = em->GetComponent<ParticleEmitter>(entity);
 
-        emitter.maxParticles = 50;
+        emitter.maxParticles = 100;
         emitter.emissionRate = rate;
         emitter.emit = true;
         emitter.worldSpace = true;
@@ -6262,12 +6263,12 @@ namespace Framework {
         emitter.emitRadius = emitRadius;
 
         // Gentle upward drift
-        emitter.velocityMin = glm::vec2(-0.01f, 0.01f);
-        emitter.velocityMax = glm::vec2(0.01f, 0.04f);
+        emitter.velocityMin = glm::vec2(-0.03f, 0.015f);
+        emitter.velocityMax = glm::vec2(0.03f, 0.09f);
 
         // Short-lived particles
-        emitter.lifetimeMin = 0.4f;
-        emitter.lifetimeMax = 1.0f;
+        emitter.lifetimeMin = 0.45f;
+        emitter.lifetimeMax = 1.2f;
 
         // Small particles that shrink
         emitter.sizeStart = 0.006f;
@@ -6317,6 +6318,36 @@ namespace Framework {
     int LevelLoader::Lua_ToggleUseEthanParticles(lua_State* L) {
         g_useEthanParticles = !g_useEthanParticles;
         lua_pushboolean(L, g_useEthanParticles);
+        return 1;
+    }
+
+    int LevelLoader::Lua_ClearAllParticleEmitters(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Clear legacy ParticleSystemManager emitters
+        if (auto* psm = loader->coreEngine->GetParticleSystemManager()) {
+            psm->ClearAllEmitters();
+        }
+
+        // Clear Ethan emitters (entities with ParticleEmitter component)
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (em) {
+            std::vector<Entity> toDestroy;
+            for (Entity e : em->GetAllEntities()) {
+                if (em->HasComponent<ParticleEmitter>(e)) {
+                    toDestroy.push_back(e);
+                }
+            }
+            for (Entity e : toDestroy) {
+                em->DestroyEntity(e);
+            }
+        }
+
+        lua_pushboolean(L, true);
         return 1;
     }
 
