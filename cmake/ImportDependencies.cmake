@@ -232,6 +232,18 @@ macro(import_freetype)
         set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
         FetchContent_MakeAvailable(freetype)
 
+        # Suppress third-party warnings that we cannot fix in FreeType source:
+        #   C4819 - source file contains characters outside the current code page
+        #   C4267 - size_t -> smaller integer conversion (common in FreeType C code)
+        #   C4244 - __int64 / larger -> smaller integer conversion
+        if(MSVC AND TARGET freetype)
+            target_compile_options(freetype PRIVATE
+                /wd4819
+                /wd4267
+                /wd4244
+            )
+        endif()
+
         # Some versions export target "freetype"; add an alias for consistency
         if(TARGET freetype AND NOT TARGET Freetype::Freetype)
             add_library(Freetype::Freetype ALIAS freetype)
@@ -298,13 +310,14 @@ macro(import_lua)
         target_include_directories(lua_static PUBLIC ${lua_SOURCE_DIR})
         
         # Platform-specific definitions
+        # Note: LUA_USE_WINDOWS is intentionally omitted -- luaconf.h already
+        # defines it automatically when _WIN32 is detected (luaconf.h line 51).
+        # Passing it again via /D would trigger C4005 macro-redefinition warnings.
         if(UNIX AND NOT APPLE)
             target_compile_definitions(lua_static PUBLIC LUA_USE_LINUX)
             target_link_libraries(lua_static PUBLIC m dl)
         elseif(APPLE)
             target_compile_definitions(lua_static PUBLIC LUA_USE_MACOSX)
-        elseif(WIN32)
-            target_compile_definitions(lua_static PUBLIC LUA_USE_WINDOWS)
         endif()
         
         # Set C standard
