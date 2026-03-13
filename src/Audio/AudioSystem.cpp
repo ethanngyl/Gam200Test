@@ -660,6 +660,26 @@ namespace Framework {
         std::cout << "[AudioSystem] Reload Complete. Loaded " << loadedCount << " sounds.\n";
     }
 
+    /**
+         * @brief Plays background music with optional fade-in and queued track swapping
+         * @param soundName Name of the music track to play
+         * @param fadeInSec Duration in seconds to fade from 0 volume to full volume
+         * @param loop If true, the music loops continuously
+         *
+         * This function is used for BGM playback instead of normal PlaySound().
+         * If another music track is already playing, the requested track is stored
+         * as pending music, the current track begins fading out, and the new track
+         * starts automatically after the fade-out completes.
+         *
+         * Behavior:
+         * - Plays music through the dedicated music channel group
+         * - Starts playback paused, sets initial volume to 0, then fades in
+         * - Supports immediate full-volume playback when fadeInSec <= 0
+         * - Queues the next track if music is already playing
+         *
+         * This supports smoother scene and menu transitions for task 1105.
+         */
+
     void AudioSystem::PlayMusic(const std::string& soundName, float fadeInSec, bool loop)
     {
         if (!fmodSystem || !musicGroup) return;
@@ -709,6 +729,19 @@ namespace Framework {
         }
     }
 
+    /**
+     * @brief Stops the current background music with optional fade-out
+     * @param fadeOutSec Duration in seconds to fade the music volume to 0
+     *
+     * If fadeOutSec is greater than 0, the current music channel fades out
+     * gradually and is stopped when the fade completes. If fadeOutSec is
+     * less than or equal to 0, the music is stopped immediately.
+     *
+     * This function also works together with PlayMusic() to support
+     * transition swapping: if a new track was queued while the old one
+     * was fading out, the queued track will start after the stop finishes.
+     */
+
     void AudioSystem::StopMusic(float fadeOutSec)
     {
         if (!musicChannel) return;
@@ -740,6 +773,18 @@ namespace Framework {
         musicFadeDuration = fadeOutSec;
         musicStopWhenFadeDone = true;
     }
+
+    /**
+    * @brief Updates active music fade state each frame
+    * @param dt Delta time since last frame
+    *
+    * This internal helper advances music fade-in and fade-out over time by
+    * interpolating the current music channel volume from the start volume
+    * to the target volume. When a fade-out completes, it stops the current
+    * track and starts any queued pending music track if one exists.
+    *
+    * Called once per frame from Update().
+    */
 
     void AudioSystem::UpdateMusicFade(float dt)
     {
