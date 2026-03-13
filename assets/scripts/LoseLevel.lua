@@ -152,9 +152,11 @@ function OnDraw()
         if fbW and fbW > 0 then
             local t = config.menu.scrollOverlay.text
             local scaleRef = fbW / 1920
+            local offX = (t.offset and t.offset.x) or 0
+            local offY = (t.offset and t.offset.y) or 0
             local approxWidth = #t.content * 48 * 0.6 * (t.scale or 1.0) * scaleRef
-            local textX = (fbW * 0.5) - (approxWidth * 0.5)
-            local textY = (fbH * 0.5) + (40 * scaleRef)
+            local textX = (fbW * 0.5) - (approxWidth * 0.5) + offX * scaleRef
+            local textY = (fbH * 0.5) + (40 * scaleRef) + offY * scaleRef
             DrawText(t.font, t.content, textX, textY, (t.scale or 1.0) * scaleRef, t.color.r, t.color.g, t.color.b)
         end
     end

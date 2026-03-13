@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -5397,7 +5397,7 @@ namespace Framework {
                 foundAny = true;
                 ImGui::PushID(levelFile.c_str());
 
-                ImGui::Text("📄");
+                ImGui::Text("[F]");
                 ImGui::SameLine();
 
                 if (ImGui::Selectable(levelFile.c_str(), selectedLevelPath == levelFile,

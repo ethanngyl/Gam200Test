@@ -739,6 +739,14 @@ function OnUpdate(dt)
     end
 
     -- ========================================
+    -- CHEAT: Skip to lose screen (press 6)
+    -- ========================================
+    if IsKeyDown("6") then
+        SetNextGameState("LOSE_SCREEN")
+        return
+    end
+
+    -- ========================================
     -- CHEAT: Skip to win screen (press 7)
     -- ========================================
     if IsKeyDown("7") then

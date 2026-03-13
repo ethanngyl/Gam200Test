@@ -495,13 +495,7 @@ namespace Framework {
         float centeredX = screenX + scaledOffsetX;
         float centeredY = screenY + scaledOffsetY;
 
-        // ========================================
-        // DEBUG OUTPUT (Enhanced)
-        // ========================================
-        bool editorEnabled = imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport();
-
         // Debug output removed for performance
-        // ========================================
 
         glm::vec3 textColor(colorR, colorG, colorB);
 
@@ -1506,13 +1500,8 @@ namespace Framework {
             return 0;
         }
 
-        // Get count before clearing for logging
-        size_t entityCount = em->GetAllEntities().size();
-
         // Clear all entities using existing ECS function
         em->ClearAllEntities();
-
-        // All entities cleared
         return 0;
     }
 
@@ -3957,6 +3946,12 @@ namespace Framework {
         config.minEnemies = 3;
         config.maxEnemies = 5;
 
+        // Scale room sizes to map dimensions
+        config.minRoomSize = 3;
+        config.maxRoomSize = std::min(7, std::min(width, height) / 4);
+        config.maxRooms = 10;
+        config.minPlayerGoalDistance = std::min(config.minPlayerGoalDistance, std::min(width, height) / 2);
+
         // Grid parameters - MATCH YOUR TileMap.json
         const float TILE_SIZE = 128.0f;
         Vector2D startPos(-0.6f, -0.4f);
@@ -5385,6 +5380,7 @@ namespace Framework {
      * Call this when enemy turn starts
      */
     int LevelLoader::Lua_InitializeEnemyTurn(lua_State* L) {
+        (void)L;
         LOG_INFO("LevelLoader", "[EnemyTurnSystem] InitializeEnemyTurn() called");
 
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
@@ -6165,7 +6161,6 @@ namespace Framework {
         float y = static_cast<float>(luaL_checknumber(L, 2));
         float spawnRadius = static_cast<float>(luaL_optnumber(L, 3, 0.04));
         float rate = static_cast<float>(luaL_optnumber(L, 4, 8.0));
-        float duration = static_cast<float>(luaL_optnumber(L, 5, 0.0));
         float r = static_cast<float>(luaL_optnumber(L, 6, 1.0));
         float g = static_cast<float>(luaL_optnumber(L, 7, 1.0));
         float b = static_cast<float>(luaL_optnumber(L, 8, 0.0));
@@ -6175,7 +6170,6 @@ namespace Framework {
         // Create an inline emitter using the ParticleSystemManager
         auto* psm = CORE->GetParticleSystemManager();
         if (!psm) { lua_pushinteger(L, -1); return 1; }
-        auto& ps = pm->AddParticleSystem();
         ParticleSystem::Settings settings;
         settings.spawnRate = rate;
         settings.tint = glm::vec4(r, g, b, a);

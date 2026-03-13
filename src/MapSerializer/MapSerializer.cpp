@@ -1,4 +1,4 @@
-/**
+ï»¿/**
 ===============================================================================
  File:          MapSerializer.cpp
  Author:        Josh Ong
@@ -221,8 +221,10 @@ namespace Framework {
             // Timestamp
             auto now = std::chrono::system_clock::now();
             auto time = std::chrono::system_clock::to_time_t(now);
+            struct tm timeInfo{};
+            localtime_s(&timeInfo, &time);
             std::stringstream ss;
-            ss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
+            ss << std::put_time(&timeInfo, "%Y-%m-%d %H:%M:%S");
             root["savedAt"] = ss.str();
 
             // Dimensions
@@ -325,7 +327,7 @@ namespace Framework {
             if (version != SERIALIZER_VERSION) {
                 std::cout << "[MapSerializer] WARNING: File version " << version
                     << " differs from current version " << SERIALIZER_VERSION << "\n";
-                // Continue anyway — we use .value() with defaults so older formats
+                // Continue anyway ï¿½ we use .value() with defaults so older formats
                 // will gracefully fall back
             }
 
@@ -438,7 +440,9 @@ namespace Framework {
             ss << '/';
         }
 
-        ss << "map_" << std::put_time(std::localtime(&time), "%Y%m%d_%H%M%S")
+        struct tm timeInfo{};
+        localtime_s(&timeInfo, &time);
+        ss << "map_" << std::put_time(&timeInfo, "%Y%m%d_%H%M%S")
             << ".map.json";
 
         std::string filepath = ss.str();
