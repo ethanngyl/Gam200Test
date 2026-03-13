@@ -4701,7 +4701,7 @@ namespace Framework {
             return 0;
         }
 
-        // Forward arguments from entity state → level state
+        // Forward arguments from entity state -> level state
         for (int i = 2; i <= nargs + 1; ++i) {
             switch (lua_type(L, i)) {
             case LUA_TNUMBER:  lua_pushnumber(levelL, lua_tonumber(L, i));   break;
@@ -4721,7 +4721,7 @@ namespace Framework {
             return 0;
         }
 
-        // Forward return values from level state → entity state
+        // Forward return values from level state -> entity state
         int nresults = lua_gettop(levelL) - topBefore;
         for (int i = topBefore + 1; i <= topBefore + nresults; ++i) {
             switch (lua_type(levelL, i)) {

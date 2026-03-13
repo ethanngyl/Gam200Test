@@ -894,7 +894,7 @@ namespace Framework {
             // Layer provides major depth separation (0.01 per layer = 100x precision margin)
             // OrderInLayer provides minor separation (0.0001 per order = 1.67x precision margin)
             // Entity ID provides guaranteed uniqueness (0.000001 per ID = 16.7x precision margin)
-            // 24-bit depth precision ≈ 0.00000006, these values are well above that threshold
+            // 24-bit depth precision ~= 0.00000006, these values are well above that threshold
             float zDepth = (cmd.layer * 0.01f) + (cmd.orderInLayer * 0.0001f) + (e.GetID() * 0.000001f);
             model = glm::translate(model, { transform.position.x, transform.position.y, zDepth });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });

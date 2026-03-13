@@ -49,7 +49,7 @@ namespace Framework {
     inline constexpr long   Abs(long   x) noexcept { return x < 0 ? -x : x; }
     inline constexpr long long Abs(long long x) noexcept { return x < 0 ? -x : x; }
 
-    // unsigned “abs” just returns the value (already non-negative)
+    // unsigned "abs" just returns the value (already non-negative)
     inline constexpr unsigned int       Abs(unsigned int       x) noexcept { return x; }
     inline constexpr unsigned long      Abs(unsigned long      x) noexcept { return x; }
     inline constexpr unsigned long long Abs(unsigned long long x) noexcept { return x; }
@@ -61,7 +61,7 @@ namespace Framework {
                          v.y < 0.0f ? -v.y : v.y };
     }
 
-    // (Optional) magnitude helpers that don’t use std::
+    // (Optional) magnitude helpers that don't use std::
     inline constexpr float LengthSq(const Vector2D& v) noexcept { return v.x * v.x + v.y * v.y; }
 
 
