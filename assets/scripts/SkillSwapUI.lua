@@ -146,7 +146,7 @@ local function loadExistingLoadout()
         Log("[SkillSwapUI] Loaded existing loadout")
     else
         loadout[1] = { ["1"] = "Thrust",       ["2"] = "Guard" }
-        loadout[2] = { ["1"] = "Fireball",     ["2"] = "ManaDrain" }
+        loadout[2] = { ["1"] = "Fireball",     ["2"] = "LightningStrike" }
         loadout[3] = { ["1"] = "Slam",         ["2"] = "SiphonCharge" }
         Log("[SkillSwapUI] Using default loadout")
     end
