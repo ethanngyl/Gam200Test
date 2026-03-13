@@ -287,7 +287,7 @@ function UIManager.Init(config)
         animName = "ScrollOpen",
         frameTime = 0.1,
         text = "Your Turn",
-        textFont = "Sans48",
+        textFont = "Jersey20Regular",
         textScale = 0.9,
         textColor = {0.0, 0.0, 0.0},
         textStartFrame = 8,
