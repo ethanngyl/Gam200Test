@@ -72,6 +72,7 @@ namespace Framework {
      * - Plays walking sound effects when enemies move
      */
     void PathfindingSystem::Update(float dt) {
+        (void)dt;
 
         if (GlobalPause::IsPaused()) {
             return;
