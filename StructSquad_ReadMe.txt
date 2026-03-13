@@ -43,7 +43,59 @@ WASD - Moves the player up, left down and right respecitvely. They are only allo
 1,2,3,4 - Skills are tied to the slots 1-4. Pressing the skill will pull up the preview of the skill to show its range. If it is a skill
 affecting oneself or a projectile skill, no preview will be shown. If it is a skill selecting an ally or an enemy, the player will be able to use
 the tab key to traverse through the targets.
+P - To end the current player's turn.
+Q - Closes the game
+ESC - Can only be used while in-game. Brings up a button to return to the main menu, a button to resume the game, a button for settings which will lead 
+to a volume slider page where the volume can be adjusted by pressing the arrow keys, left will lower the volume and right will raise the volume.
 
+UI for the demo:
+Currently, the player can see their HP (Health), AP (Used for skills), and MP (Used for movement) on the bottom right of side of the screen. There is a number value
+on them as well as a bar indicator for AP and MP, and a circle indicator for HP. The number and the bar/circle will increase/decrease accordingly corresponding to damage
+taken, AP/MP consumed etc. Each character's current skills is displayed on the far right side of the screen. Whenever a skill is selected, it will glow blue. And when a skill
+cannot be used it will be tinted grey. At the moment only some skills have an icon and other skills that do not have an icon will just be displayed as a white bubble. When no skills
+are equipped to a slot, it will be displayed as a black bubble. The enemy's health bar is above each enemy respectively.
+
+Particle System:
+At the moment, there are two particle systems, hitting f4 will toggle between the two particle systems. The default particle system shown is Ethan's particle system, pressing the f4 key 
+will show Wei Liang's particle system. The particle system is currently being used to show what effects the enemy/player's are under, be it a buff or a debuff.
+
+Current Skills available in the demo:
+The description of the every skill (24) can be found the the Skills.json located under the assets folder. The enemy skills
+are located in the EnemyGeneric.lua which effectively serves as an enemy loader as well as a skill logic/behaviour handler.
+The boss script is mostly running independently on its own logic for skills and behaviour.
+
+Boss Skills:
+Skill 1. The boss's basic attack is the same as the regular enemy's but it does 1 more damage. This skill can be used at random.
+Skill 2. The boss can execute a cross slash that goes 3 tiles far in each direction. This skill can be used at random.
+Skill 3. The boss targets the highest health player, and only path finds to them for the next 3 turns. While this skill is active, both the targeted player and the boss receives one more damage from each other. 
+This skill should always be prioritized if there is no targeted player.
+Skill 4. The boss will enter a charging state and ends his current turn and skips his next turn. While in this state he will not be able to move. After skipping his next turn, the boss will teleport one available tile adjacent to the lowest health player and execute the player. This skill can only be used when the boss reaches 50% HP, and can only be used once.
+The boss should cycle randomly between skills 1 and 2. If the condition for skills 3 and 4 are met, those skills will take priority. If both skills 3 and 4 can be used, 
+skill 4 must always be prioritized. These skills from the boss do not consume any movement points, instead, the boss can only used two skills per turn. If the boss is able to use skill 4, he will use it and end his turn immediately.
+The boss has 10 HP and uses 2 skills per turn instead of AP.
+Below is the list of current enemy skills:
+
+Enemy Knight Commander
+Strike: Adjacent Tiles, 1 Damage, Consumes 1 AP
+Rallying Cry: Enemies gain +1 movement point for the next turn only, Consumes 2 AP, Can only be used every three turns
+Bolstered Morale: Enemies gain +1 Damage while this unit is alive
+HP 3, AP 3, 3 MP
+
+Enemy Knight:
+Strike: Adjacent Tiles, 1 Damage, Consumes 1 AP
+Summon reinforcements: Skips the next turn, on the turn after, if this unit is still alive, summon another Enemy Knight on a random open tile, 2 AP. Can be used every 2 turns. Only used when character is 2 or more enemies have died this level.
+HP 5, AP 2, 3 MP
+
+Enemy Mage:
+Arcane Bolt: Fires in target facing direction, 1 Damage, Consumes 2 AP
+Barrier: Blocks next damage taken for target character, Consumes 2 AP, Can only be used every two turns, Priority usage, targets random enemy if possible, if no other enemies are alive, target self
+HP 3, AP 4, 3 MP
+
+Enemy Tank:
+Heavy Armor: Takes 1 reduced damage from all sources, always active
+Shield Bash: Adjacent Tile, Stuns target player, 2 damage, 3 AP
+Taunt: While this unit is alive, damage taken by allies is redirected to this unit, used if an enemy has < 50% health, 2 AP
+HP: 7, AP 3, 2 MP
 
 CURRENT LEVELS:
 
@@ -66,9 +118,14 @@ Further information can be found in the LevelEditor document.
 Pressing Key 3 loads Demo page.
 Press ESC to pause the game. 
 
-Demo page:
+Demo:
 This level demonstrates the core grid system, entity occupancy, combat system and enemy pathfinding loop.
 It verifies tile creation, world-to-tile conversion, occupancy tracking, arrow key movement, and enemy pursuit using the A* algorithm.
 The player is locked to one tile per turn and cannot move out of turn.
 Enemy movement is recalculated each turn for smarter pursuit behavior.
 This level forms the foundation for the turn-based gameplay system the rest of the game will build upon.
+
+Skill Select Screen:
+Only accessible after beating the first level. The player will see two of each character's existing skills, and two new skills which
+can be equipped to their third skill slot. The player can press next button to traverse through the 3 characters, hitting the next button
+after the last character in the party (Berserker) will bring the player to the second and final level for now.

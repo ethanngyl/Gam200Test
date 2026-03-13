@@ -361,6 +361,9 @@ function OnInit()
 
     targetPlayerID = FindClosestPlayer() or 0
 
+    -- Boss-specific base stats (override generic enemy spawn defaults).
+    SetEntityHP(entityID, 10, 10)
+
     -- Read arena bounds from shared C++ store (set by ProceduralMapLevel.lua)
     local aMinX = GetSharedInt("arenaMinX", -1)
     local aMinY = GetSharedInt("arenaMinY", -1)
