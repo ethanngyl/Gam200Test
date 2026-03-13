@@ -979,7 +979,7 @@ namespace Framework {
 
     /**
      * @brief Spawns a new animated sprite entity with sprite sheet animation
-     * @params texture, x, y, width, height, layer, rows, columns, frameCount, frameTime, loop
+     * @params texture, x, y, width, height, layer, rows, columns, frameCount, frameTime, loop, autoDestroyOnFinish(optional)
      * @return integer (Entity ID)
      */
     int LevelLoader::Lua_SpawnAnimatedSprite(lua_State* L) {
@@ -989,7 +989,7 @@ namespace Framework {
             return 1;
         }
 
-        // Parse parameters: SpawnAnimatedSprite(texture, x, y, width, height, layer, rows, columns, frameCount, frameTime, loop)
+        // Parse parameters: SpawnAnimatedSprite(texture, x, y, width, height, layer, rows, columns, frameCount, frameTime, loop, autoDestroyOnFinish?)
         const char* texture = luaL_checkstring(L, 1);
         float x = luaL_checknumber(L, 2);
         float y = luaL_checknumber(L, 3);
@@ -1001,6 +1001,7 @@ namespace Framework {
         int frameCount = luaL_optinteger(L, 9, rows * columns);
         float frameTime = luaL_optnumber(L, 10, 0.1f);
         bool loop = lua_toboolean(L, 11);
+        bool autoDestroyOnFinish = lua_isnoneornil(L, 12) ? false : (lua_toboolean(L, 12) != 0);
 
         auto* spawner = loader->coreEngine->GetSpawner();
         auto* em = loader->coreEngine->GetEntityManager();
@@ -1040,6 +1041,7 @@ namespace Framework {
         anim.startFrame = 0;  // IMPORTANT: Initialize startFrame to 0
         anim.elapsedTime = 0.0f;
         anim.useJsonConfig = false;  // Don't use JSON-based animation selection
+        anim.autoDestroyOnFinish = autoDestroyOnFinish;
 
         // Load sprite sheet texture
         anim.spriteSheet = gfx->GetResourceManager().LoadTexture(texture);
@@ -5701,8 +5703,12 @@ namespace Framework {
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 2, false, 1,0,0,1, "")
      *   -- with enemy projectile flag (arg 13) and source entity (arg 14):
      *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 1, false, r,g,b,a, "", true, sourceID)
-     *   -- with max range in tiles (arg 15) and line-only (arg 16) for Fireball:
-     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 5, false, 1,1,1,1, "", false, 0, 5, true)
+     *   -- with max range in tiles (arg 15), line-only (arg 16), and explosion-on-hit (arg 17):
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 5, false, 1,1,1,1, "", false, 0, 5, true, true)
+     *   -- with optional projectile sprite-sheet animation (args 18-22):
+     *   local projID = SpawnSkillProjectile(wx, wy, dx, dy, 3.0, 5, false, 1,1,1,1,
+     *                                      "assets/SkillIcons/FireballSheet.png", false, 0,
+     *                                      5, true, true, 1, 6, 6, 0.05, true)
      */
     int LevelLoader::Lua_SpawnSkillProjectile(lua_State* L) {
         float worldX = static_cast<float>(luaL_checknumber(L, 1));
@@ -5729,11 +5735,17 @@ namespace Framework {
         bool isEnemyProjectile = lua_toboolean(L, 13) != 0;
         uint32_t sourceEntityID = static_cast<uint32_t>(luaL_optinteger(L, 14, 0));
 
-        // Optional explosion VFX flag (arg 15, default false)
-        bool spawnExplosionOnHit = lua_toboolean(L, 15) != 0;
         // Optional max range in tiles (arg 15, 0=unlimited) and line-only (arg 16) for Fireball
         int maxRangeTiles = static_cast<int>(luaL_optinteger(L, 15, 0));
         bool lineOnly = lua_toboolean(L, 16) != 0;
+        // Optional explosion VFX flag (arg 17, default false)
+        bool spawnExplosionOnHit = lua_toboolean(L, 17) != 0;
+        // Optional projectile animation params (args 18-22)
+        int animRows = static_cast<int>(luaL_optinteger(L, 18, 1));
+        int animColumns = static_cast<int>(luaL_optinteger(L, 19, 1));
+        int animFrames = static_cast<int>(luaL_optinteger(L, 20, 1));
+        float animFrameTime = static_cast<float>(luaL_optnumber(L, 21, 0.06));
+        bool animLoop = lua_isnoneornil(L, 22) ? true : (lua_toboolean(L, 22) != 0);
 
         // Normalize direction
         float len = std::sqrt(dirX * dirX + dirY * dirY);
@@ -5771,6 +5783,35 @@ namespace Framework {
             movement.spawnPosition = Vector2D(worldX, worldY);
             movement.maxRangeTiles = maxRangeTiles;
             movement.lineOnly = lineOnly;
+        }
+
+        // Optional sprite-sheet animation on the projectile itself.
+        if (!spritePath.empty() && animRows > 0 && animColumns > 0 && animFrames > 1) {
+            if (!em->HasComponent<SpriteAnimation>(projectile)) {
+                em->AddComponent<SpriteAnimation>(projectile);
+            }
+            auto& anim = em->GetComponent<SpriteAnimation>(projectile);
+            anim.rows = animRows;
+            anim.columns = animColumns;
+            anim.frameCount = std::min(animFrames, animRows * animColumns);
+            anim.frameTime = std::max(0.01f, animFrameTime);
+            anim.loop = animLoop;
+            anim.playing = true;
+            anim.currentFrame = 0;
+            anim.startFrame = 0;
+            anim.elapsedTime = 0.0f;
+            anim.useJsonConfig = false;
+            anim.autoDestroyOnFinish = false;
+
+            if (core->GetGraphicsSystem()) {
+                auto* gfx = core->GetGraphicsSystem();
+                anim.spriteSheet = gfx->GetResourceManager().LoadTexture(spritePath);
+                Texture* tex = gfx->GetResourceManager().GetTexture(anim.spriteSheet);
+                if (tex) {
+                    anim.frameWidth = tex->GetWidth() / anim.columns;
+                    anim.frameHeight = tex->GetHeight() / anim.rows;
+                }
+            }
         }
 
         lua_pushinteger(L, projectile.GetID());

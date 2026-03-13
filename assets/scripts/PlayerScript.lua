@@ -435,6 +435,22 @@ local function respawnBolsteredMoraleParticles()
     end
 end
 
+local function spawnLightningStrikeSheet(targetID)
+    if not SpawnAnimatedSprite then return end
+    local wx, wy = GetEntityWorldPosition(targetID)
+    if not wx or not wy then return end
+
+    -- One-shot lightning impact VFX on the struck enemy.
+    SpawnAnimatedSprite(
+        "assets/SkillIcons/LightningStrikeSheet.png",
+        wx, wy,
+        0.16, 0.16,
+        16,
+        1, 3, 3, 0.06, false,
+        true
+    )
+end
+
 local function blockHeldKeys()
     blockedKeys = {}
     if IsKeyDown("W") then
@@ -2383,6 +2399,7 @@ function ExecuteSkill(skillID)
                 local success = damageEnemyWithEffects(eID, skill.damage)
                 if success then
                     enemiesHit = enemiesHit + 1
+                    spawnLightningStrikeSheet(eID)
                     local ex, ey = GetEntityGridPosition(eID)
                     if ex and ey then
                         PulseTile(ex, ey, 0.5, 1.0, 1.0, 0.0)  -- yellow pulse for lightning
@@ -2487,11 +2504,19 @@ function ExecuteSkill(skillID)
         local tintR, tintG, tintB, tintA = 1, 1, 1, 1
         local spritePath = nil
         local explosionOnHit = false
-        if getPlayerIndex() == 2
-           and (skillID == "Fireball" or skillID == "PiercingShot") then
+        local projectileSpeed = skill.projSpeed or 3.0
+        local animRows, animCols, animFrames = 1, 1, 1
+        local animFrameTime, animLoop = 0.06, true
+        if getPlayerIndex() == 2 and skillID == "Fireball" then
             tintR, tintG, tintB, tintA = 1, 0, 0, 1
-            spritePath = ""
+            spritePath = "assets/SkillIcons/FireballSheet.png"
             explosionOnHit = true
+            projectileSpeed = projectileSpeed * 0.6
+            animRows = 1
+            animCols = 6
+            animFrames = 6
+            animFrameTime = 0.05
+            animLoop = true
         end
 
         local rangeTiles = skill.range or 0
@@ -2499,7 +2524,7 @@ function ExecuteSkill(skillID)
         local projID = SpawnSkillProjectile(
             worldX, worldY,
             dirX, dirY,
-            skill.projSpeed or 3.0,
+            projectileSpeed,
             skill.damage or 1,
             skill.pierce or false,
             tintR, tintG, tintB, tintA,
@@ -2507,17 +2532,21 @@ function ExecuteSkill(skillID)
             false,    -- isEnemyProjectile
             entityID,  -- sourceEntityID (for Soul Rend, Soul Merge kill heal)
             rangeTiles > 0 and rangeTiles or 0,  -- maxRangeTiles (Fireball=5, PiercingShot=0 unlimited)
-            lineOnly   -- lineOnly: Fireball hits only on line, PiercingShot pierces all in path
+            lineOnly,   -- lineOnly: Fireball hits only on line, PiercingShot pierces all in path
+            explosionOnHit,
+            animRows, animCols, animFrames, animFrameTime, animLoop
         )
         if not projID then
             print("[PlayerScript] ERROR: SpawnSkillProjectile returned nil")
             ClearActivePreview()
             return
         end
-
+        if spritePath == "assets/SkillIcons/FireballSheet.png" and SetRotation then
+            SetRotation(projID, math.pi)  -- rotate another 90 deg counterclockwise (180 total from original)
+        end
         print("[PlayerScript] Spawned projectile ID=" .. tostring(projID)
             .. " dir=(" .. dirX .. "," .. dirY .. ")"
-            .. " speed=" .. (skill.projSpeed or 3.0)
+            .. " speed=" .. projectileSpeed
             .. " dmg=" .. skill.damage
             .. " pierce=" .. tostring(skill.pierce or false))
 
