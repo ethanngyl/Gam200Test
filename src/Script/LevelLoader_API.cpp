@@ -3955,6 +3955,12 @@ namespace Framework {
         config.minEnemies = 3;
         config.maxEnemies = 5;
 
+        // Scale room sizes to map dimensions
+        config.minRoomSize = 3;
+        config.maxRoomSize = std::min(7, std::min(width, height) / 4);
+        config.maxRooms = 10;
+        config.minPlayerGoalDistance = std::min(config.minPlayerGoalDistance, std::min(width, height) / 2);
+
         // Grid parameters - MATCH YOUR TileMap.json
         const float TILE_SIZE = 128.0f;
         Vector2D startPos(-0.6f, -0.4f);
