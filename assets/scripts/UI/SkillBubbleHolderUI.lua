@@ -1,8 +1,11 @@
 --[[
 ===============================================================================
- File:          SkillBubbleHolderUI.lua
- Date:          2026-03-06
- ------------------------------------------------------------------------------
+File:        UIManager.lua
+Author:      Padilla Carl Jameson Z.
+Email:       c.Padilla@digipen.edu
+Date:        2026-02-04 
+Contribution: Padilla Carl Jameson Z. (100%)
+-------------------------------------------------------------------------------
 
  SKILL BUBBLE HOLDER UI - Skill Slot Display Component
 
@@ -60,6 +63,36 @@ local TINT_BLUE  = { r = 0.2, g = 0.4, b = 1.0 }   -- Currently selected
 local TINT_GREY  = { r = 0.4, g = 0.4, b = 0.4 }   -- On cooldown / not enough AP
 local TINT_BLACK = { r = 0.05, g = 0.05, b = 0.05 } -- No skill assigned
 
+-- Default icon path convention:
+--   assets/UI/SkillIcons/<SkillID>.png
+-- You can override specific skills via config.skillIconMap in UIManager.Init().
+local DEFAULT_SKILL_ICON_MAP = {
+    Thrust = "assets/UI/SkillIcons/Thrust.png",
+    SweepingSlash = "assets/UI/SkillIcons/SweepingSlash.png",
+    Guard = "assets/UI/SkillIcons/Guard.png",
+    SwiftBlow = "assets/UI/SkillIcons/SwiftBlow.png",
+    KnightsOath = "assets/UI/SkillIcons/KnightsOath.png",
+    Parry = "assets/UI/SkillIcons/Parry.png",
+    ExploitWeakness = "assets/UI/SkillIcons/ExploitWeakness.png",
+    Bash = "assets/UI/SkillIcons/Bash.png",
+    Fireball = "assets/UI/SkillIcons/Fireball.png",
+    PiercingShot = "assets/UI/SkillIcons/PiercingShot.png",
+    LightningStrike = "assets/UI/SkillIcons/LightningStrike.png",
+    EarthenBind = "assets/UI/SkillIcons/EarthenBind.png",
+    ManaDrain = "assets/UI/SkillIcons/ManaDrain.png",
+    Overload = "assets/UI/SkillIcons/Overload.png",
+    SoulRend = "assets/UI/SkillIcons/SoulRend.png",
+    SoulMerge = "assets/UI/SkillIcons/SoulMerge.png",
+    Slam = "assets/UI/SkillIcons/Slam.png",
+    SiphonCharge = "assets/UI/SkillIcons/SiphonCharge.png",
+    FutileResistance = "assets/UI/SkillIcons/FutileResistance.png",
+    DarkOmens = "assets/UI/SkillIcons/DarkOmens.png",
+    Cannibalism = "assets/UI/SkillIcons/Cannibalism.png",
+    Groundshatter = "assets/UI/SkillIcons/Groundshatter.png",
+    BloodyWarcry = "assets/UI/SkillIcons/BloodyWarcry.png",
+    BladedWhirlwind = "assets/UI/SkillIcons/BladedWhirlwind.png",
+}
+
 -- ============================================================================
 -- CONSTRUCTOR
 -- ============================================================================
@@ -90,11 +123,18 @@ function SkillBubbleHolderUI:Init(config)
     self.circleScale = self.config.circleScale or 0.06
     self.circleSpacing = self.config.circleSpacing or 0.11
     self.circleLayer = (self.layer or 4) + 1  -- Render on top of holder
+    self.iconScale = self.config.iconScale or (self.circleScale * 0.78)
+    self.iconLayer = self.config.iconLayer or (self.circleLayer + 1)
+    self.defaultIconTexture = self.config.defaultIconTexture or "assets/UI/skill_circle.png"
+    self.skillIconBasePath = self.config.skillIconBasePath or "assets/UI/SkillIcons/"
+    self.skillIconMap = self.config.skillIconMap or DEFAULT_SKILL_ICON_MAP
 
     -- State
     self.spriteID = 0
     self.circleIDs = {}       -- Sprite IDs for the 4 circles
     self.circleTints = {}     -- Current tint per circle (to avoid redundant updates)
+    self.iconIDs = {}         -- Sprite IDs for per-skill icon art
+    self.iconSkillIDs = {}    -- Last skill ID bound to icon slot
 
     -- Get camera position for initial placement
     local camX, camY, camZ = GetCameraPosition()
@@ -112,12 +152,18 @@ function SkillBubbleHolderUI:Init(config)
     for i = 1, 4 do
         local circleY = topY - (i - 1) * self.circleSpacing
         local circleID = self:SpawnSprite(self.circleTexture, x, circleY, self.circleScale, self.circleScale, self.circleLayer)
+        local iconID = self:SpawnSprite(self.defaultIconTexture, x, circleY, self.iconScale, self.iconScale, self.iconLayer)
         self.circleIDs[i] = circleID
+        self.iconIDs[i] = iconID
         self.circleTints[i] = nil  -- Force first update
+        self.iconSkillIDs[i] = nil
 
         -- Start as black (no skill state known yet)
         if circleID and circleID > 0 and SetSpriteColor then
             SetSpriteColor(circleID, TINT_BLACK.r, TINT_BLACK.g, TINT_BLACK.b)
+        end
+        if iconID and iconID > 0 and SetSpriteColor then
+            SetSpriteColor(iconID, 0.2, 0.2, 0.2, 1.0)
         end
     end
 
@@ -159,9 +205,59 @@ function SkillBubbleHolderUI:UpdatePositions(cameraPos)
 
     for i = 1, 4 do
         local circleID = self.circleIDs[i]
+        local iconID = self.iconIDs[i]
+        local circleY = topY - (i - 1) * self.circleSpacing
         if circleID and circleID > 0 then
-            local circleY = topY - (i - 1) * self.circleSpacing
             SetSpritePosition(circleID, x, circleY)
+        end
+        if iconID and iconID > 0 then
+            SetSpritePosition(iconID, x, circleY)
+        end
+    end
+end
+
+function SkillBubbleHolderUI:ResolveSkillIconTexture(skillID)
+    if not skillID or skillID == "" then
+        return self.defaultIconTexture
+    end
+
+    local mapped = self.skillIconMap and self.skillIconMap[skillID]
+    if mapped and mapped ~= "" then
+        local f = io.open(mapped, "rb")
+        if f then
+            f:close()
+            return mapped
+        end
+    end
+
+    local inferred = self.skillIconBasePath .. skillID .. ".png"
+    local f = io.open(inferred, "rb")
+    if f then
+        f:close()
+        return inferred
+    end
+
+    return self.defaultIconTexture
+end
+
+function SkillBubbleHolderUI:UpdateSlotIcons(skills)
+    local camX, camY, camZ = GetCameraPosition()
+    local x = camX + self.offsetX
+    local topY = (camY + self.offsetY) + (self.circleSpacing * 3) / 2
+
+    for i = 1, 4 do
+        local slotKey = tostring(i)
+        local skillID = skills and skills[slotKey] or nil
+        if self.iconSkillIDs[i] ~= skillID then
+            self.iconSkillIDs[i] = skillID
+            local texture = self:ResolveSkillIconTexture(skillID)
+            local iconID = self.iconIDs[i]
+            if iconID and iconID > 0 and SetSpriteTexture then
+                SetSpriteTexture(iconID, texture)
+            elseif not iconID or iconID <= 0 then
+                local circleY = topY - (i - 1) * self.circleSpacing
+                self.iconIDs[i] = self:SpawnSprite(texture, x, circleY, self.iconScale, self.iconScale, self.iconLayer)
+            end
         end
     end
 end
@@ -193,6 +289,8 @@ function SkillBubbleHolderUI:UpdateCircleTints()
     if state.activePlayerIndex ~= activePlayerIndex then
         activeSlot = nil
     end
+
+    self:UpdateSlotIcons(skills)
 
     for i = 1, 4 do
         local slotKey = tostring(i)
@@ -226,6 +324,10 @@ function SkillBubbleHolderUI:UpdateCircleTints()
             if circleID and circleID > 0 then
                 SetSpriteColor(circleID, tint.r, tint.g, tint.b)
             end
+            local iconID = self.iconIDs[i]
+            if iconID and iconID > 0 then
+                SetSpriteColor(iconID, tint.r, tint.g, tint.b)
+            end
         end
     end
 end
@@ -241,8 +343,13 @@ function SkillBubbleHolderUI:Destroy()
         if self.circleIDs[i] and self.circleIDs[i] > 0 then
             DestroyEntity(self.circleIDs[i])
         end
+        if self.iconIDs[i] and self.iconIDs[i] > 0 then
+            DestroyEntity(self.iconIDs[i])
+        end
     end
     self.circleIDs = {}
+    self.iconIDs = {}
+    self.iconSkillIDs = {}
     self.circleTints = {}
 
     Log("[SkillBubbleHolderUI] Destroyed")

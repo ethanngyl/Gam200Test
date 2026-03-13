@@ -58,6 +58,7 @@ Technology is prohibited.
 #include "UISystem.h"
 #include "Audio/AudioSystem.h"
 #include "GraphicsSystemV2.h"
+#include "Graphics/ParticleSystemManager.h"
 #include "ImguiSystem.h"
 #include "GameStateList.h"
 #include "Pause/GlobalPauseManager.h"
@@ -334,6 +335,10 @@ namespace Framework {
         // NEW: Clear entities that were spawned by the Lua level
         if (coreEngine)
         {
+            if (auto* psm = coreEngine->GetParticleSystemManager()) {
+                psm->ClearAllEmitters();
+            }
+
             auto* em = coreEngine->GetEntityManager();
             if (em)
             {
@@ -629,6 +634,11 @@ namespace Framework {
         lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
         lua_register(L, "SetSpriteUVRect", Lua_SetSpriteUVRect);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
+        lua_register(L, "IsEntityValid", Lua_IsEntityValid);
+        lua_register(L, "SetEntityRotation", Lua_SetEntityRotation);
+        lua_register(L, "SetEntityScale", Lua_SetEntityScale);
+        lua_register(L, "SetSharedInt", Lua_SetSharedInt);
+        lua_register(L, "GetSharedInt", Lua_GetSharedInt);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
         lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
@@ -759,6 +769,11 @@ namespace Framework {
         // Procedural Map API
         lua_register(L, "LoadProceduralMap", Lua_LoadProceduralMap);
 
+        // Map Serializer API
+        lua_register(L, "SaveCurrentMap",  Lua_SaveCurrentMap);
+        lua_register(L, "LoadSavedMap",    Lua_LoadSavedMap);
+        lua_register(L, "ListSavedMaps",   Lua_ListSavedMaps);
+
         // Entity Spawning API
         lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
         lua_register(L, "RemoveMovementComponent", Lua_RemoveMovementComponent);
@@ -784,14 +799,13 @@ namespace Framework {
         lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
 
         // Particles (new ParticleSystemManager API)
-        lua_register(L, "CreateParticleEmitter", Lua_CreateParticleEmitter);
-        lua_register(L, "DestroyParticleEmitter", Lua_DestroyParticleEmitter);
-        lua_register(L, "SetParticleEmitterPosition", Lua_SetParticleEmitterPosition);
-        lua_register(L, "SetParticleEmitterOwner", Lua_SetParticleEmitterOwner);
-        lua_register(L, "CreateParticleEffect", Lua_CreateParticleEffect);
-        lua_register(L, "SetActivePlayerIndex", Lua_SetActivePlayerIndex);
-
         lua_register(L, "SpawnParticleEmitterEthan", Lua_SpawnParticleEmitterEthan);
+        lua_register(L, "SpawnParticleEmitterActive", Lua_SpawnParticleEmitterActive);
+        lua_register(L, "SetUseEthanParticles", Lua_SetUseEthanParticles);
+        lua_register(L, "GetUseEthanParticles", Lua_GetUseEthanParticles);
+        lua_register(L, "ToggleUseEthanParticles", Lua_ToggleUseEthanParticles);
+        lua_register(L, "ClearAllParticleEmitters", Lua_ClearAllParticleEmitters);
+        
         LOG_INFO("LevelLoader", "API registered");
     }
 
@@ -933,7 +947,12 @@ namespace Framework {
             next = LEVEL_2;
         }
         else if (strcmp(stateName, "LEVEL_3") == 0) {
-            next = LEVEL_3;
+            // If already in LEVEL_3, use GS_RESTART to trigger full reload
+            if (current == LEVEL_3) {
+                next = GS_RESTART;
+            } else {
+                next = LEVEL_3;
+            }
         }
         else if (strcmp(stateName, "LEVEL_END") == 0) {
             next = LEVEL_END;

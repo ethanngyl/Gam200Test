@@ -141,6 +141,7 @@ local healthBarLayer = 2
 
 -- Boss idle state: immune and does nothing until all 3 players enter the arena
 local bossActivated = false
+local localArenaBounds = nil  -- Set in OnInit from shared C++ store
 
 -- ============================================================================
 -- ANIMATION (reuses enemy knight sheets)
@@ -359,6 +360,24 @@ function OnInit()
 
     targetPlayerID = FindClosestPlayer() or 0
 
+    -- Read arena bounds from shared C++ store (set by ProceduralMapLevel.lua)
+    local aMinX = GetSharedInt("arenaMinX", -1)
+    local aMinY = GetSharedInt("arenaMinY", -1)
+    local aMaxX = GetSharedInt("arenaMaxX", -1)
+    local aMaxY = GetSharedInt("arenaMaxY", -1)
+    if aMinX >= 0 and aMinY >= 0 then
+        localArenaBounds = {
+            minX = aMinX,
+            minY = aMinY,
+            maxX = aMaxX,
+            maxY = aMaxY
+        }
+        print("[Boss " .. entityID .. "] Arena bounds from shared store: (" .. aMinX .. "," .. aMinY
+            .. ") to (" .. aMaxX .. "," .. aMaxY .. ")")
+    else
+        print("[Boss " .. entityID .. "] WARNING: No arena bounds in shared store!")
+    end
+
     -- Boss starts immune until all players enter the arena
     if ApplyStatusEffect then
         ApplyStatusEffect(entityID, "immune", -1, entityID)
@@ -435,9 +454,9 @@ local function UpdateHealthBar()
     SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
--- Check if all 3 players are inside the arena bounds
+-- Check if all living players are inside the arena bounds
 local function AreAllPlayersInArena()
-    local arena = _G.ArenaBounds
+    local arena = localArenaBounds
     if not arena then return false end
 
     local players = GetAllPlayers()
@@ -458,7 +477,6 @@ local function AreAllPlayersInArena()
         end
     end
 
-    -- All living players must be in the arena
     return alive > 0 and count == alive
 end
 

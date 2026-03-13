@@ -1,36 +1,27 @@
+/**
+===============================================================================
+ File:           ParticleSystem.cpp
+ Author:         TAN WEI LEONG
+ Email:          weileong.tan@digipen.edu
+ Date:           2026-03-12
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+
+===============================================================================
+ */
+
 #include "Precompiled.h"
 
-namespace {
-	// Get active player index from Lua
-	int GetCurrentActivePlayer() {
-		return Framework::GetActivePlayerIndexForParticles();
-	}
-
-	// Check if particle should be active based on current turn
-	bool ShouldBeActive(int ownerPlayerID) {
-		if (ownerPlayerID < 0) return true;  // Always active
-		int currentPlayer = GetCurrentActivePlayer();
-		if (currentPlayer < 0) return true;  // No active player = show all
-		return currentPlayer == ownerPlayerID;
-	}
-}
-
 namespace Framework {
-    // Access to active player index (defined in LevelLoader_API.cpp)
-	int GetActivePlayerIndexForParticles();  // Forward declaration
-
 	void ParticleSystem::CreateParticle() {
-		if (!active || !ShouldBeActive(settings.ownerPlayerID)) return;
 		if (!CORE || !CORE->GetGraphicsSystem() || !CORE->GetEntityManager()) return; // safety check
 
 		// Query active graphics system to convert pixel size into world-space scale
 		// Size (pixel -> world conversion)
 		auto* graphics = CORE->GetGraphicsSystem();
-		//float pixelSize = 15.0f; // desired size in pixels
 		float worldScale = (2.0f * settings.size) / float(graphics->GetRenderHeight());
 
 		Entity entity = CORE->GetEntityManager()->CreateEntity();
-
 		CORE->GetEntityManager()->AddComponent<Transform>(entity, emitter);
 		auto& transform = CORE->GetEntityManager()->GetComponent<Transform>(entity);
 
@@ -52,18 +43,17 @@ namespace Framework {
 		particle.startTint = settings.tint;
 		particle.endTint = settings.endTint;
 		particle.startSize = worldScale;
-		particle.endSize = settings.endSize;
+		particle.endSize = settings.endSize * worldScale;
 		particle.gravity = settings.gravity;
 		particle.fadeOut = settings.fadeOut;
 		particle.shrinkOverTime = settings.shrinkOverTime;
 		particle.growOverTime = settings.growOverTime;
 
-		// Sprite
-		CORE->GetEntityManager()->AddComponent<Sprite>(entity);
-		auto& sprite = CORE->GetEntityManager()->GetComponent<Sprite>(entity);
-		sprite.texturePath = settings.texturePath;
-		sprite.layer = settings.layer;
-		sprite.tint = settings.tint;
+		// Mesh Renderer
+		CORE->GetEntityManager()->AddComponent<MeshRenderer>(entity);
+		auto& mr = CORE->GetEntityManager()->GetComponent<MeshRenderer>(entity);
+		mr.layer = settings.layer;
+		mr.tint = settings.tint;
 
 		// frand: gives any random number from 0.0f to 1.0f
 		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };
@@ -104,11 +94,20 @@ namespace Framework {
 		particles.push_back(entity);
 	}
 
-	void ParticleSystem::Update(float dt) {
+	void ParticleSystem::UpdateParticle(float dt) {
 		if (dt <= 0.0f) return; // safety check
 
 		EntityManager* entityManager = CORE->GetEntityManager();
 		if (!entityManager) return;
+
+		// Follow target entity: keep emitter position in sync every frame
+		if (followEntity != INVALID_ENTITY) {
+			Entity target{ followEntity };
+			if (entityManager->HasComponent<Transform>(target)) {
+				auto& targetTransform = entityManager->GetComponent<Transform>(target);
+				emitter = targetTransform.position;
+			}
+		}
 
 		// spawn new particles over time
 		if (settings.spawnRate > 0.0f) {
@@ -131,7 +130,7 @@ namespace Framework {
 
 			auto& transform = entityManager->GetComponent<Transform>(entity);
 			auto& particle = entityManager->GetComponent<Particle>(entity);
-			auto& sprite = entityManager->GetComponent<Sprite>(entity);
+			auto& mr = entityManager->GetComponent<MeshRenderer>(entity);
 
 			// Apply physics
 			if (particle.gravity.x != 0.0f || particle.gravity.y != 0.0f) {
@@ -153,13 +152,13 @@ namespace Framework {
 			if (lifeProgress >= 0.0f && lifeProgress <= 1.0f) {
 				if (particle.fadeOut) {
 					// Fade out tint
-					sprite.tint.r = particle.startTint.r +
+					mr.tint.r = particle.startTint.r +
 						(particle.endTint.r - particle.startTint.r) * lifeProgress;
-					sprite.tint.g = particle.startTint.g +
+					mr.tint.g = particle.startTint.g +
 						(particle.endTint.g - particle.startTint.g) * lifeProgress;
-					sprite.tint.b = particle.startTint.b +
+					mr.tint.b = particle.startTint.b +
 						(particle.endTint.b - particle.startTint.b) * lifeProgress;
-					sprite.tint.a = particle.startTint.a +
+					mr.tint.a = particle.startTint.a +
 						(particle.endTint.a - particle.startTint.a) * lifeProgress;
 				}
 
@@ -186,5 +185,19 @@ namespace Framework {
 				++count;
 			}
 		}
+	}
+
+	void ParticleSystem::Clear() {
+		EntityManager* entityManager = CORE ? CORE->GetEntityManager() : nullptr;
+		if (entityManager) {
+			for (Entity entity : particles) {
+				entityManager->DestroyEntity(entity);
+			}
+		}
+
+		particles.clear();
+		spawnAcc = 0.0f;
+		followEntity = INVALID_ENTITY;
+		active = false;
 	}
 } // namespace Framework

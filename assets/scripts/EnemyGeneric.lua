@@ -113,6 +113,7 @@ local tauntActive = false
 local skipNextTurn = false
 local summonReady = false
 local lastTurnPhase = nil
+local lastParticleBackendVersion = -1
 
 -- ============================================================================
 -- CONFIG LOADING
@@ -850,15 +851,64 @@ local function ApplyBolsteredMorale()
             print("[" .. GetLogTag() .. " " .. entityID .. "] Bolstered Morale: +1 damageModifier on enemy " .. eid)
 
             -- Spawn yellow particle emitter around the buffed enemy
-            if SpawnParticleEmitterEthan then
+            local spawnFn = SpawnParticleEmitterActive
+            if not spawnFn then
+                if _G.ActiveParticleSpawnMode == "ethan" then
+                    spawnFn = SpawnParticleEmitterEthan
+                else
+                    spawnFn = SpawnParticleEmitter
+                end
+            end
+            if spawnFn then
                 local wx, wy = GetEntityWorldPosition(eid)
                 if wx and wy then
-                    local emitterID = SpawnParticleEmitterEthan(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
+                    local emitterID = spawnFn(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
                     if emitterID and emitterID > 0 then
                         -- Track emitter per source commander and target enemy
                         local key = entityID .. "_" .. eid
                         _G.BolsteredMoraleParticles[key] = emitterID
                         print("[" .. GetLogTag() .. " " .. entityID .. "] Spawned morale particles (entity " .. emitterID .. ") on enemy " .. eid)
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function EnsureBolsteredMoraleParticles()
+    local enemies = GetAllEnemies()
+    if not enemies then return end
+    _G.BolsteredMoraleParticles = _G.BolsteredMoraleParticles or {}
+
+    local spawnFn = SpawnParticleEmitterActive
+    if not spawnFn then
+        if _G.ActiveParticleSpawnMode == "ethan" then
+            spawnFn = SpawnParticleEmitterEthan
+        else
+            spawnFn = SpawnParticleEmitter
+        end
+    end
+    if not spawnFn then return end
+
+    for _, eid in ipairs(enemies) do
+        if eid ~= entityID then
+            local hp = GetEntityHP(eid)
+            if hp and hp > 0 then
+                local key = entityID .. "_" .. eid
+                local emitterID = _G.BolsteredMoraleParticles[key]
+                local hasValidEmitter = (emitterID and emitterID > 0)
+                if hasValidEmitter and IsEntityValid then
+                    hasValidEmitter = IsEntityValid(emitterID)
+                end
+
+                if not hasValidEmitter then
+                    _G.BolsteredMoraleParticles[key] = nil
+                    local wx, wy = GetEntityWorldPosition(eid)
+                    if wx and wy then
+                        local newEmitterID = spawnFn(wx, wy, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, eid)
+                        if newEmitterID and newEmitterID > 0 then
+                            _G.BolsteredMoraleParticles[key] = newEmitterID
+                        end
                     end
                 end
             end
@@ -1040,6 +1090,20 @@ end
 
 function OnUpdate(dt)
     UpdateHealthBar()
+
+    local backendVersion = 0
+    if GetSharedInt then
+        backendVersion = GetSharedInt("particle_backend_version") or 0
+    end
+    if backendVersion ~= lastParticleBackendVersion then
+        lastParticleBackendVersion = backendVersion
+        _G.BolsteredMoraleParticles = {}
+    end
+
+    if config and config.onInit == "bolstered_morale_apply" then
+        -- Keep aura emitters alive across backend switches/clears.
+        EnsureBolsteredMoraleParticles()
+    end
 
     -- Update Bolstered Morale particle positions to follow this enemy
     if _G.BolsteredMoraleParticles and SetSpritePosition then

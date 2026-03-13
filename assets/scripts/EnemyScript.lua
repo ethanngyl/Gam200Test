@@ -552,7 +552,7 @@ function OnUpdate(dt)
                 if allDead then
                     print("[Enemy " .. entityID .. "] ALL PLAYERS DEFEATED - GAME OVER!")
                     if SetNextGameState then
-                        SetNextGameState("LEVEL_END")
+                        SetNextGameState("LOSE_SCREEN")
                     end
                     return  -- Stop processing, game is over
                 end

@@ -161,11 +161,10 @@ namespace Framework {
                         darkGrassCount++;
                     }
                     else {
-                        // Normal tiles: random dark/light grass
-                        isDarkGrass = (grassTypeDist(rng) == 0);
-                        texture = isDarkGrass ? grassDark : grassLight;
-                        if (isDarkGrass) darkGrassCount++;
-                        else lightGrassCount++;
+                        // Normal tiles: always light grass
+                        isDarkGrass = false;
+                        texture = grassLight;
+                        lightGrassCount++;
                     }
                     blocked = false;
                 }
@@ -240,6 +239,18 @@ namespace Framework {
         std::cout << "[ProceduralMapLoader]   Dark grass: " << darkGrassCount << "\n";
         std::cout << "[ProceduralMapLoader]   Light grass: " << lightGrassCount << "\n";
         std::cout << "[ProceduralMapLoader]   Rock decorations: " << rockCount << "\n";
+    }
+
+    void ProceduralMapLoader::LoadFromGeneratedMap(
+                 const MapGen::GeneratedMap& map,
+                 EntitySpawner* spawner, EntityManager* em,
+                 const Vector2D& startPos, const Vector2D& spacing, const Vector2D& tileSize
+    ) {
+        std::cout << "[ProceduralMapLoader] Loading saved map...\n";
+        MapGen::Generator::printMap(map);
+        ConfigureGrid(map, em, startPos, spacing, tileSize);
+        SpawnTiles(map, spawner, em);
+        std::cout << "[ProceduralMapLoader] Saved map loaded!\n";
     }
 
 } // namespace Framework

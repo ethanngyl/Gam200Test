@@ -1,11 +1,11 @@
 --[[
 ===============================================================================
 File:        UIManager.lua
-Author:      Ethan Ng Yong Le
+Author:      Padilla Carl Jameson Z.
 Co Author:   Sim Kah Yan
-Email:       n.ethanyongle@digipen.edu, kahyan.sim@digipen.edu
+Email:       c.Padilla@digipen.edu, kahyan.sim@digipen.edu
 Date:        2026-02-04 (yyyy-mm-dd)
-Contribution: Ethan Ng Yong Le 82%(238 Lines of 291 total) Sim Kah Yan 18% (53 lines of 291 total)
+Contribution: Padilla Carl Jameson Z. 82%(238 Lines of 291 total) Sim Kah Yan 18% (53 lines of 291 total)
 -------------------------------------------------------------------------------
 Brief:
 Central UI coordinator that creates, updates, draws, and destroys all game UI
@@ -287,7 +287,7 @@ function UIManager.Init(config)
         animName = "ScrollOpen",
         frameTime = 0.1,
         text = "Your Turn",
-        textFont = "Sans48",
+        textFont = "Jersey20Regular",
         textScale = 0.9,
         textColor = {0.0, 0.0, 0.0},
         textStartFrame = 8,
@@ -302,7 +302,26 @@ function UIManager.Init(config)
         scaleX = 0.15,
         scaleY = 0.55,
         layer = 4,
-        texture = "assets/new assets/skill_bubble_holder.png"
+        texture = "assets/new assets/skill_bubble_holder.png",
+        -- Skill icons are resolved as: skillIconMap[skillID] or skillIconBasePath..skillID..".png"
+        skillIconBasePath = "assets/SkillIcons/",
+        defaultIconTexture = "assets/UI/skill_circle.png",
+        -- Add/override any non-standard filenames here.
+        skillIconMap = {
+            Bash = "assets/SkillIcons/Bash.png",
+            EarthenBind = "assets/SkillIcons/EarthenBind.png",
+            ExploitWeakness = "assets/SkillIcons/ExploitWeakness.png",
+            Fireball = "assets/SkillIcons/Fireball.png",
+            Guard = "assets/SkillIcons/Guard.png",
+            KnightsOath = "assets/SkillIcons/KnightsOath.png",
+            LightningStrike = "assets/SkillIcons/LightningStrike.png",
+            ManaDrain = "assets/SkillIcons/ManaDrain.png",
+            Parry = "assets/SkillIcons/Parry.png",
+            SiphonCharge = "assets/SkillIcons/SiphonCharge.png",
+            Slam = "assets/SkillIcons/Slam.png",
+            SwiftBlow = "assets/SkillIcons/SwiftBlow.png",
+            Thrust = "assets/SkillIcons/Thrust.png"
+        }
     })
 
     -- TODO: Add more components as needed:

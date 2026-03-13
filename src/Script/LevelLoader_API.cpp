@@ -67,6 +67,7 @@ Technology is prohibited.
 #include "PlayerManager.h"
 #include "SaveLoadSystem.h"  // JSON Save/Load system
 #include "MapGenerator/ProceduralMapLoader.h"
+#include "MapSerializer/MapSerializer.h"
 #include "Skills/SkillComponent.h"  // SkillDatabase, SkillData
 #include <Windows.h>      // For GetTickCount64()    
 
@@ -85,6 +86,7 @@ namespace Framework {
     // ACTIVE PLAYER INDEX - For particle system visibility per player turn
     // ========================================================================
     static int g_activePlayerIndex = -1;  // 0=Player1, 1=Player2, 2=Player3, -1=none
+    static bool g_useEthanParticles = true; // Runtime-selectable particle backend (default Ethan for verification)
 
     int GetActivePlayerIndexForParticles() {
         return g_activePlayerIndex;
@@ -493,13 +495,7 @@ namespace Framework {
         float centeredX = screenX + scaledOffsetX;
         float centeredY = screenY + scaledOffsetY;
 
-        // ========================================
-        // DEBUG OUTPUT (Enhanced)
-        // ========================================
-        bool editorEnabled = imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport();
-
         // Debug output removed for performance
-        // ========================================
 
         glm::vec3 textColor(colorR, colorG, colorB);
 
@@ -653,6 +649,7 @@ namespace Framework {
         else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
         else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
         else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;
+        else if (strcmp(keyName, "F4") == 0) keyCode = KEY_F4;
         // Check key state - use IsKeyDown for continuous input
         bool pressed = (keyCode != KEY_UNKNOWN) && input->IsKeyDown(keyCode);
         lua_pushboolean(L, pressed);
@@ -1408,6 +1405,88 @@ namespace Framework {
         return 0;
     }
 
+    int LevelLoader::Lua_IsEntityValid(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        Entity entity(static_cast<uint32_t>(entityID));
+        bool valid = entity.IsValid() && em->HasComponent<Transform>(entity);
+        lua_pushboolean(L, valid);
+        return 1;
+    }
+
+    int LevelLoader::Lua_SetEntityRotation(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        uint32_t entityID = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+        float rotation = static_cast<float>(luaL_checknumber(L, 2));
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(entityID);
+        if (em->HasComponent<Transform>(entity)) {
+            em->GetComponent<Transform>(entity).rotation = rotation;
+        }
+        return 0;
+    }
+
+    int LevelLoader::Lua_SetEntityScale(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) return 0;
+
+        uint32_t entityID = static_cast<uint32_t>(luaL_checkinteger(L, 1));
+        float sx = static_cast<float>(luaL_checknumber(L, 2));
+        float sy = static_cast<float>(luaL_checknumber(L, 3));
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) return 0;
+
+        Entity entity(entityID);
+        if (em->HasComponent<Transform>(entity)) {
+            auto& t = em->GetComponent<Transform>(entity);
+            t.scale.x = sx;
+            t.scale.y = sy;
+        }
+        return 0;
+    }
+
+    // SetSharedInt(key, value) - store an int accessible from both level and entity scripts
+    int LevelLoader::Lua_SetSharedInt(lua_State* L) {
+        const char* key = luaL_checkstring(L, 1);
+        int value = static_cast<int>(luaL_checkinteger(L, 2));
+        LevelLoader::GetInstance().sharedIntStore[key] = value;
+        return 0;
+    }
+
+    // GetSharedInt(key, default) - retrieve a shared int, returns default if not found
+    int LevelLoader::Lua_GetSharedInt(lua_State* L) {
+        const char* key = luaL_checkstring(L, 1);
+        int defaultVal = 0;
+        if (lua_gettop(L) >= 2) {
+            defaultVal = static_cast<int>(luaL_checkinteger(L, 2));
+        }
+        auto& store = LevelLoader::GetInstance().sharedIntStore;
+        auto it = store.find(key);
+        if (it != store.end()) {
+            lua_pushinteger(L, it->second);
+        } else {
+            lua_pushinteger(L, defaultVal);
+        }
+        return 1;
+    }
+
     int LevelLoader::Lua_ClearAllEntities(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -1421,13 +1500,8 @@ namespace Framework {
             return 0;
         }
 
-        // Get count before clearing for logging
-        size_t entityCount = em->GetAllEntities().size();
-
         // Clear all entities using existing ECS function
         em->ClearAllEntities();
-
-        // All entities cleared
         return 0;
     }
 
@@ -3844,6 +3918,9 @@ namespace Framework {
     // PROCEDURAL MAP API
     // ============================================================================
 
+    static Framework::MapGen::GeneratedMap s_lastGeneratedMap;
+    static Framework::MapGen::Config       s_lastGeneratedConfig;
+
     int LevelLoader::Lua_LoadProceduralMap(lua_State* L) {
         std::cout << "[Lua_LoadProceduralMap] Called!\n";
 
@@ -3866,8 +3943,14 @@ namespace Framework {
         config.width = width;
         config.height = height;
         config.algorithm = algorithm;
-        config.minEnemies = 4;   // Ensure at least 4 enemies for all enemy types
-        config.maxEnemies = 6;
+        config.minEnemies = 3;
+        config.maxEnemies = 5;
+
+        // Scale room sizes to map dimensions
+        config.minRoomSize = 3;
+        config.maxRoomSize = std::min(7, std::min(width, height) / 4);
+        config.maxRooms = 10;
+        config.minPlayerGoalDistance = std::min(config.minPlayerGoalDistance, std::min(width, height) / 2);
 
         // Grid parameters - MATCH YOUR TileMap.json
         const float TILE_SIZE = 128.0f;
@@ -3879,6 +3962,9 @@ namespace Framework {
         MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
             config, spawner, em, startPos, spacing, tileSize
         );
+
+        s_lastGeneratedMap = map;
+        s_lastGeneratedConfig = config;
 
         // ========================================
         // NEW: RETURN SPAWN POSITIONS AS LUA TABLE
@@ -4181,6 +4267,217 @@ namespace Framework {
         return 1;
     }
 
+    // ========================================================================
+    // MAP SERIALIZER API
+    // ========================================================================
+
+    int LevelLoader::Lua_SaveCurrentMap(lua_State* L) {
+        std::cout << "[MapSerializer] SaveCurrentMap called from Lua\n";
+
+        if (s_lastGeneratedMap.width == 0 || s_lastGeneratedMap.height == 0) {
+            std::cout << "[MapSerializer] ERROR: No map to save!\n";
+            lua_pushboolean(L, 0);
+            return 1;
+        }
+
+        std::string filepath;
+        if (lua_gettop(L) >= 1 && lua_isstring(L, 1)) {
+            filepath = lua_tostring(L, 1);
+        }
+
+        if (filepath.empty()) {
+            std::string saved = Framework::MapSerializer::QuickSave(
+                s_lastGeneratedMap, s_lastGeneratedConfig, "assets/maps/"
+            );
+            if (!saved.empty()) {
+                std::cout << "[MapSerializer] Map saved to: " << saved << "\n";
+                lua_pushboolean(L, 1);
+                lua_pushstring(L, saved.c_str());
+                return 2;
+            }
+            else {
+                lua_pushboolean(L, 0);
+                return 1;
+            }
+        }
+        else {
+            bool success = Framework::MapSerializer::Save(
+                s_lastGeneratedMap, s_lastGeneratedConfig, filepath
+            );
+            lua_pushboolean(L, success ? 1 : 0);
+            if (success) { lua_pushstring(L, filepath.c_str()); return 2; }
+            return 1;
+        }
+    }
+
+    int LevelLoader::Lua_LoadSavedMap(lua_State* L) {
+        std::cout << "[MapSerializer] LoadSavedMap called from Lua\n";
+
+        if (lua_gettop(L) < 1 || !lua_isstring(L, 1)) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        std::string filepath = lua_tostring(L, 1);
+
+        Framework::MapGen::GeneratedMap map;
+        Framework::MapGen::Config config;
+
+        if (!Framework::MapSerializer::Load(filepath, map, config)) {
+            std::cout << "[MapSerializer] ERROR: Failed to load: " << filepath << "\n";
+            lua_pushnil(L);
+            return 1;
+        }
+
+        s_lastGeneratedMap = map;
+        s_lastGeneratedConfig = config;
+
+        LevelLoader* loader = GetLevelLoader(L);
+        CoreEngine* core = loader->coreEngine;
+        EntitySpawner* spawner = core->GetSpawner();
+        EntityManager* em = core->GetEntityManager();
+
+        if (!spawner || !em) {
+            return luaL_error(L, "EntitySpawner or EntityManager not available");
+        }
+
+        Vector2D startPos(-0.6f, -0.4f);
+        Vector2D spacing(0.1f, 0.1f);
+        const float TILE_SIZE = 128.0f;
+        Vector2D tileSize(TILE_SIZE, TILE_SIZE);
+
+        MapGen::Generator::printMap(map);
+
+        ProceduralMapLoader::LoadFromGeneratedMap(
+            map, spawner, em, startPos, spacing, tileSize
+        );
+
+        // Build the SAME Lua table as Lua_LoadProceduralMap returns.
+        // This is a direct copy of the table-building code from that function.
+        lua_newtable(L);
+
+        lua_pushstring(L, "playerX");  lua_pushnumber(L, map.playerSpawn.x);  lua_settable(L, -3);
+        lua_pushstring(L, "playerY");  lua_pushnumber(L, map.playerSpawn.y);  lua_settable(L, -3);
+        lua_pushstring(L, "goalX");    lua_pushnumber(L, map.goalSpawn.x);    lua_settable(L, -3);
+        lua_pushstring(L, "goalY");    lua_pushnumber(L, map.goalSpawn.y);    lua_settable(L, -3);
+
+        float playerWorldX = startPos.x + (map.playerSpawn.x * spacing.x);
+        float playerWorldY = startPos.y + (map.playerSpawn.y * spacing.y);
+        lua_pushstring(L, "playerWorldX"); lua_pushnumber(L, playerWorldX); lua_settable(L, -3);
+        lua_pushstring(L, "playerWorldY"); lua_pushnumber(L, playerWorldY); lua_settable(L, -3);
+
+        float goalWorldX = startPos.x + (map.goalSpawn.x * spacing.x);
+        float goalWorldY = startPos.y + (map.goalSpawn.y * spacing.y);
+        lua_pushstring(L, "goalWorldX"); lua_pushnumber(L, goalWorldX); lua_settable(L, -3);
+        lua_pushstring(L, "goalWorldY"); lua_pushnumber(L, goalWorldY); lua_settable(L, -3);
+
+        // Enemies
+        lua_pushstring(L, "enemies");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.enemySpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+            lua_pushstring(L, "x");      lua_pushnumber(L, map.enemySpawns[i].x);                              lua_settable(L, -3);
+            lua_pushstring(L, "y");      lua_pushnumber(L, map.enemySpawns[i].y);                              lua_settable(L, -3);
+            lua_pushstring(L, "worldX"); lua_pushnumber(L, startPos.x + (map.enemySpawns[i].x * spacing.x));   lua_settable(L, -3);
+            lua_pushstring(L, "worldY"); lua_pushnumber(L, startPos.y + (map.enemySpawns[i].y * spacing.y));   lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Chests
+        lua_pushstring(L, "chests");
+        lua_newtable(L);
+        for (size_t i = 0; i < map.chestSpawns.size(); i++) {
+            lua_pushnumber(L, i + 1);
+            lua_newtable(L);
+            lua_pushstring(L, "x");      lua_pushnumber(L, map.chestSpawns[i].x);                              lua_settable(L, -3);
+            lua_pushstring(L, "y");      lua_pushnumber(L, map.chestSpawns[i].y);                              lua_settable(L, -3);
+            lua_pushstring(L, "worldX"); lua_pushnumber(L, startPos.x + (map.chestSpawns[i].x * spacing.x));   lua_settable(L, -3);
+            lua_pushstring(L, "worldY"); lua_pushnumber(L, startPos.y + (map.chestSpawns[i].y * spacing.y));   lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        // Party spawns (same search logic as Lua_LoadProceduralMap)
+        std::vector<MapGen::Position> partySpawns;
+        partySpawns.push_back(map.playerSpawn);
+
+        const int offsets[][2] = {
+            {2,0},{-2,0},{0,2},{0,-2},{2,1},{2,-1},{-2,1},{-2,-1},
+            {1,2},{-1,2},{1,-2},{-1,-2},{2,2},{-2,2},{2,-2},{-2,-2},
+            {3,0},{-3,0},{0,3},{0,-3},{3,1},{3,-1},{-3,1},{-3,-1},
+            {1,3},{-1,3},{1,-3},{-1,-3},
+            {1,0},{-1,0},{0,1},{0,-1},{1,1},{-1,1},{1,-1},{-1,-1},
+        };
+        const int nOff = sizeof(offsets) / sizeof(offsets[0]);
+
+        for (int i = 0; i < nOff && partySpawns.size() < 3; i++) {
+            int tx = map.playerSpawn.x + offsets[i][0];
+            int ty = map.playerSpawn.y + offsets[i][1];
+            if (tx < 0 || tx >= map.width || ty < 0 || ty >= map.height) continue;
+            if (map.getTile(tx, ty) != MapGen::TileType::FLOOR) continue;
+            bool tooClose = false;
+            for (const auto& p : partySpawns) {
+                if (std::abs(tx - p.x) + std::abs(ty - p.y) < 2) { tooClose = true; break; }
+            }
+            if (!tooClose) partySpawns.push_back(MapGen::Position(tx, ty));
+        }
+        if (partySpawns.size() < 3) {
+            for (int i = 0; i < nOff && partySpawns.size() < 3; i++) {
+                int tx = map.playerSpawn.x + offsets[i][0];
+                int ty = map.playerSpawn.y + offsets[i][1];
+                if (tx < 0 || tx >= map.width || ty < 0 || ty >= map.height) continue;
+                if (map.getTile(tx, ty) != MapGen::TileType::FLOOR) continue;
+                bool used = false;
+                for (const auto& p : partySpawns) if (p.x == tx && p.y == ty) { used = true; break; }
+                if (!used) partySpawns.push_back(MapGen::Position(tx, ty));
+            }
+        }
+        while (partySpawns.size() < 3) partySpawns.push_back(map.playerSpawn);
+
+        lua_pushstring(L, "partySpawns");
+        lua_newtable(L);
+        for (size_t i = 0; i < partySpawns.size(); i++) {
+            lua_pushnumber(L, static_cast<lua_Number>(i + 1));
+            lua_newtable(L);
+            lua_pushstring(L, "x");      lua_pushnumber(L, partySpawns[i].x);                                lua_settable(L, -3);
+            lua_pushstring(L, "y");      lua_pushnumber(L, partySpawns[i].y);                                lua_settable(L, -3);
+            lua_pushstring(L, "worldX"); lua_pushnumber(L, startPos.x + (partySpawns[i].x * spacing.x));     lua_settable(L, -3);
+            lua_pushstring(L, "worldY"); lua_pushnumber(L, startPos.y + (partySpawns[i].y * spacing.y));     lua_settable(L, -3);
+            lua_settable(L, -3);
+        }
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "width");  lua_pushnumber(L, map.width);  lua_settable(L, -3);
+        lua_pushstring(L, "height"); lua_pushnumber(L, map.height); lua_settable(L, -3);
+
+        if (map.hasArena) {
+            lua_pushstring(L, "hasArena"); lua_pushboolean(L, 1); lua_settable(L, -3);
+            lua_pushstring(L, "arenaX");      lua_pushnumber(L, map.arenaCenter.x);                                lua_settable(L, -3);
+            lua_pushstring(L, "arenaY");      lua_pushnumber(L, map.arenaCenter.y);                                lua_settable(L, -3);
+            lua_pushstring(L, "arenaWorldX"); lua_pushnumber(L, startPos.x + (map.arenaCenter.x * spacing.x));     lua_settable(L, -3);
+            lua_pushstring(L, "arenaWorldY"); lua_pushnumber(L, startPos.y + (map.arenaCenter.y * spacing.y));     lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    int LevelLoader::Lua_ListSavedMaps(lua_State* L) {
+        std::string dir = "assets/maps/";
+        if (lua_gettop(L) >= 1 && lua_isstring(L, 1)) dir = lua_tostring(L, 1);
+
+        auto maps = Framework::MapSerializer::ListSavedMaps(dir);
+
+        lua_newtable(L);
+        for (int i = 0; i < static_cast<int>(maps.size()); i++) {
+            lua_pushinteger(L, i + 1);
+            lua_pushstring(L, maps[i].c_str());
+            lua_settable(L, -3);
+        }
+        return 1;
+    }
+
     // ============================================================================
     // ENTITY SPAWNING API
     // ============================================================================
@@ -4402,7 +4699,7 @@ namespace Framework {
             return 0;
         }
 
-        // Forward arguments from entity state → level state
+        // Forward arguments from entity state -> level state
         for (int i = 2; i <= nargs + 1; ++i) {
             switch (lua_type(L, i)) {
             case LUA_TNUMBER:  lua_pushnumber(levelL, lua_tonumber(L, i));   break;
@@ -4422,7 +4719,7 @@ namespace Framework {
             return 0;
         }
 
-        // Forward return values from level state → entity state
+        // Forward return values from level state -> entity state
         int nresults = lua_gettop(levelL) - topBefore;
         for (int i = topBefore + 1; i <= topBefore + nresults; ++i) {
             switch (lua_type(levelL, i)) {
@@ -5083,6 +5380,7 @@ namespace Framework {
      * Call this when enemy turn starts
      */
     int LevelLoader::Lua_InitializeEnemyTurn(lua_State* L) {
+        (void)L;
         LOG_INFO("LevelLoader", "[EnemyTurnSystem] InitializeEnemyTurn() called");
 
         auto* em = CORE ? CORE->GetEntityManager() : nullptr;
@@ -5833,7 +6131,7 @@ namespace Framework {
     }
 
     // =========================================================================
-    // Particle Emitter API
+    // Particle Emitter API - Wei Liang's Particle System
     // =========================================================================
 
     /**
@@ -5861,20 +6159,23 @@ namespace Framework {
         // Parse parameters
         float x = static_cast<float>(luaL_checknumber(L, 1));
         float y = static_cast<float>(luaL_checknumber(L, 2));
+        float spawnRadius = static_cast<float>(luaL_optnumber(L, 3, 0.04));
         float rate = static_cast<float>(luaL_optnumber(L, 4, 8.0));
-        float duration = static_cast<float>(luaL_optnumber(L, 5, 0.0));
         float r = static_cast<float>(luaL_optnumber(L, 6, 1.0));
         float g = static_cast<float>(luaL_optnumber(L, 7, 1.0));
         float b = static_cast<float>(luaL_optnumber(L, 8, 0.0));
         float a = static_cast<float>(luaL_optnumber(L, 9, 1.0));
+        int followTarget = (int)luaL_optnumber(L, 10, -1);
 
         // Create an inline emitter using the ParticleSystemManager
-        auto& ps = pm->AddParticleSystem();
+        auto* psm = CORE->GetParticleSystemManager();
+        if (!psm) { lua_pushinteger(L, -1); return 1; }
         ParticleSystem::Settings settings;
         settings.spawnRate = rate;
         settings.tint = glm::vec4(r, g, b, a);
         settings.endTint = glm::vec4(r, g, b, 0.0f);
         settings.layer = 15;
+        settings.spawnRadius = spawnRadius;
         settings.size = 6.0f;
         settings.endSize = 0.001f;
         settings.minLifetime = 0.4f;
@@ -5885,147 +6186,26 @@ namespace Framework {
         settings.directionFuzz = 1.0f;
         settings.fadeOut = true;
         settings.shrinkOverTime = true;
-        ps.SetSettings(settings);
-        ps.SetEmitter(x, y);
 
-        // For duration-based emitters, create a temporary effect
-        if (duration > 0.0f) {
-            // Use a simple timer approach - mark inactive after duration
-            // (handled by the manager's temporary effects system in future)
-        }
-
-        lua_pushinteger(L, 1); // Return a non-zero value to indicate success
+        EntityID follow = (followTarget >= 0) ? static_cast<EntityID>(followTarget) : INVALID_ENTITY;
+        int emitterId = psm->CreateEmitterRaw(settings, x, y, follow);
+        lua_pushinteger(L, emitterId);
         return 1;
     }
 
     // =========================================================================
-    // New Particle System Manager API
+    // Particle Emitter API
     // =========================================================================
-
     /**
-     * @brief Creates a particle emitter from a preset
-     * Lua: local id = CreateParticleEmitter("smoke", x, y)
+     * @brief Spawns a particle emitter entity at a world position
+     * @params x, y, emitRadius, rate, duration, r, g, b, a, followEntityID
+     * @return integer (Entity ID)
+     *
+     * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, targetID)
+     *   - duration=0 means infinite (emitter persists until destroyed)
+     *   - followEntityID (optional): if provided, emitter follows that entity's position
+     *   - Returns entity ID so caller can track and destroy it later
      */
-    int LevelLoader::Lua_CreateParticleEmitter(lua_State* L) {
-        if (!CORE) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        const char* preset = luaL_checkstring(L, 1);
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-
-        int id = pm->CreateEmitter(preset, x, y);
-        lua_pushinteger(L, id);
-        return 1;
-    }
-
-    /**
-     * @brief Destroys a particle emitter
-     * Lua: DestroyParticleEmitter(id)
-     */
-    int LevelLoader::Lua_DestroyParticleEmitter(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = static_cast<int>(luaL_checkinteger(L, 1));
-        pm->DestroyEmitter(id);
-        return 0;
-    }
-
-    /**
-     * @brief Sets emitter position
-     * Lua: SetParticleEmitterPosition(id, x, y)
-     */
-    int LevelLoader::Lua_SetParticleEmitterPosition(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = static_cast<int>(luaL_checkinteger(L, 1));
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-
-        pm->SetEmitterPosition(id, x, y);
-        return 0;
-    }
-
-    /**
-     * @brief Sets which player owns this emitter
-     * Lua: SetParticleEmitterOwner(id, playerIndex)
-     */
-    int LevelLoader::Lua_SetParticleEmitterOwner(lua_State* L) {
-        if (!CORE) return 0;
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) return 0;
-
-        int id = static_cast<int>(luaL_checkinteger(L, 1));
-        int playerID = static_cast<int>(luaL_checkinteger(L, 2));
-
-        pm->SetEmitterOwner(id, playerID);
-        return 0;
-    }
-
-    /**
-     * @brief Creates temporary particle effect
-     * Lua: CreateParticleEffect("Explosion", x, y, duration)
-     */
-    int LevelLoader::Lua_CreateParticleEffect(lua_State* L) {
-        if (!CORE) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        auto* pm = CORE->GetParticleSystemManager();
-        if (!pm) {
-            lua_pushinteger(L, 0);
-            return 1;
-        }
-
-        const char* preset = luaL_checkstring(L, 1);
-        float x = static_cast<float>(luaL_checknumber(L, 2));
-        float y = static_cast<float>(luaL_checknumber(L, 3));
-        float duration = static_cast<float>(luaL_optnumber(L, 4, 1.0));
-
-        int id = pm->CreateTemporaryEffect(preset, x, y, duration);
-        lua_pushinteger(L, id);
-        return 1;
-    }
-
-    /**
-     * @brief Sets which player is currently active (for particle system)
-     * Lua: SetActivePlayerIndex(0)  -- 0, 1, 2, or -1
-     */
-    int LevelLoader::Lua_SetActivePlayerIndex(lua_State* L) {
-        g_activePlayerIndex = static_cast<int>(luaL_checkinteger(L, 1));
-        return 0;
-    }
-
-    // =========================================================================
-        // Particle Emitter API
-        // =========================================================================
-
-        /**
-         * @brief Spawns a particle emitter entity at a world position
-         * @params x, y, emitRadius, rate, duration, r, g, b, a, followEntityID
-         * @return integer (Entity ID)
-         *
-         * Usage: local emitterID = SpawnParticleEmitter(worldX, worldY, 0.04, 8, 0, 1.0, 0.9, 0.0, 1.0, targetID)
-         *   - duration=0 means infinite (emitter persists until destroyed)
-         *   - followEntityID (optional): if provided, emitter follows that entity's position
-         *   - Returns entity ID so caller can track and destroy it later
-         */
     int LevelLoader::Lua_SpawnParticleEmitterEthan(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->coreEngine) {
@@ -6066,7 +6246,7 @@ namespace Framework {
         em->AddComponent<ParticleEmitter>(entity);
         auto& emitter = em->GetComponent<ParticleEmitter>(entity);
 
-        emitter.maxParticles = 50;
+        emitter.maxParticles = 100;
         emitter.emissionRate = rate;
         emitter.emit = true;
         emitter.worldSpace = true;
@@ -6077,12 +6257,12 @@ namespace Framework {
         emitter.emitRadius = emitRadius;
 
         // Gentle upward drift
-        emitter.velocityMin = glm::vec2(-0.01f, 0.01f);
-        emitter.velocityMax = glm::vec2(0.01f, 0.04f);
+        emitter.velocityMin = glm::vec2(-0.03f, 0.015f);
+        emitter.velocityMax = glm::vec2(0.03f, 0.09f);
 
         // Short-lived particles
-        emitter.lifetimeMin = 0.4f;
-        emitter.lifetimeMax = 1.0f;
+        emitter.lifetimeMin = 0.45f;
+        emitter.lifetimeMax = 1.2f;
 
         // Small particles that shrink
         emitter.sizeStart = 0.006f;
@@ -6108,6 +6288,60 @@ namespace Framework {
         }
 
         lua_pushinteger(L, static_cast<lua_Integer>(entity.GetID()));
+        return 1;
+    }
+
+    int LevelLoader::Lua_SpawnParticleEmitterActive(lua_State* L) {
+        if (g_useEthanParticles) {
+            return Lua_SpawnParticleEmitterEthan(L);
+        }
+        return Lua_SpawnParticleEmitter(L);
+    }
+
+    int LevelLoader::Lua_SetUseEthanParticles(lua_State* L) {
+        g_useEthanParticles = lua_toboolean(L, 1) != 0;
+        lua_pushboolean(L, g_useEthanParticles);
+        return 1;
+    }
+
+    int LevelLoader::Lua_GetUseEthanParticles(lua_State* L) {
+        lua_pushboolean(L, g_useEthanParticles);
+        return 1;
+    }
+
+    int LevelLoader::Lua_ToggleUseEthanParticles(lua_State* L) {
+        g_useEthanParticles = !g_useEthanParticles;
+        lua_pushboolean(L, g_useEthanParticles);
+        return 1;
+    }
+
+    int LevelLoader::Lua_ClearAllParticleEmitters(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        // Clear legacy ParticleSystemManager emitters
+        if (auto* psm = loader->coreEngine->GetParticleSystemManager()) {
+            psm->ClearAllEmitters();
+        }
+
+        // Clear Ethan emitters (entities with ParticleEmitter component)
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (em) {
+            std::vector<Entity> toDestroy;
+            for (Entity e : em->GetAllEntities()) {
+                if (em->HasComponent<ParticleEmitter>(e)) {
+                    toDestroy.push_back(e);
+                }
+            }
+            for (Entity e : toDestroy) {
+                em->DestroyEntity(e);
+            }
+        }
+
+        lua_pushboolean(L, true);
         return 1;
     }
 

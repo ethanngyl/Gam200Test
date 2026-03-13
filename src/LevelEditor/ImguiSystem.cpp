@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -27,11 +27,11 @@ Responsibilities:
   GraphicsSystemV2 (ImGui render + camera helpers).
 
 Controls for:
-- Menu  File: Open / Open… / Save / Save As… / Exit
+- Menu  File: Open / Open... / Save / Save As... / Exit
 - Menu  Windows: toggle editor panels
 - Menu  Editor: Play (when stopped) / Stop (when playing)
 - Assets Browser: double-click texture to spawn at origin; drag filename to future
-  drop targets; click “<” to go up one folder
+  drop targets; click "<" to go up one folder
 - OS Drag-&-Drop onto window:
   - .txt  load level (clears scene if requested
   - .png, .jpg, .jpeg  spawn sprite
@@ -4166,7 +4166,7 @@ namespace Framework {
         const std::string& path = useBefore ? step.beforePath : step.afterPath;
         if (path.empty())
         {
-            return {}; // “empty snapshot” means entity should not exist (used for create/delete)
+            return {}; // "empty snapshot" means entity should not exist (used for create/delete)
         }
 
         Entity newEntity = PrefabSerializer::LoadPrefab(*entityManager, path);
@@ -5456,7 +5456,7 @@ namespace Framework {
                 foundAny = true;
                 ImGui::PushID(levelFile.c_str());
 
-                ImGui::Text("📄");
+                ImGui::Text("[F]");
                 ImGui::SameLine();
 
                 if (ImGui::Selectable(levelFile.c_str(), selectedLevelPath == levelFile,

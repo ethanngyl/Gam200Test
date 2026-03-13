@@ -84,35 +84,33 @@
         "layer": 5
       }
     ],
-    "buttons": [
-      {
-        "id": "text_title",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -0.5,
-          "y": 0.2
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "YOU WIN!",
-          "font": "Jersey20Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 70
-          },
-          "scale": 1.6,
-          "color": {
-            "r": 1.0,
-            "g": 1.0,
-            "b": 0.2
-          }
-        },
-        "callback": ""
+    "scrollOverlay": {
+      "texture": "assets/Menu/Scroll Overlay.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.05
       },
+      "scale": {
+        "x": 0.9,
+        "y": 0.35
+      },
+      "layer": 8,
+      "text": {
+        "content": "YOU WIN!",
+        "font": "Jersey20Regular",
+        "offset": {
+          "x": 60.0,
+          "y": -25.0
+        },
+        "scale": 1.6,
+        "color": {
+          "r": 1.0,
+          "g": 1.0,
+          "b": 0.2
+        }
+      }
+    },
+    "buttons": [
       {
         "id": "back",
         "texture": "assets/Menu/Ui_btn.png",

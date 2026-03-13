@@ -8,9 +8,9 @@ Date:        2025-11-07
 Course:      CSD3151 (StructSquad)
 -------------------------------------------------------------------------------
 Brief:
-Header for the TextRenderer class — a lightweight system that uses FreeType
+Header for the TextRenderer class -- a lightweight system that uses FreeType
 and modern OpenGL (4.5 core profile) to render 2D text on screen. Each font
-is loaded from a TrueType (.ttf) file, where all ASCII glyphs (0–127) are
+is loaded from a TrueType (.ttf) file, where all ASCII glyphs (0-127) are
 rasterized and uploaded into individual GL textures.
 
 The renderer draws text directly in pixel coordinates using an orthographic
@@ -56,7 +56,7 @@ public:
         const std::string& vertPath,
         const std::string& fragPath);
 
-    // Loads ASCII glyphs (0–127) for the specified TrueType font at pixelHeight.
+    // Loads ASCII glyphs (0-127) for the specified TrueType font at pixelHeight.
     // Returns true on success, false if the file cannot be loaded.
     bool loadFont(const std::string& fontKey,
         const std::string& ttfPath,

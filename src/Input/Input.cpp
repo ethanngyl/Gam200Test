@@ -115,6 +115,7 @@ namespace Framework
         UpdateKeyState(KEY_F1, GetAsyncKeyState(KEY_F1));
         UpdateKeyState(KEY_F2, GetAsyncKeyState(KEY_F2));
         UpdateKeyState(KEY_F3, GetAsyncKeyState(KEY_F3));
+        UpdateKeyState(KEY_F4, GetAsyncKeyState(KEY_F4));
         UpdateKeyState(KEY_F9, GetAsyncKeyState(KEY_F9)); 
 
         // Mouse buttons

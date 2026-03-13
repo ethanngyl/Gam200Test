@@ -713,8 +713,11 @@ function ResetPartyTurn()
 
     -- Check if all characters are dead
     if ActiveCharacterIndex > #PartyMembers then
-        Log("[PartyTurnManager] ERROR: All party members are dead in ResetPartyTurn!")
+        Log("[PartyTurnManager] All party members are dead - transitioning to LOSE_SCREEN")
         PartyTurnComplete = true
+        if SetNextGameState then
+            SetNextGameState("LOSE_SCREEN")
+        end
         return
     end
 

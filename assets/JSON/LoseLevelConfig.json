@@ -84,35 +84,33 @@
         "layer": 5
       }
     ],
-    "buttons": [
-      {
-        "id": "text_title",
-        "texture": "assets/Menu/transparent.png",
-        "position": {
-          "x": -0.6,
-          "y": 0.2
-        },
-        "scale": {
-          "x": 0.01,
-          "y": 0.01
-        },
-        "layer": 10,
-        "text": {
-          "content": "YOU LOSE",
-          "font": "Jersey20Regular",
-          "offset": {
-            "x": 0.0,
-            "y": 70
-          },
-          "scale": 1.5,
-          "color": {
-            "r": 1.0,
-            "g": 0.2,
-            "b": 0.2
-          }
-        },
-        "callback": ""
+    "scrollOverlay": {
+      "texture": "assets/Menu/Scroll Overlay.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.05
       },
+      "scale": {
+        "x": 0.9,
+        "y": 0.35
+      },
+      "layer": 5,
+      "text": {
+        "content": "YOU LOSE!",
+        "font": "Jersey20Regular",
+        "offset": {
+          "x": 65.0,
+          "y": -25.0
+        },
+        "scale": 1.6,
+        "color": {
+          "r": 0.8,
+          "g": 0.1,
+          "b": 0.1
+        }
+      }
+    },
+    "buttons": [
       {
         "id": "back",
         "texture": "assets/Menu/Ui_btn.png",
