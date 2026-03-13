@@ -1,7 +1,8 @@
 --[[
 ===============================================================================
 File:        SkillPatterns.lua
-Author:      AI Assistant
+Author:      Ethan Ng
+Email:       n.ethanyongle@digipen.edu
 Date:        2026-02-07
 ------------------------------------------------------------------------------
 Skill Attack Pattern Definitions

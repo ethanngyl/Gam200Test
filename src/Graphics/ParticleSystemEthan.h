@@ -1,6 +1,8 @@
 /*
 ===============================================================================
-File:        ParticleSystemEthan.h
+Author:      Ethan Ng
+Email:       n.ethanyongle@digipen.edu
+File:        ParticleSystemEthan.cpp
 -------------------------------------------------------------------------------
 Brief:
 ParticleSystem manages the lifecycle of all particles in the engine.

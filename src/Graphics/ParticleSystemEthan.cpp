@@ -1,10 +1,14 @@
 /*
 ===============================================================================
+Author:      Ethan Ng
+Email:       n.ethanyongle@digipen.edu
 File:        ParticleSystemEthan.cpp
 -------------------------------------------------------------------------------
 Brief:
-Implementation of ParticleSystem. Handles particle spawning, physics
-integration, color/size interpolation over lifetime, and cleanup.
+ParticleSystemEthan.cpp serves to manage the full lifecycle of all ECS-based
+particle emitters. Particle spawning (continuous and burst), physics integration,
+color/size interpolation over lifetime, world/local space handling, and emitter
+cleanup are all handled in this file rather than being spread across multiple systems.
 ===============================================================================
 */
 #include "Precompiled.h"
