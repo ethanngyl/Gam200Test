@@ -302,7 +302,10 @@ function UIManager.Init(config)
         scaleX = 0.15,
         scaleY = 0.55,
         layer = 4,
-        texture = "assets/new assets/skill_bubble_holder.png"
+        texture = "assets/new assets/skill_bubble_holder.png",
+        -- Skill icons are resolved as: skillIconMap[skillID] or skillIconBasePath..skillID..".png"
+        skillIconBasePath = "assets/UI/SkillIcons/",
+        defaultIconTexture = "assets/UI/skill_circle.png"
     })
 
     -- TODO: Add more components as needed:
