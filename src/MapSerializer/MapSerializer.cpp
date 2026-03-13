@@ -327,8 +327,6 @@ namespace Framework {
             if (version != SERIALIZER_VERSION) {
                 std::cout << "[MapSerializer] WARNING: File version " << version
                     << " differs from current version " << SERIALIZER_VERSION << "\n";
-                // Continue anyway � we use .value() with defaults so older formats
-                // will gracefully fall back
             }
 
             // Load dimensions
@@ -512,3 +510,4 @@ namespace Framework {
     }
 
 } // namespace Framework
+

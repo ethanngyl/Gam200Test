@@ -202,25 +202,25 @@
     },
 
     "Berserker_Idle_front": {
-      "sprite": "assets/Berserker/FrontView/Berserker_Walk_Front-Sheet.png",
+      "sprite": "assets/Berserker/FrontView/Berserker_Idle_Front-Sheet.png",
       "group": "Idle",
       "direction": "Front",
       "rows": 1,
-      "columns": 6,
+      "columns": 12,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0
     },
 
     "Berserker_Idle_back": {
-      "sprite": "assets/Berserker/BackView/Berserker_Walk_Back-Sheet.png",
+      "sprite": "assets/Berserker/BackView/Berserker_Idle_Back-Sheet.png",
       "group": "Idle",
       "direction": "Back",
       "rows": 1,
-      "columns": 6,
+      "columns": 12,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0
     },
@@ -230,9 +230,9 @@
       "group": "Idle",
       "direction": "Side",
       "rows": 1,
-      "columns": 6,
+      "columns": 12,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.55,
       "loop": true,
       "uvShrinkPx": 0.0
     },

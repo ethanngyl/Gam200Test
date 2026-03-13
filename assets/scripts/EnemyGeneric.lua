@@ -367,17 +367,12 @@ local function UpdateHealthBar()
     SetSpritePosition(healthBarFG, fgX, barY)
     SetScale(healthBarFG, fgWidth, healthBarHeight)
 
-    -- Use config color or default HP-based coloring
-    if config and config.healthBarColor then
-        local c = config.healthBarColor
-        SetSpriteColor(healthBarFG, c[1], c[2], c[3], c[4])
-    else
-        local r, g, b = 0.0, 0.85, 0.0
-        if ratio <= 0.25 then r, g, b = 0.9, 0.1, 0.1
-        elseif ratio <= 0.5 then r, g, b = 0.95, 0.65, 0.0
-        elseif ratio <= 0.75 then r, g, b = 0.95, 0.95, 0.0 end
-        SetSpriteColor(healthBarFG, r, g, b, 1.0)
-    end
+    -- Health bars use universal HP threshold colors (not enemy tint/config color).
+    local r, g, b = 0.0, 0.85, 0.0
+    if ratio <= 0.25 then r, g, b = 0.9, 0.1, 0.1
+    elseif ratio <= 0.5 then r, g, b = 0.95, 0.65, 0.0
+    elseif ratio <= 0.75 then r, g, b = 0.95, 0.95, 0.0 end
+    SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
 -- ============================================================================
@@ -1034,12 +1029,7 @@ function OnInit()
         end
         healthBarFG = SpawnSprite("", wx, barY, barWidth, healthBarHeight, healthBarLayer + 1)
         if healthBarFG and healthBarFG > 0 then
-            if config.healthBarColor then
-                local c = config.healthBarColor
-                SetSpriteColor(healthBarFG, c[1], c[2], c[3], c[4])
-            else
-                SetSpriteColor(healthBarFG, 0.0, 0.85, 0.0, 1.0)
-            end
+            SetSpriteColor(healthBarFG, 0.0, 0.85, 0.0, 1.0)
         end
     end
 end

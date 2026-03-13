@@ -1,4 +1,4 @@
-/******************************************************************************
+﻿/******************************************************************************
 ===============================================================================
  File:           PlayerManager.h
  Author:         ETHAN NG YONG LE
@@ -14,7 +14,7 @@
 
   Design notes:
   - Single-tile movement semantics with bounds/walkability checks
-  - Turn integration: movements can end the player�s turn
+  - Turn integration: movements can end the player's turn
   - Non-blocking, timer-based UI feedback (start/stop pulse; show/hide outline)
   - Minimal surface area: effects are initiated here and updated per frame
 

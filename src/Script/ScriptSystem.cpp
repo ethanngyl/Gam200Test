@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -499,7 +499,7 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", LevelLoader::Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", LevelLoader::Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", LevelLoader::Lua_EndEnemyTurn);
-        lua_register(L, "CallLevelFunction", LevelLoader::Lua_CallLevelFunction);  // Generic entity→level bridge
+        lua_register(L, "CallLevelFunction", LevelLoader::Lua_CallLevelFunction);  // Generic entitylevel bridge
         lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
         lua_register(L, "IsUIAnimating", LevelLoader::Lua_IsUIAnimating);  // Check UI animation state
         lua_register(L, "IsInTurnTransition", LevelLoader::Lua_IsInTurnTransition);  // Check turn transition cooldown

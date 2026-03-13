@@ -789,13 +789,13 @@ namespace Framework {
          * @param radius Distance from center to each spawned entity
          *
          * Spawning Process:
-         * 1. Calculates angular spacing (2π / count radians)
+         * 1. Calculates angular spacing (2pi / count radians)
          * 2. For each entity, computes angle (i * angular spacing)
          * 3. Converts polar coordinates to Cartesian (x, y)
          * 4. Spawns sprite at calculated position
          *
          * Position Calculation:
-         * - Angle: (2π * i) / count (evenly distributed)
+         * - Angle: (2pi * i) / count (evenly distributed)
          * - X Position: center.x + radius * cos(angle)
          * - Y Position: center.y + radius * sin(angle)
          * - Forms perfect circle in world space

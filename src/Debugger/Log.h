@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          Log.h
  Author:        GE YONGQI
@@ -100,7 +100,7 @@ namespace eng::debug {
 // ================================ Convenience macros ================================
 // These macros automatically capture __FILE__ and __LINE__ so your log can
 // include them when showSourceInfo==true (or you can read them in sinks).
-// Use the *0 macros if you already have a std::string and don�t need printf.
+// Use the *0 macros if you already have a std::string and don't need printf.
 
 #define LOG_ERROR(TAG, FMT, ...) ::eng::debug::Log::writef(::eng::debug::LogLevel::Error, TAG, __FILE__, __LINE__, FMT, __VA_ARGS__)
 #define LOG_WARN(TAG,  FMT, ...) ::eng::debug::Log::writef(::eng::debug::LogLevel::Warn,  TAG, __FILE__, __LINE__, FMT, __VA_ARGS__)
@@ -113,3 +113,4 @@ namespace eng::debug {
 #define LOG_DEBUG0(TAG, MSG) ::eng::debug::Log::write(::eng::debug::LogLevel::Debug, TAG, __FILE__, __LINE__, MSG)
 
 } // namespace eng::debug
+

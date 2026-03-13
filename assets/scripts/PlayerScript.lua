@@ -2542,7 +2542,9 @@ function ExecuteSkill(skillID)
             return
         end
         if spritePath == "assets/SkillIcons/FireballSheet.png" and SetRotation then
-            SetRotation(projID, math.pi)  -- rotate another 90 deg counterclockwise (180 total from original)
+            -- SetRotation expects degrees (renderer applies glm::radians internally).
+            local angleDeg = math.deg(math.atan(dirY, dirX))
+            SetRotation(projID, angleDeg)
         end
         print("[PlayerScript] Spawned projectile ID=" .. tostring(projID)
             .. " dir=(" .. dirX .. "," .. dirY .. ")"

@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          UISystem.cpp
  Author:        GE YONGQI
@@ -426,7 +426,7 @@ namespace Framework {
         // ========================================================================
         // STEP 2: Get window and framebuffer sizes
         // ========================================================================
-        // 🔧 FIX: Handle Viewport mode separately
+        // FIX: Handle Viewport mode separately
         // ========================================================================
 
         int fbWidth, fbHeight;

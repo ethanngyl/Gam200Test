@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        LevelLoader.h
 Author:      GE YONGQI, Sim Kah Yan
@@ -281,7 +281,7 @@ namespace Framework {
         static int Lua_GetTurnIndex(lua_State* L);
         static int Lua_EndPlayerTurn(lua_State* L);
         static int Lua_EndEnemyTurn(lua_State* L);
-        static int Lua_CallLevelFunction(lua_State* L);  // Generic entity→level bridge
+        static int Lua_CallLevelFunction(lua_State* L);  // Generic entitylevel bridge
         static int Lua_EndCharacterTurn(lua_State* L);  // Party turn system - bridge to level Lua state
         static int Lua_IsUIAnimating(lua_State* L);     // Check if UI is animating - bridge to level Lua state
         static int Lua_IsInTurnTransition(lua_State* L); // Check if in turn transition cooldown - bridge to level Lua state
