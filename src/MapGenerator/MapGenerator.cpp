@@ -771,6 +771,8 @@ namespace Framework {
             const Config& config) {
             (void)enemies;
 
+            (void)enemies;
+
             // Must be floor tile
             if (map.getTile(pos.x, pos.y) != TileType::FLOOR) return false;
 
