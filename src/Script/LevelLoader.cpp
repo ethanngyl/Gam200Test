@@ -58,6 +58,7 @@ Technology is prohibited.
 #include "UISystem.h"
 #include "Audio/AudioSystem.h"
 #include "GraphicsSystemV2.h"
+#include "Graphics/ParticleSystemManager.h"
 #include "ImguiSystem.h"
 #include "GameStateList.h"
 #include "Pause/GlobalPauseManager.h"
@@ -334,6 +335,10 @@ namespace Framework {
         // NEW: Clear entities that were spawned by the Lua level
         if (coreEngine)
         {
+            if (auto* psm = coreEngine->GetParticleSystemManager()) {
+                psm->ClearAllEmitters();
+            }
+
             auto* em = coreEngine->GetEntityManager();
             if (em)
             {
@@ -794,14 +799,12 @@ namespace Framework {
         lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
 
         // Particles (new ParticleSystemManager API)
-        lua_register(L, "CreateParticleEmitter", Lua_CreateParticleEmitter);
-        lua_register(L, "DestroyParticleEmitter", Lua_DestroyParticleEmitter);
-        lua_register(L, "SetParticleEmitterPosition", Lua_SetParticleEmitterPosition);
-        lua_register(L, "SetParticleEmitterOwner", Lua_SetParticleEmitterOwner);
-        lua_register(L, "CreateParticleEffect", Lua_CreateParticleEffect);
-        lua_register(L, "SetActivePlayerIndex", Lua_SetActivePlayerIndex);
-
         lua_register(L, "SpawnParticleEmitterEthan", Lua_SpawnParticleEmitterEthan);
+        lua_register(L, "SpawnParticleEmitterActive", Lua_SpawnParticleEmitterActive);
+        lua_register(L, "SetUseEthanParticles", Lua_SetUseEthanParticles);
+        lua_register(L, "GetUseEthanParticles", Lua_GetUseEthanParticles);
+        lua_register(L, "ToggleUseEthanParticles", Lua_ToggleUseEthanParticles);
+        
         LOG_INFO("LevelLoader", "API registered");
     }
 

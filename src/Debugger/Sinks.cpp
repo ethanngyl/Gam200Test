@@ -48,6 +48,9 @@ namespace eng::debug {
     void ConsoleSink::write(LogLevel lvl, const char* tag, const char* msg) {
         /*std::fprintf(stderr, "[%s][%s] %s\n", lvl_to_cstr(lvl), tag, msg);
         std::fflush(stderr);*/
+        (void)msg;
+        (void)tag;
+        (void)lvl;
     #if defined(_WIN32)
         if (m_usePlatformOutput) {
 
