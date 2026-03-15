@@ -52,6 +52,7 @@ public:
     // ========================================================================
     // Unified config file path - change this to match your project structure
     static constexpr const char* CONFIG_FILE_PATH = "assets/game_config.txt";
+   static constexpr const char* STATE_REGISTRY_PATH = "assets/JSON/state_registry.json";
 
     // ========================================================================
     // PUBLIC INTERFACE
@@ -78,6 +79,14 @@ public:
      * @return The game state enum value
      */
     static int GetInitialGameState(int defaultState);
+
+   /**
+    * @brief Resolve a state name to enum value using state registry + fallback aliases
+    * @param stateName Name or alias of the state
+    * @param defaultState Fallback enum value if not found
+    * @return The resolved enum value
+    */
+   static int ResolveStateName(const std::string& stateName, int defaultState);
 
     /**
      * @brief Get a string value from config

@@ -23,6 +23,83 @@
 
 #include "Precompiled.h"
 
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <unordered_map>
+
+namespace {
+    std::unordered_map<std::string, int> g_stateAliasToEnum;
+    bool g_stateRegistryLoaded = false;
+
+    std::string ToLowerASCII(const std::string& input)
+    {
+        std::string out = input;
+        std::transform(out.begin(), out.end(), out.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return out;
+    }
+
+    void AddAlias(const std::string& alias, int state)
+    {
+        if (alias.empty()) return;
+        g_stateAliasToEnum[ToLowerASCII(alias)] = state;
+    }
+
+    void LoadStateRegistryAliases()
+    {
+        if (g_stateRegistryLoaded) {
+            return;
+        }
+
+        g_stateRegistryLoaded = true;
+
+        try {
+            std::ifstream file(ConfigReader::STATE_REGISTRY_PATH);
+            if (!file.is_open()) {
+                LOG_WARN("CONFIG", "State registry not found at '%s'; using fallback aliases",
+                    ConfigReader::STATE_REGISTRY_PATH);
+                return;
+            }
+
+            nlohmann::json doc;
+            file >> doc;
+
+            if (!doc.contains("states") || !doc["states"].is_array()) {
+                LOG_WARN("CONFIG", "State registry missing 'states' array; using fallback aliases");
+                return;
+            }
+
+            for (const auto& stateEntry : doc["states"]) {
+                if (!stateEntry.is_object()) continue;
+                if (!stateEntry.contains("id") || !stateEntry["id"].is_number_integer()) continue;
+
+                const int stateId = stateEntry["id"].get<int>();
+
+                if (stateEntry.contains("name") && stateEntry["name"].is_string()) {
+                    AddAlias(stateEntry["name"].get<std::string>(), stateId);
+                }
+
+                if (stateEntry.contains("aliases") && stateEntry["aliases"].is_array()) {
+                    for (const auto& alias : stateEntry["aliases"]) {
+                        if (alias.is_string()) {
+                            AddAlias(alias.get<std::string>(), stateId);
+                        }
+                    }
+                }
+            }
+
+            LOG_INFO("CONFIG", "Loaded state aliases from %s (%zu entries)",
+                ConfigReader::STATE_REGISTRY_PATH, g_stateAliasToEnum.size());
+        }
+        catch (const nlohmann::json::exception& e) {
+            LOG_WARN("CONFIG", "Failed to parse state registry JSON: %s", e.what());
+        }
+        catch (const std::exception& e) {
+            LOG_WARN("CONFIG", "Failed to load state registry: %s", e.what());
+        }
+    }
+}
+
 
  // ============================================================================
  // STATIC MEMBER DEFINITIONS
@@ -76,11 +153,16 @@ int ConfigReader::GetInitialGameState(int defaultState)
     }
 
     // Parse state name to enum
-    int state = ParseStateName(stateName, defaultState);
+    int state = ResolveStateName(stateName, defaultState);
 
     LOG_INFO("CONFIG", "Initial game state: %s (enum value: %d)", stateName.c_str(), state);
 
     return state;
+}
+
+int ConfigReader::ResolveStateName(const std::string& stateName, int defaultState)
+{
+    return ParseStateName(stateName, defaultState);
 }
 
 std::string ConfigReader::GetString(const std::string& key, const std::string& defaultValue)
@@ -316,23 +398,20 @@ std::string ConfigReader::Trim(const std::string& str)
 
 int ConfigReader::ParseStateName(const std::string& stateName, int defaultState)
 {
-    // Convert to lowercase for case-insensitive comparison
-    std::string lowerName = stateName;
-    std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(),
-        [](unsigned char c) { return (char)std::tolower(c); });
+    LoadStateRegistryAliases();
 
-    // Parse state names
-    if (lowerName == "mainmenu" || lowerName == "main_menu") {
-        return mainMenu;
+    const std::string lowerName = ToLowerASCII(stateName);
+
+    auto it = g_stateAliasToEnum.find(lowerName);
+    if (it != g_stateAliasToEnum.end()) {
+        return it->second;
     }
-    else if (lowerName == "level2" || lowerName == "level_2") {
-        return LEVEL_2;
-    }
-    else if (lowerName == "quit" || lowerName == "exit") {
-        return GS_QUIT;
-    }
-    else {
-        LOG_WARN("CONFIG", "Unknown state name '%s', using default", stateName.c_str());
-        return defaultState;
-    }
+
+    // Backward-compatible fallback aliases.
+    if (lowerName == "mainmenu" || lowerName == "main_menu") return mainMenu;
+    if (lowerName == "level2" || lowerName == "level_2") return LEVEL_2;
+    if (lowerName == "quit" || lowerName == "exit") return GS_QUIT;
+
+    LOG_WARN("CONFIG", "Unknown state name '%s', using default", stateName.c_str());
+    return defaultState;
 }

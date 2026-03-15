@@ -52,29 +52,159 @@
 #include "Component.h"    // Movement, CircleCollider components
 #include "TagHelper.h"
 
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <unordered_map>
+
 // ============================================================================
-// LEVEL SCRIPT PATH LOOKUP TABLE
+// LEVEL SCRIPT LOOKUP
 // ============================================================================
-// Centralises all Lua script paths so they can be changed in one place.
-// Index matches the GS_STATES enum (see GameStateList.h).
-// nullptr means the state has no associated Lua script.
-static const char* const g_levelScriptPaths[] = {
-    "assets/scripts/MainMenuLevel.lua",      // mainMenu       (0)
-    "assets/scripts/SettingsLevel.lua",     // settingsMenu   (1)
-    "assets/scripts/LevelSelectLevel.lua",   // Level_select   (2)
-    "assets/scripts/Level2.lua",             // LEVEL_2        (3)
-    "assets/scripts/ProceduralMapLevel.lua", // LEVEL_3        (4)
-    "assets/scripts/EndLevel.lua",           // LEVEL_END      (5)
-    "assets/scripts/TutorialLevel.lua",      // TUTORIAL       (6)
-};
-static constexpr int g_levelScriptPathCount =
-    static_cast<int>(sizeof(g_levelScriptPaths) / sizeof(g_levelScriptPaths[0]));
+
+namespace {
+    constexpr const char* kStateRegistryPath = "assets/JSON/state_registry.json";
+    constexpr const char* kEmptyScriptPath = "";
+
+    std::unordered_map<int, std::string> g_manifestScriptPaths;
+    bool g_manifestLoaded = false;
+
+    const char* GetFallbackLevelScript(int state)
+    {
+        switch (state) {
+        case mainMenu: return "assets/scripts/MainMenuLevel.lua";
+        case settingsMenu: return "assets/scripts/SettingsLevel.lua";
+        case Level_select: return "assets/scripts/LevelSelectLevel.lua";
+        case LEVEL_2: return "assets/scripts/Level2.lua";
+        case LEVEL_3: return "assets/scripts/ProceduralMapLevel.lua";
+        case LEVEL_END: return "assets/scripts/EndLevel.lua";
+        case TUTORIAL: return "assets/scripts/TutorialLevel.lua";
+        case CONTROL: return "assets/scripts/ControlLevel.lua";
+        case CONTROL2: return "assets/scripts/Control2Level.lua";
+        case SKILL_SETS: return "assets/scripts/SkillSetsLevel.lua";
+        case WIN_SCREEN: return "assets/scripts/WinLevel.lua";
+        case LOSE_SCREEN: return "assets/scripts/LoseLevel.lua";
+        default: return nullptr;
+        }
+    }
+
+    bool IsScriptedState(int state)
+    {
+        switch (state) {
+        case mainMenu:
+        case settingsMenu:
+        case Level_select:
+        case LEVEL_2:
+        case LEVEL_3:
+        case LEVEL_END:
+        case TUTORIAL:
+        case CONTROL:
+        case CONTROL2:
+        case SKILL_SETS:
+        case WIN_SCREEN:
+        case LOSE_SCREEN:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    void LoadStateRegistryIfNeeded()
+    {
+        if (g_manifestLoaded) return;
+        g_manifestLoaded = true;
+
+        try {
+            std::ifstream file(kStateRegistryPath);
+            if (!file.is_open()) {
+                LOG_WARN("GSM", "State registry file not found at '%s'; using fallback paths", kStateRegistryPath);
+                return;
+            }
+
+            nlohmann::json doc;
+            file >> doc;
+
+            if (!doc.contains("states") || !doc["states"].is_array()) {
+                LOG_WARN("GSM", "State registry missing 'states' array; using fallback paths");
+                return;
+            }
+
+            for (const auto& stateEntry : doc["states"]) {
+                if (!stateEntry.is_object()) continue;
+                if (!stateEntry.contains("id") || !stateEntry["id"].is_number_integer()) continue;
+                if (!stateEntry.contains("script") || !stateEntry["script"].is_string()) continue;
+
+                const int id = stateEntry["id"].get<int>();
+                const std::string scriptPath = stateEntry["script"].get<std::string>();
+                if (!scriptPath.empty()) {
+                    g_manifestScriptPaths[id] = scriptPath;
+                }
+            }
+
+            LOG_INFO("GSM", "Loaded state registry script paths from %s (%zu entries)",
+                kStateRegistryPath, g_manifestScriptPaths.size());
+        }
+        catch (const nlohmann::json::exception& e) {
+            LOG_WARN("GSM", "Failed to parse state registry JSON: %s", e.what());
+        }
+        catch (const std::exception& e) {
+            LOG_WARN("GSM", "Failed to load state registry: %s", e.what());
+        }
+    }
+}
 
 /// Returns the Lua script path for a game state, or nullptr if none.
-static const char* GetLevelScript(int state) {
-    if (state >= 0 && state < g_levelScriptPathCount)
-        return g_levelScriptPaths[state];
-    return nullptr;
+static const char* GetLevelScript(int state)
+{
+    LoadStateRegistryIfNeeded();
+
+    auto it = g_manifestScriptPaths.find(state);
+    if (it != g_manifestScriptPaths.end() && !it->second.empty()) {
+        return it->second.c_str();
+    }
+
+    const char* fallback = GetFallbackLevelScript(state);
+    if (fallback && fallback[0] != '\0') {
+        return fallback;
+    }
+
+    if (IsScriptedState(state)) {
+        LOG_ERROR("GSM", "No script mapping found for scripted state id=%d", state);
+    }
+    return kEmptyScriptPath;
+}
+
+static bool ValidateScriptMappingsAtStartup()
+{
+    const int requiredStates[] = {
+        mainMenu,
+        settingsMenu,
+        Level_select,
+        LEVEL_2,
+        LEVEL_3,
+        LEVEL_END,
+        TUTORIAL,
+        CONTROL,
+        CONTROL2,
+        SKILL_SETS,
+        WIN_SCREEN,
+        LOSE_SCREEN
+    };
+
+    bool ok = true;
+    for (int state : requiredStates) {
+        const char* path = GetLevelScript(state);
+        if (!path || path[0] == '\0') {
+            LOG_ERROR("GSM", "Missing script path for required state id=%d", state);
+            ok = false;
+        }
+    }
+
+    if (ok) {
+        LOG_INFO("GSM", "State script mapping validation passed");
+    }
+    else {
+        LOG_ERROR("GSM", "State script mapping validation failed");
+    }
+    return ok;
 }
 
 // ============================================================================
@@ -105,6 +235,13 @@ bool g_preservePlayingState = false;
 void GSM_Initialize(int startingState)
 {
     current = previous = next = startingState;
+
+    const bool mappingOk = ValidateScriptMappingsAtStartup();
+    LOG_WARN("GSM", "[PHASE1] State registry validation result: %s",
+        mappingOk ? "PASS" : "FAIL");
+    std::cout << "[GSM][PHASE1] State registry validation result: "
+        << (mappingOk ? "PASS" : "FAIL") << std::endl;
+
     LOG_INFO("GSM", "Game State Manager initialized with state: %d", startingState);
     LOG_INFO("GSM", "Using LUA-SCRIPTED MainMenu (Pure Lua mode)");
     LOG_INFO("GSM", "Fixed DT: %.4f seconds", Framework::Time::FIXED_DT);
@@ -735,12 +872,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Control Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/ControlLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(CONTROL), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Control Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/ControlLevel.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(CONTROL));
                 next = GS_QUIT;
             }
             else {
@@ -831,12 +968,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading Control2 Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/Control2Level.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(CONTROL2), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load Control2 Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/Control2Level.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(CONTROL2));
                 next = GS_QUIT;
             }
             else {
@@ -927,12 +1064,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading SkillSets Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/SkillSetsLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(SKILL_SETS), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load SkillSets Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/SkillSetsLevel.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(SKILL_SETS));
                 next = GS_QUIT;
             }
             else {
@@ -1023,12 +1160,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading WinLevel Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/WinLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(WIN_SCREEN), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load WinLevel Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/WinLevel.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(WIN_SCREEN));
                 next = GS_QUIT;
             }
             else {
@@ -1119,12 +1256,12 @@ void GSM_Update()
             LOG_INFO("GSM", "Loading LoseLevel Lua script...");
 
             auto& loader = Framework::LevelLoader::GetInstance();
-            bool success = loader.LoadLevel("assets/scripts/LoseLevel.lua", g_loadAsEditorMode);
+            bool success = loader.LoadLevel(GetLevelScript(LOSE_SCREEN), g_loadAsEditorMode);
             g_loadAsEditorMode = false;  // Reset flag after use
 
             if (!success) {
                 LOG_ERROR("GSM", "CRITICAL: Failed to load LoseLevel Lua script!");
-                LOG_ERROR("GSM", "Check: assets/scripts/LoseLevel.lua exists");
+                LOG_ERROR("GSM", "Check: %s exists", GetLevelScript(LOSE_SCREEN));
                 next = GS_QUIT;
             }
             else {

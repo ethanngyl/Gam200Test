@@ -61,6 +61,7 @@ Technology is prohibited.
 #include "Graphics/ParticleSystemManager.h"
 #include "ImguiSystem.h"
 #include "GameStateList.h"
+#include "ConfigReader.h"
 #include "Pause/GlobalPauseManager.h"
 #include "Component.h"     // CircleCollider, AP components
 #include "ECS/TagHelper.h" // FindFirstByTag, FindAllByTag
@@ -918,53 +919,18 @@ namespace Framework {
             }
         }
 
-        // Map state names to enum values
-        if (strcmp(stateName, "Level_select") == 0) {
-            next = Level_select;
+        const int resolvedState = ConfigReader::ResolveStateName(stateName, -1);
+        if (resolvedState < 0) {
+            LOG_WARN("LevelLoader", "Unknown game state: %s", stateName);
+            return 0;
         }
-        if (strcmp(stateName, "TUTORIAL") == 0) {
-            next = TUTORIAL;
-        }
-        else if (strcmp(stateName, "CONTROL") == 0) {
-            next = CONTROL;
-        }
-        else if (strcmp(stateName, "CONTROL2") == 0) {
-            next = CONTROL2;
-        }
-        else if (strcmp(stateName, "SETTINGS") == 0) {
-            next = settingsMenu;
-        }
-        else if (strcmp(stateName, "SKILL_SETS") == 0) {
-            next = SKILL_SETS;
-        }
-        else if (strcmp(stateName, "WIN_SCREEN") == 0) {
-            next = WIN_SCREEN;
-        }
-        else if (strcmp(stateName, "LOSE_SCREEN") == 0) {
-            next = LOSE_SCREEN;
-        }
-        else if (strcmp(stateName, "LEVEL_2") == 0) {
-            next = LEVEL_2;
-        }
-        else if (strcmp(stateName, "LEVEL_3") == 0) {
-            // If already in LEVEL_3, use GS_RESTART to trigger full reload
-            if (current == LEVEL_3) {
-                next = GS_RESTART;
-            } else {
-                next = LEVEL_3;
-            }
-        }
-        else if (strcmp(stateName, "LEVEL_END") == 0) {
-            next = LEVEL_END;
-        }
-        else if (strcmp(stateName, "mainMenu") == 0) {
-            next = mainMenu;
-        }
-        else if (strcmp(stateName, "GS_QUIT") == 0) {
-            next = GS_QUIT;
+
+        // Preserve existing restart behavior for in-place Level 3 transition.
+        if (resolvedState == LEVEL_3 && current == LEVEL_3) {
+            next = GS_RESTART;
         }
         else {
-            LOG_WARN("LevelLoader", "Unknown game state: %s", stateName);
+            next = resolvedState;
         }
 
         return 0;

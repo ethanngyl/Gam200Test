@@ -52,6 +52,8 @@ local UIManager = require("UIManager")
 local SkillSwapUI = require("SkillSwapUI")
 _G.SkillSwapUI = SkillSwapUI
 
+local BOSS_SCRIPT_PATH = "assets/scripts/Boss2OrcShaman.lua"
+
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)
 _G.UIManager = UIManager
@@ -464,8 +466,8 @@ function SpawnProceduralBoss(mapData)
 
     Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
 
-    -- Attach BossScript instead of EnemyScript
-    AddScriptComponentToEntity(bossID, "assets/scripts/BossScript.lua")
+    -- Attach configurable boss script.
+    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
 
     -- Set target (C++ side)
     SetEnemyTarget(bossID, playerID)
@@ -489,7 +491,7 @@ function SpawnProceduralBoss(mapData)
     bossArenaWorldX = bx
     bossArenaWorldY = by
 
-    Log("Boss " .. bossID .. " BossScript attached + target set to " .. tostring(playerID))
+    Log("Boss " .. bossID .. " script attached (" .. BOSS_SCRIPT_PATH .. ") + target set to " .. tostring(playerID))
     Log("========================================")
     return true
 end
