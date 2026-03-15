@@ -33,7 +33,7 @@ Editor Mode:
 Usage:
   Instead of: mainMenu_Load(), mainMenu_Initialize(), mainMenu_Update(),
   mainMenu_Draw(), mainMenu_Free(), mainMenu_Unload()
-  Use: LevelLoader::LoadLevel("assets/scripts/MainMenuLevel.lua"),
+  Use: LevelLoader::LoadLevel("<script_root>/MainMenuLevel.lua"),
   UpdateCurrentLevel(dt), DrawCurrentLevel(), UnloadCurrentLevel()
 
 Safety:

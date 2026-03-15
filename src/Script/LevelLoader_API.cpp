@@ -2318,7 +2318,7 @@ namespace Framework {
      * @param configType (string, optional) Config type passed to the script as a global
      * @return true if successful
      *
-     * Usage: AddScriptComponentToEntity(entityID, "assets/scripts/EnemyGeneric.lua", "mage")
+    * Usage: AddScriptComponentToEntity(entityID, "<script_root>/EnemyGeneric.lua", "mage")
      */
     int LevelLoader::Lua_AddScriptComponentToEntity(lua_State* L) {
         // Get parameters

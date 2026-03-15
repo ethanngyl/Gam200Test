@@ -287,13 +287,13 @@ namespace Framework {
 
         /**
          * @brief Shows script browser popup for selecting Lua scripts
-         * Displays all .lua files in assets/scripts/ directory with search functionality
+         * Displays all .lua files in the configured script_root directory with search functionality
          */
         void ShowScriptBrowserPopup();
 
         /**
          * @brief Recursively gets all .lua files in a directory
-         * @param directory The directory to search (e.g., "assets/scripts/")
+         * @param directory The directory to search (typically script_root)
          * @return Vector of relative paths to .lua files
          */
         std::vector<std::string> GetLuaFilesInDirectory(const std::string& directory);
@@ -412,7 +412,7 @@ namespace Framework {
         bool showAudioNamePopup = false;
         char newAudioKeyBuffer[256] = "";
         std::filesystem::path pendingAudioPath;
-        std::filesystem::path pendingAudioDestDir = "assets/Audio/";
+        std::filesystem::path pendingAudioDestDir;
 
         void ShowLayersWindow();
         bool showLayersWindow = false;

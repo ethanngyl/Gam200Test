@@ -53,7 +53,8 @@ namespace Framework
      */
     void MovementSystem::Initialize()
     {
-        ConfigReader::LoadConfig("assets/valueloader.txt");
+        ConfigReader::LoadConfig(
+            ConfigReader::GetProjectPath("value_loader", "assets/valueloader.txt"));
         y_mov_displacement = ConfigReader::GetFloat("y_mov_displacement", 0.0f);
         x_mov_displacement = ConfigReader::GetFloat("x_mov_displacement", 0.0f);
         default_zero = ConfigReader::GetFloat("default_zero", 0.0f);
@@ -110,12 +111,12 @@ namespace Framework
                     if (inputSystem->IsKeyDown(KEY_D)) inputDir.x += x_mov_displacement;
 
                    // ============================================================================
-                   // ANIMATION LOGIC MOVED TO: assets/scripts/AnimationController.lua
+                   // ANIMATION LOGIC MOVED TO: <script_root>/AnimationController.lua
                    // ============================================================================
                    // Animation control has been refactored into a reusable Lua script.
                    // To add animation control to an entity, attach the AnimationController script:
                    //
-                   //   AddScriptComponentToEntity(entityID, "assets/scripts/AnimationController.lua")
+                   //   AddScriptComponentToEntity(entityID, "<script_root>/AnimationController.lua")
                    //
                    // Features now in AnimationController.lua:
                    //   - Automatic Idle/Walk transitions based on movement

@@ -61,7 +61,6 @@
 // ============================================================================
 
 namespace {
-    constexpr const char* kStateRegistryPath = "assets/JSON/state_registry.json";
     constexpr const char* kEmptyScriptPath = "";
 
     std::unordered_map<int, std::string> g_manifestScriptPaths;
@@ -69,19 +68,30 @@ namespace {
 
     const char* GetFallbackLevelScript(int state)
     {
+        static std::string fallbackPath;
+        const std::string scriptRoot = ConfigReader::GetProjectPath("script_root", "assets/scripts/");
+        const auto buildPath = [&](const char* filename) -> const char* {
+            fallbackPath = scriptRoot;
+            if (!fallbackPath.empty() && fallbackPath.back() != '/') {
+                fallbackPath.push_back('/');
+            }
+            fallbackPath += filename;
+            return fallbackPath.c_str();
+        };
+
         switch (state) {
-        case mainMenu: return "assets/scripts/MainMenuLevel.lua";
-        case settingsMenu: return "assets/scripts/SettingsLevel.lua";
-        case Level_select: return "assets/scripts/LevelSelectLevel.lua";
-        case LEVEL_2: return "assets/scripts/Level2.lua";
-        case LEVEL_3: return "assets/scripts/ProceduralMapLevel.lua";
-        case LEVEL_END: return "assets/scripts/EndLevel.lua";
-        case TUTORIAL: return "assets/scripts/TutorialLevel.lua";
-        case CONTROL: return "assets/scripts/ControlLevel.lua";
-        case CONTROL2: return "assets/scripts/Control2Level.lua";
-        case SKILL_SETS: return "assets/scripts/SkillSetsLevel.lua";
-        case WIN_SCREEN: return "assets/scripts/WinLevel.lua";
-        case LOSE_SCREEN: return "assets/scripts/LoseLevel.lua";
+        case mainMenu: return buildPath("MainMenuLevel.lua");
+        case settingsMenu: return buildPath("SettingsLevel.lua");
+        case Level_select: return buildPath("LevelSelectLevel.lua");
+        case LEVEL_2: return buildPath("Level2.lua");
+        case LEVEL_3: return buildPath("ProceduralMapLevel.lua");
+        case LEVEL_END: return buildPath("EndLevel.lua");
+        case TUTORIAL: return buildPath("TutorialLevel.lua");
+        case CONTROL: return buildPath("ControlLevel.lua");
+        case CONTROL2: return buildPath("Control2Level.lua");
+        case SKILL_SETS: return buildPath("SkillSetsLevel.lua");
+        case WIN_SCREEN: return buildPath("WinLevel.lua");
+        case LOSE_SCREEN: return buildPath("LoseLevel.lua");
         default: return nullptr;
         }
     }
@@ -113,9 +123,11 @@ namespace {
         g_manifestLoaded = true;
 
         try {
-            std::ifstream file(kStateRegistryPath);
+            const std::string registryPath =
+                ConfigReader::GetProjectPath("state_registry", ConfigReader::STATE_REGISTRY_PATH);
+            std::ifstream file(registryPath);
             if (!file.is_open()) {
-                LOG_WARN("GSM", "State registry file not found at '%s'; using fallback paths", kStateRegistryPath);
+                LOG_WARN("GSM", "State registry file not found at '%s'; using fallback paths", registryPath.c_str());
                 return;
             }
 
@@ -140,7 +152,7 @@ namespace {
             }
 
             LOG_INFO("GSM", "Loaded state registry script paths from %s (%zu entries)",
-                kStateRegistryPath, g_manifestScriptPaths.size());
+                registryPath.c_str(), g_manifestScriptPaths.size());
         }
         catch (const nlohmann::json::exception& e) {
             LOG_WARN("GSM", "Failed to parse state registry JSON: %s", e.what());

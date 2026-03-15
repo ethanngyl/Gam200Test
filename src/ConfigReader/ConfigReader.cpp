@@ -30,6 +30,8 @@
 namespace {
     std::unordered_map<std::string, int> g_stateAliasToEnum;
     bool g_stateRegistryLoaded = false;
+    std::unordered_map<std::string, std::string> g_projectPaths;
+    bool g_projectPathsLoaded = false;
 
     std::string ToLowerASCII(const std::string& input)
     {
@@ -54,10 +56,12 @@ namespace {
         g_stateRegistryLoaded = true;
 
         try {
-            std::ifstream file(ConfigReader::STATE_REGISTRY_PATH);
+            const std::string stateRegistryPath =
+                ConfigReader::GetProjectPath("state_registry", ConfigReader::STATE_REGISTRY_PATH);
+            std::ifstream file(stateRegistryPath);
             if (!file.is_open()) {
                 LOG_WARN("CONFIG", "State registry not found at '%s'; using fallback aliases",
-                    ConfigReader::STATE_REGISTRY_PATH);
+                    stateRegistryPath.c_str());
                 return;
             }
 
@@ -89,13 +93,59 @@ namespace {
             }
 
             LOG_INFO("CONFIG", "Loaded state aliases from %s (%zu entries)",
-                ConfigReader::STATE_REGISTRY_PATH, g_stateAliasToEnum.size());
+                stateRegistryPath.c_str(), g_stateAliasToEnum.size());
         }
         catch (const nlohmann::json::exception& e) {
             LOG_WARN("CONFIG", "Failed to parse state registry JSON: %s", e.what());
         }
         catch (const std::exception& e) {
             LOG_WARN("CONFIG", "Failed to load state registry: %s", e.what());
+        }
+    }
+
+    void LoadProjectPathsIfNeeded()
+    {
+        if (g_projectPathsLoaded) {
+            return;
+        }
+
+        g_projectPathsLoaded = true;
+
+        try {
+            std::ifstream file(ConfigReader::PROJECT_PATHS_FILE_PATH);
+            if (!file.is_open()) {
+                LOG_WARN("CONFIG", "Project paths file not found at '%s'",
+                    ConfigReader::PROJECT_PATHS_FILE_PATH);
+                return;
+            }
+
+            nlohmann::json doc;
+            file >> doc;
+
+            if (doc.contains("paths") && doc["paths"].is_object()) {
+                const auto& paths = doc["paths"];
+                for (auto it = paths.begin(); it != paths.end(); ++it) {
+                    if (it.value().is_string()) {
+                        g_projectPaths[it.key()] = it.value().get<std::string>();
+                    }
+                }
+            }
+            else if (doc.is_object()) {
+                for (auto it = doc.begin(); it != doc.end(); ++it) {
+                    if (it.value().is_string()) {
+                        g_projectPaths[it.key()] = it.value().get<std::string>();
+                    }
+                }
+            }
+
+            LOG_INFO("CONFIG", "Loaded project paths from %s (%zu entries)",
+                ConfigReader::PROJECT_PATHS_FILE_PATH, g_projectPaths.size());
+        }
+        catch (const nlohmann::json::exception& e) {
+            LOG_WARN("CONFIG", "Failed to parse project paths JSON: %s", e.what());
+        }
+        catch (const std::exception& e) {
+            LOG_WARN("CONFIG", "Failed to load project paths: %s", e.what());
         }
     }
 }
@@ -114,22 +164,32 @@ std::string ConfigReader::loadedConfigPath = "";
 
 bool ConfigReader::LoadConfig(const std::string& filename)
 {
+    const std::string resolvedPath =
+        (filename == CONFIG_FILE_PATH)
+        ? GetProjectPath("game_config", CONFIG_FILE_PATH)
+        : filename;
+
     // Check if this file is already loaded
-    if (configLoaded && loadedConfigPath == filename) {
-        LOG_INFO("CONFIG", "Configuration already loaded from: %s", filename.c_str());
+    if (configLoaded && loadedConfigPath == resolvedPath) {
+        LOG_INFO("CONFIG", "Configuration already loaded from: %s", resolvedPath.c_str());
         return true;
     }
 
     // Load the config file
-    return LoadConfigInternal(filename);
+    return LoadConfigInternal(resolvedPath);
 }
 
 bool ConfigReader::ReloadConfig(const std::string& filename)
 {
+    const std::string resolvedPath =
+        (filename == CONFIG_FILE_PATH)
+        ? GetProjectPath("game_config", CONFIG_FILE_PATH)
+        : filename;
+
     LOG_INFO("CONFIG", "Force reloading configuration...");
     configLoaded = false;
     loadedConfigPath = "";
-    return LoadConfigInternal(filename);
+    return LoadConfigInternal(resolvedPath);
 }
 
 bool ConfigReader::IsConfigLoaded()
@@ -141,7 +201,7 @@ int ConfigReader::GetInitialGameState(int defaultState)
 {
     // Ensure config is loaded
     if (!configLoaded) {
-        LoadConfig(CONFIG_FILE_PATH);
+        LoadConfig(GetProjectPath("game_config", CONFIG_FILE_PATH));
     }
 
     // Get initial_state value
@@ -163,6 +223,17 @@ int ConfigReader::GetInitialGameState(int defaultState)
 int ConfigReader::ResolveStateName(const std::string& stateName, int defaultState)
 {
     return ParseStateName(stateName, defaultState);
+}
+
+std::string ConfigReader::GetProjectPath(const std::string& key, const std::string& defaultValue)
+{
+    LoadProjectPathsIfNeeded();
+
+    auto it = g_projectPaths.find(key);
+    if (it != g_projectPaths.end() && !it->second.empty()) {
+        return it->second;
+    }
+    return defaultValue;
 }
 
 std::string ConfigReader::GetString(const std::string& key, const std::string& defaultValue)
@@ -248,7 +319,7 @@ bool ConfigReader::SaveConfig(const std::string& filename)
     std::string targetFile = filename.empty() ? loadedConfigPath : filename;
 
     if (targetFile.empty()) {
-        targetFile = CONFIG_FILE_PATH;
+        targetFile = GetProjectPath("game_config", CONFIG_FILE_PATH);
     }
 
     // Read the original file to preserve comments and structure
@@ -310,6 +381,11 @@ void ConfigReader::Shutdown()
     // Clear and shrink the string to free its buffer
     loadedConfigPath.clear();
     loadedConfigPath.shrink_to_fit();
+
+    std::unordered_map<std::string, int>().swap(g_stateAliasToEnum);
+    std::unordered_map<std::string, std::string>().swap(g_projectPaths);
+    g_stateRegistryLoaded = false;
+    g_projectPathsLoaded = false;
 
     configLoaded = false;
 

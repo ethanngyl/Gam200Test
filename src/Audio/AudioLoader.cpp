@@ -245,10 +245,15 @@ namespace Framework {
      */
     bool AudioLoader::SaveAudioConfig(const std::string& filepath) {
         try {
+            const std::string resolvedPath =
+                filepath.empty()
+                ? ConfigReader::GetProjectPath("audio_config", "assets/JSON/AudioConfig.json")
+                : filepath;
+
             // Read existing JSON file
-            std::ifstream inFile(filepath);
+            std::ifstream inFile(resolvedPath);
             if (!inFile.is_open()) {
-                LOG_ERROR("AudioLoader", "Failed to open audio config file for reading: %s", filepath.c_str());
+                LOG_ERROR("AudioLoader", "Failed to open audio config file for reading: %s", resolvedPath.c_str());
                 return false;
             }
 
@@ -266,9 +271,9 @@ namespace Framework {
             jsonData["settings"]["sfxVolume"] = settings.sfxVolume;
 
             // Write back to file with pretty formatting
-            std::ofstream outFile(filepath);
+            std::ofstream outFile(resolvedPath);
             if (!outFile.is_open()) {
-                LOG_ERROR("AudioLoader", "Failed to open audio config file for writing: %s", filepath.c_str());
+                LOG_ERROR("AudioLoader", "Failed to open audio config file for writing: %s", resolvedPath.c_str());
                 return false;
             }
 
@@ -276,7 +281,7 @@ namespace Framework {
             outFile.close();
 
             LOG_INFO("AudioLoader", "Audio config saved to: %s (Master Volume: %.2f)",
-                filepath.c_str(), settings.masterVolume);
+                resolvedPath.c_str(), settings.masterVolume);
             return true;
         }
         catch (const std::exception& e) {

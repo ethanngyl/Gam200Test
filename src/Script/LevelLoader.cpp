@@ -13,7 +13,7 @@ Editor mode (F1) and preserve-playing-state on level transition supported.
 
 Details:
 - Initialize(engine) caches UISystem, AudioSystem, GraphicsSystem; CreateLuaState
-  adds assets/scripts/ to package.path, RegisterLevelAPI(), stores __level_loader_ptr.
+    adds configured script_root to package.path, RegisterLevelAPI(), stores __level_loader_ptr.
 - LoadLevel(scriptPath, isEditorMode): UnloadCurrentLevel if needed; sets
   IS_EDITOR_LOAD, g_preservePlayingState/g_loadAsEditorMode for editor/playing;
   luaL_dofile; enforces editor/ImGui state; checks OnInit/OnUpdate/OnDraw/OnDestroy;
@@ -150,14 +150,18 @@ namespace Framework {
         // Add assets/scripts to Lua's module search path
         lua_getglobal(L, "package");
         lua_getfield(L, -1, "path");
-        std::string currentPath = lua_tostring(L, -1);
-        std::string newPath = currentPath + ";assets/scripts/?.lua";
+        const std::string scriptRoot = ConfigReader::GetProjectPath("script_root", "assets/scripts/");
+        std::string normalizedScriptRoot = scriptRoot;
+        if (!normalizedScriptRoot.empty() && normalizedScriptRoot.back() != '/') {
+            normalizedScriptRoot.push_back('/');
+        }
+        std::string newPath = std::string(lua_tostring(L, -1)) + ";" + normalizedScriptRoot + "?.lua";
         lua_pop(L, 1);  // Pop old path
         lua_pushstring(L, newPath.c_str());
         lua_setfield(L, -2, "path");
         lua_pop(L, 1);  // Pop package table
 
-        LOG_INFO("LevelLoader", "Added assets/scripts/ to Lua module path");
+        LOG_INFO("LevelLoader", "Added %s to Lua module path", normalizedScriptRoot.c_str());
 
         RegisterLevelAPI();
 

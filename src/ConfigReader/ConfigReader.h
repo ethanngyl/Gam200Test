@@ -53,6 +53,7 @@ public:
     // Unified config file path - change this to match your project structure
     static constexpr const char* CONFIG_FILE_PATH = "assets/game_config.txt";
    static constexpr const char* STATE_REGISTRY_PATH = "assets/JSON/state_registry.json";
+   static constexpr const char* PROJECT_PATHS_FILE_PATH = "assets/JSON/project_paths.json";
 
     // ========================================================================
     // PUBLIC INTERFACE
@@ -87,6 +88,14 @@ public:
     * @return The resolved enum value
     */
    static int ResolveStateName(const std::string& stateName, int defaultState);
+
+   /**
+    * @brief Resolve a runtime project path from manifest (project_paths.json)
+    * @param key Path key, e.g. "audio_config", "audio_root", "state_registry"
+    * @param defaultValue Returned when key is missing or file cannot be read
+    * @return Path string suitable for file IO
+    */
+   static std::string GetProjectPath(const std::string& key, const std::string& defaultValue = "");
 
     /**
      * @brief Get a string value from config
