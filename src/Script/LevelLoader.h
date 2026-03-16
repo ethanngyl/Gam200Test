@@ -116,7 +116,6 @@ namespace Framework {
         lua_State* L = nullptr;
         void CreateLuaState();
         void DestroyLuaState();
-        static int Lua_ClearAllEntities(lua_State* L);
         // API registration
         void RegisterLevelAPI();
 
@@ -201,6 +200,7 @@ namespace Framework {
         static int Lua_LoadTileMap(lua_State* L);
 
         // AP Indicator / Entity Management API
+        static int Lua_ClearAllEntities(lua_State* L);
         static int Lua_SpawnSprite(lua_State* L);
         static int Lua_SpawnAnimatedSprite(lua_State* L);  // Spawn sprite with animation sheet
         static int Lua_SetSpriteAnimationSheet(lua_State* L);  // Add animation to existing sprite

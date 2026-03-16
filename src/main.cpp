@@ -37,6 +37,8 @@ Responsibilities:
 #include "Pause/Pause.h"
 #include "GlobalPauseManager.h"
 #include "WindowEventHandler.h"
+#include "EditorModeManager.h"
+#include "GameRuntime/GameBootstrap.h"
 
 
 
@@ -91,6 +93,8 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
         FIXED_DT * 1000.0, 1.0 / FIXED_DT);
     LOG_INFO("CORE", "=================================================");
 
+    Framework::GameBootstrap::Initialize();
+
     // ===============================================================================
     // INITIALIZE ENGINE
     // ===============================================================================
@@ -109,10 +113,20 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
         Framework::DebugConfig::Initialize(window);
     }
 
+#ifdef STRUCTSQUAD_START_IN_EDITOR
+    engine->SetEditorMode(true);
+    Framework::EditorMode::SetEditorMode(true);
+    LOG_INFO("CORE", "Startup override: editor mode enabled by build config");
+#endif
+
     // ===============================================================================
     // GAME STATE MANAGER
     // ===============================================================================
     int initialState = ConfigReader::GetInitialGameState(mainMenu);
+#ifdef STRUCTSQUAD_INITIAL_STATE_ALIAS
+    initialState = ConfigReader::ResolveStateName(STRUCTSQUAD_INITIAL_STATE_ALIAS, initialState);
+    LOG_INFO("CORE", "Startup override: initial state alias '%s'", STRUCTSQUAD_INITIAL_STATE_ALIAS);
+#endif
     GSM_Initialize(initialState);
 
     LOG_INFO("CORE", "Entering GSM main loop...");

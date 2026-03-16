@@ -164,15 +164,31 @@ local BOSS_ANIM = {
 
 local lastAnimKey = nil
 local lastFlipX = false
+local warnedMissingAnimAPI = false
 
 local function ApplySheet(animKey, flipX)
-    if not SetSpriteAnimationSheet then return end
+    if not SetSpriteAnimationSheet then
+        if not warnedMissingAnimAPI then
+            print("[BossScript] SetSpriteAnimationSheet is NIL; boss animation sheets unavailable")
+            warnedMissingAnimAPI = true
+        end
+        return
+    end
     if animKey == lastAnimKey and flipX == lastFlipX then return end
 
     local a = BOSS_ANIM[animKey]
-    if not a then return end
+    if not a then
+        print("[BossScript] Missing BOSS_ANIM key: " .. tostring(animKey))
+        return
+    end
 
-    SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    local ok = SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    if not ok then
+        print("[BossScript] ApplySheet failed for key=" .. tostring(animKey) .. ", tex=" .. tostring(a.tex))
+        if SetSpriteTexture then
+            SetSpriteTexture(entityID, a.tex)
+        end
+    end
     if SetAnimationFlipX then
         SetAnimationFlipX(entityID, flipX and true or false)
     end

@@ -93,6 +93,33 @@ local BOSS_CONFIG = {
     periodicSpawnEveryEnemyRounds = 2
 }
 
+-- SpawnEnemyAt starts with a default enemy look; force boss visuals on attach.
+local BOSS_VISUAL = {
+    tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",
+    rows = 4,
+    cols = 3,
+    frames = 12,
+    time = 0.08,
+    loop = true
+}
+
+local function ApplyBossVisuals()
+    if not entityID or entityID == 0 then return end
+    if not SetSpriteAnimationSheet then return end
+    SetSpriteAnimationSheet(
+        entityID,
+        BOSS_VISUAL.tex,
+        BOSS_VISUAL.rows,
+        BOSS_VISUAL.cols,
+        BOSS_VISUAL.frames,
+        BOSS_VISUAL.time,
+        BOSS_VISUAL.loop
+    )
+    if SetAnimationFlipX then
+        SetAnimationFlipX(entityID, false)
+    end
+end
+
 local moveTimer = 0.0
 local moveDelay = 0.45
 local movesThisTurn = 0
@@ -710,6 +737,8 @@ end
 function OnInit()
     entityID = self
     if not entityID or entityID == 0 then return end
+
+    ApplyBossVisuals()
 
     local aMinX = GetSharedInt("arenaMinX", -1)
     local aMinY = GetSharedInt("arenaMinY", -1)

@@ -52,7 +52,7 @@ local UIManager = require("UIManager")
 local SkillSwapUI = require("SkillSwapUI")
 _G.SkillSwapUI = SkillSwapUI
 
-local BOSS_SCRIPT_PATH = "assets/scripts/Boss2OrcShaman.lua"
+local BOSS_SCRIPT_PATH = "assets/scripts/BossScript.lua"
 
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)

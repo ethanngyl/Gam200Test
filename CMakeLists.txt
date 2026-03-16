@@ -11,6 +11,10 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Startup behavior knobs so different build trees can target editor/game workflows.
+option(STRUCTSQUAD_START_IN_EDITOR "Start with editor mode enabled" OFF)
+set(STRUCTSQUAD_INITIAL_STATE "" CACHE STRING "Initial state alias override (e.g. mainmenu, level3)")
+
 # Set the directory where custom CMake modules are stored
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -56,6 +60,14 @@ file(COPY "${CMAKE_SOURCE_DIR}/assets"
 # Create executable
 add_executable(${CMAKE_PROJECT_NAME} ${APP_SRC} 
 "src/main.cpp")
+
+if(STRUCTSQUAD_START_IN_EDITOR)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE STRUCTSQUAD_START_IN_EDITOR=1)
+endif()
+
+if(NOT STRUCTSQUAD_INITIAL_STATE STREQUAL "")
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE STRUCTSQUAD_INITIAL_STATE_ALIAS="${STRUCTSQUAD_INITIAL_STATE}")
+endif()
 
 # MSVC-only: disable noisy integer conversion warnings
 #  - C4244: converting larger numeric types to smaller ones (possible loss of data)
