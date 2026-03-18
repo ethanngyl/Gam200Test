@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader.h
 Author:      GE YONGQI, Sim Kah Yan
@@ -246,6 +246,8 @@ namespace Framework {
         static int Lua_SetAnimationGroup(lua_State* L);
         static int Lua_SetAnimationDirection(lua_State* L);
         static int Lua_SetAnimationFlipX(lua_State* L);
+        static int Lua_GetAnimationDirection(lua_State* L);
+        static int Lua_GetAnimationFlipX(lua_State* L);
         static int Lua_SetAnimationPlaying(lua_State* L);
         static int Lua_SetAnimationPrefix(lua_State* L);
         static int Lua_SetAnimationLoop(lua_State* L);

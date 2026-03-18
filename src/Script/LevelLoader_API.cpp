@@ -1850,9 +1850,19 @@ namespace Framework {
     int LevelLoader::Lua_SetActiveCharacter(lua_State* L)
     {
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
-        // NOTE: Active character tracking is fully managed in Lua (PartyTurnManager).
-        // IsActiveCharacter() bridges directly to the level Lua state, so no C++ state needed.
         LOG_INFO("LevelLoader", "SetActiveCharacter: Active character set to entity %d", entityID);
+
+        // Sync the C++ PlayerControllerSystem so arrow-key facing (and any other
+        // C++-side per-frame logic) always operates on the currently active unit.
+        LevelLoader* loader = GetLevelLoader(L);
+        if (loader && loader->coreEngine) {
+            auto* pc = loader->coreEngine->GetPlayerController();
+            if (pc) {
+                pc->SetPlayerEntity(Framework::Entity(static_cast<Framework::EntityID>(entityID)));
+                LOG_INFO("LevelLoader", "SetActiveCharacter: PlayerControllerSystem synced to entity %d", entityID);
+            }
+        }
+
         return 0;
     }
 
@@ -5184,6 +5194,52 @@ namespace Framework {
         anim.flipX = flipX;
 
         return 0;
+    }
+
+    /**
+     * @brief Read the current AnimDirection from an entity's SpriteAnimation component.
+     * Lua usage: local dir = GetAnimationDirection(entityID)
+     * Returns: integer (0=Front, 1=Back, 2=Side, 3=None), or 0 on failure.
+     * Lets Lua re-sync its local facing variable after C++ arrow-key changes.
+     */
+    int LevelLoader::Lua_GetAnimationDirection(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) { lua_pushinteger(L, 0); return 1; }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, static_cast<lua_Integer>(anim.direction));
+        return 1;
+    }
+
+    /**
+     * @brief Read the current flipX flag from an entity's SpriteAnimation component.
+     * Lua usage: local flip = GetAnimationFlipX(entityID)
+     * Returns: boolean, or false on failure.
+     * Lets Lua re-sync its local isFlippedX variable after C++ arrow-key changes.
+     */
+    int LevelLoader::Lua_GetAnimationFlipX(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) { lua_pushboolean(L, false); return 1; }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushboolean(L, anim.flipX ? 1 : 0);
+        return 1;
     }
 
     /**

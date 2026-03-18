@@ -1417,6 +1417,19 @@ function OnUpdate(dt)
     end
 
     -- ========================================================================
+    -- FACING SYNC: Pull direction/flip from the C++ component so that arrow-key
+    -- facing changes (done in C++ HandleArrowKeyFacing) are visible to skills
+    -- and movement logic in Lua. This keeps currentAnimDirection / isFlippedX
+    -- as the single source of truth without needing to touch C++ for every case.
+    -- ========================================================================
+    if GetAnimationDirection then
+        currentAnimDirection = GetAnimationDirection(entityID)
+    end
+    if GetAnimationFlipX then
+        isFlippedX = GetAnimationFlipX(entityID)
+    end
+
+    -- ========================================================================
     -- ANIMATION BLOCKING: Disable input during scroll and AP refill animations
     -- ========================================================================
 

@@ -66,6 +66,8 @@ void Register(lua_State* L)
     lua_register(L, "SetAnimationGroup", LevelLoader::Lua_SetAnimationGroup);
     lua_register(L, "SetAnimationDirection", LevelLoader::Lua_SetAnimationDirection);
     lua_register(L, "SetAnimationFlipX", LevelLoader::Lua_SetAnimationFlipX);
+    lua_register(L, "GetAnimationDirection", LevelLoader::Lua_GetAnimationDirection);
+    lua_register(L, "GetAnimationFlipX", LevelLoader::Lua_GetAnimationFlipX);
     lua_register(L, "SetAnimationPlaying", LevelLoader::Lua_SetAnimationPlaying);
     lua_register(L, "SetAnimationPrefix", LevelLoader::Lua_SetAnimationPrefix);
     lua_register(L, "SetAnimationLoop", LevelLoader::Lua_SetAnimationLoop);
