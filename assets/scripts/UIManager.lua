@@ -60,6 +60,22 @@ local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 local TurnScrollUI = require("ScrollOpen")
 local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")
+local CharacterInfoPanel = require("UI/CharacterInfoPanel")
+
+-- Character info panel instance (I key overlay)
+local _charInfoPanel = CharacterInfoPanel.new()
+
+-- Bridge functions callable from entity scripts via CallLevelFunction
+function _G.ToggleCharInfoPanel(playerIndex, entityID)
+    print("[UIManager] ToggleCharInfoPanel player=" .. tostring(playerIndex))
+    _charInfoPanel:Toggle(playerIndex, entityID)
+end
+
+function _G.CloseCharInfoPanel()
+    if _charInfoPanel.isOpen then
+        _charInfoPanel:_hide()
+    end
+end
 
 -- ============================================================================
 -- STATE
@@ -379,11 +395,21 @@ function UIManager.Draw()
         return
     end
 
-    -- Draw all components that have a Draw method
-    for name, component in pairs(UIManager.components) do
-        if component and component.Draw then
-            component:Draw()
+    -- Draw all HUD components, but suppress them while the info panel is open
+    -- (DrawText has no Z-layer, so HUD text would bleed through the panel background)
+    local panelOpen = _charInfoPanel and _charInfoPanel.isOpen
+    if not panelOpen then
+        for name, component in pairs(UIManager.components) do
+            if component and component.Draw then
+                component:Draw()
+            end
         end
+    end
+
+    -- Character info panel text overlay (must be called during Draw, not Update)
+    -- Skip when game is paused so text doesn't bleed through the pause menu
+    if panelOpen and not (IsPaused and IsPaused()) then
+        _charInfoPanel:OnDraw()
     end
 end
 

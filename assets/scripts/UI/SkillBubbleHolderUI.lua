@@ -64,33 +64,33 @@ local TINT_GREY  = { r = 0.4, g = 0.4, b = 0.4 }   -- On cooldown / not enough A
 local TINT_BLACK = { r = 0.05, g = 0.05, b = 0.05 } -- No skill assigned
 
 -- Default icon path convention:
---   assets/UI/SkillIcons/<SkillID>.png
+--   assets/SkillIcons/<SkillID>.png
 -- You can override specific skills via config.skillIconMap in UIManager.Init().
 local DEFAULT_SKILL_ICON_MAP = {
-    Thrust = "assets/UI/SkillIcons/Thrust.png",
-    SweepingSlash = "assets/UI/SkillIcons/SweepingSlash.png",
-    Guard = "assets/UI/SkillIcons/Guard.png",
-    SwiftBlow = "assets/UI/SkillIcons/SwiftBlow.png",
-    KnightsOath = "assets/UI/SkillIcons/KnightsOath.png",
-    Parry = "assets/UI/SkillIcons/Parry.png",
-    ExploitWeakness = "assets/UI/SkillIcons/ExploitWeakness.png",
-    Bash = "assets/UI/SkillIcons/Bash.png",
-    Fireball = "assets/UI/SkillIcons/Fireball.png",
-    PiercingShot = "assets/UI/SkillIcons/PiercingShot.png",
-    LightningStrike = "assets/UI/SkillIcons/LightningStrike.png",
-    EarthenBind = "assets/UI/SkillIcons/EarthenBind.png",
-    ManaDrain = "assets/UI/SkillIcons/ManaDrain.png",
-    Overload = "assets/UI/SkillIcons/Overload.png",
-    SoulRend = "assets/UI/SkillIcons/SoulRend.png",
-    SoulMerge = "assets/UI/SkillIcons/SoulMerge.png",
-    Slam = "assets/UI/SkillIcons/Slam.png",
-    SiphonCharge = "assets/UI/SkillIcons/SiphonCharge.png",
-    FutileResistance = "assets/UI/SkillIcons/FutileResistance.png",
-    DarkOmens = "assets/UI/SkillIcons/DarkOmens.png",
-    Cannibalism = "assets/UI/SkillIcons/Cannibalism.png",
-    Groundshatter = "assets/UI/SkillIcons/Groundshatter.png",
-    BloodyWarcry = "assets/UI/SkillIcons/BloodyWarcry.png",
-    BladedWhirlwind = "assets/UI/SkillIcons/BladedWhirlwind.png",
+    Thrust = "assets/SkillIcons/Thrust.png",
+    SweepingSlash = "assets/SkillIcons/SweepingSlash.png",
+    Guard = "assets/SkillIcons/Guard.png",
+    SwiftBlow = "assets/SkillIcons/SwiftBlow.png",
+    KnightsOath = "assets/SkillIcons/KnightsOath.png",
+    Parry = "assets/SkillIcons/Parry.png",
+    ExploitWeakness = "assets/SkillIcons/ExploitWeakness.png",
+    Bash = "assets/SkillIcons/Bash.png",
+    Fireball = "assets/SkillIcons/Fireball.png",
+    PiercingShot = "assets/SkillIcons/PiercingShot.png",
+    LightningStrike = "assets/SkillIcons/LightningStrike.png",
+    EarthenBind = "assets/SkillIcons/EarthenBind.png",
+    ManaDrain = "assets/SkillIcons/ManaDrain.png",
+    Overload = "assets/SkillIcons/Overload.png",
+    SoulRend = "assets/SkillIcons/SoulRend.png",
+    SoulMerge = "assets/SkillIcons/SoulMerge.png",
+    Slam = "assets/SkillIcons/Slam.png",
+    SiphonCharge = "assets/SkillIcons/SiphonCharge.png",
+    FutileResistance = "assets/SkillIcons/FutileResistance.png",
+    DarkOmens = "assets/SkillIcons/DarkOmens.png",
+    Cannibalism = "assets/SkillIcons/Cannibalism.png",
+    Groundshatter = "assets/SkillIcons/Groundshatter.png",
+    BloodyWarcry = "assets/SkillIcons/BloodyWarcry.png",
+    BladedWhirlwind = "assets/SkillIcons/BladedWhirlwind.png",
 }
 
 -- ============================================================================
@@ -126,7 +126,7 @@ function SkillBubbleHolderUI:Init(config)
     self.iconScale = self.config.iconScale or (self.circleScale * 0.78)
     self.iconLayer = self.config.iconLayer or (self.circleLayer + 1)
     self.defaultIconTexture = self.config.defaultIconTexture or "assets/UI/skill_circle.png"
-    self.skillIconBasePath = self.config.skillIconBasePath or "assets/UI/SkillIcons/"
+    self.skillIconBasePath = self.config.skillIconBasePath or "assets/SkillIcons/"
     self.skillIconMap = self.config.skillIconMap or DEFAULT_SKILL_ICON_MAP
 
     -- State

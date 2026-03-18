@@ -619,6 +619,11 @@ namespace Framework {
         lua_register(L, "GetUseEthanParticles", LevelLoader::Lua_GetUseEthanParticles);
         lua_register(L, "ToggleUseEthanParticles", LevelLoader::Lua_ToggleUseEthanParticles);
         lua_register(L, "ClearAllParticleEmitters", LevelLoader::Lua_ClearAllParticleEmitters);
+
+        // UI / Rendering helpers (needed by per-entity UI panels spawned from scripts)
+        lua_register(L, "GetCameraPosition",   LevelLoader::Lua_GetCameraPosition);
+        lua_register(L, "DrawText",            LevelLoader::Lua_DrawText);
+        lua_register(L, "GetFramebufferSize",  LevelLoader::Lua_GetFramebufferSize);
     }
 
     /**

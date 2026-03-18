@@ -621,6 +621,7 @@ namespace Framework {
         else if (strcmp(keyName, "Q") == 0) keyCode = KEY_Q;
         else if (strcmp(keyName, "R") == 0) keyCode = KEY_R;
         else if (strcmp(keyName, "P") == 0) keyCode = KEY_P;
+        else if (strcmp(keyName, "I") == 0) keyCode = KEY_I;
 
         // Special keys
         else if (strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
