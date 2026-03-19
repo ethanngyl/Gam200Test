@@ -720,6 +720,43 @@ namespace Framework {
         return 2;
     }
 
+    int LevelLoader::Lua_GetMouseWorldPosition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine || !loader->uiSystem) {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        auto* input = loader->coreEngine->GetInputSystem();
+        auto* imguiSystem = loader->coreEngine->GetImGuiSystem();
+
+        float mouseScreenX = 0, mouseScreenY = 0;
+        bool useViewportCoords = false;
+
+        if (imguiSystem && imguiSystem->IsRenderingToViewport()) {
+            ImVec2 mousePos = ImGui::GetMousePos();
+            ImVec2 viewportOffset = imguiSystem->GetViewportPos();
+            mouseScreenX = mousePos.x - viewportOffset.x;
+            mouseScreenY = mousePos.y - viewportOffset.y;
+            useViewportCoords = true;
+        }
+        else if (input) {
+            input->GetMousePosition(mouseScreenX, mouseScreenY);
+        }
+        else {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        Framework::Vector2D worldPos = loader->uiSystem->ScreenToWorld(
+            mouseScreenX, mouseScreenY, useViewportCoords);
+        lua_pushnumber(L, worldPos.x);
+        lua_pushnumber(L, worldPos.y);
+        return 2;
+    }
+
     int LevelLoader::Lua_LoadJSON(lua_State* L) {
         const char* filepath = luaL_checkstring(L, 1);
 

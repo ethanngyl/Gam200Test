@@ -54,6 +54,7 @@ void Register(lua_State* L)
     lua_register(L, "IsMouseButtonDown", LevelLoader::Lua_IsMouseButtonDown);
     lua_register(L, "IsMouseButtonPressed", LevelLoader::Lua_IsMouseButtonPressed);
     lua_register(L, "GetMousePosition", LevelLoader::Lua_GetMousePosition);
+    lua_register(L, "GetMouseWorldPosition", LevelLoader::Lua_GetMouseWorldPosition);
 
     // JSON and level loading
     lua_register(L, "LoadJSON", LevelLoader::Lua_LoadJSON);

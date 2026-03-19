@@ -136,39 +136,21 @@ local function IsMouseOverSettingsButton()
     if not settingsButton.spriteID or settingsButton.spriteID <= 0 then
         return false
     end
-    if not WorldToScreen or not GetMousePosition or not GetFramebufferSize then
+    if not GetMouseWorldPosition then
         return false
     end
 
-    local fbW, fbH = GetFramebufferSize()
-    if not fbW or fbW <= 0 or not fbH or fbH <= 0 then
-        return false
-    end
-
-    local mouseX, mouseY = GetMousePosition()
-    local mouseFbX = mouseX
-    local mouseFbY = fbH - mouseY
+    local mouseWX, mouseWY = GetMouseWorldPosition()
 
     local halfW = settingsButton.scaleX * 0.5
     local halfH = settingsButton.scaleY * 0.5
 
-    local leftWorld = settingsButton.position.x - halfW
-    local rightWorld = settingsButton.position.x + halfW
-    local bottomWorld = settingsButton.position.y - halfH
-    local topWorld = settingsButton.position.y + halfH
+    local left   = settingsButton.position.x - halfW
+    local right  = settingsButton.position.x + halfW
+    local bottom = settingsButton.position.y - halfH
+    local top    = settingsButton.position.y + halfH
 
-    local leftScreen, bottomScreen = WorldToScreen(leftWorld, bottomWorld, settingsButton.useViewportCoords)
-    local rightScreen, topScreen = WorldToScreen(rightWorld, topWorld, settingsButton.useViewportCoords)
-    if not leftScreen or not bottomScreen or not rightScreen or not topScreen then
-        return false
-    end
-
-    local minX = math.min(leftScreen, rightScreen)
-    local maxX = math.max(leftScreen, rightScreen)
-    local minY = math.min(bottomScreen, topScreen)
-    local maxY = math.max(bottomScreen, topScreen)
-
-    return mouseFbX >= minX and mouseFbX <= maxX and mouseFbY >= minY and mouseFbY <= maxY
+    return mouseWX >= left and mouseWX <= right and mouseWY >= bottom and mouseWY <= top
 end
 
 local function UpdateSettingsButton(dt)
