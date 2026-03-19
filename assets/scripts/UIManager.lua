@@ -319,6 +319,10 @@ function UIManager.Init(config)
         scaleY = 0.55,
         layer = 4,
         texture = "assets/new assets/skill_bubble_holder.png",
+        slotLabelFont = "Jersey20Regular",
+        slotLabelScale = 0.5,
+        slotLabelOffsetXPx = -35,
+        slotLabelOffsetYPx = 20,
         -- Skill icons are resolved as: skillIconMap[skillID] or skillIconBasePath..skillID..".png"
         skillIconBasePath = "assets/SkillIcons/",
         defaultIconTexture = "assets/UI/skill_circle.png",

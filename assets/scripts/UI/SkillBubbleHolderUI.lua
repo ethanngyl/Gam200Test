@@ -129,6 +129,15 @@ function SkillBubbleHolderUI:Init(config)
     self.skillIconBasePath = self.config.skillIconBasePath or "assets/SkillIcons/"
     self.skillIconMap = self.config.skillIconMap or DEFAULT_SKILL_ICON_MAP
 
+    -- Slot index labels (1-4) rendered near each bubble for input clarity.
+    self.showSlotLabels = (self.config.showSlotLabels ~= false)
+    self.slotLabelFont = self.config.slotLabelFont or "Jersey20Regular"
+    self.slotLabelScale = self.config.slotLabelScale or 0.27
+    self.slotLabelColor = self.config.slotLabelColor or { r = 0.08, g = 0.08, b = 0.08 }
+    self.slotLabelOffsetXPx = self.config.slotLabelOffsetXPx or -14
+    self.slotLabelOffsetYPx = self.config.slotLabelOffsetYPx or -14
+    self.useViewportCoordsForText = (self.config.useViewportCoordsForText ~= false)
+
     -- State
     self.spriteID = 0
     self.circleIDs = {}       -- Sprite IDs for the 4 circles
@@ -328,6 +337,56 @@ function SkillBubbleHolderUI:UpdateCircleTints()
             if iconID and iconID > 0 then
                 SetSpriteColor(iconID, tint.r, tint.g, tint.b)
             end
+        end
+    end
+end
+
+-- Draw slot numbers (1-4) near each bubble.
+-- DrawText uses framebuffer-space coordinates, so convert from camera-relative
+-- UI offsets to screen-space each frame.
+function SkillBubbleHolderUI:Draw()
+    if not self.enabled or not self.showSlotLabels or not DrawText then
+        return
+    end
+
+    local fbW, fbH = nil, nil
+    if GetFramebufferSize then
+        fbW, fbH = GetFramebufferSize()
+    end
+    if not fbW or not fbH or fbW <= 0 or fbH <= 0 then
+        return
+    end
+
+    local camX, camY, camZ = GetCameraPosition()
+    local scaleRef = fbW / 1920
+
+    local totalHeight = self.circleSpacing * 3
+    local topY = (camY + self.offsetY) + totalHeight / 2
+    local x = camX + self.offsetX
+
+    for i = 1, 4 do
+        local circleY = topY - (i - 1) * self.circleSpacing
+        local sx = nil
+        local sy = nil
+
+        if WorldToScreen then
+            sx, sy = WorldToScreen(x, circleY, self.useViewportCoordsForText)
+        end
+
+        if sx and sy then
+            sx = sx + self.slotLabelOffsetXPx
+            sy = sy + self.slotLabelOffsetYPx
+
+            DrawText(
+                self.slotLabelFont,
+                tostring(i),
+                sx,
+                sy,
+                self.slotLabelScale * scaleRef,
+                self.slotLabelColor.r,
+                self.slotLabelColor.g,
+                self.slotLabelColor.b
+            )
         end
     end
 end
