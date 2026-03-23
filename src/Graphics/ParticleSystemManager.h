@@ -14,6 +14,25 @@
 #include "ParticleSystem.h"
 
 namespace Framework {
+
+	/**
+	 * @class ParticleSystemManager
+	 * @brief Owns and updates all active ParticleSystem emitters.
+	 *
+	 * Emitters are created via CreateEmitterRaw() which returns an integer emitter ID.
+	 * Use that ID with SetFollowEntity() to attach an emitter to a moving entity.
+	 * Call ClearAllEmitters() on level unload to destroy all particle entities.
+	 *
+	 * The emitter ID system:
+	 *   - IDs are sequential integers starting from 1
+	 *   - emitterIdToIndex maps IDs to indices in particleSystems vector
+	 *   - IDs reset to 1 after ClearAllEmitters() — do not hold stale IDs across level loads
+	 *
+	 * ALT+TAB handling:
+	 *   - Particles pause via GlobalPauseManager — Core.cpp gates Update() when paused
+	 *   - suspended flag provides an additional explicit guard in Update()
+	 *   - SendEngineMessage() takes no action; pause is handled upstream
+	 */
 	class ParticleSystemManager : public EngineSystem {
 	public:
 		ParticleSystemManager();
@@ -37,5 +56,6 @@ namespace Framework {
 		std::vector<ParticleSystem> particleSystems;
 		std::unordered_map<int, size_t> emitterIdToIndex; // Map IDs to indices
 		int nextEmitterId{ 1 };
+		bool suspended{ false };  // true while window has no focus (ALT+TAB / minimize)
 	};
 } // namespace Framework

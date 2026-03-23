@@ -20,6 +20,23 @@
 #include <glm/glm.hpp>
 
 namespace Framework {
+
+	/**
+	 * @class ParticleSystem
+	 * @brief Manages a single particle emitter — spawning, updating, and destroying
+	 *        particle entities each frame.
+	 *
+	 * Each ParticleSystem owns a list of ECS particle entities. Call SetSettings()
+	 * before use (it caches world-scale and pre-reserves the particle vector).
+	 * Call UpdateParticle(dt) every frame. Call Clear() before destroying.
+	 *
+	 * The followEntity field makes the emitter track another entity's Transform
+	 * position each frame — used to attach particles to moving players/enemies.
+	 *
+	 * ownerPlayerID controls turn-based visibility:
+	 *   -1 = always active
+	 *    0, 1, 2 = only active on that player's turn
+	 */
 	class ParticleSystem {
 	public:
 		struct Settings {
@@ -46,6 +63,8 @@ namespace Framework {
 			bool		growOverTime{ false };
 
 			int         ownerPlayerID{ -1 };  // -1 = always active, 0-2 = specific player
+
+			float		cachedWorldScale{ 0.0f };  // computed once from size + render height; avoids per-particle graphics query
 		};
 
 		void CreateParticle();
@@ -53,13 +72,15 @@ namespace Framework {
 
 		void SetEmitter(float x, float y) { emitter = { x, y }; }
 		void SetFollowEntity(EntityID id) { followEntity = id; }
-		void SetSettings(const Settings& s) { settings = s; }
+		void SetSettings(const Settings& s);
 
 		const Settings& GetSettings() const { return settings; }
 		Vector2D GetEmitter() const { return emitter; }
 
 		bool IsActive() const { return active; }
 		void SetActive(bool a) { active = a;  }
+		
+		void ResetSpawnAccumulator() { spawnAcc = 0.0f; }  // call after long pauses to prevent burst-spawn
 
 		size_t GetParticle() const { return particles.size(); } // Get particle count
 
