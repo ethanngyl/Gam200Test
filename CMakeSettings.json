@@ -25,7 +25,7 @@
     },
     {
       "name": "vs2022-editor-x64-Debug",
-      "generator": "Visual Studio 17 2022",
+      "generator": "Visual Studio 17 2022 Win64",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
@@ -36,7 +36,7 @@
     },
     {
       "name": "vs2022-game-x64-Debug",
-      "generator": "Visual Studio 17 2022",
+      "generator": "Visual Studio 17 2022 Win64",
       "configurationType": "Debug",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
