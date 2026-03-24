@@ -63,6 +63,8 @@ local TINT_BLUE  = { r = 0.2, g = 0.4, b = 1.0 }   -- Currently selected
 local TINT_GREY  = { r = 0.4, g = 0.4, b = 0.4 }   -- On cooldown / not enough AP
 local TINT_BLACK = { r = 0.05, g = 0.05, b = 0.05 } -- No skill assigned
 
+local TOOLTIP_TEXTURE_DEFAULT = "assets/Menu/Scroll Overlay.png"
+
 -- Default icon path convention:
 --   assets/SkillIcons/<SkillID>.png
 -- You can override specific skills via config.skillIconMap in UIManager.Init().
@@ -138,12 +140,44 @@ function SkillBubbleHolderUI:Init(config)
     self.slotLabelOffsetYPx = self.config.slotLabelOffsetYPx or -14
     self.useViewportCoordsForText = (self.config.useViewportCoordsForText ~= false)
 
+    -- Tooltip configuration
+    self.tooltipTexture = self.config.tooltipTexture or TOOLTIP_TEXTURE_DEFAULT
+    self.tooltipOffsetX = self.config.tooltipOffsetX or 0.34
+    self.tooltipScaleX = self.config.tooltipScaleX or 0.35
+    self.tooltipScaleY = self.config.tooltipScaleY or 0.22
+    self.tooltipLayer = self.config.tooltipLayer or (self.iconLayer + 1)
+    self.tooltipFont = self.config.tooltipFont or "Jersey20Regular"
+    self.tooltipTitleScale = self.config.tooltipTitleScale or 0.35
+    self.tooltipCostScale = self.config.tooltipCostScale or 0.33
+    self.tooltipBodyScale = self.config.tooltipBodyScale or 0.27
+    self.tooltipTextColor = self.config.tooltipTextColor or { r = 0.08, g = 0.08, b = 0.08 }
+    self.tooltipPaddingXPx = self.config.tooltipPaddingXPx or 68
+    self.tooltipHeaderTopInsetPx = self.config.tooltipHeaderTopInsetPx or 58
+    self.tooltipDescriptionStartInsetPx = self.config.tooltipDescriptionStartInsetPx or 104
+    self.tooltipDescriptionLineSpacingPx = self.config.tooltipDescriptionLineSpacingPx or 26
+    self.tooltipWrapChars = self.config.tooltipWrapChars or 33
+
     -- State
     self.spriteID = 0
     self.circleIDs = {}       -- Sprite IDs for the 4 circles
     self.circleTints = {}     -- Current tint per circle (to avoid redundant updates)
     self.iconIDs = {}         -- Sprite IDs for per-skill icon art
     self.iconSkillIDs = {}    -- Last skill ID bound to icon slot
+    self.tooltipID = 0
+    self.tooltipVisible = false
+    self.hoveredSlot = nil
+    self.hoveredSkillID = nil
+    self.hoveredSkillName = nil
+    self.hoveredSkillDescription = nil
+    self.hoveredSkillCost = nil
+
+    self.skillsDb = {}
+    if LoadJSON then
+        local data = LoadJSON("assets/JSON/Skills.json")
+        if data and data.skills then
+            self.skillsDb = data.skills
+        end
+    end
 
     -- Get camera position for initial placement
     local camX, camY, camZ = GetCameraPosition()
@@ -176,6 +210,11 @@ function SkillBubbleHolderUI:Init(config)
         end
     end
 
+    self.tooltipID = self:SpawnSprite(self.tooltipTexture, x + self.tooltipOffsetX, y, self.tooltipScaleX, self.tooltipScaleY, self.tooltipLayer)
+    if self.tooltipID > 0 and SetSpriteVisibility then
+        SetSpriteVisibility(self.tooltipID, false)
+    end
+
     Log("[SkillBubbleHolderUI] Initialized at offset (" .. self.offsetX .. ", " .. self.offsetY .. ") with 4 skill circles")
 end
 
@@ -193,6 +232,9 @@ function SkillBubbleHolderUI:Update(dt, cameraPos)
 
     -- Update circle tints based on skill state
     self:UpdateCircleTints()
+
+    -- Update mouse hover and tooltip display state
+    self:UpdateTooltip(cameraPos)
 end
 
 -- ============================================================================
@@ -223,6 +265,163 @@ function SkillBubbleHolderUI:UpdatePositions(cameraPos)
             SetSpritePosition(iconID, x, circleY)
         end
     end
+
+    if self.tooltipID and self.tooltipID > 0 then
+        SetSpritePosition(self.tooltipID, x + self.tooltipOffsetX, y)
+    end
+end
+
+function SkillBubbleHolderUI:GetSlotWorldCenter(slotIndex)
+    local camX, camY = GetCameraPosition()
+    local x = camX + self.offsetX
+    local totalHeight = self.circleSpacing * 3
+    local topY = (camY + self.offsetY) + totalHeight / 2
+    local y = topY - (slotIndex - 1) * self.circleSpacing
+    return x, y
+end
+
+function SkillBubbleHolderUI:GetMouseFramebufferPosition()
+    if not GetMousePosition or not GetFramebufferSize then
+        return nil, nil
+    end
+
+    local fbW, fbH = GetFramebufferSize()
+    if not fbW or not fbH or fbW <= 0 or fbH <= 0 then
+        return nil, nil
+    end
+
+    local mouseX, mouseY = GetMousePosition()
+    return mouseX, (fbH - mouseY)
+end
+
+function SkillBubbleHolderUI:GetHoveredSlot(state, activePlayerIndex)
+    if not state or not activePlayerIndex then
+        return nil
+    end
+
+    local skills = state.players and state.players[activePlayerIndex] or nil
+    if not skills then
+        return nil
+    end
+
+    local mouseX, mouseY = self:GetMouseFramebufferPosition()
+    if not mouseX or not mouseY or not WorldToScreen then
+        return nil
+    end
+
+    for i = 1, 4 do
+        local slotKey = tostring(i)
+        if skills[slotKey] then
+            local cx, cy = self:GetSlotWorldCenter(i)
+            local leftWorld = cx - (self.circleScale * 0.5)
+            local rightWorld = cx + (self.circleScale * 0.5)
+            local bottomWorld = cy - (self.circleScale * 0.5)
+            local topWorld = cy + (self.circleScale * 0.5)
+
+            local leftScreen, bottomScreen = WorldToScreen(leftWorld, bottomWorld, self.useViewportCoordsForText)
+            local rightScreen, topScreen = WorldToScreen(rightWorld, topWorld, self.useViewportCoordsForText)
+
+            if leftScreen and bottomScreen and rightScreen and topScreen then
+                local minX = math.min(leftScreen, rightScreen)
+                local maxX = math.max(leftScreen, rightScreen)
+                local minY = math.min(bottomScreen, topScreen)
+                local maxY = math.max(bottomScreen, topScreen)
+
+                if mouseX >= minX and mouseX <= maxX and mouseY >= minY and mouseY <= maxY then
+                    return slotKey
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+function SkillBubbleHolderUI:WrapText(input, maxChars)
+    if not input or input == "" then
+        return ""
+    end
+
+    local out = {}
+    local line = ""
+    for word in tostring(input):gmatch("%S+") do
+        if line == "" then
+            line = word
+        elseif (#line + #word + 1) <= maxChars then
+            line = line .. " " .. word
+        else
+            table.insert(out, line)
+            line = word
+        end
+    end
+    if line ~= "" then
+        table.insert(out, line)
+    end
+
+    return table.concat(out, "\n")
+end
+
+function SkillBubbleHolderUI:GetEstimatedTextWidthPx(text, textScale, scaleRef)
+    local s = tostring(text or "")
+    -- Jersey font is fairly wide; this constant gives a good visual centering fit.
+    local avgGlyphWidthPx = 24 * textScale * scaleRef
+    return #s * avgGlyphWidthPx
+end
+
+function SkillBubbleHolderUI:UpdateTooltip(cameraPos)
+    local state = _G._skillUIState
+    local activeEntityID = GetActiveCharacter and GetActiveCharacter() or nil
+    local activePlayerIndex = nil
+
+    if state and activeEntityID and activeEntityID > 0 then
+        for idx, eid in pairs(state.entityIDs or {}) do
+            if eid == activeEntityID then
+                activePlayerIndex = idx
+                break
+            end
+        end
+    end
+
+    local hoveredSlot = self:GetHoveredSlot(state, activePlayerIndex)
+    self.hoveredSlot = hoveredSlot
+    self.hoveredSkillID = nil
+    self.hoveredSkillName = nil
+    self.hoveredSkillDescription = nil
+    self.hoveredSkillCost = nil
+
+    local showTooltip = false
+
+    if hoveredSlot and state and state.players and activePlayerIndex then
+        local skills = state.players[activePlayerIndex]
+        local skillID = skills and skills[hoveredSlot] or nil
+        if skillID then
+            local skillData = self.skillsDb and self.skillsDb[skillID] or nil
+            local slotCost = state.apCosts and state.apCosts[activePlayerIndex] and state.apCosts[activePlayerIndex][hoveredSlot] or nil
+            self.hoveredSkillID = skillID
+            self.hoveredSkillName = (skillData and skillData.name) or skillID
+            self.hoveredSkillDescription = (skillData and skillData.description) or "No description available."
+            local rawCost = slotCost or (skillData and skillData.apCost) or 0
+            self.hoveredSkillCost = math.floor((tonumber(rawCost) or 0) + 0.5)
+            showTooltip = true
+        end
+    end
+
+    if self.tooltipID and self.tooltipID > 0 then
+        local y = cameraPos.y + self.offsetY
+        if hoveredSlot then
+            local slotIndex = tonumber(hoveredSlot)
+            if slotIndex then
+                local _, slotY = self:GetSlotWorldCenter(slotIndex)
+                y = slotY
+            end
+        end
+        SetSpritePosition(self.tooltipID, cameraPos.x + self.tooltipOffsetX, y)
+    end
+
+    if self.tooltipID and self.tooltipID > 0 and SetSpriteVisibility and self.tooltipVisible ~= showTooltip then
+        SetSpriteVisibility(self.tooltipID, showTooltip)
+    end
+    self.tooltipVisible = showTooltip
 end
 
 function SkillBubbleHolderUI:ResolveSkillIconTexture(skillID)
@@ -345,7 +544,7 @@ end
 -- DrawText uses framebuffer-space coordinates, so convert from camera-relative
 -- UI offsets to screen-space each frame.
 function SkillBubbleHolderUI:Draw()
-    if not self.enabled or not self.showSlotLabels or not DrawText then
+    if not self.enabled or not DrawText then
         return
     end
 
@@ -364,30 +563,119 @@ function SkillBubbleHolderUI:Draw()
     local topY = (camY + self.offsetY) + totalHeight / 2
     local x = camX + self.offsetX
 
-    for i = 1, 4 do
-        local circleY = topY - (i - 1) * self.circleSpacing
-        local sx = nil
-        local sy = nil
+    if self.showSlotLabels then
+        for i = 1, 4 do
+            local circleY = topY - (i - 1) * self.circleSpacing
+            local sx = nil
+            local sy = nil
 
-        if WorldToScreen then
-            sx, sy = WorldToScreen(x, circleY, self.useViewportCoordsForText)
+            if WorldToScreen then
+                sx, sy = WorldToScreen(x, circleY, self.useViewportCoordsForText)
+            end
+
+            if sx and sy then
+                sx = sx + self.slotLabelOffsetXPx
+                sy = sy + self.slotLabelOffsetYPx
+
+                DrawText(
+                    self.slotLabelFont,
+                    tostring(i),
+                    sx,
+                    sy,
+                    self.slotLabelScale * scaleRef,
+                    self.slotLabelColor.r,
+                    self.slotLabelColor.g,
+                    self.slotLabelColor.b
+                )
+            end
         end
+    end
 
-        if sx and sy then
-            sx = sx + self.slotLabelOffsetXPx
-            sy = sy + self.slotLabelOffsetYPx
+    if not self.tooltipVisible or not self.hoveredSkillName then
+        return
+    end
+    if IsPaused and IsPaused() then
+        return
+    end
 
-            DrawText(
-                self.slotLabelFont,
-                tostring(i),
-                sx,
-                sy,
-                self.slotLabelScale * scaleRef,
-                self.slotLabelColor.r,
-                self.slotLabelColor.g,
-                self.slotLabelColor.b
-            )
+    if not WorldToScreen then
+        return
+    end
+
+    local camX, camY = GetCameraPosition()
+    local tooltipX = camX + self.tooltipOffsetX
+    local tooltipY = camY + self.offsetY
+
+    if self.hoveredSlot then
+        local slotIndex = tonumber(self.hoveredSlot)
+        if slotIndex then
+            local _, slotY = self:GetSlotWorldCenter(slotIndex)
+            tooltipY = slotY
         end
+    end
+
+    local sx, sy = WorldToScreen(tooltipX, tooltipY, self.useViewportCoordsForText)
+    if not sx or not sy then
+        return
+    end
+
+    local halfW = self.tooltipScaleX * 0.5
+    local halfH = self.tooltipScaleY * 0.5
+    local leftScreen, bottomScreen = WorldToScreen(tooltipX - halfW, tooltipY - halfH, self.useViewportCoordsForText)
+    local rightScreen, topScreen = WorldToScreen(tooltipX + halfW, tooltipY + halfH, self.useViewportCoordsForText)
+    if not leftScreen or not rightScreen or not bottomScreen or not topScreen then
+        return
+    end
+
+    local minX = math.min(leftScreen, rightScreen)
+    local maxX = math.max(leftScreen, rightScreen)
+    local topY = math.max(bottomScreen, topScreen)
+
+    local scaleRef = fbW / 1920
+    local wrappedDescription = self:WrapText(self.hoveredSkillDescription, self.tooltipWrapChars)
+    local titleX = minX + (self.tooltipPaddingXPx * scaleRef)
+    local titleY = topY - (self.tooltipHeaderTopInsetPx * scaleRef)
+    local costText = string.format("AP %d", math.floor((tonumber(self.hoveredSkillCost) or 0) + 0.5))
+    local costWidthPx = self:GetEstimatedTextWidthPx(costText, self.tooltipCostScale, scaleRef)
+    local costX = maxX - (self.tooltipPaddingXPx * scaleRef) - costWidthPx
+    local costY = titleY
+
+    DrawText(
+        self.tooltipFont,
+        self.hoveredSkillName,
+        titleX,
+        titleY,
+        self.tooltipTitleScale * scaleRef,
+        self.tooltipTextColor.r,
+        self.tooltipTextColor.g,
+        self.tooltipTextColor.b
+    )
+
+    DrawText(
+        self.tooltipFont,
+        costText,
+        costX,
+        costY,
+        self.tooltipCostScale * scaleRef,
+        self.tooltipTextColor.r,
+        self.tooltipTextColor.g,
+        self.tooltipTextColor.b
+    )
+
+    local lineIndex = 0
+    local descYStart = topY - (self.tooltipDescriptionStartInsetPx * scaleRef)
+    for line in wrappedDescription:gmatch("[^\n]+") do
+        DrawText(
+            self.tooltipFont,
+            line,
+            titleX,
+            descYStart - (lineIndex * self.tooltipDescriptionLineSpacingPx * scaleRef),
+            self.tooltipBodyScale * scaleRef,
+            self.tooltipTextColor.r,
+            self.tooltipTextColor.g,
+            self.tooltipTextColor.b
+        )
+        lineIndex = lineIndex + 1
     end
 end
 
@@ -406,10 +694,15 @@ function SkillBubbleHolderUI:Destroy()
             DestroyEntity(self.iconIDs[i])
         end
     end
+    if self.tooltipID and self.tooltipID > 0 then
+        DestroyEntity(self.tooltipID)
+    end
     self.circleIDs = {}
     self.iconIDs = {}
     self.iconSkillIDs = {}
     self.circleTints = {}
+    self.tooltipID = 0
+    self.tooltipVisible = false
 
     Log("[SkillBubbleHolderUI] Destroyed")
 end
