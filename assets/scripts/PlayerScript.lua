@@ -212,9 +212,6 @@ local lastParticleBackendVersion = -1
 -- Load skill pattern definitions (provides SkillPatterns.GetPattern)
 dofile("assets/scripts/SkillPatterns.lua")
 
--- I key edge-detection flag (panel runs in Level3Clean global state via CallLevelFunction)
-local lastIKeyDown = false
-
 -- Skill definitions loaded from JSON in OnInit() (single source of truth)
 -- skillType: nil/"melee" = instant damage, "projectile" = spawns a projectile
 local SkillDefs = {}
@@ -577,11 +574,6 @@ local function endTurn()
         lastSkillKeyDown[key] = false
     end
     lastSpaceKeyDown = false
-    lastIKeyDown = false
-    -- Close info panel when turn ends (panel lives in global state)
-    if CallLevelFunction then
-        CallLevelFunction("CloseCharInfoPanel")
-    end
     -- Reset movement key states
     lastWKeyDown = false
     lastSKeyDown = false
@@ -1436,24 +1428,6 @@ function OnUpdate(dt)
     if GetAnimationFlipX then
         isFlippedX = GetAnimationFlipX(entityID)
     end
-
-    -- ========================================================================
-    -- CHARACTER INFO PANEL: I key → signal Level3Clean to toggle the panel
-    -- (Panel lives in the global Lua state so DrawText renders correctly)
-    -- ========================================================================
-    local iDown = IsKeyDown("I")
-    if iDown and not lastIKeyDown then
-        local idx = getPlayerIndex()
-        print("[PlayerScript] I key pressed! idx=" .. tostring(idx) .. " entityID=" .. tostring(entityID))
-        if CallLevelFunction then
-            print("[PlayerScript] Calling ToggleCharInfoPanel via CallLevelFunction")
-            CallLevelFunction("ToggleCharInfoPanel", idx, entityID)
-            print("[PlayerScript] CallLevelFunction returned")
-        else
-            print("[PlayerScript] ERROR: CallLevelFunction not available!")
-        end
-    end
-    lastIKeyDown = iDown
 
     -- ========================================================================
     -- ANIMATION BLOCKING: Disable input during scroll and AP refill animations
