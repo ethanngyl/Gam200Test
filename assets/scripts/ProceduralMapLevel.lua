@@ -52,6 +52,8 @@ local UIManager = require("UIManager")
 local SkillSwapUI = require("SkillSwapUI")
 _G.SkillSwapUI = SkillSwapUI
 
+local BOSS_SCRIPT_PATH = "assets/scripts/BossScript.lua"
+
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)
 _G.UIManager = UIManager
@@ -105,6 +107,11 @@ local goalTransitionDelay = 0
 local bossEntityID = nil
 local bossDefeated = false
 local pendingGoalData = nil  -- Stores goal spawn data until boss dies
+local pendingBossSpawn = nil  -- Stores deferred boss spawn payload
+local bossArenaGridX = nil
+local bossArenaGridY = nil
+local bossArenaWorldX = nil
+local bossArenaWorldY = nil
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -201,14 +208,14 @@ function OnInit()
     -- Setup enemies
     SetupProceduralEnemies(mapData)
 
-    -- Spawn boss in arena
-    SpawnProceduralBoss(mapData)
+    -- Queue boss spawn; boss appears only when all surviving players enter arena
+    QueueBossSpawnIfArena(mapData)
 
     -- Spawn chests and goal
     SpawnProceduralChestsAndGoal(mapData)
 
     -- Initialize UI system
-    UIManager.Init()
+    UIManager.Init({ currentLevel = currentLevel })
 
     -- Setup Party UI
     SetupPartyUI()
@@ -464,8 +471,8 @@ function SpawnProceduralBoss(mapData)
 
     Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
 
-    -- Attach BossScript instead of EnemyScript
-    AddScriptComponentToEntity(bossID, "assets/scripts/BossScript.lua")
+    -- Attach configurable boss script.
+    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
 
     -- Set target (C++ side)
     SetEnemyTarget(bossID, playerID)
@@ -489,9 +496,84 @@ function SpawnProceduralBoss(mapData)
     bossArenaWorldX = bx
     bossArenaWorldY = by
 
-    Log("Boss " .. bossID .. " BossScript attached + target set to " .. tostring(playerID))
+    Log("Boss " .. bossID .. " script attached (" .. BOSS_SCRIPT_PATH .. ") + target set to " .. tostring(playerID))
     Log("========================================")
     return true
+end
+
+function QueueBossSpawnIfArena(mapData)
+    pendingBossSpawn = nil
+
+    if not mapData.hasArena then
+        Log("No boss arena in this level")
+        return true
+    end
+
+    local bx = mapData.arenaWorldX
+    local by = mapData.arenaWorldY
+    if not bx or not by then
+        Log("ERROR: Arena world coordinates missing! Cannot queue boss spawn.")
+        return false
+    end
+
+    pendingBossSpawn = {
+        arenaX = mapData.arenaX,
+        arenaY = mapData.arenaY,
+        arenaWorldX = bx,
+        arenaWorldY = by,
+        arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3),
+        arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3),
+        arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4),
+        arenaMaxY = mapData.arenaMaxY or (mapData.arenaY + 4),
+        hasArena = true
+    }
+
+    bossEntityID = nil
+    bossDefeated = false
+    Log("Boss spawn queued: boss will appear once all surviving players enter arena")
+    return true
+end
+
+local function AreAllSurvivingPlayersInArena()
+    if not pendingBossSpawn then
+        return false
+    end
+
+    local aliveCount = 0
+    local insideCount = 0
+
+    for _, playerID in ipairs(partyMembers) do
+        if playerID and playerID ~= 0 then
+            local hp = GetEntityHP(playerID)
+            if hp and hp > 0 then
+                aliveCount = aliveCount + 1
+                local px, py = GetEntityGridPosition(playerID)
+                if px and py
+                   and px >= pendingBossSpawn.arenaMinX and px < pendingBossSpawn.arenaMaxX
+                   and py >= pendingBossSpawn.arenaMinY and py < pendingBossSpawn.arenaMaxY then
+                    insideCount = insideCount + 1
+                end
+            end
+        end
+    end
+
+    return aliveCount > 0 and insideCount == aliveCount
+end
+
+local function TrySpawnQueuedBoss()
+    if bossEntityID or bossDefeated or not pendingBossSpawn then
+        return
+    end
+
+    if not AreAllSurvivingPlayersInArena() then
+        return
+    end
+
+    local spawnData = pendingBossSpawn
+    local spawned = SpawnProceduralBoss(spawnData)
+    if spawned then
+        pendingBossSpawn = nil
+    end
 end
 
 -- ============================================================================
@@ -523,7 +605,7 @@ function SpawnProceduralChestsAndGoal(mapData)
             goalWorldY = mapData.goalWorldY
         }
 
-        if bossEntityID then
+        if bossEntityID or pendingBossSpawn then
             Log("Portal will appear after boss is defeated")
         else
             -- No boss on this level, spawn portal immediately
@@ -774,6 +856,7 @@ function OnUpdate(dt)
     -- ========================================
     -- CHECK BOSS DEFEATED -> SPAWN PORTAL
     -- ========================================
+    TrySpawnQueuedBoss()
     CheckBossDefeated()
 
     -- ========================================

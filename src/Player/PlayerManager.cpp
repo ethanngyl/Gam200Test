@@ -193,6 +193,9 @@ namespace Framework {
             return;
         }
 
+        // Arrow-key facing: free direction change, no AP cost, works in all states
+        HandleArrowKeyFacing();
+
         if (IsPlayerTurn()) {
             // IMPORTANT: Only run C++ turn management when gridMovementEnabled is true
             // When false, Lua scripts (PartyTurnManager) handle turn management
@@ -615,6 +618,56 @@ namespace Framework {
         // FIX: Set cooldown to prevent double AP consumption (200ms = 0.2 seconds)
         arrowMoveCooldown = 0.2f;
         // LOG_INFO("PlayerManager", "Arrow move cooldown activated (0.2s)");
+    }
+
+    /**
+    * @brief Arrow-key in-place facing change. Updates the entity's AnimDirection
+    *        so AnimationSystem::Update picks the correct prefixed animation on the
+    *        next frame (e.g. "Mage_Idle_back" for Player2). Does NOT call
+    *        LoadAnimation directly — that would bypass the per-entity animPrefix
+    *        and load the wrong sprite from the global animation config.
+    *        No movement, no AP cost, works with both C++ and Lua turn systems.
+    */
+    void PlayerControllerSystem::HandleArrowKeyFacing() {
+        if (!inputSystem || !entityManager) return;
+        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
+
+        AnimDirection newDir  = AnimDirection::None;
+        bool          flipAnim = false;
+        bool          anyPressed = false;
+
+        if (inputSystem->IsKeyPressed(KEY_UP)) {
+            newDir = AnimDirection::Back;
+            anyPressed = true;
+        }
+        else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
+            newDir = AnimDirection::Front;
+            anyPressed = true;
+        }
+        else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
+            newDir  = AnimDirection::Side;
+            flipAnim = false;   // false = facing left (natural sprite orientation)
+            anyPressed = true;
+        }
+        else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
+            newDir  = AnimDirection::Side;
+            flipAnim = true;    // true = facing right (mirrored)
+            anyPressed = true;
+        }
+
+        if (!anyPressed) return;
+
+        if (entityManager->HasComponent<SpriteAnimation>(playerEntity)) {
+            auto& anim    = entityManager->GetComponent<SpriteAnimation>(playerEntity);
+            anim.group    = AnimGroup::Idle;
+            anim.direction = newDir;
+            anim.flipX    = flipAnim;
+            // Clear animName so AnimationSystem::Update detects the change and
+            // reloads the correctly-prefixed sprite (e.g. "Mage_Idle_back") next frame.
+            anim.animName.clear();
+            LOG_INFO("PlayerManager", "Facing changed [no AP cost]: direction=%d flip=%d",
+                static_cast<int>(newDir), static_cast<int>(flipAnim));
+        }
     }
 
     void PlayerControllerSystem::ResetGridState() {

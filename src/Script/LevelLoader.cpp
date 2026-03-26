@@ -13,7 +13,7 @@ Editor mode (F1) and preserve-playing-state on level transition supported.
 
 Details:
 - Initialize(engine) caches UISystem, AudioSystem, GraphicsSystem; CreateLuaState
-  adds assets/scripts/ to package.path, RegisterLevelAPI(), stores __level_loader_ptr.
+    adds configured script_root to package.path, RegisterLevelAPI(), stores __level_loader_ptr.
 - LoadLevel(scriptPath, isEditorMode): UnloadCurrentLevel if needed; sets
   IS_EDITOR_LOAD, g_preservePlayingState/g_loadAsEditorMode for editor/playing;
   luaL_dofile; enforces editor/ImGui state; checks OnInit/OnUpdate/OnDraw/OnDestroy;
@@ -61,6 +61,8 @@ Technology is prohibited.
 #include "Graphics/ParticleSystemManager.h"
 #include "ImguiSystem.h"
 #include "GameStateList.h"
+#include "ConfigReader.h"
+#include "ScriptAPIRegistry.h"
 #include "Pause/GlobalPauseManager.h"
 #include "Component.h"     // CircleCollider, AP components
 #include "ECS/TagHelper.h" // FindFirstByTag, FindAllByTag
@@ -149,14 +151,18 @@ namespace Framework {
         // Add assets/scripts to Lua's module search path
         lua_getglobal(L, "package");
         lua_getfield(L, -1, "path");
-        std::string currentPath = lua_tostring(L, -1);
-        std::string newPath = currentPath + ";assets/scripts/?.lua";
+        const std::string scriptRoot = ConfigReader::GetProjectPath("script_root", "assets/scripts/");
+        std::string normalizedScriptRoot = scriptRoot;
+        if (!normalizedScriptRoot.empty() && normalizedScriptRoot.back() != '/') {
+            normalizedScriptRoot.push_back('/');
+        }
+        std::string newPath = std::string(lua_tostring(L, -1)) + ";" + normalizedScriptRoot + "?.lua";
         lua_pop(L, 1);  // Pop old path
         lua_pushstring(L, newPath.c_str());
         lua_setfield(L, -2, "path");
         lua_pop(L, 1);  // Pop package table
 
-        LOG_INFO("LevelLoader", "Added assets/scripts/ to Lua module path");
+        LOG_INFO("LevelLoader", "Added %s to Lua module path", normalizedScriptRoot.c_str());
 
         RegisterLevelAPI();
 
@@ -567,244 +573,7 @@ namespace Framework {
     void LevelLoader::RegisterLevelAPI() {
         LOG_INFO("LevelLoader", "Registering Level API...");
 
-        // Logging
-        lua_register(L, "Log", Lua_Log);
-
-        // Camera
-        lua_register(L, "SetCameraPosition", Lua_SetCameraPosition);
-        lua_register(L, "SetCameraZoom", Lua_SetCameraZoom);
-        lua_register(L, "SetCameraFollowTarget", Lua_SetCameraFollowTarget);
-        lua_register(L, "GetFramebufferSize", Lua_GetFramebufferSize);
-
-        // Engine control
-        lua_register(L, "SetEnginePlayState", Lua_SetEnginePlayState);
-        lua_register(L, "SetNextGameState", Lua_SetNextGameState);
-
-        // ImGui
-        lua_register(L, "ToggleEditor", Lua_ToggleEditor);
-        lua_register(L, "IsEditorEnabled", Lua_IsEditorEnabled);
-        lua_register(L, "SetEditorMode", Lua_SetEditorMode);
-        lua_register(L, "DisableImGui", Lua_DisableImGui);
-        lua_register(L, "EnableImGui", Lua_EnableImGui);
-
-        // Pause control
-        lua_register(L, "TogglePause", Lua_TogglePause);
-        lua_register(L, "IsPaused", Lua_IsPaused);
-
-        // Audio
-        lua_register(L, "PlaySound", Lua_PlaySound);
-        lua_register(L, "PlayMusic", Lua_PlayMusic);
-        lua_register(L, "StopMusic", Lua_StopMusic);
-        lua_register(L, "StopSound", Lua_StopSound);
-        lua_register(L, "StopAllSounds", Lua_StopAllSounds);
-        lua_register(L, "UpdateAudio", Lua_UpdateAudio);
-        lua_register(L, "SetMasterVolume", Lua_SetMasterVolume);
-        lua_register(L, "GetMasterVolume", Lua_GetMasterVolume);
-        lua_register(L, "SaveMasterVolume", Lua_SaveMasterVolume);
-
-        // UI Buttons
-        lua_register(L, "CreateButton", Lua_CreateButton);
-        lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
-        lua_register(L, "DrawButtonText", Lua_DrawButtonText);
-        lua_register(L, "DrawText", Lua_DrawText);
-        lua_register(L, "WorldToScreen", Lua_WorldToScreen);
-
-        // Input
-        lua_register(L, "IsKeyDown", Lua_IsKeyDown);
-        lua_register(L, "IsMouseButtonDown", Lua_IsMouseButtonDown);
-        lua_register(L, "IsMouseButtonPressed", Lua_IsMouseButtonPressed);
-        lua_register(L, "GetMousePosition", Lua_GetMousePosition);
-
-        // JSON and Level Loading
-        lua_register(L, "LoadJSON", Lua_LoadJSON);
-        lua_register(L, "LoadTileMap", Lua_LoadTileMap);
-
-        // AP Indicator / Entity Management
-        lua_register(L, "SpawnSprite", Lua_SpawnSprite);
-        lua_register(L, "SpawnAnimatedSprite", Lua_SpawnAnimatedSprite);
-        lua_register(L, "SetSpriteAnimationSheet", Lua_SetSpriteAnimationSheet);
-        lua_register(L, "SetSpriteColor", Lua_SetSpriteColor);
-        lua_register(L, "TintTile", Lua_TintTile);
-        lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
-        lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
-        lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
-        lua_register(L, "SetScale", Lua_SetScale);
-        lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
-        lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
-        lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
-        lua_register(L, "SetSpriteUVRect", Lua_SetSpriteUVRect);
-        lua_register(L, "DestroyEntity", Lua_DestroyEntity);
-        lua_register(L, "IsEntityValid", Lua_IsEntityValid);
-        lua_register(L, "SetEntityRotation", Lua_SetEntityRotation);
-        lua_register(L, "SetEntityScale", Lua_SetEntityScale);
-        lua_register(L, "SetSharedInt", Lua_SetSharedInt);
-        lua_register(L, "GetSharedInt", Lua_GetSharedInt);
-        lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
-
-        lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
-        lua_register(L, "GetCameraPosition", Lua_GetCameraPosition);
-        lua_register(L, "GetPlayerAttackAP", Lua_GetPlayerAttackAP);
-        lua_register(L, "GetPlayerHP", Lua_GetPlayerHP);
-
-        // Enemy AI Configuration
-        lua_register(L, "FindPlayer", Lua_FindPlayer);
-        lua_register(L, "GetAllPlayers", Lua_GetAllPlayers);
-        lua_register(L, "GetAllEnemies", Lua_GetAllEnemies);
-        lua_register(L, "SetEnemyTarget", Lua_SetEnemyTarget);
-        lua_register(L, "GetCurrentTurn", Lua_GetCurrentTurn);
-        lua_register(L, "GetChestProgress", Lua_GetChestProgress);
-
-        // Enemy Turn Management System
-        lua_register(L, "InitializeEnemyTurn", Lua_InitializeEnemyTurn);
-        lua_register(L, "IsActiveEnemy", Lua_IsActiveEnemy);
-        lua_register(L, "IsEnemyActionReady", Lua_IsEnemyActionReady);
-        lua_register(L, "MarkEnemyActionComplete", Lua_MarkEnemyActionComplete);
-        lua_register(L, "UpdateEnemyTurnManager", Lua_UpdateEnemyTurnManager);
-
-        // Animation
-        lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
-        lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
-
-        // NEW: Unified Animation Loading API
-        lua_register(L, "LoadAnimationForEntity", Lua_LoadAnimationForEntity);
-        lua_register(L, "LoadAnimationForAllPlayers", Lua_LoadAnimationForAllPlayers);
-        lua_register(L, "LoadAnimationForAllEnemies", Lua_LoadAnimationForAllEnemies);
-
-        // Scroll Animation API (for TurnScrollUI)
-        lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
-        lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
-        lua_register(L, "GetAnimationFrame", Lua_GetAnimationFrame);
-        lua_register(L, "GetAnimationFrameCount", Lua_GetAnimationFrameCount);
-
-        // Animation Control API
-        lua_register(L, "SetAnimationGroup", Lua_SetAnimationGroup);
-        lua_register(L, "SetAnimationDirection", Lua_SetAnimationDirection);
-        lua_register(L, "SetAnimationFlipX", Lua_SetAnimationFlipX);
-        lua_register(L, "SetAnimationPlaying", Lua_SetAnimationPlaying);
-        lua_register(L, "SetAnimationPrefix", Lua_SetAnimationPrefix);
-        lua_register(L, "SetAnimationLoop", Lua_SetAnimationLoop);
-        lua_register(L, "SetAnimationFrameRange", Lua_SetAnimationFrameRange);
-        lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
-        lua_register(L, "GetEntityMovementDirection", Lua_GetEntityMovementDirection);
-
-        // Party System - Entity-Based APIs
-        lua_register(L, "GetEntityAP", Lua_GetEntityAP);
-        lua_register(L, "GetEntityAttackAP", Lua_GetEntityAttackAP);
-        lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
-        lua_register(L, "ConsumeEntityAttackAP", Lua_ConsumeEntityAttackAP);
-        lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
-        lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
-        lua_register(L, "GetEntityHP", Lua_GetEntityHP);
-        lua_register(L, "SetEntityHP", Lua_SetEntityHP);
-        lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
-
-        // Script Component Management
-        lua_register(L, "AddScriptComponentToEntity", Lua_AddScriptComponentToEntity);
-        lua_register(L, "RemoveScriptComponentFromEntity", Lua_RemoveScriptComponentFromEntity);
-
-        // Player Grid Movement API
-        lua_register(L, "GetPlayerGridPosition", Lua_GetPlayerGridPosition);
-        lua_register(L, "IsValidGridPosition", Lua_IsValidGridPosition);
-        lua_register(L, "IsWalkableTile", Lua_IsWalkableTile);
-        lua_register(L, "IsTileWall", Lua_IsTileWall);
-        lua_register(L, "MovePlayerToTile", Lua_MovePlayerToTile);
-        lua_register(L, "SetGridMovementEnabled", Lua_SetGridMovementEnabled);
-        lua_register(L, "ShowTileBorder", Lua_ShowTileBorder);
-        lua_register(L, "PulseTile", Lua_PulseTile);
-        lua_register(L, "ConsumePlayerAP", Lua_ConsumePlayerAP);
-        lua_register(L, "RefillPlayerAP", Lua_RefillPlayerAP);
-        lua_register(L, "GetTurnIndex", Lua_GetTurnIndex);
-        lua_register(L, "EndPlayerTurn", Lua_EndPlayerTurn);
-        lua_register(L, "EndEnemyTurn", Lua_EndEnemyTurn);
-        lua_register(L, "CallLevelFunction", Lua_CallLevelFunction);
-        lua_register(L, "SetPlayerFlipX", Lua_SetPlayerFlipX);
-        lua_register(L, "HasChestAtTile", Lua_HasChestAtTile);
-        lua_register(L, "CollectChest", Lua_CollectChest);
-        lua_register(L, "HasGoalAtTile", Lua_HasGoalAtTile);
-
-        // Enemy/Entity API
-        lua_register(L, "GetEnemyAP", Lua_GetEnemyAP);
-        lua_register(L, "RefillEnemyAP", Lua_RefillEnemyAP);
-        lua_register(L, "GetEntityGridPosition", Lua_GetEntityGridPosition);
-        lua_register(L, "GetEntityWorldPosition", Lua_GetEntityWorldPosition);
-        lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
-        lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
-        lua_register(L, "DamageEntity", Lua_DamageEntity);
-        lua_register(L, "GetDamageModifier", Lua_GetDamageModifier);
-        lua_register(L, "SetDamageModifier", Lua_SetDamageModifier);
-        lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
-
-        // Tile Occupancy API
-        lua_register(L, "SetTileOccupant", Lua_SetTileOccupant);
-        lua_register(L, "GetTileOccupant", Lua_GetTileOccupant);
-        lua_register(L, "IsTileOccupied", Lua_IsTileOccupied);
-
-        // Grid Conversion API
-        lua_register(L, "TileToWorld", Lua_TileToWorld);
-        lua_register(L, "ScreenToTile", Lua_ScreenToTile);
-
-        // Entity-specific APIs (proper naming)
-        lua_register(L, "GetEntityAP", Lua_GetEntityAP);
-        lua_register(L, "GetEntityHP", Lua_GetEntityHP);
-        lua_register(L, "SetEntityHP", Lua_SetEntityHP);
-        lua_register(L, "SetEntityMaxAP", Lua_SetEntityMaxAP);
-        lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
-        lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
-        lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
-        lua_register(L, "SetActiveCharacter", Lua_SetActiveCharacter);
-        lua_register(L, "IsActiveCharacter", Lua_IsActiveCharacter);
-
-        lua_register(L, "ToggleEditorMode", lua_ToggleEditorMode);
-        lua_register(L, "IsEditorMode", lua_IsEditorMode);
-        lua_register(L, "ShouldDisableGameplay", Lua_ShouldDisableGameplay);
-
-        // Save/Load API
-        lua_register(L, "SaveSceneToJSON", Lua_SaveSceneToJSON);
-        lua_register(L, "LoadSceneFromJSON", Lua_LoadSceneFromJSON);
-        lua_register(L, "AutoSaveScene", Lua_AutoSaveScene);
-        lua_register(L, "LoadAutoSave", Lua_LoadAutoSave);
-        lua_register(L, "HasAutoSave", Lua_HasAutoSave);
-        lua_register(L, "ClearAutoSave", Lua_ClearAutoSave);
-
-        // Procedural Map API
-        lua_register(L, "LoadProceduralMap", Lua_LoadProceduralMap);
-
-        // Map Serializer API
-        lua_register(L, "SaveCurrentMap",  Lua_SaveCurrentMap);
-        lua_register(L, "LoadSavedMap",    Lua_LoadSavedMap);
-        lua_register(L, "ListSavedMaps",   Lua_ListSavedMaps);
-
-        // Entity Spawning API
-        lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
-        lua_register(L, "RemoveMovementComponent", Lua_RemoveMovementComponent);
-        lua_register(L, "InitializeTurnSystem", Lua_InitializeTurnSystem);
-        lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);
-        lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
-        lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
-
-        // Status Effect API
-        lua_register(L, "ApplyStatusEffect", Lua_ApplyStatusEffect);
-        lua_register(L, "HasStatusEffect", Lua_HasStatusEffect);
-        lua_register(L, "RemoveStatusEffect", Lua_RemoveStatusEffect);
-        lua_register(L, "DecrementStatusEffects", Lua_DecrementStatusEffects);
-        lua_register(L, "GetStatusEffectSource", Lua_GetStatusEffectSource);
-        lua_register(L, "GetEffectDuration", Lua_GetEffectDuration);
-
-        // Unified Skill Database API
-        lua_register(L, "GetSkillByID", Lua_GetSkillByID);
-        lua_register(L, "GetClassSkills", Lua_GetClassSkills);
-        lua_register(L, "GetSkillCount", Lua_GetSkillCount);
-
-        // Particle Emitter API (legacy)
-        lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
-
-        // Particles (new ParticleSystemManager API)
-        lua_register(L, "SpawnParticleEmitterEthan", Lua_SpawnParticleEmitterEthan);
-        lua_register(L, "SpawnParticleEmitterActive", Lua_SpawnParticleEmitterActive);
-        lua_register(L, "SetUseEthanParticles", Lua_SetUseEthanParticles);
-        lua_register(L, "GetUseEthanParticles", Lua_GetUseEthanParticles);
-        lua_register(L, "ToggleUseEthanParticles", Lua_ToggleUseEthanParticles);
-        lua_register(L, "ClearAllParticleEmitters", Lua_ClearAllParticleEmitters);
+        Framework::ScriptAPIRegistry::RegisterAll(L);
         
         LOG_INFO("LevelLoader", "API registered");
     }
@@ -918,53 +687,18 @@ namespace Framework {
             }
         }
 
-        // Map state names to enum values
-        if (strcmp(stateName, "Level_select") == 0) {
-            next = Level_select;
+        const int resolvedState = ConfigReader::ResolveStateName(stateName, -1);
+        if (resolvedState < 0) {
+            LOG_WARN("LevelLoader", "Unknown game state: %s", stateName);
+            return 0;
         }
-        if (strcmp(stateName, "TUTORIAL") == 0) {
-            next = TUTORIAL;
-        }
-        else if (strcmp(stateName, "CONTROL") == 0) {
-            next = CONTROL;
-        }
-        else if (strcmp(stateName, "CONTROL2") == 0) {
-            next = CONTROL2;
-        }
-        else if (strcmp(stateName, "SETTINGS") == 0) {
-            next = settingsMenu;
-        }
-        else if (strcmp(stateName, "SKILL_SETS") == 0) {
-            next = SKILL_SETS;
-        }
-        else if (strcmp(stateName, "WIN_SCREEN") == 0) {
-            next = WIN_SCREEN;
-        }
-        else if (strcmp(stateName, "LOSE_SCREEN") == 0) {
-            next = LOSE_SCREEN;
-        }
-        else if (strcmp(stateName, "LEVEL_2") == 0) {
-            next = LEVEL_2;
-        }
-        else if (strcmp(stateName, "LEVEL_3") == 0) {
-            // If already in LEVEL_3, use GS_RESTART to trigger full reload
-            if (current == LEVEL_3) {
-                next = GS_RESTART;
-            } else {
-                next = LEVEL_3;
-            }
-        }
-        else if (strcmp(stateName, "LEVEL_END") == 0) {
-            next = LEVEL_END;
-        }
-        else if (strcmp(stateName, "mainMenu") == 0) {
-            next = mainMenu;
-        }
-        else if (strcmp(stateName, "GS_QUIT") == 0) {
-            next = GS_QUIT;
+
+        // Preserve existing restart behavior for in-place Level 3 transition.
+        if (resolvedState == LEVEL_3 && current == LEVEL_3) {
+            next = GS_RESTART;
         }
         else {
-            LOG_WARN("LevelLoader", "Unknown game state: %s", stateName);
+            next = resolvedState;
         }
 
         return 0;

@@ -202,6 +202,7 @@ function InitializeParty(entityIDs)
     print("[InitializeParty] Step 6: DONE")
 
     print("[InitializeParty] COMPLETED SUCCESSFULLY - Active character: " .. PartyMembers[ActiveCharacterIndex].name)
+    OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
     return true
 end
 
@@ -785,15 +786,18 @@ function OnCharacterSwitched(newCharID)
     print("[PartyTurnManager] ==========================================")
 
     -- Update the graphics system's camera follow target
-    -- This is more robust than SetCameraPosition because the camera
-    -- will continuously follow the entity every frame
     SetCameraFollowTarget(newCharID)
+
+    -- Tint all party members back to normal, then highlight the active one red
+    if SetSpriteColor then
+        for _, member in ipairs(PartyMembers) do
+            SetSpriteColor(member.entityID, 1, 1, 1, 1)   -- restore white
+        end
+        SetSpriteColor(newCharID, 1, 0.3, 0.3, 1)         -- tint active unit red
+    end
 
     print("[PartyTurnManager] Camera now following Entity " .. newCharID)
     print("[PartyTurnManager] ==========================================")
-
-    -- Optional: Play sound effect for character switch
-    -- PlaySound("character_switch.wav", false)
 end
 
 -- ============================================================================

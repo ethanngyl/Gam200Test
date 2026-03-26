@@ -1,0 +1,88 @@
+{
+  "states": [
+    {
+      "id": 0,
+      "name": "mainMenu",
+      "aliases": ["mainmenu", "main_menu", "MAIN_MENU"],
+      "script": "assets/scripts/MainMenuLevel.lua"
+    },
+    {
+      "id": 1,
+      "name": "settingsMenu",
+      "aliases": ["settings", "SETTINGS"],
+      "script": "assets/scripts/SettingsLevel.lua"
+    },
+    {
+      "id": 2,
+      "name": "Level_select",
+      "aliases": ["level_select", "LEVEL_SELECT"],
+      "script": "assets/scripts/LevelSelectLevel.lua"
+    },
+    {
+      "id": 3,
+      "name": "LEVEL_2",
+      "aliases": ["level2", "level_2", "LEVEL2"],
+      "script": "assets/scripts/Level2.lua"
+    },
+    {
+      "id": 4,
+      "name": "LEVEL_3",
+      "aliases": ["level3", "level_3", "LEVEL3"],
+      "script": "assets/scripts/ProceduralMapLevel.lua"
+    },
+    {
+      "id": 5,
+      "name": "LEVEL_END",
+      "aliases": ["end", "level_end"],
+      "script": "assets/scripts/EndLevel.lua"
+    },
+    {
+      "id": 6,
+      "name": "TUTORIAL",
+      "aliases": ["tutorial"],
+      "script": "assets/scripts/TutorialLevel.lua"
+    },
+    {
+      "id": 7,
+      "name": "CONTROL",
+      "aliases": ["control"],
+      "script": "assets/scripts/ControlLevel.lua"
+    },
+    {
+      "id": 8,
+      "name": "CONTROL2",
+      "aliases": ["control2"],
+      "script": "assets/scripts/Control2Level.lua"
+    },
+    {
+      "id": 9,
+      "name": "SKILL_SETS",
+      "aliases": ["skill_sets", "skillsets"],
+      "script": "assets/scripts/SkillSetsLevel.lua"
+    },
+    {
+      "id": 10,
+      "name": "WIN_SCREEN",
+      "aliases": ["win", "win_screen"],
+      "script": "assets/scripts/WinLevel.lua"
+    },
+    {
+      "id": 11,
+      "name": "LOSE_SCREEN",
+      "aliases": ["lose", "lose_screen"],
+      "script": "assets/scripts/LoseLevel.lua"
+    },
+    {
+      "id": 12,
+      "name": "GS_QUIT",
+      "aliases": ["quit", "exit"],
+      "script": ""
+    },
+    {
+      "id": 13,
+      "name": "GS_RESTART",
+      "aliases": ["restart"],
+      "script": ""
+    }
+  ]
+}

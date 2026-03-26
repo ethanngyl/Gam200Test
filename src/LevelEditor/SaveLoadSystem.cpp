@@ -1,4 +1,4 @@
-﻿/**
+/**
 ===============================================================================
  File:          SaveLoadSystem.cpp
  Author:        Ge Yongqi
@@ -527,11 +527,17 @@ namespace Framework {
         const auto& components = json["components"];
 
         // Deserialize each component
+        // NOTE: MeshRenderer and Sprite must come BEFORE SpriteAnimation,
+        // because DeserializeSpriteAnimation reads the texture path from
+        // Sprite.texturePath or MeshRenderer.spriteName to load the spriteSheet.
         if (components.contains("Transform")) {
             DeserializeTransform(components["Transform"], entity, em);
         }
         if (components.contains("Sprite")) {
             DeserializeSprite(components["Sprite"], entity, em);
+        }
+        if (components.contains("MeshRenderer")) {
+            DeserializeMeshRenderer(components["MeshRenderer"], entity, em);
         }
         if (components.contains("Movement")) {
             DeserializeMovement(components["Movement"], entity, em);
@@ -571,9 +577,6 @@ namespace Framework {
         }
         if (components.contains("AttackRangeComponent")) {
             DeserializeAttackRangeComponent(components["AttackRangeComponent"], entity, em);
-        }
-        if (components.contains("MeshRenderer")) {
-            DeserializeMeshRenderer(components["MeshRenderer"], entity, em);
         }
         if (components.contains("GridTiles")) {
             DeserializeGridTiles(components["GridTiles"], entity, em);
@@ -663,11 +666,19 @@ namespace Framework {
         sa.useJsonConfig = j.value("useJsonConfig", true);
 
         // Load sprite sheet texture if graphics system is available
-        if (s_graphicsSystem && em->HasComponent<Sprite>(entity)) {
-            auto& sprite = em->GetComponent<Sprite>(entity);
-            if (!sprite.texturePath.empty()) {
+        if (s_graphicsSystem) {
+            std::string texturePath;
+
+            if (em->HasComponent<Sprite>(entity)) {
+                texturePath = em->GetComponent<Sprite>(entity).texturePath;
+            }
+            else if (em->HasComponent<MeshRenderer>(entity)) {
+                texturePath = em->GetComponent<MeshRenderer>(entity).spriteName;
+            }
+
+            if (!texturePath.empty()) {
                 auto& rm = s_graphicsSystem->GetResourceManager();
-                sa.spriteSheet = rm.LoadTexture(sprite.texturePath);
+                sa.spriteSheet = rm.LoadTexture(texturePath);
                 if (auto* texture = rm.GetTexture(sa.spriteSheet)) {
                     int colsForSize = (sa.columns > 0) ? sa.columns : 1;
                     int rowsForSize = (sa.rows > 0) ? sa.rows : 1;

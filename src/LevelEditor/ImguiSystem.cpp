@@ -133,6 +133,8 @@ namespace Framework {
         , selectedEntity{}
         , selectedPrefabPath("")
     {
+        pendingAudioDestDir = std::filesystem::path(
+            ConfigReader::GetProjectPath("audio_root", "assets/Audio/"));
     }
 
     void ImGuiSystem::Shutdown()
@@ -677,7 +679,8 @@ namespace Framework {
                 if (IsAudioFileSupported(srcPath, audioErr))
                 {
                     pendingAudioPath = srcPath;
-                    pendingAudioDestDir = std::filesystem::path("assets/Audio");
+                    pendingAudioDestDir = std::filesystem::path(
+                        ConfigReader::GetProjectPath("audio_root", "assets/Audio/"));
 
                     std::string defaultName = srcPath.stem().string();
                     strncpy_s(newAudioKeyBuffer, sizeof(newAudioKeyBuffer), defaultName.c_str(), _TRUNCATE);
@@ -4462,7 +4465,8 @@ namespace Framework {
 
                     // 1. Store the source path
                     pendingAudioPath = path;
-                    pendingAudioDestDir = std::filesystem::path("assets/Audio");
+                    pendingAudioDestDir = std::filesystem::path(
+                        ConfigReader::GetProjectPath("audio_root", "assets/Audio/"));
                     // 2. Pre-fill the buffer with the filename (as a default key)
                     std::string defaultName = path.stem().string();
                     //strncpy(newAudioKeyBuffer, defaultName.c_str(), sizeof(newAudioKeyBuffer));
@@ -4646,7 +4650,8 @@ namespace Framework {
     }
 
     bool ImGuiSystem::AddAudioToJSON(const std::string& audioName, const std::string& fileName) {
-        const std::string jsonPath = "assets/JSON/AudioConfig.json";
+        const std::string jsonPath =
+            ConfigReader::GetProjectPath("audio_config", "assets/JSON/AudioConfig.json");
 
         // Opening JSON file
 
@@ -5199,7 +5204,8 @@ namespace Framework {
 
             ImGui::BeginChild("ScriptList", ImVec2(0, -35), true);
 
-            auto scriptFiles = GetLuaFilesInDirectory("assets/scripts/");
+            const std::string scriptRoot = ConfigReader::GetProjectPath("script_root", "assets/scripts/");
+            auto scriptFiles = GetLuaFilesInDirectory(scriptRoot);
 
             std::string searchStr = searchBuffer;
             std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
@@ -5227,12 +5233,20 @@ namespace Framework {
                         if (entityManager->HasComponent<ScriptComponent>(entityPendingScriptAssignment))
                         {
                             auto& sc = entityManager->GetComponent<ScriptComponent>(entityPendingScriptAssignment);
-                            sc.scriptPath = "assets/scripts/" + selectedScriptPath;
+                            std::string normalizedScriptRoot = scriptRoot;
+                            if (!normalizedScriptRoot.empty() && normalizedScriptRoot.back() != '/') {
+                                normalizedScriptRoot.push_back('/');
+                            }
+                            sc.scriptPath = normalizedScriptRoot + selectedScriptPath;
                         }
                         else
                         {
                             auto& sc = entityManager->AddComponent<ScriptComponent>(entityPendingScriptAssignment);
-                            sc.scriptPath = "assets/scripts/" + selectedScriptPath;
+                            std::string normalizedScriptRoot = scriptRoot;
+                            if (!normalizedScriptRoot.empty() && normalizedScriptRoot.back() != '/') {
+                                normalizedScriptRoot.push_back('/');
+                            }
+                            sc.scriptPath = normalizedScriptRoot + selectedScriptPath;
                         }
 
                         EndSnapshotEdit(entityPendingScriptAssignment);
@@ -5243,7 +5257,7 @@ namespace Framework {
 
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
-                    ImGui::Text("Full path: scripts/%s", scriptFile.c_str());
+                    ImGui::Text("Full path: %s%s", scriptRoot.c_str(), scriptFile.c_str());
                     ImGui::EndTooltip();
                 }
             }
@@ -5437,7 +5451,8 @@ namespace Framework {
 
             ImGui::BeginChild("LevelList", ImVec2(0, 250), true);
 
-            auto levelFiles = GetLuaLevelsInDirectory("assets/scripts/");
+            const std::string scriptRoot = ConfigReader::GetProjectPath("script_root", "assets/scripts/");
+            auto levelFiles = GetLuaLevelsInDirectory(scriptRoot);
 
             std::string searchStr = searchBuffer;
             std::transform(searchStr.begin(), searchStr.end(), searchStr.begin(), ::tolower);
@@ -5477,7 +5492,7 @@ namespace Framework {
                 if (ImGui::IsItemHovered()) {
                     ImGui::BeginTooltip();
                     ImGui::Text("Double-click to load");
-                    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Path: assets/scripts/%s", levelFile.c_str());
+                    ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Path: %s%s", scriptRoot.c_str(), levelFile.c_str());
                     ImGui::EndTooltip();
                 }
 

@@ -164,15 +164,31 @@ local BOSS_ANIM = {
 
 local lastAnimKey = nil
 local lastFlipX = false
+local warnedMissingAnimAPI = false
 
 local function ApplySheet(animKey, flipX)
-    if not SetSpriteAnimationSheet then return end
+    if not SetSpriteAnimationSheet then
+        if not warnedMissingAnimAPI then
+            print("[BossScript] SetSpriteAnimationSheet is NIL; boss animation sheets unavailable")
+            warnedMissingAnimAPI = true
+        end
+        return
+    end
     if animKey == lastAnimKey and flipX == lastFlipX then return end
 
     local a = BOSS_ANIM[animKey]
-    if not a then return end
+    if not a then
+        print("[BossScript] Missing BOSS_ANIM key: " .. tostring(animKey))
+        return
+    end
 
-    SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    local ok = SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    if not ok then
+        print("[BossScript] ApplySheet failed for key=" .. tostring(animKey) .. ", tex=" .. tostring(a.tex))
+        if SetSpriteTexture then
+            SetSpriteTexture(entityID, a.tex)
+        end
+    end
     if SetAnimationFlipX then
         SetAnimationFlipX(entityID, flipX and true or false)
     end
@@ -497,17 +513,7 @@ function OnUpdate(dt)
             end
             print("[Boss " .. entityID .. "] All players in arena - BOSS ACTIVATED!")
         else
-            -- Still need to finish our turn action so the turn system doesn't softlock
-            local currentTurn = GetCurrentTurn()
-            if currentTurn == "Enemy" then
-                local ok, isActive = pcall(IsActiveEnemy, entityID)
-                if ok and isActive then
-                    local ok2, actionReady = pcall(IsEnemyActionReady)
-                    if ok2 and actionReady then
-                        FinishBossAction()
-                    end
-                end
-            end
+            -- Boss is fully idle before activation and does not consume an enemy action.
             return
         end
     end

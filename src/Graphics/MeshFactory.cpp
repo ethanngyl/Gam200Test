@@ -46,7 +46,8 @@ namespace Framework {
     * @return A pointer to the created `Mesh` object representing a triangle.
     */
     void MeshFactory::MeshValueInitialize() {
-        ConfigReader::LoadConfig("valueloader.txt");
+        ConfigReader::LoadConfig(
+            ConfigReader::GetProjectPath("value_loader", "assets/valueloader.txt"));
         blv_x = ConfigReader::GetFloat("blv_x", 0);
         blv_y = ConfigReader::GetFloat("blv_y", 0);
         blv_z = ConfigReader::GetFloat("blv_z", 0);

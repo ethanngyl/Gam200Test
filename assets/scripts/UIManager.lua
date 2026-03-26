@@ -60,6 +60,23 @@ local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 local TurnScrollUI = require("ScrollOpen")
 local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")
+local CharacterInfoPanel = require("UI/CharacterInfoPanel")
+local TutorialPopupUI = require("UI/TutorialPopupUI")
+
+-- Character info panel instance (I key overlay)
+local _charInfoPanel = CharacterInfoPanel.new()
+
+-- Bridge functions callable from entity scripts via CallLevelFunction
+function _G.ToggleCharInfoPanel(playerIndex, entityID)
+    print("[UIManager] ToggleCharInfoPanel player=" .. tostring(playerIndex))
+    _charInfoPanel:Toggle(playerIndex, entityID)
+end
+
+function _G.CloseCharInfoPanel()
+    if _charInfoPanel.isOpen then
+        _charInfoPanel:_hide()
+    end
+end
 
 -- ============================================================================
 -- STATE
@@ -160,6 +177,7 @@ end
 
 function UIManager.Init(config)
     config = config or {}
+    local currentLevel = config.currentLevel or 0
 
     Log("========================================")
     Log("[UIManager] Initializing UI System...")
@@ -303,6 +321,14 @@ function UIManager.Init(config)
         scaleY = 0.55,
         layer = 4,
         texture = "assets/new assets/skill_bubble_holder.png",
+        tooltipTexture = "assets/Menu/Scroll Overlay.png",
+        tooltipScaleX = 0.35,
+        tooltipScaleY = 0.22,
+        tooltipOffsetX = 0.34,
+        slotLabelFont = "Jersey20Regular",
+        slotLabelScale = 0.5,
+        slotLabelOffsetXPx = -35,
+        slotLabelOffsetYPx = 20,
         -- Skill icons are resolved as: skillIconMap[skillID] or skillIconBasePath..skillID..".png"
         skillIconBasePath = "assets/SkillIcons/",
         defaultIconTexture = "assets/UI/skill_circle.png",
@@ -323,6 +349,37 @@ function UIManager.Init(config)
             Thrust = "assets/SkillIcons/Thrust.png"
         }
     })
+
+    if currentLevel == 1 then
+        UIManager.components.tutorialPopup = TutorialPopupUI:New()
+        UIManager.components.tutorialPopup:Init({
+            offsetX = -0.60,
+            offsetY = -0.08,
+            scaleX = 0.42,
+            scaleY = 0.24,
+            layer = 7,
+            texture = "assets/Menu/Scroll Overlay.png",
+            font = "Jersey20Regular",
+            steps = {
+                {
+                    title = "Welcome",
+                    body = "This is your party HUD. It shows each hero's health, movement AP and attack AP."
+                },
+                {
+                    title = "Turn Flow",
+                    body = "Use the active hero each turn. After all party members act, enemies take their turn."
+                },
+                {
+                    title = "Skills",
+                    body = "Your skill bubbles are on the right side. Hover them to read each skill description and AP cost."
+                },
+                {
+                    title = "Goal",
+                    body = "Clear enemies, move as a team and reach the portal to advance to the next level."
+                }
+            }
+        })
+    end
 
     -- TODO: Add more components as needed:
     -- - ChestProgressUI
@@ -379,11 +436,21 @@ function UIManager.Draw()
         return
     end
 
-    -- Draw all components that have a Draw method
-    for name, component in pairs(UIManager.components) do
-        if component and component.Draw then
-            component:Draw()
+    -- Draw all HUD components, but suppress them while the info panel is open
+    -- (DrawText has no Z-layer, so HUD text would bleed through the panel background)
+    local panelOpen = _charInfoPanel and _charInfoPanel.isOpen
+    if not panelOpen then
+        for name, component in pairs(UIManager.components) do
+            if component and component.Draw then
+                component:Draw()
+            end
         end
+    end
+
+    -- Character info panel text overlay (must be called during Draw, not Update)
+    -- Skip when game is paused so text doesn't bleed through the pause menu
+    if panelOpen and not (IsPaused and IsPaused()) then
+        _charInfoPanel:OnDraw()
     end
 end
 

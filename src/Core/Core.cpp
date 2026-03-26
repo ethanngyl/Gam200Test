@@ -118,7 +118,9 @@ namespace Framework
             // Load audio configuration from JSON
             if (audioSystem) {
                 LOG_INFO("CORE", "Loading audio configuration...");
-                bool audioLoaded = AudioLoader::LoadAudioConfig("assets/JSON/AudioConfig.json", audioSystem);
+                const std::string audioConfigPath =
+                    ConfigReader::GetProjectPath("audio_config", "assets/JSON/AudioConfig.json");
+                bool audioLoaded = AudioLoader::LoadAudioConfig(audioConfigPath, audioSystem);
                 if (audioLoaded) {
                     LOG_INFO("CORE", " Audio configuration loaded successfully");
                 }

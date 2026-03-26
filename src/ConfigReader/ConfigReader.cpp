@@ -23,6 +23,133 @@
 
 #include "Precompiled.h"
 
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <unordered_map>
+
+namespace {
+    std::unordered_map<std::string, int> g_stateAliasToEnum;
+    bool g_stateRegistryLoaded = false;
+    std::unordered_map<std::string, std::string> g_projectPaths;
+    bool g_projectPathsLoaded = false;
+
+    std::string ToLowerASCII(const std::string& input)
+    {
+        std::string out = input;
+        std::transform(out.begin(), out.end(), out.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return out;
+    }
+
+    void AddAlias(const std::string& alias, int state)
+    {
+        if (alias.empty()) return;
+        g_stateAliasToEnum[ToLowerASCII(alias)] = state;
+    }
+
+    void LoadStateRegistryAliases()
+    {
+        if (g_stateRegistryLoaded) {
+            return;
+        }
+
+        g_stateRegistryLoaded = true;
+
+        try {
+            const std::string stateRegistryPath =
+                ConfigReader::GetProjectPath("state_registry", ConfigReader::STATE_REGISTRY_PATH);
+            std::ifstream file(stateRegistryPath);
+            if (!file.is_open()) {
+                LOG_WARN("CONFIG", "State registry not found at '%s'; using fallback aliases",
+                    stateRegistryPath.c_str());
+                return;
+            }
+
+            nlohmann::json doc;
+            file >> doc;
+
+            if (!doc.contains("states") || !doc["states"].is_array()) {
+                LOG_WARN("CONFIG", "State registry missing 'states' array; using fallback aliases");
+                return;
+            }
+
+            for (const auto& stateEntry : doc["states"]) {
+                if (!stateEntry.is_object()) continue;
+                if (!stateEntry.contains("id") || !stateEntry["id"].is_number_integer()) continue;
+
+                const int stateId = stateEntry["id"].get<int>();
+
+                if (stateEntry.contains("name") && stateEntry["name"].is_string()) {
+                    AddAlias(stateEntry["name"].get<std::string>(), stateId);
+                }
+
+                if (stateEntry.contains("aliases") && stateEntry["aliases"].is_array()) {
+                    for (const auto& alias : stateEntry["aliases"]) {
+                        if (alias.is_string()) {
+                            AddAlias(alias.get<std::string>(), stateId);
+                        }
+                    }
+                }
+            }
+
+            LOG_INFO("CONFIG", "Loaded state aliases from %s (%zu entries)",
+                stateRegistryPath.c_str(), g_stateAliasToEnum.size());
+        }
+        catch (const nlohmann::json::exception& e) {
+            LOG_WARN("CONFIG", "Failed to parse state registry JSON: %s", e.what());
+        }
+        catch (const std::exception& e) {
+            LOG_WARN("CONFIG", "Failed to load state registry: %s", e.what());
+        }
+    }
+
+    void LoadProjectPathsIfNeeded()
+    {
+        if (g_projectPathsLoaded) {
+            return;
+        }
+
+        g_projectPathsLoaded = true;
+
+        try {
+            std::ifstream file(ConfigReader::PROJECT_PATHS_FILE_PATH);
+            if (!file.is_open()) {
+                LOG_WARN("CONFIG", "Project paths file not found at '%s'",
+                    ConfigReader::PROJECT_PATHS_FILE_PATH);
+                return;
+            }
+
+            nlohmann::json doc;
+            file >> doc;
+
+            if (doc.contains("paths") && doc["paths"].is_object()) {
+                const auto& paths = doc["paths"];
+                for (auto it = paths.begin(); it != paths.end(); ++it) {
+                    if (it.value().is_string()) {
+                        g_projectPaths[it.key()] = it.value().get<std::string>();
+                    }
+                }
+            }
+            else if (doc.is_object()) {
+                for (auto it = doc.begin(); it != doc.end(); ++it) {
+                    if (it.value().is_string()) {
+                        g_projectPaths[it.key()] = it.value().get<std::string>();
+                    }
+                }
+            }
+
+            LOG_INFO("CONFIG", "Loaded project paths from %s (%zu entries)",
+                ConfigReader::PROJECT_PATHS_FILE_PATH, g_projectPaths.size());
+        }
+        catch (const nlohmann::json::exception& e) {
+            LOG_WARN("CONFIG", "Failed to parse project paths JSON: %s", e.what());
+        }
+        catch (const std::exception& e) {
+            LOG_WARN("CONFIG", "Failed to load project paths: %s", e.what());
+        }
+    }
+}
+
 
  // ============================================================================
  // STATIC MEMBER DEFINITIONS
@@ -37,22 +164,32 @@ std::string ConfigReader::loadedConfigPath = "";
 
 bool ConfigReader::LoadConfig(const std::string& filename)
 {
+    const std::string resolvedPath =
+        (filename == CONFIG_FILE_PATH)
+        ? GetProjectPath("game_config", CONFIG_FILE_PATH)
+        : filename;
+
     // Check if this file is already loaded
-    if (configLoaded && loadedConfigPath == filename) {
-        LOG_INFO("CONFIG", "Configuration already loaded from: %s", filename.c_str());
+    if (configLoaded && loadedConfigPath == resolvedPath) {
+        LOG_INFO("CONFIG", "Configuration already loaded from: %s", resolvedPath.c_str());
         return true;
     }
 
     // Load the config file
-    return LoadConfigInternal(filename);
+    return LoadConfigInternal(resolvedPath);
 }
 
 bool ConfigReader::ReloadConfig(const std::string& filename)
 {
+    const std::string resolvedPath =
+        (filename == CONFIG_FILE_PATH)
+        ? GetProjectPath("game_config", CONFIG_FILE_PATH)
+        : filename;
+
     LOG_INFO("CONFIG", "Force reloading configuration...");
     configLoaded = false;
     loadedConfigPath = "";
-    return LoadConfigInternal(filename);
+    return LoadConfigInternal(resolvedPath);
 }
 
 bool ConfigReader::IsConfigLoaded()
@@ -64,7 +201,7 @@ int ConfigReader::GetInitialGameState(int defaultState)
 {
     // Ensure config is loaded
     if (!configLoaded) {
-        LoadConfig(CONFIG_FILE_PATH);
+        LoadConfig(GetProjectPath("game_config", CONFIG_FILE_PATH));
     }
 
     // Get initial_state value
@@ -76,11 +213,27 @@ int ConfigReader::GetInitialGameState(int defaultState)
     }
 
     // Parse state name to enum
-    int state = ParseStateName(stateName, defaultState);
+    int state = ResolveStateName(stateName, defaultState);
 
     LOG_INFO("CONFIG", "Initial game state: %s (enum value: %d)", stateName.c_str(), state);
 
     return state;
+}
+
+int ConfigReader::ResolveStateName(const std::string& stateName, int defaultState)
+{
+    return ParseStateName(stateName, defaultState);
+}
+
+std::string ConfigReader::GetProjectPath(const std::string& key, const std::string& defaultValue)
+{
+    LoadProjectPathsIfNeeded();
+
+    auto it = g_projectPaths.find(key);
+    if (it != g_projectPaths.end() && !it->second.empty()) {
+        return it->second;
+    }
+    return defaultValue;
 }
 
 std::string ConfigReader::GetString(const std::string& key, const std::string& defaultValue)
@@ -166,7 +319,7 @@ bool ConfigReader::SaveConfig(const std::string& filename)
     std::string targetFile = filename.empty() ? loadedConfigPath : filename;
 
     if (targetFile.empty()) {
-        targetFile = CONFIG_FILE_PATH;
+        targetFile = GetProjectPath("game_config", CONFIG_FILE_PATH);
     }
 
     // Read the original file to preserve comments and structure
@@ -228,6 +381,11 @@ void ConfigReader::Shutdown()
     // Clear and shrink the string to free its buffer
     loadedConfigPath.clear();
     loadedConfigPath.shrink_to_fit();
+
+    std::unordered_map<std::string, int>().swap(g_stateAliasToEnum);
+    std::unordered_map<std::string, std::string>().swap(g_projectPaths);
+    g_stateRegistryLoaded = false;
+    g_projectPathsLoaded = false;
 
     configLoaded = false;
 
@@ -316,23 +474,20 @@ std::string ConfigReader::Trim(const std::string& str)
 
 int ConfigReader::ParseStateName(const std::string& stateName, int defaultState)
 {
-    // Convert to lowercase for case-insensitive comparison
-    std::string lowerName = stateName;
-    std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(),
-        [](unsigned char c) { return (char)std::tolower(c); });
+    LoadStateRegistryAliases();
 
-    // Parse state names
-    if (lowerName == "mainmenu" || lowerName == "main_menu") {
-        return mainMenu;
+    const std::string lowerName = ToLowerASCII(stateName);
+
+    auto it = g_stateAliasToEnum.find(lowerName);
+    if (it != g_stateAliasToEnum.end()) {
+        return it->second;
     }
-    else if (lowerName == "level2" || lowerName == "level_2") {
-        return LEVEL_2;
-    }
-    else if (lowerName == "quit" || lowerName == "exit") {
-        return GS_QUIT;
-    }
-    else {
-        LOG_WARN("CONFIG", "Unknown state name '%s', using default", stateName.c_str());
-        return defaultState;
-    }
+
+    // Backward-compatible fallback aliases.
+    if (lowerName == "mainmenu" || lowerName == "main_menu") return mainMenu;
+    if (lowerName == "level2" || lowerName == "level_2") return LEVEL_2;
+    if (lowerName == "quit" || lowerName == "exit") return GS_QUIT;
+
+    LOG_WARN("CONFIG", "Unknown state name '%s', using default", stateName.c_str());
+    return defaultState;
 }
