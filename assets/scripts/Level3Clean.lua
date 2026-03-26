@@ -313,6 +313,10 @@ function OnUpdate(dt)
         UpdateEnemyTurnManager(dt)
     end
 
+    -- Keep enemy indicators in sync (always visible, red arrows above enemies)
+    if SyncEnemyIndicators then SyncEnemyIndicators() end
+    if UpdateAllEnemyIndicators then UpdateAllEnemyIndicators() end
+
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
 
