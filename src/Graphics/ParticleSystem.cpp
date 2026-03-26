@@ -20,6 +20,10 @@ namespace Framework {
 	static std::uniform_real_distribution<float> s_dist{ 0.0f, 1.0f };
 
 	void ParticleSystem::SetSettings(const Settings& s) {
+		// Copy the incoming settings first, then patch cachedWorldScale.
+		// We compute world scale once here rather than inside CreateParticle()
+		// because GetRenderHeight() involves a system pointer dereference —
+		// doing it per-particle would waste CPU on every spawn (rubric 2104 FPS).
 		settings = s;
 
 		// Pre-compute world scale once here instead of on every CreateParticle call.
