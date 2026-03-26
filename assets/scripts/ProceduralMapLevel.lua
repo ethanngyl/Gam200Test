@@ -78,8 +78,6 @@ local SAVED_MAP_PATH = "assets/maps/my_map.map.json"
 
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
-local partyUI = nil
-
 -- Turn tracking
 local previousTurn = "Player"
 
@@ -216,9 +214,6 @@ function OnInit()
 
     -- Initialize UI system
     UIManager.Init({ currentLevel = currentLevel })
-
-    -- Setup Party UI
-    SetupPartyUI()
 
     -- CRITICAL: Disable C++ grid movement (Lua handles movement via PartyTurnManager)
     SetGridMovementEnabled(false)
@@ -620,21 +615,6 @@ end
 -- HELPER: Setup Party UI
 -- ============================================================================
 
-function SetupPartyUI()
-    Log("========================================")
-    Log("Setting up Party UI...")
-    Log("========================================")
-
-    -- Load PartyStatusUI
-    dofile("assets/scripts/UI/PartyStatusUI.lua")
-
-    -- Create UI instance
-    partyUI = PartyStatusUI:new(0)
-    partyUI:OnInit()
-
-    Log("Party status UI created")
-    Log("========================================")
-end
 
 -- ============================================================================
 -- PORTAL SPAWN (deferred until boss defeated)
@@ -786,11 +766,6 @@ function OnUpdate(dt)
 
     -- Update skill swap UI (runs while paused, handles its own input)
     SkillSwapUI.Update(dt)
-
-    -- Update party UI
-    if partyUI then
-        partyUI:OnUpdate(dt)
-    end
 
     -- Skip game logic if paused (SkillSwapUI pauses the game while active)
     if IsPaused() then
@@ -959,12 +934,6 @@ function OnDestroy()
     Log("========================================")
     Log("Level 3 (Procedural) cleanup...")
     Log("========================================")
-
-    -- Cleanup party UI
-    if partyUI then
-        partyUI:OnDestroy()
-        partyUI = nil
-    end
 
     -- Stop audio
     StopMusic(0.5)

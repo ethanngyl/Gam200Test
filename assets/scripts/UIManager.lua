@@ -54,8 +54,6 @@ Technology is prohibited.
 local UIManager = {}
 
 -- Import UI components
-local APIndicatorUI = require("UI/APIndicatorUI")
-local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
 local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 local TurnScrollUI = require("ScrollOpen")
@@ -146,16 +144,10 @@ end
 
 -- UI-driven AP getters for the new bars (fallback to entity values)
 local function GetAttackAPForBars()
-    if UIManager.components.attackAP and UIManager.components.attackAP.GetDisplayedAP then
-        return UIManager.components.attackAP:GetDisplayedAP()
-    end
     return GetActiveCharacterAttackAP()
 end
 
 local function GetMoveAPForBars()
-    if UIManager.components.movementAP and UIManager.components.movementAP.GetDisplayedAP then
-        return UIManager.components.movementAP:GetDisplayedAP()
-    end
     return GetActiveCharacterAP()
 end
 
@@ -166,55 +158,6 @@ function UIManager.Init(config)
     Log("========================================")
     Log("[UIManager] Initializing UI System...")
     Log("========================================")
-
-    -- Create Movement AP UI (hidden, kept for logic/animations)
-    UIManager.components.movementAP = APIndicatorUI:New()
-    UIManager.components.movementAP:Init({
-        maxAP = 5,
-        size = 0.001,      -- Hidden: effectively invisible
-        spacing = 0.001,
-        offsetX = 5.0,     -- Off-screen
-        offsetY = 5.0,
-        layer = 1,
-        filledTexture = "assets/UI/MovP.png",
-        emptyTexture = "assets/UI/MovP.png",
-        useTint = true,
-        filledTint = { r = 1.0, g = 1.0, b = 1.0 },
-        emptyTint = { r = 0.3, g = 0.3, b = 0.3 },
-        useGray = true,
-        filledGrayAmount = 0.0,
-        emptyGrayAmount = 0.8,
-        getAPFunc = GetActiveCharacterAP,
-        showEmpty = false,
-        useMaxFromAP = true
-    })
-
-    -- Create Attack AP UI (hidden, kept for logic/animations)
-    UIManager.components.attackAP = AttackAPIndicatorUI:New()
-    UIManager.components.attackAP:Init({
-        maxAP = 3,
-        size = 0.001,      -- Hidden: effectively invisible
-        spacing = 0.001,
-        offsetX = 5.0,     -- Off-screen
-        offsetY = 5.0,
-        layer = 1,
-        emptyTexture = "assets/UI/AP_Empty.png",
-        filledTexture = "assets/UI/AP_Crystal.png",
-        useAnimatedSprite = true,
-        spriteRows = 4,
-        spriteCols = 4,
-        filledStartFrame = 0,
-        filledFrameCount = 8,
-        consumeStartFrame = 8,
-        consumeFrameCount = 8,
-        frameTime = 0.1,
-        useTint = true,
-        filledTint = { r = 1.0, g = 1.0, b = 1.0 },
-        emptyTint = { r = 0.3, g = 0.3, b = 0.3 },
-        useGray = true,
-        filledGrayAmount = 0.0,
-        emptyGrayAmount = 0.8
-    })
 
     -- Create Health UI
     UIManager.components.health = HealthUI:New()
@@ -432,20 +375,12 @@ end
 -- ============================================================================
 
 function UIManager.IsAPAnimating()
-    if not UIManager.initialized then
-        return false
-    end
-
-    if UIManager.components.movementAP and UIManager.components.movementAP.IsAnimating then
-        return UIManager.components.movementAP:IsAnimating()
-    end
-
     return false
 end
 
 -- Check if any UI animation is currently playing (AP refill or turn scroll)
 function UIManager.IsAnyAnimationPlaying()
-    return UIManager.IsAPAnimating() or UIManager.IsTurnScrollPlaying()
+    return UIManager.IsTurnScrollPlaying()
 end
 
 -- Check if the turn scroll animation is currently playing
