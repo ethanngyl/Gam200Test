@@ -50,7 +50,7 @@
 #include "imgui_impl_opengl3.h"
 #include "AudioSystem.h"
 #include <unordered_set>
-
+#include <unordered_map>
 namespace Framework {
 
     class EntitySpawner;
@@ -416,6 +416,23 @@ namespace Framework {
 
         void ShowLayersWindow();
         bool showLayersWindow = false;
+
+        struct BuildSizeAssetEntry
+        {
+            std::string relativePath;
+            uintmax_t fileSize = 0;
+            bool selected = false;
+        };
+
+        void ShowBuildSizeWindow();
+        void RefreshBuildSizeEntries();
+        bool ExportSelectedBuildAssets(const std::filesystem::path& destinationRoot);
+
+        bool showBuildSizeWindow = false;
+        bool buildSizeNeedsRefresh = true;
+        std::vector<BuildSizeAssetEntry> buildSizeEntries;
+        std::unordered_map<std::string, bool> buildSizeSelectionMemory;
+
         std::unordered_set<int> hiddenRenderLayers;
     };
 
