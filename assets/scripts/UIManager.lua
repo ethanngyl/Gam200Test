@@ -61,6 +61,7 @@ local TurnIndicatorUI = require("UI/TurnIndicatorUI")
 local TurnScrollUI = require("ScrollOpen")
 local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")
 local CharacterInfoPanel = require("UI/CharacterInfoPanel")
+local TutorialPopupUI = require("UI/TutorialPopupUI")
 
 -- Character info panel instance (I key overlay)
 local _charInfoPanel = CharacterInfoPanel.new()
@@ -176,6 +177,7 @@ end
 
 function UIManager.Init(config)
     config = config or {}
+    local currentLevel = config.currentLevel or 0
 
     Log("========================================")
     Log("[UIManager] Initializing UI System...")
@@ -347,6 +349,37 @@ function UIManager.Init(config)
             Thrust = "assets/SkillIcons/Thrust.png"
         }
     })
+
+    if currentLevel == 1 then
+        UIManager.components.tutorialPopup = TutorialPopupUI:New()
+        UIManager.components.tutorialPopup:Init({
+            offsetX = -0.60,
+            offsetY = -0.08,
+            scaleX = 0.42,
+            scaleY = 0.24,
+            layer = 7,
+            texture = "assets/Menu/Scroll Overlay.png",
+            font = "Jersey20Regular",
+            steps = {
+                {
+                    title = "Welcome",
+                    body = "This is your party HUD. It shows each hero's health, movement AP and attack AP."
+                },
+                {
+                    title = "Turn Flow",
+                    body = "Use the active hero each turn. After all party members act, enemies take their turn."
+                },
+                {
+                    title = "Skills",
+                    body = "Your skill bubbles are on the right side. Hover them to read each skill description and AP cost."
+                },
+                {
+                    title = "Goal",
+                    body = "Clear enemies, move as a team and reach the portal to advance to the next level."
+                }
+            }
+        })
+    end
 
     -- TODO: Add more components as needed:
     -- - ChestProgressUI
