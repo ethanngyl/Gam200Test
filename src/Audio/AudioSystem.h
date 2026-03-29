@@ -327,6 +327,7 @@ namespace Framework {
         // M5 1105: Dedicated BGM routing + fade state
         FMOD::ChannelGroup* musicGroup = nullptr;
         FMOD::Channel* musicChannel = nullptr;
+        std::string currentMusicName;
 
         bool musicFadeActive = false;
         float musicFadeStartVol = 1.0f;
