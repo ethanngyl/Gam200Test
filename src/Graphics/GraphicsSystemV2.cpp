@@ -160,41 +160,21 @@ namespace Framework {
         std::cout << "TextRenderer initialized.\n";
     }
 
-    // FollowPlayer: Smoothly move camera toward player's Transform (XY plane).
-    void GraphicsSystemV2::FollowPlayer(EntityManager* em, Entity player)
+    // FollowPlayer: Smoothly pan camera toward player's Transform (XY plane).
+    void GraphicsSystemV2::FollowPlayer(EntityManager* em, Entity player, float dt)
     {
         if (!em || !em->HasComponent<Transform>(player))
             return;
 
         auto& playerTransform = em->GetComponent<Transform>(player);
 
-        // Target camera position = player position (z fixed at 0)
+        // Smooth follow toward target to avoid instant camera teleport on target swap.
         glm::vec3 targetPos(playerTransform.position.x, playerTransform.position.y, 0.0f);
-
-        // Smoothly interpolate camera position toward target (simple exponential smoothing)
         glm::vec3 currentPos = mainCamera.GetPosition();
-        float smoothSpeed = 5.0f;  // Tune responsiveness
-        float dt = 0.016f;          // or pass your actual deltaTime into this function
-        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * dt);
 
-
-        glm::vec2 orthoHalfExtents = mainCamera.GetOrthoHalfExtents();
-        auto& grid = GetGrid();
-
-        float minX = grid.worldbound_min.x + orthoHalfExtents.x;
-        float maxX = grid.worldbound_max.x - orthoHalfExtents.x;
-        float minY = grid.worldbound_min.y + orthoHalfExtents.y;
-        float maxY = grid.worldbound_max.y - orthoHalfExtents.y;
-
-        if (minX <= maxX) {
-            newPos.x = std::clamp(newPos.x, minX, maxX);
-        }
-
-        if (minY <= maxY) {
-            newPos.y = std::clamp(newPos.y, minY, maxY);
-        }
-
-
+        const float followSpeed = 14.0f;
+        const float alpha = std::clamp(dt * followSpeed, 0.0f, 1.0f);
+        glm::vec3 newPos = glm::mix(currentPos, targetPos, alpha);
 
         mainCamera.SetPosition(newPos);
     }
@@ -291,8 +271,6 @@ namespace Framework {
 
         DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics);
 
-        (void)dt;
-
         if (!window || glfwWindowShouldClose(window)) {
             return;
         }
@@ -337,7 +315,7 @@ namespace Framework {
         // === CAMERA FOLLOW LOGIC ===
         if (Framework::CORE->IsPlaying()) {
             if (followEnabled && entityManager && followTarget.IsValid()/* && Framework::CORE->IsPlaying()*/) {
-                FollowPlayer(entityManager, followTarget);
+                FollowPlayer(entityManager, followTarget, dt);
             }
         }
         else {
