@@ -160,6 +160,15 @@ local function UpdateSettingsButton(dt)
         return
     end
 
+    if ShouldDisableGameplay and ShouldDisableGameplay() then
+        if settingsButton.state ~= "idle" then
+            settingsButton.state = "idle"
+            ApplySettingsButtonFrame("idle")
+        end
+        settingsButton.wasMouseDown = false
+        return
+    end
+
     if settingsButton.releaseTimer and settingsButton.releaseTimer > 0 then
         settingsButton.releaseTimer = settingsButton.releaseTimer - dt
         if settingsButton.releaseTimer <= 0 then
