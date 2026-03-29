@@ -14,6 +14,67 @@ local initialized = false
 local config = nil
 local backgroundSpriteID = 0
 local overlaySprites = {}
+local musicButton = nil
+local sfxButton = nil
+local musicEnabled = true
+local sfxEnabled = true
+local musicVolumeOn = 1.0
+local sfxVolumeOn = 1.0
+
+local function FindButtonConfig(id)
+    if not config or not config.menu or not config.menu.buttons then
+        return nil
+    end
+
+    for _, button in ipairs(config.menu.buttons) do
+        if button.id == id then
+            return button
+        end
+    end
+
+    return nil
+end
+
+local function GetMusicVolumeValue()
+    if GetMusicVolume then
+        return GetMusicVolume()
+    end
+    return 1.0
+end
+
+local function GetSfxVolumeValue()
+    if GetSfxVolume then
+        return GetSfxVolume()
+    end
+    return 1.0
+end
+
+local function ApplyToggleText()
+    if musicButton and musicButton.text then
+        musicButton.text.content = musicEnabled and "MUSIC: ON" or "MUSIC: OFF"
+    end
+    if sfxButton and sfxButton.text then
+        sfxButton.text.content = sfxEnabled and "SFX: ON" or "SFX: OFF"
+    end
+end
+
+local function SetMusicVolumePersist(volume)
+    if SetMusicVolume then
+        SetMusicVolume(volume)
+    end
+    if SaveMusicVolume then
+        SaveMusicVolume(volume)
+    end
+end
+
+local function SetSfxVolumePersist(volume)
+    if SetSfxVolume then
+        SetSfxVolume(volume)
+    end
+    if SaveSfxVolume then
+        SaveSfxVolume(volume)
+    end
+end
 
 function OnInit()
     Log("Settings Level Script Initialized (ButtonManager Version)")
@@ -83,9 +144,22 @@ function OnInit()
     PlaySound(music.name, music.loop, music.volume)
     Log("Playing settings page music: " .. music.name)
 
+    musicButton = FindButtonConfig("toggle_music")
+    sfxButton = FindButtonConfig("toggle_sfx")
+
+    local currentMusicVolume = GetMusicVolumeValue()
+    local currentSfxVolume = GetSfxVolumeValue()
+
+    musicEnabled = currentMusicVolume > 0.001
+    sfxEnabled = currentSfxVolume > 0.001
+
+    musicVolumeOn = musicEnabled and currentMusicVolume or 1.0
+    sfxVolumeOn = sfxEnabled and currentSfxVolume or 1.0
+
+    ApplyToggleText()
+
     -- Initialize buttons
     ButtonManager.Initialize(config.menu.buttons)
-
     initialized = true
     Log("Settings page initialization complete")
     Log("Press F1 to toggle editor mode")
@@ -102,6 +176,50 @@ function OnBackButtonClicked()
 
     Log("BACK button clicked!")
     ButtonManager.TransitionTo("mainMenu")
+end
+
+function OnToggleMusicClicked()
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    local currentVolume = GetMusicVolumeValue()
+    if currentVolume > 0.001 then
+        musicVolumeOn = currentVolume
+        SetMusicVolumePersist(0.0)
+        musicEnabled = false
+    else
+        local restoreVolume = musicVolumeOn
+        if restoreVolume <= 0.001 then
+            restoreVolume = 1.0
+        end
+        SetMusicVolumePersist(restoreVolume)
+        musicEnabled = true
+    end
+
+    ApplyToggleText()
+end
+
+function OnToggleSfxClicked()
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    local currentVolume = GetSfxVolumeValue()
+    if currentVolume > 0.001 then
+        sfxVolumeOn = currentVolume
+        SetSfxVolumePersist(0.0)
+        sfxEnabled = false
+    else
+        local restoreVolume = sfxVolumeOn
+        if restoreVolume <= 0.001 then
+            restoreVolume = 1.0
+        end
+        SetSfxVolumePersist(restoreVolume)
+        sfxEnabled = true
+    end
+
+    ApplyToggleText()
 end
 
 -- ============================================================================
