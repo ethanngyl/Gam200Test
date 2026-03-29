@@ -141,7 +141,7 @@ function OnInit()
     end
 
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    PlayMusic(music.name, 0.8, music.loop)
     Log("Playing settings page music: " .. music.name)
 
     musicButton = FindButtonConfig("toggle_music")
@@ -250,7 +250,7 @@ end
 function OnDestroy()
     Log("Settings page cleanup...")
 
-    StopAllSounds()
+    -- Keep menu BGM playing across menu page transitions.
 
     ButtonManager.Cleanup()
 

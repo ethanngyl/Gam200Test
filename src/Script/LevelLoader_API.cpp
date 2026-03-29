@@ -682,19 +682,21 @@ namespace Framework {
         // Map to Framework::KeyCode (from Input.h)
         KeyCode keyCode = KEY_UNKNOWN;
 
-        // Letters
-        if (strcmp(keyName, "W") == 0) keyCode = KEY_W;
-        else if (strcmp(keyName, "A") == 0) keyCode = KEY_A;
-        else if (strcmp(keyName, "S") == 0) keyCode = KEY_S;
-        else if (strcmp(keyName, "D") == 0) keyCode = KEY_D;
-        else if (strcmp(keyName, "E") == 0) keyCode = KEY_E;
-        else if (strcmp(keyName, "Q") == 0) keyCode = KEY_Q;
-        else if (strcmp(keyName, "R") == 0) keyCode = KEY_R;
-        else if (strcmp(keyName, "P") == 0) keyCode = KEY_P;
-        else if (strcmp(keyName, "I") == 0) keyCode = KEY_I;
+        // Support any single-letter key (A-Z) and single digit (0-9).
+        // This keeps Lua key strings predictable and avoids one-off mapping gaps.
+        if (keyName && keyName[0] != '\0' && keyName[1] == '\0') {
+            const unsigned char raw = static_cast<unsigned char>(keyName[0]);
+            const char c = static_cast<char>(std::toupper(raw));
+            if (c >= 'A' && c <= 'Z') {
+                keyCode = static_cast<KeyCode>(c);
+            }
+            else if (c >= '0' && c <= '9') {
+                keyCode = static_cast<KeyCode>(c);
+            }
+        }
 
         // Special keys
-        else if (strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
+        if (keyCode == KEY_UNKNOWN && strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
         else if (strcmp(keyName, "Escape") == 0) keyCode = KEY_ESCAPE;
         else if (strcmp(keyName, "Enter") == 0) keyCode = KEY_ENTER;
         else if (strcmp(keyName, "Shift") == 0) keyCode = KEY_SHIFT;
@@ -706,17 +708,6 @@ namespace Framework {
         else if (strcmp(keyName, "Left") == 0) keyCode = KEY_LEFT;
         else if (strcmp(keyName, "Right") == 0) keyCode = KEY_RIGHT;
 
-        // Number keys
-        else if (strcmp(keyName, "1") == 0) keyCode = KEY_1;
-        else if (strcmp(keyName, "2") == 0) keyCode = KEY_2;
-        else if (strcmp(keyName, "3") == 0) keyCode = KEY_3;
-        else if (strcmp(keyName, "4") == 0) keyCode = KEY_4;
-        else if (strcmp(keyName, "5") == 0) keyCode = KEY_5;
-        else if (strcmp(keyName, "6") == 0) keyCode = KEY_6;
-        else if (strcmp(keyName, "7") == 0) keyCode = KEY_7;
-        else if (strcmp(keyName, "8") == 0) keyCode = KEY_8;
-        else if (strcmp(keyName, "9") == 0) keyCode = KEY_9;
-        else if (strcmp(keyName, "0") == 0) keyCode = KEY_0;
         else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
         else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
         else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;

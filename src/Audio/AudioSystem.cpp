@@ -414,6 +414,7 @@ namespace Framework {
             masterGroup->stop();
         }
         musicChannel = nullptr;
+        currentMusicName.clear();
         musicFadeActive = false;
         musicStopWhenFadeDone = false;
         pendingMusicName.clear();
@@ -564,6 +565,11 @@ namespace Framework {
             musicChannel->isPlaying(&isPlaying);
         }
 
+        // Already playing this exact track: keep current playback and do nothing.
+        if (isPlaying && currentMusicName == soundName) {
+            return;
+        }
+
         // If already playing, fade out then swap
         if (isPlaying) {
             pendingMusicName = soundName;
@@ -589,6 +595,7 @@ namespace Framework {
         channel->setPaused(false);
 
         musicChannel = channel;
+        currentMusicName = soundName;
 
         // Fade in
         musicFadeActive = true;
@@ -626,6 +633,7 @@ namespace Framework {
 
         if (!isPlaying) {
             musicChannel = nullptr;
+            currentMusicName.clear();
             return;
         }
 
@@ -635,6 +643,7 @@ namespace Framework {
         if (fadeOutSec <= 0.0f) {
             musicChannel->stop();
             musicChannel = nullptr;
+            currentMusicName.clear();
             musicFadeActive = false;
             musicStopWhenFadeDone = false;
             return;
@@ -689,6 +698,7 @@ namespace Framework {
             {
                 musicChannel->stop();
                 musicChannel = nullptr;
+                currentMusicName.clear();
                 musicStopWhenFadeDone = false;
 
                 // If a track was queued during fade-out, start it now

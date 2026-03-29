@@ -287,22 +287,45 @@ function UIManager.Init(config)
             layer = 7,
             texture = "assets/Menu/Scroll Overlay.png",
             font = "Jersey20Regular",
+            paddingXPx = 96,
+            titleInsetTopPx = 58,
+            wrapChars = 52,
             steps = {
                 {
-                    title = "Welcome",
-                    body = "This is your party HUD. It shows each hero's health, movement AP and attack AP."
+                    title = "HUD",
+                    body = "Below is your HUD, the Red Circle displays the current health of the party member, the Blue Bar indicates your Action Points(AP), and the brown bar indicates your movement bar (MP)."
                 },
                 {
                     title = "Turn Flow",
-                    body = "Use the active hero each turn. After all party members act, enemies take their turn."
+                    body = "The turn order in the party goes from Knight > Mage > Berserker. Press key P to end the turn for the respective character."
+                },
+                {
+                    title = "Movement",
+                    body = "Use keys W,A,S,D to move up, left, down and right respecitvely for the current party member, indicated by the green arrow above their head. Each key-press moves 1 tile and consumes 1 MP."
                 },
                 {
                     title = "Skills",
-                    body = "Your skill bubbles are on the right side. Hover them to read each skill description and AP cost."
+                    body = "Use keys 1-4 to use the skills corresponding to the key number which can be shown on the right side. Using the keys will bring up the attack preview of the skill and the Spacebar key will execute the skill. Each skill consumes AP."
                 },
                 {
-                    title = "Goal",
-                    body = "Clear enemies, move as a team and reach the portal to advance to the next level."
+                    title = "Skill HUD",
+                    body = "The description of the skill will be shown by hovering over its skill bubble. Currently selected skills will be tinted in blue, skills unable to be used or on cooldown will be grey and empty skill slots will be black."
+                },
+                {
+                    title = "Directional Skills",
+                    body = "Use the arrow keys to change the direction the current party member is facing, certain skills are directional."
+                },
+                {
+                    title = "Enemies",
+                    body = "Enemies are indicated via the red arrows on their head. Their turn begins after all members of the party have finished their turn."
+                },
+                {
+                    title = "Skill Selection",
+                    body = "At the end of each successful level, you will be allowed to choose a skill which will be bound to an empty skill slot."
+                },
+                {
+                    title = "Win Condition",
+                    body = "The boss will only show up after all EXISTING players have entered the boss's arena. After the boss has been defeated, a blue portal will spawn, entering it will clear the level."
                 }
             }
         })
