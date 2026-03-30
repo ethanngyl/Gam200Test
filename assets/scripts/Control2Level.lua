@@ -20,6 +20,122 @@ local config = nil
 local backgroundSpriteID = 0
 local overlaySprites = {}
 local turnIndicatorSprites = {}
+local hudSampleSprites = {}
+
+local HUD_SAMPLE_BASE = {
+    holderScaleX = 0.55,
+    holderScaleY = 0.23,
+    hpFillOffsetX = -0.189,
+    hpFillOffsetY = 0.05,
+    hpFillWidth = 0.085,
+    hpFillHeight = 0.085,
+    attackFillOffsetX = 0.0429,
+    attackFillOffsetY = 0.05,
+    attackFillWidth = 0.365,
+    attackFillHeight = 0.07,
+    moveFillOffsetX = 0.015,
+    moveFillOffsetY = -0.047,
+    moveFillWidth = 0.427,
+    moveFillHeight = 0.07
+}
+
+local HUD_SAMPLE_COLORS = {
+    hp = { r = 0.9, g = 0.1, b = 0.1, a = 1.0 },
+    attack = { r = 0.1, g = 0.25, b = 0.7, a = 1.0 },
+    move = { r = 0.65, g = 0.35, b = 0.15, a = 1.0 }
+}
+
+local function SpawnHudSample(sample)
+    if not sample then return end
+
+    local scaleX = (sample.scale and sample.scale.x) or 0.35
+    local scaleY = (sample.scale and sample.scale.y) or 0.15
+    local scaleFactorX = scaleX / HUD_SAMPLE_BASE.holderScaleX
+    local scaleFactorY = scaleY / HUD_SAMPLE_BASE.holderScaleY
+
+    local baseX = sample.position and sample.position.x or 0.0
+    local baseY = sample.position and sample.position.y or 0.0
+    local layer = sample.layer or 9
+    local holderTexture = sample.holderTexture or "assets/UI/health_ap_movement_holder.png"
+    local frameTexture = sample.holderFrameTexture or "assets/UI/health_ap_movement_holder frame only.png"
+
+    local holderID = SpawnSprite(
+        holderTexture,
+        baseX,
+        baseY,
+        scaleX,
+        scaleY,
+        layer
+    )
+
+    local sprites = {
+        holder = holderID,
+        frame = 0,
+        hp = 0,
+        attack = 0,
+        move = 0
+    }
+
+    local function spawnFill(offsetX, offsetY, width, height, color)
+        local fillID = SpawnSprite(
+            "",
+            baseX + offsetX,
+            baseY + offsetY,
+            width,
+            height,
+            layer + 1
+        )
+        if fillID and fillID > 0 then
+            SetSpriteColor(fillID, color.r, color.g, color.b, color.a or 1.0)
+        end
+        return fillID
+    end
+
+    if sample.showHP then
+        sprites.hp = spawnFill(
+            HUD_SAMPLE_BASE.hpFillOffsetX * scaleFactorX,
+            HUD_SAMPLE_BASE.hpFillOffsetY * scaleFactorY,
+            HUD_SAMPLE_BASE.hpFillWidth * scaleFactorX,
+            HUD_SAMPLE_BASE.hpFillHeight * scaleFactorY,
+            HUD_SAMPLE_COLORS.hp
+        )
+    end
+
+    if sample.showAttack then
+        sprites.attack = spawnFill(
+            HUD_SAMPLE_BASE.attackFillOffsetX * scaleFactorX,
+            HUD_SAMPLE_BASE.attackFillOffsetY * scaleFactorY,
+            HUD_SAMPLE_BASE.attackFillWidth * scaleFactorX,
+            HUD_SAMPLE_BASE.attackFillHeight * scaleFactorY,
+            HUD_SAMPLE_COLORS.attack
+        )
+    end
+
+    if sample.showMove then
+        sprites.move = spawnFill(
+            HUD_SAMPLE_BASE.moveFillOffsetX * scaleFactorX,
+            HUD_SAMPLE_BASE.moveFillOffsetY * scaleFactorY,
+            HUD_SAMPLE_BASE.moveFillWidth * scaleFactorX,
+            HUD_SAMPLE_BASE.moveFillHeight * scaleFactorY,
+            HUD_SAMPLE_COLORS.move
+        )
+    end
+
+    if frameTexture and frameTexture ~= "" then
+        local frameOffsetX = sample.frameOffsetX or 0.0
+        local frameOffsetY = sample.frameOffsetY or 0.0
+        sprites.frame = SpawnSprite(
+            frameTexture,
+            baseX + frameOffsetX,
+            baseY + frameOffsetY,
+            scaleX,
+            scaleY,
+            layer + 2
+        )
+    end
+
+    hudSampleSprites[sample.id or tostring(#hudSampleSprites + 1)] = sprites
+end
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -131,6 +247,15 @@ function OnInit()
         Log("Turn indicator icons complete!")
     end
 
+    -- Create HUD samples (holder + single fill)
+    if config.menu.hudSamples then
+        Log("Creating HUD samples...")
+        for _, sample in ipairs(config.menu.hudSamples) do
+            SpawnHudSample(sample)
+        end
+        Log("HUD samples complete!")
+    end
+
     local music = config.menu.music
     PlayMusic(music.name, 0.8, music.loop)
     Log("Playing control page music: " .. music.name)
@@ -216,11 +341,31 @@ function OnDestroy()
         end
     end
 
+    for sampleID, sprites in pairs(hudSampleSprites) do
+        if sprites.holder and sprites.holder > 0 then
+            DestroyEntity(sprites.holder)
+        end
+        if sprites.frame and sprites.frame > 0 then
+            DestroyEntity(sprites.frame)
+        end
+        if sprites.hp and sprites.hp > 0 then
+            DestroyEntity(sprites.hp)
+        end
+        if sprites.attack and sprites.attack > 0 then
+            DestroyEntity(sprites.attack)
+        end
+        if sprites.move and sprites.move > 0 then
+            DestroyEntity(sprites.move)
+        end
+        Log("HUD sample '" .. sampleID .. "' destroyed")
+    end
+
     config = nil
     initialized = false
     backgroundSpriteID = 0
     overlaySprites = {}
     turnIndicatorSprites = {}
+    hudSampleSprites = {}
 
     Log("Control2 page cleanup complete")
 end

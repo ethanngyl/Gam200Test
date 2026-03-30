@@ -278,6 +278,76 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Sets the music volume for the game
+     * @params volume (number) - 0.0 to 1.0
+     */
+    int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMusicVolume(volume);
+        return 0;
+    }
+
+    /**
+     * @brief Gets the saved music volume from audio config
+     * @return number - The saved music volume (0.0 to 1.0)
+     */
+    int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
+        float volume = AudioLoader::GetSettings().musicVolume;
+        lua_pushnumber(L, volume);
+        return 1;
+    }
+
+    /**
+     * @brief Saves the music volume to audio config JSON file
+     * @params volume (number) - 0.0 to 1.0
+     * @return boolean - True if save succeeded
+     */
+    int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
+        float volume = luaL_checknumber(L, 1);
+        bool success = AudioLoader::SetMusicVolume(volume);
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Sets the sfx volume for the game
+     * @params volume (number) - 0.0 to 1.0
+     */
+    int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetSfxVolume(volume);
+        return 0;
+    }
+
+    /**
+     * @brief Gets the saved sfx volume from audio config
+     * @return number - The saved sfx volume (0.0 to 1.0)
+     */
+    int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
+        float volume = AudioLoader::GetSettings().sfxVolume;
+        lua_pushnumber(L, volume);
+        return 1;
+    }
+
+    /**
+     * @brief Saves the sfx volume to audio config JSON file
+     * @params volume (number) - 0.0 to 1.0
+     * @return boolean - True if save succeeded
+     */
+    int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {
+        float volume = luaL_checknumber(L, 1);
+        bool success = AudioLoader::SetSfxVolume(volume);
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
     // ========================================================================
     // UI BUTTON API
     // ========================================================================

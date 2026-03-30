@@ -185,7 +185,7 @@ function UIManager.Init(config)
         hpFillTexture = "assets/TileMap/Attack_Indicator.png",
         hpTextShowPercent = false,
         hpTextOffsetY = 0.0097,
-        hpTextOffsetX = 0.0025,
+        hpTextOffsetX = -0.0025,
         attackFillOffsetX = 0.0429,
         attackFillOffsetY = 0.05,
         attackFillWidth = 0.365,

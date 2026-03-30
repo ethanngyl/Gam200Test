@@ -55,7 +55,7 @@
         },
         "layer": 10,
         "text": {
-          "content": "SKILL SETS",
+          "content": "SKILL SETS GUIDE",
           "font": "Jersey20Regular",
           "offset": {
             "x": 0.0,
@@ -67,6 +67,186 @@
             "g": 0.0,
             "b": 0.0
           }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_intro",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": 0.43 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Pick your style: Knight (tank), Mage (control), Berserker (risk/reward).",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.56,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_knight_header",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": 0.33 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "KNIGHT - Frontline Protector",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.65,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_knight_1",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": 0.25 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Thrust: cheap 1-tile hit. Sweeping Slash: hits enemies around you.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_knight_2",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": 0.18 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Guard blocks next hit. Parry reflects next hit. Bash stuns for 1 turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_knight_3",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": 0.11 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Swift Blow dashes through enemies. Knight's Oath protects an ally.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_header",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": 0.01 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "MAGE - Ranged Control",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.65,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_1",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": -0.07 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Fireball is a straight shot. Piercing Shot hits through enemies in a line.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_2",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": -0.14 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Lightning Strike hits all enemies. Earthen Bind slows movement next turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_3",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": -0.21 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Mana Drain cuts enemy AP. Overload gives AP now but weakens next turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_header",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": -0.31 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "BERSERKER - High Risk, High Damage",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.65,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_1",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": -0.39 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Slam and Groundshatter hit hard but cost HP. Siphon Charge heals you.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_2",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -1.20, "y": -0.46 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Dark Omens delays death once. Bloody Warcry boosts power at HP cost.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.50,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
         },
         "callback": ""
       },

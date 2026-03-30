@@ -116,6 +116,8 @@ namespace Framework {
          * - Triggers SaveAudioConfig to persist changes
          */
         static bool SetMasterVolume(float volume, const std::string& filepath = "");
+        static bool SetMusicVolume(float volume, const std::string& filepath = "");
+        static bool SetSfxVolume(float volume, const std::string& filepath = "");
 
         /**
          * @brief Serializes the current audio settings back to the JSON file
