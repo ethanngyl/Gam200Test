@@ -497,7 +497,29 @@ namespace Framework {
 
         // Debug output removed for performance
 
-        glm::vec3 textColor(colorR, colorG, colorB);
+        // Match text visibility to left-to-right transition wipe driven from Lua.
+        float textVisibility = 1.0f;
+        lua_getglobal(L, "__transitionWipeProgress");
+        if (lua_isnumber(L, -1)) {
+            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
+            if (wipeProgress > 0.0f) {
+                const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
+                const float featherPx = 36.0f * viewportScale;
+
+                if (centeredX <= wipeEdgePx - featherPx) {
+                    lua_pop(L, 1);
+                    return 0;
+                }
+
+                if (centeredX < wipeEdgePx + featherPx) {
+                    const float span = std::max(1.0f, featherPx * 2.0f);
+                    textVisibility = std::clamp((centeredX - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
+                }
+            }
+        }
+        lua_pop(L, 1);
+
+        glm::vec3 textColor(colorR * textVisibility, colorG * textVisibility, colorB * textVisibility);
 
         // CRITICAL FIX: Bind viewport FBO if editor is enabled
         // This ensures text renders to the game viewport, not the main window
@@ -542,7 +564,47 @@ namespace Framework {
         float g = luaL_checknumber(L, 7);
         float b = luaL_checknumber(L, 8);
 
-        glm::vec3 color(r, g, b);
+        float textVisibility = 1.0f;
+        lua_getglobal(L, "__transitionWipeProgress");
+        if (lua_isnumber(L, -1)) {
+            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
+            if (wipeProgress > 0.0f && loader->coreEngine) {
+                int fbWidth = 0;
+                int fbHeight = 0;
+
+                auto* imgui = loader->coreEngine->GetImGuiSystem();
+                if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport() &&
+                    imgui->GetViewportFBO() != 0) {
+                    fbWidth = imgui->GetViewportWidth();
+                    fbHeight = imgui->GetViewportHeight();
+                }
+                else {
+                    auto* windowSystem = loader->coreEngine->GetWindowSystem();
+                    if (windowSystem) {
+                        GLFWwindow* window = windowSystem->GetWindow();
+                        if (window) {
+                            glfwGetWindowSize(window, &fbWidth, &fbHeight);
+                        }
+                    }
+                }
+
+                if (fbWidth > 0 && fbHeight > 0) {
+                    const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
+                    const float featherPx = 28.0f;
+                    if (x <= wipeEdgePx - featherPx) {
+                        lua_pop(L, 1);
+                        return 0;
+                    }
+                    if (x < wipeEdgePx + featherPx) {
+                        const float span = std::max(1.0f, featherPx * 2.0f);
+                        textVisibility = std::clamp((x - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
+                    }
+                }
+            }
+        }
+        lua_pop(L, 1);
+
+        glm::vec3 color(r * textVisibility, g * textVisibility, b * textVisibility);
         loader->graphicsSystem->DrawText4(font, text, x, y, scale, color);
 
         return 0;

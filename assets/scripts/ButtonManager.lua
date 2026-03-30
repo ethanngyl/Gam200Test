@@ -52,6 +52,67 @@ local buttonIDs = {}           -- Stores button entity IDs with their config
 local editorToggleCooldown = 0 -- Cooldown timer for F1 key
 local pendingState = nil       -- Pending game state transition
 local pendingTimer = 0.0       -- Timer for delayed state transitions
+local transitionDuration = 4.0 -- Fade duration before committing transition
+local fadeElapsed = 0.0
+local fadeAlpha = 0.0
+local fadeOverlayID = 0
+local FADE_TEXTURE = "assets/Menu/WoodBackground.png"
+local FADE_SCALE_X = 100.0
+local FADE_SCALE_Y = 100.0
+-- RenderQueue packs layer into 8 bits; use -1 so it wraps to 255 (topmost).
+local FADE_LAYER = -1
+
+local function EnsureFadeOverlay()
+    if fadeOverlayID and fadeOverlayID > 0 then
+        return
+    end
+
+    local camX, camY = 0.0, 0.0
+    if GetCameraPosition then
+        camX, camY = GetCameraPosition()
+    end
+
+    fadeOverlayID = SpawnSprite(FADE_TEXTURE, camX, camY, FADE_SCALE_X, FADE_SCALE_Y, FADE_LAYER)
+    if fadeOverlayID and fadeOverlayID > 0 then
+        if SetSpriteBlendMode then
+            -- Force opaque alpha so source texture transparency cannot punch holes
+            -- through the fade overlay.
+            SetSpriteBlendMode(fadeOverlayID, "AlphaBlend", true)
+        end
+        if SetSpriteColor then
+            SetSpriteColor(fadeOverlayID, 0.0, 0.0, 0.0, 0.0)
+        end
+        if SetSpriteFilterMode then
+            SetSpriteFilterMode(fadeOverlayID, true)
+        end
+    end
+end
+
+local function UpdateFadeOverlay()
+    if not fadeOverlayID or fadeOverlayID <= 0 then
+        return
+    end
+
+    local camX, camY = 0.0, 0.0
+    if GetCameraPosition then
+        camX, camY = GetCameraPosition()
+    end
+
+    local progress = math.max(0.0, math.min(1.0, fadeAlpha))
+    local currentWidth = math.max(0.001, FADE_SCALE_X * progress)
+    local leftX = camX - (FADE_SCALE_X * 0.5)
+    local centerX = leftX + (currentWidth * 0.5)
+
+    if SetScale then
+        SetScale(fadeOverlayID, currentWidth, FADE_SCALE_Y)
+    end
+
+    SetSpritePosition(fadeOverlayID, centerX, camY)
+
+    -- Opaque wipe: covered region is fully black, uncovered region remains unchanged.
+    local overlayAlpha = (progress > 0.0) and 1.0 or 0.0
+    SetSpriteColor(fadeOverlayID, 0.0, 0.0, 0.0, overlayAlpha)
+end
 
 -- ============================================================================
 -- PUBLIC API: INITIALIZATION
@@ -72,6 +133,9 @@ function ButtonManager.Initialize(buttons)
 
     -- Clear any existing buttons first
     ButtonManager.Cleanup()
+
+    -- Setup a fullscreen fade overlay used for menu-level transitions.
+    EnsureFadeOverlay()
 
     -- Create each button from JSON config
     for i, button in ipairs(buttons) do
@@ -152,11 +216,29 @@ function ButtonManager.Update(dt)
 
     -- Handle pending state transitions
     if pendingState ~= nil then
+        fadeElapsed = fadeElapsed + dt
         pendingTimer = pendingTimer - dt
+
+        if transitionDuration > 0 then
+            fadeAlpha = math.min(1.0, fadeElapsed / transitionDuration)
+        else
+            fadeAlpha = 1.0
+        end
+
+        UpdateFadeOverlay()
+
         if pendingTimer <= 0 then
             SetNextGameState(pendingState)
             pendingState = nil
         end
+
+        _G.__transitionWipeProgress = fadeAlpha
+    else
+        if fadeAlpha ~= 0.0 then
+            fadeAlpha = 0.0
+            UpdateFadeOverlay()
+        end
+        _G.__transitionWipeProgress = 0.0
     end
 end
 
@@ -211,10 +293,17 @@ end
 --
 function ButtonManager.Cleanup()
     ClearAllButtons()
+    if fadeOverlayID and fadeOverlayID > 0 then
+        DestroyEntity(fadeOverlayID)
+    end
+    fadeOverlayID = 0
     buttonIDs = {}
     editorToggleCooldown = 0
     pendingState = nil
     pendingTimer = 0.0
+    transitionDuration = 4.0
+    fadeElapsed = 0.0
+    fadeAlpha = 0.0
 
     Log("[ButtonManager] Cleanup complete")
 end
@@ -231,6 +320,10 @@ end
 function ButtonManager.CanExecuteCallback()
     -- Use ShouldDisableGameplay() instead of IsEditorMode()
     -- This allows buttons to work when in editor mode but playing
+    if pendingState ~= nil then
+        return false
+    end
+
     if ShouldDisableGameplay() then
         Log("[ButtonManager] Button disabled - gameplay paused")
         return false
@@ -239,20 +332,35 @@ function ButtonManager.CanExecuteCallback()
 end
 
 ---
--- Queue a state transition with sound and delay
+-- Queue a state transition with sound and fade duration
 -- @param state string Target game state name
 -- @param soundName string Optional sound effect to play (default: "button")
--- @param delay number Optional delay in seconds (default: 0.15)
+-- @param delay number Optional fade duration in seconds (default: 4.0)
 --
 function ButtonManager.TransitionTo(state, soundName, delay)
     soundName = soundName or "button"
-    delay = delay or 0.15
+    delay = delay or 4.0
 
     PlaySound(soundName, false, 1)
     pendingState = state
-    pendingTimer = delay
+    transitionDuration = math.max(0.0, delay)
+    pendingTimer = transitionDuration
+    -- Start fade slightly progressed so black appears almost immediately after click.
+    fadeElapsed = math.min(0.18, transitionDuration * 0.12)
+    if transitionDuration > 0 then
+        fadeAlpha = math.min(1.0, fadeElapsed / transitionDuration)
+    else
+        fadeAlpha = 1.0
+    end
+
+    EnsureFadeOverlay()
+    UpdateFadeOverlay()
 
     Log("[ButtonManager] Queued transition to: " .. state)
+end
+
+function ButtonManager.GetTransitionFadeAlpha()
+    return fadeAlpha
 end
 
 ---

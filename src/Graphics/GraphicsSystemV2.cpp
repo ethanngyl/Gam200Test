@@ -1391,11 +1391,11 @@ namespace Framework {
             glUniform1f(grayLoc, grayAmount);
         }
 
-        // Set color tint (combine material tint with instance tint)
-        glm::vec3 finalTint = glm::vec3(material->tint * tint);
+        // Set color tint (combine material tint with instance tint, including alpha)
+        glm::vec4 finalTint = material->tint * tint;
         GLint colorLoc = glGetUniformLocation(shader->GetID(), "uColor");
         if (colorLoc != -1) {
-            glUniform3f(colorLoc, finalTint.r, finalTint.g, finalTint.b);
+            glUniform4f(colorLoc, finalTint.r, finalTint.g, finalTint.b, finalTint.a);
         }
         return true;
     }
