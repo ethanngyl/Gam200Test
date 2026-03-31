@@ -4722,7 +4722,8 @@ namespace Framework {
         auto& turn = Framework::Turn();
         turn.phase = Framework::TurnPhase::Player;
         turn.busy = false;
-        LOG_INFO("LevelLoader", "InitializeTurnSystem: Phase=Player, Busy=false");
+        turn.turnIndex = 0;
+        LOG_INFO("LevelLoader", "InitializeTurnSystem: Phase=Player, Busy=false, TurnIndex=0");
         return 0;
     }
 
@@ -5591,6 +5592,32 @@ namespace Framework {
         static float actionDelay = 0.5f;  // 0.5 seconds between enemies
         static std::vector<int> enemyList;
         static bool needsReinitialize = true;
+
+        void Reset() {
+            turnActive = false;
+            activeEnemyIndex = 0;
+            actionTimer = 0.0f;
+            actionDelay = 0.5f;
+            enemyList.clear();
+            needsReinitialize = true;
+        }
+    }
+
+    // ============================================================================
+    // LEVEL STATE RESET (called between level transitions)
+    // ============================================================================
+
+    void LevelLoader::ResetCppLevelState() {
+        auto& turn = Framework::Turn();
+        turn.phase = Framework::TurnPhase::Player;
+        turn.busy = false;
+        turn.turnIndex = 0;
+
+        LevelLoader::GetInstance().sharedIntStore.clear();
+
+        EnemyTurnState::Reset();
+
+        LOG_INFO("LevelLoader", "ResetCppLevelState: Turn, sharedIntStore, and EnemyTurnState all reset");
     }
 
     /**

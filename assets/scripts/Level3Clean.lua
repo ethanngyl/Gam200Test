@@ -350,6 +350,23 @@ function OnDestroy()
     StopMusic(0.5)
     Log(" All audio stopped")
 
+    -- Destroy player active-character indicator
+    if DestroyActiveCharIndicator then
+        DestroyActiveCharIndicator()
+    end
+
+    -- Destroy all enemy indicators
+    if DestroyAllEnemyIndicators then
+        DestroyAllEnemyIndicators()
+    end
+
+    -- Force-end enemy turn state
+    if EnemyTurnActive ~= nil then EnemyTurnActive = false end
+    if ActiveEnemyIndex ~= nil then ActiveEnemyIndex = 0 end
+
+    -- Reset party state
+    if PartyMembers then PartyMembers = {} end
+
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
     UIManager.Destroy()
 
