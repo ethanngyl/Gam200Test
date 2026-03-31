@@ -76,8 +76,6 @@ local editorToggleCooldown = 0
 
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
-local partyUI = nil
-
 -- Turn tracking (for party reset)
 local previousTurn = "Player"
 
@@ -230,9 +228,6 @@ function OnInit()
     -- Initialize popup system for one-time animations
     PopupManager.Init()
 
-    -- Setup Party UI (shows all 3 characters)
-    SetupPartyUI()
-
     -- CRITICAL: Re-disable grid movement AFTER all initialization
     -- Some systems (GameStateManager) may re-enable it during setup
     Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -266,11 +261,6 @@ function OnUpdate(dt)
 
     -- Handle pause menu (always runs)
     PauseMenu.Update(dt)
-
-    -- Update party UI (shows HP/AP for all characters)
-    if partyUI then
-        partyUI:OnUpdate(dt)
-    end
 
     -- Skip game logic if paused
     if IsPaused() then
@@ -355,13 +345,6 @@ function OnDestroy()
     Log("========================================")
     Log("Level 3 cleanup...")
     Log("========================================")
-
-    -- Cleanup party UI
-    if partyUI then
-        partyUI:OnDestroy()
-        partyUI = nil
-        Log(" Party UI destroyed")
-    end
 
     -- Stop audio
     StopMusic(0.5)
@@ -546,21 +529,6 @@ function SetupParty()
     return true
 end
 
-function SetupPartyUI()
-    Log("========================================")
-    Log("Setting up Party UI...")
-    Log("========================================")
-
-    -- Load PartyStatusUI
-    dofile("assets/scripts/UI/PartyStatusUI.lua")
-
-    -- Create UI instance
-    partyUI = PartyStatusUI:new(0)
-    partyUI:OnInit()
-
-    Log("Party status UI created")
-    Log("  UI will display HP/AP for all party members")
-end
 
 -- Legacy function name for compatibility
 function SetupPlayer()

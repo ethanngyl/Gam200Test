@@ -163,7 +163,7 @@ local function CreateActiveCharIndicator(worldX, worldY)
         true
     )
     if ind.spriteID and ind.spriteID > 0 and SetSpriteColor then
-        SetSpriteColor(ind.spriteID, 0.3, 0.5, 1, 1)
+        SetSpriteColor(ind.spriteID, 0,191,255)
     end
 end
 

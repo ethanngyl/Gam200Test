@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          AudioSystem.cpp
  Author:        ETHAN NG
@@ -114,6 +114,16 @@ namespace Framework {
             CheckFMODError(result, "masterGroup->addGroup(Music)");
         }
 
+        // Create SFX group under master
+        result = fmodSystem->createChannelGroup("SFX", &sfxGroup);
+        CheckFMODError(result, "createChannelGroup(SFX)");
+
+        if (result == FMOD_OK && masterGroup && sfxGroup)
+        {
+            result = masterGroup->addGroup(sfxGroup);
+            CheckFMODError(result, "masterGroup->addGroup(SFX)");
+        }
+
 
         std::cout << "[Audio] FMOD initialized successfully\n";
     }
@@ -198,7 +208,7 @@ namespace Framework {
                         // Play sound
                         FMOD_RESULT result = fmodSystem->playSound(
                             sound,
-                            nullptr,
+                            sfxGroup ? sfxGroup : nullptr,
                             false,
                             &channel
                         );
@@ -379,9 +389,10 @@ namespace Framework {
         }
 
         FMOD::Channel* channel = nullptr;
+        FMOD::ChannelGroup* group = loop ? musicGroup : sfxGroup;
         FMOD_RESULT result = fmodSystem->playSound(
             it->second,
-            nullptr,
+            group ? group : nullptr,
             false,
             &channel
         );
@@ -403,6 +414,7 @@ namespace Framework {
             masterGroup->stop();
         }
         musicChannel = nullptr;
+        currentMusicName.clear();
         musicFadeActive = false;
         musicStopWhenFadeDone = false;
         pendingMusicName.clear();
@@ -418,6 +430,18 @@ namespace Framework {
     void AudioSystem::SetMasterVolume(float volume) {
         if (masterGroup) {
             masterGroup->setVolume(volume);
+        }
+    }
+
+    void AudioSystem::SetMusicVolume(float volume) {
+        if (musicGroup) {
+            musicGroup->setVolume(volume);
+        }
+    }
+
+    void AudioSystem::SetSfxVolume(float volume) {
+        if (sfxGroup) {
+            sfxGroup->setVolume(volume);
         }
     }
 
@@ -541,6 +565,11 @@ namespace Framework {
             musicChannel->isPlaying(&isPlaying);
         }
 
+        // Already playing this exact track: keep current playback and do nothing.
+        if (isPlaying && currentMusicName == soundName) {
+            return;
+        }
+
         // If already playing, fade out then swap
         if (isPlaying) {
             pendingMusicName = soundName;
@@ -566,6 +595,7 @@ namespace Framework {
         channel->setPaused(false);
 
         musicChannel = channel;
+        currentMusicName = soundName;
 
         // Fade in
         musicFadeActive = true;
@@ -603,6 +633,7 @@ namespace Framework {
 
         if (!isPlaying) {
             musicChannel = nullptr;
+            currentMusicName.clear();
             return;
         }
 
@@ -612,6 +643,7 @@ namespace Framework {
         if (fadeOutSec <= 0.0f) {
             musicChannel->stop();
             musicChannel = nullptr;
+            currentMusicName.clear();
             musicFadeActive = false;
             musicStopWhenFadeDone = false;
             return;
@@ -666,6 +698,7 @@ namespace Framework {
             {
                 musicChannel->stop();
                 musicChannel = nullptr;
+                currentMusicName.clear();
                 musicStopWhenFadeDone = false;
 
                 // If a track was queued during fade-out, start it now

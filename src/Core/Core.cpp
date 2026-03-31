@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          Core.cpp (FIXED - ALT+TAB Text Rendering Issue)
  Author:        GE YONGQI
@@ -257,6 +257,18 @@ namespace Framework
         float masterVolume = AudioLoader::GetSettings().masterVolume;
         audioSystem->SetMasterVolume(masterVolume);
         LOG_INFO("AUDIO", "Master volume loaded from audio_config.json: %.2f", masterVolume);
+
+        // Reset music/sfx toggles each app launch (default ON)
+        AudioLoader::SetMusicVolume(1.0f);
+        AudioLoader::SetSfxVolume(1.0f);
+
+        float musicVolume = AudioLoader::GetSettings().musicVolume;
+        audioSystem->SetMusicVolume(musicVolume);
+        LOG_INFO("AUDIO", "Music volume reset to: %.2f", musicVolume);
+
+        float sfxVolume = AudioLoader::GetSettings().sfxVolume;
+        audioSystem->SetSfxVolume(sfxVolume);
+        LOG_INFO("AUDIO", "SFX volume reset to: %.2f", sfxVolume);
 
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);

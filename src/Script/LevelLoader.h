@@ -179,6 +179,12 @@ namespace Framework {
         static int Lua_SetMasterVolume(lua_State* L);
         static int Lua_GetMasterVolume(lua_State* L);
         static int Lua_SaveMasterVolume(lua_State* L);
+        static int Lua_SetMusicVolume(lua_State* L);
+        static int Lua_GetMusicVolume(lua_State* L);
+        static int Lua_SaveMusicVolume(lua_State* L);
+        static int Lua_SetSfxVolume(lua_State* L);
+        static int Lua_GetSfxVolume(lua_State* L);
+        static int Lua_SaveSfxVolume(lua_State* L);
 
         // UI Button API
         static int Lua_CreateButton(lua_State* L);

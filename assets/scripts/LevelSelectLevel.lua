@@ -236,8 +236,7 @@ end
 function OnDestroy()
     Log("LevelSelect cleanup...")
 
-    -- Stop all sounds
-    StopMusic(0.5)
+    -- Keep menu BGM playing across menu page transitions.
 
     -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()
