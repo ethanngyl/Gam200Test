@@ -906,8 +906,13 @@ end
 function OnDraw()
     PauseMenu.Draw()
 
-    -- Render skill swap UI overlay
+    -- Render skill swap UI overlay (manages its own pause/active state)
     SkillSwapUI.Draw()
+
+    -- When paused, only draw the pause/overlay UIs — skip all game UI
+    if IsPaused() then
+        return
+    end
 
     -- Render UI components (including scroll animation text)
     UIManager.Draw()

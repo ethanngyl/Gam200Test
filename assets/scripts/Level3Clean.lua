@@ -322,6 +322,11 @@ function OnDraw()
     -- Render pause menu
     PauseMenu.Draw()
 
+    -- When paused, only draw the pause menu overlay — skip all game UI
+    if IsPaused() then
+        return
+    end
+
     -- Render popup animations (damage numbers, status effects, etc.)
     PopupManager.Draw()
 
