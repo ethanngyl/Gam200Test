@@ -1,4 +1,4 @@
---[[
+﻿--[[
 ===============================================================================
  File:          PlayerScript.lua
  Authors:       ETHAN NG YONG LE
@@ -1526,11 +1526,6 @@ function OnUpdate(dt)
     -- Update cooldown timer
     if moveCooldown > 0 then
         moveCooldown = moveCooldown - dt
-        -- Return to Idle if not moving
-        if currentAnimGroup == AnimGroup.Walk then
-            currentAnimGroup = AnimGroup.Idle
-            SetAnimationGroup(entityID, currentAnimGroup)
-        end
         return
     end
 
