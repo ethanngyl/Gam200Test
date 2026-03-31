@@ -278,6 +278,76 @@ namespace Framework {
         return 1;
     }
 
+    /**
+     * @brief Sets the music volume for the game
+     * @params volume (number) - 0.0 to 1.0
+     */
+    int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMusicVolume(volume);
+        return 0;
+    }
+
+    /**
+     * @brief Gets the saved music volume from audio config
+     * @return number - The saved music volume (0.0 to 1.0)
+     */
+    int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
+        float volume = AudioLoader::GetSettings().musicVolume;
+        lua_pushnumber(L, volume);
+        return 1;
+    }
+
+    /**
+     * @brief Saves the music volume to audio config JSON file
+     * @params volume (number) - 0.0 to 1.0
+     * @return boolean - True if save succeeded
+     */
+    int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
+        float volume = luaL_checknumber(L, 1);
+        bool success = AudioLoader::SetMusicVolume(volume);
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
+    /**
+     * @brief Sets the sfx volume for the game
+     * @params volume (number) - 0.0 to 1.0
+     */
+    int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetSfxVolume(volume);
+        return 0;
+    }
+
+    /**
+     * @brief Gets the saved sfx volume from audio config
+     * @return number - The saved sfx volume (0.0 to 1.0)
+     */
+    int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
+        float volume = AudioLoader::GetSettings().sfxVolume;
+        lua_pushnumber(L, volume);
+        return 1;
+    }
+
+    /**
+     * @brief Saves the sfx volume to audio config JSON file
+     * @params volume (number) - 0.0 to 1.0
+     * @return boolean - True if save succeeded
+     */
+    int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {
+        float volume = luaL_checknumber(L, 1);
+        bool success = AudioLoader::SetSfxVolume(volume);
+        lua_pushboolean(L, success);
+        return 1;
+    }
+
     // ========================================================================
     // UI BUTTON API
     // ========================================================================
@@ -497,7 +567,29 @@ namespace Framework {
 
         // Debug output removed for performance
 
-        glm::vec3 textColor(colorR, colorG, colorB);
+        // Match text visibility to left-to-right transition wipe driven from Lua.
+        float textVisibility = 1.0f;
+        lua_getglobal(L, "__transitionWipeProgress");
+        if (lua_isnumber(L, -1)) {
+            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
+            if (wipeProgress > 0.0f) {
+                const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
+                const float featherPx = 36.0f * viewportScale;
+
+                if (centeredX <= wipeEdgePx - featherPx) {
+                    lua_pop(L, 1);
+                    return 0;
+                }
+
+                if (centeredX < wipeEdgePx + featherPx) {
+                    const float span = std::max(1.0f, featherPx * 2.0f);
+                    textVisibility = std::clamp((centeredX - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
+                }
+            }
+        }
+        lua_pop(L, 1);
+
+        glm::vec3 textColor(colorR * textVisibility, colorG * textVisibility, colorB * textVisibility);
 
         // CRITICAL FIX: Bind viewport FBO if editor is enabled
         // This ensures text renders to the game viewport, not the main window
@@ -542,7 +634,47 @@ namespace Framework {
         float g = luaL_checknumber(L, 7);
         float b = luaL_checknumber(L, 8);
 
-        glm::vec3 color(r, g, b);
+        float textVisibility = 1.0f;
+        lua_getglobal(L, "__transitionWipeProgress");
+        if (lua_isnumber(L, -1)) {
+            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
+            if (wipeProgress > 0.0f && loader->coreEngine) {
+                int fbWidth = 0;
+                int fbHeight = 0;
+
+                auto* imgui = loader->coreEngine->GetImGuiSystem();
+                if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport() &&
+                    imgui->GetViewportFBO() != 0) {
+                    fbWidth = imgui->GetViewportWidth();
+                    fbHeight = imgui->GetViewportHeight();
+                }
+                else {
+                    auto* windowSystem = loader->coreEngine->GetWindowSystem();
+                    if (windowSystem) {
+                        GLFWwindow* window = windowSystem->GetWindow();
+                        if (window) {
+                            glfwGetWindowSize(window, &fbWidth, &fbHeight);
+                        }
+                    }
+                }
+
+                if (fbWidth > 0 && fbHeight > 0) {
+                    const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
+                    const float featherPx = 28.0f;
+                    if (x <= wipeEdgePx - featherPx) {
+                        lua_pop(L, 1);
+                        return 0;
+                    }
+                    if (x < wipeEdgePx + featherPx) {
+                        const float span = std::max(1.0f, featherPx * 2.0f);
+                        textVisibility = std::clamp((x - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
+                    }
+                }
+            }
+        }
+        lua_pop(L, 1);
+
+        glm::vec3 color(r * textVisibility, g * textVisibility, b * textVisibility);
         loader->graphicsSystem->DrawText4(font, text, x, y, scale, color);
 
         return 0;
@@ -612,19 +744,21 @@ namespace Framework {
         // Map to Framework::KeyCode (from Input.h)
         KeyCode keyCode = KEY_UNKNOWN;
 
-        // Letters
-        if (strcmp(keyName, "W") == 0) keyCode = KEY_W;
-        else if (strcmp(keyName, "A") == 0) keyCode = KEY_A;
-        else if (strcmp(keyName, "S") == 0) keyCode = KEY_S;
-        else if (strcmp(keyName, "D") == 0) keyCode = KEY_D;
-        else if (strcmp(keyName, "E") == 0) keyCode = KEY_E;
-        else if (strcmp(keyName, "Q") == 0) keyCode = KEY_Q;
-        else if (strcmp(keyName, "R") == 0) keyCode = KEY_R;
-        else if (strcmp(keyName, "P") == 0) keyCode = KEY_P;
-        else if (strcmp(keyName, "I") == 0) keyCode = KEY_I;
+        // Support any single-letter key (A-Z) and single digit (0-9).
+        // This keeps Lua key strings predictable and avoids one-off mapping gaps.
+        if (keyName && keyName[0] != '\0' && keyName[1] == '\0') {
+            const unsigned char raw = static_cast<unsigned char>(keyName[0]);
+            const char c = static_cast<char>(std::toupper(raw));
+            if (c >= 'A' && c <= 'Z') {
+                keyCode = static_cast<KeyCode>(c);
+            }
+            else if (c >= '0' && c <= '9') {
+                keyCode = static_cast<KeyCode>(c);
+            }
+        }
 
         // Special keys
-        else if (strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
+        if (keyCode == KEY_UNKNOWN && strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
         else if (strcmp(keyName, "Escape") == 0) keyCode = KEY_ESCAPE;
         else if (strcmp(keyName, "Enter") == 0) keyCode = KEY_ENTER;
         else if (strcmp(keyName, "Shift") == 0) keyCode = KEY_SHIFT;
@@ -636,17 +770,6 @@ namespace Framework {
         else if (strcmp(keyName, "Left") == 0) keyCode = KEY_LEFT;
         else if (strcmp(keyName, "Right") == 0) keyCode = KEY_RIGHT;
 
-        // Number keys
-        else if (strcmp(keyName, "1") == 0) keyCode = KEY_1;
-        else if (strcmp(keyName, "2") == 0) keyCode = KEY_2;
-        else if (strcmp(keyName, "3") == 0) keyCode = KEY_3;
-        else if (strcmp(keyName, "4") == 0) keyCode = KEY_4;
-        else if (strcmp(keyName, "5") == 0) keyCode = KEY_5;
-        else if (strcmp(keyName, "6") == 0) keyCode = KEY_6;
-        else if (strcmp(keyName, "7") == 0) keyCode = KEY_7;
-        else if (strcmp(keyName, "8") == 0) keyCode = KEY_8;
-        else if (strcmp(keyName, "9") == 0) keyCode = KEY_9;
-        else if (strcmp(keyName, "0") == 0) keyCode = KEY_0;
         else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
         else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
         else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;

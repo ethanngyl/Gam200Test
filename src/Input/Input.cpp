@@ -95,6 +95,7 @@ namespace Framework
 
         UpdateKeyState(KEY_I, GetAsyncKeyState(KEY_I));
         UpdateKeyState(KEY_X, GetAsyncKeyState(KEY_X));
+        UpdateKeyState(KEY_Y, GetAsyncKeyState(KEY_Y));
         UpdateKeyState(KEY_C, GetAsyncKeyState(KEY_C));
         UpdateKeyState(KEY_V, GetAsyncKeyState(KEY_V));
         UpdateKeyState(KEY_B, GetAsyncKeyState(KEY_B));

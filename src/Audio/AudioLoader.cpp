@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          AudioLoader.cpp
  Author:        ETHAN NG
@@ -227,6 +227,16 @@ namespace Framework {
         settings.masterVolume = (std::max)(0.0f, (std::min)(1.0f, volume));
 
         // Save to JSON file
+        return SaveAudioConfig(filepath);
+    }
+
+    bool AudioLoader::SetMusicVolume(float volume, const std::string& filepath) {
+        settings.musicVolume = (std::max)(0.0f, (std::min)(1.0f, volume));
+        return SaveAudioConfig(filepath);
+    }
+
+    bool AudioLoader::SetSfxVolume(float volume, const std::string& filepath) {
+        settings.sfxVolume = (std::max)(0.0f, (std::min)(1.0f, volume));
         return SaveAudioConfig(filepath);
     }
 

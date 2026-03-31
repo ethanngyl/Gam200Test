@@ -59,6 +59,19 @@ TurnTransitionCooldownTime = 0.0     -- Delay in seconds after turn switch (0 = 
 -- when destroying entity whose script is still on the call stack, e.g. Dark Omens)
 DeferredDeathQueue = {}
 
+-- Active-character indicator (yellow arrow above the controlled character)
+ActiveCharIndicator = {
+    spriteID   = 0,
+    texture    = "assets/UI/New_Piskel_11.png",
+    rows       = 5,
+    cols       = 4,
+    frameCount = 18,
+    frameTime  = 0.045,
+    scale      = 0.04,
+    yOffset    = 0.055,
+    layer      = 4,
+}
+
 -- Character definitions (can be customized)
 CharacterConfig = {
     {
@@ -134,6 +147,51 @@ function ApplyProjectileDamage(enemyID, damage, attackerID)
 end
 
 -- ============================================================================
+-- ACTIVE CHARACTER INDICATOR
+-- ============================================================================
+
+local function CreateActiveCharIndicator(worldX, worldY)
+    if not SpawnAnimatedSprite then return end
+    local ind = ActiveCharIndicator
+    ind.spriteID = SpawnAnimatedSprite(
+        ind.texture,
+        worldX, worldY + ind.yOffset,
+        ind.scale, ind.scale,
+        ind.layer,
+        ind.rows, ind.cols,
+        ind.frameCount, ind.frameTime,
+        true
+    )
+    if ind.spriteID and ind.spriteID > 0 and SetSpriteColor then
+        SetSpriteColor(ind.spriteID, 0,191,255)
+    end
+end
+
+local function UpdateActiveCharIndicatorPosition()
+    local ind = ActiveCharIndicator
+    if not ind.spriteID or ind.spriteID <= 0 then return end
+    if #PartyMembers == 0 then return end
+
+    local activeID = GetActiveCharacter()
+    if not activeID or activeID == 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(activeID)
+    if not wx or not wy then return end
+
+    SetSpritePosition(ind.spriteID, wx, wy + ind.yOffset)
+end
+
+local function DestroyActiveCharIndicator()
+    local ind = ActiveCharIndicator
+    if ind.spriteID and ind.spriteID > 0 then
+        if DestroyEntity then
+            DestroyEntity(ind.spriteID)
+        end
+        ind.spriteID = 0
+    end
+end
+
+-- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
@@ -203,6 +261,13 @@ function InitializeParty(entityIDs)
 
     print("[InitializeParty] COMPLETED SUCCESSFULLY - Active character: " .. PartyMembers[ActiveCharacterIndex].name)
     OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
+
+    -- Spawn the indicator arrow above the first active character
+    local wx, wy = GetEntityWorldPosition(PartyMembers[1].entityID)
+    if wx and wy then
+        CreateActiveCharIndicator(wx, wy)
+    end
+
     return true
 end
 
@@ -788,14 +853,6 @@ function OnCharacterSwitched(newCharID)
     -- Update the graphics system's camera follow target
     SetCameraFollowTarget(newCharID)
 
-    -- Tint all party members back to normal, then highlight the active one red
-    if SetSpriteColor then
-        for _, member in ipairs(PartyMembers) do
-            SetSpriteColor(member.entityID, 1, 1, 1, 1)   -- restore white
-        end
-        SetSpriteColor(newCharID, 1, 0.3, 0.3, 1)         -- tint active unit red
-    end
-
     print("[PartyTurnManager] Camera now following Entity " .. newCharID)
     print("[PartyTurnManager] ==========================================")
 end
@@ -866,6 +923,8 @@ function UpdatePartyTurnManager(dt)
             TurnTransitionCooldown = 0
         end
     end
+
+    UpdateActiveCharIndicatorPosition()
 end
 
 --[[
@@ -914,6 +973,7 @@ _G.OnEnemyTurnEnded = OnEnemyTurnEnded
 _G.DebugPrintPartyState = DebugPrintPartyState
 _G.UpdatePartyTurnManager = UpdatePartyTurnManager
 _G.IsInTurnTransition = IsInTurnTransition
+_G.DestroyActiveCharIndicator = DestroyActiveCharIndicator
 
 print("============================================================")
 print("========== PartyTurnManager.lua LOADED SUCCESSFULLY ==========")

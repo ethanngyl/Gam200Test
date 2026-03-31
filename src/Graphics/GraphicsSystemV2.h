@@ -354,7 +354,7 @@ namespace Framework {
         /**
          * @brief Makes the camera follow a target player entity
          */
-        void FollowPlayer(EntityManager* em, Entity player);
+        void FollowPlayer(EntityManager* em, Entity player, float dt);
         void EditorCamDefaultControl(float dt);
 
         // Editor camera state

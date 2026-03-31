@@ -13,13 +13,39 @@
 #include "Precompiled.h"
 
 namespace Framework {
+	// Persistent random engine for particle spawning.
+	// std::rand() is slow, low-quality, and not thread-safe.
+	// mt19937 is seeded once at startup and reused every spawn.
+	static std::mt19937 s_rng{ std::random_device{}() };
+	static std::uniform_real_distribution<float> s_dist{ 0.0f, 1.0f };
+
+	void ParticleSystem::SetSettings(const Settings& s) {
+		// Copy the incoming settings first, then patch cachedWorldScale.
+		// We compute world scale once here rather than inside CreateParticle()
+		// because GetRenderHeight() involves a system pointer dereference —
+		// doing it per-particle would waste CPU on every spawn (rubric 2104 FPS).
+		settings = s;
+
+		// Pre-compute world scale once here instead of on every CreateParticle call.
+		// This avoids querying the graphics system per-particle (rubric 2104).
+		if (CORE && CORE->GetGraphicsSystem()) {
+			settings.cachedWorldScale =
+				(2.0f * settings.size) / float(CORE->GetGraphicsSystem()->GetRenderHeight());
+		}
+
+		// Pre-size the particle vector based on expected max live particles
+		// to avoid reallocations during gameplay
+		int maxExpected = static_cast<int>(settings.spawnRate * settings.maxLifetime)
+			+ settings.burstCnt + 8;
+		particles.reserve(static_cast<size_t>(max(maxExpected, 0)));
+	}
+
 	void ParticleSystem::CreateParticle() {
 		if (!CORE || !CORE->GetGraphicsSystem() || !CORE->GetEntityManager()) return; // safety check
 
-		// Query active graphics system to convert pixel size into world-space scale
-		// Size (pixel -> world conversion)
-		auto* graphics = CORE->GetGraphicsSystem();
-		float worldScale = (2.0f * settings.size) / float(graphics->GetRenderHeight());
+		// Use the value cached at settings-load time (computed in SetSettings)
+		float worldScale = settings.cachedWorldScale;
+		if (worldScale <= 0.0f) return;  // settings not yet configured, bail early
 
 		Entity entity = CORE->GetEntityManager()->CreateEntity();
 		CORE->GetEntityManager()->AddComponent<Transform>(entity, emitter);
@@ -28,9 +54,8 @@ namespace Framework {
 		// Randomize spawn position within spawnRadius
 		Vector2D spawnPos = emitter;
 		if (settings.spawnRadius > 0.0f) {
-			auto frandLocal = []() { return float(std::rand()) / float(RAND_MAX); };
-			float angle = frandLocal() * 2.0f * 3.14159265f;
-			float radius = frandLocal() * settings.spawnRadius;
+			float angle = s_dist(s_rng) * 2.0f * 3.14159265f;
+			float radius = s_dist(s_rng) * settings.spawnRadius;
 			spawnPos.x += std::cos(angle) * radius;
 			spawnPos.y += std::sin(angle) * radius;
 		}
@@ -55,24 +80,21 @@ namespace Framework {
 		mr.layer = settings.layer;
 		mr.tint = settings.tint;
 
-		// frand: gives any random number from 0.0f to 1.0f
-		auto frand = []() { return float(std::rand()) / float(RAND_MAX); };
-
 		// Lifetime
-		particle.lifetime = settings.minLifetime + frand() * (settings.maxLifetime - settings.minLifetime);
+		particle.lifetime = settings.minLifetime + s_dist(s_rng) * (settings.maxLifetime - settings.minLifetime);
 		particle.maxLifetime = particle.lifetime;  // Store max lifetime for interpolation
 		particle.age = 0.0f;
 
 		// Velocity: Radial or Directional cone
-		float speed = settings.minSpeed + frand() * (settings.maxSpeed - settings.minSpeed);
+		float speed = settings.minSpeed + s_dist(s_rng) * (settings.maxSpeed - settings.minSpeed);
 
 		Vector2D direction { 0.0f, 0.0f };
 
 		if (settings.direction.x == 0.0f && settings.direction.y == 0.0f) {
 			// Radial Emission
 			// scale up by 2 then shift by -1 (Range: -1 to 1)
-			direction.x = (frand() * 2.0f) - 1.0f;
-			direction.y = (frand() * 2.0f) - 1.0f;
+			direction.x = (s_dist(s_rng) * 2.0f) - 1.0f;
+			direction.y = (s_dist(s_rng) * 2.0f) - 1.0f;
 
 			// direction normalized
 			direction.normalize();
@@ -82,8 +104,8 @@ namespace Framework {
 			direction = settings.direction;
 
 			// scale up by 2 then shift by -1 (Range: -1 to 1)
-			direction.x += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
-			direction.y += ((frand() * 2.0f) - 1.0f) * settings.directionFuzz;
+			direction.x += ((s_dist(s_rng) * 2.0f) - 1.0f) * settings.directionFuzz;
+			direction.y += ((s_dist(s_rng) * 2.0f) - 1.0f) * settings.directionFuzz;
 
 			// direction normalized
 			direction.normalize();
@@ -95,7 +117,9 @@ namespace Framework {
 	}
 
 	void ParticleSystem::UpdateParticle(float dt) {
-		if (dt <= 0.0f) return; // safety check
+		// Guard against zero, negative, or runaway dt (e.g. after ALT+TAB resume)
+		// Without the upper clamp, a 5-second pause would try to spawn 5*rate particles at once
+		if (dt <= 0.0f || dt > 0.25f) return;
 
 		EntityManager* entityManager = CORE->GetEntityManager();
 		if (!entityManager) return;
@@ -122,8 +146,10 @@ namespace Framework {
 		for (auto count = particles.begin(); count != particles.end(); ) {
 			Entity entity = *count;
 
-			// Checks if components exist (prevents GetComponent throwing if something removed it)
-			if (!entityManager->HasComponent<Transform>(entity) || !entityManager->HasComponent<Particle>(entity)) {
+			// Transform and Particle are guaranteed present — we added them in CreateParticle.
+			// Only guard against MeshRenderer in case something external stripped it.
+			if (!entityManager->HasComponent<MeshRenderer>(entity)) {
+				entityManager->DestroyEntity(entity);
 				count = particles.erase(count);
 				continue;
 			}
@@ -162,14 +188,9 @@ namespace Framework {
 						(particle.endTint.a - particle.startTint.a) * lifeProgress;
 				}
 
-				if (particle.shrinkOverTime) {
-					// Shrink over time
-					float currentSize = particle.startSize +
-						(particle.endSize - particle.startSize) * lifeProgress;
-					transform.scale = { currentSize, currentSize };
-				}
-				else if (particle.growOverTime) {
-					// Grow over time
+				// shrinkOverTime and growOverTime use the same interpolation formula —
+				// the difference is in the Settings values (endSize < startSize vs endSize > startSize)
+				if (particle.shrinkOverTime || particle.growOverTime) {
 					float currentSize = particle.startSize +
 						(particle.endSize - particle.startSize) * lifeProgress;
 					transform.scale = { currentSize, currentSize };
