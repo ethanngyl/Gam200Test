@@ -114,16 +114,6 @@ namespace Framework {
             CheckFMODError(result, "masterGroup->addGroup(Music)");
         }
 
-        // Create SFX group under master
-        result = fmodSystem->createChannelGroup("SFX", &sfxGroup);
-        CheckFMODError(result, "createChannelGroup(SFX)");
-
-        if (result == FMOD_OK && masterGroup && sfxGroup)
-        {
-            result = masterGroup->addGroup(sfxGroup);
-            CheckFMODError(result, "masterGroup->addGroup(SFX)");
-        }
-
 
         std::cout << "[Audio] FMOD initialized successfully\n";
     }
@@ -208,7 +198,7 @@ namespace Framework {
                         // Play sound
                         FMOD_RESULT result = fmodSystem->playSound(
                             sound,
-                            sfxGroup ? sfxGroup : nullptr,
+                            nullptr,
                             false,
                             &channel
                         );
@@ -389,10 +379,9 @@ namespace Framework {
         }
 
         FMOD::Channel* channel = nullptr;
-        FMOD::ChannelGroup* group = loop ? musicGroup : sfxGroup;
         FMOD_RESULT result = fmodSystem->playSound(
             it->second,
-            group ? group : nullptr,
+            nullptr,
             false,
             &channel
         );
@@ -430,18 +419,6 @@ namespace Framework {
     void AudioSystem::SetMasterVolume(float volume) {
         if (masterGroup) {
             masterGroup->setVolume(volume);
-        }
-    }
-
-    void AudioSystem::SetMusicVolume(float volume) {
-        if (musicGroup) {
-            musicGroup->setVolume(volume);
-        }
-    }
-
-    void AudioSystem::SetSfxVolume(float volume) {
-        if (sfxGroup) {
-            sfxGroup->setVolume(volume);
         }
     }
 

@@ -230,16 +230,6 @@ namespace Framework {
         return SaveAudioConfig(filepath);
     }
 
-    bool AudioLoader::SetMusicVolume(float volume, const std::string& filepath) {
-        settings.musicVolume = (std::max)(0.0f, (std::min)(1.0f, volume));
-        return SaveAudioConfig(filepath);
-    }
-
-    bool AudioLoader::SetSfxVolume(float volume, const std::string& filepath) {
-        settings.sfxVolume = (std::max)(0.0f, (std::min)(1.0f, volume));
-        return SaveAudioConfig(filepath);
-    }
-
     /**
      * @brief Serializes the current audio settings back to the JSON file
      * @params filepath, The path to the JSON file to write

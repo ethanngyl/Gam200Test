@@ -41,8 +41,6 @@ local config = nil
 local backgroundSpriteID = 0  -- Store background sprite entity ID
 local logoSpriteID = 0        -- Store logo sprite entity ID
 local cornerSpriteIDs = {}    -- Store corner sprite entity IDs
-local wasWinKeyDown = false
-local wasLoseKeyDown = false
 
 -- Settings button (custom animated sprite)
 local settingsButton = {
@@ -392,19 +390,6 @@ function OnUpdate(dt)
     -- ButtonManager handles F1 toggle and state transitions
     ButtonManager.Update(dt)
     UpdateSettingsButton(dt)
-
-    -- Debug: quick access to win/lose screens
-    local winKeyDown = IsKeyDown and IsKeyDown("7") or false
-    if winKeyDown and not wasWinKeyDown then
-        SetNextGameState("WIN_SCREEN")
-    end
-    wasWinKeyDown = winKeyDown
-
-    local loseKeyDown = IsKeyDown and IsKeyDown("8") or false
-    if loseKeyDown and not wasLoseKeyDown then
-        SetNextGameState("LOSE_SCREEN")
-    end
-    wasLoseKeyDown = loseKeyDown
 end
 
 -- ============================================================================

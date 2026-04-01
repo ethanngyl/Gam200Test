@@ -245,8 +245,6 @@ namespace Framework {
          * @endcode
          */
         void SetMasterVolume(float volume);  // 0.0 to 1.0
-        void SetMusicVolume(float volume);   // 0.0 to 1.0
-        void SetSfxVolume(float volume);     // 0.0 to 1.0
 
         /**
          * @brief Shuts down the audio system and releases all resources
@@ -330,9 +328,6 @@ namespace Framework {
         FMOD::ChannelGroup* musicGroup = nullptr;
         FMOD::Channel* musicChannel = nullptr;
         std::string currentMusicName;
-
-        // Dedicated SFX routing
-        FMOD::ChannelGroup* sfxGroup = nullptr;
 
         bool musicFadeActive = false;
         float musicFadeStartVol = 1.0f;
