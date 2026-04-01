@@ -354,6 +354,7 @@ namespace Framework {
         }
 
         deferredEntitiesToDestroy.clear();
+        sharedIntStore.clear();
         levelLoaded = false;
         currentLevelPath.clear();
 

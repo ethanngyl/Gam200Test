@@ -906,8 +906,13 @@ end
 function OnDraw()
     PauseMenu.Draw()
 
-    -- Render skill swap UI overlay
+    -- Render skill swap UI overlay (manages its own pause/active state)
     SkillSwapUI.Draw()
+
+    -- When paused, only draw the pause/overlay UIs — skip all game UI
+    if IsPaused() then
+        return
+    end
 
     -- Render UI components (including scroll animation text)
     UIManager.Draw()
@@ -938,12 +943,39 @@ function OnDestroy()
     -- Stop audio
     StopMusic(0.5)
 
+    -- Destroy player active-character indicator
+    if DestroyActiveCharIndicator then
+        DestroyActiveCharIndicator()
+        Log("  Destroyed active character indicator")
+    end
+
+    -- Destroy all enemy indicators
+    if DestroyAllEnemyIndicators then
+        DestroyAllEnemyIndicators()
+        Log("  Destroyed all enemy indicators")
+    end
+
+    -- Force-end enemy turn state so it doesn't carry over
+    EnemyTurnActive = false
+    ActiveEnemyIndex = 0
+
+    -- Reset party state
+    PartyMembers = {}
+    ActiveCharacterIndex = 1
+    PartyTurnComplete = false
+
     -- Destroy UI system
     UIManager.Destroy()
 
     -- Reset state
     audioConfig = nil
     initialized = false
+    goalReached = false
+    goalPosition = nil
+    bossEntityID = nil
+    bossDefeated = false
+    pendingGoalData = nil
+    pendingBossSpawn = nil
 
     Log("Level 3 (Procedural) cleanup complete")
     Log("========================================")

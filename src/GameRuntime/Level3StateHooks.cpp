@@ -6,6 +6,7 @@
 #include "TagHelper.h"
 #include "PlayerManager.h"
 #include "Pathfinding.h"
+#include "ScriptSystem.h"
 
 extern Framework::CoreEngine* engine;
 
@@ -73,6 +74,38 @@ void OnUpdate()
 void OnFree()
 {
     LOG_INFO("GSM", "Cleaning up Level3...");
+
+    // Reset all C++ static state that persists across level transitions
+    // (EnemyTurnState, TurnState, sharedIntStore)
+    Framework::LevelLoader::ResetCppLevelState();
+
+    // Properly call OnDestroy on all entity scripts before destroying them.
+    // ClearAllEntities only calls component destructors (closes lua_State)
+    // but does NOT invoke the Lua OnDestroy function. We need to do that
+    // here so enemy tile-occupancy, health bars, etc. are cleaned up.
+    if (::engine) {
+        if (auto* ss = ::engine->GetScriptSystem()) {
+            auto* em = ::engine->GetEntityManager();
+            if (em) {
+                auto entities = em->GetAllEntities();
+                for (auto entity : entities) {
+                    if (em->HasComponent<ScriptComponent>(entity)) {
+                        auto& script = em->GetComponent<ScriptComponent>(entity);
+                        if (script.hasOnDestroy && script.L) {
+                            lua_getglobal(script.L, "OnDestroy");
+                            if (lua_isfunction(script.L, -1)) {
+                                if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                                    lua_pop(script.L, 1);
+                                }
+                            } else {
+                                lua_pop(script.L, 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Framework::LevelLoader::GetInstance().ResetLuaState();
 
