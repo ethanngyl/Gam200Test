@@ -1105,7 +1105,12 @@ namespace Framework {
     // GraphicsSystemV2.cpp
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
-        if (commands.empty()) return;
+        if (commands.empty() && queuedTextCommands.empty()) return;
+
+        std::sort(queuedTextCommands.begin(), queuedTextCommands.end(),
+            [](const QueuedTextCommand& a, const QueuedTextCommand& b) {
+                return a.GetSortKey() < b.GetSortKey();
+            });
 
         Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
@@ -1165,7 +1170,35 @@ namespace Framework {
             batchMatrices.clear();
             };
 
-        for (const auto& cmd : commands) {
+        auto DrawQueuedText = [&](const QueuedTextCommand& textCmd) {
+            if (!textCmd.visible) return;
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            text_.draw(textCmd.fontKey, textCmd.text, textCmd.x, textCmd.y, textCmd.scale, textCmd.color);
+            };
+
+        size_t spriteIndex = 0;
+        size_t textIndex = 0;
+        while (spriteIndex < commands.size() || textIndex < queuedTextCommands.size()) {
+            bool drawTextNow = false;
+            if (textIndex < queuedTextCommands.size()) {
+                if (spriteIndex >= commands.size()) {
+                    drawTextNow = true;
+                }
+                else {
+                    drawTextNow = queuedTextCommands[textIndex].GetSortKey() <= commands[spriteIndex].GetSortKey();
+                }
+            }
+
+            if (drawTextNow) {
+                FlushBatch();
+                DrawQueuedText(queuedTextCommands[textIndex]);
+                ++textIndex;
+                continue;
+            }
+
+            const auto& cmd = commands[spriteIndex++];
             if (!cmd.visible) continue;
 
             bool isSameBatch = false;
@@ -1183,6 +1216,7 @@ namespace Framework {
             batchMatrices.push_back(cmd.modelMatrix);
         }
         FlushBatch(); // Draw final batch
+        queuedTextCommands.clear();
 
         if (currentBoundShader.IsValid()) {
             if (auto* sh = resourceManager.GetShader(currentBoundShader)) sh->Unbind();
@@ -1417,7 +1451,7 @@ namespace Framework {
         glfwPollEvents();
     }
 
-    void GraphicsSystemV2::DrawText4(const std::string& fontKey,
+    void GraphicsSystemV2::DrawTextImmediate(const std::string& fontKey,
         const std::string& text,
         float x, float y,
         float scale,
@@ -1430,6 +1464,26 @@ namespace Framework {
         text_.draw(fontKey, text, x, y, scale, color);
 
         glEnable(GL_DEPTH_TEST);
+    }
+
+    void GraphicsSystemV2::DrawText4(const std::string& fontKey,
+        const std::string& text,
+        float x, float y,
+        float scale,
+        const glm::vec3& color,
+        int layer,
+        int orderInLayer)
+    {
+        QueuedTextCommand cmd;
+        cmd.fontKey = fontKey;
+        cmd.text = text;
+        cmd.x = x;
+        cmd.y = y;
+        cmd.scale = scale;
+        cmd.color = color;
+        cmd.layer = layer;
+        cmd.orderInLayer = orderInLayer;
+        queuedTextCommands.push_back(std::move(cmd));
     }
 
     void GraphicsSystemV2::RenderImGui() {
@@ -1471,7 +1525,7 @@ namespace Framework {
             float textY = static_cast<float>(fbHeight) - 100.0f;
             
             // Draw with black color as requested
-            DrawText4("Sans48", fpsText, textX, textY, 1.0f, glm::vec3(255.0f, 0.0f, 0.0f));
+            DrawTextImmediate("Sans48", fpsText, textX, textY, 1.0f, glm::vec3(255.0f, 0.0f, 0.0f));
         }
 
         //    // Just swap - DON'T clear!

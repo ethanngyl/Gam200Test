@@ -232,13 +232,11 @@ function ButtonManager.Update(dt)
             pendingState = nil
         end
 
-        _G.__transitionWipeProgress = fadeAlpha
     else
         if fadeAlpha ~= 0.0 then
             fadeAlpha = 0.0
             UpdateFadeOverlay()
         end
-        _G.__transitionWipeProgress = 0.0
     end
 end
 

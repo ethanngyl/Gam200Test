@@ -278,74 +278,30 @@ namespace Framework {
         return 1;
     }
 
-    /**
-     * @brief Sets the music volume for the game
-     * @params volume (number) - 0.0 to 1.0
-     */
+    // Music/SFX volume aliases currently map to master volume because the
+    // underlying audio settings file stores a single master value.
     int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->audioSystem) return 0;
-
-        float volume = luaL_checknumber(L, 1);
-        loader->audioSystem->SetMusicVolume(volume);
-        return 0;
+        return Lua_SetMasterVolume(L);
     }
 
-    /**
-     * @brief Gets the saved music volume from audio config
-     * @return number - The saved music volume (0.0 to 1.0)
-     */
     int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
-        float volume = AudioLoader::GetSettings().musicVolume;
-        lua_pushnumber(L, volume);
-        return 1;
+        return Lua_GetMasterVolume(L);
     }
 
-    /**
-     * @brief Saves the music volume to audio config JSON file
-     * @params volume (number) - 0.0 to 1.0
-     * @return boolean - True if save succeeded
-     */
     int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
-        float volume = luaL_checknumber(L, 1);
-        bool success = AudioLoader::SetMusicVolume(volume);
-        lua_pushboolean(L, success);
-        return 1;
+        return Lua_SaveMasterVolume(L);
     }
 
-    /**
-     * @brief Sets the sfx volume for the game
-     * @params volume (number) - 0.0 to 1.0
-     */
     int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->audioSystem) return 0;
-
-        float volume = luaL_checknumber(L, 1);
-        loader->audioSystem->SetSfxVolume(volume);
-        return 0;
+        return Lua_SetMasterVolume(L);
     }
 
-    /**
-     * @brief Gets the saved sfx volume from audio config
-     * @return number - The saved sfx volume (0.0 to 1.0)
-     */
     int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
-        float volume = AudioLoader::GetSettings().sfxVolume;
-        lua_pushnumber(L, volume);
-        return 1;
+        return Lua_GetMasterVolume(L);
     }
 
-    /**
-     * @brief Saves the sfx volume to audio config JSON file
-     * @params volume (number) - 0.0 to 1.0
-     * @return boolean - True if save succeeded
-     */
     int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {
-        float volume = luaL_checknumber(L, 1);
-        bool success = AudioLoader::SetSfxVolume(volume);
-        lua_pushboolean(L, success);
-        return 1;
+        return Lua_SaveMasterVolume(L);
     }
 
     // ========================================================================
@@ -567,52 +523,23 @@ namespace Framework {
 
         // Debug output removed for performance
 
-        // Match text visibility to left-to-right transition wipe driven from Lua.
-        float textVisibility = 1.0f;
-        lua_getglobal(L, "__transitionWipeProgress");
-        if (lua_isnumber(L, -1)) {
-            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
-            if (wipeProgress > 0.0f) {
-                const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
-                const float featherPx = 36.0f * viewportScale;
+        glm::vec3 textColor(colorR, colorG, colorB);
 
-                if (centeredX <= wipeEdgePx - featherPx) {
-                    lua_pop(L, 1);
-                    return 0;
-                }
-
-                if (centeredX < wipeEdgePx + featherPx) {
-                    const float span = std::max(1.0f, featherPx * 2.0f);
-                    textVisibility = std::clamp((centeredX - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
-                }
-            }
-        }
-        lua_pop(L, 1);
-
-        glm::vec3 textColor(colorR * textVisibility, colorG * textVisibility, colorB * textVisibility);
-
-        // CRITICAL FIX: Bind viewport FBO if editor is enabled
-        // This ensures text renders to the game viewport, not the main window
+        // Bind viewport FBO when rendering in editor viewport mode.
         GLuint previousFBO = 0;
         bool needsRestore = false;
 
         if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport()) {
             GLuint viewportFBO = imgui->GetViewportFBO();
             if (viewportFBO != 0) {
-                // Save current FBO and bind viewport FBO
                 glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&previousFBO));
                 glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
                 needsRestore = true;
-
-                // Rendering text to viewport FBO
             }
         }
 
-        // Draw text to the currently bound framebuffer (viewport or main window)
-        // Use centered coordinates and finalScale for responsive, centered text
         loader->graphicsSystem->DrawText4(font, text, centeredX, centeredY, finalScale, textColor);
 
-        // Restore previous framebuffer
         if (needsRestore) {
             glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
         }
@@ -634,47 +561,7 @@ namespace Framework {
         float g = luaL_checknumber(L, 7);
         float b = luaL_checknumber(L, 8);
 
-        float textVisibility = 1.0f;
-        lua_getglobal(L, "__transitionWipeProgress");
-        if (lua_isnumber(L, -1)) {
-            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
-            if (wipeProgress > 0.0f && loader->coreEngine) {
-                int fbWidth = 0;
-                int fbHeight = 0;
-
-                auto* imgui = loader->coreEngine->GetImGuiSystem();
-                if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport() &&
-                    imgui->GetViewportFBO() != 0) {
-                    fbWidth = imgui->GetViewportWidth();
-                    fbHeight = imgui->GetViewportHeight();
-                }
-                else {
-                    auto* windowSystem = loader->coreEngine->GetWindowSystem();
-                    if (windowSystem) {
-                        GLFWwindow* window = windowSystem->GetWindow();
-                        if (window) {
-                            glfwGetWindowSize(window, &fbWidth, &fbHeight);
-                        }
-                    }
-                }
-
-                if (fbWidth > 0 && fbHeight > 0) {
-                    const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
-                    const float featherPx = 28.0f;
-                    if (x <= wipeEdgePx - featherPx) {
-                        lua_pop(L, 1);
-                        return 0;
-                    }
-                    if (x < wipeEdgePx + featherPx) {
-                        const float span = std::max(1.0f, featherPx * 2.0f);
-                        textVisibility = std::clamp((x - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
-                    }
-                }
-            }
-        }
-        lua_pop(L, 1);
-
-        glm::vec3 color(r * textVisibility, g * textVisibility, b * textVisibility);
+        glm::vec3 color(r, g, b);
         loader->graphicsSystem->DrawText4(font, text, x, y, scale, color);
 
         return 0;
