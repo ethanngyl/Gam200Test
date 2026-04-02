@@ -41,42 +41,7 @@
         "layer": 2
       }
     ],
-    "turnIndicators": [
-      {
-        "id": "playerTurn",
-        "texture": "assets/UI/End_Turn_Button.png",
-        "position": {
-          "x": -1.05,
-          "y": 0.40
-        },
-        "scale": {
-          "x": 0.28,
-          "y": 0.28
-        },
-        "layer": 10,
-        "rows": 2,
-        "cols": 2,
-        "frameTime": 0.15,
-        "row": 0
-      },
-      {
-        "id": "enemyTurn",
-        "texture": "assets/UI/End_Turn_Button.png",
-        "position": {
-          "x": -1.05,
-          "y": 0.10
-        },
-        "scale": {
-          "x": 0.28,
-          "y": 0.28
-        },
-        "layer": 10,
-        "rows": 2,
-        "cols": 2,
-        "frameTime": 0.15,
-        "row": 1
-      }
-    ],
+    "turnIndicators": [],
     "hudSamples": [
       {
         "id": "healthSample",
