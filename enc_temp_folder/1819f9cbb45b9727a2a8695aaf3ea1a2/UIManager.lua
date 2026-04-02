@@ -275,8 +275,8 @@ function UIManager.Init(config)
         bgScaleX = 0.15,
         bgScaleY = 0.70,
         arrowTexture = "assets/new assets/Back_ParchmentButton.png",
-        activeScale = 1.2,
-        inactiveTint = { r = 0.5, g = 0.5, b = 0.5, a = 1.0 },
+        activeScale = 1.3,
+        inactiveTint = { r = 0.35, g = 0.35, b = 0.35, a = 1.0 },
         charConfigs = {
             {
                 texture = "assets/Warrior/FrontView/WarriorTopDownView.png",

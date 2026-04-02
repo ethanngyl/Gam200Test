@@ -9,8 +9,8 @@ TURN ORDER UI - Displays party turn order with active character highlight
 Brief:
    Shows animated character portraits in a row with arrow icons between them.
    Slots 1-3 are the three party members; slot 4 is a shared enemy portrait.
-   During the player phase the active party member is tinted green.
-   During the enemy phase the enemy portrait is tinted green instead.
+   The active portrait is shown at full brightness and scaled up;
+   inactive portraits are dimmed and at normal size.
    Inherits from UIComponent for camera-relative positioning.
 
 Usage:
@@ -75,8 +75,10 @@ function TurnOrderUI:Init(config)
     self.bgRotation = config.bgRotation or 90
     self.bgOffsetY = config.bgOffsetY or 0.0
 
-    self.activeTint = config.activeTint or { r = 0.3, g = 1.0, b = 0.3, a = 1.0 }
-    self.normalTint = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 }
+    -- Active = full brightness + scaled up; Inactive = dimmed + normal size
+    self.activeTint = config.activeTint or { r = 1.0, g = 1.0, b = 1.0, a = 1.0 }
+    self.inactiveTint = config.inactiveTint or { r = 0.35, g = 0.35, b = 0.35, a = 1.0 }
+    self.activeScale = config.activeScale or 1.3
 
     -- Total slot count = party members + 1 enemy
     self.totalSlots = #self.charConfigs + 1
@@ -89,7 +91,7 @@ function TurnOrderUI:Init(config)
 
     local camX, camY = GetCameraPosition()
     self:CreateSprites(camX, camY)
-    self:UpdateTint()
+    self:UpdateHighlight()
 end
 
 -- ============================================================================
@@ -161,7 +163,7 @@ end
 -- TINT UPDATE
 -- ============================================================================
 
-function TurnOrderUI:UpdateTint()
+function TurnOrderUI:UpdateHighlight()
     local currentTurn = GetCurrentTurn and GetCurrentTurn() or "Player"
     local isEnemyTurn = (currentTurn == "Enemy")
 
@@ -178,16 +180,21 @@ function TurnOrderUI:UpdateTint()
     end
     self.lastHighlight = key
 
+    local baseSize = self.portraitSize
+    local bigSize = baseSize * self.activeScale
+
     for i, id in ipairs(self.portraitIDs) do
         if id and id > 0 then
             if i == highlightSlot then
                 SetSpriteColor(id,
                     self.activeTint.r, self.activeTint.g,
                     self.activeTint.b, self.activeTint.a)
+                SetScale(id, bigSize, bigSize)
             else
                 SetSpriteColor(id,
-                    self.normalTint.r, self.normalTint.g,
-                    self.normalTint.b, self.normalTint.a)
+                    self.inactiveTint.r, self.inactiveTint.g,
+                    self.inactiveTint.b, self.inactiveTint.a)
+                SetScale(id, baseSize, baseSize)
             end
         end
     end
@@ -204,7 +211,7 @@ function TurnOrderUI:Update(dt, cameraPos)
         self:UpdatePositions(cameraPos)
     end
 
-    self:UpdateTint()
+    self:UpdateHighlight()
 end
 
 function TurnOrderUI:UpdatePositions(cameraPos)
