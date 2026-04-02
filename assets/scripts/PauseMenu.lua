@@ -40,6 +40,13 @@ local config = {
         layer = 50
     },
     
+    -- Scroll overlay (on top of background, behind buttons)
+    overlay = {
+        texture = "assets/Menu/Scroll Overlay.png",
+        scale = { x = 2.25, y = 1.25 },
+        layer = 50
+    },
+
     -- Title
     title = {
         text = "Paused",
@@ -107,6 +114,7 @@ local state = {
     
     -- Entity IDs
     backgroundID = 0,
+    overlayID = 0,
     buttonIDs = {},  -- Array of {id = buttonID, config = buttonConfig}
     
     -- Input tracking
@@ -165,6 +173,16 @@ local function CreatePauseUI()
         config.background.layer
     )
     
+    -- Create scroll overlay on top of background
+    state.overlayID = SpawnSprite(
+        config.overlay.texture,
+        camX,
+        camY,
+        config.overlay.scale.x,
+        config.overlay.scale.y,
+        config.overlay.layer
+    )
+    
     -- Create buttons using CreateButton (with hover highlight)
     state.buttonIDs = {}
     local btnConfig = config.buttons
@@ -201,6 +219,12 @@ local function DestroyPauseUI()
     if state.backgroundID and state.backgroundID > 0 then
         DestroyEntity(state.backgroundID)
         state.backgroundID = 0
+    end
+    
+    -- Destroy scroll overlay
+    if state.overlayID and state.overlayID > 0 then
+        DestroyEntity(state.overlayID)
+        state.overlayID = 0
     end
     
     -- Clear all buttons (created with CreateButton)
