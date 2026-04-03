@@ -93,31 +93,101 @@ local BOSS_CONFIG = {
     periodicSpawnEveryEnemyRounds = 2
 }
 
--- SpawnEnemyAt starts with a default enemy look; force boss visuals on attach.
-local BOSS_VISUAL = {
-    tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",
-    rows = 4,
-    cols = 3,
-    frames = 12,
-    time = 0.08,
-    loop = true
+-- ============================================================================
+-- ANIMATION (Warlock Boss sprite sheets)
+-- ============================================================================
+
+local BOSS_ANIM = {
+    idleFront = { tex = "assets/Enemy/Warlock_Boss_Idle_Front-Sheet.png",  rows = 1, cols = 5, frames = 5, time = 0.12, loop = true  },
+    idleBack  = { tex = "assets/Enemy/Warlock_Boss_Idle_Back-Sheet.png",   rows = 1, cols = 5, frames = 5, time = 0.12, loop = true  },
+    idleSide  = { tex = "assets/Enemy/Warlock_Boss_Idle_Side-Sheet.png",   rows = 1, cols = 5, frames = 5, time = 0.12, loop = true  },
+
+    walkFront = { tex = "assets/Enemy/Warlock_Boss_Walk_Front-Sheet.png",  rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+    walkBack  = { tex = "assets/Enemy/Warlock_Boss_Walk_Back-Sheet.png",   rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+    walkSide  = { tex = "assets/Enemy/Warlock_Boss_Walk_Side-Sheet.png",   rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+
+    atkFront  = { tex = "assets/Enemy/Warlock_Boss_Attack_Front-Sheet.png", rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkBack   = { tex = "assets/Enemy/Warlock_Boss_Attack_Back-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkSide   = { tex = "assets/Enemy/Warlock_Boss_Attack_Side-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false }
 }
 
-local function ApplyBossVisuals()
-    if not entityID or entityID == 0 then return end
-    if not SetSpriteAnimationSheet then return end
-    SetSpriteAnimationSheet(
-        entityID,
-        BOSS_VISUAL.tex,
-        BOSS_VISUAL.rows,
-        BOSS_VISUAL.cols,
-        BOSS_VISUAL.frames,
-        BOSS_VISUAL.time,
-        BOSS_VISUAL.loop
-    )
-    if SetAnimationFlipX then
-        SetAnimationFlipX(entityID, false)
+local lastAnimKey = nil
+local lastFlipX = false
+local warnedMissingAnimAPI = false
+
+local function ApplySheet(animKey, flipX)
+    if not SetSpriteAnimationSheet then
+        if not warnedMissingAnimAPI then
+            print("[Boss2] SetSpriteAnimationSheet is NIL; animation sheets unavailable")
+            warnedMissingAnimAPI = true
+        end
+        return
     end
+    if animKey == lastAnimKey and flipX == lastFlipX then return end
+
+    local a = BOSS_ANIM[animKey]
+    if not a then
+        print("[Boss2] Missing BOSS_ANIM key: " .. tostring(animKey))
+        return
+    end
+
+    local ok = SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    if not ok then
+        print("[Boss2] ApplySheet failed for key=" .. tostring(animKey) .. ", tex=" .. tostring(a.tex))
+        if SetSpriteTexture then
+            SetSpriteTexture(entityID, a.tex)
+        end
+    end
+    if SetAnimationFlipX then
+        SetAnimationFlipX(entityID, flipX and true or false)
+    end
+    lastAnimKey = animKey
+    lastFlipX = flipX and true or false
+end
+
+local function SetFacingFromDelta(dx, dy, isMoving)
+    local animKey = nil
+    local flipX = false
+
+    if math.abs(dx) > math.abs(dy) then
+        if isMoving then
+            animKey = "walkSide"
+        else
+            animKey = "idleSide"
+        end
+        flipX = (dx > 0)
+    else
+        if dy > 0 then
+            if isMoving then
+                animKey = "walkBack"
+            else
+                animKey = "idleBack"
+            end
+        else
+            if isMoving then
+                animKey = "walkFront"
+            else
+                animKey = "idleFront"
+            end
+        end
+    end
+
+    ApplySheet(animKey, flipX)
+end
+
+local function SetAttackFacing(ex, ey, px, py)
+    local dx = px - ex
+    local dy = py - ey
+    if math.abs(dx) > math.abs(dy) then
+        ApplySheet("atkSide", dx > 0)
+    else
+        if dy > 0 then ApplySheet("atkBack", false)
+        else ApplySheet("atkFront", false) end
+    end
+end
+
+local function ApplyBossVisuals()
+    ApplySheet("idleFront", false)
 end
 
 local moveTimer = 0.0
@@ -126,6 +196,14 @@ local movesThisTurn = 0
 local currentPath = {}
 local pathIndex = 1
 local targetPlayerID = 0
+
+-- Health bar sprites
+local healthBarBG = nil
+local healthBarFG = nil
+local healthBarWidth = 0.4
+local healthBarHeight = 0.02
+local healthBarOffsetY = 0.22
+local healthBarLayer = 2
 
 local function GetEntityHPValue(eid)
     local hp = GetEntityHP(eid)
@@ -206,24 +284,6 @@ local function FindClosestLivingPlayer()
     return bestID
 end
 
-local function AreAllPlayersInArena()
-    local players = GetAllPlayers()
-    if not players or #players == 0 then return false end
-
-    local aliveCount = 0
-    local inCount = 0
-    for _, pid in ipairs(players) do
-        if IsAlive(pid) then
-            aliveCount = aliveCount + 1
-            local px, py = GetEntityGridPosition(pid)
-            if px and InArena(px, py) then
-                inCount = inCount + 1
-            end
-        end
-    end
-    return aliveCount > 0 and aliveCount == inCount
-end
-
 local function BuildSpawnWorldCache()
     if spawnWorldCache then return end
     spawnWorldCache = {}
@@ -267,13 +327,10 @@ local function FindRandomAdjacentFreeTile(anchorX, anchorY)
     for _, d in ipairs(dirs) do
         local tx = anchorX + d[1]
         local ty = anchorY + d[2]
-        if localArenaBounds and not InArena(tx, ty) then
-            goto continue
-        end
-        if IsWalkableTile(tx, ty) and not IsTileOccupied(tx, ty) then
+        local skip = localArenaBounds and not InArena(tx, ty)
+        if not skip and IsWalkableTile(tx, ty) and not IsTileOccupied(tx, ty) then
             return tx, ty
         end
-        ::continue::
     end
     return nil, nil
 end
@@ -320,7 +377,6 @@ local function SetEnemyWideBuffs()
                 if SetEntityMaxAP then
                     SetEntityMaxAP(eid, newMax)
                 end
-                SetEntityAP(eid, math.min(ap + BOSS_CONFIG.totemicBonusAP, newMax), newMax)
             end
 
             if SetSharedInt then
@@ -338,6 +394,9 @@ local function ActivateEmpoweredState()
     if empowered then return end
     empowered = true
     Log("[Boss2] ORC SHAMAN EMPOWERED")
+
+    -- Play attack animation for empowerment cast
+    ApplySheet("atkFront", false)
 
     SpawnNOrcWarriors(BOSS_CONFIG.extraOrcsOnEmpower)
     SetEnemyWideBuffs()
@@ -593,7 +652,6 @@ local function SpawnTotem(totemType)
 
     SetEntityHP(totemID, hp, hp)
     if SetEntityMaxAP then SetEntityMaxAP(totemID, 0) end
-    SetEntityAP(totemID, 0, 0)
     SetEnemyTarget(totemID, FindClosestLivingPlayer())
 
     SetSharedInt("boss2_totem_type_" .. tostring(totemID), totemType)
@@ -661,6 +719,17 @@ local function FinishBossTurn()
     if hasActedThisTurn then return end
     hasActedThisTurn = true
     isMyTurnToAct = false
+
+    -- Return to idle facing closest player
+    local target = FindClosestLivingPlayer()
+    if target ~= 0 then
+        local bx, by = GetEntityGridPosition(entityID)
+        local px, py = GetEntityGridPosition(target)
+        if bx and px then
+            SetFacingFromDelta(px - bx, py - by, false)
+        end
+    end
+
     MarkEnemyActionComplete()
 end
 
@@ -687,8 +756,14 @@ local function TryMoveTowardClosestPlayer()
         if IsTileOccupied(nextTile.x, nextTile.y) then break end
         if moveTimer > 0 then break end
 
+        -- Animate walk facing toward next tile
+        local prevX, prevY = GetEntityGridPosition(entityID)
         local moved = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
         if not moved then break end
+
+        if prevX then
+            SetFacingFromDelta(nextTile.x - prevX, nextTile.y - prevY, true)
+        end
 
         ConsumeEnemyAP(entityID, BOSS_CONFIG.apCostPerMove)
         ShowTileBorder(nextTile.x, nextTile.y, 0.25)
@@ -699,12 +774,21 @@ local function TryMoveTowardClosestPlayer()
         pathIndex = pathIndex + 1
         moveTimer = moveDelay
     end
+
+    -- Return to idle facing toward closest player after movement
+    local bx2, by2 = GetEntityGridPosition(entityID)
+    local px2, py2 = GetEntityGridPosition(targetPlayerID)
+    if bx2 and px2 then
+        SetFacingFromDelta(px2 - bx2, py2 - by2, false)
+    end
 end
 
 local function BossDecision()
     if not prepWasCast then
         prepWasCast = true
         ritesCountdown = BOSS_CONFIG.prepCountdownStart
+        -- Play attack animation for casting Preparatory Rites
+        ApplySheet("atkFront", false)
         Log("[Boss2] Preparatory Rites cast. Countdown: " .. ritesCountdown)
         FinishBossTurn()
         return
@@ -718,11 +802,21 @@ local function BossDecision()
     end
 
     if currentTotem.type ~= TOTEM_TYPE.NONE and IsAlive(currentTotem.entity) then
+        -- Face toward active totem while waiting
+        local bx, by = GetEntityGridPosition(entityID)
+        if bx and currentTotem.centerX then
+            SetFacingFromDelta(currentTotem.centerX - bx, currentTotem.centerY - by, false)
+        end
         FinishBossTurn()
         return
     end
 
     if TryUseNextTotem() then
+        -- Play attack animation facing toward spawned totem
+        local bx, by = GetEntityGridPosition(entityID)
+        if bx and currentTotem.centerX then
+            SetAttackFacing(bx, by, currentTotem.centerX, currentTotem.centerY)
+        end
         FinishBossTurn()
         return
     end
@@ -755,23 +849,75 @@ function OnInit()
 
     SetEntityHP(entityID, BOSS_CONFIG.maxHP, BOSS_CONFIG.maxHP)
     if SetEntityMaxAP then SetEntityMaxAP(entityID, 3) end
-    SetEntityAP(entityID, 3, 3)
 
-    if ApplyStatusEffect then
-        ApplyStatusEffect(entityID, "immune", -1, entityID)
+    -- Spawn health bar sprites above boss
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if wx and wy then
+        local barY = wy + healthBarOffsetY
+        healthBarBG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer)
+        if healthBarBG and healthBarBG > 0 then
+            SetSpriteColor(healthBarBG, 0.15, 0.15, 0.15, 0.85)
+        end
+        healthBarFG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer + 1)
+        if healthBarFG and healthBarFG > 0 then
+            SetSpriteColor(healthBarFG, 0.85, 0.0, 0.0, 1.0)
+        end
     end
 
     CaptureTrackedState()
-    Log("[Boss2] Orc Shaman initialized")
+    Log("[Boss2] Orc Shaman initialized (entity " .. entityID .. ")")
 end
 
 function OnDestroy()
+    -- Clean up health bar sprites
+    if healthBarBG and healthBarBG > 0 then
+        DestroyEntity(healthBarBG)
+        healthBarBG = nil
+    end
+    if healthBarFG and healthBarFG > 0 then
+        DestroyEntity(healthBarFG)
+        healthBarFG = nil
+    end
+
     if currentTotem.entity and currentTotem.entity ~= 0 and IsEntityValid and IsEntityValid(currentTotem.entity) then
         DestroyEntity(currentTotem.entity)
     end
 end
 
+local function UpdateHealthBar()
+    if not healthBarBG or not healthBarFG then return end
+    if healthBarBG <= 0 or healthBarFG <= 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if not wx or not wy then return end
+
+    local barY = wy + healthBarOffsetY
+    SetSpritePosition(healthBarBG, wx, barY)
+
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or not maxHP or maxHP <= 0 then return end
+
+    local ratio = currentHP / maxHP
+    if ratio < 0 then ratio = 0 end
+    if ratio > 1 then ratio = 1 end
+
+    local fgWidth = healthBarWidth * ratio
+    local fgX = wx - (healthBarWidth - fgWidth) * 0.5
+    SetSpritePosition(healthBarFG, fgX, barY)
+    SetScale(healthBarFG, fgWidth, healthBarHeight)
+
+    local r, g, b = 0.85, 0.0, 0.0
+    if ratio <= 0.25 then
+        r, g, b = 1.0, 0.0, 0.0
+    elseif ratio <= 0.5 then
+        r, g, b = 0.9, 0.15, 0.0
+    end
+    SetSpriteColor(healthBarFG, r, g, b, 1.0)
+end
+
 function OnUpdate(dt)
+    UpdateHealthBar()
+
     local prevTracked = trackedEntityState
 
     if moveTimer > 0 then
@@ -780,18 +926,15 @@ function OnUpdate(dt)
     end
 
     if not bossActivated then
-        if AreAllPlayersInArena() then
-            bossActivated = true
-            RemoveStatusEffect(entityID, "immune")
-            SpawnNOrcWarriors(4)
-            Log("[Boss2] Arena condition met. Orc Shaman activated.")
-        else
-            if GetCurrentTurn() == "Enemy" and IsActiveEnemy(entityID) and IsEnemyActionReady() then
-                FinishBossTurn()
-            end
-            CaptureTrackedState()
-            return
+        bossActivated = true
+        Log("[Boss2] Orc Shaman activated.")
+        SpawnNOrcWarriors(4)
+        local currentTurnNow = GetCurrentTurn()
+        if currentTurnNow == "Enemy" and IsActiveEnemy(entityID) and IsEnemyActionReady() then
+            FinishBossTurn()
         end
+        CaptureTrackedState()
+        return
     end
 
     local turn = GetCurrentTurn()
@@ -805,7 +948,7 @@ function OnUpdate(dt)
     end
     lastKnownTurn = turn
 
-    CheckTotemStateTransitions(prevTracked)
+    -- These run every frame: safe status/HP corrections with no damage side-effects
     ApplyFatalProtectionFromUnkilling()
     HandleMassacreInvulnerability()
     ApplyTotemicBlessing()
@@ -822,6 +965,9 @@ function OnUpdate(dt)
         return
     end
     lastEnemyTurn = "Enemy"
+
+    -- Only during enemy turn: can trigger OnTotemDestroyed which deals AoE damage
+    CheckTotemStateTransitions(prevTracked)
 
     if not IsActiveEnemy(entityID) then
         CaptureTrackedState()

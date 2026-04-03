@@ -20,6 +20,22 @@ local regenCooldown = 0
 local facingDX = 0
 local facingDY = -1
 
+local healthBarBG = nil
+local healthBarFG = nil
+local healthBarWidth = 0.1
+local healthBarHeight = 0.015
+local healthBarOffsetY = 0.08
+local healthBarLayer = 2
+
+local glideActive = false
+local glideElapsed = 0.0
+local glideDuration = 0.35
+local glideStartX = 0.0
+local glideStartY = 0.0
+local glideEndX = 0.0
+local glideEndY = 0.0
+local pendingFinishAfterGlide = false
+
 local CONFIG = {
     maxHP = 6,
     maxAP = 2,
@@ -187,12 +203,23 @@ local function TryMoveTowardTarget()
     if not IsWalkableTile(nextTile.x, nextTile.y) then return false end
     if IsTileOccupied(nextTile.x, nextTile.y) then return false end
 
+    local sx, sy = GetEntityWorldPosition(entityID)
     local moved = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
     if not moved then return false end
 
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if sx and sy and wx and wy then
+        glideActive = true
+        glideElapsed = 0.0
+        glideStartX = sx
+        glideStartY = sy
+        glideEndX = wx
+        glideEndY = wy
+        SetSpritePosition(entityID, sx, sy)
+    end
+
     ConsumeEnemyAP(entityID, CONFIG.moveCost)
     mpRemaining = mpRemaining - 1
-    moveTimer = moveDelay
 
     UpdateFacingToward(px, py)
     ShowTileBorder(nextTile.x, nextTile.y, 0.25)
@@ -212,6 +239,37 @@ local function StartTurn()
     targetPlayerID = FindClosestPlayer()
 end
 
+local function UpdateHealthBar()
+    if not healthBarBG or not healthBarFG then return end
+    if healthBarBG <= 0 or healthBarFG <= 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if not wx or not wy then return end
+
+    local barY = wy + healthBarOffsetY
+    SetSpritePosition(healthBarBG, wx, barY)
+
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or not maxHP or maxHP <= 0 then return end
+
+    local ratio = currentHP / maxHP
+    if ratio < 0 then ratio = 0 end
+    if ratio > 1 then ratio = 1 end
+
+    local fgWidth = healthBarWidth * ratio
+    local fgX = wx - (healthBarWidth - fgWidth) * 0.5
+    SetSpritePosition(healthBarFG, fgX, barY)
+    SetScale(healthBarFG, fgWidth, healthBarHeight)
+
+    local r, g, b = 0.0, 0.85, 0.0
+    if ratio <= 0.25 then
+        r, g, b = 0.9, 0.1, 0.1
+    elseif ratio <= 0.5 then
+        r, g, b = 0.85, 0.75, 0.0
+    end
+    SetSpriteColor(healthBarFG, r, g, b, 1.0)
+end
+
 local function FinishTurn()
     if hasActedThisTurn then return end
     hasActedThisTurn = true
@@ -225,12 +283,52 @@ function OnInit()
 
     SetEntityHP(entityID, CONFIG.maxHP, CONFIG.maxHP)
     if SetEntityMaxAP then SetEntityMaxAP(entityID, CONFIG.maxAP) end
-    SetEntityAP(entityID, CONFIG.maxAP, CONFIG.maxAP)
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if wx and wy then
+        local barY = wy + healthBarOffsetY
+        healthBarBG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer)
+        if healthBarBG and healthBarBG > 0 then
+            SetSpriteColor(healthBarBG, 0.15, 0.15, 0.15, 0.85)
+        end
+        healthBarFG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer + 1)
+        if healthBarFG and healthBarFG > 0 then
+            SetSpriteColor(healthBarFG, 0.0, 0.85, 0.0, 1.0)
+        end
+    end
 
     targetPlayerID = FindClosestPlayer()
 end
 
+function OnDestroy()
+    if healthBarBG and healthBarBG > 0 then
+        DestroyEntity(healthBarBG)
+        healthBarBG = nil
+    end
+    if healthBarFG and healthBarFG > 0 then
+        DestroyEntity(healthBarFG)
+        healthBarFG = nil
+    end
+end
+
 function OnUpdate(dt)
+    UpdateHealthBar()
+
+    if glideActive then
+        glideElapsed = glideElapsed + dt
+        local t = glideElapsed / glideDuration
+        if t > 1.0 then t = 1.0 end
+        local eased = 1.0 - (1.0 - t) * (1.0 - t)
+        local x = glideStartX + (glideEndX - glideStartX) * eased
+        local y = glideStartY + (glideEndY - glideStartY) * eased
+        SetSpritePosition(entityID, x, y)
+        if t >= 1.0 then
+            SetSpritePosition(entityID, glideEndX, glideEndY)
+            glideActive = false
+        end
+        if glideActive then return end
+    end
+
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
         if moveTimer < 0 then moveTimer = 0 end
@@ -241,6 +339,10 @@ function OnUpdate(dt)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
+            if glideActive then
+                SetSpritePosition(entityID, glideEndX, glideEndY)
+                glideActive = false
+            end
         end
         lastEnemyTurn = turn
         return

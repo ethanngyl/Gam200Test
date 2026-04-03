@@ -552,6 +552,13 @@ namespace Framework {
         lua_register(L, "MarkEnemyActionComplete", LevelLoader::Lua_MarkEnemyActionComplete);
         lua_register(L, "UpdateEnemyTurnManager", LevelLoader::Lua_UpdateEnemyTurnManager);
 
+        // Entity Spawning & Script Management (needed by boss scripts that spawn minions)
+        lua_register(L, "SpawnEnemyAt", LevelLoader::Lua_SpawnEnemyAt);
+        lua_register(L, "AddScriptComponentToEntity", LevelLoader::Lua_AddScriptComponentToEntity);
+        lua_register(L, "SetEnemyTarget", LevelLoader::Lua_SetEnemyTarget);
+        lua_register(L, "SetEntityMaxAP", LevelLoader::Lua_SetEntityMaxAP);
+        lua_register(L, "SetTileOccupant", LevelLoader::Lua_SetTileOccupant);
+
         // Grid Conversion API
         lua_register(L, "TileToWorld", LevelLoader::Lua_TileToWorld);
 

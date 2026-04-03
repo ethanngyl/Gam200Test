@@ -92,22 +92,22 @@ local SPRITE_SCALE  = 0.55
 -- Scroll behind character (rotated 90 degrees)
 local CHAR_SCROLL_LAYER = 51
 
--- CHANGED: Current skills column (center-left of right side)
-local CURRENT_X         = 0.05
+-- Current skills column (center-left)
+local CURRENT_X         = -0.05
 local CURRENT_START_Y   = 0.25
-local CURRENT_SPACING   = 0.14
-local SLOT_W            = 0.32
+local CURRENT_SPACING   = 0.12
+local SLOT_W            = 0.28
 local SLOT_H            = 0.10
 
--- CHANGED: Offer skills column (right of current skills)
-local OFFER_X           = 0.42
-local OFFER_START_Y     = 0.25   -- CHANGED: same Y as current skills (side by side)
-local OFFER_SPACING     = 0.14
+-- Offer skills column (right, with more gap from current)
+local OFFER_X           = 0.50
+local OFFER_START_Y     = 0.25
+local OFFER_SPACING     = 0.12
 
--- CHANGED: Nav button (bottom-right corner, above level counter)
-local NAV_BTN_X = 0.42
-local NAV_BTN_Y = -0.35   -- CHANGED: moved up from -0.45
-local NAV_BTN_W = 0.32
+-- Nav button (bottom-right corner)
+local NAV_BTN_X = 0.50
+local NAV_BTN_Y = -0.35
+local NAV_BTN_W = 0.28
 local NAV_BTN_H = 0.10
 
 local BG_SCALE = 5.0
@@ -477,43 +477,43 @@ function SkillSwapUI.Draw()
         1.4 * scaleRef, cr, cg, cb)
 
     -- ========================================
-    -- CHANGED: Center column label - "Current Skills:"
+    -- Center column label - "Current Skills:"
     -- ========================================
-    local currentScreenX = fbW * 0.42
+    local currentScreenX = fbW * 0.35
     local existLabelY = fbH - 145 * scaleRef
     DrawText("Jersey20Regular", "Current Skills:",
         currentScreenX - 50 * scaleRef, existLabelY,
         0.7 * scaleRef, 0.8, 0.8, 0.8)
 
-    -- Existing skill text (CHANGED: centered dynamically)
+    -- Existing skill text (centered on button)
     local numExisting = tonumber(targetSlot) - 1
     for si = 1, numExisting do
         local skillID = loadout[pi][tostring(si)]
         local skillName = getSkillName(skillID)
 
         if existingBtnMap[si] then
-            local textOffsetX = -string.len(skillName) * 4.5 * scaleRef  -- CHANGED: center based on text length
+            local textOffsetX = -string.len(skillName) * 3.5 * scaleRef
             DrawButtonText(
                 existingBtnMap[si],
                 "Jersey20Regular",
                 skillName,
                 textOffsetX, -5 * scaleRef,
-                0.38 * scaleRef,
+                0.35 * scaleRef,
                 0.2, 0.15, 0.1
             )
         end
     end
 
     -- ========================================
-    -- CHANGED: Right column label - "Pick a new skill:"
+    -- Right column label - "Pick a new skill:"
     -- ========================================
-    local offerScreenX = fbW * 0.72
-    local offerLabelY = fbH - 145 * scaleRef   -- CHANGED: same Y as "Current Skills:" label
+    local offerScreenX = fbW * 0.78
+    local offerLabelY = fbH - 145 * scaleRef
     DrawText("Jersey20Regular", "Pick a new skill:",
         offerScreenX - 65 * scaleRef, offerLabelY,
         0.7 * scaleRef, 1.0, 0.9, 0.5)
 
-    -- Offer skill text (CHANGED: centered dynamically)
+    -- Offer skill text (centered on button)
     for oi = 1, NUM_OFFERS do
         local offeredSkill = skillOffers[pi][oi]
         local skillName = getSkillName(offeredSkill)
@@ -524,13 +524,13 @@ function SkillSwapUI.Draw()
         end
 
         if offerBtnMap[oi] then
-            local textOffsetX = -string.len(skillName) * 4.5 * scaleRef  -- CHANGED: center based on text length
+            local textOffsetX = -string.len(skillName) * 3.5 * scaleRef
             DrawButtonText(
                 offerBtnMap[oi],
                 "Jersey20Regular",
                 skillName,
                 textOffsetX, -5 * scaleRef,
-                0.38 * scaleRef,
+                0.35 * scaleRef,
                 sr, sg, sb
             )
         end
@@ -552,13 +552,13 @@ function SkillSwapUI.Draw()
             nr, ng, nb = 0.1, 0.5, 0.1
         end
 
-        local textOffsetX = -string.len(navLabel) * 4.5 * scaleRef  -- CHANGED: center based on text length
+        local textOffsetX = -string.len(navLabel) * 3.5 * scaleRef
         DrawButtonText(
             navBtnID,
             "Jersey20Regular",
             navLabel,
             textOffsetX, -6 * scaleRef,
-            0.45 * scaleRef,
+            0.40 * scaleRef,
             nr, ng, nb
         )
     end

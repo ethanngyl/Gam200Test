@@ -5,6 +5,38 @@ local entityID = 0
 local hasActedThisTurn = false
 local lastTurn = nil
 
+local healthBarBG = nil
+local healthBarFG = nil
+local healthBarWidth = 0.09
+local healthBarHeight = 0.015
+local healthBarOffsetY = 0.08
+local healthBarLayer = 2
+
+local function UpdateHealthBar()
+    if not healthBarBG or not healthBarFG then return end
+    if healthBarBG <= 0 or healthBarFG <= 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if not wx or not wy then return end
+
+    local barY = wy + healthBarOffsetY
+    SetSpritePosition(healthBarBG, wx, barY)
+
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or not maxHP or maxHP <= 0 then return end
+
+    local ratio = currentHP / maxHP
+    if ratio < 0 then ratio = 0 end
+    if ratio > 1 then ratio = 1 end
+
+    local fgWidth = healthBarWidth * ratio
+    local fgX = wx - (healthBarWidth - fgWidth) * 0.5
+    SetSpritePosition(healthBarFG, fgX, barY)
+    SetScale(healthBarFG, fgWidth, healthBarHeight)
+
+    SetSpriteColor(healthBarFG, 0.95, 0.5, 0.0, 1.0)
+end
+
 function OnInit()
     entityID = self
     if not entityID or entityID == 0 then return end
@@ -21,10 +53,35 @@ function OnInit()
     end
 
     if SetEntityMaxAP then SetEntityMaxAP(entityID, 0) end
-    SetEntityAP(entityID, 0, 0)
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if wx and wy then
+        local barY = wy + healthBarOffsetY
+        healthBarBG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer)
+        if healthBarBG and healthBarBG > 0 then
+            SetSpriteColor(healthBarBG, 0.15, 0.15, 0.15, 0.85)
+        end
+        healthBarFG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer + 1)
+        if healthBarFG and healthBarFG > 0 then
+            SetSpriteColor(healthBarFG, 0.95, 0.5, 0.0, 1.0)
+        end
+    end
+end
+
+function OnDestroy()
+    if healthBarBG and healthBarBG > 0 then
+        DestroyEntity(healthBarBG)
+        healthBarBG = nil
+    end
+    if healthBarFG and healthBarFG > 0 then
+        DestroyEntity(healthBarFG)
+        healthBarFG = nil
+    end
 end
 
 function OnUpdate(_dt)
+    UpdateHealthBar()
+
     local turn = GetCurrentTurn()
 
     if turn ~= "Enemy" then
