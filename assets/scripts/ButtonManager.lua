@@ -52,13 +52,15 @@ local buttonIDs = {}           -- Stores button entity IDs with their config
 local editorToggleCooldown = 0 -- Cooldown timer for F1 key
 local pendingState = nil       -- Pending game state transition
 local pendingTimer = 0.0       -- Timer for delayed state transitions
-local transitionDuration = 4.0 -- Fade duration before committing transition
+local transitionDuration = 2.0 -- Fade duration before committing transition
 local fadeElapsed = 0.0
 local fadeAlpha = 0.0
 local fadeOverlayID = 0
 local FADE_TEXTURE = "assets/Menu/WoodBackground.png"
-local FADE_SCALE_X = 100.0
-local FADE_SCALE_Y = 100.0
+-- Match menu camera visible extents (orthographic: approx [-aspect, aspect] x [-1, 1])
+-- so wipe begins immediately at the visible left edge.
+local FADE_SCALE_X = 4.2
+local FADE_SCALE_Y = 2.4
 -- RenderQueue packs layer into 8 bits; use -1 so it wraps to 255 (topmost).
 local FADE_LAYER = -1
 
@@ -299,7 +301,7 @@ function ButtonManager.Cleanup()
     editorToggleCooldown = 0
     pendingState = nil
     pendingTimer = 0.0
-    transitionDuration = 4.0
+    transitionDuration = 2.0
     fadeElapsed = 0.0
     fadeAlpha = 0.0
 
@@ -333,11 +335,11 @@ end
 -- Queue a state transition with sound and fade duration
 -- @param state string Target game state name
 -- @param soundName string Optional sound effect to play (default: "button")
--- @param delay number Optional fade duration in seconds (default: 4.0)
+-- @param delay number Optional fade duration in seconds (default: 2.0)
 --
 function ButtonManager.TransitionTo(state, soundName, delay)
     soundName = soundName or "button"
-    delay = delay or 4.0
+    delay = delay or 2.0
 
     PlaySound(soundName, false, 1)
     pendingState = state
