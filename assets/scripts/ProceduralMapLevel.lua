@@ -564,6 +564,18 @@ local function TrySpawnQueuedBoss()
         return
     end
 
+    -- CRITICAL: Never spawn the boss while the enemy turn is active.
+    -- Adding a new enemy entity mid-enemy-turn corrupts EnemyTurnManager's
+    -- ActiveEnemyIndex state (the new boss appears in GetAllEnemies() at an
+    -- unexpected index, conflicting with the already-running sequential turn).
+    -- Defer to the next player turn - players cannot move during the enemy turn,
+    -- so they will still be in the arena when this check runs again on the first
+    -- frame of the player turn.
+    if GetCurrentTurn and GetCurrentTurn() == "Enemy" then
+        Log("[ProceduralMapLevel] Boss spawn deferred: enemy turn in progress, will spawn next player-turn frame")
+        return
+    end
+
     local spawnData = pendingBossSpawn
     local spawned = SpawnProceduralBoss(spawnData)
     if spawned then

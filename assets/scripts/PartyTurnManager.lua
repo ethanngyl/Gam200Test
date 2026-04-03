@@ -442,6 +442,29 @@ function NextCharacterTurn()
     local skippedDead = 0
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
+
+        -- Guard against entity-ID recycling: when a player's entity is destroyed on
+        -- death, the C++ EntityManager may reassign that ID to a newly spawned entity
+        -- (e.g. the boss). GetAllPlayers() only returns "Player"-tagged entities, so
+        -- if this slot's ID is no longer found there, the entity has been recycled and
+        -- the slot must be treated as permanently dead to avoid treating the boss as a
+        -- party member.
+        if checkEntity > 0 and GetAllPlayers then
+            local isStillPlayer = false
+            local allP = GetAllPlayers()
+            if allP then
+                for _, pid in ipairs(allP) do
+                    if pid == checkEntity then isStillPlayer = true; break end
+                end
+            end
+            if not isStillPlayer then
+                print(string.format("[PartyTurnManager] %s slot entity %d is no longer a player (ID recycled to enemy/boss) - clearing slot",
+                    PartyMembers[ActiveCharacterIndex].name, checkEntity))
+                PartyMembers[ActiveCharacterIndex].entityID = 0
+                checkEntity = 0
+            end
+        end
+
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
         -- Skip dead characters
@@ -757,6 +780,26 @@ function ResetPartyTurn()
     -- Find first character who is alive and not Soul Merged (may be stunned - we'll auto-skip like pressing P)
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
+
+        -- Guard against entity-ID recycling (same as EndCharacterTurn): a dead player's
+        -- destroyed entity ID may be reassigned to the boss. Verify the slot still refers
+        -- to a "Player"-tagged entity before trusting its HP value.
+        if checkEntity > 0 and GetAllPlayers then
+            local isStillPlayer = false
+            local allP = GetAllPlayers()
+            if allP then
+                for _, pid in ipairs(allP) do
+                    if pid == checkEntity then isStillPlayer = true; break end
+                end
+            end
+            if not isStillPlayer then
+                Log(string.format("[PartyTurnManager] ResetPartyTurn: %s slot entity %d is no longer a player (ID recycled) - clearing slot",
+                    PartyMembers[ActiveCharacterIndex].name, checkEntity))
+                PartyMembers[ActiveCharacterIndex].entityID = 0
+                checkEntity = 0
+            end
+        end
+
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
         if not currentHP or currentHP <= 0 then
