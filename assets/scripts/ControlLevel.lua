@@ -92,7 +92,7 @@ function OnInit()
     end
 
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    PlayMusic(music.name, 0.8, music.loop)
     Log("Playing control page music: " .. music.name)
 
     -- Initialize buttons
@@ -153,7 +153,7 @@ end
 function OnDestroy()
     Log("Control page cleanup...")
 
-    StopAllSounds()
+    -- Keep menu BGM playing across menu page transitions.
 
     ButtonManager.Cleanup()
 

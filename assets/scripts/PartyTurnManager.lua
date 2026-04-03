@@ -59,6 +59,19 @@ TurnTransitionCooldownTime = 0.0     -- Delay in seconds after turn switch (0 = 
 -- when destroying entity whose script is still on the call stack, e.g. Dark Omens)
 DeferredDeathQueue = {}
 
+-- Active-character indicator (yellow arrow above the controlled character)
+ActiveCharIndicator = {
+    spriteID   = 0,
+    texture    = "assets/UI/New_Piskel_11.png",
+    rows       = 5,
+    cols       = 4,
+    frameCount = 18,
+    frameTime  = 0.045,
+    scale      = 0.04,
+    yOffset    = 0.055,
+    layer      = 4,
+}
+
 -- Character definitions (can be customized)
 CharacterConfig = {
     {
@@ -134,6 +147,51 @@ function ApplyProjectileDamage(enemyID, damage, attackerID)
 end
 
 -- ============================================================================
+-- ACTIVE CHARACTER INDICATOR
+-- ============================================================================
+
+local function CreateActiveCharIndicator(worldX, worldY)
+    if not SpawnAnimatedSprite then return end
+    local ind = ActiveCharIndicator
+    ind.spriteID = SpawnAnimatedSprite(
+        ind.texture,
+        worldX, worldY + ind.yOffset,
+        ind.scale, ind.scale,
+        ind.layer,
+        ind.rows, ind.cols,
+        ind.frameCount, ind.frameTime,
+        true
+    )
+    if ind.spriteID and ind.spriteID > 0 and SetSpriteColor then
+        SetSpriteColor(ind.spriteID, 0,191,255)
+    end
+end
+
+local function UpdateActiveCharIndicatorPosition()
+    local ind = ActiveCharIndicator
+    if not ind.spriteID or ind.spriteID <= 0 then return end
+    if #PartyMembers == 0 then return end
+
+    local activeID = GetActiveCharacter()
+    if not activeID or activeID == 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(activeID)
+    if not wx or not wy then return end
+
+    SetSpritePosition(ind.spriteID, wx, wy + ind.yOffset)
+end
+
+local function DestroyActiveCharIndicator()
+    local ind = ActiveCharIndicator
+    if ind.spriteID and ind.spriteID > 0 then
+        if DestroyEntity then
+            DestroyEntity(ind.spriteID)
+        end
+        ind.spriteID = 0
+    end
+end
+
+-- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
@@ -203,6 +261,13 @@ function InitializeParty(entityIDs)
 
     print("[InitializeParty] COMPLETED SUCCESSFULLY - Active character: " .. PartyMembers[ActiveCharacterIndex].name)
     OnCharacterSwitched(PartyMembers[ActiveCharacterIndex].entityID)
+
+    -- Spawn the indicator arrow above the first active character
+    local wx, wy = GetEntityWorldPosition(PartyMembers[1].entityID)
+    if wx and wy then
+        CreateActiveCharIndicator(wx, wy)
+    end
+
     return true
 end
 
@@ -377,6 +442,29 @@ function NextCharacterTurn()
     local skippedDead = 0
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
+
+        -- Guard against entity-ID recycling: when a player's entity is destroyed on
+        -- death, the C++ EntityManager may reassign that ID to a newly spawned entity
+        -- (e.g. the boss). GetAllPlayers() only returns "Player"-tagged entities, so
+        -- if this slot's ID is no longer found there, the entity has been recycled and
+        -- the slot must be treated as permanently dead to avoid treating the boss as a
+        -- party member.
+        if checkEntity > 0 and GetAllPlayers then
+            local isStillPlayer = false
+            local allP = GetAllPlayers()
+            if allP then
+                for _, pid in ipairs(allP) do
+                    if pid == checkEntity then isStillPlayer = true; break end
+                end
+            end
+            if not isStillPlayer then
+                print(string.format("[PartyTurnManager] %s slot entity %d is no longer a player (ID recycled to enemy/boss) - clearing slot",
+                    PartyMembers[ActiveCharacterIndex].name, checkEntity))
+                PartyMembers[ActiveCharacterIndex].entityID = 0
+                checkEntity = 0
+            end
+        end
+
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
         -- Skip dead characters
@@ -692,6 +780,26 @@ function ResetPartyTurn()
     -- Find first character who is alive and not Soul Merged (may be stunned - we'll auto-skip like pressing P)
     while ActiveCharacterIndex <= #PartyMembers do
         local checkEntity = PartyMembers[ActiveCharacterIndex].entityID
+
+        -- Guard against entity-ID recycling (same as EndCharacterTurn): a dead player's
+        -- destroyed entity ID may be reassigned to the boss. Verify the slot still refers
+        -- to a "Player"-tagged entity before trusting its HP value.
+        if checkEntity > 0 and GetAllPlayers then
+            local isStillPlayer = false
+            local allP = GetAllPlayers()
+            if allP then
+                for _, pid in ipairs(allP) do
+                    if pid == checkEntity then isStillPlayer = true; break end
+                end
+            end
+            if not isStillPlayer then
+                Log(string.format("[PartyTurnManager] ResetPartyTurn: %s slot entity %d is no longer a player (ID recycled) - clearing slot",
+                    PartyMembers[ActiveCharacterIndex].name, checkEntity))
+                PartyMembers[ActiveCharacterIndex].entityID = 0
+                checkEntity = 0
+            end
+        end
+
         local currentHP, maxHP = GetEntityHP(checkEntity)
 
         if not currentHP or currentHP <= 0 then
@@ -788,14 +896,6 @@ function OnCharacterSwitched(newCharID)
     -- Update the graphics system's camera follow target
     SetCameraFollowTarget(newCharID)
 
-    -- Tint all party members back to normal, then highlight the active one red
-    if SetSpriteColor then
-        for _, member in ipairs(PartyMembers) do
-            SetSpriteColor(member.entityID, 1, 1, 1, 1)   -- restore white
-        end
-        SetSpriteColor(newCharID, 1, 0.3, 0.3, 1)         -- tint active unit red
-    end
-
     print("[PartyTurnManager] Camera now following Entity " .. newCharID)
     print("[PartyTurnManager] ==========================================")
 end
@@ -866,6 +966,8 @@ function UpdatePartyTurnManager(dt)
             TurnTransitionCooldown = 0
         end
     end
+
+    UpdateActiveCharIndicatorPosition()
 end
 
 --[[
@@ -914,6 +1016,7 @@ _G.OnEnemyTurnEnded = OnEnemyTurnEnded
 _G.DebugPrintPartyState = DebugPrintPartyState
 _G.UpdatePartyTurnManager = UpdatePartyTurnManager
 _G.IsInTurnTransition = IsInTurnTransition
+_G.DestroyActiveCharIndicator = DestroyActiveCharIndicator
 
 print("============================================================")
 print("========== PartyTurnManager.lua LOADED SUCCESSFULLY ==========")

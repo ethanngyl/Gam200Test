@@ -160,41 +160,21 @@ namespace Framework {
         std::cout << "TextRenderer initialized.\n";
     }
 
-    // FollowPlayer: Smoothly move camera toward player's Transform (XY plane).
-    void GraphicsSystemV2::FollowPlayer(EntityManager* em, Entity player)
+    // FollowPlayer: Smoothly pan camera toward player's Transform (XY plane).
+    void GraphicsSystemV2::FollowPlayer(EntityManager* em, Entity player, float dt)
     {
         if (!em || !em->HasComponent<Transform>(player))
             return;
 
         auto& playerTransform = em->GetComponent<Transform>(player);
 
-        // Target camera position = player position (z fixed at 0)
+        // Smooth follow toward target to avoid instant camera teleport on target swap.
         glm::vec3 targetPos(playerTransform.position.x, playerTransform.position.y, 0.0f);
-
-        // Smoothly interpolate camera position toward target (simple exponential smoothing)
         glm::vec3 currentPos = mainCamera.GetPosition();
-        float smoothSpeed = 5.0f;  // Tune responsiveness
-        float dt = 0.016f;          // or pass your actual deltaTime into this function
-        glm::vec3 newPos = glm::mix(currentPos, targetPos, smoothSpeed * dt);
 
-
-        glm::vec2 orthoHalfExtents = mainCamera.GetOrthoHalfExtents();
-        auto& grid = GetGrid();
-
-        float minX = grid.worldbound_min.x + orthoHalfExtents.x;
-        float maxX = grid.worldbound_max.x - orthoHalfExtents.x;
-        float minY = grid.worldbound_min.y + orthoHalfExtents.y;
-        float maxY = grid.worldbound_max.y - orthoHalfExtents.y;
-
-        if (minX <= maxX) {
-            newPos.x = std::clamp(newPos.x, minX, maxX);
-        }
-
-        if (minY <= maxY) {
-            newPos.y = std::clamp(newPos.y, minY, maxY);
-        }
-
-
+        const float followSpeed = 14.0f;
+        const float alpha = std::clamp(dt * followSpeed, 0.0f, 1.0f);
+        glm::vec3 newPos = glm::mix(currentPos, targetPos, alpha);
 
         mainCamera.SetPosition(newPos);
     }
@@ -291,8 +271,6 @@ namespace Framework {
 
         DBG_SCOPE_SYS("Graphics", eng::debug::Subsystem::Graphics);
 
-        (void)dt;
-
         if (!window || glfwWindowShouldClose(window)) {
             return;
         }
@@ -337,7 +315,7 @@ namespace Framework {
         // === CAMERA FOLLOW LOGIC ===
         if (Framework::CORE->IsPlaying()) {
             if (followEnabled && entityManager && followTarget.IsValid()/* && Framework::CORE->IsPlaying()*/) {
-                FollowPlayer(entityManager, followTarget);
+                FollowPlayer(entityManager, followTarget, dt);
             }
         }
         else {
@@ -1127,7 +1105,12 @@ namespace Framework {
     // GraphicsSystemV2.cpp
     void GraphicsSystemV2::ExecuteRenderQueue() {
         const auto& commands = renderQueue.GetCommands();
-        if (commands.empty()) return;
+        if (commands.empty() && queuedTextCommands.empty()) return;
+
+        std::sort(queuedTextCommands.begin(), queuedTextCommands.end(),
+            [](const QueuedTextCommand& a, const QueuedTextCommand& b) {
+                return a.GetSortKey() < b.GetSortKey();
+            });
 
         Camera& activeCamera = Framework::CORE->IsPlaying() ? mainCamera : editorCamera;
         glm::mat4 projection = activeCamera.GetProjectionMatrix();
@@ -1187,7 +1170,35 @@ namespace Framework {
             batchMatrices.clear();
             };
 
-        for (const auto& cmd : commands) {
+        auto DrawQueuedText = [&](const QueuedTextCommand& textCmd) {
+            if (!textCmd.visible) return;
+            glDisable(GL_DEPTH_TEST);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            text_.draw(textCmd.fontKey, textCmd.text, textCmd.x, textCmd.y, textCmd.scale, textCmd.color);
+            };
+
+        size_t spriteIndex = 0;
+        size_t textIndex = 0;
+        while (spriteIndex < commands.size() || textIndex < queuedTextCommands.size()) {
+            bool drawTextNow = false;
+            if (textIndex < queuedTextCommands.size()) {
+                if (spriteIndex >= commands.size()) {
+                    drawTextNow = true;
+                }
+                else {
+                    drawTextNow = queuedTextCommands[textIndex].GetSortKey() <= commands[spriteIndex].GetSortKey();
+                }
+            }
+
+            if (drawTextNow) {
+                FlushBatch();
+                DrawQueuedText(queuedTextCommands[textIndex]);
+                ++textIndex;
+                continue;
+            }
+
+            const auto& cmd = commands[spriteIndex++];
             if (!cmd.visible) continue;
 
             bool isSameBatch = false;
@@ -1205,6 +1216,7 @@ namespace Framework {
             batchMatrices.push_back(cmd.modelMatrix);
         }
         FlushBatch(); // Draw final batch
+        queuedTextCommands.clear();
 
         if (currentBoundShader.IsValid()) {
             if (auto* sh = resourceManager.GetShader(currentBoundShader)) sh->Unbind();
@@ -1413,11 +1425,11 @@ namespace Framework {
             glUniform1f(grayLoc, grayAmount);
         }
 
-        // Set color tint (combine material tint with instance tint)
-        glm::vec3 finalTint = glm::vec3(material->tint * tint);
+        // Set color tint (combine material tint with instance tint, including alpha)
+        glm::vec4 finalTint = material->tint * tint;
         GLint colorLoc = glGetUniformLocation(shader->GetID(), "uColor");
         if (colorLoc != -1) {
-            glUniform3f(colorLoc, finalTint.r, finalTint.g, finalTint.b);
+            glUniform4f(colorLoc, finalTint.r, finalTint.g, finalTint.b, finalTint.a);
         }
         return true;
     }
@@ -1439,7 +1451,7 @@ namespace Framework {
         glfwPollEvents();
     }
 
-    void GraphicsSystemV2::DrawText4(const std::string& fontKey,
+    void GraphicsSystemV2::DrawTextImmediate(const std::string& fontKey,
         const std::string& text,
         float x, float y,
         float scale,
@@ -1452,6 +1464,26 @@ namespace Framework {
         text_.draw(fontKey, text, x, y, scale, color);
 
         glEnable(GL_DEPTH_TEST);
+    }
+
+    void GraphicsSystemV2::DrawText4(const std::string& fontKey,
+        const std::string& text,
+        float x, float y,
+        float scale,
+        const glm::vec3& color,
+        int layer,
+        int orderInLayer)
+    {
+        QueuedTextCommand cmd;
+        cmd.fontKey = fontKey;
+        cmd.text = text;
+        cmd.x = x;
+        cmd.y = y;
+        cmd.scale = scale;
+        cmd.color = color;
+        cmd.layer = layer;
+        cmd.orderInLayer = orderInLayer;
+        queuedTextCommands.push_back(std::move(cmd));
     }
 
     void GraphicsSystemV2::RenderImGui() {
@@ -1493,7 +1525,7 @@ namespace Framework {
             float textY = static_cast<float>(fbHeight) - 100.0f;
             
             // Draw with black color as requested
-            DrawText4("Sans48", fpsText, textX, textY, 1.0f, glm::vec3(255.0f, 0.0f, 0.0f));
+            DrawTextImmediate("Sans48", fpsText, textX, textY, 1.0f, glm::vec3(255.0f, 0.0f, 0.0f));
         }
 
         //    // Just swap - DON'T clear!

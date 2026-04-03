@@ -13,10 +13,9 @@ components (movement AP, attack AP, health, turn indicator, turn scroll).
 Supports party/active-character AP and toggles player UI off during enemy turn.
 
 Details:
-- Requires UI/APIndicatorUI, AttackAPIndicatorUI, HealthUI, TurnIndicatorUI,
-  and ScrollOpen (TurnScrollUI). Holds components in UIManager.components.
-- Init(config): Creates movementAP (GetActiveCharacterAP for party), attackAP,
-  health, turnIndicator, turnScroll with fixed configs (paths, offsets, layers,
+- Requires HealthUI, ScrollOpen (TurnScrollUI), SkillBubbleHolderUI,
+  TurnOrderUI, and TutorialPopupUI. Holds components in UIManager.components.
+- Init(config): Creates health, turnScroll, turnOrder with fixed configs (paths, offsets, layers,
   animation/sprite sheet settings). Sets UIManager.initialized = true.
 - Update(dt): Gets camera position; if GetCurrentTurn() == "Enemy", disables
   movementAP, attackAP, health; then calls component:Update(dt, cameraPos) on all.
@@ -54,28 +53,12 @@ Technology is prohibited.
 local UIManager = {}
 
 -- Import UI components
-local APIndicatorUI = require("UI/APIndicatorUI")
-local AttackAPIndicatorUI = require("UI/AttackAPIndicatorUI")
 local HealthUI = require("UI/HealthUI")
-local TurnIndicatorUI = require("UI/TurnIndicatorUI")
+
 local TurnScrollUI = require("ScrollOpen")
 local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")
-local CharacterInfoPanel = require("UI/CharacterInfoPanel")
-
--- Character info panel instance (I key overlay)
-local _charInfoPanel = CharacterInfoPanel.new()
-
--- Bridge functions callable from entity scripts via CallLevelFunction
-function _G.ToggleCharInfoPanel(playerIndex, entityID)
-    print("[UIManager] ToggleCharInfoPanel player=" .. tostring(playerIndex))
-    _charInfoPanel:Toggle(playerIndex, entityID)
-end
-
-function _G.CloseCharInfoPanel()
-    if _charInfoPanel.isOpen then
-        _charInfoPanel:_hide()
-    end
-end
+local TutorialPopupUI = require("UI/TutorialPopupUI")
+local TurnOrderUI = require("UI/TurnOrderUI")
 
 -- ============================================================================
 -- STATE
@@ -161,74 +144,20 @@ end
 
 -- UI-driven AP getters for the new bars (fallback to entity values)
 local function GetAttackAPForBars()
-    if UIManager.components.attackAP and UIManager.components.attackAP.GetDisplayedAP then
-        return UIManager.components.attackAP:GetDisplayedAP()
-    end
     return GetActiveCharacterAttackAP()
 end
 
 local function GetMoveAPForBars()
-    if UIManager.components.movementAP and UIManager.components.movementAP.GetDisplayedAP then
-        return UIManager.components.movementAP:GetDisplayedAP()
-    end
     return GetActiveCharacterAP()
 end
 
 function UIManager.Init(config)
     config = config or {}
+    local currentLevel = config.currentLevel or 0
 
     Log("========================================")
     Log("[UIManager] Initializing UI System...")
     Log("========================================")
-
-    -- Create Movement AP UI (hidden, kept for logic/animations)
-    UIManager.components.movementAP = APIndicatorUI:New()
-    UIManager.components.movementAP:Init({
-        maxAP = 5,
-        size = 0.001,      -- Hidden: effectively invisible
-        spacing = 0.001,
-        offsetX = 5.0,     -- Off-screen
-        offsetY = 5.0,
-        layer = 1,
-        filledTexture = "assets/UI/MovP.png",
-        emptyTexture = "assets/UI/MovP.png",
-        useTint = true,
-        filledTint = { r = 1.0, g = 1.0, b = 1.0 },
-        emptyTint = { r = 0.3, g = 0.3, b = 0.3 },
-        useGray = true,
-        filledGrayAmount = 0.0,
-        emptyGrayAmount = 0.8,
-        getAPFunc = GetActiveCharacterAP,
-        showEmpty = false,
-        useMaxFromAP = true
-    })
-
-    -- Create Attack AP UI (hidden, kept for logic/animations)
-    UIManager.components.attackAP = AttackAPIndicatorUI:New()
-    UIManager.components.attackAP:Init({
-        maxAP = 3,
-        size = 0.001,      -- Hidden: effectively invisible
-        spacing = 0.001,
-        offsetX = 5.0,     -- Off-screen
-        offsetY = 5.0,
-        layer = 1,
-        emptyTexture = "assets/UI/AP_Empty.png",
-        filledTexture = "assets/UI/AP_Crystal.png",
-        useAnimatedSprite = true,
-        spriteRows = 4,
-        spriteCols = 4,
-        filledStartFrame = 0,
-        filledFrameCount = 8,
-        consumeStartFrame = 8,
-        consumeFrameCount = 8,
-        frameTime = 0.1,
-        useTint = true,
-        filledTint = { r = 1.0, g = 1.0, b = 1.0 },
-        emptyTint = { r = 0.3, g = 0.3, b = 0.3 },
-        useGray = true,
-        filledGrayAmount = 0.0,
-        emptyGrayAmount = 0.8
-    })
 
     -- Create Health UI
     UIManager.components.health = HealthUI:New()
@@ -277,20 +206,6 @@ function UIManager.Init(config)
         textureBasePath = "assets/UI/Health_"
     })
 
-    -- Create Turn Indicator (Animated sprite sheet)
-    UIManager.components.turnIndicator = TurnIndicatorUI:New()
-    UIManager.components.turnIndicator:Init({
-        offsetX = -0.82,
-        offsetY = -0.19,
-        scaleX = 0.18,
-        scaleY = 0.18,
-        layer = 4,
-        texture = "assets/UI/End_Turn_Button.png",
-        rows = 2,           -- Row 0: Player turn, Row 1: Enemy turn
-        cols = 2,           -- 2 columns per row
-        frameTime = 0.3     -- Animation speed (seconds per frame)
-    })
-
     -- Create Turn Scroll UI (Your Turn animation)
     UIManager.components.turnScroll = TurnScrollUI:New()
     UIManager.components.turnScroll:Init({
@@ -322,7 +237,7 @@ function UIManager.Init(config)
         tooltipTexture = "assets/Menu/Scroll Overlay.png",
         tooltipScaleX = 0.35,
         tooltipScaleY = 0.22,
-        tooltipOffsetX = 0.34,
+        tooltipOffsetX = 0.6,
         slotLabelFont = "Jersey20Regular",
         slotLabelScale = 0.5,
         slotLabelOffsetXPx = -35,
@@ -347,6 +262,94 @@ function UIManager.Init(config)
             Thrust = "assets/SkillIcons/Thrust.png"
         }
     })
+
+    -- Create Turn Order UI (character portraits with active highlight)
+    UIManager.components.turnOrder = TurnOrderUI:New()
+    UIManager.components.turnOrder:Init({
+        offsetX = 0.0,
+        offsetY = 0.42,
+        layer = 8,
+        portraitSize = 0.2,
+        arrowSize = 0.04,
+        spacing = 0.14,
+        bgScaleX = 0.15,
+        bgScaleY = 0.70,
+        arrowTexture = "assets/new assets/Back_ParchmentButton.png",
+        activeScale = 1.2,
+        inactiveTint = { r = 0.5, g = 0.5, b = 0.5, a = 1.0 },
+        charConfigs = {
+            {
+                texture = "assets/Warrior/FrontView/WarriorTopDownView.png",
+                rows = 1, columns = 12, frameCount = 12, frameTime = 0.55
+            },
+            {
+                texture = "assets/Mage/FrontView/Mage_Idle_Front-Sheet.png",
+                rows = 1, columns = 12, frameCount = 12, frameTime = 0.55
+            },
+            {
+                texture = "assets/Berserker/FrontView/Berserker_Idle_Front-Sheet.png",
+                rows = 1, columns = 12, frameCount = 6, frameTime = 0.55
+            }
+        },
+        enemyConfig = {
+            texture = "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",
+            rows = 1, columns = 12, frameCount = 12, frameTime = 0.08
+        }
+    })
+
+    if currentLevel == 1 then
+        UIManager.components.tutorialPopup = TutorialPopupUI:New()
+        UIManager.components.tutorialPopup:Init({
+            offsetX = -0.60,
+            offsetY = -0.08,
+            scaleX = 0.42,
+            scaleY = 0.24,
+            layer = 7,
+            texture = "assets/Menu/Scroll Overlay.png",
+            font = "Jersey20Regular",
+            paddingXPx = 96,
+            titleInsetTopPx = 58,
+            wrapChars = 52,
+            steps = {
+                {
+                    title = "HUD",
+                    body = "Below is your HUD, the Red Circle displays the current health of the party member, the Blue Bar indicates your Action Points(AP), and the brown bar indicates your movement bar (MP)."
+                },
+                {
+                    title = "Turn Flow",
+                    body = "The turn order in the party goes from Knight > Mage > Berserker. Press key P to end the turn for the respective character."
+                },
+                {
+                    title = "Movement",
+                    body = "Use keys W,A,S,D to move up, left, down and right respecitvely for the current party member, indicated by the green arrow above their head. Each key-press moves 1 tile and consumes 1 MP."
+                },
+                {
+                    title = "Skills",
+                    body = "Use keys 1-4 to use the skills corresponding to the key number which can be shown on the right side. Using the keys will bring up the attack preview of the skill and the Spacebar key will execute the skill. Each skill consumes AP."
+                },
+                {
+                    title = "Skill HUD",
+                    body = "The description of the skill will be shown by hovering over its skill bubble. Currently selected skills will be tinted in blue, skills unable to be used or on cooldown will be grey and empty skill slots will be black."
+                },
+                {
+                    title = "Directional Skills",
+                    body = "Use the arrow keys to change the direction the current party member is facing, certain skills are directional."
+                },
+                {
+                    title = "Enemies",
+                    body = "Enemies are indicated via the red arrows on their head. Their turn begins after all members of the party have finished their turn."
+                },
+                {
+                    title = "Skill Selection",
+                    body = "At the end of each successful level, you will be allowed to choose a skill which will be bound to an empty skill slot."
+                },
+                {
+                    title = "Win Condition",
+                    body = "The boss will only show up after all EXISTING players have entered the boss's arena. After the boss has been defeated, a blue portal will spawn, entering it will clear the level."
+                }
+            }
+        })
+    end
 
     -- TODO: Add more components as needed:
     -- - ChestProgressUI
@@ -403,21 +406,10 @@ function UIManager.Draw()
         return
     end
 
-    -- Draw all HUD components, but suppress them while the info panel is open
-    -- (DrawText has no Z-layer, so HUD text would bleed through the panel background)
-    local panelOpen = _charInfoPanel and _charInfoPanel.isOpen
-    if not panelOpen then
-        for name, component in pairs(UIManager.components) do
-            if component and component.Draw then
-                component:Draw()
-            end
+    for name, component in pairs(UIManager.components) do
+        if component and component.Draw then
+            component:Draw()
         end
-    end
-
-    -- Character info panel text overlay (must be called during Draw, not Update)
-    -- Skip when game is paused so text doesn't bleed through the pause menu
-    if panelOpen and not (IsPaused and IsPaused()) then
-        _charInfoPanel:OnDraw()
     end
 end
 
@@ -426,20 +418,12 @@ end
 -- ============================================================================
 
 function UIManager.IsAPAnimating()
-    if not UIManager.initialized then
-        return false
-    end
-
-    if UIManager.components.movementAP and UIManager.components.movementAP.IsAnimating then
-        return UIManager.components.movementAP:IsAnimating()
-    end
-
     return false
 end
 
 -- Check if any UI animation is currently playing (AP refill or turn scroll)
 function UIManager.IsAnyAnimationPlaying()
-    return UIManager.IsAPAnimating() or UIManager.IsTurnScrollPlaying()
+    return UIManager.IsTurnScrollPlaying()
 end
 
 -- Check if the turn scroll animation is currently playing

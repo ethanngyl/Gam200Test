@@ -79,8 +79,6 @@ local SAVED_MAP_PATH = "assets/maps/my_map.map.json"
 
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
-local partyUI = nil
-
 -- Turn tracking
 local previousTurn = "Player"
 
@@ -108,6 +106,11 @@ local goalTransitionDelay = 0
 local bossEntityIDs = {}     -- Table of boss entity IDs (supports multiple bosses)
 local bossDefeated = false
 local pendingGoalData = nil  -- Stores goal spawn data until boss dies
+local pendingBossSpawn = nil  -- Stores deferred boss spawn payload
+local bossArenaGridX = nil
+local bossArenaGridY = nil
+local bossArenaWorldX = nil
+local bossArenaWorldY = nil
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -241,17 +244,14 @@ function OnInit()
         Log("Level 3: Skipping regular enemies - boss spawns its own")
     end
 
-    -- Spawn boss in arena
-    SpawnProceduralBoss(mapData)
+    -- Queue boss spawn; boss appears only when all surviving players enter arena
+    QueueBossSpawnIfArena(mapData)
 
     -- Spawn chests and goal
     SpawnProceduralChestsAndGoal(mapData)
 
     -- Initialize UI system
-    UIManager.Init()
-
-    -- Setup Party UI
-    SetupPartyUI()
+    UIManager.Init({ currentLevel = currentLevel })
 
     -- CRITICAL: Disable C++ grid movement (Lua handles movement via PartyTurnManager)
     SetGridMovementEnabled(false)
@@ -561,6 +561,93 @@ function SpawnProceduralBoss(mapData)
     return true
 end
 
+function QueueBossSpawnIfArena(mapData)
+    pendingBossSpawn = nil
+
+    if not mapData.hasArena then
+        Log("No boss arena in this level")
+        return true
+    end
+
+    local bx = mapData.arenaWorldX
+    local by = mapData.arenaWorldY
+    if not bx or not by then
+        Log("ERROR: Arena world coordinates missing! Cannot queue boss spawn.")
+        return false
+    end
+
+    pendingBossSpawn = {
+        arenaX = mapData.arenaX,
+        arenaY = mapData.arenaY,
+        arenaWorldX = bx,
+        arenaWorldY = by,
+        arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3),
+        arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3),
+        arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4),
+        arenaMaxY = mapData.arenaMaxY or (mapData.arenaY + 4),
+        hasArena = true
+    }
+
+    bossEntityID = nil
+    bossDefeated = false
+    Log("Boss spawn queued: boss will appear once all surviving players enter arena")
+    return true
+end
+
+local function AreAllSurvivingPlayersInArena()
+    if not pendingBossSpawn then
+        return false
+    end
+
+    local aliveCount = 0
+    local insideCount = 0
+
+    for _, playerID in ipairs(partyMembers) do
+        if playerID and playerID ~= 0 then
+            local hp = GetEntityHP(playerID)
+            if hp and hp > 0 then
+                aliveCount = aliveCount + 1
+                local px, py = GetEntityGridPosition(playerID)
+                if px and py
+                   and px >= pendingBossSpawn.arenaMinX and px < pendingBossSpawn.arenaMaxX
+                   and py >= pendingBossSpawn.arenaMinY and py < pendingBossSpawn.arenaMaxY then
+                    insideCount = insideCount + 1
+                end
+            end
+        end
+    end
+
+    return aliveCount > 0 and insideCount == aliveCount
+end
+
+local function TrySpawnQueuedBoss()
+    if bossEntityID or bossDefeated or not pendingBossSpawn then
+        return
+    end
+
+    if not AreAllSurvivingPlayersInArena() then
+        return
+    end
+
+    -- CRITICAL: Never spawn the boss while the enemy turn is active.
+    -- Adding a new enemy entity mid-enemy-turn corrupts EnemyTurnManager's
+    -- ActiveEnemyIndex state (the new boss appears in GetAllEnemies() at an
+    -- unexpected index, conflicting with the already-running sequential turn).
+    -- Defer to the next player turn - players cannot move during the enemy turn,
+    -- so they will still be in the arena when this check runs again on the first
+    -- frame of the player turn.
+    if GetCurrentTurn and GetCurrentTurn() == "Enemy" then
+        Log("[ProceduralMapLevel] Boss spawn deferred: enemy turn in progress, will spawn next player-turn frame")
+        return
+    end
+
+    local spawnData = pendingBossSpawn
+    local spawned = SpawnProceduralBoss(spawnData)
+    if spawned then
+        pendingBossSpawn = nil
+    end
+end
+
 -- ============================================================================
 -- HELPER: Spawn Chests and Goal
 -- ============================================================================
@@ -592,6 +679,8 @@ function SpawnProceduralChestsAndGoal(mapData)
 
         if #bossEntityIDs > 0 then
             Log("Portal will appear after all " .. #bossEntityIDs .. " boss(es) defeated")
+        if bossEntityID or pendingBossSpawn then
+            Log("Portal will appear after boss is defeated")
         else
             -- No boss on this level, spawn portal immediately
             SpawnPortalNow()
@@ -605,21 +694,6 @@ end
 -- HELPER: Setup Party UI
 -- ============================================================================
 
-function SetupPartyUI()
-    Log("========================================")
-    Log("Setting up Party UI...")
-    Log("========================================")
-
-    -- Load PartyStatusUI
-    dofile("assets/scripts/UI/PartyStatusUI.lua")
-
-    -- Create UI instance
-    partyUI = PartyStatusUI:new(0)
-    partyUI:OnInit()
-
-    Log("Party status UI created")
-    Log("========================================")
-end
 
 -- ============================================================================
 -- PORTAL SPAWN (deferred until boss defeated)
@@ -778,11 +852,6 @@ function OnUpdate(dt)
     -- Update skill swap UI (runs while paused, handles its own input)
     SkillSwapUI.Update(dt)
 
-    -- Update party UI
-    if partyUI then
-        partyUI:OnUpdate(dt)
-    end
-
     -- Skip game logic if paused (SkillSwapUI pauses the game while active)
     if IsPaused() then
         return
@@ -866,6 +935,7 @@ function OnUpdate(dt)
     -- ========================================
     -- CHECK BOSS DEFEATED -> SPAWN PORTAL
     -- ========================================
+    TrySpawnQueuedBoss()
     CheckBossDefeated()
 
     -- ========================================
@@ -925,6 +995,10 @@ function OnUpdate(dt)
         UpdateEnemyTurnManager(dt)
     end
 
+    -- Keep enemy indicators in sync (always visible, red arrows above enemies)
+    if SyncEnemyIndicators then SyncEnemyIndicators() end
+    if UpdateAllEnemyIndicators then UpdateAllEnemyIndicators() end
+
     -- Update UI system
     UIManager.Update(dt)
 end
@@ -936,8 +1010,13 @@ end
 function OnDraw()
     PauseMenu.Draw()
 
-    -- Render skill swap UI overlay
+    -- Render skill swap UI overlay (manages its own pause/active state)
     SkillSwapUI.Draw()
+
+    -- When paused, only draw the pause/overlay UIs — skip all game UI
+    if IsPaused() then
+        return
+    end
 
     -- Render UI components (including scroll animation text)
     UIManager.Draw()
@@ -965,14 +1044,29 @@ function OnDestroy()
     Log("Level 3 (Procedural) cleanup...")
     Log("========================================")
 
-    -- Cleanup party UI
-    if partyUI then
-        partyUI:OnDestroy()
-        partyUI = nil
-    end
-
     -- Stop audio
     StopMusic(0.5)
+
+    -- Destroy player active-character indicator
+    if DestroyActiveCharIndicator then
+        DestroyActiveCharIndicator()
+        Log("  Destroyed active character indicator")
+    end
+
+    -- Destroy all enemy indicators
+    if DestroyAllEnemyIndicators then
+        DestroyAllEnemyIndicators()
+        Log("  Destroyed all enemy indicators")
+    end
+
+    -- Force-end enemy turn state so it doesn't carry over
+    EnemyTurnActive = false
+    ActiveEnemyIndex = 0
+
+    -- Reset party state
+    PartyMembers = {}
+    ActiveCharacterIndex = 1
+    PartyTurnComplete = false
 
     -- Destroy UI system
     UIManager.Destroy()
@@ -980,6 +1074,12 @@ function OnDestroy()
     -- Reset state
     audioConfig = nil
     initialized = false
+    goalReached = false
+    goalPosition = nil
+    bossEntityID = nil
+    bossDefeated = false
+    pendingGoalData = nil
+    pendingBossSpawn = nil
 
     Log("Level 3 (Procedural) cleanup complete")
     Log("========================================")

@@ -212,9 +212,6 @@ local lastParticleBackendVersion = -1
 -- Load skill pattern definitions (provides SkillPatterns.GetPattern)
 dofile("assets/scripts/SkillPatterns.lua")
 
--- I key edge-detection flag (panel runs in Level3Clean global state via CallLevelFunction)
-local lastIKeyDown = false
-
 -- Skill definitions loaded from JSON in OnInit() (single source of truth)
 -- skillType: nil/"melee" = instant damage, "projectile" = spawns a projectile
 local SkillDefs = {}
@@ -577,11 +574,6 @@ local function endTurn()
         lastSkillKeyDown[key] = false
     end
     lastSpaceKeyDown = false
-    lastIKeyDown = false
-    -- Close info panel when turn ends (panel lives in global state)
-    if CallLevelFunction then
-        CallLevelFunction("CloseCharInfoPanel")
-    end
     -- Reset movement key states
     lastWKeyDown = false
     lastSKeyDown = false
@@ -1438,24 +1430,6 @@ function OnUpdate(dt)
     end
 
     -- ========================================================================
-    -- CHARACTER INFO PANEL: I key → signal Level3Clean to toggle the panel
-    -- (Panel lives in the global Lua state so DrawText renders correctly)
-    -- ========================================================================
-    local iDown = IsKeyDown("I")
-    if iDown and not lastIKeyDown then
-        local idx = getPlayerIndex()
-        print("[PlayerScript] I key pressed! idx=" .. tostring(idx) .. " entityID=" .. tostring(entityID))
-        if CallLevelFunction then
-            print("[PlayerScript] Calling ToggleCharInfoPanel via CallLevelFunction")
-            CallLevelFunction("ToggleCharInfoPanel", idx, entityID)
-            print("[PlayerScript] CallLevelFunction returned")
-        else
-            print("[PlayerScript] ERROR: CallLevelFunction not available!")
-        end
-    end
-    lastIKeyDown = iDown
-
-    -- ========================================================================
     -- ANIMATION BLOCKING: Disable input during scroll and AP refill animations
     -- ========================================================================
 
@@ -2174,6 +2148,7 @@ function ExecuteSkill(skillID)
         end
 
         faceToward(enemies[1].x, enemies[1].y)
+        ClearActivePreview()  -- clear preview tint BEFORE PulseTile so it records white as original
 
         -- Apply CC effect to first adjacent enemy found
         local target = enemies[1]
@@ -2188,7 +2163,6 @@ function ExecuteSkill(skillID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to enemy " .. target.id)
         playAttackAnimation()
-        ClearActivePreview()
         return
     end
 
@@ -2210,6 +2184,7 @@ function ExecuteSkill(skillID)
         end
 
         faceToward(enemies[1].x, enemies[1].y)
+        ClearActivePreview()  -- clear preview tint BEFORE PulseTile so it records white as original
 
         -- Apply debuff to first adjacent enemy
         local target = enemies[1]
@@ -2225,7 +2200,6 @@ function ExecuteSkill(skillID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' (+" .. extraDmg .. " dmg) to enemy " .. target.id)
         playAttackAnimation()
-        ClearActivePreview()
         return
     end
 
@@ -2485,6 +2459,9 @@ function ExecuteSkill(skillID)
         local targetID = enemyTargetMode.selectedEnemy
         local ex, ey = GetEntityGridPosition(targetID)
 
+        -- Clear preview tint BEFORE PulseTile so it records white as the original to restore
+        ClearActivePreview()
+
         -- Apply the skill's effect to the target enemy
         local extra = skill.extraData or 0
         ApplyStatusEffect(targetID, skill.effect, skill.effectDuration, entityID, 0, extra)
@@ -2507,7 +2484,6 @@ function ExecuteSkill(skillID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to enemy " .. targetID)
         playAttackAnimation()
-        ClearActivePreview()
         return
     end
 
@@ -2641,6 +2617,7 @@ function ExecuteSkill(skillID)
     end
 
     faceToward(enemies[1].x, enemies[1].y)
+    ClearActivePreview()  -- clear preview tint BEFORE PulseTile so it records white as original
 
     local enemiesHit = 0
     for _, enemy in ipairs(enemies) do
@@ -2659,7 +2636,6 @@ function ExecuteSkill(skillID)
     consumeAttackAPAndAnimate(skill.apCost)
     print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
     playAttackAnimation()
-    ClearActivePreview()
 end
 
 -- ============================================================================

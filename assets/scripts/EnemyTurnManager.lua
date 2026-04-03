@@ -40,6 +40,88 @@ EnemyStuckTimeout = 10.0    -- Max seconds an enemy can be active before auto-ad
 EnemyStuckTimer = 0.0       -- Tracks how long current enemy has been active
 
 -- ============================================================================
+-- ENEMY INDICATORS (red arrows above ALL enemies, always visible)
+-- ============================================================================
+
+EnemyIndicatorConfig = {
+    texture    = "assets/UI/New_Piskel_11.png",
+    rows       = 5,
+    cols       = 4,
+    frameCount = 18,
+    frameTime  = 0.045,
+    scale      = 0.04,
+    yOffset    = 0.055,
+    layer      = 4,
+}
+
+-- Maps enemyEntityID -> indicatorSpriteID
+EnemyIndicators = {}
+
+local function SpawnOneEnemyIndicator(enemyID)
+    if not SpawnAnimatedSprite or not GetEntityWorldPosition then return end
+    local wx, wy = GetEntityWorldPosition(enemyID)
+    if not wx or not wy then return end
+
+    local cfg = EnemyIndicatorConfig
+    local spriteID = SpawnAnimatedSprite(
+        cfg.texture,
+        wx, wy + cfg.yOffset,
+        cfg.scale, cfg.scale,
+        cfg.layer,
+        cfg.rows, cfg.cols,
+        cfg.frameCount, cfg.frameTime,
+        true
+    )
+    if spriteID and spriteID > 0 then
+        if SetSpriteColor then
+            SetSpriteColor(spriteID, 1, 0.3, 0.3, 1)
+        end
+        EnemyIndicators[enemyID] = spriteID
+    end
+end
+
+function SyncEnemyIndicators()
+    local enemies = GetAllEnemies()
+    if not enemies then return end
+
+    -- Spawn indicators for new enemies that don't have one yet
+    for _, eid in ipairs(enemies) do
+        if not EnemyIndicators[eid] then
+            SpawnOneEnemyIndicator(eid)
+        end
+    end
+
+    -- Build a quick lookup of living enemies
+    local alive = {}
+    for _, eid in ipairs(enemies) do alive[eid] = true end
+
+    -- Remove indicators for enemies that no longer exist
+    for eid, sid in pairs(EnemyIndicators) do
+        if not alive[eid] then
+            if DestroyEntity then DestroyEntity(sid) end
+            EnemyIndicators[eid] = nil
+        end
+    end
+end
+
+function UpdateAllEnemyIndicators()
+    local cfg = EnemyIndicatorConfig
+    for eid, sid in pairs(EnemyIndicators) do
+        local wx, wy = GetEntityWorldPosition(eid)
+        if wx and wy then
+            SetSpritePosition(sid, wx, wy + cfg.yOffset)
+        end
+    end
+end
+
+function DestroyAllEnemyIndicators()
+    for eid, sid in pairs(EnemyIndicators) do
+        if DestroyEntity then DestroyEntity(sid) end
+    end
+    EnemyIndicators = {}
+end
+
+-- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
@@ -181,24 +263,29 @@ function EndAllEnemyTurns()
     EnemyTurnActive = false
     ActiveEnemyIndex = 0
 
-    -- Pan camera back to active player
-    local activePlayerID = GetActiveCharacter()
-    if activePlayerID and activePlayerID > 0 then
-        SetCameraFollowTarget(activePlayerID)
-        print("[EnemyTurnManager] Camera now following Player " .. activePlayerID)
-    end
-
-    -- Switch back to player turn
+    -- Switch back to player turn (must happen before ResetPartyTurn)
     EndEnemyTurn()
 
-    -- CRITICAL: Reset party turn immediately
-    -- Normally OnEnemyTurnEnded() would be called by the level script on next frame,
-    -- but we need to reset the party NOW to avoid being stuck in a stale state
+    -- CRITICAL: Reset party turn immediately.
+    -- This resets ActiveCharacterIndex to 1 (first alive player).
+    -- Must be called BEFORE GetActiveCharacter() so the camera follows the correct player.
     if ResetPartyTurn then
         print("[EnemyTurnManager] Immediately resetting party turn...")
         ResetPartyTurn()
     else
         print("[EnemyTurnManager] WARNING: ResetPartyTurn not found!")
+    end
+
+    -- Pan camera back to active player (AFTER ResetPartyTurn so GetActiveCharacter() is valid).
+    -- Previously this was called before ResetPartyTurn, causing GetActiveCharacter() to return 0
+    -- when ActiveCharacterIndex > #PartyMembers (all players had already acted), leaving the
+    -- camera stuck on the boss and both indicators visually overlapping on it.
+    local activePlayerID = GetActiveCharacter()
+    if activePlayerID and activePlayerID > 0 then
+        SetCameraFollowTarget(activePlayerID)
+        print("[EnemyTurnManager] Camera now following Player " .. activePlayerID)
+    else
+        print("[EnemyTurnManager] WARNING: No valid active player for camera follow")
     end
 
     print("[EnemyTurnManager] EndAllEnemyTurns() COMPLETE")
@@ -294,6 +381,9 @@ _G.UpdateEnemyTurnManager = UpdateEnemyTurnManager
 _G.IsEnemyActionReady = IsEnemyActionReady
 _G.MarkEnemyActionComplete = MarkEnemyActionComplete
 _G.SyncEnemyTurnBeforeEntityDestroyed = SyncEnemyTurnBeforeEntityDestroyed
+_G.SyncEnemyIndicators = SyncEnemyIndicators
+_G.UpdateAllEnemyIndicators = UpdateAllEnemyIndicators
+_G.DestroyAllEnemyIndicators = DestroyAllEnemyIndicators
 
 print("============================================================")
 print("========== EnemyTurnManager.lua LOADED SUCCESSFULLY ==========")

@@ -76,8 +76,6 @@ local editorToggleCooldown = 0
 
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
-local partyUI = nil
-
 -- Turn tracking (for party reset)
 local previousTurn = "Player"
 
@@ -230,9 +228,6 @@ function OnInit()
     -- Initialize popup system for one-time animations
     PopupManager.Init()
 
-    -- Setup Party UI (shows all 3 characters)
-    SetupPartyUI()
-
     -- CRITICAL: Re-disable grid movement AFTER all initialization
     -- Some systems (GameStateManager) may re-enable it during setup
     Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -266,11 +261,6 @@ function OnUpdate(dt)
 
     -- Handle pause menu (always runs)
     PauseMenu.Update(dt)
-
-    -- Update party UI (shows HP/AP for all characters)
-    if partyUI then
-        partyUI:OnUpdate(dt)
-    end
 
     -- Skip game logic if paused
     if IsPaused() then
@@ -313,6 +303,10 @@ function OnUpdate(dt)
         UpdateEnemyTurnManager(dt)
     end
 
+    -- Keep enemy indicators in sync (always visible, red arrows above enemies)
+    if SyncEnemyIndicators then SyncEnemyIndicators() end
+    if UpdateAllEnemyIndicators then UpdateAllEnemyIndicators() end
+
     -- Update UI system (replaces 300+ lines of UI update code!)
     UIManager.Update(dt)
 
@@ -327,6 +321,11 @@ end
 function OnDraw()
     -- Render pause menu
     PauseMenu.Draw()
+
+    -- When paused, only draw the pause menu overlay — skip all game UI
+    if IsPaused() then
+        return
+    end
 
     -- Render popup animations (damage numbers, status effects, etc.)
     PopupManager.Draw()
@@ -352,16 +351,26 @@ function OnDestroy()
     Log("Level 3 cleanup...")
     Log("========================================")
 
-    -- Cleanup party UI
-    if partyUI then
-        partyUI:OnDestroy()
-        partyUI = nil
-        Log(" Party UI destroyed")
-    end
-
     -- Stop audio
     StopMusic(0.5)
     Log(" All audio stopped")
+
+    -- Destroy player active-character indicator
+    if DestroyActiveCharIndicator then
+        DestroyActiveCharIndicator()
+    end
+
+    -- Destroy all enemy indicators
+    if DestroyAllEnemyIndicators then
+        DestroyAllEnemyIndicators()
+    end
+
+    -- Force-end enemy turn state
+    if EnemyTurnActive ~= nil then EnemyTurnActive = false end
+    if ActiveEnemyIndex ~= nil then ActiveEnemyIndex = 0 end
+
+    -- Reset party state
+    if PartyMembers then PartyMembers = {} end
 
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
     UIManager.Destroy()
@@ -542,21 +551,6 @@ function SetupParty()
     return true
 end
 
-function SetupPartyUI()
-    Log("========================================")
-    Log("Setting up Party UI...")
-    Log("========================================")
-
-    -- Load PartyStatusUI
-    dofile("assets/scripts/UI/PartyStatusUI.lua")
-
-    -- Create UI instance
-    partyUI = PartyStatusUI:new(0)
-    partyUI:OnInit()
-
-    Log("Party status UI created")
-    Log("  UI will display HP/AP for all party members")
-end
 
 -- Legacy function name for compatibility
 function SetupPlayer()

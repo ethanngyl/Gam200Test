@@ -1,4 +1,4 @@
-﻿-- ============================================================================
+-- ============================================================================
 -- LevelSelectLevel.lua
 -- Author:        Padilla carl jameson
 -- Email:         c.Padilla@digipen.edu
@@ -22,6 +22,7 @@ local ButtonManager = require("assets/scripts/ButtonManager")
 local initialized = false
 local config = nil
 local backgroundSpriteID = 0    -- Store background sprite entity ID
+local overlaySpriteID = 0       -- Store scroll overlay sprite entity ID
 local logoSpriteID = 0          -- Store logo sprite entity ID
 local cornerSpriteIDs = {}      -- Store corner sprite entity IDs
 
@@ -78,6 +79,22 @@ function OnInit()
         Log("Background sprite created (ID: " .. backgroundSpriteID .. ")")
     else
         Log("WARNING: Failed to create background sprite")
+    end
+
+    -- ========================================================================
+    -- CREATE SCROLL OVERLAY SPRITE
+    -- ========================================================================
+    overlaySpriteID = SpawnSprite(
+        "assets/Menu/Scroll Overlay.png",
+        0.0, 0.0,
+        4.7, 2.5,
+        3   -- Above background (1), below corners (5) and buttons (10)
+    )
+
+    if overlaySpriteID > 0 then
+        Log("Scroll overlay sprite created (ID: " .. overlaySpriteID .. ")")
+    else
+        Log("WARNING: Failed to create scroll overlay sprite")
     end
 
     -- ========================================================================
@@ -236,8 +253,7 @@ end
 function OnDestroy()
     Log("LevelSelect cleanup...")
 
-    -- Stop all sounds
-    StopMusic(0.5)
+    -- Keep menu BGM playing across menu page transitions.
 
     -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()
@@ -246,6 +262,12 @@ function OnDestroy()
     if backgroundSpriteID > 0 then
         DestroyEntity(backgroundSpriteID)
         Log("Background sprite destroyed")
+    end
+
+    -- Destroy scroll overlay sprite
+    if overlaySpriteID > 0 then
+        DestroyEntity(overlaySpriteID)
+        Log("Scroll overlay sprite destroyed")
     end
 
     -- Destroy logo sprite
@@ -266,6 +288,7 @@ function OnDestroy()
     config = nil
     initialized = false
     backgroundSpriteID = 0
+    overlaySpriteID = 0
     logoSpriteID = 0
     cornerSpriteIDs = {}
 

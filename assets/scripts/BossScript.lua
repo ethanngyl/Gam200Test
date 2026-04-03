@@ -398,10 +398,20 @@ function OnInit()
         print("[Boss " .. entityID .. "] WARNING: No arena bounds in shared store!")
     end
 
-    -- Boss starts immune until all players enter the arena
-    if ApplyStatusEffect then
-        ApplyStatusEffect(entityID, "immune", -1, entityID)
-        print("[Boss " .. entityID .. "] Immune until all players enter arena")
+    -- Boss is spawned by ProceduralMapLevel only when AreAllSurvivingPlayersInArena() is true.
+    -- Activate immediately if players are already in the arena (covers the case where a player
+    -- died elsewhere to satisfy the "all surviving players in arena" condition, after which the
+    -- remaining players may move out before the first enemy turn, causing AreAllPlayersInArena()
+    -- in OnUpdate to return false and permanently block boss activation).
+    if AreAllPlayersInArena() then
+        bossActivated = true
+        print("[Boss " .. entityID .. "] Immediately activated (all surviving players confirmed in arena at spawn time)")
+    else
+        -- Players not yet in arena (safety fallback - apply immune and wait)
+        if ApplyStatusEffect then
+            ApplyStatusEffect(entityID, "immune", -1, entityID)
+            print("[Boss " .. entityID .. "] Immune until all players enter arena")
+        end
     end
 
     -- Spawn health bar sprites above boss
@@ -513,17 +523,7 @@ function OnUpdate(dt)
             end
             print("[Boss " .. entityID .. "] All players in arena - BOSS ACTIVATED!")
         else
-            -- Still need to finish our turn action so the turn system doesn't softlock
-            local currentTurn = GetCurrentTurn()
-            if currentTurn == "Enemy" then
-                local ok, isActive = pcall(IsActiveEnemy, entityID)
-                if ok and isActive then
-                    local ok2, actionReady = pcall(IsEnemyActionReady)
-                    if ok2 and actionReady then
-                        FinishBossAction()
-                    end
-                end
-            end
+            -- Boss is fully idle before activation and does not consume an enemy action.
             return
         end
     end

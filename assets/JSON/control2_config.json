@@ -41,40 +41,58 @@
         "layer": 2
       }
     ],
-    "turnIndicators": [
+    "turnIndicators": [],
+    "hudSamples": [
       {
-        "id": "playerTurn",
-        "texture": "assets/UI/End_Turn_Button.png",
+        "id": "healthSample",
         "position": {
-          "x": -1.05,
-          "y": 0.40
+          "x": -1.15,
+          "y": -0.30
         },
         "scale": {
-          "x": 0.28,
-          "y": 0.28
+          "x": 0.35,
+          "y": 0.15
         },
-        "layer": 10,
-        "rows": 2,
-        "cols": 2,
-        "frameTime": 0.15,
-        "row": 0
+        "layer": 9,
+        "frameOffsetX": 0.01,
+        "frameOffsetY": 0.01,
+        "showHP": true,
+        "showAttack": false,
+        "showMove": false
       },
       {
-        "id": "enemyTurn",
-        "texture": "assets/UI/End_Turn_Button.png",
+        "id": "attackSample",
         "position": {
-          "x": -1.05,
-          "y": 0.10
+          "x": 0.10,
+          "y": 0.34
         },
         "scale": {
-          "x": 0.28,
-          "y": 0.28
+          "x": 0.35,
+          "y": 0.15
         },
-        "layer": 10,
-        "rows": 2,
-        "cols": 2,
-        "frameTime": 0.15,
-        "row": 1
+        "layer": 9,
+        "frameOffsetX": 0.01,
+        "frameOffsetY": 0.01,
+        "showHP": false,
+        "showAttack": true,
+        "showMove": false
+      },
+      {
+        "id": "moveSample",
+        "position": {
+          "x": 0.10,
+          "y": 0.04
+        },
+        "scale": {
+          "x": 0.35,
+          "y": 0.15
+        },
+        "layer": 9,
+        "frameOffsetX": 0.01,
+        "frameOffsetY": 0.01,
+        "showHP": false,
+        "showAttack": false,
+        "showMove": true
       }
     ],
     "buttons": [

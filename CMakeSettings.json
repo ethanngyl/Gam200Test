@@ -22,28 +22,6 @@
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x64_x64" ]
-    },
-    {
-      "name": "vs2022-editor-x64-Debug",
-      "generator": "Visual Studio 17 2022",
-      "configurationType": "Debug",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\out\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DSTRUCTSQUAD_START_IN_EDITOR=ON -DSTRUCTSQUAD_INITIAL_STATE=level3",
-      "buildCommandArgs": "",
-      "ctestCommandArgs": ""
-    },
-    {
-      "name": "vs2022-game-x64-Debug",
-      "generator": "Visual Studio 17 2022",
-      "configurationType": "Debug",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\out\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-DSTRUCTSQUAD_START_IN_EDITOR=OFF -DSTRUCTSQUAD_INITIAL_STATE=mainmenu",
-      "buildCommandArgs": "",
-      "ctestCommandArgs": ""
     }
   ]
 }

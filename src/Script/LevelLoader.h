@@ -94,6 +94,10 @@ namespace Framework {
         bool IsLevelLoaded() const { return levelLoaded; }
         std::string GetCurrentLevelPath() const { return currentLevelPath; }
 
+        // Reset all C++ static state that persists across level transitions.
+        // Called by Level3StateHooks::OnFree() before loading the next level.
+        static void ResetCppLevelState();
+
         // Called from ProjectileSystem when player projectile hits enemy (Soul Rend, Soul Merge)
         bool ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID);
 
@@ -179,6 +183,12 @@ namespace Framework {
         static int Lua_SetMasterVolume(lua_State* L);
         static int Lua_GetMasterVolume(lua_State* L);
         static int Lua_SaveMasterVolume(lua_State* L);
+        static int Lua_SetMusicVolume(lua_State* L);
+        static int Lua_GetMusicVolume(lua_State* L);
+        static int Lua_SaveMusicVolume(lua_State* L);
+        static int Lua_SetSfxVolume(lua_State* L);
+        static int Lua_GetSfxVolume(lua_State* L);
+        static int Lua_SaveSfxVolume(lua_State* L);
 
         // UI Button API
         static int Lua_CreateButton(lua_State* L);
