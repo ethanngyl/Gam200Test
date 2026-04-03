@@ -302,13 +302,13 @@ function UIManager.Init(config)
         UIManager.components.tutorialPopup:Init({
             offsetX = -0.60,
             offsetY = -0.08,
-            scaleX = 0.42,
-            scaleY = 0.24,
+            scaleX = 0.52,
+            scaleY = 0.30,
             layer = 7,
             texture = "assets/Menu/Scroll Overlay.png",
             font = "Jersey20Regular",
-            paddingXPx = 96,
-            titleInsetTopPx = 58,
+            paddingXPx = 130,
+            titleInsetTopPx = 63,
             wrapChars = 52,
             steps = {
                 {
