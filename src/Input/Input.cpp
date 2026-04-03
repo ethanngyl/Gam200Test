@@ -58,8 +58,10 @@ namespace Framework
 
         // --------------------------------------------------------------------
         // CONTROLLER INPUT (GLFW gamepad API)
-        // Left stick -> WASD movement
-        // D-pad      -> Arrow-key facing
+        // Left stick  -> WASD movement
+        // D-pad       -> Arrow-key facing
+        // Right stick -> Virtual mouse cursor
+        // A button    -> Left mouse click
         // --------------------------------------------------------------------
         bool gamepadConnected = false;
         bool padDpadUp = false;
@@ -70,6 +72,9 @@ namespace Framework
         bool padMoveDown = false;
         bool padMoveLeft = false;
         bool padMoveRight = false;
+        bool padMouseLeft = false;
+        float padLookX = 0.0f;
+        float padLookY = 0.0f;
 
         if (window && glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
             if (glfwJoystickPresent(GLFW_JOYSTICK_1) && glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) {
@@ -91,7 +96,45 @@ namespace Framework
                     padDpadDown = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] == GLFW_PRESS;
                     padDpadLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] == GLFW_PRESS;
                     padDpadRight = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] == GLFW_PRESS;
+
+                    padMouseLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS;
+                    padLookX = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+                    padLookY = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
                 }
+            }
+        }
+
+        if (window && gamepadConnected) {
+            double currentX = 0.0;
+            double currentY = 0.0;
+            if (!virtualMouseInitialized) {
+                glfwGetCursorPos(window, &currentX, &currentY);
+                virtualMouseX = static_cast<float>(currentX);
+                virtualMouseY = static_cast<float>(currentY);
+                virtualMouseInitialized = true;
+            }
+
+            const float lookDeadzone = 0.20f;
+            const float mouseSpeedPxPerSec = 700.0f;
+            float moveX = (std::fabs(padLookX) > lookDeadzone) ? padLookX : 0.0f;
+            float moveY = (std::fabs(padLookY) > lookDeadzone) ? padLookY : 0.0f;
+
+            if (moveX != 0.0f || moveY != 0.0f || padMouseLeft) {
+                useVirtualMouse = true;
+
+                virtualMouseX += moveX * mouseSpeedPxPerSec * dt;
+                virtualMouseY += moveY * mouseSpeedPxPerSec * dt;
+
+                int winW = 0;
+                int winH = 0;
+                glfwGetWindowSize(window, &winW, &winH);
+                const float maxMouseX = static_cast<float>((winW > 0) ? (winW - 1) : 0);
+                const float maxMouseY = static_cast<float>((winH > 0) ? (winH - 1) : 0);
+                virtualMouseX = std::clamp(virtualMouseX, 0.0f, maxMouseX);
+                virtualMouseY = std::clamp(virtualMouseY, 0.0f, maxMouseY);
+
+                // Keep OS cursor in sync so hover feedback aligns with visible cursor.
+                glfwSetCursorPos(window, virtualMouseX, virtualMouseY);
             }
         }
 
@@ -160,7 +203,7 @@ namespace Framework
         UpdateKeyState(KEY_F9, GetAsyncKeyState(KEY_F9)); 
 
         // Mouse buttons
-        UpdateKeyState(MOUSE_LEFT, GetAsyncKeyState(MOUSE_LEFT));
+        UpdateKeyState(MOUSE_LEFT, GetAsyncKeyState(MOUSE_LEFT) || (gamepadConnected && padMouseLeft));
         UpdateKeyState(MOUSE_RIGHT, GetAsyncKeyState(MOUSE_RIGHT));
 
 
@@ -197,6 +240,12 @@ namespace Framework
         y = 0.0f;
 
         if (!window) {
+            return;
+        }
+
+        if (useVirtualMouse) {
+            x = virtualMouseX;
+            y = virtualMouseY;
             return;
         }
 
