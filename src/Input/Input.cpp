@@ -56,17 +56,56 @@ namespace Framework
         // Store previous frame's key states
         PreviousKeys = CurrentKeys;
 
+        // --------------------------------------------------------------------
+        // CONTROLLER INPUT (GLFW gamepad API)
+        // Left stick -> WASD movement
+        // D-pad      -> Arrow-key facing
+        // --------------------------------------------------------------------
+        bool gamepadConnected = false;
+        bool padDpadUp = false;
+        bool padDpadDown = false;
+        bool padDpadLeft = false;
+        bool padDpadRight = false;
+        bool padMoveUp = false;
+        bool padMoveDown = false;
+        bool padMoveLeft = false;
+        bool padMoveRight = false;
+
+        if (window && glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+            if (glfwJoystickPresent(GLFW_JOYSTICK_1) && glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) {
+                GLFWgamepadstate gamepadState{};
+                if (glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepadState) == GLFW_TRUE) {
+                    gamepadConnected = true;
+
+                    const float stickDeadzone = 0.35f;
+                    const float lx = gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+                    const float ly = gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+
+                    // GLFW Y axis is negative when pushing up.
+                    padMoveUp = (ly < -stickDeadzone);
+                    padMoveDown = (ly > stickDeadzone);
+                    padMoveLeft = (lx < -stickDeadzone);
+                    padMoveRight = (lx > stickDeadzone);
+
+                    padDpadUp = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] == GLFW_PRESS;
+                    padDpadDown = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] == GLFW_PRESS;
+                    padDpadLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] == GLFW_PRESS;
+                    padDpadRight = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] == GLFW_PRESS;
+                }
+            }
+        }
+
         // Movement keys
-        UpdateKeyState(KEY_W, GetAsyncKeyState(KEY_W));
-        UpdateKeyState(KEY_A, GetAsyncKeyState(KEY_A));
-        UpdateKeyState(KEY_S, GetAsyncKeyState(KEY_S));
-        UpdateKeyState(KEY_D, GetAsyncKeyState(KEY_D));
+        UpdateKeyState(KEY_W, GetAsyncKeyState(KEY_W) || (gamepadConnected && padMoveUp));
+        UpdateKeyState(KEY_A, GetAsyncKeyState(KEY_A) || (gamepadConnected && padMoveLeft));
+        UpdateKeyState(KEY_S, GetAsyncKeyState(KEY_S) || (gamepadConnected && padMoveDown));
+        UpdateKeyState(KEY_D, GetAsyncKeyState(KEY_D) || (gamepadConnected && padMoveRight));
 
         //Arrow Keys: For player
-        UpdateKeyState(KEY_UP, GetAsyncKeyState(KEY_UP));
-        UpdateKeyState(KEY_DOWN, GetAsyncKeyState(KEY_DOWN));
-        UpdateKeyState(KEY_LEFT, GetAsyncKeyState(KEY_LEFT));
-        UpdateKeyState(KEY_RIGHT, GetAsyncKeyState(KEY_RIGHT));
+        UpdateKeyState(KEY_UP, GetAsyncKeyState(KEY_UP) || (gamepadConnected && padDpadUp));
+        UpdateKeyState(KEY_DOWN, GetAsyncKeyState(KEY_DOWN) || (gamepadConnected && padDpadDown));
+        UpdateKeyState(KEY_LEFT, GetAsyncKeyState(KEY_LEFT) || (gamepadConnected && padDpadLeft));
+        UpdateKeyState(KEY_RIGHT, GetAsyncKeyState(KEY_RIGHT) || (gamepadConnected && padDpadRight));
 
 
         // System keys
