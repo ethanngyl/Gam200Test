@@ -194,7 +194,7 @@ function OnLevel3ButtonClicked()
     end
 
 
-    ButtonManager.TransitionTo("LEVEL_3")
+    ButtonManager.TransitionTo("DEMO_BRIDGE")
 end
 
 function OnBackButtonClicked()

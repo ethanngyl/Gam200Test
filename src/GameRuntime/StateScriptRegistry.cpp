@@ -30,6 +30,7 @@ namespace {
         case SKILL_SETS: return "SKILL_SETS";
         case WIN_SCREEN: return "WIN_SCREEN";
         case LOSE_SCREEN: return "LOSE_SCREEN";
+        case DEMO_BRIDGE: return "DEMO_BRIDGE";
         case GS_QUIT: return "GS_QUIT";
         case GS_RESTART: return "GS_RESTART";
         default: return "UNKNOWN_STATE";
@@ -62,6 +63,7 @@ namespace {
         case SKILL_SETS: return buildPath("SkillSetsLevel.lua");
         case WIN_SCREEN: return buildPath("WinLevel.lua");
         case LOSE_SCREEN: return buildPath("LoseLevel.lua");
+        case DEMO_BRIDGE: return buildPath("DemoBridgeLevel.lua");
         default: return nullptr;
         }
     }
@@ -81,6 +83,7 @@ namespace {
         case SKILL_SETS:
         case WIN_SCREEN:
         case LOSE_SCREEN:
+        case DEMO_BRIDGE:
             return true;
         default:
             return false;
