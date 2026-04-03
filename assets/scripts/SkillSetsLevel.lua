@@ -19,6 +19,70 @@ local initialized = false
 local config = nil
 local backgroundSpriteID = 0
 local overlaySprites = {}
+local pageIndex = 1
+local pageConfigs = {
+    "assets/JSON/skillsets_config.json",
+    "assets/JSON/skillsets_mage_config.json",
+    "assets/JSON/skillsets_berserker_config.json"
+}
+
+local function ClearOverlaySprites()
+    for overlayID, spriteID in pairs(overlaySprites) do
+        if spriteID > 0 then
+            DestroyEntity(spriteID)
+            Log("Overlay sprite '" .. overlayID .. "' destroyed")
+        end
+    end
+    overlaySprites = {}
+end
+
+local function SpawnOverlaySprites()
+    if not config or not config.menu.overlaySprites then
+        return
+    end
+
+    Log("Creating overlay sprites...")
+    for i, overlay in ipairs(config.menu.overlaySprites) do
+        local spriteID = SpawnSprite(
+            overlay.texture,
+            overlay.position.x,
+            overlay.position.y,
+            overlay.scale.x,
+            overlay.scale.y,
+            overlay.layer,
+            overlay.rotation or 0
+        )
+
+        if spriteID > 0 then
+            overlaySprites[overlay.id] = spriteID
+            if overlay.color and SetSpriteColor then
+                SetSpriteColor(spriteID, overlay.color.r or 1.0, overlay.color.g or 1.0, overlay.color.b or 1.0)
+            end
+            Log("  Overlay sprite '" .. overlay.id .. "' created (ID: " .. spriteID .. ")")
+        else
+            Log("  FAILED to create overlay sprite: " .. overlay.id)
+        end
+    end
+    Log("Overlay sprites complete!")
+end
+
+local function LoadPageConfig(index)
+    local configPath = pageConfigs[index]
+    if not configPath then
+        Log("ERROR: Invalid skill sets page index: " .. tostring(index))
+        return nil
+    end
+
+    local loadedConfig = LoadJSON(configPath)
+    if not loadedConfig then
+        Log("ERROR: Failed to load JSON configuration: " .. configPath)
+        return nil
+    end
+
+    config = loadedConfig
+    Log("Successfully loaded configuration for: " .. config.menu.name)
+    return loadedConfig
+end
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -28,14 +92,10 @@ function OnInit()
     Log("SkillSets Level Script Initialized (ButtonManager Version)")
     Log("Loading configuration from JSON file...")
 
-    config = LoadJSON("assets/JSON/skillsets_config.json")
-
-    if not config then
-        Log("ERROR: Failed to load JSON configuration!")
+    pageIndex = 1
+    if not LoadPageConfig(pageIndex) then
         return
     end
-
-    Log("Successfully loaded configuration for: " .. config.menu.name)
 
     local cam = config.menu.camera
     SetCameraPosition(cam.position.x, cam.position.y, cam.position.z)
@@ -62,31 +122,8 @@ function OnInit()
         Log("WARNING: Failed to create background sprite")
     end
 
-    -- Create overlay sprites (scroll, etc.)
-    if config.menu.overlaySprites then
-        Log("Creating overlay sprites...")
-
-        for i, overlay in ipairs(config.menu.overlaySprites) do
-            local spriteID = SpawnSprite(
-                overlay.texture,
-                overlay.position.x,
-                overlay.position.y,
-                overlay.scale.x,
-                overlay.scale.y,
-                overlay.layer,
-                overlay.rotation or 0
-            )
-
-            if spriteID > 0 then
-                overlaySprites[overlay.id] = spriteID
-                Log("  Overlay sprite '" .. overlay.id .. "' created (ID: " .. spriteID .. ")")
-            else
-                Log("  FAILED to create overlay sprite: " .. overlay.id)
-            end
-        end
-
-        Log("Overlay sprites complete!")
-    end
+    -- Create overlay sprites (scroll, icons, etc.)
+    SpawnOverlaySprites()
 
     local music = config.menu.music
     PlayMusic(music.name, 0.8, music.loop)
@@ -109,7 +146,38 @@ function OnBackButtonClicked()
         return
     end
 
-    Log("BACK button clicked!")
+    if pageIndex > 1 then
+        pageIndex = pageIndex - 1
+        Log("Skill sets page back: " .. tostring(pageIndex))
+        if LoadPageConfig(pageIndex) then
+            ClearOverlaySprites()
+            SpawnOverlaySprites()
+            ButtonManager.Initialize(config.menu.buttons)
+        end
+        return
+    end
+
+    Log("BACK button clicked! Returning to CONTROL2")
+    ButtonManager.TransitionTo("CONTROL2")
+end
+
+function OnNextButtonClicked()
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    if pageIndex < #pageConfigs then
+        pageIndex = pageIndex + 1
+        Log("Skill sets page next: " .. tostring(pageIndex))
+        if LoadPageConfig(pageIndex) then
+            ClearOverlaySprites()
+            SpawnOverlaySprites()
+            ButtonManager.Initialize(config.menu.buttons)
+        end
+        return
+    end
+
+    Log("NEXT button clicked! Returning to CONTROL2")
     ButtonManager.TransitionTo("CONTROL2")
 end
 

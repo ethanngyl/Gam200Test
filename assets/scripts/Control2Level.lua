@@ -10,6 +10,7 @@
 
 -- Load ButtonManager module
 local ButtonManager = require("assets/scripts/ButtonManager")
+local HealthUI = require("UI/HealthUI")
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
@@ -20,6 +21,79 @@ local config = nil
 local backgroundSpriteID = 0
 local overlaySprites = {}
 local turnIndicatorSprites = {}
+local hudSampleUIs = {}
+
+local HUD_SAMPLE_BASE = {
+    holderScaleX = 0.55,
+    holderScaleY = 0.23,
+    hpFillOffsetX = -0.181,
+    hpFillOffsetY = 0.05,
+    hpFillWidth = 0.085,
+    hpFillHeight = 0.085,
+    attackFillOffsetX = 0.0429,
+    attackFillOffsetY = 0.05,
+    attackFillWidth = 0.365,
+    attackFillHeight = 0.07,
+    moveFillOffsetX = 0.015,
+    moveFillOffsetY = -0.047,
+    moveFillWidth = 0.427,
+    moveFillHeight = 0.07
+}
+
+local function CreateHudSample(sample)
+    if not sample or not sample.position or not sample.scale then
+        return nil
+    end
+
+    local scaleX = sample.scale.x or HUD_SAMPLE_BASE.holderScaleX
+    local scaleY = sample.scale.y or HUD_SAMPLE_BASE.holderScaleY
+    local ratioX = scaleX / HUD_SAMPLE_BASE.holderScaleX
+    local ratioY = scaleY / HUD_SAMPLE_BASE.holderScaleY
+
+    local ui = HealthUI:New()
+    ui:Init({
+        maxHP = 5,
+        holderTexture = "assets/UI/health_ap_movement_holder.png",
+        holderFrameTexture = "assets/UI/health_ap_movement_holder frame only.png",
+        holderOnly = false,
+        enableHPFill = sample.showHP == true,
+        enableAttackFill = sample.showAttack == true,
+        enableMoveFill = sample.showMove == true,
+        holderScaleX = scaleX,
+        holderScaleY = scaleY,
+        holderOffsetX = sample.position.x or 0.0,
+        holderOffsetY = sample.position.y or 0.0,
+        holderFrameScaleX = scaleX,
+        holderFrameScaleY = scaleY,
+        holderFrameOffsetX = (sample.position.x or 0.0) + (sample.frameOffsetX or 0.0),
+        holderFrameOffsetY = (sample.position.y or 0.0) + (sample.frameOffsetY or 0.0),
+        hpFillOffsetX = HUD_SAMPLE_BASE.hpFillOffsetX * ratioX,
+        hpFillOffsetY = HUD_SAMPLE_BASE.hpFillOffsetY * ratioY,
+        hpFillWidth = HUD_SAMPLE_BASE.hpFillWidth * ratioX,
+        hpFillHeight = HUD_SAMPLE_BASE.hpFillHeight * ratioY,
+        attackFillOffsetX = HUD_SAMPLE_BASE.attackFillOffsetX * ratioX,
+        attackFillOffsetY = HUD_SAMPLE_BASE.attackFillOffsetY * ratioY,
+        attackFillWidth = HUD_SAMPLE_BASE.attackFillWidth * ratioX,
+        attackFillHeight = HUD_SAMPLE_BASE.attackFillHeight * ratioY,
+        moveFillOffsetX = HUD_SAMPLE_BASE.moveFillOffsetX * ratioX,
+        moveFillOffsetY = HUD_SAMPLE_BASE.moveFillOffsetY * ratioY,
+        moveFillWidth = HUD_SAMPLE_BASE.moveFillWidth * ratioX,
+        moveFillHeight = HUD_SAMPLE_BASE.moveFillHeight * ratioY,
+        hpFillColor = { r = 0.9, g = 0.1, b = 0.1, a = 1.0 },
+        attackFillColor = { r = 0.1, g = 0.25, b = 0.7, a = 1.0 },
+        moveFillColor = { r = 0.65, g = 0.35, b = 0.15, a = 1.0 },
+        hpFillTexture = "assets/TileMap/Attack_Indicator.png",
+        textColor = { r = 0.0, g = 0.0, b = 0.0, a = 1.0 },
+        textScale = 0.6,
+        showValueText = false,
+        getMovementAPFunc = function() return 3, 3 end,
+        getAttackAPFunc = function() return 3, 3 end,
+        layer = sample.layer or 9,
+        textureBasePath = "assets/UI/Health_"
+    })
+
+    return ui
+end
 
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
@@ -131,6 +205,22 @@ function OnInit()
         Log("Turn indicator icons complete!")
     end
 
+    -- Create HUD sample bars (status bar examples)
+    if config.menu.hudSamples then
+        Log("Creating HUD sample bars...")
+        for i, sample in ipairs(config.menu.hudSamples) do
+            local ui = CreateHudSample(sample)
+            if ui then
+                local sampleID = sample.id or ("sample_" .. tostring(i))
+                hudSampleUIs[sampleID] = ui
+                Log("  HUD sample '" .. sampleID .. "' created")
+            else
+                Log("  FAILED to create HUD sample at index " .. tostring(i))
+            end
+        end
+        Log("HUD sample bars complete!")
+    end
+
     local music = config.menu.music
     PlayMusic(music.name, 0.8, music.loop)
     Log("Playing control page music: " .. music.name)
@@ -216,11 +306,19 @@ function OnDestroy()
         end
     end
 
+    for sampleID, ui in pairs(hudSampleUIs) do
+        if ui and ui.Destroy then
+            ui:Destroy()
+            Log("HUD sample '" .. sampleID .. "' destroyed")
+        end
+    end
+
     config = nil
     initialized = false
     backgroundSpriteID = 0
     overlaySprites = {}
     turnIndicatorSprites = {}
+    hudSampleUIs = {}
 
     Log("Control2 page cleanup complete")
 end

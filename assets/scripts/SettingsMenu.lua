@@ -34,11 +34,18 @@ local config = {
         layer = 52  -- Above pause menu
     },
     
+    -- Scroll overlay (on top of background, behind UI elements)
+    overlay = {
+        texture = "assets/Menu/Scroll Overlay.png",
+        scale = { x = 2.25, y = 1.25 },
+        layer = 52
+    },
+
     -- Title
     title = {
         text = "Settings",
         scale = 2.0,
-        color = { r = 255, g = 255, b = 255 }
+        color = { r = 0, g = 0, b = 0 }
     },
     
     -- Back button (top-left) - uses CreateButton for hover effect
@@ -82,6 +89,7 @@ local state = {
     
     -- Entity IDs
     backgroundID = 0,
+    overlayID = 0,
     backButtonID = 0,  -- Now a CreateButton ID (pointer)
     volumeSliderID = 0,
     
@@ -172,6 +180,15 @@ function SettingsMenu.Open(onCloseCallback)
         config.background.layer
     )
     
+    -- Create scroll overlay
+    state.overlayID = SpawnSprite(
+        config.overlay.texture,
+        camX, camY,
+        config.overlay.scale.x,
+        config.overlay.scale.y,
+        config.overlay.layer
+    )
+    
     -- Create back button using CreateButton (with hover highlight)
     local backCfg = config.backButton
     state.backButtonID = CreateButton(
@@ -215,6 +232,12 @@ function SettingsMenu.Close()
     if state.backgroundID and state.backgroundID > 0 then
         DestroyEntity(state.backgroundID)
         state.backgroundID = 0
+    end
+    
+    -- Destroy scroll overlay
+    if state.overlayID and state.overlayID > 0 then
+        DestroyEntity(state.overlayID)
+        state.overlayID = 0
     end
     
     -- Clear the back button (created with CreateButton)
@@ -432,7 +455,7 @@ function SettingsMenu.Draw()
     local instructionY = centerY - 150 * scaleFactorY  -- Below the slider
     
     DrawText("Playfair48", instructionText, instructionX, instructionY, instructionScale,
-             255, 255, 255)  -- Dark brown color
+             0, 0, 0)  -- Dark brown color
 end
 
 -- ============================================================================
