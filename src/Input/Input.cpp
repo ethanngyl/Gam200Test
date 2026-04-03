@@ -73,6 +73,15 @@ namespace Framework
         bool padMoveLeft = false;
         bool padMoveRight = false;
         bool padMouseLeft = false;
+        bool padKey1 = false;
+        bool padKey2 = false;
+        bool padKey3 = false;
+        bool padKey4 = false;
+        bool padLuaX = false;
+        bool padLuaY = false;
+        bool padAttack = false;
+        bool padStart = false;
+        bool padBack = false;
         float padLookX = 0.0f;
         float padLookY = 0.0f;
 
@@ -97,7 +106,20 @@ namespace Framework
                     padDpadLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] == GLFW_PRESS;
                     padDpadRight = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] == GLFW_PRESS;
 
-                    padMouseLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS;
+                    padMouseLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] == GLFW_PRESS;
+                    padKey1 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_X] == GLFW_PRESS;
+                    padKey2 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_B] == GLFW_PRESS;
+                    padKey3 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_Y] == GLFW_PRESS;
+                    padKey4 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS;
+                    padLuaX = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] == GLFW_PRESS;
+
+                    const float lt = gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+                    padLuaY = (lt > 0.35f);
+                    // GLFW trigger axes are typically [-1..1]. Treat near-pressed as attack.
+                    const float rt = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+                    padAttack = (rt > 0.35f);
+                    padStart = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_START] == GLFW_PRESS;
+                    padBack = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_BACK] == GLFW_PRESS;
                     padLookX = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
                     padLookY = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
                 }
@@ -153,8 +175,8 @@ namespace Framework
 
         // System keys
         UpdateKeyState(KEY_Q, GetAsyncKeyState(KEY_Q));
-        UpdateKeyState(KEY_ESCAPE, GetAsyncKeyState(KEY_ESCAPE));
-        UpdateKeyState(KEY_SPACE, GetAsyncKeyState(KEY_SPACE));
+        UpdateKeyState(KEY_ESCAPE, GetAsyncKeyState(KEY_ESCAPE) || (gamepadConnected && padBack));
+        UpdateKeyState(KEY_SPACE, GetAsyncKeyState(KEY_SPACE) || (gamepadConnected && padAttack));
         UpdateKeyState(KEY_ENTER, GetAsyncKeyState(KEY_ENTER));
 		UpdateKeyState(KEY_DELETE, GetAsyncKeyState(KEY_DELETE));
         UpdateKeyState(KEY_Z, GetAsyncKeyState(KEY_Z));
@@ -166,7 +188,7 @@ namespace Framework
         UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
-        UpdateKeyState(KEY_P, GetAsyncKeyState(KEY_P));
+        UpdateKeyState(KEY_P, GetAsyncKeyState(KEY_P) || (gamepadConnected && padStart));
         UpdateKeyState(KEY_TAB, GetAsyncKeyState(KEY_TAB));
 
         UpdateKeyState(KEY_M, GetAsyncKeyState(KEY_M));
@@ -176,18 +198,18 @@ namespace Framework
         UpdateKeyState(KEY_L, GetAsyncKeyState(KEY_L));
 
         UpdateKeyState(KEY_I, GetAsyncKeyState(KEY_I));
-        UpdateKeyState(KEY_X, GetAsyncKeyState(KEY_X));
-        UpdateKeyState(KEY_Y, GetAsyncKeyState(KEY_Y));
+        UpdateKeyState(KEY_X, GetAsyncKeyState(KEY_X) || (gamepadConnected && padLuaX));
+        UpdateKeyState(KEY_Y, GetAsyncKeyState(KEY_Y) || (gamepadConnected && padLuaY));
         UpdateKeyState(KEY_C, GetAsyncKeyState(KEY_C));
         UpdateKeyState(KEY_V, GetAsyncKeyState(KEY_V));
         UpdateKeyState(KEY_B, GetAsyncKeyState(KEY_B));
         UpdateKeyState(KEY_N, GetAsyncKeyState(KEY_N));
 
         // Number keys
-        UpdateKeyState(KEY_1, GetAsyncKeyState(KEY_1));
-        UpdateKeyState(KEY_2, GetAsyncKeyState(KEY_2));
-        UpdateKeyState(KEY_3, GetAsyncKeyState(KEY_3));
-        UpdateKeyState(KEY_4, GetAsyncKeyState(KEY_4));
+        UpdateKeyState(KEY_1, GetAsyncKeyState(KEY_1) || (gamepadConnected && padKey1));
+        UpdateKeyState(KEY_2, GetAsyncKeyState(KEY_2) || (gamepadConnected && padKey2));
+        UpdateKeyState(KEY_3, GetAsyncKeyState(KEY_3) || (gamepadConnected && padKey3));
+        UpdateKeyState(KEY_4, GetAsyncKeyState(KEY_4) || (gamepadConnected && padKey4));
         UpdateKeyState(KEY_5, GetAsyncKeyState(KEY_5));
         UpdateKeyState(KEY_6, GetAsyncKeyState(KEY_6));
         UpdateKeyState(KEY_7, GetAsyncKeyState(KEY_7));
