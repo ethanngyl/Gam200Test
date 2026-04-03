@@ -60,16 +60,18 @@ local config = {
         scale = { x = 0.35, y = 0.10 },
         layer = 51,
         
-        -- Each button config
+        -- 2x2 grid layout:
+        --   [Resume]   [Settings]
+        --   [Restart]  [MainMenu]
         items = {
             { 
-                id = "quit", 
-                label = "MainMenu",
-                offsetX = -0.45,    -- World X offset from camera
-                offsetY = 0.0,      -- World Y offset from camera
-                callback = "OnPauseQuitClicked",
+                id = "resume", 
+                label = "Resume",
+                offsetX = -0.24,    -- World X offset from camera
+                offsetY = 0.0,     -- World Y offset from camera (top row)
+                callback = "OnPauseResumeClicked",
                 text = {
-                    offsetX = -80,
+                    offsetX = -60,
                     offsetY = -10,
                     scale = 0.8,
                     color = { r = 255, g = 255, b = 255 }
@@ -78,25 +80,38 @@ local config = {
             { 
                 id = "settings", 
                 label = "Settings",
-                offsetX = 0.00,
+                offsetX = 0.24,
                 offsetY = 0.0,
                 callback = "OnPauseSettingsClicked",
                 text = {
-                    offsetX = -50,
+                    offsetX = -60,
                     offsetY = -10,
                     scale = 0.8,
                     color = { r = 255, g = 255, b = 255 }
                 }
             },
             { 
-                id = "resume", 
-                label = "Resume",
-                offsetX = 0.45,
-                offsetY = 0.0,
-                callback = "OnPauseResumeClicked",
+                id = "restart", 
+                label = "Restart",
+                offsetX = -0.24,
+                offsetY = -0.15,    -- Bottom row
+                callback = "OnPauseRestartClicked",
                 text = {
-                    offsetX = -50,
-                    offsetY = -10,
+                    offsetX = -60,
+                    offsetY = -15,
+                    scale = 0.8,
+                    color = { r = 255, g = 255, b = 255 }
+                }
+            },
+            { 
+                id = "quit", 
+                label = "MainMenu",
+                offsetX = 0.24,
+                offsetY = -0.15,
+                callback = "OnPauseQuitClicked",
+                text = {
+                    offsetX = -80,
+                    offsetY = -15,
                     scale = 0.8,
                     color = { r = 255, g = 255, b = 255 }
                 }
@@ -138,6 +153,11 @@ end
 function OnPauseResumeClicked()
     PlaySound("button2", false, 0.7)
     PauseMenu.OnResume()
+end
+
+function OnPauseRestartClicked()
+    PlaySound("button2", false, 0.7)
+    PauseMenu.OnRestart()
 end
 
 -- ============================================================================
@@ -360,6 +380,23 @@ function PauseMenu.OnSettings()
     end)
     
     Log("[PauseMenu] Opening Settings")
+end
+
+function PauseMenu.OnRestart()
+    -- Reset campaign progress back to level 1
+    local f = io.open("assets/JSON/LevelProgress.json", "w")
+    if f then
+        f:write("{\n  \"currentLevel\": 1,\n  \"totalLevels\": 3\n}\n")
+        f:close()
+        Log("[PauseMenu] Level progress reset to 1")
+    end
+
+    DestroyPauseUI()
+    TogglePause()
+    -- Restore to saved volume setting
+    SetMasterVolume(SettingsMenu.GetSavedVolume())
+    SetNextGameState("LEVEL_3")
+    Log("[PauseMenu] Restarting campaign from Level 1")
 end
 
 function PauseMenu.OnQuit()
