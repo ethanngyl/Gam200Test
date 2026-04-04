@@ -53,6 +53,7 @@ local SkillSwapUI = require("SkillSwapUI")
 _G.SkillSwapUI = SkillSwapUI
 
 local BOSS_SCRIPT_PATH = "assets/scripts/BossScript.lua"
+local BOSS2_SCRIPT_PATH = "assets/scripts/Boss2OrcShaman.lua"
 
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)
@@ -101,8 +102,8 @@ local goalPosition = nil  -- {gridX, gridY, worldX, worldY}
 local goalReached = false
 local goalTransitionDelay = 0
 
--- Boss tracking - portal only spawns after boss is defeated
-local bossEntityID = nil
+-- Boss tracking - portal only spawns after ALL bosses are defeated
+local bossEntityIDs = {}     -- Table of boss entity IDs (supports multiple bosses)
 local bossDefeated = false
 local pendingGoalData = nil  -- Stores goal spawn data until boss dies
 local pendingBossSpawn = nil  -- Stores deferred boss spawn payload
@@ -110,6 +111,7 @@ local bossArenaGridX = nil
 local bossArenaGridY = nil
 local bossArenaWorldX = nil
 local bossArenaWorldY = nil
+local redPortalEntity = nil  -- Red portal indicator shown before players enter boss arena
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -157,16 +159,77 @@ function OnInit()
     -- PROCEDURAL MAP GENERATION
     -- ========================================
     local mapData = nil
-    if USE_SAVED_MAP then
-         Log("Loading saved map: " .. SAVED_MAP_PATH)
-         mapData = LoadSavedMap(SAVED_MAP_PATH)
-         if not mapData then
-             Log("ERROR: Failed! Falling back to procedural.")
-             mapData = LoadProceduralMap(20, 20, "rooms_arena")
-         end
-     else
-         mapData = LoadProceduralMap(20, 20, "rooms_arena")
-     end
+    local mapAlgorithm = "rooms_arena"
+    if currentLevel >= 3 then
+        mapAlgorithm = "open"
+    end
+
+    -- Levels 1 and 2 use pre-made layouts (3 per level, randomly chosen)
+    -- Level 3+ uses procedural generation
+    if currentLevel <= 2 then
+        math.randomseed(os.time())
+        local layoutIndex = math.random(1, 3)
+        local layoutPath = "assets/maps/level" .. currentLevel .. "_layout" .. layoutIndex .. ".map.json"
+        Log("Loading saved layout: " .. layoutPath)
+        mapData = LoadSavedMap(layoutPath, currentLevel)
+        if not mapData then
+            Log("ERROR: Failed to load layout! Falling back to procedural.")
+            mapData = LoadProceduralMap(20, 20, mapAlgorithm, currentLevel)
+        else
+            -- Read arena min/max directly from JSON (C++ LoadSavedMap may not pass these)
+            local jsonData = LoadJSON(layoutPath)
+            if jsonData and jsonData.arena and jsonData.arena.hasArena then
+                local arenaInfo = jsonData.arena
+                if arenaInfo.min then
+                    mapData.arenaMinX = arenaInfo.min.x
+                    mapData.arenaMinY = arenaInfo.min.y
+                end
+                if arenaInfo.max then
+                    mapData.arenaMaxX = arenaInfo.max.x
+                    mapData.arenaMaxY = arenaInfo.max.y
+                end
+                Log("Arena bounds from JSON: (" .. tostring(mapData.arenaMinX) .. "," .. tostring(mapData.arenaMinY)
+                    .. ") to (" .. tostring(mapData.arenaMaxX) .. "," .. tostring(mapData.arenaMaxY) .. ")")
+            end
+        end
+    elseif USE_SAVED_MAP then
+        Log("Loading saved map: " .. SAVED_MAP_PATH)
+        mapData = LoadSavedMap(SAVED_MAP_PATH, currentLevel)
+        if not mapData then
+            Log("ERROR: Failed! Falling back to procedural.")
+            mapData = LoadProceduralMap(20, 20, mapAlgorithm, currentLevel)
+        end
+    else
+        mapData = LoadProceduralMap(20, 20, mapAlgorithm, currentLevel)
+    end
+
+    -- For open arena levels (level 3+), synthesize arena data covering the whole map
+    -- so the boss spawn logic works on the open floor
+    if currentLevel >= 3 and mapData and not mapData.hasArena then
+        local arenaMinX = 3
+        local arenaMinY = 3
+        local arenaMaxX = 17   -- 20 - 3
+        local arenaMaxY = 17
+        local centerX = 10
+        local centerY = 10
+
+        mapData.hasArena = true
+        mapData.arenaX = centerX
+        mapData.arenaY = centerY
+        mapData.arenaMinX = arenaMinX
+        mapData.arenaMinY = arenaMinY
+        mapData.arenaMaxX = arenaMaxX
+        mapData.arenaMaxY = arenaMaxY
+
+        -- Convert grid center to world coordinates
+        local wx = kStartX + centerX * kSpacingX
+        local wy = kStartY + centerY * kSpacingY
+        mapData.arenaWorldX = wx
+        mapData.arenaWorldY = wy
+
+        Log("Level 3: Open arena - synthesized arena bounds (" ..
+            arenaMinX .. "," .. arenaMinY .. ") to (" .. arenaMaxX .. "," .. arenaMaxY .. ")")
+    end
 
     -- Debug output
     Log("DEBUG: mapData = " .. tostring(mapData))
@@ -203,8 +266,12 @@ function OnInit()
     LoadAnimationConfig("assets/JSON/animations.json")
     LoadPlayerAnimation("Idle_front")
 
-    -- Setup enemies
-    SetupProceduralEnemies(mapData)
+    -- Setup enemies (skip for level 3 - Warlock boss spawns its own)
+    if currentLevel < 3 then
+        SetupProceduralEnemies(mapData)
+    else
+        Log("Level 3: Skipping regular enemies - boss spawns its own")
+    end
 
     -- Queue boss spawn; boss appears only when all surviving players enter arena
     QueueBossSpawnIfArena(mapData)
@@ -439,7 +506,7 @@ function SpawnProceduralBoss(mapData)
     end
 
     Log("========================================")
-    Log("Spawning boss in arena...")
+    Log("Spawning boss(es) in arena...")
     Log("========================================")
 
     local bx = mapData.arenaWorldX
@@ -456,23 +523,9 @@ function SpawnProceduralBoss(mapData)
         return false
     end
 
-    -- Spawn boss as an enemy entity (same stats as regular enemies)
-    local bossID = SpawnEnemyAt(bx, by)
-
-    if not bossID or bossID == 0 then
-        Log("ERROR: Failed to spawn boss!")
-        return false
-    end
-
-    Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
-
-    -- Attach configurable boss script.
-    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
-
-    -- Set target (C++ side)
-    SetEnemyTarget(bossID, playerID)
-
-    -- Store arena boundaries in shared C++ store so BossScript can access them
+    -- Store arena boundaries BEFORE attaching the script so that BossScript's OnInit
+    -- can read correct bounds via GetSharedInt.  (Attaching the script calls OnInit
+    -- immediately; if bounds are set afterwards OnInit reads stale -1 values.)
     local arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3)
     local arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3)
     local arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4)
@@ -484,14 +537,58 @@ function SpawnProceduralBoss(mapData)
     Log("Arena bounds set: (" .. arenaMinX .. "," .. arenaMinY
         .. ") to (" .. arenaMaxX .. "," .. arenaMaxY .. ")")
 
+    -- Determine how many bosses to spawn based on current level
+    -- Level 2 only: 2 bosses. Level 1 and 3: 1 boss.
+    local bossCount = 1
+    if currentLevel == 2 then
+        bossCount = 2
+    end
+
+    -- Boss spawn offsets within the arena (grid offsets from center)
+    -- For 1 boss: spawn at center. For 2 bosses: offset left and right.
+    local bossOffsets = {}
+    if bossCount == 1 then
+        bossOffsets = { {dx = 0, dy = 0} }
+    else
+        bossOffsets = { {dx = -2, dy = 0}, {dx = 2, dy = 0} }
+    end
+
+    bossEntityIDs = {}
+    for i = 1, bossCount do
+        local spawnX = bx + (bossOffsets[i].dx * kSpacingX)
+        local spawnY = by + (bossOffsets[i].dy * kSpacingY)
+
+        local bossID = SpawnEnemyAt(spawnX, spawnY)
+
+        if not bossID or bossID == 0 then
+            Log("ERROR: Failed to spawn boss " .. i .. "!")
+            return false
+        end
+
+        Log("Boss " .. i .. " spawned at grid offset (" .. bossOffsets[i].dx .. ", " .. bossOffsets[i].dy .. ") -> Entity " .. bossID)
+
+        -- Attach boss script based on current level
+        local scriptPath = BOSS_SCRIPT_PATH
+        if currentLevel >= 3 then
+            scriptPath = BOSS2_SCRIPT_PATH
+        end
+        AddScriptComponentToEntity(bossID, scriptPath)
+
+        -- Set target (C++ side)
+        SetEnemyTarget(bossID, playerID)
+
+        table.insert(bossEntityIDs, bossID)
+        Log("Boss " .. i .. " (Entity " .. bossID .. ") script attached (" .. scriptPath .. ") + target set to " .. tostring(playerID))
+    end
+
     -- Track boss entity and arena position so portal spawns here after boss dies
-    bossEntityID = bossID
+    bossEntityID = bossEntityIDs[#bossEntityIDs]
     bossArenaGridX = mapData.arenaX
     bossArenaGridY = mapData.arenaY
     bossArenaWorldX = bx
     bossArenaWorldY = by
 
-    Log("Boss " .. bossID .. " script attached (" .. BOSS_SCRIPT_PATH .. ") + target set to " .. tostring(playerID))
+    Log(bossCount .. " boss(es) spawned in arena")
     Log("========================================")
     return true
 end
@@ -525,6 +622,12 @@ function QueueBossSpawnIfArena(mapData)
 
     bossEntityID = nil
     bossDefeated = false
+
+    -- Spawn red portal at arena center as a visual indicator
+    local portalSize = 0.09
+    redPortalEntity = SpawnSprite("assets/Menu/Portal_Red.png", bx, by, portalSize, portalSize, 1)
+    Log("Red portal indicator spawned at arena center (" .. tostring(bx) .. ", " .. tostring(by) .. ")")
+
     Log("Boss spawn queued: boss will appear once all surviving players enter arena")
     return true
 end
@@ -564,6 +667,25 @@ local function TrySpawnQueuedBoss()
         return
     end
 
+    -- CRITICAL: Never spawn the boss while the enemy turn is active.
+    -- Adding a new enemy entity mid-enemy-turn corrupts EnemyTurnManager's
+    -- ActiveEnemyIndex state (the new boss appears in GetAllEnemies() at an
+    -- unexpected index, conflicting with the already-running sequential turn).
+    -- Defer to the next player turn - players cannot move during the enemy turn,
+    -- so they will still be in the arena when this check runs again on the first
+    -- frame of the player turn.
+    if GetCurrentTurn and GetCurrentTurn() == "Enemy" then
+        Log("[ProceduralMapLevel] Boss spawn deferred: enemy turn in progress, will spawn next player-turn frame")
+        return
+    end
+
+    -- Remove the red portal indicator now that boss is about to spawn
+    if redPortalEntity and redPortalEntity ~= 0 then
+        DestroyEntity(redPortalEntity)
+        redPortalEntity = nil
+        Log("Red portal indicator removed - boss spawning")
+    end
+
     local spawnData = pendingBossSpawn
     local spawned = SpawnProceduralBoss(spawnData)
     if spawned then
@@ -600,7 +722,7 @@ function SpawnProceduralChestsAndGoal(mapData)
             goalWorldY = mapData.goalWorldY
         }
 
-        if bossEntityID or pendingBossSpawn then
+        if #bossEntityIDs > 0 or pendingBossSpawn then
             Log("Portal will appear after boss is defeated")
         else
             -- No boss on this level, spawn portal immediately
@@ -640,24 +762,30 @@ function SpawnPortalNow()
 end
 
 function CheckBossDefeated()
-    if bossDefeated or not bossEntityID then return end
+    if bossDefeated or #bossEntityIDs == 0 then return end
 
-    if not IsEntityValid(bossEntityID) then
-        bossDefeated = true
-        Log("BOSS DEFEATED - Spawning portal in boss room!")
-
-        -- Spawn portal at boss arena center
-        local goalID = SpawnGoalAt(bossArenaWorldX, bossArenaWorldY)
-        goalPosition = {
-            gridX = bossArenaGridX,
-            gridY = bossArenaGridY,
-            worldX = bossArenaWorldX,
-            worldY = bossArenaWorldY,
-            entityID = goalID
-        }
-        pendingGoalData = nil
-        Log("Portal spawned in boss room at grid (" .. bossArenaGridX .. ", " .. bossArenaGridY .. ") -> Entity " .. goalID)
+    -- Check if ALL bosses are dead
+    for _, bossID in ipairs(bossEntityIDs) do
+        if IsEntityValid(bossID) then
+            return  -- At least one boss is still alive
+        end
     end
+
+    -- All bosses defeated
+    bossDefeated = true
+    Log("ALL BOSSES DEFEATED - Spawning portal in boss room!")
+
+    -- Spawn portal at boss arena center
+    local goalID = SpawnGoalAt(bossArenaWorldX, bossArenaWorldY)
+    goalPosition = {
+        gridX = bossArenaGridX,
+        gridY = bossArenaGridY,
+        worldX = bossArenaWorldX,
+        worldY = bossArenaWorldY,
+        entityID = goalID
+    }
+    pendingGoalData = nil
+    Log("Portal spawned in boss room at grid (" .. bossArenaGridX .. ", " .. bossArenaGridY .. ") -> Entity " .. goalID)
 end
 
 -- ============================================================================
@@ -796,6 +924,25 @@ function OnUpdate(dt)
     end
 
     -- ========================================
+    -- DEBUG: Jump to specific level (press 8)
+    -- Cycles through levels: 1 -> 2 -> 3 -> 1
+    -- ========================================
+    if IsKeyDown("8") then
+        local nextLvl = (currentLevel % totalLevels) + 1
+        Log("DEBUG: Jumping to level " .. nextLvl)
+        local f = io.open("assets/JSON/LevelProgress.json", "w")
+        if f then
+            f:write("{\n")
+            f:write("  \"currentLevel\": " .. nextLvl .. ",\n")
+            f:write("  \"totalLevels\": " .. totalLevels .. "\n")
+            f:write("}\n")
+            f:close()
+        end
+        SetNextGameState("LEVEL_3")
+        return
+    end
+
+    -- ========================================
     -- CHEAT: Skip to lose screen (press 6)
     -- ========================================
     if IsKeyDown("6") then
@@ -823,6 +970,43 @@ function OnUpdate(dt)
             end
             Log("[CHEAT] Killed all " .. #enemies .. " enemies")
         end
+    end
+
+    -- ========================================
+    -- CHEAT: Kill all enemies (press F2)
+    -- ========================================
+    if IsKeyDown("F2") and not goalReached then
+        local enemies = GetAllEnemies()
+        if enemies and #enemies > 0 then
+            for _, eid in ipairs(enemies) do
+                SetEntityHP(eid, 0, 0)
+                DestroyEntity(eid)
+            end
+            Log("[CHEAT] F2 killed all " .. #enemies .. " enemies")
+        end
+    end
+
+    -- ========================================
+    -- CHEAT: Auto-complete current level (press F3)
+    -- ========================================
+    if IsKeyDown("F3") then
+        SetNextGameState("WIN_SCREEN")
+        return
+    end
+
+    -- CHEAT: Skip to level 2 (press F4)
+    -- ========================================
+    if IsKeyDown("F4") and currentLevel ~= 2 then
+        local f = io.open("assets/JSON/LevelProgress.json", "w")
+        if f then
+            f:write("{\n")
+            f:write("  \"currentLevel\": 2,\n")
+            f:write("  \"totalLevels\": " .. totalLevels .. "\n")
+            f:write("}\n")
+            f:close()
+        end
+        SetNextGameState("LEVEL_3")
+        return
     end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues
@@ -906,8 +1090,13 @@ end
 function OnDraw()
     PauseMenu.Draw()
 
-    -- Render skill swap UI overlay
+    -- Render skill swap UI overlay (manages its own pause/active state)
     SkillSwapUI.Draw()
+
+    -- When paused, only draw the pause/overlay UIs — skip all game UI
+    if IsPaused() then
+        return
+    end
 
     -- Render UI components (including scroll animation text)
     UIManager.Draw()
@@ -938,12 +1127,39 @@ function OnDestroy()
     -- Stop audio
     StopMusic(0.5)
 
+    -- Destroy player active-character indicator
+    if DestroyActiveCharIndicator then
+        DestroyActiveCharIndicator()
+        Log("  Destroyed active character indicator")
+    end
+
+    -- Destroy all enemy indicators
+    if DestroyAllEnemyIndicators then
+        DestroyAllEnemyIndicators()
+        Log("  Destroyed all enemy indicators")
+    end
+
+    -- Force-end enemy turn state so it doesn't carry over
+    EnemyTurnActive = false
+    ActiveEnemyIndex = 0
+
+    -- Reset party state
+    PartyMembers = {}
+    ActiveCharacterIndex = 1
+    PartyTurnComplete = false
+
     -- Destroy UI system
     UIManager.Destroy()
 
     -- Reset state
     audioConfig = nil
     initialized = false
+    goalReached = false
+    goalPosition = nil
+    bossEntityID = nil
+    bossDefeated = false
+    pendingGoalData = nil
+    pendingBossSpawn = nil
 
     Log("Level 3 (Procedural) cleanup complete")
     Log("========================================")

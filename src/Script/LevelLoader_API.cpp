@@ -278,74 +278,48 @@ namespace Framework {
         return 1;
     }
 
-    /**
-     * @brief Sets the music volume for the game
-     * @params volume (number) - 0.0 to 1.0
-     */
     int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->audioSystem) return 0;
-
         float volume = luaL_checknumber(L, 1);
         loader->audioSystem->SetMusicVolume(volume);
         return 0;
     }
 
-    /**
-     * @brief Gets the saved music volume from audio config
-     * @return number - The saved music volume (0.0 to 1.0)
-     */
     int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
-        float volume = AudioLoader::GetSettings().musicVolume;
-        lua_pushnumber(L, volume);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetMusicVolume());
         return 1;
     }
 
-    /**
-     * @brief Saves the music volume to audio config JSON file
-     * @params volume (number) - 0.0 to 1.0
-     * @return boolean - True if save succeeded
-     */
     int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
-        float volume = luaL_checknumber(L, 1);
-        bool success = AudioLoader::SetMusicVolume(volume);
-        lua_pushboolean(L, success);
-        return 1;
+        return Lua_SaveMasterVolume(L);
     }
 
-    /**
-     * @brief Sets the sfx volume for the game
-     * @params volume (number) - 0.0 to 1.0
-     */
     int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
         LevelLoader* loader = GetLevelLoader(L);
         if (!loader || !loader->audioSystem) return 0;
-
         float volume = luaL_checknumber(L, 1);
         loader->audioSystem->SetSfxVolume(volume);
         return 0;
     }
 
-    /**
-     * @brief Gets the saved sfx volume from audio config
-     * @return number - The saved sfx volume (0.0 to 1.0)
-     */
     int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
-        float volume = AudioLoader::GetSettings().sfxVolume;
-        lua_pushnumber(L, volume);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetSfxVolume());
         return 1;
     }
 
-    /**
-     * @brief Saves the sfx volume to audio config JSON file
-     * @params volume (number) - 0.0 to 1.0
-     * @return boolean - True if save succeeded
-     */
     int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {
-        float volume = luaL_checknumber(L, 1);
-        bool success = AudioLoader::SetSfxVolume(volume);
-        lua_pushboolean(L, success);
-        return 1;
+        return Lua_SaveMasterVolume(L);
     }
 
     // ========================================================================
@@ -567,52 +541,23 @@ namespace Framework {
 
         // Debug output removed for performance
 
-        // Match text visibility to left-to-right transition wipe driven from Lua.
-        float textVisibility = 1.0f;
-        lua_getglobal(L, "__transitionWipeProgress");
-        if (lua_isnumber(L, -1)) {
-            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
-            if (wipeProgress > 0.0f) {
-                const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
-                const float featherPx = 36.0f * viewportScale;
+        glm::vec3 textColor(colorR, colorG, colorB);
 
-                if (centeredX <= wipeEdgePx - featherPx) {
-                    lua_pop(L, 1);
-                    return 0;
-                }
-
-                if (centeredX < wipeEdgePx + featherPx) {
-                    const float span = std::max(1.0f, featherPx * 2.0f);
-                    textVisibility = std::clamp((centeredX - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
-                }
-            }
-        }
-        lua_pop(L, 1);
-
-        glm::vec3 textColor(colorR * textVisibility, colorG * textVisibility, colorB * textVisibility);
-
-        // CRITICAL FIX: Bind viewport FBO if editor is enabled
-        // This ensures text renders to the game viewport, not the main window
+        // Bind viewport FBO when rendering in editor viewport mode.
         GLuint previousFBO = 0;
         bool needsRestore = false;
 
         if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport()) {
             GLuint viewportFBO = imgui->GetViewportFBO();
             if (viewportFBO != 0) {
-                // Save current FBO and bind viewport FBO
                 glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&previousFBO));
                 glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
                 needsRestore = true;
-
-                // Rendering text to viewport FBO
             }
         }
 
-        // Draw text to the currently bound framebuffer (viewport or main window)
-        // Use centered coordinates and finalScale for responsive, centered text
         loader->graphicsSystem->DrawText4(font, text, centeredX, centeredY, finalScale, textColor);
 
-        // Restore previous framebuffer
         if (needsRestore) {
             glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
         }
@@ -634,47 +579,7 @@ namespace Framework {
         float g = luaL_checknumber(L, 7);
         float b = luaL_checknumber(L, 8);
 
-        float textVisibility = 1.0f;
-        lua_getglobal(L, "__transitionWipeProgress");
-        if (lua_isnumber(L, -1)) {
-            const float wipeProgress = std::clamp(static_cast<float>(lua_tonumber(L, -1)), 0.0f, 1.0f);
-            if (wipeProgress > 0.0f && loader->coreEngine) {
-                int fbWidth = 0;
-                int fbHeight = 0;
-
-                auto* imgui = loader->coreEngine->GetImGuiSystem();
-                if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport() &&
-                    imgui->GetViewportFBO() != 0) {
-                    fbWidth = imgui->GetViewportWidth();
-                    fbHeight = imgui->GetViewportHeight();
-                }
-                else {
-                    auto* windowSystem = loader->coreEngine->GetWindowSystem();
-                    if (windowSystem) {
-                        GLFWwindow* window = windowSystem->GetWindow();
-                        if (window) {
-                            glfwGetWindowSize(window, &fbWidth, &fbHeight);
-                        }
-                    }
-                }
-
-                if (fbWidth > 0 && fbHeight > 0) {
-                    const float wipeEdgePx = static_cast<float>(fbWidth) * wipeProgress;
-                    const float featherPx = 28.0f;
-                    if (x <= wipeEdgePx - featherPx) {
-                        lua_pop(L, 1);
-                        return 0;
-                    }
-                    if (x < wipeEdgePx + featherPx) {
-                        const float span = std::max(1.0f, featherPx * 2.0f);
-                        textVisibility = std::clamp((x - (wipeEdgePx - featherPx)) / span, 0.0f, 1.0f);
-                    }
-                }
-            }
-        }
-        lua_pop(L, 1);
-
-        glm::vec3 color(r * textVisibility, g * textVisibility, b * textVisibility);
+        glm::vec3 color(r, g, b);
         loader->graphicsSystem->DrawText4(font, text, x, y, scale, color);
 
         return 0;
@@ -3639,21 +3544,33 @@ namespace Framework {
                 uint32_t knightID = oathEffect->sourceEntity;
                 Entity knight(knightID);
                 if (em->HasComponent<Health>(knight)) {
-                    LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
-                        amount, entity.GetID(), knightID);
-
                     auto& knightHP = em->GetComponent<Health>(knight);
-                    knightHP.currentHealth -= amount;
 
-                    if (knightHP.currentHealth <= 0) {
-                        knightHP.currentHealth = 0;
-                        knightHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-                        loader->DeferEntityDestruction(knightID);
+                    if (knightHP.isDead) {
+                        // The protecting knight is already dead but not yet removed from the
+                        // entity manager (deferred destruction pending).  The oath is stale —
+                        // remove it so subsequent hits deal damage normally to this entity.
+                        effects.RemoveEffect("knightsOath");
+                        LOG_INFO("StatusEffect",
+                            "Knight's Oath on entity %u: knight %u already dead, removing stale effect",
+                            entity.GetID(), knightID);
+                        // Fall through to apply damage normally to the original target.
+                    } else {
+                        LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
+                            amount, entity.GetID(), knightID);
+
+                        knightHP.currentHealth -= amount;
+
+                        if (knightHP.currentHealth <= 0) {
+                            knightHP.currentHealth = 0;
+                            knightHP.isDead = true;
+                            LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
+                            loader->DeferEntityDestruction(knightID);
+                        }
+
+                        lua_pushboolean(L, 1);
+                        return 1;
                     }
-
-                    lua_pushboolean(L, 1);
-                    return 1;
                 }
             }
 
@@ -4100,6 +4017,7 @@ namespace Framework {
         int width = static_cast<int>(luaL_checknumber(L, 1));
         int height = static_cast<int>(luaL_checknumber(L, 2));
         const char* algorithm = luaL_checkstring(L, 3);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 4, 1));
 
         LevelLoader* loader = GetLevelLoader(L);
         CoreEngine* core = loader->coreEngine;
@@ -4133,7 +4051,7 @@ namespace Framework {
 
         // Generate and load
         MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
-            config, spawner, em, startPos, spacing, tileSize
+            config, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         s_lastGeneratedMap = map;
@@ -4492,6 +4410,7 @@ namespace Framework {
         }
 
         std::string filepath = lua_tostring(L, 1);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 2, 1));
 
         Framework::MapGen::GeneratedMap map;
         Framework::MapGen::Config config;
@@ -4522,7 +4441,7 @@ namespace Framework {
         MapGen::Generator::printMap(map);
 
         ProceduralMapLoader::LoadFromGeneratedMap(
-            map, spawner, em, startPos, spacing, tileSize
+            map, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         // Build the SAME Lua table as Lua_LoadProceduralMap returns.
@@ -4631,6 +4550,10 @@ namespace Framework {
             lua_pushstring(L, "arenaY");      lua_pushnumber(L, map.arenaCenter.y);                                lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldX"); lua_pushnumber(L, startPos.x + (map.arenaCenter.x * spacing.x));     lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldY"); lua_pushnumber(L, startPos.y + (map.arenaCenter.y * spacing.y));     lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinX");   lua_pushnumber(L, map.arenaMin.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinY");   lua_pushnumber(L, map.arenaMin.y);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxX");   lua_pushnumber(L, map.arenaMax.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxY");   lua_pushnumber(L, map.arenaMax.y);                                   lua_settable(L, -3);
         }
 
         return 1;
@@ -4722,7 +4645,8 @@ namespace Framework {
         auto& turn = Framework::Turn();
         turn.phase = Framework::TurnPhase::Player;
         turn.busy = false;
-        LOG_INFO("LevelLoader", "InitializeTurnSystem: Phase=Player, Busy=false");
+        turn.turnIndex = 0;
+        LOG_INFO("LevelLoader", "InitializeTurnSystem: Phase=Player, Busy=false, TurnIndex=0");
         return 0;
     }
 
@@ -5591,6 +5515,32 @@ namespace Framework {
         static float actionDelay = 0.5f;  // 0.5 seconds between enemies
         static std::vector<int> enemyList;
         static bool needsReinitialize = true;
+
+        void Reset() {
+            turnActive = false;
+            activeEnemyIndex = 0;
+            actionTimer = 0.0f;
+            actionDelay = 0.5f;
+            enemyList.clear();
+            needsReinitialize = true;
+        }
+    }
+
+    // ============================================================================
+    // LEVEL STATE RESET (called between level transitions)
+    // ============================================================================
+
+    void LevelLoader::ResetCppLevelState() {
+        auto& turn = Framework::Turn();
+        turn.phase = Framework::TurnPhase::Player;
+        turn.busy = false;
+        turn.turnIndex = 0;
+
+        LevelLoader::GetInstance().sharedIntStore.clear();
+
+        EnemyTurnState::Reset();
+
+        LOG_INFO("LevelLoader", "ResetCppLevelState: Turn, sharedIntStore, and EnemyTurnState all reset");
     }
 
     /**

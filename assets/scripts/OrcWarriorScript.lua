@@ -20,6 +20,22 @@ local regenCooldown = 0
 local facingDX = 0
 local facingDY = -1
 
+local healthBarBG = nil
+local healthBarFG = nil
+local healthBarWidth = 0.1
+local healthBarHeight = 0.015
+local healthBarOffsetY = 0.08
+local healthBarLayer = 2
+
+local glideActive = false
+local glideElapsed = 0.0
+local glideDuration = 0.35
+local glideStartX = 0.0
+local glideStartY = 0.0
+local glideEndX = 0.0
+local glideEndY = 0.0
+local pendingFinishAfterGlide = false
+
 local CONFIG = {
     maxHP = 6,
     maxAP = 2,
@@ -32,6 +48,70 @@ local CONFIG = {
     strongSwingSelfDamage = 2,
     strongSwingAPCost = 2
 }
+
+-- ============================================================================
+-- ANIMATION (Boss Minion sprite sheets)
+-- ============================================================================
+local ORC_ANIM = {
+    idleFront = { tex = "assets/enemy/Boss_Minion_Idle_Front-Sheet.png",  rows = 1, cols = 4, frames = 4, time = 0.12, loop = true  },
+    idleBack  = { tex = "assets/enemy/Boss_Minion_Idle_Back-Sheet.png",   rows = 1, cols = 4, frames = 4, time = 0.12, loop = true  },
+    idleSide  = { tex = "assets/enemy/Boss_Minion_Idle_Side-Sheet.png",   rows = 1, cols = 4, frames = 4, time = 0.12, loop = true  },
+
+    walkFront = { tex = "assets/enemy/Boss_Minion_Walk_Front-Sheet.png",  rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+    walkBack  = { tex = "assets/enemy/Boss_Minion_Walk_Back-Sheet.png",   rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+    walkSide  = { tex = "assets/enemy/Boss_Minion_Walk_Side-Sheet.png",   rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+
+    atkFront  = { tex = "assets/enemy/Boss_Minion_Attack_Front-Sheet.png", rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkBack   = { tex = "assets/enemy/Boss_Minion_Attack_Back-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkSide   = { tex = "assets/enemy/Boss_Minion_Attack_Side-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false }
+}
+
+local lastAnimKey = nil
+local lastFlipX = false
+
+local function ApplyOrcSheet(animKey, flipX)
+    if not SetSpriteAnimationSheet then return end
+    if animKey == lastAnimKey and flipX == lastFlipX then return end
+
+    local a = ORC_ANIM[animKey]
+    if not a then return end
+
+    local ok = SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    if not ok and SetSpriteTexture then
+        SetSpriteTexture(entityID, a.tex)
+    end
+
+    if SetSpriteFlip and flipX ~= lastFlipX then
+        SetSpriteFlip(entityID, flipX, false)
+    end
+
+    lastAnimKey = animKey
+    lastFlipX = flipX
+end
+
+local function UpdateOrcAnimation(isMoving, isAttacking)
+    local key, flipX
+    if facingDY < 0 then
+        -- facing down = front
+        if isAttacking then key = "atkFront"
+        elseif isMoving then key = "walkFront"
+        else key = "idleFront" end
+        flipX = false
+    elseif facingDY > 0 then
+        -- facing up = back
+        if isAttacking then key = "atkBack"
+        elseif isMoving then key = "walkBack"
+        else key = "idleBack" end
+        flipX = false
+    else
+        -- facing left/right = side
+        if isAttacking then key = "atkSide"
+        elseif isMoving then key = "walkSide"
+        else key = "idleSide" end
+        flipX = (facingDX < 0)
+    end
+    ApplyOrcSheet(key, flipX)
+end
 
 local function IsAlive(eid)
     if not eid or eid == 0 then return false end
@@ -145,13 +225,15 @@ local function UseStrongSwing()
     if not players then return false end
 
     local hitAny = false
+    local empAtk = GetSharedInt and GetSharedInt("orc_empowered_atk_" .. tostring(entityID)) or 0
+    local swingDamage = CONFIG.strongSwingDamage + (empAtk or 0)
     for _, pid in ipairs(players) do
         if IsAlive(pid) then
             local px, py = GetEntityGridPosition(pid)
             if px then
                 for _, t in ipairs(tiles) do
                     if t.x == px and t.y == py then
-                        DamageEntity(pid, CONFIG.strongSwingDamage, entityID)
+                        DamageEntity(pid, swingDamage, entityID)
                         hitAny = true
                     end
                 end
@@ -187,12 +269,23 @@ local function TryMoveTowardTarget()
     if not IsWalkableTile(nextTile.x, nextTile.y) then return false end
     if IsTileOccupied(nextTile.x, nextTile.y) then return false end
 
+    local sx, sy = GetEntityWorldPosition(entityID)
     local moved = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
     if not moved then return false end
 
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if sx and sy and wx and wy then
+        glideActive = true
+        glideElapsed = 0.0
+        glideStartX = sx
+        glideStartY = sy
+        glideEndX = wx
+        glideEndY = wy
+        SetSpritePosition(entityID, sx, sy)
+    end
+
     ConsumeEnemyAP(entityID, CONFIG.moveCost)
     mpRemaining = mpRemaining - 1
-    moveTimer = moveDelay
 
     UpdateFacingToward(px, py)
     ShowTileBorder(nextTile.x, nextTile.y, 0.25)
@@ -203,13 +296,45 @@ end
 local function StartTurn()
     isMyTurnToAct = true
     hasActedThisTurn = false
-    mpRemaining = CONFIG.moveMP
+    local empMP = GetSharedInt and GetSharedInt("orc_empowered_mp_" .. tostring(entityID)) or 0
+    mpRemaining = CONFIG.moveMP + (empMP or 0)
 
     if regenCooldown > 0 then
         regenCooldown = regenCooldown - 1
     end
 
     targetPlayerID = FindClosestPlayer()
+end
+
+local function UpdateHealthBar()
+    if not healthBarBG or not healthBarFG then return end
+    if healthBarBG <= 0 or healthBarFG <= 0 then return end
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if not wx or not wy then return end
+
+    local barY = wy + healthBarOffsetY
+    SetSpritePosition(healthBarBG, wx, barY)
+
+    local currentHP, maxHP = GetEntityHP(entityID)
+    if not currentHP or not maxHP or maxHP <= 0 then return end
+
+    local ratio = currentHP / maxHP
+    if ratio < 0 then ratio = 0 end
+    if ratio > 1 then ratio = 1 end
+
+    local fgWidth = healthBarWidth * ratio
+    local fgX = wx - (healthBarWidth - fgWidth) * 0.5
+    SetSpritePosition(healthBarFG, fgX, barY)
+    SetScale(healthBarFG, fgWidth, healthBarHeight)
+
+    local r, g, b = 0.0, 0.85, 0.0
+    if ratio <= 0.25 then
+        r, g, b = 0.9, 0.1, 0.1
+    elseif ratio <= 0.5 then
+        r, g, b = 0.85, 0.75, 0.0
+    end
+    SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
 local function FinishTurn()
@@ -225,12 +350,64 @@ function OnInit()
 
     SetEntityHP(entityID, CONFIG.maxHP, CONFIG.maxHP)
     if SetEntityMaxAP then SetEntityMaxAP(entityID, CONFIG.maxAP) end
-    SetEntityAP(entityID, CONFIG.maxAP, CONFIG.maxAP)
+
+    local wx, wy = GetEntityWorldPosition(entityID)
+    if wx and wy then
+        local barY = wy + healthBarOffsetY
+        healthBarBG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer)
+        if healthBarBG and healthBarBG > 0 then
+            SetSpriteColor(healthBarBG, 0.15, 0.15, 0.15, 0.85)
+        end
+        healthBarFG = SpawnSprite("", wx, barY, healthBarWidth, healthBarHeight, healthBarLayer + 1)
+        if healthBarFG and healthBarFG > 0 then
+            SetSpriteColor(healthBarFG, 0.0, 0.85, 0.0, 1.0)
+        end
+    end
 
     targetPlayerID = FindClosestPlayer()
+
+    -- Set initial Boss Minion appearance
+    ApplyOrcSheet("idleFront", false)
+end
+
+function OnDestroy()
+    if healthBarBG and healthBarBG > 0 then
+        DestroyEntity(healthBarBG)
+        healthBarBG = nil
+    end
+    if healthBarFG and healthBarFG > 0 then
+        DestroyEntity(healthBarFG)
+        healthBarFG = nil
+    end
 end
 
 function OnUpdate(dt)
+    UpdateHealthBar()
+
+    if glideActive then
+        UpdateOrcAnimation(true, false)
+        glideElapsed = glideElapsed + dt
+        local t = glideElapsed / glideDuration
+        if t > 1.0 then t = 1.0 end
+        local eased = 1.0 - (1.0 - t) * (1.0 - t)
+        local x = glideStartX + (glideEndX - glideStartX) * eased
+        local y = glideStartY + (glideEndY - glideStartY) * eased
+        SetSpritePosition(entityID, x, y)
+        if t >= 1.0 then
+            SetSpritePosition(entityID, glideEndX, glideEndY)
+            glideActive = false
+            moveTimer = moveDelay
+            if pendingFinishAfterGlide then
+                pendingFinishAfterGlide = false
+                if GetCurrentTurn() == "Enemy" then
+                    FinishTurn()
+                end
+                return
+            end
+        end
+        if glideActive then return end
+    end
+
     if moveTimer > 0 then
         moveTimer = moveTimer - dt
         if moveTimer < 0 then moveTimer = 0 end
@@ -241,6 +418,11 @@ function OnUpdate(dt)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
+            pendingFinishAfterGlide = false
+            if glideActive then
+                SetSpritePosition(entityID, glideEndX, glideEndY)
+                glideActive = false
+            end
         end
         lastEnemyTurn = turn
         return
@@ -273,19 +455,31 @@ function OnUpdate(dt)
         return
     end
 
-    if CanUseStrongSwingOnAnyPlayer() and UseStrongSwing() then
-        FinishTurn()
-        return
+    if CanUseStrongSwingOnAnyPlayer() then
+        UpdateOrcAnimation(false, true)
+        if UseStrongSwing() then
+            FinishTurn()
+            return
+        end
     end
 
     if moveTimer <= 0 then
         TryMoveTowardTarget()
     end
 
-    if CanUseStrongSwingOnAnyPlayer() and UseStrongSwing() then
-        FinishTurn()
+    if glideActive then
+        pendingFinishAfterGlide = true
         return
     end
 
+    if CanUseStrongSwingOnAnyPlayer() then
+        UpdateOrcAnimation(false, true)
+        if UseStrongSwing() then
+            FinishTurn()
+            return
+        end
+    end
+
+    UpdateOrcAnimation(false, false)
     FinishTurn()
 end

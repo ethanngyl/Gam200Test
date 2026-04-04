@@ -2,12 +2,12 @@
   "skills": {
     "Thrust": {
       "name": "Thrust",
-      "description": "Targets 1 adjacent enemy, deals 1 damage",
+      "description": "Stab forward, deals 1 damage to the enemy directly ahead",
       "skillType": "melee",
       "apCost": 1,
       "damage": 1,
       "range": 1,
-      "pattern": "adjacent",
+      "pattern": "single",
       "animationName": "Attack",
       "soundEffect": "sword_slash"
     },

@@ -13,10 +13,9 @@ components (movement AP, attack AP, health, turn indicator, turn scroll).
 Supports party/active-character AP and toggles player UI off during enemy turn.
 
 Details:
-- Requires UI/APIndicatorUI, AttackAPIndicatorUI, HealthUI, TurnIndicatorUI,
-  and ScrollOpen (TurnScrollUI). Holds components in UIManager.components.
-- Init(config): Creates movementAP (GetActiveCharacterAP for party), attackAP,
-  health, turnIndicator, turnScroll with fixed configs (paths, offsets, layers,
+- Requires HealthUI, ScrollOpen (TurnScrollUI), SkillBubbleHolderUI,
+  TurnOrderUI, and TutorialPopupUI. Holds components in UIManager.components.
+- Init(config): Creates health, turnScroll, turnOrder with fixed configs (paths, offsets, layers,
   animation/sprite sheet settings). Sets UIManager.initialized = true.
 - Update(dt): Gets camera position; if GetCurrentTurn() == "Enemy", disables
   movementAP, attackAP, health; then calls component:Update(dt, cameraPos) on all.
@@ -55,10 +54,11 @@ local UIManager = {}
 
 -- Import UI components
 local HealthUI = require("UI/HealthUI")
-local TurnIndicatorUI = require("UI/TurnIndicatorUI")
+
 local TurnScrollUI = require("ScrollOpen")
 local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")
 local TutorialPopupUI = require("UI/TutorialPopupUI")
+local TurnOrderUI = require("UI/TurnOrderUI")
 
 -- ============================================================================
 -- STATE
@@ -185,7 +185,7 @@ function UIManager.Init(config)
         hpFillTexture = "assets/TileMap/Attack_Indicator.png",
         hpTextShowPercent = false,
         hpTextOffsetY = 0.0097,
-        hpTextOffsetX = -0.0025,
+        hpTextOffsetX = 0.0025,
         attackFillOffsetX = 0.0429,
         attackFillOffsetY = 0.05,
         attackFillWidth = 0.365,
@@ -204,20 +204,6 @@ function UIManager.Init(config)
         getAttackAPFunc = GetAttackAPForBars,
         layer = 4,
         textureBasePath = "assets/UI/Health_"
-    })
-
-    -- Create Turn Indicator (Animated sprite sheet)
-    UIManager.components.turnIndicator = TurnIndicatorUI:New()
-    UIManager.components.turnIndicator:Init({
-        offsetX = -0.82,
-        offsetY = -0.19,
-        scaleX = 0.18,
-        scaleY = 0.18,
-        layer = 4,
-        texture = "assets/UI/End_Turn_Button.png",
-        rows = 2,           -- Row 0: Player turn, Row 1: Enemy turn
-        cols = 2,           -- 2 columns per row
-        frameTime = 0.3     -- Animation speed (seconds per frame)
     })
 
     -- Create Turn Scroll UI (Your Turn animation)
@@ -251,7 +237,7 @@ function UIManager.Init(config)
         tooltipTexture = "assets/Menu/Scroll Overlay.png",
         tooltipScaleX = 0.35,
         tooltipScaleY = 0.22,
-        tooltipOffsetX = 0.34,
+        tooltipOffsetX = 0.6,
         slotLabelFont = "Jersey20Regular",
         slotLabelScale = 0.5,
         slotLabelOffsetXPx = -35,
@@ -277,18 +263,52 @@ function UIManager.Init(config)
         }
     })
 
+    -- Create Turn Order UI (character portraits with active highlight)
+    UIManager.components.turnOrder = TurnOrderUI:New()
+    UIManager.components.turnOrder:Init({
+        offsetX = 0.0,
+        offsetY = 0.42,
+        layer = 8,
+        portraitSize = 0.2,
+        arrowSize = 0.04,
+        spacing = 0.14,
+        bgScaleX = 0.15,
+        bgScaleY = 0.70,
+        arrowTexture = "assets/new assets/Back_ParchmentButton.png",
+        activeScale = 1.2,
+        inactiveTint = { r = 0.5, g = 0.5, b = 0.5, a = 1.0 },
+        charConfigs = {
+            {
+                texture = "assets/Warrior/FrontView/WarriorTopDownView.png",
+                rows = 1, columns = 12, frameCount = 12, frameTime = 0.55
+            },
+            {
+                texture = "assets/Mage/FrontView/Mage_Idle_Front-Sheet.png",
+                rows = 1, columns = 12, frameCount = 12, frameTime = 0.55
+            },
+            {
+                texture = "assets/Berserker/FrontView/Berserker_Idle_Front-Sheet.png",
+                rows = 1, columns = 12, frameCount = 6, frameTime = 0.55
+            }
+        },
+        enemyConfig = {
+            texture = "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",
+            rows = 1, columns = 12, frameCount = 12, frameTime = 0.08
+        }
+    })
+
     if currentLevel == 1 then
         UIManager.components.tutorialPopup = TutorialPopupUI:New()
         UIManager.components.tutorialPopup:Init({
             offsetX = -0.60,
             offsetY = -0.08,
-            scaleX = 0.42,
-            scaleY = 0.24,
+            scaleX = 0.52,
+            scaleY = 0.30,
             layer = 7,
             texture = "assets/Menu/Scroll Overlay.png",
             font = "Jersey20Regular",
-            paddingXPx = 96,
-            titleInsetTopPx = 58,
+            paddingXPx = 130,
+            titleInsetTopPx = 63,
             wrapChars = 52,
             steps = {
                 {

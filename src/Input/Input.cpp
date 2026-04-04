@@ -56,23 +56,127 @@ namespace Framework
         // Store previous frame's key states
         PreviousKeys = CurrentKeys;
 
+        // --------------------------------------------------------------------
+        // CONTROLLER INPUT (GLFW gamepad API)
+        // Left stick  -> WASD movement
+        // D-pad       -> Arrow-key facing
+        // Right stick -> Virtual mouse cursor
+        // A button    -> Left mouse click
+        // --------------------------------------------------------------------
+        bool gamepadConnected = false;
+        bool padDpadUp = false;
+        bool padDpadDown = false;
+        bool padDpadLeft = false;
+        bool padDpadRight = false;
+        bool padMoveUp = false;
+        bool padMoveDown = false;
+        bool padMoveLeft = false;
+        bool padMoveRight = false;
+        bool padMouseLeft = false;
+        bool padKey1 = false;
+        bool padKey2 = false;
+        bool padKey3 = false;
+        bool padKey4 = false;
+        bool padLuaX = false;
+        bool padLuaY = false;
+        bool padAttack = false;
+        bool padStart = false;
+        bool padBack = false;
+        float padLookX = 0.0f;
+        float padLookY = 0.0f;
+
+        if (window && glfwGetWindowAttrib(window, GLFW_FOCUSED)) {
+            if (glfwJoystickPresent(GLFW_JOYSTICK_1) && glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) {
+                GLFWgamepadstate gamepadState{};
+                if (glfwGetGamepadState(GLFW_JOYSTICK_1, &gamepadState) == GLFW_TRUE) {
+                    gamepadConnected = true;
+
+                    const float stickDeadzone = 0.35f;
+                    const float lx = gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X];
+                    const float ly = gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
+
+                    // GLFW Y axis is negative when pushing up.
+                    padMoveUp = (ly < -stickDeadzone);
+                    padMoveDown = (ly > stickDeadzone);
+                    padMoveLeft = (lx < -stickDeadzone);
+                    padMoveRight = (lx > stickDeadzone);
+
+                    padDpadUp = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP] == GLFW_PRESS;
+                    padDpadDown = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN] == GLFW_PRESS;
+                    padDpadLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT] == GLFW_PRESS;
+                    padDpadRight = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT] == GLFW_PRESS;
+
+                    padMouseLeft = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER] == GLFW_PRESS;
+                    padKey1 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_X] == GLFW_PRESS;
+                    padKey2 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_B] == GLFW_PRESS;
+                    padKey3 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_Y] == GLFW_PRESS;
+                    padKey4 = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_A] == GLFW_PRESS;
+                    padLuaX = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER] == GLFW_PRESS;
+
+                    const float lt = gamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+                    padLuaY = (lt > 0.35f);
+                    // GLFW trigger axes are typically [-1..1]. Treat near-pressed as attack.
+                    const float rt = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+                    padAttack = (rt > 0.35f);
+                    padStart = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_START] == GLFW_PRESS;
+                    padBack = gamepadState.buttons[GLFW_GAMEPAD_BUTTON_BACK] == GLFW_PRESS;
+                    padLookX = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X];
+                    padLookY = gamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
+                }
+            }
+        }
+
+        if (window && gamepadConnected) {
+            double currentX = 0.0;
+            double currentY = 0.0;
+            if (!virtualMouseInitialized) {
+                glfwGetCursorPos(window, &currentX, &currentY);
+                virtualMouseX = static_cast<float>(currentX);
+                virtualMouseY = static_cast<float>(currentY);
+                virtualMouseInitialized = true;
+            }
+
+            const float lookDeadzone = 0.20f;
+            const float mouseSpeedPxPerSec = 700.0f;
+            float moveX = (std::fabs(padLookX) > lookDeadzone) ? padLookX : 0.0f;
+            float moveY = (std::fabs(padLookY) > lookDeadzone) ? padLookY : 0.0f;
+
+            if (moveX != 0.0f || moveY != 0.0f || padMouseLeft) {
+                useVirtualMouse = true;
+
+                virtualMouseX += moveX * mouseSpeedPxPerSec * dt;
+                virtualMouseY += moveY * mouseSpeedPxPerSec * dt;
+
+                int winW = 0;
+                int winH = 0;
+                glfwGetWindowSize(window, &winW, &winH);
+                const float maxMouseX = static_cast<float>((winW > 0) ? (winW - 1) : 0);
+                const float maxMouseY = static_cast<float>((winH > 0) ? (winH - 1) : 0);
+                virtualMouseX = std::clamp(virtualMouseX, 0.0f, maxMouseX);
+                virtualMouseY = std::clamp(virtualMouseY, 0.0f, maxMouseY);
+
+                // Keep OS cursor in sync so hover feedback aligns with visible cursor.
+                glfwSetCursorPos(window, virtualMouseX, virtualMouseY);
+            }
+        }
+
         // Movement keys
-        UpdateKeyState(KEY_W, GetAsyncKeyState(KEY_W));
-        UpdateKeyState(KEY_A, GetAsyncKeyState(KEY_A));
-        UpdateKeyState(KEY_S, GetAsyncKeyState(KEY_S));
-        UpdateKeyState(KEY_D, GetAsyncKeyState(KEY_D));
+        UpdateKeyState(KEY_W, GetAsyncKeyState(KEY_W) || (gamepadConnected && padMoveUp));
+        UpdateKeyState(KEY_A, GetAsyncKeyState(KEY_A) || (gamepadConnected && padMoveLeft));
+        UpdateKeyState(KEY_S, GetAsyncKeyState(KEY_S) || (gamepadConnected && padMoveDown));
+        UpdateKeyState(KEY_D, GetAsyncKeyState(KEY_D) || (gamepadConnected && padMoveRight));
 
         //Arrow Keys: For player
-        UpdateKeyState(KEY_UP, GetAsyncKeyState(KEY_UP));
-        UpdateKeyState(KEY_DOWN, GetAsyncKeyState(KEY_DOWN));
-        UpdateKeyState(KEY_LEFT, GetAsyncKeyState(KEY_LEFT));
-        UpdateKeyState(KEY_RIGHT, GetAsyncKeyState(KEY_RIGHT));
+        UpdateKeyState(KEY_UP, GetAsyncKeyState(KEY_UP) || (gamepadConnected && padDpadUp));
+        UpdateKeyState(KEY_DOWN, GetAsyncKeyState(KEY_DOWN) || (gamepadConnected && padDpadDown));
+        UpdateKeyState(KEY_LEFT, GetAsyncKeyState(KEY_LEFT) || (gamepadConnected && padDpadLeft));
+        UpdateKeyState(KEY_RIGHT, GetAsyncKeyState(KEY_RIGHT) || (gamepadConnected && padDpadRight));
 
 
         // System keys
         UpdateKeyState(KEY_Q, GetAsyncKeyState(KEY_Q));
-        UpdateKeyState(KEY_ESCAPE, GetAsyncKeyState(KEY_ESCAPE));
-        UpdateKeyState(KEY_SPACE, GetAsyncKeyState(KEY_SPACE));
+        UpdateKeyState(KEY_ESCAPE, GetAsyncKeyState(KEY_ESCAPE) || (gamepadConnected && padBack));
+        UpdateKeyState(KEY_SPACE, GetAsyncKeyState(KEY_SPACE) || (gamepadConnected && padAttack));
         UpdateKeyState(KEY_ENTER, GetAsyncKeyState(KEY_ENTER));
 		UpdateKeyState(KEY_DELETE, GetAsyncKeyState(KEY_DELETE));
         UpdateKeyState(KEY_Z, GetAsyncKeyState(KEY_Z));
@@ -84,7 +188,7 @@ namespace Framework
         UpdateKeyState(KEY_O, GetAsyncKeyState(KEY_O));
         UpdateKeyState(KEY_R, GetAsyncKeyState(KEY_R));
         UpdateKeyState(KEY_T, GetAsyncKeyState(KEY_T));
-        UpdateKeyState(KEY_P, GetAsyncKeyState(KEY_P));
+        UpdateKeyState(KEY_P, GetAsyncKeyState(KEY_P) || (gamepadConnected && padStart));
         UpdateKeyState(KEY_TAB, GetAsyncKeyState(KEY_TAB));
 
         UpdateKeyState(KEY_M, GetAsyncKeyState(KEY_M));
@@ -94,18 +198,18 @@ namespace Framework
         UpdateKeyState(KEY_L, GetAsyncKeyState(KEY_L));
 
         UpdateKeyState(KEY_I, GetAsyncKeyState(KEY_I));
-        UpdateKeyState(KEY_X, GetAsyncKeyState(KEY_X));
-        UpdateKeyState(KEY_Y, GetAsyncKeyState(KEY_Y));
+        UpdateKeyState(KEY_X, GetAsyncKeyState(KEY_X) || (gamepadConnected && padLuaX));
+        UpdateKeyState(KEY_Y, GetAsyncKeyState(KEY_Y) || (gamepadConnected && padLuaY));
         UpdateKeyState(KEY_C, GetAsyncKeyState(KEY_C));
         UpdateKeyState(KEY_V, GetAsyncKeyState(KEY_V));
         UpdateKeyState(KEY_B, GetAsyncKeyState(KEY_B));
         UpdateKeyState(KEY_N, GetAsyncKeyState(KEY_N));
 
         // Number keys
-        UpdateKeyState(KEY_1, GetAsyncKeyState(KEY_1));
-        UpdateKeyState(KEY_2, GetAsyncKeyState(KEY_2));
-        UpdateKeyState(KEY_3, GetAsyncKeyState(KEY_3));
-        UpdateKeyState(KEY_4, GetAsyncKeyState(KEY_4));
+        UpdateKeyState(KEY_1, GetAsyncKeyState(KEY_1) || (gamepadConnected && padKey1));
+        UpdateKeyState(KEY_2, GetAsyncKeyState(KEY_2) || (gamepadConnected && padKey2));
+        UpdateKeyState(KEY_3, GetAsyncKeyState(KEY_3) || (gamepadConnected && padKey3));
+        UpdateKeyState(KEY_4, GetAsyncKeyState(KEY_4) || (gamepadConnected && padKey4));
         UpdateKeyState(KEY_5, GetAsyncKeyState(KEY_5));
         UpdateKeyState(KEY_6, GetAsyncKeyState(KEY_6));
         UpdateKeyState(KEY_7, GetAsyncKeyState(KEY_7));
@@ -121,7 +225,7 @@ namespace Framework
         UpdateKeyState(KEY_F9, GetAsyncKeyState(KEY_F9)); 
 
         // Mouse buttons
-        UpdateKeyState(MOUSE_LEFT, GetAsyncKeyState(MOUSE_LEFT));
+        UpdateKeyState(MOUSE_LEFT, GetAsyncKeyState(MOUSE_LEFT) || (gamepadConnected && padMouseLeft));
         UpdateKeyState(MOUSE_RIGHT, GetAsyncKeyState(MOUSE_RIGHT));
 
 
@@ -158,6 +262,12 @@ namespace Framework
         y = 0.0f;
 
         if (!window) {
+            return;
+        }
+
+        if (useVirtualMouse) {
+            x = virtualMouseX;
+            y = virtualMouseY;
             return;
         }
 

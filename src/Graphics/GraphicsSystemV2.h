@@ -40,6 +40,7 @@ Technology is prohibited.
 #include "Camera.h"
 #include "RenderCommand.h"
 #include "RenderComponents.h"
+#include "RenderLayers.h"
 #include "Material.h"
 #include "Precompiled.h"
 #include <memory>
@@ -97,7 +98,9 @@ namespace Framework {
 
         void DrawText4(const std::string& fontKey, const std::string& text,
             float x, float y, float scale = 1.0f,
-            const glm::vec3& color = glm::vec3(1, 1, 1));
+            const glm::vec3& color = glm::vec3(1, 1, 1),
+            int layer = RenderLayers::UI,
+            int orderInLayer = 0);
 
         /**
          * @brief Set the rendering window
@@ -350,6 +353,35 @@ namespace Framework {
         MaterialHandle currentBoundMaterial;         // Last bound material.
         ShaderHandle currentBoundShader;             // Last bound shader.
         TextRenderer text_;                          // FreeType text renderer
+
+        struct QueuedTextCommand {
+            std::string fontKey;
+            std::string text;
+            float x = 0.0f;
+            float y = 0.0f;
+            float scale = 1.0f;
+            glm::vec3 color = glm::vec3(1.0f);
+            int layer = RenderLayers::UI;
+            int orderInLayer = 0;
+            bool visible = true;
+
+            uint64_t GetSortKey() const {
+                uint64_t key = 0;
+                key |= (static_cast<uint64_t>(layer & 0xFF) << 56);
+                key |= (static_cast<uint64_t>(0xFFFFFF) << 32);
+                key |= (static_cast<uint64_t>(orderInLayer & 0xFFFF) << 16);
+                key |= 0xFFFF;
+                return key;
+            }
+        };
+        std::vector<QueuedTextCommand> queuedTextCommands;
+
+        void DrawTextImmediate(const std::string& fontKey,
+            const std::string& text,
+            float x,
+            float y,
+            float scale,
+            const glm::vec3& color);
 
         /**
          * @brief Makes the camera follow a target player entity

@@ -142,7 +142,7 @@ function SkillBubbleHolderUI:Init(config)
 
     -- Tooltip configuration
     self.tooltipTexture = self.config.tooltipTexture or TOOLTIP_TEXTURE_DEFAULT
-    self.tooltipOffsetX = self.config.tooltipOffsetX or 0.34
+    self.tooltipOffsetX = self.config.tooltipOffsetX or 0.6
     self.tooltipScaleX = self.config.tooltipScaleX or 0.35
     self.tooltipScaleY = self.config.tooltipScaleY or 0.22
     self.tooltipLayer = self.config.tooltipLayer or (self.iconLayer + 1)

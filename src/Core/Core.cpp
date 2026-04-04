@@ -258,18 +258,6 @@ namespace Framework
         audioSystem->SetMasterVolume(masterVolume);
         LOG_INFO("AUDIO", "Master volume loaded from audio_config.json: %.2f", masterVolume);
 
-        // Reset music/sfx toggles each app launch (default ON)
-        AudioLoader::SetMusicVolume(1.0f);
-        AudioLoader::SetSfxVolume(1.0f);
-
-        float musicVolume = AudioLoader::GetSettings().musicVolume;
-        audioSystem->SetMusicVolume(musicVolume);
-        LOG_INFO("AUDIO", "Music volume reset to: %.2f", musicVolume);
-
-        float sfxVolume = AudioLoader::GetSettings().sfxVolume;
-        audioSystem->SetSfxVolume(sfxVolume);
-        LOG_INFO("AUDIO", "SFX volume reset to: %.2f", sfxVolume);
-
         // Wire Event System
         projectileSystem->SetEventSystem(eventSystem);
 
@@ -637,7 +625,6 @@ namespace Framework
                 imguiSystem->GetViewportWidth(),
                 imguiSystem->GetViewportHeight()
             );
-            graphicsSystem->Update(dt);
             glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
 
             graphicsSystem->GetTextRenderer().setScreenSize(
@@ -645,7 +632,9 @@ namespace Framework
                 imguiSystem->GetViewportHeight()
             );
 
+            // Queue script/UI text first so graphics update renders it in the same pass.
             LevelLoader::GetInstance().DrawCurrentLevel();
+            graphicsSystem->Update(dt);
 
             graphicsSystem->ClearRenderTarget();
 
@@ -657,13 +646,12 @@ namespace Framework
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         else {
-            graphicsSystem->Update(dt);
-
             int winWidth, winHeight;
             glfwGetWindowSize(windowSystem->GetWindow(), &winWidth, &winHeight);
             graphicsSystem->GetTextRenderer().setScreenSize(winWidth, winHeight);
 
             LevelLoader::GetInstance().DrawCurrentLevel();
+            graphicsSystem->Update(dt);
         }
 
         // === IMGUI ===

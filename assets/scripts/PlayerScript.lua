@@ -2163,6 +2163,7 @@ function ExecuteSkill(skillID)
         end
 
         faceToward(enemies[1].x, enemies[1].y)
+        ClearActivePreview()  -- clear preview tint BEFORE PulseTile so it records white as original
 
         -- Apply CC effect to first adjacent enemy found
         local target = enemies[1]
@@ -2177,7 +2178,6 @@ function ExecuteSkill(skillID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to enemy " .. target.id)
         playAttackAnimation()
-        ClearActivePreview()
         return
     end
 
@@ -2199,6 +2199,7 @@ function ExecuteSkill(skillID)
         end
 
         faceToward(enemies[1].x, enemies[1].y)
+        ClearActivePreview()  -- clear preview tint BEFORE PulseTile so it records white as original
 
         -- Apply debuff to first adjacent enemy
         local target = enemies[1]
@@ -2214,7 +2215,6 @@ function ExecuteSkill(skillID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' (+" .. extraDmg .. " dmg) to enemy " .. target.id)
         playAttackAnimation()
-        ClearActivePreview()
         return
     end
 
@@ -2474,6 +2474,9 @@ function ExecuteSkill(skillID)
         local targetID = enemyTargetMode.selectedEnemy
         local ex, ey = GetEntityGridPosition(targetID)
 
+        -- Clear preview tint BEFORE PulseTile so it records white as the original to restore
+        ClearActivePreview()
+
         -- Apply the skill's effect to the target enemy
         local extra = skill.extraData or 0
         ApplyStatusEffect(targetID, skill.effect, skill.effectDuration, entityID, 0, extra)
@@ -2496,7 +2499,6 @@ function ExecuteSkill(skillID)
         consumeAttackAPAndAnimate(skill.apCost)
         print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to enemy " .. targetID)
         playAttackAnimation()
-        ClearActivePreview()
         return
     end
 
@@ -2630,6 +2632,7 @@ function ExecuteSkill(skillID)
     end
 
     faceToward(enemies[1].x, enemies[1].y)
+    ClearActivePreview()  -- clear preview tint BEFORE PulseTile so it records white as original
 
     local enemiesHit = 0
     for _, enemy in ipairs(enemies) do
@@ -2648,7 +2651,6 @@ function ExecuteSkill(skillID)
     consumeAttackAPAndAnimate(skill.apCost)
     print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
     playAttackAnimation()
-    ClearActivePreview()
 end
 
 -- ============================================================================

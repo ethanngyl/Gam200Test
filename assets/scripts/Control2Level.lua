@@ -10,6 +10,7 @@
 
 -- Load ButtonManager module
 local ButtonManager = require("assets/scripts/ButtonManager")
+local HealthUI = require("UI/HealthUI")
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
@@ -20,12 +21,12 @@ local config = nil
 local backgroundSpriteID = 0
 local overlaySprites = {}
 local turnIndicatorSprites = {}
-local hudSampleSprites = {}
+local hudSampleUIs = {}
 
 local HUD_SAMPLE_BASE = {
     holderScaleX = 0.55,
     holderScaleY = 0.23,
-    hpFillOffsetX = -0.189,
+    hpFillOffsetX = -0.181,
     hpFillOffsetY = 0.05,
     hpFillWidth = 0.085,
     hpFillHeight = 0.085,
@@ -39,102 +40,59 @@ local HUD_SAMPLE_BASE = {
     moveFillHeight = 0.07
 }
 
-local HUD_SAMPLE_COLORS = {
-    hp = { r = 0.9, g = 0.1, b = 0.1, a = 1.0 },
-    attack = { r = 0.1, g = 0.25, b = 0.7, a = 1.0 },
-    move = { r = 0.65, g = 0.35, b = 0.15, a = 1.0 }
-}
-
-local function SpawnHudSample(sample)
-    if not sample then return end
-
-    local scaleX = (sample.scale and sample.scale.x) or 0.35
-    local scaleY = (sample.scale and sample.scale.y) or 0.15
-    local scaleFactorX = scaleX / HUD_SAMPLE_BASE.holderScaleX
-    local scaleFactorY = scaleY / HUD_SAMPLE_BASE.holderScaleY
-
-    local baseX = sample.position and sample.position.x or 0.0
-    local baseY = sample.position and sample.position.y or 0.0
-    local layer = sample.layer or 9
-    local holderTexture = sample.holderTexture or "assets/UI/health_ap_movement_holder.png"
-    local frameTexture = sample.holderFrameTexture or "assets/UI/health_ap_movement_holder frame only.png"
-
-    local holderID = SpawnSprite(
-        holderTexture,
-        baseX,
-        baseY,
-        scaleX,
-        scaleY,
-        layer
-    )
-
-    local sprites = {
-        holder = holderID,
-        frame = 0,
-        hp = 0,
-        attack = 0,
-        move = 0
-    }
-
-    local function spawnFill(offsetX, offsetY, width, height, color)
-        local fillID = SpawnSprite(
-            "",
-            baseX + offsetX,
-            baseY + offsetY,
-            width,
-            height,
-            layer + 1
-        )
-        if fillID and fillID > 0 then
-            SetSpriteColor(fillID, color.r, color.g, color.b, color.a or 1.0)
-        end
-        return fillID
+local function CreateHudSample(sample)
+    if not sample or not sample.position or not sample.scale then
+        return nil
     end
 
-    if sample.showHP then
-        sprites.hp = spawnFill(
-            HUD_SAMPLE_BASE.hpFillOffsetX * scaleFactorX,
-            HUD_SAMPLE_BASE.hpFillOffsetY * scaleFactorY,
-            HUD_SAMPLE_BASE.hpFillWidth * scaleFactorX,
-            HUD_SAMPLE_BASE.hpFillHeight * scaleFactorY,
-            HUD_SAMPLE_COLORS.hp
-        )
-    end
+    local scaleX = sample.scale.x or HUD_SAMPLE_BASE.holderScaleX
+    local scaleY = sample.scale.y or HUD_SAMPLE_BASE.holderScaleY
+    local ratioX = scaleX / HUD_SAMPLE_BASE.holderScaleX
+    local ratioY = scaleY / HUD_SAMPLE_BASE.holderScaleY
 
-    if sample.showAttack then
-        sprites.attack = spawnFill(
-            HUD_SAMPLE_BASE.attackFillOffsetX * scaleFactorX,
-            HUD_SAMPLE_BASE.attackFillOffsetY * scaleFactorY,
-            HUD_SAMPLE_BASE.attackFillWidth * scaleFactorX,
-            HUD_SAMPLE_BASE.attackFillHeight * scaleFactorY,
-            HUD_SAMPLE_COLORS.attack
-        )
-    end
+    local ui = HealthUI:New()
+    ui:Init({
+        maxHP = 5,
+        holderTexture = "assets/UI/health_ap_movement_holder.png",
+        holderFrameTexture = "assets/UI/health_ap_movement_holder frame only.png",
+        holderOnly = false,
+        enableHPFill = sample.showHP == true,
+        enableAttackFill = sample.showAttack == true,
+        enableMoveFill = sample.showMove == true,
+        holderScaleX = scaleX,
+        holderScaleY = scaleY,
+        holderOffsetX = sample.position.x or 0.0,
+        holderOffsetY = sample.position.y or 0.0,
+        holderFrameScaleX = scaleX,
+        holderFrameScaleY = scaleY,
+        holderFrameOffsetX = (sample.position.x or 0.0) + (sample.frameOffsetX or 0.0),
+        holderFrameOffsetY = (sample.position.y or 0.0) + (sample.frameOffsetY or 0.0),
+        hpFillOffsetX = HUD_SAMPLE_BASE.hpFillOffsetX * ratioX,
+        hpFillOffsetY = HUD_SAMPLE_BASE.hpFillOffsetY * ratioY,
+        hpFillWidth = HUD_SAMPLE_BASE.hpFillWidth * ratioX,
+        hpFillHeight = HUD_SAMPLE_BASE.hpFillHeight * ratioY,
+        attackFillOffsetX = HUD_SAMPLE_BASE.attackFillOffsetX * ratioX,
+        attackFillOffsetY = HUD_SAMPLE_BASE.attackFillOffsetY * ratioY,
+        attackFillWidth = HUD_SAMPLE_BASE.attackFillWidth * ratioX,
+        attackFillHeight = HUD_SAMPLE_BASE.attackFillHeight * ratioY,
+        moveFillOffsetX = HUD_SAMPLE_BASE.moveFillOffsetX * ratioX,
+        moveFillOffsetY = HUD_SAMPLE_BASE.moveFillOffsetY * ratioY,
+        moveFillWidth = HUD_SAMPLE_BASE.moveFillWidth * ratioX,
+        moveFillHeight = HUD_SAMPLE_BASE.moveFillHeight * ratioY,
+        hpFillColor = { r = 0.9, g = 0.1, b = 0.1, a = 1.0 },
+        attackFillColor = { r = 0.1, g = 0.25, b = 0.7, a = 1.0 },
+        moveFillColor = { r = 0.65, g = 0.35, b = 0.15, a = 1.0 },
+        hpFillTexture = "assets/TileMap/Attack_Indicator.png",
+        textColor = { r = 0.0, g = 0.0, b = 0.0, a = 1.0 },
+        textScale = 0.6,
+        showValueText = false,
+        getMovementAPFunc = function() return 3, 3 end,
+        getAttackAPFunc = function() return 3, 3 end,
+        layer = sample.layer or 9,
+        textureBasePath = "assets/UI/Health_"
+    })
 
-    if sample.showMove then
-        sprites.move = spawnFill(
-            HUD_SAMPLE_BASE.moveFillOffsetX * scaleFactorX,
-            HUD_SAMPLE_BASE.moveFillOffsetY * scaleFactorY,
-            HUD_SAMPLE_BASE.moveFillWidth * scaleFactorX,
-            HUD_SAMPLE_BASE.moveFillHeight * scaleFactorY,
-            HUD_SAMPLE_COLORS.move
-        )
-    end
-
-    if frameTexture and frameTexture ~= "" then
-        local frameOffsetX = sample.frameOffsetX or 0.0
-        local frameOffsetY = sample.frameOffsetY or 0.0
-        sprites.frame = SpawnSprite(
-            frameTexture,
-            baseX + frameOffsetX,
-            baseY + frameOffsetY,
-            scaleX,
-            scaleY,
-            layer + 2
-        )
-    end
-
-    hudSampleSprites[sample.id or tostring(#hudSampleSprites + 1)] = sprites
+    return ui
 end
 
 -- ============================================================================
@@ -247,13 +205,20 @@ function OnInit()
         Log("Turn indicator icons complete!")
     end
 
-    -- Create HUD samples (holder + single fill)
+    -- Create HUD sample bars (status bar examples)
     if config.menu.hudSamples then
-        Log("Creating HUD samples...")
-        for _, sample in ipairs(config.menu.hudSamples) do
-            SpawnHudSample(sample)
+        Log("Creating HUD sample bars...")
+        for i, sample in ipairs(config.menu.hudSamples) do
+            local ui = CreateHudSample(sample)
+            if ui then
+                local sampleID = sample.id or ("sample_" .. tostring(i))
+                hudSampleUIs[sampleID] = ui
+                Log("  HUD sample '" .. sampleID .. "' created")
+            else
+                Log("  FAILED to create HUD sample at index " .. tostring(i))
+            end
         end
-        Log("HUD samples complete!")
+        Log("HUD sample bars complete!")
     end
 
     local music = config.menu.music
@@ -341,23 +306,11 @@ function OnDestroy()
         end
     end
 
-    for sampleID, sprites in pairs(hudSampleSprites) do
-        if sprites.holder and sprites.holder > 0 then
-            DestroyEntity(sprites.holder)
+    for sampleID, ui in pairs(hudSampleUIs) do
+        if ui and ui.Destroy then
+            ui:Destroy()
+            Log("HUD sample '" .. sampleID .. "' destroyed")
         end
-        if sprites.frame and sprites.frame > 0 then
-            DestroyEntity(sprites.frame)
-        end
-        if sprites.hp and sprites.hp > 0 then
-            DestroyEntity(sprites.hp)
-        end
-        if sprites.attack and sprites.attack > 0 then
-            DestroyEntity(sprites.attack)
-        end
-        if sprites.move and sprites.move > 0 then
-            DestroyEntity(sprites.move)
-        end
-        Log("HUD sample '" .. sampleID .. "' destroyed")
     end
 
     config = nil
@@ -365,7 +318,7 @@ function OnDestroy()
     backgroundSpriteID = 0
     overlaySprites = {}
     turnIndicatorSprites = {}
-    hudSampleSprites = {}
+    hudSampleUIs = {}
 
     Log("Control2 page cleanup complete")
 end

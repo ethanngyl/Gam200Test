@@ -15,15 +15,15 @@ function TutorialPopupUI:Init(config)
 
     self.offsetX = self.config.offsetX or -0.60
     self.offsetY = self.config.offsetY or -0.08
-    self.scaleX = self.config.scaleX or 0.42
-    self.scaleY = self.config.scaleY or 0.24
+    self.scaleX = self.config.scaleX or 0.52
+    self.scaleY = self.config.scaleY or 0.30
     self.layer = self.config.layer or 7
     self.texture = self.config.texture or "assets/Menu/Scroll Overlay.png"
 
     self.font = self.config.font or "Jersey20Regular"
-    self.titleScale = self.config.titleScale or 0.42
-    self.bodyScale = self.config.bodyScale or 0.28
-    self.hintScale = self.config.hintScale or 0.22
+    self.titleScale = self.config.titleScale or 0.50
+    self.bodyScale = self.config.bodyScale or 0.33
+    self.hintScale = self.config.hintScale or 0.26
     self.textColor = self.config.textColor or { r = 0.08, g = 0.08, b = 0.08 }
 
     self.paddingXPx = self.config.paddingXPx or 62
@@ -150,12 +150,15 @@ function TutorialPopupUI:Draw()
 
     local title = step.title or ("Tutorial " .. tostring(self.currentStep))
     local body = self:WrapText(step.body or "", self.wrapChars)
-    local hint = "Y: Next    X: Skip"
+    local leftHint = "[X] Close"
+    local rightHint = "[Y] Next"
 
     local textX = minX + (self.paddingXPx * scaleRef)
     local titleY = maxY - (self.titleInsetTopPx * scaleRef)
     local bodyY = maxY - (self.bodyInsetTopPx * scaleRef)
-    local hintY = minY + (self.hintInsetBottomPx * scaleRef)
+    local hintY = minY + ((self.hintInsetBottomPx + 48) * scaleRef)
+    local maxX = math.max(leftScreen, rightScreen)
+    local rightHintX = maxX - (self.paddingXPx * scaleRef) - (string.len(rightHint) * self.hintScale * scaleRef * 24)
 
     DrawText(
         self.font,
@@ -185,8 +188,19 @@ function TutorialPopupUI:Draw()
 
     DrawText(
         self.font,
-        hint,
+        leftHint,
         textX,
+        hintY,
+        self.hintScale * scaleRef,
+        self.textColor.r,
+        self.textColor.g,
+        self.textColor.b
+    )
+
+    DrawText(
+        self.font,
+        rightHint,
+        rightHintX,
         hintY,
         self.hintScale * scaleRef,
         self.textColor.r,

@@ -79,13 +79,15 @@ namespace Framework {
             EntityManager* em,
             const Vector2D& startPos,
             const Vector2D& spacing,
-            const Vector2D& tileSize
+            const Vector2D& tileSize,
+            int levelIndex = 1
         );
 
         static void LoadFromGeneratedMap(
             const MapGen::GeneratedMap& map,
             EntitySpawner* spawner, EntityManager* em,
-            const Vector2D& startPos, const Vector2D& spacing, const Vector2D& tileSize
+            const Vector2D& startPos, const Vector2D& spacing, const Vector2D& tileSize,
+            int levelIndex = 1
         );
 
     private:
@@ -100,7 +102,8 @@ namespace Framework {
         static void SpawnTiles(
             const MapGen::GeneratedMap& map,
             EntitySpawner* spawner,
-            EntityManager* em
+            EntityManager* em,
+            int levelIndex = 1
         );
     };
 

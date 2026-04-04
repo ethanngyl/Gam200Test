@@ -250,8 +250,12 @@ namespace Framework {
          * @endcode
          */
         void SetMasterVolume(float volume);  // 0.0 to 1.0
-        void SetMusicVolume(float volume);   // 0.0 to 1.0
-        void SetSfxVolume(float volume);     // 0.0 to 1.0
+
+        void SetMusicVolume(float volume);   // controls musicGroup only
+        float GetMusicVolume() const;
+
+        void SetSfxVolume(float volume);     // controls sfxGroup only
+        float GetSfxVolume() const;
 
         /**
          * @brief Shuts down the audio system and releases all resources
@@ -333,11 +337,9 @@ namespace Framework {
 
         // M5 1105: Dedicated BGM routing + fade state
         FMOD::ChannelGroup* musicGroup = nullptr;
+        FMOD::ChannelGroup* sfxGroup   = nullptr;
         FMOD::Channel* musicChannel = nullptr;
         std::string currentMusicName;
-
-        // Dedicated SFX routing
-        FMOD::ChannelGroup* sfxGroup = nullptr;
 
         bool musicFadeActive = false;
         float musicFadeStartVol = 1.0f;

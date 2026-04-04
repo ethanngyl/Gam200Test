@@ -124,7 +124,6 @@ namespace Framework {
             CheckFMODError(result, "masterGroup->addGroup(SFX)");
         }
 
-
         std::cout << "[Audio] FMOD initialized successfully\n";
     }
 
@@ -208,7 +207,7 @@ namespace Framework {
                         // Play sound
                         FMOD_RESULT result = fmodSystem->playSound(
                             sound,
-                            sfxGroup ? sfxGroup : nullptr,
+                            nullptr,
                             false,
                             &channel
                         );
@@ -389,10 +388,9 @@ namespace Framework {
         }
 
         FMOD::Channel* channel = nullptr;
-        FMOD::ChannelGroup* group = loop ? musicGroup : sfxGroup;
         FMOD_RESULT result = fmodSystem->playSound(
             it->second,
-            group ? group : nullptr,
+            sfxGroup,
             false,
             &channel
         );
@@ -525,10 +523,26 @@ namespace Framework {
         }
     }
 
+    float AudioSystem::GetMusicVolume() const {
+        float vol = 1.0f;
+        if (musicGroup) {
+            musicGroup->getVolume(&vol);
+        }
+        return vol;
+    }
+
     void AudioSystem::SetSfxVolume(float volume) {
         if (sfxGroup) {
             sfxGroup->setVolume(volume);
         }
+    }
+
+    float AudioSystem::GetSfxVolume() const {
+        float vol = 1.0f;
+        if (sfxGroup) {
+            sfxGroup->getVolume(&vol);
+        }
+        return vol;
     }
 
     // Reload all runtime sounds from the configured audio manifest path.

@@ -34,11 +34,18 @@ local config = {
         layer = 52  -- Above pause menu
     },
     
+    -- Scroll overlay (on top of background, behind UI elements)
+    overlay = {
+        texture = "assets/Menu/Scroll Overlay.png",
+        scale = { x = 2.25, y = 1.25 },
+        layer = 52
+    },
+
     -- Title
     title = {
         text = "Settings",
-        scale = 2.0,
-        color = { r = 255, g = 255, b = 255 }
+        scale = 1.0,
+        color = { r = 0, g = 0, b = 0 }
     },
     
     -- Back button (top-left) - uses CreateButton for hover effect
@@ -46,19 +53,37 @@ local config = {
         texture = "assets/Menu/Ui_btn.png",
         scale = { x = 0.25, y = 0.08 },
         layer = 53,
-        offsetX = -0.70,  -- World offset from camera
-        offsetY = 0.35,
+        offsetX = 0.0,  -- World offset from camera
+        offsetY = -0.30,
         -- Text config for DrawButtonText
         text = {
             content = "Back",
             font = "Playfair48",
             scale = 0.7,
-            offsetX = -25,
+            offsetX = -40,
             offsetY = -10,
             color = { r = 255, g = 255, b = 255 }
         }
     },
-    
+
+    -- Music toggle button
+    musicButton = {
+        texture = "assets/Menu/Ui_btn.png",
+        scale = { x = 0.5, y = 0.08 },
+        layer = 53,
+        offsetX = 0.0,
+        offsetY = 0.22,
+    },
+
+    -- SFX toggle button
+    sfxButton = {
+        texture = "assets/Menu/Ui_btn.png",
+        scale = { x = 0.5, y = 0.08 },
+        layer = 53,
+        offsetX = 0.0,
+        offsetY = 0.12,
+    },
+
     -- Volume slider
     volumeSlider = {
         -- Sprites: 00 = full (1.0), 09 = empty (0.0)
@@ -82,11 +107,18 @@ local state = {
     
     -- Entity IDs
     backgroundID = 0,
-    backButtonID = 0,  -- Now a CreateButton ID (pointer)
+    overlayID = 0,
+    backButtonID = 0,
+    musicButtonID = 0,
+    sfxButtonID = 0,
     volumeSliderID = 0,
     
     -- Volume level (0-9, where 0 = max volume, 9 = min volume)
     volumeLevel = 0,
+
+    -- Music / SFX toggle state
+    musicEnabled = true,
+    sfxEnabled   = true,
     
     -- Input tracking for volume slider
     wasLeftPressed = false,
@@ -111,8 +143,8 @@ end
 -- ============================================================================
 
 local function LevelToVolume(level)
-    -- Level 0 = 1.0, Level 9 = 0.0 (actually let's keep some minimum)
-    -- Level 0 = 1.0, Level 1 = 0.9, ..., Level 9 = 0.1
+    -- Level 0 = 1.0, Level 1 = 0.9, ..., Level 8 = 0.2, Level 9 = 0.0 (silent)
+    if level >= 9 then return 0.0 end
     return 1.0 - (level * 0.1)
 end
 
@@ -121,11 +153,10 @@ end
 -- ============================================================================
 
 local function VolumeToLevel(volume)
-    -- Clamp volume to valid range
-    volume = math.max(0.1, math.min(1.0, volume))
-    -- Convert: 1.0 -> 0, 0.9 -> 1, ..., 0.1 -> 9
+    if volume <= 0.05 then return 9 end
+    volume = math.min(1.0, volume)
     local level = math.floor((1.0 - volume) * 10 + 0.5)
-    return math.max(0, math.min(9, level))
+    return math.max(0, math.min(8, level))
 end
 
 -- ============================================================================
@@ -172,6 +203,15 @@ function SettingsMenu.Open(onCloseCallback)
         config.background.layer
     )
     
+    -- Create scroll overlay
+    state.overlayID = SpawnSprite(
+        config.overlay.texture,
+        camX, camY,
+        config.overlay.scale.x,
+        config.overlay.scale.y,
+        config.overlay.layer
+    )
+    
     -- Create back button using CreateButton (with hover highlight)
     local backCfg = config.backButton
     state.backButtonID = CreateButton(
@@ -180,10 +220,38 @@ function SettingsMenu.Open(onCloseCallback)
         camY + backCfg.offsetY,
         backCfg.scale.x,
         backCfg.scale.y,
-        "OnSettingsBackClicked",  -- Global callback function name
+        "OnSettingsBackClicked",
         backCfg.layer
     )
-    
+
+    -- Sync music/sfx enabled state from actual channel volumes
+    if GetMusicVolume then state.musicEnabled = GetMusicVolume() > 0.0 end
+    if GetSfxVolume   then state.sfxEnabled   = GetSfxVolume()   > 0.0 end
+
+    -- Create music toggle button
+    local mCfg = config.musicButton
+    state.musicButtonID = CreateButton(
+        mCfg.texture,
+        camX + mCfg.offsetX,
+        camY + mCfg.offsetY,
+        mCfg.scale.x,
+        mCfg.scale.y,
+        "OnSettingsMusicToggled",
+        mCfg.layer
+    )
+
+    -- Create sfx toggle button
+    local sCfg = config.sfxButton
+    state.sfxButtonID = CreateButton(
+        sCfg.texture,
+        camX + sCfg.offsetX,
+        camY + sCfg.offsetY,
+        sCfg.scale.x,
+        sCfg.scale.y,
+        "OnSettingsSfxToggled",
+        sCfg.layer
+    )
+
     -- Create volume slider
     local sliderCfg = config.volumeSlider
     state.volumeSliderID = SpawnSprite(
@@ -204,6 +272,22 @@ function OnSettingsBackClicked()
     SettingsMenu.Close()
 end
 
+function OnSettingsMusicToggled()
+    state.musicEnabled = not state.musicEnabled
+    if SetMusicVolume then
+        SetMusicVolume(state.musicEnabled and 1.0 or 0.0)
+    end
+    Log("[SettingsMenu] Music: " .. (state.musicEnabled and "ON" or "OFF"))
+end
+
+function OnSettingsSfxToggled()
+    state.sfxEnabled = not state.sfxEnabled
+    if SetSfxVolume then
+        SetSfxVolume(state.sfxEnabled and 1.0 or 0.0)
+    end
+    Log("[SettingsMenu] SFX: " .. (state.sfxEnabled and "ON" or "OFF"))
+end
+
 -- ============================================================================
 -- CLOSE SETTINGS MENU
 -- ============================================================================
@@ -215,6 +299,12 @@ function SettingsMenu.Close()
     if state.backgroundID and state.backgroundID > 0 then
         DestroyEntity(state.backgroundID)
         state.backgroundID = 0
+    end
+    
+    -- Destroy scroll overlay
+    if state.overlayID and state.overlayID > 0 then
+        DestroyEntity(state.overlayID)
+        state.overlayID = 0
     end
     
     -- Clear the back button (created with CreateButton)
@@ -394,6 +484,18 @@ function SettingsMenu.Draw()
     end
     
     -- ========================================================================
+    -- DRAW MUSIC / SFX TOGGLE BUTTON TEXT
+    -- ========================================================================
+    if state.musicButtonID and state.musicButtonID > 0 then
+        local text = state.musicEnabled and "MUSIC: ON" or "MUSIC: OFF"
+        DrawButtonText(state.musicButtonID, "Playfair48", text, -90, -10, 0.7, 255, 255, 255)
+    end
+    if state.sfxButtonID and state.sfxButtonID > 0 then
+        local text = state.sfxEnabled and "SFX: ON" or "SFX: OFF"
+        DrawButtonText(state.sfxButtonID, "Playfair48", text, -70, -10, 0.7, 255, 255, 255)
+    end
+
+    -- ========================================================================
     -- DRAW TITLE ("Settings" - above volume slider)
     -- ========================================================================
     local titleCfg = config.title
@@ -402,8 +504,8 @@ function SettingsMenu.Draw()
     
     -- Use the manually adjusted position
     local approxTitleWidth = #titleText * 30 * titleScale
-    local titleX = centerX - (approxTitleWidth * 0.5) + 50
-    local titleY = centerY + 150 * scaleFactorY
+    local titleX = centerX - (approxTitleWidth * 0.5)+25
+    local titleY = centerY + 320 * scaleFactorY
     
     DrawText("Playfair48", titleText, titleX, titleY, titleScale,
              titleCfg.color.r, titleCfg.color.g, titleCfg.color.b)
@@ -432,7 +534,7 @@ function SettingsMenu.Draw()
     local instructionY = centerY - 150 * scaleFactorY  -- Below the slider
     
     DrawText("Playfair48", instructionText, instructionX, instructionY, instructionScale,
-             255, 255, 255)  -- Dark brown color
+             0, 0, 0)  -- Dark brown color
 end
 
 -- ============================================================================

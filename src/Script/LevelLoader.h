@@ -94,6 +94,10 @@ namespace Framework {
         bool IsLevelLoaded() const { return levelLoaded; }
         std::string GetCurrentLevelPath() const { return currentLevelPath; }
 
+        // Reset all C++ static state that persists across level transitions.
+        // Called by Level3StateHooks::OnFree() before loading the next level.
+        static void ResetCppLevelState();
+
         // Called from ProjectileSystem when player projectile hits enemy (Soul Rend, Soul Merge)
         bool ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID);
 
