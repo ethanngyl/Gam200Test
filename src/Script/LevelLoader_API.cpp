@@ -3526,21 +3526,33 @@ namespace Framework {
                 uint32_t knightID = oathEffect->sourceEntity;
                 Entity knight(knightID);
                 if (em->HasComponent<Health>(knight)) {
-                    LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
-                        amount, entity.GetID(), knightID);
-
                     auto& knightHP = em->GetComponent<Health>(knight);
-                    knightHP.currentHealth -= amount;
 
-                    if (knightHP.currentHealth <= 0) {
-                        knightHP.currentHealth = 0;
-                        knightHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-                        loader->DeferEntityDestruction(knightID);
+                    if (knightHP.isDead) {
+                        // The protecting knight is already dead but not yet removed from the
+                        // entity manager (deferred destruction pending).  The oath is stale —
+                        // remove it so subsequent hits deal damage normally to this entity.
+                        effects.RemoveEffect("knightsOath");
+                        LOG_INFO("StatusEffect",
+                            "Knight's Oath on entity %u: knight %u already dead, removing stale effect",
+                            entity.GetID(), knightID);
+                        // Fall through to apply damage normally to the original target.
+                    } else {
+                        LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
+                            amount, entity.GetID(), knightID);
+
+                        knightHP.currentHealth -= amount;
+
+                        if (knightHP.currentHealth <= 0) {
+                            knightHP.currentHealth = 0;
+                            knightHP.isDead = true;
+                            LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
+                            loader->DeferEntityDestruction(knightID);
+                        }
+
+                        lua_pushboolean(L, 1);
+                        return 1;
                     }
-
-                    lua_pushboolean(L, 1);
-                    return 1;
                 }
             }
 
