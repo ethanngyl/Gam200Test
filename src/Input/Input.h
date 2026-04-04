@@ -187,6 +187,10 @@ namespace Framework
         std::map<KeyCode, bool> CurrentKeys;     // Keys down this frame
         std::map<KeyCode, bool> PreviousKeys;    // Keys down last frame
         GLFWwindow* window;                      // NEW: Window pointer for mouse queries
+        float virtualMouseX = 0.0f;              // Controller-driven cursor X (window space)
+        float virtualMouseY = 0.0f;              // Controller-driven cursor Y (window space)
+        bool useVirtualMouse = false;            // If true, GetMousePosition returns virtual cursor
+        bool virtualMouseInitialized = false;    // Lazily initialize virtual cursor from real cursor
 
         /**
          * @brief Updates the state of a specific key

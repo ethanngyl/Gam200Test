@@ -911,25 +911,81 @@ local function EnsureBolsteredMoraleParticles()
     end
 end
 
+local function CountAliveKnightCommanders()
+    local ids = _G.KnightCommanderIDs
+    if not ids then return 0 end
+
+    local aliveCount = 0
+    local i = 1
+    while i <= #ids do
+        local id = ids[i]
+        local alive = true
+        if IsEntityValid then
+            alive = IsEntityValid(id)
+        end
+        if alive then
+            local hp = GetEntityHP(id)
+            alive = (hp and hp > 0) and true or false
+        end
+
+        if alive then
+            aliveCount = aliveCount + 1
+            i = i + 1
+        else
+            table.remove(ids, i)
+        end
+    end
+
+    return aliveCount
+end
+
 local function RemoveBolsteredMorale()
+    local processedTargets = {}
+    local sourcePrefix = tostring(entityID) .. "_"
+
+    -- Collect matching keys first so we don't modify the table while iterating.
+    local toRemove = {}
+    if _G.BolsteredMoraleParticles then
+        for key, emitterID in pairs(_G.BolsteredMoraleParticles) do
+            if type(key) == "string" and key:sub(1, #sourcePrefix) == sourcePrefix then
+                table.insert(toRemove, { key = key, emitterID = emitterID })
+            end
+        end
+    end
+
+    for _, entry in ipairs(toRemove) do
+        local key      = entry.key
+        local emitterID = entry.emitterID
+        local targetID = tonumber(key:match("_(%d+)$"))
+
+        if targetID and targetID ~= entityID then
+            processedTargets[targetID] = true
+            local current = GetDamageModifier(targetID) or 0
+            SetDamageModifier(targetID, math.max(0, current - 1))
+        end
+
+        -- Always attempt destroy — DestroyEntity handles already-invalid IDs gracefully.
+        -- Skipping via IsEntityValid can leave orphaned particle entities still rendering.
+        if emitterID and emitterID > 0 and DestroyEntity then
+            DestroyEntity(emitterID)
+        end
+        _G.BolsteredMoraleParticles[key] = nil
+    end
+
+    -- Fallback: handle buffed enemies whose particle tracking was lost
+    -- (e.g. particle_backend_version reset wiped the tracking table mid-game).
+    local aliveCommanders = CountAliveKnightCommanders()
     local enemies = GetAllEnemies()
     if not enemies then return end
     for _, eid in ipairs(enemies) do
-        if eid ~= entityID then
+        if eid ~= entityID and not processedTargets[eid] then
             local current = GetDamageModifier(eid) or 0
-            local newVal = current - 1
-            if newVal < 0 then newVal = 0 end
-            SetDamageModifier(eid, newVal)
-
-            -- Remove particle emitter for this enemy
-            if _G.BolsteredMoraleParticles and DestroyEntity then
-                local key = entityID .. "_" .. eid
-                local emitterID = _G.BolsteredMoraleParticles[key]
-                if emitterID and emitterID > 0 then
-                    DestroyEntity(emitterID)
-                    _G.BolsteredMoraleParticles[key] = nil
-                    print("[" .. GetLogTag() .. " " .. entityID .. "] Removed morale particles from enemy " .. eid)
-                end
+            if aliveCommanders == 0 then
+                -- This is the last commander dying; hard-reset to 0 to clear any lingering buff.
+                if current > 0 then SetDamageModifier(eid, 0) end
+            else
+                -- Other commanders are still alive; just remove this commander's contribution.
+                SetDamageModifier(eid, math.max(0, current - 1))
             end
         end
     end
@@ -1095,6 +1151,31 @@ function OnUpdate(dt)
         EnsureBolsteredMoraleParticles()
     end
 
+    if config and config.onInit ~= "bolstered_morale_apply" then
+        local aliveCommanders = CountAliveKnightCommanders()
+        if aliveCommanders == 0 then
+            -- Safety reset: if all commanders are dead, this buff should never persist.
+            local current = GetDamageModifier(entityID) or 0
+            if current > 0 then
+                SetDamageModifier(entityID, 0)
+            end
+
+            if _G.BolsteredMoraleParticles then
+                local suffix = "_" .. tostring(entityID)
+                for key, emitterID in pairs(_G.BolsteredMoraleParticles) do
+                    if type(key) == "string" and key:sub(-#suffix) == suffix then
+                        if emitterID and emitterID > 0 and DestroyEntity then
+                            if not IsEntityValid or IsEntityValid(emitterID) then
+                                DestroyEntity(emitterID)
+                            end
+                        end
+                        _G.BolsteredMoraleParticles[key] = nil
+                    end
+                end
+            end
+        end
+    end
+
     -- Update Bolstered Morale particle positions to follow this enemy
     if _G.BolsteredMoraleParticles and SetSpritePosition then
         local wx, wy = GetEntityWorldPosition(entityID)
@@ -1103,7 +1184,15 @@ function OnUpdate(dt)
                 -- Check if this emitter is tracking us (key ends with _<entityID>)
                 local targetID = key:match("_(%d+)$")
                 if targetID and tonumber(targetID) == entityID then
-                    SetSpritePosition(emitterID, wx, wy)
+                    local valid = true
+                    if IsEntityValid then
+                        valid = IsEntityValid(emitterID)
+                    end
+                    if valid then
+                        SetSpritePosition(emitterID, wx, wy)
+                    else
+                        _G.BolsteredMoraleParticles[key] = nil
+                    end
                 end
             end
         end

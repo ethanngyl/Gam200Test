@@ -466,13 +466,9 @@ function SpawnProceduralBoss(mapData)
 
     Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
 
-    -- Attach configurable boss script.
-    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
-
-    -- Set target (C++ side)
-    SetEnemyTarget(bossID, playerID)
-
-    -- Store arena boundaries in shared C++ store so BossScript can access them
+    -- Store arena boundaries BEFORE attaching the script so that BossScript's OnInit
+    -- can read correct bounds via GetSharedInt.  (Attaching the script calls OnInit
+    -- immediately; if bounds are set afterwards OnInit reads stale -1 values.)
     local arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3)
     local arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3)
     local arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4)
@@ -483,6 +479,12 @@ function SpawnProceduralBoss(mapData)
     SetSharedInt("arenaMaxY", arenaMaxY)
     Log("Arena bounds set: (" .. arenaMinX .. "," .. arenaMinY
         .. ") to (" .. arenaMaxX .. "," .. arenaMaxY .. ")")
+
+    -- Attach configurable boss script (OnInit now sees correct arena bounds above).
+    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
+
+    -- Set target (C++ side)
+    SetEnemyTarget(bossID, playerID)
 
     -- Track boss entity and arena position so portal spawns here after boss dies
     bossEntityID = bossID
@@ -561,6 +563,18 @@ local function TrySpawnQueuedBoss()
     end
 
     if not AreAllSurvivingPlayersInArena() then
+        return
+    end
+
+    -- CRITICAL: Never spawn the boss while the enemy turn is active.
+    -- Adding a new enemy entity mid-enemy-turn corrupts EnemyTurnManager's
+    -- ActiveEnemyIndex state (the new boss appears in GetAllEnemies() at an
+    -- unexpected index, conflicting with the already-running sequential turn).
+    -- Defer to the next player turn - players cannot move during the enemy turn,
+    -- so they will still be in the arena when this check runs again on the first
+    -- frame of the player turn.
+    if GetCurrentTurn and GetCurrentTurn() == "Enemy" then
+        Log("[ProceduralMapLevel] Boss spawn deferred: enemy turn in progress, will spawn next player-turn frame")
         return
     end
 
@@ -823,6 +837,28 @@ function OnUpdate(dt)
             end
             Log("[CHEAT] Killed all " .. #enemies .. " enemies")
         end
+    end
+
+    -- ========================================
+    -- CHEAT: Kill all enemies (press F2)
+    -- ========================================
+    if IsKeyDown("F2") and not goalReached then
+        local enemies = GetAllEnemies()
+        if enemies and #enemies > 0 then
+            for _, eid in ipairs(enemies) do
+                SetEntityHP(eid, 0, 0)
+                DestroyEntity(eid)
+            end
+            Log("[CHEAT] F2 killed all " .. #enemies .. " enemies")
+        end
+    end
+
+    -- ========================================
+    -- CHEAT: Auto-complete current level (press F3)
+    -- ========================================
+    if IsKeyDown("F3") then
+        SetNextGameState("WIN_SCREEN")
+        return
     end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues

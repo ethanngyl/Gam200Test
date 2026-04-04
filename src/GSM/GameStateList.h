@@ -41,5 +41,6 @@ enum GS_STATES
     GS_RESTART,
     LevelSelectionMenu,
     Copyright,
-    Credits
+   Credits,
+   DEMO_BRIDGE
 };

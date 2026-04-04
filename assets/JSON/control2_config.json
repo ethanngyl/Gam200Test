@@ -39,6 +39,19 @@
           "y": 2.5
         },
         "layer": 2
+      },
+      {
+        "id": "roundIndicatorScreenshot",
+        "texture": "assets/Round indicator screenshot.png",
+        "position": {
+          "x": 0.8,
+          "y": -0.05
+        },
+        "scale": {
+          "x": 1.15,
+          "y": 0.25
+        },
+        "layer": 8
       }
     ],
     "turnIndicators": [],
@@ -47,7 +60,7 @@
         "id": "healthSample",
         "position": {
           "x": -1.15,
-          "y": -0.30
+          "y": 0.31
         },
         "scale": {
           "x": 0.35,
@@ -63,8 +76,8 @@
       {
         "id": "attackSample",
         "position": {
-          "x": 0.10,
-          "y": 0.34
+          "x": -1.15,
+          "y": 0.00
         },
         "scale": {
           "x": 0.35,
@@ -80,8 +93,8 @@
       {
         "id": "moveSample",
         "position": {
-          "x": 0.10,
-          "y": 0.04
+          "x": -1.15,
+          "y": -0.30
         },
         "scale": {
           "x": 0.35,
@@ -125,11 +138,11 @@
         "callback": ""
       },
       {
-        "id": "text_player_turn",
+        "id": "text_indicator_label",
         "texture": "assets/Menu/transparent.png",
         "position": {
-          "x": -0.9,
-          "y": 0.25
+          "x": 0.55,
+          "y": 0.05
         },
         "scale": {
           "x": 0.01,
@@ -137,13 +150,13 @@
         },
         "layer": 10,
         "text": {
-          "content": "Green: Player's turn.",
+          "content": "Turn Indicator:",
           "font": "Jersey20Regular",
           "offset": {
-            "x": 0.0,
-            "y": 70
+            "x": -150.0,
+            "y": 160
           },
-          "scale": 0.9,
+          "scale": 0.85,
           "color": {
             "r": 0.0,
             "g": 0.0,
@@ -153,11 +166,11 @@
         "callback": ""
       },
       {
-        "id": "text_enemy_turn",
+        "id": "text_indicator_desc1",
         "texture": "assets/Menu/transparent.png",
         "position": {
-          "x": -0.9,
-          "y": -0.05
+          "x": 0.55,
+          "y": -0.07
         },
         "scale": {
           "x": 0.01,
@@ -165,13 +178,41 @@
         },
         "layer": 10,
         "text": {
-          "content": "Red: Enemy's turn.",
+          "content": "The player's character in the",
           "font": "Jersey20Regular",
           "offset": {
-            "x": 0.0,
-            "y": 70
+            "x": -150.0,
+            "y": 160
           },
-          "scale": 0.9,
+          "scale": 0.85,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_indicator_desc2",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": 0.55,
+          "y": -0.19
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "current round will be highlighted.",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -150.0,
+            "y": 160
+          },
+          "scale": 0.85,
           "color": {
             "r": 0.0,
             "g": 0.0,
@@ -185,7 +226,7 @@
         "texture": "assets/Menu/transparent.png",
         "position": {
           "x": -0.9,
-          "y": -0.4
+          "y": 0.22
         },
         "scale": {
           "x": 0.01,
@@ -213,7 +254,7 @@
         "texture": "assets/Menu/transparent.png",
         "position": {
           "x": -0.9,
-          "y": -0.48
+          "y": 0.14
         },
         "scale": {
           "x": 0.01,
@@ -240,8 +281,8 @@
         "id": "text_attack_ap",
         "texture": "assets/Menu/transparent.png",
         "position": {
-          "x": 0.35,
-          "y": 0.25
+          "x": -0.9,
+          "y": -0.09
         },
         "scale": {
           "x": 0.01,
@@ -268,8 +309,8 @@
         "id": "text_attack_ap_line2",
         "texture": "assets/Menu/transparent.png",
         "position": {
-          "x": 0.35,
-          "y": 0.17
+          "x": -0.9,
+          "y": -0.17
         },
         "scale": {
           "x": 0.01,
@@ -296,8 +337,8 @@
         "id": "text_move_ap",
         "texture": "assets/Menu/transparent.png",
         "position": {
-          "x": 0.35,
-          "y": -0.05
+          "x": -0.9,
+          "y": -0.40
         },
         "scale": {
           "x": 0.01,
@@ -324,8 +365,8 @@
         "id": "text_move_ap_line2",
         "texture": "assets/Menu/transparent.png",
         "position": {
-          "x": 0.35,
-          "y": -0.13
+          "x": -0.9,
+          "y": -0.48
         },
         "scale": {
           "x": 0.01,

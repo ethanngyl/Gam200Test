@@ -199,10 +199,12 @@ bool ConfigReader::IsConfigLoaded()
 
 int ConfigReader::GetInitialGameState(int defaultState)
 {
-    // Ensure config is loaded
-    if (!configLoaded) {
-        LoadConfig(GetProjectPath("game_config", CONFIG_FILE_PATH));
-    }
+    // Always reload the game config explicitly.
+    // Another config file (e.g. valueloader.txt) may have been loaded after the
+    // initial game_config.txt load, which clears configData via LoadConfigInternal.
+    // Calling LoadConfig here re-reads game_config.txt when a different file is
+    // currently cached, ensuring initial_state is always present.
+    LoadConfig(GetProjectPath("game_config", CONFIG_FILE_PATH));
 
     // Get initial_state value
     std::string stateName = GetString("initial_state", "");

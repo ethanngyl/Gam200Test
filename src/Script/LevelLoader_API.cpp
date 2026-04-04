@@ -278,14 +278,22 @@ namespace Framework {
         return 1;
     }
 
-    // Music/SFX volume aliases currently map to master volume because the
-    // underlying audio settings file stores a single master value.
     int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
-        return Lua_SetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMusicVolume(volume);
+        return 0;
     }
 
     int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
-        return Lua_GetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetMusicVolume());
+        return 1;
     }
 
     int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
@@ -293,11 +301,21 @@ namespace Framework {
     }
 
     int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
-        return Lua_SetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetSfxVolume(volume);
+        return 0;
     }
 
     int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
-        return Lua_GetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetSfxVolume());
+        return 1;
     }
 
     int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {
@@ -3526,21 +3544,33 @@ namespace Framework {
                 uint32_t knightID = oathEffect->sourceEntity;
                 Entity knight(knightID);
                 if (em->HasComponent<Health>(knight)) {
-                    LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
-                        amount, entity.GetID(), knightID);
-
                     auto& knightHP = em->GetComponent<Health>(knight);
-                    knightHP.currentHealth -= amount;
 
-                    if (knightHP.currentHealth <= 0) {
-                        knightHP.currentHealth = 0;
-                        knightHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-                        loader->DeferEntityDestruction(knightID);
+                    if (knightHP.isDead) {
+                        // The protecting knight is already dead but not yet removed from the
+                        // entity manager (deferred destruction pending).  The oath is stale —
+                        // remove it so subsequent hits deal damage normally to this entity.
+                        effects.RemoveEffect("knightsOath");
+                        LOG_INFO("StatusEffect",
+                            "Knight's Oath on entity %u: knight %u already dead, removing stale effect",
+                            entity.GetID(), knightID);
+                        // Fall through to apply damage normally to the original target.
+                    } else {
+                        LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
+                            amount, entity.GetID(), knightID);
+
+                        knightHP.currentHealth -= amount;
+
+                        if (knightHP.currentHealth <= 0) {
+                            knightHP.currentHealth = 0;
+                            knightHP.isDead = true;
+                            LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
+                            loader->DeferEntityDestruction(knightID);
+                        }
+
+                        lua_pushboolean(L, 1);
+                        return 1;
                     }
-
-                    lua_pushboolean(L, 1);
-                    return 1;
                 }
             }
 

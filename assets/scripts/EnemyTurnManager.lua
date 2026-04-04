@@ -263,24 +263,29 @@ function EndAllEnemyTurns()
     EnemyTurnActive = false
     ActiveEnemyIndex = 0
 
-    -- Pan camera back to active player
-    local activePlayerID = GetActiveCharacter()
-    if activePlayerID and activePlayerID > 0 then
-        SetCameraFollowTarget(activePlayerID)
-        print("[EnemyTurnManager] Camera now following Player " .. activePlayerID)
-    end
-
-    -- Switch back to player turn
+    -- Switch back to player turn (must happen before ResetPartyTurn)
     EndEnemyTurn()
 
-    -- CRITICAL: Reset party turn immediately
-    -- Normally OnEnemyTurnEnded() would be called by the level script on next frame,
-    -- but we need to reset the party NOW to avoid being stuck in a stale state
+    -- CRITICAL: Reset party turn immediately.
+    -- This resets ActiveCharacterIndex to 1 (first alive player).
+    -- Must be called BEFORE GetActiveCharacter() so the camera follows the correct player.
     if ResetPartyTurn then
         print("[EnemyTurnManager] Immediately resetting party turn...")
         ResetPartyTurn()
     else
         print("[EnemyTurnManager] WARNING: ResetPartyTurn not found!")
+    end
+
+    -- Pan camera back to active player (AFTER ResetPartyTurn so GetActiveCharacter() is valid).
+    -- Previously this was called before ResetPartyTurn, causing GetActiveCharacter() to return 0
+    -- when ActiveCharacterIndex > #PartyMembers (all players had already acted), leaving the
+    -- camera stuck on the boss and both indicators visually overlapping on it.
+    local activePlayerID = GetActiveCharacter()
+    if activePlayerID and activePlayerID > 0 then
+        SetCameraFollowTarget(activePlayerID)
+        print("[EnemyTurnManager] Camera now following Player " .. activePlayerID)
+    else
+        print("[EnemyTurnManager] WARNING: No valid active player for camera follow")
     end
 
     print("[EnemyTurnManager] EndAllEnemyTurns() COMPLETE")
