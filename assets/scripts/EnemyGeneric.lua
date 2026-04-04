@@ -449,6 +449,8 @@ local function MoveOneStep()
                 local sx, sy = GetEntityWorldPosition(entityID)
                 local success = MoveEntityToTile(entityID, fleeX, fleeY)
                 if success then
+                    PlaySound("walk1", false)
+
                     local endX, endY = GetEntityWorldPosition(entityID)
                     if sx and sy and endX and endY then
                         StartGlide(sx, sy, endX, endY)
@@ -484,6 +486,8 @@ local function MoveOneStep()
         local sx, sy = GetEntityWorldPosition(entityID)
         local success = MoveEntityToTile(entityID, nextTile.x, nextTile.y)
         if success then
+            PlaySound("walk1", false)
+            
             local endX, endY = GetEntityWorldPosition(entityID)
             if sx and sy and endX and endY then
                 StartGlide(sx, sy, endX, endY)

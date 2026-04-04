@@ -1880,6 +1880,7 @@ local function consumeAttackAPAndAnimate(cost)
     end
 end
 
+local skillPlayedCustomSfx = false
 -- Helper: play the attack animation
 local function playAttackAnimation()
     currentAnimGroup = AnimGroup.Attack
@@ -1888,6 +1889,12 @@ local function playAttackAnimation()
     
     local myIndex = getPlayerIndex()
     print("[PlayerScript] playAttackAnimation entityID = " .. tostring(entityID) .. ", playerIndex = " .. tostring(myIndex))
+
+    if skillPlayedCustomSfx then
+        print("[PlayerScript] Skill already played custom SFX, skipping generic attack SFX")
+        skillPlayedCustomSfx = false
+        return
+    end
 
     if myIndex == 2 then
         print("[PlayerScript] Mage attack sound: mage_fireball")
@@ -2006,6 +2013,7 @@ end
 
 function ExecuteSkill(skillID)
     local skill = SkillDefs[skillID]
+    skillPlayedCustomSfx = false
     if not skill then
         ClearActivePreview()
         return
@@ -2101,50 +2109,59 @@ function ExecuteSkill(skillID)
     -- ================================================================
     -- SELF-BUFF skills (Guard, Parry, Siphon Charge, Futile Resistance, Dark Omens, Bloody Warcry)
     -- ================================================================
-    if skill.skillType == "self_buff" then
-        ApplyStatusEffect(entityID, skill.effect, skill.duration, entityID)
+if skill.skillType == "self_buff" then
+    ApplyStatusEffect(entityID, skill.effect, skill.duration, entityID)
 
-        -- Dark Omens: mark as used this level
-        if skill.effect == "darkOmens" then
-            darkOmensUsedThisLevel = true
-            spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
-        end
-
-        -- Siphon Charge: immediately heal 2 HP
-        if skill.effect == "siphonCharge" then
-            healEntity(entityID, 2)
-            print("[PlayerScript] Siphon Charge: healed 2 HP")
-            RemoveStatusEffect(entityID, "siphonCharge")
-        end
-
-        -- Bloody Warcry: apply as PENDING to all party members (activates next round)
-        -- Using "bloodyWarcryPending" prevents same-round characters from consuming the effect.
-        -- ResetPartyTurn converts pending -> active at the start of the next round.
-        if skill.effect == "bloodyWarcry" then
-            -- Replace the self-applied "bloodyWarcry" with pending version
-            RemoveStatusEffect(entityID, "bloodyWarcry")
-            ApplyStatusEffect(entityID, "bloodyWarcryPending", skill.duration, entityID)
-            local allPlayers = GetAllPlayers()
-            if allPlayers then
-                for _, pid in ipairs(allPlayers) do
-                    if pid ~= entityID then
-                        ApplyStatusEffect(pid, "bloodyWarcryPending", skill.duration, entityID)
-                        spawnEffectParticles(pid, "bloodyWarcry", 1.0, 0.0, 0.0)
-                    end
-                end
-            end
-            -- Red particles on self too
-            spawnEffectParticles(entityID, "bloodyWarcry", 1.0, 0.0, 0.0)
-            print("[PlayerScript] Bloody Warcry: applied pending to all party members (activates next round)")
-        end
-
-        consumeAttackAPAndAnimate(skill.apCost)
-        print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to self")
-        playAttackAnimation()
-        ClearActivePreview()
-        return
+    if skillID == "Guard" then
+        PlaySound("guard", false)
+        skillPlayedCustomSfx = true
+    elseif skillID == "SiphonCharge" then
+        PlaySound("siphon charge", false)
+        skillPlayedCustomSfx = true
     end
 
+    -- Dark Omens: mark as used this level
+    if skill.effect == "darkOmens" then
+        darkOmensUsedThisLevel = true
+        spawnEffectParticles(entityID, "darkOmens", 0.6, 0.0, 0.8)
+    end
+
+    -- Siphon Charge: immediately heal 2 HP
+    if skill.effect == "siphonCharge" then
+        healEntity(entityID, 2)
+        print("[PlayerScript] Siphon Charge: healed 2 HP")
+        RemoveStatusEffect(entityID, "siphonCharge")
+    end
+
+    -- Bloody Warcry: apply as PENDING to all party members (activates next round)
+    -- Using "bloodyWarcryPending" prevents same-round characters from consuming the effect.
+    -- ResetPartyTurn converts pending -> active at the start of the next round.
+    if skill.effect == "bloodyWarcry" then
+        -- Replace the self-applied "bloodyWarcry" with pending version
+        RemoveStatusEffect(entityID, "bloodyWarcry")
+        ApplyStatusEffect(entityID, "bloodyWarcryPending", skill.duration, entityID)
+        local allPlayers = GetAllPlayers()
+        if allPlayers then
+            for _, pid in ipairs(allPlayers) do
+                if pid ~= entityID then
+                    ApplyStatusEffect(pid, "bloodyWarcryPending", skill.duration, entityID)
+                    spawnEffectParticles(pid, "bloodyWarcry", 1.0, 0.0, 0.0)
+                end
+            end
+        end
+        -- Red particles on self too
+        spawnEffectParticles(entityID, "bloodyWarcry", 1.0, 0.0, 0.0)
+        print("[PlayerScript] Bloody Warcry: applied pending to all party members (activates next round)")
+    end
+
+    consumeAttackAPAndAnimate(skill.apCost)
+
+    
+    print("[PlayerScript] " .. skill.name .. ": applied '" .. skill.effect .. "' to self")
+    playAttackAnimation()
+    ClearActivePreview()
+    return
+end
     -- ================================================================
     -- MELEE CC skills (Bash - stun)
     -- ================================================================
@@ -2421,27 +2438,31 @@ function ExecuteSkill(skillID)
     -- GLOBAL DAMAGE skills (Lightning Strike)
     -- ================================================================
     if skill.skillType == "global_damage" then
-        local enemies = GetAllEnemies()
-        local enemiesHit = 0
-        if enemies then
-            for _, eID in ipairs(enemies) do
-                local success = damageEnemyWithEffects(eID, skill.damage)
-                if success then
-                    enemiesHit = enemiesHit + 1
-                    spawnLightningStrikeSheet(eID)
-                    local ex, ey = GetEntityGridPosition(eID)
-                    if ex and ey then
-                        PulseTile(ex, ey, 0.5, 1.0, 1.0, 0.0)  -- yellow pulse for lightning
-                    end
+    local enemies = GetAllEnemies()
+    local enemiesHit = 0
+    if enemies then
+        for _, eID in ipairs(enemies) do
+            local success = damageEnemyWithEffects(eID, skill.damage)
+            if success then
+                enemiesHit = enemiesHit + 1
+                spawnLightningStrikeSheet(eID)
+                local ex, ey = GetEntityGridPosition(eID)
+                if ex and ey then
+                    PulseTile(ex, ey, 0.5, 1.0, 1.0, 0.0)
                 end
             end
         end
-        consumeAttackAPAndAnimate(skill.apCost)
-        print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
-        playAttackAnimation()
-        ClearActivePreview()
-        return
     end
+
+    consumeAttackAPAndAnimate(skill.apCost)
+    PlaySound("lightning strike", false)
+    skillPlayedCustomSfx = true
+
+    print("[PlayerScript] " .. skill.name .. ": hit " .. enemiesHit .. " enemies for " .. skill.damage .. " damage each")
+    playAttackAnimation()
+    ClearActivePreview()
+    return
+end
 
     -- ================================================================
     -- SELF-OVERLOAD skills (Overload)
