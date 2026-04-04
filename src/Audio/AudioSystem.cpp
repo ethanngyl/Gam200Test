@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          AudioSystem.cpp
  Author:        ETHAN NG
@@ -28,7 +28,7 @@
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
 #include "GlobalPauseManager.h"
-
+#include <fmod_dsp.h>
 namespace Framework {
 
     /**
@@ -399,6 +399,92 @@ namespace Framework {
 
         if (result == FMOD_OK && channel) {
             channel->setMode(loop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF);
+
+            // M6 1207: apply a simple echo effect to one isolated UI SFX only
+            if (soundName == "button2") {
+                FMOD::DSP* echoDSP = nullptr;
+                FMOD_RESULT dspResult = fmodSystem->createDSPByType(FMOD_DSP_TYPE_ECHO, &echoDSP);
+                CheckFMODError(dspResult, "createDSPByType(ECHO)");
+
+                if (dspResult == FMOD_OK && echoDSP) {
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_DELAY, 180.0f);      // ms
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_FEEDBACK, 25.0f);    // %
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_DRYLEVEL, 0.0f);     // dB
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_WETLEVEL, -12.0f);   // dB
+
+                    FMOD_RESULT addResult = channel->addDSP(0, echoDSP);
+                    CheckFMODError(addResult, "channel->addDSP(ECHO)");
+
+                    // FMOD keeps its own reference after addDSP, so release local handle
+                    echoDSP->release();
+                }
+            }
+        }
+    }
+
+    float AudioSystem::ComputeDistanceVolume(const Framework::Vector2D& sourcePos,
+        const Framework::Vector2D& listenerPos) const
+    {
+        const float maxDistance = 4.0f;
+        float dist = Framework::Vector2D::distance(sourcePos, listenerPos);
+
+        if (dist >= maxDistance)
+        {
+            return 0.1f;
+        }
+
+        float t = dist / maxDistance;
+        float volume = 1.0f - (0.9f * t); // 1.0 near, 0.1 far
+
+        return std::clamp(volume, 0.1f, 1.0f);
+    }
+
+    float AudioSystem::ComputeStereoPan(const Framework::Vector2D& sourcePos,
+        const Framework::Vector2D& listenerPos) const
+    {
+        const float maxPanDistance = 2.5f;
+        float dx = sourcePos.x - listenerPos.x;
+        float pan = dx / maxPanDistance;
+
+        return std::clamp(pan, -1.0f, 1.0f);
+    }
+
+    void AudioSystem::PlaySoundPositional(const std::string& soundName,
+        const Framework::Vector2D& sourcePos,
+        const Framework::Vector2D& listenerPos,
+        bool loop)
+    {
+        if (!fmodSystem)
+        {
+            return;
+        }
+
+        auto it = sounds.find(soundName);
+        if (it == sounds.end())
+        {
+            std::cerr << "[Audio] Sound not found: " << soundName << "\n";
+            return;
+        }
+
+        FMOD::Channel* channel = nullptr;
+        FMOD::ChannelGroup* group = loop ? musicGroup : sfxGroup;
+
+        FMOD_RESULT result = fmodSystem->playSound(
+            it->second,
+            group ? group : nullptr,
+            false,
+            &channel
+        );
+
+        if (result == FMOD_OK && channel)
+        {
+            channel->setMode(loop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF);
+
+            float volume = ComputeDistanceVolume(sourcePos, listenerPos);
+            float pan = ComputeStereoPan(sourcePos, listenerPos);
+
+            channel->setVolume(volume);
+            channel->setPan(pan);
         }
     }
 

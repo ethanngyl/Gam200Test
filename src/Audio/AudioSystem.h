@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
  File:          AudioSystem.h
  Author:        ETHAN NG
@@ -194,6 +194,11 @@ namespace Framework {
          */
         void PlaySound(const std::string& soundName, bool loop = false);
 
+        void PlaySoundPositional(const std::string& soundName,
+            const Framework::Vector2D& sourcePos,
+            const Framework::Vector2D& listenerPos,
+            bool loop = false);
+
         /**
          * @brief Immediately stops all currently playing sounds
          *
@@ -351,7 +356,11 @@ namespace Framework {
         // Key: Unique sound name, Value: FMOD sound pointer
         std::unordered_map<std::string, FMOD::Sound*> sounds;
 
+        float ComputeDistanceVolume(const Framework::Vector2D& sourcePos,
+            const Framework::Vector2D& listenerPos) const;
 
+        float ComputeStereoPan(const Framework::Vector2D& sourcePos,
+            const Framework::Vector2D& listenerPos) const;
 
         // Maximum number of sounds that can play simultaneously (default: 32)
         // If exceeded, FMOD will steal the oldest/quietest channel

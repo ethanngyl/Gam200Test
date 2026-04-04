@@ -1082,6 +1082,7 @@ local function createPlayerStates(fsm)
                 currentAnimGroup = AnimGroup.Walk
                 SetAnimationGroup(entityID, currentAnimGroup)
                 SetAnimationPlaying(entityID, true)
+                PlaySound("walk1", false);
             end
 
             -- 7) Visual feedback
@@ -1884,6 +1885,26 @@ local function playAttackAnimation()
     currentAnimGroup = AnimGroup.Attack
     SetAnimationGroup(entityID, currentAnimGroup)
     SetAnimationLoop(entityID, false)
+    
+    local myIndex = getPlayerIndex()
+    print("[PlayerScript] playAttackAnimation entityID = " .. tostring(entityID) .. ", playerIndex = " .. tostring(myIndex))
+
+    if myIndex == 2 then
+        print("[PlayerScript] Mage attack sound: mage_fireball")
+
+        local myX, myY = GetEntityPosition(entityID)
+        local listenerX, listenerY = myX, myY
+
+        if currentTargetEntity ~= nil and currentTargetEntity ~= 0 then
+            local tx, ty = GetEntityPosition(currentTargetEntity)
+            listenerX, listenerY = tx, ty
+        end
+
+        PlaySoundPositional("enemy_mage_attack_basic", myX, myY, listenerX, listenerY, false)
+    else
+        print("[PlayerScript] Normal attack sound: dmgb")
+        PlaySound("dmgb", false)
+    end
 end
 
 -- Helper: face toward a grid position
@@ -1975,7 +1996,6 @@ end
 -- Helper: damage an enemy with soulMergeBuff bonus and post-damage effects
 local function damageEnemyWithEffects(enemyID, baseDamage)
     local damage = baseDamage + getSoulMergeBonusDamage() + currentWarcryBonus
-    -- Check soulRend BEFORE damage: if attack kills enemy, entity is destroyed and HasStatusEffect would fail
     local hadSoulRend = HasStatusEffect and HasStatusEffect(enemyID, "soulRend")
     local success = DamageEntity(enemyID, damage)
     if success then

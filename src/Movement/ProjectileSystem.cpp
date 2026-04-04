@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
  File:           MovementSystem.cpp
  Author:         Josh Ong
@@ -38,6 +38,7 @@
 #include <lua.h>
 #include <lauxlib.h>
 #include <algorithm>
+#include "Audio/AudioSystem.h"
 namespace Framework
 {
     /**
@@ -433,6 +434,26 @@ namespace Framework
                     if (eventSystem) {
                         eventSystem->QueueMessage(new EnemyDamagedMessage(
                             enemy, projectile, damageDealt, hpAfter, hitPos));
+                    }
+
+                    auto* audioSystem = CORE ? CORE->GetAudioSystem() : nullptr;
+                    if (audioSystem)
+                    {
+                        Framework::Vector2D sourcePos(enemyTransform.position.x, enemyTransform.position.y);
+
+                        Framework::Vector2D listenerPos = sourcePos;
+                        if (projMovement.sourceEntityID != 0)
+                        {
+                            Framework::Entity sourceEntity(projMovement.sourceEntityID);
+                            if (entityManager->HasComponent<Transform>(sourceEntity))
+                            {
+                                auto& sourceTransform = entityManager->GetComponent<Transform>(sourceEntity);
+                                listenerPos = Framework::Vector2D(sourceTransform.position.x, sourceTransform.position.y);
+                            }
+                        }
+
+                        audioSystem->PlaySoundPositional("takedmg", sourcePos, listenerPos, false);
+                        
                     }
 
                     // =============================================

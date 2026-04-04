@@ -1,4 +1,4 @@
---[[
+﻿--[[
 ===============================================================================
  File:          EnemyGeneric.lua
  Authors:       Ethan Ng Yong Le
@@ -740,6 +740,7 @@ local function ResolvePendingMeleeAttack()
     local attack = config.skills.attack
 
     DamageEntity(pendingAttackTarget, pendingAttackDamage, entityID)
+    PlaySound("takedmg", false)
     print("[" .. GetLogTag() .. " " .. entityID .. "] " .. attack.name .. " hit for " .. pendingAttackDamage)
 
     -- Apply status effect if configured
