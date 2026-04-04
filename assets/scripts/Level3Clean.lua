@@ -396,6 +396,7 @@ function InitializeAudio()
 
     if not audioConfig then
         Log("ERROR: Failed to load audio configuration!")
+        PlayMusic("igbgm", 0.8, true)
         return
     end
 
@@ -414,9 +415,11 @@ function InitializeAudio()
 
     if bgmSound then
         Log("Starting background music: " .. bgmSound.name)
-        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)        Log(" Background music started: " .. bgmSound.filepath)
+        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)
+        Log(" Background music started: " .. bgmSound.filepath)
     else
-        Log("WARNING: Background music 'igbgm' not found")
+        Log("WARNING: Background music 'igbgm' not found, trying direct playback")
+        PlayMusic("igbgm", 0.8, true)
     end
 end
 

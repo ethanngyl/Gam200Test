@@ -18,6 +18,7 @@
 
 local initialized = false
 local editorToggleCooldown = 0
+local audioConfig = nil
 
 -- ============================================================================
 -- HELPER FUNCTIONS
@@ -41,6 +42,34 @@ local function SafeSwitchLevel(targetLevel, levelName)
     Log(string.format(" Switching to %s", levelName))
 end
 
+local function InitializeAudio()
+    audioConfig = LoadJSON("assets/JSON/AudioConfig.json")
+
+    if not audioConfig then
+        Log("[Level2] WARNING: Failed to load AudioConfig.json, trying direct igbgm playback")
+        PlayMusic("igbgm", 0.8, true)
+        return
+    end
+
+    local found = false
+    if audioConfig.sounds then
+        for _, sound in ipairs(audioConfig.sounds) do
+            if sound.name == "igbgm" then
+                found = true
+                break
+            end
+        end
+    end
+
+    if found then
+        PlayMusic("igbgm", 0.8, true)
+        Log("[Level2] Started BGM: igbgm")
+    else
+        Log("[Level2] WARNING: igbgm not found in AudioConfig, trying direct playback")
+        PlayMusic("igbgm", 0.8, true)
+    end
+end
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -55,6 +84,9 @@ function OnInit()
     SetCameraPosition(0.0, 0.0, 0.0)
     SetCameraZoom(1.0)
     Log("Camera initialized: pos(0,0,0), zoom=1.0")
+
+    -- Start level BGM
+    InitializeAudio()
     
     --  Enable ImGui first
     EnableImGui()
@@ -165,6 +197,7 @@ function OnDestroy()
     -- Disable ImGui
     DisableImGui()
     Log("ImGui disabled")
+    StopMusic(0.3)
     ClearAllEntities()
 
     initialized = false

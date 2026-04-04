@@ -1174,6 +1174,7 @@ function InitializeAudio()
 
     if not audioConfig then
         Log("ERROR: Failed to load audio configuration!")
+        PlayMusic("igbgm", 0.8, true)
         return
     end
 
@@ -1190,6 +1191,10 @@ function InitializeAudio()
 
     if bgmSound then
         PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)
+        Log("[ProceduralMapLevel] Started BGM: " .. bgmSound.name)
+    else
+        Log("[ProceduralMapLevel] WARNING: igbgm not found in AudioConfig, trying direct playback")
+        PlayMusic("igbgm", 0.8, true)
     end
 end
 
