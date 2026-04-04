@@ -77,6 +77,9 @@ local enemyRoundCount = 0
 local lastKnownTurn = "Player"
 local bonusSpawnLastRound = 0
 
+local totemZoneEmitters = {}  -- particle emitter IDs for the active totem's zone
+local bossTotemEmitter = nil  -- purple particle emitter on the boss when totem is active
+
 local BOSS_CONFIG = {
     maxHP = 10,
     moveMPCountdown = 0,
@@ -613,6 +616,19 @@ local function HandleEndOfEnemyRoundEffects()
     end
 end
 
+local function ClearTotemParticles()
+    for _, eid in ipairs(totemZoneEmitters) do
+        if eid and eid ~= 0 then
+            DestroyEntity(eid)
+        end
+    end
+    totemZoneEmitters = {}
+    if bossTotemEmitter and bossTotemEmitter ~= 0 then
+        DestroyEntity(bossTotemEmitter)
+        bossTotemEmitter = nil
+    end
+end
+
 local function OnTotemDestroyed(totemType)
     if totemType ~= TOTEM_TYPE.UNKILLING and totemType ~= TOTEM_TYPE.MASSACRE and totemType ~= TOTEM_TYPE.BLIGHT then
         return
@@ -628,6 +644,8 @@ local function OnTotemDestroyed(totemType)
         end
         QueueDeadPlayerDeaths()
     end
+
+    ClearTotemParticles()
 
     currentTotem.type = TOTEM_TYPE.NONE
     currentTotem.entity = 0
@@ -720,6 +738,35 @@ local function FindTotemAnchorForType(totemType)
     return nil, nil
 end
 
+local function SpawnTotemZoneParticles(totemType, centerTX, centerTY)
+    local r, g, b
+    if totemType == TOTEM_TYPE.UNKILLING then
+        r, g, b = 0.2, 0.5, 1.0
+    elseif totemType == TOTEM_TYPE.MASSACRE then
+        r, g, b = 1.0, 0.2, 0.2
+    else -- BLIGHT
+        r, g, b = 0.2, 0.9, 0.3
+    end
+    local radius = BOSS_CONFIG.totemZoneRadius
+    for ty = centerTY - radius, centerTY + radius do
+        for tx = centerTX - radius, centerTX + radius do
+            local wx, wy = TileToWorld(tx, ty)
+            if wx and wy then
+                local eid = SpawnParticleEmitterActive(wx, wy, 0.03, 4, 0, r, g, b, 0.7)
+                if eid and eid ~= 0 then
+                    table.insert(totemZoneEmitters, eid)
+                end
+            end
+        end
+    end
+end
+
+local function SpawnBossTotemParticle()
+    local bx, by = GetEntityWorldPosition(entityID)
+    if not bx then return end
+    bossTotemEmitter = SpawnParticleEmitterActive(bx, by, 0.04, 6, 0, 0.6, 0.1, 0.9, 0.8, entityID)
+end
+
 local function SpawnTotem(totemType)
     if currentTotem.type ~= TOTEM_TYPE.NONE then return false end
 
@@ -735,6 +782,22 @@ local function SpawnTotem(totemType)
     local totemID = SpawnEnemyAt(wx, wy)
     if not totemID or totemID == 0 then return false end
 
+    -- Set totem texture immediately (before script attachment, so it's visible right away)
+    local totemTextures = {
+        [TOTEM_TYPE.UNKILLING] = "assets/enemy/totem_of_unkilling.png",
+        [TOTEM_TYPE.MASSACRE]  = "assets/enemy/totem_of_massacre.png",
+        [TOTEM_TYPE.BLIGHT]    = "assets/enemy/totem_of_blight.png"
+    }
+    local texPath = totemTextures[totemType]
+    if texPath then
+        if SetSpriteAnimationSheet then
+            SetSpriteAnimationSheet(totemID, texPath, 1, 1, 1, 1.0, false)
+        end
+        if SetSpriteTexture then
+            SetSpriteTexture(totemID, texPath)
+        end
+    end
+
     AddScriptComponentToEntity(totemID, "assets/scripts/Boss2TotemScript.lua")
 
     local hp = 3
@@ -746,7 +809,7 @@ local function SpawnTotem(totemType)
     if SetEntityMaxAP then SetEntityMaxAP(totemID, 0) end
     SetEnemyTarget(totemID, FindClosestLivingPlayer())
 
-    SetSharedInt("boss2_totem_type_" .. tostring(totemID), totemType)
+    SetSharedInt("boss2_totem_type_" .. tostring(math.floor(totemID)), totemType)
 
     currentTotem.type = totemType
     currentTotem.entity = totemID
@@ -764,6 +827,9 @@ local function SpawnTotem(totemType)
         r, g, b = 0.5, 0.2, 0.8
     end
     PulseTile(tx, ty, 0.55, r, g, b)
+
+    SpawnTotemZoneParticles(totemType, tx, ty)
+    SpawnBossTotemParticle()
     return true
 end
 
@@ -979,6 +1045,8 @@ function OnDestroy()
         healthBarFG = nil
     end
 
+    ClearTotemParticles()
+
     if currentTotem.entity and currentTotem.entity ~= 0 and IsEntityValid and IsEntityValid(currentTotem.entity) then
         DestroyEntity(currentTotem.entity)
     end
@@ -1081,6 +1149,20 @@ function OnUpdate(dt)
     ApplyFatalProtectionFromUnkilling()
     HandleMassacreInvulnerability()
     ApplyTotemicBlessing()
+
+    -- Detect totem death every frame so particles are cleaned up immediately
+    if currentTotem.type ~= TOTEM_TYPE.NONE and currentTotem.entity ~= 0 then
+        local totemGone = false
+        if IsEntityValid and not IsEntityValid(currentTotem.entity) then
+            totemGone = true
+        elseif GetEntityHPValue then
+            local hp = GetEntityHPValue(currentTotem.entity)
+            if hp and hp <= 0 then totemGone = true end
+        end
+        if totemGone then
+            OnTotemDestroyed(currentTotem.type)
+        end
+    end
 
     if turn ~= "Enemy" then
         if lastEnemyTurn == "Enemy" then

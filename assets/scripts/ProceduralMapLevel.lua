@@ -112,6 +112,8 @@ local bossArenaGridY = nil
 local bossArenaWorldX = nil
 local bossArenaWorldY = nil
 local redPortalEntity = nil  -- Red portal indicator shown before players enter boss arena
+local redPortalGridX = nil
+local redPortalGridY = nil
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -550,7 +552,7 @@ function SpawnProceduralBoss(mapData)
     if bossCount == 1 then
         bossOffsets = { {dx = 0, dy = 0} }
     else
-        bossOffsets = { {dx = -2, dy = 0}, {dx = 2, dy = 0} }
+        bossOffsets = { {dx = -3, dy = 0}, {dx = 3, dy = 0} }
     end
 
     bossEntityIDs = {}
@@ -566,6 +568,11 @@ function SpawnProceduralBoss(mapData)
         end
 
         Log("Boss " .. i .. " spawned at grid offset (" .. bossOffsets[i].dx .. ", " .. bossOffsets[i].dy .. ") -> Entity " .. bossID)
+
+        -- Set boss skin: level 2 uses blue (boss 1) and yellow (boss 2), others use default
+        if currentLevel == 2 then
+            SetSharedInt("boss_skin_" .. tostring(math.floor(bossID)), i)  -- 1=blue, 2=yellow
+        end
 
         -- Attach boss script based on current level
         local scriptPath = BOSS_SCRIPT_PATH
@@ -623,9 +630,14 @@ function QueueBossSpawnIfArena(mapData)
     bossEntityID = nil
     bossDefeated = false
 
-    -- Spawn red portal at arena center as a visual indicator
+    -- Spawn red portal at arena center as a visual indicator and block the tile
     local portalSize = 0.09
     redPortalEntity = SpawnSprite("assets/Menu/Portal_Red.png", bx, by, portalSize, portalSize, 1)
+    redPortalGridX = mapData.arenaX
+    redPortalGridY = mapData.arenaY
+    if redPortalEntity and redPortalEntity ~= 0 and SetTileOccupant then
+        SetTileOccupant(redPortalGridX, redPortalGridY, redPortalEntity)
+    end
     Log("Red portal indicator spawned at arena center (" .. tostring(bx) .. ", " .. tostring(by) .. ")")
 
     Log("Boss spawn queued: boss will appear once all surviving players enter arena")
@@ -679,10 +691,15 @@ local function TrySpawnQueuedBoss()
         return
     end
 
-    -- Remove the red portal indicator now that boss is about to spawn
+    -- Remove the red portal indicator and unblock the tile
     if redPortalEntity and redPortalEntity ~= 0 then
+        if redPortalGridX and SetTileOccupant then
+            SetTileOccupant(redPortalGridX, redPortalGridY, 0)
+        end
         DestroyEntity(redPortalEntity)
         redPortalEntity = nil
+        redPortalGridX = nil
+        redPortalGridY = nil
         Log("Red portal indicator removed - boss spawning")
     end
 

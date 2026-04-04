@@ -148,19 +148,46 @@ local localArenaBounds = nil  -- Set in OnInit from shared C++ store
 -- ANIMATION (reuses enemy knight sheets)
 -- ============================================================================
 
-local BOSS_ANIM = {
-    idleFront = { tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
-    idleBack  = { tex = "assets/Enemy/Boss1_Idle_Back-Sheet.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
-    idleSide  = { tex = "assets/Enemy/Boss1_Idle_Side-Sheet.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
-
-    walkFront = { tex = "assets/Enemy/Boss1_Walk_Front2-Sheet.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
-    walkBack  = { tex = "assets/Enemy/Boss1_Walk_Back2.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
-    walkSide  = { tex = "assets/Enemy/Boss1_Walk_Side-Sheet.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
-
-    atkFront  = { tex = "assets/Enemy/Boss1_Attack_Front-Sheet.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
-    atkBack   = { tex = "assets/Enemy/Boss1_Attack_Back-Sheet.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
-    atkLeft   = { tex = "assets/Enemy/Boss1_Attack_Left-Sheet.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+local BOSS_SKINS = {
+    -- Skin 0: default Boss1 (level 1)
+    [0] = {
+        idleFront = { tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        idleBack  = { tex = "assets/Enemy/Boss1_Idle_Back-Sheet.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
+        idleSide  = { tex = "assets/Enemy/Boss1_Idle_Side-Sheet.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        walkFront = { tex = "assets/Enemy/Boss1_Walk_Front2-Sheet.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkBack  = { tex = "assets/Enemy/Boss1_Walk_Back2.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkSide  = { tex = "assets/Enemy/Boss1_Walk_Side-Sheet.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        atkFront  = { tex = "assets/Enemy/Boss1_Attack_Front-Sheet.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkBack   = { tex = "assets/Enemy/Boss1_Attack_Back-Sheet.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkLeft   = { tex = "assets/Enemy/Boss1_Attack_Left-Sheet.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+    },
+    -- Skin 1: Blue boss (level 2 boss 1)
+    [1] = {
+        idleFront = { tex = "assets/Enemy/Boss2_blue_Idle_Front-Sheet.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        idleBack  = { tex = "assets/Enemy/Boss2_blue_Idle_Back-Sheet.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
+        idleSide  = { tex = "assets/Enemy/Boss2_blue_Idle_Side-Sheet.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        walkFront = { tex = "assets/Enemy/Boss2_blue_Walk_Front2-Sheet.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkBack  = { tex = "assets/Enemy/Boss2_blue_Walk_Back2.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkSide  = { tex = "assets/Enemy/Boss2_blue_Walk_Side-Sheet.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        atkFront  = { tex = "assets/Enemy/Boss2_blue_Attack_Front-Sheet.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkBack   = { tex = "assets/Enemy/Boss2_blue_Attack_Back-Sheet.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkLeft   = { tex = "assets/Enemy/Boss2_blue_Attack_Left-Sheet.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+    },
+    -- Skin 2: Yellow boss (level 2 boss 2)
+    [2] = {
+        idleFront = { tex = "assets/Enemy/Boss2_yellow_Idle_Front-Sheet_Y.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        idleBack  = { tex = "assets/Enemy/Boss2_yellow_Idle_Back-Sheet_Y.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
+        idleSide  = { tex = "assets/Enemy/Boss2_yellow_Idle_Side-Sheet_Y.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        walkFront = { tex = "assets/Enemy/Boss2_yellow_Walk_Front2-Sheet_Y.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkBack  = { tex = "assets/Enemy/Boss2_yellow_Walk_Back2_Y.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkSide  = { tex = "assets/Enemy/Boss2_yellow_Walk_Side-Sheet_Y.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        atkFront  = { tex = "assets/Enemy/Boss2_yellow_Attack_Front-Sheet_Y.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkBack   = { tex = "assets/Enemy/Boss2_yellow_Attack_Back-Sheet_Y.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkLeft   = { tex = "assets/Enemy/Boss2_yellow_Attack_Left-Sheet_Y.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+    }
 }
+
+local BOSS_ANIM = BOSS_SKINS[0]  -- default, overridden in OnInit
 
 local lastAnimKey = nil
 local lastFlipX = false
@@ -394,6 +421,14 @@ function OnInit()
         return
     end
     Log("[BossScript] Boss " .. entityID .. " initialized")
+
+    -- Select skin based on SharedInt (0=Boss1, 1=blue, 2=yellow)
+    local skinID = 0
+    if GetSharedInt then
+        skinID = GetSharedInt("boss_skin_" .. tostring(entityID), 0)
+    end
+    BOSS_ANIM = BOSS_SKINS[skinID] or BOSS_SKINS[0]
+    Log("[BossScript] Boss " .. entityID .. " using skin " .. skinID)
 
     currentPath = {}
     pathIndex = 1

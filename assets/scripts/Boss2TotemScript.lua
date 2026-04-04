@@ -56,8 +56,8 @@ function OnInit()
 
     -- Set totem texture based on type
     local totemTextures = {
-        [1] = "assets/enemy/totem_of_unkilling.png",
-        [2] = "assets/enemy/totem_of_massacre.png",
+        [1] = "assets/Enemy/totem_of_unkilling.png",
+        [2] = "assets/Enemy/totem_of_massacre.png",
         [3] = "assets/enemy/totem_of_blight.png"
     }
     local texPath = totemTextures[totemType]
