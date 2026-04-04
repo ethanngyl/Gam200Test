@@ -119,8 +119,8 @@ end
 -- ============================================================================
 
 local function LevelToVolume(level)
-    -- Level 0 = 1.0, Level 9 = 0.0 (actually let's keep some minimum)
-    -- Level 0 = 1.0, Level 1 = 0.9, ..., Level 9 = 0.1
+    -- Level 0 = 1.0, Level 1 = 0.9, ..., Level 8 = 0.2, Level 9 = 0.0 (silent)
+    if level >= 9 then return 0.0 end
     return 1.0 - (level * 0.1)
 end
 
@@ -129,11 +129,10 @@ end
 -- ============================================================================
 
 local function VolumeToLevel(volume)
-    -- Clamp volume to valid range
-    volume = math.max(0.1, math.min(1.0, volume))
-    -- Convert: 1.0 -> 0, 0.9 -> 1, ..., 0.1 -> 9
+    if volume <= 0.05 then return 9 end
+    volume = math.min(1.0, volume)
     local level = math.floor((1.0 - volume) * 10 + 0.5)
-    return math.max(0, math.min(9, level))
+    return math.max(0, math.min(8, level))
 end
 
 -- ============================================================================
