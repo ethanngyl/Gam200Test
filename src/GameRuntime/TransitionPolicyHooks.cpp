@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          TransitionPolicyHooks.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ TransitionPolicyHooks Implementation
+
+ Overview:
+    The TransitionPolicyHooks module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "TransitionPolicyHooks.h"
 
@@ -6,6 +21,10 @@
 
 namespace Framework::TransitionPolicyHooks {
 
+/**
+ * @brief Applies transition policies and sets the upcoming game state.
+ * @param nextState State identifier to set as next.
+ */
 void SetNextStateWithPolicy(int nextState)
 {
     if (Framework::CORE) {

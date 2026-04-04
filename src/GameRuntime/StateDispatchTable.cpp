@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          StateDispatchTable.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ StateDispatchTable Implementation
+
+ Overview:
+    The StateDispatchTable module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "StateDispatchTable.h"
 
@@ -9,6 +24,9 @@
 #include "StateProfiles.h"
 
 namespace {
+    /**
+     * @brief Binds Level 2 specific lifecycle callbacks into the GSM dispatch pointers.
+     */
     void ConfigureLevel2State()
     {
         fpLoad = Framework::Level2StateHooks::OnLoad;
@@ -23,6 +41,10 @@ namespace {
 
 namespace Framework::StateDispatchTable {
 
+/**
+ * @brief Configures callback function pointers for the given state id.
+ * @param state State identifier that determines callback profile.
+ */
 void ConfigureState(int state)
 {
     switch (Framework::StateProfiles::GetKind(state)) {

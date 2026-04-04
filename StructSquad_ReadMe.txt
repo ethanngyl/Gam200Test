@@ -4,11 +4,11 @@ TEAM NAME:
 Struct Squad
 
 TEAM ROSTER:
-IVAN NG ...................... Product Manager + Programmer
+IVAN NG ...................... Product Manager 
 ETHAN NG ..................... Tech Lead
 SIM KAH YAN .................. Graphic Design + Audio
 TAN WEI LEONG ............... Programmer
-JOSH ONG ..................... Programmer
+JOSH ONG ..................... Programmer (Map)
 GE YONG QI ................... Programmer (Debug)
 ZHOU JIAHAO .................. Collision + Physics
 CARL JAMESON Z. PADILLA ..... Programmer
@@ -46,8 +46,25 @@ the tab key to traverse through the targets.
 P - To end the current player's turn.
 Q - Closes the game
 ESC - Can only be used while in-game. Brings up a button to return to the main menu, a button to resume the game, a button for settings which will lead 
-to a volume slider page where the volume can be adjusted by pressing the arrow keys, left will lower the volume and right will raise the volume.
+to a volume slider page where the volume can be adjusted by pressing the arrow keys, left will lower the volume and right will raise the volume. 
+There is also an option to mute all bgm or all sfx. There is also a button to restart the game from the first level no matter which level you are on.
+Arrow Keys - Changes direction of the player, some skills are direction orientated
 
+Controller Support:
+DPad - changes direction of the player (Arrow Keys). 
+Left Joystick - For movement (mimicks wasd), you cannot hold it down in one direction to consume all movement points in that direction, you will have to go to rest and move it again.
+Right Joystick - Functions as a mouse
+RB - Functions as the left click
+X,B,Y,A - Skills 1 - 4 respectively
+RT - Execute skill
+Start - End turn
+Back - Pauses game
+LB - Skips tutorial
+LT - Goes to the next page
+
+Cheat Keys:
+F2 - Kills all enemies, once boss spawns, you can toggle the f2 key again
+F3 - Instantly brings you to the victory screen
 UI for the demo:
 Currently, the player can see their HP (Health), AP (Used for skills), and MP (Used for movement) on the bottom right of side of the screen. There is a number value
 on them as well as a bar indicator for AP and MP, and a circle indicator for HP. The number and the bar/circle will increase/decrease accordingly corresponding to damage
@@ -64,7 +81,7 @@ The description of the every skill (24) can be found the the Skills.json located
 are located in the EnemyGeneric.lua which effectively serves as an enemy loader as well as a skill logic/behaviour handler.
 The boss script is mostly running independently on its own logic for skills and behaviour.
 
-Boss Skills:
+Boss for levels 1/2 Skills (Dark knight, spawns once on level 1, and spawns twice at once on level 2):
 Skill 1. The boss's basic attack is the same as the regular enemy's but it does 1 more damage. This skill can be used at random.
 Skill 2. The boss can execute a cross slash that goes 3 tiles far in each direction. This skill can be used at random.
 Skill 3. The boss targets the highest health player, and only path finds to them for the next 3 turns. While this skill is active, both the targeted player and the boss receives one more damage from each other. 
@@ -74,6 +91,37 @@ The boss should cycle randomly between skills 1 and 2. If the condition for skil
 skill 4 must always be prioritized. These skills from the boss do not consume any movement points, instead, the boss can only used two skills per turn. If the boss is able to use skill 4, he will use it and end his turn immediately.
 The boss has 10 HP and uses 2 skills per turn instead of AP.
 Below is the list of current enemy skills:
+
+Boss 3 (Orc Shaman):
+Orc Summoning Ritual
+There will be a portal in the center of the map. After all existing players in the party have entered into the boss area, the boss will be activated. 
+Orc Shaman:
+Preparatory Rites
+This skill will always be used first when the boss first becomes "active". This skill begins a 8 turn countdown, excluding this turn. After the countdown is over, this boss gains an empowered state. While the countdown is active, the boss will not move from his initial location. After entering the empowered state, the boss will be able to move, and 5 additional Orc Warriors will be spawned randomly in the boss arena. While in the empowered state, all enemies gain + 1 attack, + 1 MP, + 1 AP. Each time a totem is broken, the boss takes 2 damage and spawns 2 additional Orc Warriors
+Totem of Unkilling.
+Summons a totem (3 HP, 0 AP, No skills) next to the closest enemy with a random free tile spot. This totem creates a 5x5 zone while the totem is alive. Any entity (Player/Enemy) when taking fatal damage in the zone, will have their health set to 1 instead.
+Totem of Massacre
+Summons a totem (3 HP, 0 AP, No skills) next to the closest player with a random free tile spot. This totem creates a 5x5 zone while the totem is alive.
+This totem remains invulnerable while there are enemies in the zone. Whenever an enemy dies in the zone, this totem takes one damage. When the health of the totem reaches 0, all entities (Player/Enemy) takes 3 damage.
+Totem of Blight
+Summons a totem (5 HP, 0 AP, No skills) next to the Orc Shaman. This totem creates a 5x5 zone while this totem is alive. At the end of each turn (meaning after the last enemy has made their move), all entities(Player/Enemy) takes 1 damage. If the number of entities in the zone exceeds 4 at the end of the turn, The countdown of preparatory rites is reduced by 1.
+Totemic Blessing (Passive)
+While a totem is alive, the boss takes 0 damage. 
+
+Decision Making:
+1.The boss should always use preparatory rites when he first becomes active. 
+The boss should always use totem skills in order of 2-4. There can only be one totem up at a time. So if a totem is already up, the boss will just choose to pass his turn. Once all the 3 types of totems have been killed at least once, the boss becomes stunned for 1 turn, preparatory rites countdown is increased by 1.
+Repeat this cycle after the boss becomes unstunned from the effect of totems being destroyed.
+While a totem is active, the boss will always choose to pass his turn.
+The Orc Shaman has
+10 Health, and uses the unique logic provided above.
+
+Orc Warrior: 
+2 MP 2 AP 6 HP
+Strong Swing
+Range: 3 Tiles horizontally relative to the direction the enemy is facing. Consumes 2 HP, 2 AP does 2 Damage. No cooldown
+Regenerate
+Consumes 2 AP, heal 1 HP. 2 Turn cooldown. To be used when HP reaches less than or equal
 
 Enemy Knight Commander
 Strike: Adjacent Tiles, 1 Damage, Consumes 1 AP
@@ -104,10 +152,10 @@ The game starts at the main menu.
 Selecting Play loads the task guide page
 Selecting How To Play shows the controls and explains the UI elements that are currently present for the player.
 Selecting Quit Game closes the application.
-Selecting the settings button on the bottom right will bring up an empty page at the moment as it is still being done.
+Selecting the settings button will allow the player adjust the volume of the game, toggle on/off BGM/SFX.
 
 GUIDE PAGE:
-This section introduces a brief story and the objective of the game. Click the "next" button to enter the level selection page.
+This section introduces the objective of the game. Click the "next" button to enter the level selection page.
 
 LEVEL SELECTOR:
 Displays buttons Editor's page, Demo page, and back.
@@ -118,7 +166,10 @@ Further information can be found in the LevelEditor document.
 Pressing Key 3 loads Demo page.
 Press ESC to pause the game. 
 
-Demo:
+Cutscene before level loads:
+A type-writer animation will play, writing out the current story on screen before the level loads.
+
+Level 1:
 This level demonstrates the core grid system, entity occupancy, combat system and enemy pathfinding loop.
 It verifies tile creation, world-to-tile conversion, occupancy tracking, arrow key movement, and enemy pursuit using the A* algorithm.
 The player is locked to one tile per turn and cannot move out of turn.
@@ -128,4 +179,8 @@ This level forms the foundation for the turn-based gameplay system the rest of t
 Skill Select Screen:
 Only accessible after beating the first level. The player will see two of each character's existing skills, and two new skills which
 can be equipped to their third skill slot. The player can press next button to traverse through the 3 characters, hitting the next button
-after the last character in the party (Berserker) will bring the player to the second and final level for now.
+after the last character in the party (Berserker) will bring the player to the next level.
+
+Levels:
+There are a total of three levels and the player must always start from the available option of level 1 since this game is meant to be played
+progressively.

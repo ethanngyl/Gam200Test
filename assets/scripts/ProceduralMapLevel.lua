@@ -1189,9 +1189,17 @@ end
 function InitializeAudio()
     audioConfig = LoadJSON("assets/JSON/AudioConfig.json")
 
+    local function StartInGameBgm()
+        -- Hard-swap music to avoid queued fade transitions across state changes.
+        if StopMusic then
+            StopMusic(0.0)
+        end
+        PlayMusic("igbgm", 0.8, true)
+    end
+
     if not audioConfig then
         Log("ERROR: Failed to load audio configuration!")
-        PlayMusic("igbgm", 0.8, true)
+        StartInGameBgm()
         return
     end
 
@@ -1207,11 +1215,11 @@ function InitializeAudio()
     end
 
     if bgmSound then
-        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)
+        StartInGameBgm()
         Log("[ProceduralMapLevel] Started BGM: " .. bgmSound.name)
     else
         Log("[ProceduralMapLevel] WARNING: igbgm not found in AudioConfig, trying direct playback")
-        PlayMusic("igbgm", 0.8, true)
+        StartInGameBgm()
     end
 end
 

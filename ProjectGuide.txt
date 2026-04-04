@@ -24,6 +24,7 @@ Set Up:
 - run.bat clean will delete the build folder
 - run.bat will delete and then create the build
 - clean.bat will perform a deep clean, removing .vs, build, out and the bin folder
+- note that the build folder is named bat-build due to permission errors occuring while attmepting to create the build folder.
 
 CMake Notes:
 - Do note that the current iteration of CMakeLists.txt is now made to run on CMAKE 4.1.2

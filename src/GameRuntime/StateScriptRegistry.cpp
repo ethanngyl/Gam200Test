@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          StateScriptRegistry.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ StateScriptRegistry Implementation
+
+ Overview:
+    The StateScriptRegistry module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "StateScriptRegistry.h"
 
@@ -15,6 +30,11 @@ namespace {
     std::unordered_map<int, std::string> g_manifestStateNames;
     bool g_manifestLoaded = false;
 
+    /**
+     * @brief Returns a fallback readable state name for unmapped manifest entries.
+     * @param state State identifier.
+     * @return Static state name string.
+     */
     const char* GetFallbackStateName(int state)
     {
         switch (state) {
@@ -37,6 +57,11 @@ namespace {
         }
     }
 
+    /**
+     * @brief Builds a fallback Lua script path for known scripted states.
+     * @param state State identifier.
+     * @return Resolved script path or nullptr when unknown.
+     */
     const char* GetFallbackLevelScript(int state)
     {
         static std::string fallbackPath;
@@ -68,6 +93,11 @@ namespace {
         }
     }
 
+    /**
+     * @brief Indicates whether a state should have a Lua script mapping.
+     * @param state State identifier.
+     * @return True if state is scripted; otherwise false.
+     */
     bool IsScriptedState(int state)
     {
         switch (state) {
@@ -90,6 +120,9 @@ namespace {
         }
     }
 
+    /**
+     * @brief Lazily loads state script/name mappings from the registry manifest.
+     */
     void LoadStateRegistryIfNeeded()
     {
         if (g_manifestLoaded) return;
@@ -146,6 +179,11 @@ namespace {
 
 namespace Framework::StateScriptRegistry {
 
+/**
+ * @brief Gets the Lua script path for a state id.
+ * @param state State identifier.
+ * @return Script path string, or empty string when unavailable.
+ */
 const char* GetLevelScript(int state)
 {
     LoadStateRegistryIfNeeded();
@@ -166,6 +204,11 @@ const char* GetLevelScript(int state)
     return kEmptyScriptPath;
 }
 
+/**
+ * @brief Gets a stable display/log name for a state id.
+ * @param state State identifier.
+ * @return State name string from manifest or fallback table.
+ */
 const char* GetStateName(int state)
 {
     LoadStateRegistryIfNeeded();
@@ -177,6 +220,10 @@ const char* GetStateName(int state)
     return GetFallbackStateName(state);
 }
 
+/**
+ * @brief Validates that required scripted states resolve to script paths.
+ * @return True when all required states are mapped; otherwise false.
+ */
 bool ValidateScriptMappingsAtStartup()
 {
     const int requiredStates[] = {

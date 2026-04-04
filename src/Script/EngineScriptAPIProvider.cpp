@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          EngineScriptAPIProvider.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ EngineScriptAPIProvider Implementation
+
+ Overview:
+    The EngineScriptAPIProvider module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "EngineScriptAPIProvider.h"
 
@@ -5,6 +20,10 @@
 
 namespace Framework::EngineScriptAPIProvider {
 
+/**
+ * @brief Registers engine-level Lua API bindings into a Lua state.
+ * @param L Active Lua state that receives bindings.
+ */
 void Register(lua_State* L)
 {
     // Logging
