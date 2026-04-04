@@ -44,6 +44,10 @@
 
 local ButtonManager = {}
 
+-- Seed the random number generator so character picks vary across sessions.
+math.randomseed(os.time and os.time() or 42)
+math.random() math.random()  -- discard first two values (common Lua practice)
+
 -- ============================================================================
 -- INTERNAL STATE
 -- ============================================================================
@@ -61,8 +65,23 @@ local FADE_TEXTURE = "assets/Menu/WoodBackground.png"
 -- so wipe begins immediately at the visible left edge.
 local FADE_SCALE_X = 4.2
 local FADE_SCALE_Y = 2.4
--- RenderQueue packs layer into 8 bits; use -1 so it wraps to 255 (topmost).
-local FADE_LAYER = -1
+-- RenderQueue packs layer into 8 bits; use -2 so it wraps to 254.
+-- Warrior sits one layer above at -1 (wraps to 255, topmost).
+local FADE_LAYER = -2
+
+-- Walking character sprite that rides the leading edge of the black curtain.
+-- One character is picked at random each time a transition starts.
+local warriorOverlayID = 0
+local WARRIOR_W        = 0.8   -- world units (menu viewport is ~4.2 wide)
+local WARRIOR_H        = 0.8   -- square frames, so same as width
+local WARRIOR_LAYER    = -1    -- wraps to 255, always above the curtain (254)
+
+-- { texture, rows, cols, frameCount, frameTime, flipX }
+local WALK_CHARACTERS = {
+    { "assets/Warrior/SideView/WarriorSideViewWalk.png",          1, 6, 6, 0.12, true  },
+    { "assets/Mage/SideView/Mage_Walk_Side-Sheet.png",            1, 6, 6, 0.12, true  },
+    { "assets/Berserker/SideView/Berserker_Walk_Right-Sheet.png", 1, 6, 6, 0.12, false },
+}
 
 local function EnsureFadeOverlay()
     if fadeOverlayID and fadeOverlayID > 0 then
@@ -74,6 +93,7 @@ local function EnsureFadeOverlay()
         camX, camY = GetCameraPosition()
     end
 
+    -- Black curtain sprite (layer 254)
     fadeOverlayID = SpawnSprite(FADE_TEXTURE, camX, camY, FADE_SCALE_X, FADE_SCALE_Y, FADE_LAYER)
     if fadeOverlayID and fadeOverlayID > 0 then
         if SetSpriteBlendMode then
@@ -86,6 +106,31 @@ local function EnsureFadeOverlay()
         end
         if SetSpriteFilterMode then
             SetSpriteFilterMode(fadeOverlayID, true)
+        end
+    end
+
+    -- Walking character sprite (layer 255, above curtain) — random pick each transition
+    if not (warriorOverlayID and warriorOverlayID > 0) then
+        local idx  = math.random(1, #WALK_CHARACTERS)
+        local char = WALK_CHARACTERS[idx]
+        -- char = { texture, rows, cols, frameCount, frameTime, flipX }
+        warriorOverlayID = SpawnAnimatedSprite(
+            char[1],
+            camX, camY,
+            WARRIOR_W, WARRIOR_H,
+            WARRIOR_LAYER,
+            char[2], char[3], char[4],  -- rows, columns, frameCount
+            char[5],                     -- frameTime
+            true                         -- loop
+        )
+        if warriorOverlayID and warriorOverlayID > 0 then
+            if SetAnimationFlipX then
+                SetAnimationFlipX(warriorOverlayID, char[6])  -- flip only if needed
+            end
+            if SetSpriteColor then
+                SetSpriteColor(warriorOverlayID, 1.0, 1.0, 1.0, 0.0)  -- invisible until transition starts
+            end
+            Log("[ButtonManager] Transition character: " .. char[1])
         end
     end
 end
@@ -114,6 +159,23 @@ local function UpdateFadeOverlay()
     -- Opaque wipe: covered region is fully black, uncovered region remains unchanged.
     local overlayAlpha = (progress > 0.0) and 1.0 or 0.0
     SetSpriteColor(fadeOverlayID, 0.0, 0.0, 0.0, overlayAlpha)
+
+    -- Update warrior: sits at the right (leading) edge of the curtain
+    if warriorOverlayID and warriorOverlayID > 0 then
+        local warriorAlpha = overlayAlpha   -- visible exactly when curtain is visible
+        if SetSpriteColor then
+            SetSpriteColor(warriorOverlayID, 1.0, 1.0, 1.0, warriorAlpha)
+        end
+        if warriorAlpha > 0.0 then
+            -- Right edge of the curtain = leftX + currentWidth
+            local warriorX = leftX + currentWidth
+            -- Stand at the bottom of the viewport (floor level)
+            local warriorY = camY - (FADE_SCALE_Y * 0.5) + (WARRIOR_H * 0.5)
+            if SetSpritePosition then
+                SetSpritePosition(warriorOverlayID, warriorX, warriorY)
+            end
+        end
+    end
 end
 
 -- ============================================================================
@@ -297,6 +359,10 @@ function ButtonManager.Cleanup()
         DestroyEntity(fadeOverlayID)
     end
     fadeOverlayID = 0
+    if warriorOverlayID and warriorOverlayID > 0 then
+        DestroyEntity(warriorOverlayID)
+    end
+    warriorOverlayID = 0
     buttonIDs = {}
     editorToggleCooldown = 0
     pendingState = nil
