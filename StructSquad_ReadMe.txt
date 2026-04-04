@@ -4,11 +4,11 @@ TEAM NAME:
 Struct Squad
 
 TEAM ROSTER:
-IVAN NG ...................... Product Manager + Programmer
+IVAN NG ...................... Product Manager 
 ETHAN NG ..................... Tech Lead
 SIM KAH YAN .................. Graphic Design + Audio
 TAN WEI LEONG ............... Programmer
-JOSH ONG ..................... Programmer
+JOSH ONG ..................... Programmer (Map)
 GE YONG QI ................... Programmer (Debug)
 ZHOU JIAHAO .................. Collision + Physics
 CARL JAMESON Z. PADILLA ..... Programmer
