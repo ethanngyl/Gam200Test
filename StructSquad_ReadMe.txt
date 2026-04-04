@@ -95,7 +95,7 @@ Below is the list of current enemy skills:
 Boss 3 (Orc Shaman):
 Orc Summoning Ritual
 There will be a portal in the center of the map. After all existing players in the party have entered into the boss area, the boss will be activated. 
-Orc Shaman:
+Skills:
 Preparatory Rites
 This skill will always be used first when the boss first becomes "active". This skill begins a 8 turn countdown, excluding this turn. After the countdown is over, this boss gains an empowered state. While the countdown is active, the boss will not move from his initial location. After entering the empowered state, the boss will be able to move, and 5 additional Orc Warriors will be spawned randomly in the boss arena. While in the empowered state, all enemies gain + 1 attack, + 1 MP, + 1 AP. Each time a totem is broken, the boss takes 2 damage and spawns 2 additional Orc Warriors
 Totem of Unkilling.
@@ -121,7 +121,8 @@ Orc Warrior:
 Strong Swing
 Range: 3 Tiles horizontally relative to the direction the enemy is facing. Consumes 2 HP, 2 AP does 2 Damage. No cooldown
 Regenerate
-Consumes 2 AP, heal 1 HP. 2 Turn cooldown. To be used when HP reaches less than or equal
+Consumes 2 AP, heal 1 HP. 2 Turn cooldown. To be used when HP reaches less than or equal to 50%.
+There can only be 15 Orc Warriors in the level at any given time.
 
 Enemy Knight Commander
 Strike: Adjacent Tiles, 1 Damage, Consumes 1 AP

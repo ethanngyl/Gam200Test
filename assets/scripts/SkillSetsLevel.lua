@@ -424,6 +424,15 @@ function OnNextButtonClicked()
     ButtonManager.TransitionTo("CONTROL2")
 end
 
+function OnReturnButtonClicked()
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    Log("RETURN button clicked! Returning to main menu")
+    ButtonManager.TransitionTo("mainMenu")
+end
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnUpdate
 -- ============================================================================

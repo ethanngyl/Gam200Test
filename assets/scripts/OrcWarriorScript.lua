@@ -42,7 +42,7 @@ local CONFIG = {
     moveMP = 2,
     moveCost = 1,
     regenAmount = 1,
-    regenThreshold = 3,
+    regenThresholdPercent = 0.5,
     regenCooldown = 2,
     strongSwingDamage = 2,
     strongSwingSelfDamage = 2,
@@ -218,7 +218,8 @@ local function UseRegenerate()
     local ap = GetEntityAP(entityID)
     if not ap or ap < 2 then return false end
     if regenCooldown > 0 then return false end
-    if hp > CONFIG.regenThreshold then return false end
+    if maxHP <= 0 then return false end
+    if (hp / maxHP) > CONFIG.regenThresholdPercent then return false end
 
     ConsumeEnemyAP(entityID, 2)
     SetEntityHP(entityID, math.min(hp + CONFIG.regenAmount, maxHP), maxHP)
@@ -227,6 +228,12 @@ local function UseRegenerate()
     local ex, ey = GetEntityGridPosition(entityID)
     if ex then PulseTile(ex, ey, 0.3, 0.2, 0.9, 0.2) end
     return true
+end
+
+local function ShouldPrioritizeRegenerate()
+    local hp, maxHP = GetEntityHP(entityID)
+    if not hp or not maxHP or maxHP <= 0 then return false end
+    return (hp / maxHP) <= CONFIG.regenThresholdPercent
 end
 
 local function UseStrongSwing()
@@ -478,9 +485,12 @@ function OnUpdate(dt)
         UpdateFacingToward(tx, ty)
     end
 
-    if UseRegenerate() then
-        FinishTurn()
-        return
+    -- Regenerate takes priority only when HP is at or below 50%.
+    if ShouldPrioritizeRegenerate() then
+        if UseRegenerate() then
+            FinishTurn()
+            return
+        end
     end
 
     if CanUseStrongSwingOnAnyPlayer() then
