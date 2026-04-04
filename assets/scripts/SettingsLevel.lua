@@ -14,6 +14,8 @@ local initialized = false
 local config = nil
 local backgroundSpriteID = 0
 local overlaySprites = {}
+local musicEnabled = true
+local sfxEnabled   = true
 
 function OnInit()
     Log("Settings Level Script Initialized (ButtonManager Version)")
@@ -86,6 +88,17 @@ function OnInit()
     -- Initialize buttons
     ButtonManager.Initialize(config.menu.buttons)
 
+    -- Sync button labels to the actual current volume state
+    musicEnabled = (GetMusicVolume() > 0.0)
+    sfxEnabled   = (GetSfxVolume()   > 0.0)
+
+    if not musicEnabled then
+        ButtonManager.SetButtonText("toggle_music", "MUSIC: OFF")
+    end
+    if not sfxEnabled then
+        ButtonManager.SetButtonText("toggle_sfx", "SFX: OFF")
+    end
+
     initialized = true
     Log("Settings page initialization complete")
     Log("Press F1 to toggle editor mode")
@@ -94,6 +107,38 @@ end
 -- ============================================================================
 -- BUTTON CALLBACKS
 -- ============================================================================
+
+function OnToggleMusicClicked()
+    if not ButtonManager.CanExecuteCallback() then return end
+
+    musicEnabled = not musicEnabled
+
+    if musicEnabled then
+        SetMusicVolume(1.0)
+        ButtonManager.SetButtonText("toggle_music", "MUSIC: ON")
+        Log("Music enabled")
+    else
+        SetMusicVolume(0.0)
+        ButtonManager.SetButtonText("toggle_music", "MUSIC: OFF")
+        Log("Music disabled")
+    end
+end
+
+function OnToggleSfxClicked()
+    if not ButtonManager.CanExecuteCallback() then return end
+
+    sfxEnabled = not sfxEnabled
+
+    if sfxEnabled then
+        SetSfxVolume(1.0)
+        ButtonManager.SetButtonText("toggle_sfx", "SFX: ON")
+        Log("SFX enabled")
+    else
+        SetSfxVolume(0.0)
+        ButtonManager.SetButtonText("toggle_sfx", "SFX: OFF")
+        Log("SFX disabled")
+    end
+end
 
 function OnBackButtonClicked()
     if not ButtonManager.CanExecuteCallback() then

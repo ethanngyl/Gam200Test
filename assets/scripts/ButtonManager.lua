@@ -248,6 +248,24 @@ function ButtonManager.CreateButton(buttonConfig)
 end
 
 -- ============================================================================
+-- PUBLIC API: BUTTON TEXT OVERRIDE
+-- ============================================================================
+
+---
+-- Change the displayed text of an existing button at runtime.
+-- @param buttonId string  The id field from the JSON config
+-- @param newText  string  New text to display
+--
+function ButtonManager.SetButtonText(buttonId, newText)
+    local data = buttonIDs[buttonId]
+    if data and data.config and data.config.text then
+        data.config.text.content = newText
+    else
+        Log("[ButtonManager] SetButtonText: button '" .. tostring(buttonId) .. "' not found")
+    end
+end
+
+-- ============================================================================
 -- PUBLIC API: UPDATE LOOP
 -- ============================================================================
 

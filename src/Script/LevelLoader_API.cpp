@@ -278,14 +278,22 @@ namespace Framework {
         return 1;
     }
 
-    // Music/SFX volume aliases currently map to master volume because the
-    // underlying audio settings file stores a single master value.
     int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
-        return Lua_SetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMusicVolume(volume);
+        return 0;
     }
 
     int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
-        return Lua_GetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetMusicVolume());
+        return 1;
     }
 
     int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
@@ -293,11 +301,21 @@ namespace Framework {
     }
 
     int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
-        return Lua_SetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetSfxVolume(volume);
+        return 0;
     }
 
     int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
-        return Lua_GetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetSfxVolume());
+        return 1;
     }
 
     int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {

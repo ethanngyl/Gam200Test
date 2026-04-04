@@ -41,6 +41,10 @@ void Register(lua_State* L)
     lua_register(L, "SetMasterVolume", LevelLoader::Lua_SetMasterVolume);
     lua_register(L, "GetMasterVolume", LevelLoader::Lua_GetMasterVolume);
     lua_register(L, "SaveMasterVolume", LevelLoader::Lua_SaveMasterVolume);
+    lua_register(L, "SetMusicVolume",   LevelLoader::Lua_SetMusicVolume);
+    lua_register(L, "GetMusicVolume",   LevelLoader::Lua_GetMusicVolume);
+    lua_register(L, "SetSfxVolume",     LevelLoader::Lua_SetSfxVolume);
+    lua_register(L, "GetSfxVolume",     LevelLoader::Lua_GetSfxVolume);
 
     // UI Buttons
     lua_register(L, "CreateButton", LevelLoader::Lua_CreateButton);
