@@ -1,7 +1,8 @@
 --[[
 ===============================================================================
 | File:          PauseMenu.lua
-| Author:        GE YONGQI
+| Author:        GE YONGQI (50%), Carl Padilla Jameson (50%)
+| Email:         yongqi.ge@digipen.edu , c.padilla@digipen.edu
 | Date:          2026-01-27
 | ------------------------------------------------------------------------------
 |  Reusable Pause Menu System with Visual UI Elements

@@ -1,8 +1,9 @@
 --[[
 ===============================================================================
  File:          OrcWarriorScript.lua
- Authors:       Ethan Ng
- Email:         n.ethanyongle@digipen.edu
+ Authors:       Ethan Ng (94%)
+ Co-Authors:    Carl Padilla Jameson (6%)
+ Email:         n.ethanyongle@digipen.edu, c.padilla@digipen.edu
  Date:          03/13/2026
  ------------------------------------------------------------------------------
 
