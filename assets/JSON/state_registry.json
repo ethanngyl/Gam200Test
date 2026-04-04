@@ -83,6 +83,18 @@
       "name": "GS_RESTART",
       "aliases": ["restart"],
       "script": ""
+    },
+    {
+      "id": 15,
+      "name": "SPLASH_SCREEN",
+      "aliases": ["splash_screen", "splash", "copyright"],
+      "script": "assets/scripts/SplashScreenLevel.lua"
+    },
+    {
+      "id": 17,
+      "name": "DEMO_BRIDGE",
+      "aliases": ["demo_bridge", "DEMO_INTRO", "demo_intro"],
+      "script": "assets/scripts/DemoBridgeLevel.lua"
     }
   ]
 }

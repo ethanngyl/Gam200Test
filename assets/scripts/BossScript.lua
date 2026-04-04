@@ -354,6 +354,36 @@ local function GetMarkBonus(targetID)
 end
 
 -- ============================================================================
+-- ARENA CHECK (must be defined before OnInit so OnInit can call it as a local)
+-- ============================================================================
+
+-- Check if all living players are inside the arena bounds
+local function AreAllPlayersInArena()
+    local arena = localArenaBounds
+    if not arena then return false end
+
+    local players = GetAllPlayers()
+    if not players or #players == 0 then return false end
+
+    local count = 0
+    local alive = 0
+    for _, pid in ipairs(players) do
+        local hp = GetEntityHP(pid)
+        if hp and hp > 0 then
+            alive = alive + 1
+            local px, py = GetEntityGridPosition(pid)
+            if px and py
+               and px >= arena.minX and px < arena.maxX
+               and py >= arena.minY and py < arena.maxY then
+                count = count + 1
+            end
+        end
+    end
+
+    return alive > 0 and count == alive
+end
+
+-- ============================================================================
 -- LIFECYCLE CALLBACKS
 -- ============================================================================
 
@@ -484,32 +514,6 @@ local function UpdateHealthBar()
     SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
--- Check if all living players are inside the arena bounds
-local function AreAllPlayersInArena()
-    local arena = localArenaBounds
-    if not arena then return false end
-
-    local players = GetAllPlayers()
-    if not players or #players == 0 then return false end
-
-    local count = 0
-    local alive = 0
-    for _, pid in ipairs(players) do
-        local hp = GetEntityHP(pid)
-        if hp and hp > 0 then
-            alive = alive + 1
-            local px, py = GetEntityGridPosition(pid)
-            if px and py
-               and px >= arena.minX and px < arena.maxX
-               and py >= arena.minY and py < arena.maxY then
-                count = count + 1
-            end
-        end
-    end
-
-    return alive > 0 and count == alive
-end
-
 function OnUpdate(dt)
     -- Update health bar every frame
     UpdateHealthBar()
@@ -523,7 +527,20 @@ function OnUpdate(dt)
             end
             print("[Boss " .. entityID .. "] All players in arena - BOSS ACTIVATED!")
         else
-            -- Boss is fully idle before activation and does not consume an enemy action.
+            -- Players not yet in arena.  If the enemy turn system has made us the
+            -- active enemy we MUST still finish our action, otherwise the whole
+            -- enemy turn hangs permanently.  Skip any real action but release the turn.
+            local currentTurn = GetCurrentTurn and GetCurrentTurn()
+            if currentTurn == "Enemy" then
+                local ok1, isActive = pcall(IsActiveEnemy, entityID)
+                if ok1 and isActive then
+                    local ok2, actionReady = pcall(IsEnemyActionReady)
+                    if ok2 and actionReady and not hasActedThisTurn then
+                        print("[Boss " .. entityID .. "] Not yet activated — passing turn to unblock enemy phase")
+                        FinishBossAction()
+                    end
+                end
+            end
             return
         end
     end

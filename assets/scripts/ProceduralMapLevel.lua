@@ -523,6 +523,19 @@ function SpawnProceduralBoss(mapData)
     end
 
     -- Store arena boundaries in shared C++ store so BossScript can access them
+    -- Spawn boss as an enemy entity (same stats as regular enemies)
+    local bossID = SpawnEnemyAt(bx, by)
+
+    if not bossID or bossID == 0 then
+        Log("ERROR: Failed to spawn boss!")
+        return false
+    end
+
+    Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
+
+    -- Store arena boundaries BEFORE attaching the script so that BossScript's OnInit
+    -- can read correct bounds via GetSharedInt.  (Attaching the script calls OnInit
+    -- immediately; if bounds are set afterwards OnInit reads stale -1 values.)
     local arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3)
     local arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3)
     local arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4)
@@ -579,6 +592,14 @@ function SpawnProceduralBoss(mapData)
     end
 
     -- Track arena position so portal spawns here after all bosses die
+    -- Attach configurable boss script (OnInit now sees correct arena bounds above).
+    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
+
+    -- Set target (C++ side)
+    SetEnemyTarget(bossID, playerID)
+
+    -- Track boss entity and arena position so portal spawns here after boss dies
+    bossEntityID = bossID
     bossArenaGridX = mapData.arenaX
     bossArenaGridY = mapData.arenaY
     bossArenaWorldX = bx
@@ -953,6 +974,28 @@ function OnUpdate(dt)
             end
             Log("[CHEAT] Killed all " .. #enemies .. " enemies")
         end
+    end
+
+    -- ========================================
+    -- CHEAT: Kill all enemies (press F2)
+    -- ========================================
+    if IsKeyDown("F2") and not goalReached then
+        local enemies = GetAllEnemies()
+        if enemies and #enemies > 0 then
+            for _, eid in ipairs(enemies) do
+                SetEntityHP(eid, 0, 0)
+                DestroyEntity(eid)
+            end
+            Log("[CHEAT] F2 killed all " .. #enemies .. " enemies")
+        end
+    end
+
+    -- ========================================
+    -- CHEAT: Auto-complete current level (press F3)
+    -- ========================================
+    if IsKeyDown("F3") then
+        SetNextGameState("WIN_SCREEN")
+        return
     end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues
