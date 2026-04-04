@@ -198,8 +198,8 @@ function ButtonManager.Initialize(buttons)
     -- Clear any existing buttons first
     ButtonManager.Cleanup()
 
-    -- Setup a fullscreen fade overlay used for menu-level transitions.
-    EnsureFadeOverlay()
+    -- NOTE: fade overlay and character sprite are spawned lazily in TransitionTo(),
+    -- not here, so they don't pollute the entity list while the menu is idle.
 
     -- Create each button from JSON config
     for i, button in ipairs(buttons) do

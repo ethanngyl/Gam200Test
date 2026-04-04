@@ -64,7 +64,7 @@ function OnInit()
     logoID = SpawnSprite(
         "assets/DigiPen_BLACK.png",
         0.0, 0.0,
-        2.5,1.5,
+        3.0,1.5,
         1
     )
     if logoID and logoID > 0 then
