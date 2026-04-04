@@ -31,6 +31,11 @@ local active        = false
 local onDone        = nil
 local currentChar   = 1
 
+-- Camera position locked when the UI opens; all subsequent pages use the same origin
+-- so sprites and buttons never drift when the camera moves between frames.
+local lockedCamX    = 0
+local lockedCamY    = 0
+
 local bgSpriteID    = 0
 local charSpriteID  = 0
 local charScrollID  = 0
@@ -275,7 +280,10 @@ end
 
 local function buildCharPage()
     local pi = currentChar
-    local camX, camY = GetCameraPosition()
+    -- Always use the camera position that was captured when Show() was called.
+    -- Calling GetCameraPosition() again here can return a slightly different value
+    -- if even one frame has passed, causing sprites to drift away from the background.
+    local camX, camY = lockedCamX, lockedCamY
 
     existingBtnMap = {}
     offerBtnMap = {}
@@ -400,10 +408,12 @@ function SkillSwapUI.Show(doneCallback, slot)
 
     TogglePause()
 
-    local camX, camY = GetCameraPosition()
+    -- Lock the camera origin once; all pages (Warrior → Mage → Berserker) share it.
+    lockedCamX, lockedCamY = GetCameraPosition()
+
     bgSpriteID = SpawnSprite(
         "assets/Menu/WoodBackground.png",
-        camX, camY,
+        lockedCamX, lockedCamY,
         BG_SCALE, BG_SCALE,
         BG_LAYER
     )
@@ -421,6 +431,8 @@ function SkillSwapUI.Hide()
         DestroyEntity(bgSpriteID)
         bgSpriteID = 0
     end
+
+    lockedCamX, lockedCamY = 0, 0
 
     TogglePause()
 
