@@ -1,0 +1,373 @@
+{
+  "menu": {
+    "name": "SkillSets_Berserker",
+    "music": {
+      "name": "mmbgm",
+      "volume": 1.0,
+      "loop": true
+    },
+    "camera": {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "zoom": 1.0
+    },
+    "background": {
+      "texture": "assets/Menu/WoodBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 4.0,
+        "y": 4.0
+      },
+      "layer": 1
+    },
+    "overlaySprites": [
+      {
+        "id": "scrollOverlay",
+        "texture": "assets/Menu/Scroll Overlay.png",
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "scale": {
+          "x": 4.7,
+          "y": 2.5
+        },
+        "layer": 2
+      },
+      {
+        "id": "icon_bg_zerk_slam",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.46 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_zerk_siphon",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.33 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_zerk_futile",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.20 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_zerk_dark_omens",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.07 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_zerk_cannibalism",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.06 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_zerk_groundshatter",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.19 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_zerk_warcry",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.32 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_zerk_whirlwind",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.45 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_zerk_slam",
+        "texture": "assets/SkillIcons/Slam.png",
+        "position": { "x": -0.98, "y": 0.46 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_zerk_siphon",
+        "texture": "assets/SkillIcons/SiphonCharge.png",
+        "position": { "x": -0.98, "y": 0.33 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_zerk_futile",
+        "texture": "assets/SkillIcons/FutileResistance.png",
+        "position": { "x": -0.98, "y": 0.20 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_zerk_dark_omens",
+        "texture": "assets/SkillIcons/DarkOmens.png",
+        "position": { "x": -0.98, "y": 0.07 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_zerk_cannibalism",
+        "texture": "assets/SkillIcons/Cannibalism.png",
+        "position": { "x": -0.98, "y": -0.06 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_zerk_groundshatter",
+        "texture": "assets/SkillIcons/Groundshatter.png",
+        "position": { "x": -0.98, "y": -0.19 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_zerk_warcry",
+        "texture": "assets/SkillIcons/BloodyWarcry.png",
+        "position": { "x": -0.98, "y": -0.32 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_zerk_whirlwind",
+        "texture": "assets/SkillIcons/BladedWhirlwind.png",
+        "position": { "x": -0.98, "y": -0.45 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      }
+    ],
+    "buttons": [
+      {
+        "id": "text_title",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.27,
+          "y": 0.54
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "SKILL SETS GUIDE",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 1.25,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_page",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": 1.05, "y": 0.54 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "PAGE 3/3",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.6,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_header",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.44 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Berserker (high risk/high reward)",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.9,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_1",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.33 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Slam: strong line hit, costs HP too.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_2",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.20 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Siphon Charge: spend AP to heal.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_3",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.07 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Futile Resistance: weak enemies deal less damage to you.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_4",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.06 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Dark Omens: cheat death once, but die after your next turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_5",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.19 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Cannibalism: damage ally to heal self.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_6",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.32 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Groundshatter: huge AoE that hurts everyone, then self-stuns.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_7",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.45 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Bloody Warcry: boosts next turn with HP tradeoff.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_zerk_8",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.58 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Bladed Whirlwind: ranged hit + bleed tick next turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "back",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": -1.0,
+          "y": -0.66
+        },
+        "scale": {
+          "x": 0.8,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "BACK",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -50.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnBackButtonClicked"
+      }
+    ]
+  }
+}

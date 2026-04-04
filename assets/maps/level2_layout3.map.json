@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "dimensions": { "width": 20, "height": 21 },
+  "algorithm": "saved",
+  "tiles": [
+    "FFFFFFFWWFFFFFFFFFFF",
+    "FFFFFFFWWFFFFFFFFFFF",
+    "FFFFFFFWWFFFFFFFFFFF",
+    "FFFFFFFWWFFFFFFFFFFF",
+    "FFFFFFFWWFFFFWWFFFFF",
+    "FFFFFFFFFFFFFWWFFFFF",
+    "FFFFFFFWWFFFFWWFFFFF",
+    "FFFFFFFWWFFFFWWFFFFF",
+    "WWWFFWWWWFFWWWWWWFFF",
+    "WWWFFWWWWFFWWWWWWFFF",
+    "WWWFFWWWWFFFFFFFFFFF",
+    "WWWFFWWWWFWWWWFFFFFF",
+    "FFFFFFFFFFWWWWFFFFFF",
+    "FFFFFFFFFFWWFFFFFFFF",
+    "FFFFFFWWFFWWFFFFFFFF",
+    "FFFFFFWWFFFFFFFFFFFF",
+    "FFWWWWWWFFFFFFFFFFFF",
+    "FFWWWWWWFFWWFFFFFFFF",
+    "FFFFFFWWFFWWFFFFFFFF",
+    "FFFFFFWWFFWWFFFFFFFF",
+    "FFFFFFFFFFWWFFFFFFFF"
+  ],
+  "playerSpawn": { "x": 19, "y": 19 },
+  "goalSpawn": { "x": 18, "y": 20 },
+  "enemySpawns": [
+    { "x": 14, "y": 19 },
+    { "x": 1, "y": 15 },
+    { "x": 14, "y": 12 },
+    { "x": 4, "y": 10 },
+    { "x": 10, "y": 5 },
+    { "x": 15, "y": 2 }
+  ],
+  "chestSpawns": [],
+  "arena": {
+    "hasArena": true,
+    "center": { "x": 3, "y": 3 },
+    "min": { "x": 0, "y": 0 },
+    "max": { "x": 7, "y": 8 }
+  }
+}

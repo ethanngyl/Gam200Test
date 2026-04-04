@@ -278,14 +278,22 @@ namespace Framework {
         return 1;
     }
 
-    // Music/SFX volume aliases currently map to master volume because the
-    // underlying audio settings file stores a single master value.
     int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
-        return Lua_SetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMusicVolume(volume);
+        return 0;
     }
 
     int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
-        return Lua_GetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetMusicVolume());
+        return 1;
     }
 
     int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
@@ -293,11 +301,21 @@ namespace Framework {
     }
 
     int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
-        return Lua_SetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetSfxVolume(volume);
+        return 0;
     }
 
     int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
-        return Lua_GetMasterVolume(L);
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetSfxVolume());
+        return 1;
     }
 
     int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {
@@ -3526,21 +3544,33 @@ namespace Framework {
                 uint32_t knightID = oathEffect->sourceEntity;
                 Entity knight(knightID);
                 if (em->HasComponent<Health>(knight)) {
-                    LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
-                        amount, entity.GetID(), knightID);
-
                     auto& knightHP = em->GetComponent<Health>(knight);
-                    knightHP.currentHealth -= amount;
 
-                    if (knightHP.currentHealth <= 0) {
-                        knightHP.currentHealth = 0;
-                        knightHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-                        loader->DeferEntityDestruction(knightID);
+                    if (knightHP.isDead) {
+                        // The protecting knight is already dead but not yet removed from the
+                        // entity manager (deferred destruction pending).  The oath is stale —
+                        // remove it so subsequent hits deal damage normally to this entity.
+                        effects.RemoveEffect("knightsOath");
+                        LOG_INFO("StatusEffect",
+                            "Knight's Oath on entity %u: knight %u already dead, removing stale effect",
+                            entity.GetID(), knightID);
+                        // Fall through to apply damage normally to the original target.
+                    } else {
+                        LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
+                            amount, entity.GetID(), knightID);
+
+                        knightHP.currentHealth -= amount;
+
+                        if (knightHP.currentHealth <= 0) {
+                            knightHP.currentHealth = 0;
+                            knightHP.isDead = true;
+                            LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
+                            loader->DeferEntityDestruction(knightID);
+                        }
+
+                        lua_pushboolean(L, 1);
+                        return 1;
                     }
-
-                    lua_pushboolean(L, 1);
-                    return 1;
                 }
             }
 
@@ -3987,6 +4017,7 @@ namespace Framework {
         int width = static_cast<int>(luaL_checknumber(L, 1));
         int height = static_cast<int>(luaL_checknumber(L, 2));
         const char* algorithm = luaL_checkstring(L, 3);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 4, 1));
 
         LevelLoader* loader = GetLevelLoader(L);
         CoreEngine* core = loader->coreEngine;
@@ -4020,7 +4051,7 @@ namespace Framework {
 
         // Generate and load
         MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
-            config, spawner, em, startPos, spacing, tileSize
+            config, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         s_lastGeneratedMap = map;
@@ -4379,6 +4410,7 @@ namespace Framework {
         }
 
         std::string filepath = lua_tostring(L, 1);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 2, 1));
 
         Framework::MapGen::GeneratedMap map;
         Framework::MapGen::Config config;
@@ -4409,7 +4441,7 @@ namespace Framework {
         MapGen::Generator::printMap(map);
 
         ProceduralMapLoader::LoadFromGeneratedMap(
-            map, spawner, em, startPos, spacing, tileSize
+            map, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         // Build the SAME Lua table as Lua_LoadProceduralMap returns.
@@ -4518,6 +4550,10 @@ namespace Framework {
             lua_pushstring(L, "arenaY");      lua_pushnumber(L, map.arenaCenter.y);                                lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldX"); lua_pushnumber(L, startPos.x + (map.arenaCenter.x * spacing.x));     lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldY"); lua_pushnumber(L, startPos.y + (map.arenaCenter.y * spacing.y));     lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinX");   lua_pushnumber(L, map.arenaMin.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinY");   lua_pushnumber(L, map.arenaMin.y);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxX");   lua_pushnumber(L, map.arenaMax.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxY");   lua_pushnumber(L, map.arenaMax.y);                                   lua_settable(L, -3);
         }
 
         return 1;

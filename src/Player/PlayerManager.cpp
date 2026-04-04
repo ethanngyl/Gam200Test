@@ -1,4 +1,4 @@
-/******************************************************************************
+﻿/******************************************************************************
 ===============================================================================
  File:           PlayerManager.cpp
  Author:         ETHAN NG YONG LE
@@ -1047,8 +1047,14 @@ namespace Framework {
         // PLAY TAKE DAMAGE SOUND EFFECT (Enemy gets hit)
         // ========================================================================
         if (audioSystem && !hp.isDead) {
-            audioSystem->PlaySound("takedmg", false);  // Play take damage sound
-            LOG_INFO("PlayerAttack", "Playing take damage sound 'takedmg'");
+            const auto& enemyTransform = entityManager->GetComponent<Transform>(target);
+            const auto& playerTransform = entityManager->GetComponent<Transform>(playerEntity);
+
+            Framework::Vector2D sourcePos(enemyTransform.position.x, enemyTransform.position.y);
+            Framework::Vector2D listenerPos(playerTransform.position.x, playerTransform.position.y);
+
+            audioSystem->PlaySoundPositional("takedmg", sourcePos, listenerPos, false);
+            LOG_INFO("PlayerAttack", "Playing positional take damage sound 'takedmg'");
         }
 
         LOG_INFO("PlayerAttack", "Hit enemy %u for 1. Enemy HP now %d/%d. AttackAP=%d/%d",

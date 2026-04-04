@@ -1,4 +1,4 @@
-/*
+﻿/*
 ===============================================================================
 File:        ImGuiSystem.cpp
 Author:      Ethan Ng, Jiahao Zhou, Sim Kah Yan
@@ -83,6 +83,7 @@ Controls for:
 #ifdef _WIN32
 #include <Windows.h>
 #include <commdlg.h>
+#include <shlobj.h>
 #endif
 
 namespace Framework {
@@ -226,8 +227,42 @@ namespace Framework {
         (void)outPath;
         return false;
     }
+
 #endif
 
+#ifdef _WIN32
+    static bool OpenFolderPicker(std::string& outPath)
+    {
+        char folderPath[MAX_PATH] = { 0 };
+
+        BROWSEINFOA bi;
+        ZeroMemory(&bi, sizeof(bi));
+        bi.hwndOwner = nullptr;
+        bi.lpszTitle = "Select Export Folder";
+        bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+
+        LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
+        if (pidl != nullptr)
+        {
+            if (SHGetPathFromIDListA(pidl, folderPath))
+            {
+                outPath = folderPath;
+                CoTaskMemFree(pidl);
+                return true;
+            }
+
+            CoTaskMemFree(pidl);
+        }
+
+        return false;
+    }
+#else
+    static bool OpenFolderPicker(std::string& outPath)
+    {
+        (void)outPath;
+        return false;
+    }
+#endif
 
 
     // ============================================================================
@@ -637,6 +672,34 @@ namespace Framework {
         return ext == ".png" || ext == ".jpg" || ext == ".jpeg";
     }
 
+    static std::string FormatBytes(uintmax_t bytes)
+    {
+        const double kb = 1024.0;
+        const double mb = kb * 1024.0;
+        const double gb = mb * 1024.0;
+
+        char buffer[64] = { 0 };
+
+        if (bytes >= static_cast<uintmax_t>(gb))
+        {
+            sprintf_s(buffer, "%.2f GB", static_cast<double>(bytes) / gb);
+        }
+        else if (bytes >= static_cast<uintmax_t>(mb))
+        {
+            sprintf_s(buffer, "%.2f MB", static_cast<double>(bytes) / mb);
+        }
+        else if (bytes >= static_cast<uintmax_t>(kb))
+        {
+            sprintf_s(buffer, "%.2f KB", static_cast<double>(bytes) / kb);
+        }
+        else
+        {
+            sprintf_s(buffer, "%llu B", static_cast<unsigned long long>(bytes));
+        }
+
+        return std::string(buffer);
+    }
+
 
     // ============================================================================
     // This is the function that show the asset window
@@ -719,6 +782,7 @@ namespace Framework {
                     {
                         std::filesystem::copy_file(srcPath, destPath);
                         forceRescan = true;
+                        buildSizeNeedsRefresh = true;
 
                         if (graphicsSystem && IsTextureFile(destPath))
                         {
@@ -738,6 +802,7 @@ namespace Framework {
         if (ImGui::Button("Refresh##Assets"))
         {
             forceRescan = true;
+            buildSizeNeedsRefresh = true;
         }
 
         ImGui::Separator();
@@ -976,6 +1041,7 @@ namespace Framework {
                     }
 
                     forceRescan = true;
+                    buildSizeNeedsRefresh = true;
                 }
                 catch (const std::exception& e)
                 {
@@ -998,6 +1064,207 @@ namespace Framework {
 
         ImGui::End();  // Only one End() call at the very end
     }
+
+    void ImGuiSystem::RefreshBuildSizeEntries()
+    {
+        buildSizeEntries.clear();
+
+        try
+        {
+            if (!std::filesystem::exists(rootpath))
+            {
+                buildSizeNeedsRefresh = false;
+                return;
+            }
+
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(rootpath))
+            {
+                if (!entry.is_regular_file())
+                {
+                    continue;
+                }
+
+                std::filesystem::path relative = std::filesystem::relative(entry.path(), rootpath);
+
+                BuildSizeAssetEntry asset;
+                asset.relativePath = relative.generic_string();
+                asset.fileSize = entry.file_size();
+
+                auto found = buildSizeSelectionMemory.find(asset.relativePath);
+                if (found != buildSizeSelectionMemory.end())
+                {
+                    asset.selected = found->second;
+                }
+
+                buildSizeEntries.push_back(asset);
+            }
+
+            std::sort(buildSizeEntries.begin(), buildSizeEntries.end(),
+                [](const BuildSizeAssetEntry& a, const BuildSizeAssetEntry& b)
+                {
+                    return a.relativePath < b.relativePath;
+                });
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[BuildSize] Refresh failed: " << e.what() << "\n";
+        }
+
+        buildSizeNeedsRefresh = false;
+    }
+
+    bool ImGuiSystem::ExportSelectedBuildAssets(const std::filesystem::path& destinationRoot)
+    {
+        try
+        {
+            if (!std::filesystem::exists(destinationRoot))
+            {
+                std::filesystem::create_directories(destinationRoot);
+            }
+
+            for (const auto& asset : buildSizeEntries)
+            {
+                if (!asset.selected)
+                {
+                    continue;
+                }
+
+                std::filesystem::path srcPath = rootpath / asset.relativePath;
+                std::filesystem::path dstPath = destinationRoot / asset.relativePath;
+
+                std::filesystem::create_directories(dstPath.parent_path());
+                std::filesystem::copy_file(
+                    srcPath,
+                    dstPath,
+                    std::filesystem::copy_options::overwrite_existing
+                );
+            }
+
+            return true;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "[BuildSize] Export failed: " << e.what() << "\n";
+            return false;
+        }
+    }
+
+    void ImGuiSystem::ShowBuildSizeWindow()
+    {
+        if (buildSizeNeedsRefresh)
+        {
+            RefreshBuildSizeEntries();
+        }
+
+        if (!ImGui::Begin("Build Size Analyzer##BuildSizeWindow", &showBuildSizeWindow))
+        {
+            ImGui::End();
+            return;
+        }
+
+        if (ImGui::Button("Refresh##BuildSize"))
+        {
+            buildSizeNeedsRefresh = true;
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Select All##BuildSize"))
+        {
+            for (auto& asset : buildSizeEntries)
+            {
+                asset.selected = true;
+                buildSizeSelectionMemory[asset.relativePath] = true;
+            }
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Deselect All##BuildSize"))
+        {
+            for (auto& asset : buildSizeEntries)
+            {
+                asset.selected = false;
+                buildSizeSelectionMemory[asset.relativePath] = false;
+            }
+        }
+
+        uintmax_t totalSelectedSize = 0;
+        int selectedCount = 0;
+
+        for (const auto& asset : buildSizeEntries)
+        {
+            if (asset.selected)
+            {
+                totalSelectedSize += asset.fileSize;
+                selectedCount++;
+            }
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Assets: %d", static_cast<int>(buildSizeEntries.size()));
+        ImGui::Text("Selected: %d", selectedCount);
+        ImGui::Text("Total Selected Size: %s", FormatBytes(totalSelectedSize).c_str());
+        ImGui::Separator();
+
+        if (ImGui::Button("Export Selected Assets##BuildSizeExport"))
+        {
+            std::string destinationFolder;
+            if (OpenFolderPicker(destinationFolder))
+            {
+                if (ExportSelectedBuildAssets(destinationFolder))
+                {
+                    std::cout << "[BuildSize] Exported selected assets to: " << destinationFolder << "\n";
+                }
+                else
+                {
+                    std::cerr << "[BuildSize] Export failed.\n";
+                }
+            }
+        }
+
+        ImGui::Separator();
+
+        ImGui::BeginChild("BuildSizeAssetList", ImVec2(0, 0), true);
+
+        if (ImGui::BeginTable("BuildSizeTable", 3,
+            ImGuiTableFlags_RowBg |
+            ImGuiTableFlags_Borders |
+            ImGuiTableFlags_Resizable |
+            ImGuiTableFlags_ScrollY))
+        {
+            ImGui::TableSetupColumn("Export", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+            ImGui::TableSetupColumn("Asset Path", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("File Size", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableHeadersRow();
+
+            for (size_t i = 0; i < buildSizeEntries.size(); ++i)
+            {
+                auto& asset = buildSizeEntries[i];
+
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+                std::string checkboxId = "##BuildSizeSelect_" + std::to_string(i);
+                if (ImGui::Checkbox(checkboxId.c_str(), &asset.selected))
+                {
+                    buildSizeSelectionMemory[asset.relativePath] = asset.selected;
+                }
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::TextUnformatted(asset.relativePath.c_str());
+
+                ImGui::TableSetColumnIndex(2);
+                ImGui::TextUnformatted(FormatBytes(asset.fileSize).c_str());
+            }
+
+            ImGui::EndTable();
+        }
+
+        ImGui::EndChild();
+        ImGui::End();
+    }
+
 
     // ============================================================================
     // This function converts the mouse cursor's screen position (pixels) into 
@@ -1534,6 +1801,7 @@ namespace Framework {
         if (showDemo) ImGui::ShowDemoWindow(&showDemo);
         // show asset window - jiahao
         if (showAssets) ShowAssetsWindow();
+        if (showBuildSizeWindow) ShowBuildSizeWindow();
         if (showLayersWindow) ShowLayersWindow();
 
         if (showAudioNamePopup) {
@@ -5040,6 +5308,7 @@ namespace Framework {
                 ImGui::MenuItem("Debug Info", nullptr, &showDebug);
                 ImGui::MenuItem("ImGui Demo", nullptr, &showDemo);
                 ImGui::MenuItem("Assets", nullptr, &showAssets);
+                ImGui::MenuItem("Build Size Analyzer", nullptr, &showBuildSizeWindow);
                 ImGui::MenuItem("Prefabs", nullptr, &showPrefabWindow);
                 ImGui::MenuItem("Layers", nullptr, &showLayersWindow);
                 ImGui::MenuItem("Game Viewport", nullptr, &showGameViewport);
