@@ -23,6 +23,7 @@ namespace {
         { WIN_SCREEN, Framework::StateProfiles::Kind::StandardScripted },
         { LOSE_SCREEN, Framework::StateProfiles::Kind::StandardScripted },
         { DEMO_BRIDGE, Framework::StateProfiles::Kind::StandardScripted },
+        { Copyright, Framework::StateProfiles::Kind::StandardScripted },
         { GS_QUIT, Framework::StateProfiles::Kind::Quit },
         { GS_RESTART, Framework::StateProfiles::Kind::Restart }
     };
