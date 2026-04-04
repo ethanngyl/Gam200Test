@@ -838,6 +838,28 @@ function OnUpdate(dt)
             Log("[CHEAT] Killed all " .. #enemies .. " enemies")
         end
     end
+
+    -- ========================================
+    -- CHEAT: Kill all enemies (press F2)
+    -- ========================================
+    if IsKeyDown("F2") and not goalReached then
+        local enemies = GetAllEnemies()
+        if enemies and #enemies > 0 then
+            for _, eid in ipairs(enemies) do
+                SetEntityHP(eid, 0, 0)
+                DestroyEntity(eid)
+            end
+            Log("[CHEAT] F2 killed all " .. #enemies .. " enemies")
+        end
+    end
+
+    -- ========================================
+    -- CHEAT: Auto-complete current level (press F3)
+    -- ========================================
+    if IsKeyDown("F3") then
+        SetNextGameState("WIN_SCREEN")
+        return
+    end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues
     -- HandleMapRegeneration()
