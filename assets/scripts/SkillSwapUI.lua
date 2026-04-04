@@ -38,6 +38,7 @@ local SkillSwapUI = {}
 local active        = false
 local onDone        = nil
 local currentChar   = 1
+local pendingAdvance = false   -- deferred page transition (avoids button iterator invalidation)
 
 -- Camera position locked when the UI opens; all subsequent pages use the same origin
 -- so sprites and buttons never drift when the camera moves between frames.
@@ -629,21 +630,15 @@ local function buildCharPage()
     end
 
     -- CHANGED: Nav button (bottom-right)
+    -- IMPORTANT: Do NOT destroy/rebuild buttons inside a button callback!
+    -- ClearAllButtons() invalidates the UISystem's button iterator mid-loop.
+    -- Instead, set a flag and handle the transition in Update().
     _G["OnNavBtn"] = function()
         if not chosenSkill[pi] then
             Log("[SkillSwapUI] Must choose a skill first!")
             return
         end
-        if currentChar < 3 then
-            destroyCharPage()
-            currentChar = currentChar + 1
-            buildCharPage()
-            Log("[SkillSwapUI] Moving to " .. charNames[currentChar])
-        else
-            Log("[SkillSwapUI] All done - saving")
-            saveLoadout()
-            SkillSwapUI.Hide()
-        end
+        pendingAdvance = true
     end
 
     navBtnID = CreateButton(
@@ -728,6 +723,24 @@ end
 
 function SkillSwapUI.Update(dt)
     if not active then return end
+
+    -- Handle deferred page transition (must happen outside button callback
+    -- to avoid invalidating UISystem's button iterator during ClearAllButtons)
+    if pendingAdvance then
+        pendingAdvance = false
+        if currentChar < 3 then
+            destroyCharPage()
+            currentChar = currentChar + 1
+            buildCharPage()
+            Log("[SkillSwapUI] Moving to " .. charNames[currentChar])
+        else
+            Log("[SkillSwapUI] All done - saving")
+            saveLoadout()
+            SkillSwapUI.Hide()
+        end
+        return
+    end
+
     UpdateHoverTooltip()
 end
 
