@@ -8,7 +8,7 @@ set GENERATOR=Visual Studio 17 2022
 set BUILD_TYPE=Debug
 set MODE=game
 set ACTION=build
-set BUILD_ROOT=out\build
+set BUILD_ROOT=bat-build
 
 :: ---------------------------------------------------------------------------
 :: Parse command line arguments

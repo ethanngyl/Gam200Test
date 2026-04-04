@@ -22,7 +22,7 @@ Makefile
 Debug/
 Release/
 x86/
-
+bat-build/
 # Executables and libraries
 *.exe
 *.a
