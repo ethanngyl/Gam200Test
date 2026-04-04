@@ -1,3 +1,27 @@
+--[[
+===============================================================================
+ File:          TutorialPopupUI.lua
+ Authors:       Ethan Ng
+ Email:         n.ethanyongle@digipen.edu
+ Date:          02/25/2026
+ ------------------------------------------------------------------------------
+
+ TUTORIAL POPUP UI - Displays tutorial popups during gameplay
+
+ Brief:
+    A UI component for displaying tutorial popups with text and images.
+    Can be configured with multiple steps, each containing a title, body,
+    and optional hint. Supports text wrapping and viewport-relative positioning.
+    Players can navigate through steps with key presses, and the popup will
+    follow the camera with optimized updates.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+]]--
+
 local UIComponent = require("UI/UIComponent")
 
 local TutorialPopupUI = {}
