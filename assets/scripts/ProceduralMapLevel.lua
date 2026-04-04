@@ -466,13 +466,9 @@ function SpawnProceduralBoss(mapData)
 
     Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
 
-    -- Attach configurable boss script.
-    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
-
-    -- Set target (C++ side)
-    SetEnemyTarget(bossID, playerID)
-
-    -- Store arena boundaries in shared C++ store so BossScript can access them
+    -- Store arena boundaries BEFORE attaching the script so that BossScript's OnInit
+    -- can read correct bounds via GetSharedInt.  (Attaching the script calls OnInit
+    -- immediately; if bounds are set afterwards OnInit reads stale -1 values.)
     local arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3)
     local arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3)
     local arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4)
@@ -483,6 +479,12 @@ function SpawnProceduralBoss(mapData)
     SetSharedInt("arenaMaxY", arenaMaxY)
     Log("Arena bounds set: (" .. arenaMinX .. "," .. arenaMinY
         .. ") to (" .. arenaMaxX .. "," .. arenaMaxY .. ")")
+
+    -- Attach configurable boss script (OnInit now sees correct arena bounds above).
+    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
+
+    -- Set target (C++ side)
+    SetEnemyTarget(bossID, playerID)
 
     -- Track boss entity and arena position so portal spawns here after boss dies
     bossEntityID = bossID
