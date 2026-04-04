@@ -99,11 +99,39 @@
         "callback": ""
       },
       {
+        "id": "text_facing",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": 0.10
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "The arrow keys can adjust the character's facing direction.",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
         "id": "text_skill_select",
         "texture": "assets/Menu/transparent.png",
         "position": {
           "x": -1.22,
-          "y": 0.05
+          "y": -0.05
         },
         "scale": {
           "x": 0.01,
@@ -127,11 +155,39 @@
         "callback": ""
       },
       {
+        "id": "text_tab_target",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.22,
+          "y": -0.20
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "For some targeted skills, you can press the TAB key to change the target.",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
         "id": "text_execute",
         "texture": "assets/Menu/transparent.png",
         "position": {
           "x": -1.22,
-          "y": -0.15
+          "y": -0.35
         },
         "scale": {
           "x": 0.01,
@@ -159,7 +215,7 @@
         "texture": "assets/Menu/transparent.png",
         "position": {
           "x": -1.22,
-          "y": -0.35
+          "y": -0.50
         },
         "scale": {
           "x": 0.01,
