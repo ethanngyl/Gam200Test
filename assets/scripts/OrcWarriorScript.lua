@@ -81,8 +81,9 @@ local function ApplyOrcSheet(animKey, flipX)
         SetSpriteTexture(entityID, a.tex)
     end
 
-    if SetSpriteFlip and flipX ~= lastFlipX then
-        SetSpriteFlip(entityID, flipX, false)
+    -- Use animation flip API exposed by LevelLoader_API (SetSpriteFlip is not bound).
+    if SetAnimationFlipX and flipX ~= lastFlipX then
+        SetAnimationFlipX(entityID, flipX and true or false)
     end
 
     lastAnimKey = animKey
@@ -108,7 +109,8 @@ local function UpdateOrcAnimation(isMoving, isAttacking)
         if isAttacking then key = "atkSide"
         elseif isMoving then key = "walkSide"
         else key = "idleSide" end
-        flipX = (facingDX < 0)
+        -- Match side-facing convention used by other enemy scripts.
+        flipX = (facingDX > 0)
     end
     ApplyOrcSheet(key, flipX)
 end
@@ -150,6 +152,20 @@ local function UpdateFacingToward(tx, ty)
     if not ex then return end
     local dx = tx - ex
     local dy = ty - ey
+    if math.abs(dx) > math.abs(dy) then
+        facingDX = dx > 0 and 1 or -1
+        facingDY = 0
+    else
+        facingDX = 0
+        facingDY = dy > 0 and 1 or -1
+    end
+end
+
+local function UpdateFacingFromMove(fromX, fromY, toX, toY)
+    local dx = toX - fromX
+    local dy = toY - fromY
+    if dx == 0 and dy == 0 then return end
+
     if math.abs(dx) > math.abs(dy) then
         facingDX = dx > 0 and 1 or -1
         facingDY = 0
@@ -287,7 +303,8 @@ local function TryMoveTowardTarget()
     ConsumeEnemyAP(entityID, CONFIG.moveCost)
     mpRemaining = mpRemaining - 1
 
-    UpdateFacingToward(px, py)
+    -- Face based on the tile actually moved this step (not on player target position).
+    UpdateFacingFromMove(ex, ey, nextTile.x, nextTile.y)
     ShowTileBorder(nextTile.x, nextTile.y, 0.25)
     PulseTile(nextTile.x, nextTile.y, 0.2, 0.9, 0.5, 0.2)
     return true
@@ -415,6 +432,7 @@ function OnUpdate(dt)
 
     local turn = GetCurrentTurn()
     if turn ~= "Enemy" then
+        UpdateOrcAnimation(false, false)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
@@ -429,18 +447,28 @@ function OnUpdate(dt)
     end
     lastEnemyTurn = "Enemy"
 
-    if not IsActiveEnemy(entityID) then return end
-    if not IsEnemyActionReady() then return end
+    if not IsActiveEnemy(entityID) then
+        UpdateOrcAnimation(false, false)
+        return
+    end
+    if not IsEnemyActionReady() then
+        UpdateOrcAnimation(false, false)
+        return
+    end
 
     if not isMyTurnToAct then
         StartTurn()
     end
-    if hasActedThisTurn then return end
+    if hasActedThisTurn then
+        UpdateOrcAnimation(false, false)
+        return
+    end
 
     if not targetPlayerID or targetPlayerID == 0 or not IsAlive(targetPlayerID) then
         targetPlayerID = FindClosestPlayer()
     end
     if not targetPlayerID or targetPlayerID == 0 then
+        UpdateOrcAnimation(false, false)
         FinishTurn()
         return
     end
