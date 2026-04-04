@@ -928,7 +928,7 @@ local function createPlayerStates(fsm)
         endWorldX   = 0,
         endWorldY   = 0,
         elapsed     = 0,
-        duration    = 0.18,  -- seconds to glide (set high to test, lower later)
+        duration    = 0.50,  -- seconds to glide (set high to test, lower later)
         moveValid   = false,
 
         -- Direction / target
