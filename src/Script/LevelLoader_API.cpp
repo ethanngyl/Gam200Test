@@ -4518,6 +4518,10 @@ namespace Framework {
             lua_pushstring(L, "arenaY");      lua_pushnumber(L, map.arenaCenter.y);                                lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldX"); lua_pushnumber(L, startPos.x + (map.arenaCenter.x * spacing.x));     lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldY"); lua_pushnumber(L, startPos.y + (map.arenaCenter.y * spacing.y));     lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinX");   lua_pushnumber(L, map.arenaMin.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinY");   lua_pushnumber(L, map.arenaMin.y);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxX");   lua_pushnumber(L, map.arenaMax.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxY");   lua_pushnumber(L, map.arenaMax.y);                                   lua_settable(L, -3);
         }
 
         return 1;

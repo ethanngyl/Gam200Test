@@ -161,13 +161,15 @@ local function UseStrongSwing()
     if not players then return false end
 
     local hitAny = false
+    local empAtk = GetSharedInt and GetSharedInt("orc_empowered_atk_" .. tostring(entityID)) or 0
+    local swingDamage = CONFIG.strongSwingDamage + (empAtk or 0)
     for _, pid in ipairs(players) do
         if IsAlive(pid) then
             local px, py = GetEntityGridPosition(pid)
             if px then
                 for _, t in ipairs(tiles) do
                     if t.x == px and t.y == py then
-                        DamageEntity(pid, CONFIG.strongSwingDamage, entityID)
+                        DamageEntity(pid, swingDamage, entityID)
                         hitAny = true
                     end
                 end
@@ -230,7 +232,8 @@ end
 local function StartTurn()
     isMyTurnToAct = true
     hasActedThisTurn = false
-    mpRemaining = CONFIG.moveMP
+    local empMP = GetSharedInt and GetSharedInt("orc_empowered_mp_" .. tostring(entityID)) or 0
+    mpRemaining = CONFIG.moveMP + (empMP or 0)
 
     if regenCooldown > 0 then
         regenCooldown = regenCooldown - 1
@@ -325,6 +328,14 @@ function OnUpdate(dt)
         if t >= 1.0 then
             SetSpritePosition(entityID, glideEndX, glideEndY)
             glideActive = false
+            moveTimer = moveDelay
+            if pendingFinishAfterGlide then
+                pendingFinishAfterGlide = false
+                if GetCurrentTurn() == "Enemy" then
+                    FinishTurn()
+                end
+                return
+            end
         end
         if glideActive then return end
     end
@@ -339,6 +350,7 @@ function OnUpdate(dt)
         if lastEnemyTurn == "Enemy" then
             hasActedThisTurn = false
             isMyTurnToAct = false
+            pendingFinishAfterGlide = false
             if glideActive then
                 SetSpritePosition(entityID, glideEndX, glideEndY)
                 glideActive = false
@@ -382,6 +394,11 @@ function OnUpdate(dt)
 
     if moveTimer <= 0 then
         TryMoveTowardTarget()
+    end
+
+    if glideActive then
+        pendingFinishAfterGlide = true
+        return
     end
 
     if CanUseStrongSwingOnAnyPlayer() and UseStrongSwing() then

@@ -163,16 +163,44 @@ function OnInit()
         mapAlgorithm = "open"
     end
 
-    if USE_SAVED_MAP then
-         Log("Loading saved map: " .. SAVED_MAP_PATH)
-         mapData = LoadSavedMap(SAVED_MAP_PATH)
-         if not mapData then
-             Log("ERROR: Failed! Falling back to procedural.")
-             mapData = LoadProceduralMap(20, 20, mapAlgorithm)
-         end
-     else
-         mapData = LoadProceduralMap(20, 20, mapAlgorithm)
-     end
+    -- Levels 1 and 2 use pre-made layouts (3 per level, randomly chosen)
+    -- Level 3+ uses procedural generation
+    if currentLevel <= 2 then
+        math.randomseed(os.time())
+        local layoutIndex = math.random(1, 3)
+        local layoutPath = "assets/maps/level" .. currentLevel .. "_layout" .. layoutIndex .. ".map.jso"
+        Log("Loading saved layout: " .. layoutPath)
+        mapData = LoadSavedMap(layoutPath)
+        if not mapData then
+            Log("ERROR: Failed to load layout! Falling back to procedural.")
+            mapData = LoadProceduralMap(20, 20, mapAlgorithm)
+        else
+            -- Read arena min/max directly from JSON (C++ LoadSavedMap may not pass these)
+            local jsonData = LoadJSON(layoutPath)
+            if jsonData and jsonData.arena and jsonData.arena.hasArena then
+                local arenaInfo = jsonData.arena
+                if arenaInfo.min then
+                    mapData.arenaMinX = arenaInfo.min.x
+                    mapData.arenaMinY = arenaInfo.min.y
+                end
+                if arenaInfo.max then
+                    mapData.arenaMaxX = arenaInfo.max.x
+                    mapData.arenaMaxY = arenaInfo.max.y
+                end
+                Log("Arena bounds from JSON: (" .. tostring(mapData.arenaMinX) .. "," .. tostring(mapData.arenaMinY)
+                    .. ") to (" .. tostring(mapData.arenaMaxX) .. "," .. tostring(mapData.arenaMaxY) .. ")")
+            end
+        end
+    elseif USE_SAVED_MAP then
+        Log("Loading saved map: " .. SAVED_MAP_PATH)
+        mapData = LoadSavedMap(SAVED_MAP_PATH)
+        if not mapData then
+            Log("ERROR: Failed! Falling back to procedural.")
+            mapData = LoadProceduralMap(20, 20, mapAlgorithm)
+        end
+    else
+        mapData = LoadProceduralMap(20, 20, mapAlgorithm)
+    end
 
     -- For open arena levels (level 3+), synthesize arena data covering the whole map
     -- so the boss spawn logic works on the open floor
@@ -677,9 +705,7 @@ function SpawnProceduralChestsAndGoal(mapData)
             goalWorldY = mapData.goalWorldY
         }
 
-        if #bossEntityIDs > 0 then
-            Log("Portal will appear after all " .. #bossEntityIDs .. " boss(es) defeated")
-        if bossEntityID or pendingBossSpawn then
+        if #bossEntityIDs > 0 or pendingBossSpawn then
             Log("Portal will appear after boss is defeated")
         else
             -- No boss on this level, spawn portal immediately
