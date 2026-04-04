@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          StandardScriptedStateHooks.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ StandardScriptedStateHooks Implementation
+
+ Overview:
+    The StandardScriptedStateHooks module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "StandardScriptedStateHooks.h"
 
@@ -12,6 +27,9 @@ extern Framework::CoreEngine* engine;
 namespace {
     int g_activeStandardLuaState = mainMenu;
 
+    /**
+     * @brief Resets Lua runtime and clears remaining entities for the current state.
+     */
     void ResetLuaAndClearEntities()
     {
         Framework::LevelLoader::GetInstance().ResetLuaState();
@@ -33,6 +51,10 @@ namespace {
 
 namespace Framework::StandardScriptedStateHooks {
 
+/**
+ * @brief Sets up scripted callback pipeline for the provided state.
+ * @param state State identifier that should use standard scripted hooks.
+ */
 void Configure(int state)
 {
     g_activeStandardLuaState = state;

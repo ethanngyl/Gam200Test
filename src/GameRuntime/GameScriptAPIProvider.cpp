@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          GameScriptAPIProvider.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ GameScriptAPIProvider Implementation
+
+ Overview:
+    The GameScriptAPIProvider module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "GameScriptAPIProvider.h"
 
@@ -5,6 +20,10 @@
 
 namespace Framework::GameScriptAPIProvider {
 
+/**
+ * @brief Registers game-facing Lua API functions into the provided Lua state.
+ * @param L Active Lua state that receives function bindings.
+ */
 void Register(lua_State* L)
 {
     // AP Indicator / Entity Management

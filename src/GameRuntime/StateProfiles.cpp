@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          StateProfiles.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ StateProfiles Implementation
+
+ Overview:
+    The StateProfiles module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "StateProfiles.h"
 
@@ -31,6 +46,11 @@ namespace {
 
 namespace Framework::StateProfiles {
 
+/**
+ * @brief Returns the profile kind associated with a state id.
+ * @param state State identifier to classify.
+ * @return Matching state profile kind, or Unknown when unmapped.
+ */
 Kind GetKind(int state)
 {
     for (const auto& entry : kStateProfiles) {

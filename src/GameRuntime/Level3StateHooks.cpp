@@ -1,3 +1,18 @@
+/*
+===============================================================================
+ File:          Level3StateHooks.cpp
+ Author:        ETHAN NG
+ Email:         n.ethanyongle@digipen.edu
+ Date:          2026-04-05
+ Contribution:  100%
+ ------------------------------------------------------------------------------
+ Level3StateHooks Implementation
+
+ Overview:
+    The Level3StateHooks module provides runtime functionality for the game engine.
+
+===============================================================================
+*/
 #include "Precompiled.h"
 #include "Level3StateHooks.h"
 
@@ -12,6 +27,9 @@ extern Framework::CoreEngine* engine;
 
 namespace Framework::Level3StateHooks {
 
+/**
+ * @brief Configures engine systems and player bindings for Level 3.
+ */
 void OnInitialize()
 {
     LOG_INFO("GSM", "Level3 ready (Lua-scripted)");
@@ -37,6 +55,9 @@ void OnInitialize()
     }
 }
 
+/**
+ * @brief Handles Level 3 update flow including hot-reload and system updates.
+ */
 void OnUpdate()
 {
     if (::engine && ::engine->GetInputSystem()) {
@@ -71,6 +92,9 @@ void OnUpdate()
     );
 }
 
+/**
+ * @brief Performs full Level 3 cleanup including script OnDestroy calls.
+ */
 void OnFree()
 {
     LOG_INFO("GSM", "Cleaning up Level3...");
