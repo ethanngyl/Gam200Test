@@ -1,3 +1,19 @@
+--[[
+===============================================================================
+ File:          DemoBridgeLevel.lua
+ Authors:       Ethan Ng
+ Email:         n.ethanyongle@digipen.edu
+ Date:          03/13/2026
+ ------------------------------------------------------------------------------
+
+ ORC SHAMAN BOSS (Boss 2) - Orc Summoning Ritual encounter
+
+ Summary:
+    - Introductory level with a scroll background and text reveal effect.
+    - Sets the stage for the upcoming boss encounter with narrative context.    
+
+===============================================================================
+]]--
 local fullText = "The imperial squadron has staged a failed coup against the current king and are on the run.\nYour party has been hired to hunt down these rebel knights covertly to avoid public hysteira.\nThey seem to have taken refuge in a nearby forest, hunt down the traitors\nand find the mastermind behind this devious plot."
 local visibleChars = 0
 local revealRate = 34.0          -- characters per second

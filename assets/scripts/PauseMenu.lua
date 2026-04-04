@@ -52,6 +52,14 @@ local ENEMY_DEX_BUTTONS = {
     }
 }
 
+local ENEMY_DEX_PREVIEW = {
+    offsetX = 0.56,
+    offsetY = 0.16,
+    scaleX = 0.24,
+    scaleY = 0.24,
+    layer = 52
+}
+
 -- ============================================================================
 -- CONFIGURATION
 -- ============================================================================
@@ -175,6 +183,8 @@ local state = {
     enemyDexIndex = 1,
     enemyDexEntries = {},
     enemyDexButtonIDs = {},
+    enemyDexPreviewID = 0,
+    enemyDexPreviewIndex = -1,
     
     -- Input tracking
     wasEscapePressed = false,
@@ -183,11 +193,28 @@ local state = {
 }
 
 local RecreatePauseButtons
+local UpdateEnemyDexPreview
+
+local function DestroyEnemyDexPreview()
+    if state.enemyDexPreviewID and state.enemyDexPreviewID > 0 then
+        DestroyEntity(state.enemyDexPreviewID)
+        state.enemyDexPreviewID = 0
+    end
+    state.enemyDexPreviewIndex = -1
+end
 
 local function LoadEnemyDexEntries()
     state.enemyDexEntries = {
         {
             name = "Enemy Knight",
+            anim = {
+                tex = "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",
+                rows = 1,
+                cols = 12,
+                frames = 12,
+                time = 0.08,
+                loop = true
+            },
             lines = {
                 "Strike: Adjacent Tiles, 1 Damage, Consumes 1 AP.",
                 "Summon Reinforcements: Skip next turn. On following turn, if still alive,",
@@ -199,6 +226,14 @@ local function LoadEnemyDexEntries()
         },
         {
             name = "Enemy Mage",
+            anim = {
+                tex = "assets/Enemy/EnemyMage_Idle_Front-Sheet.png",
+                rows = 4,
+                cols = 3,
+                frames = 12,
+                time = 0.08,
+                loop = true
+            },
             lines = {
                 "Arcane Bolt: Fires in facing direction, 1 Damage, Consumes 2 AP.",
                 "Barrier: Blocks next damage taken for target character, Consumes 2 AP.",
@@ -210,6 +245,14 @@ local function LoadEnemyDexEntries()
         },
         {
             name = "Dark Knight (Level 1/2)",
+            anim = {
+                tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",
+                rows = 4,
+                cols = 3,
+                frames = 12,
+                time = 0.08,
+                loop = true
+            },
             lines = {
                 "Strike: Adjacent Tiles, 2 Damage, Consumes 1 AP.",
                 "Cross Impact: Cross slash reaching 3 tiles in each direction.",
@@ -224,6 +267,15 @@ local function LoadEnemyDexEntries()
         },
         {
             name = "Enemy Knight Commander",
+            anim = {
+                tex = "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",
+                rows = 1,
+                cols = 12,
+                frames = 12,
+                time = 0.08,
+                loop = true,
+                tint = { 1.0, 0.9, 0.3 }
+            },
             lines = {
                 "Strike: Adjacent Tiles, 1 Damage, Consumes 1 AP.",
                 "Rallying Cry: Enemies gain +1 movement point for next turn only.",
@@ -234,6 +286,15 @@ local function LoadEnemyDexEntries()
         },
         {
             name = "Enemy Tank",
+            anim = {
+                tex = "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",
+                rows = 1,
+                cols = 12,
+                frames = 12,
+                time = 0.08,
+                loop = true,
+                tint = { 0.3, 0.9, 0.3 }
+            },
             lines = {
                 "Heavy Armor: Takes 1 reduced damage from all sources (always active).",
                 "Shield Bash: Adjacent tile, stuns target player, 2 damage, 3 AP.",
@@ -244,6 +305,14 @@ local function LoadEnemyDexEntries()
         },
         {
             name = "Orc Shaman",
+            anim = {
+                tex = "assets/Enemy/Warlock_Boss_Idle_Front-Sheet.png",
+                rows = 1,
+                cols = 5,
+                frames = 5,
+                time = 0.12,
+                loop = true
+            },
             lines = {
                 "Preparatory Rites: Always first use on activation. Starts an 8-turn",
                 "countdown (excluding current turn). During countdown, boss cannot move.",
@@ -262,6 +331,14 @@ local function LoadEnemyDexEntries()
         },
         {
             name = "Orc Warrior",
+            anim = {
+                tex = "assets/enemy/Boss_Minion_Idle_Front-Sheet.png",
+                rows = 1,
+                cols = 4,
+                frames = 4,
+                time = 0.12,
+                loop = true
+            },
             lines = {
                 "Strong Swing: 3-tile horizontal range relative to facing direction.",
                 "Consumes 2 AP, deals 2 Damage. No cooldown.",
@@ -277,6 +354,7 @@ local function CloseEnemyDex()
     state.enemyDexActive = false
     ClearAllButtons()
     state.enemyDexButtonIDs = {}
+    DestroyEnemyDexPreview()
     RecreatePauseButtons()
 end
 
@@ -300,6 +378,58 @@ local function CreateEnemyDexButtons()
             id = buttonID,
             config = btn
         }
+    end
+end
+
+UpdateEnemyDexPreview = function(force)
+    if not state.enemyDexActive then
+        return
+    end
+
+    local entry = state.enemyDexEntries[state.enemyDexIndex]
+    local anim = entry and entry.anim
+    if not anim then
+        DestroyEnemyDexPreview()
+        return
+    end
+
+    if not force and state.enemyDexPreviewIndex == state.enemyDexIndex then
+        return
+    end
+
+    DestroyEnemyDexPreview()
+
+    if not SpawnAnimatedSprite then
+        return
+    end
+
+    local camX, camY, camZ = GetCameraPosition()
+    local previewID = SpawnAnimatedSprite(
+        anim.tex,
+        camX + ENEMY_DEX_PREVIEW.offsetX,
+        camY + ENEMY_DEX_PREVIEW.offsetY,
+        ENEMY_DEX_PREVIEW.scaleX,
+        ENEMY_DEX_PREVIEW.scaleY,
+        ENEMY_DEX_PREVIEW.layer,
+        anim.rows,
+        anim.cols,
+        anim.frames,
+        anim.time,
+        anim.loop
+    )
+
+    if previewID and previewID > 0 then
+        if SetSpriteColor then
+            local tint = anim.tint
+            if tint then
+                SetSpriteColor(previewID, tint[1] or 1.0, tint[2] or 1.0, tint[3] or 1.0)
+            else
+                SetSpriteColor(previewID, 1.0, 1.0, 1.0)
+            end
+        end
+
+        state.enemyDexPreviewID = previewID
+        state.enemyDexPreviewIndex = state.enemyDexIndex
     end
 end
 
@@ -504,6 +634,8 @@ local function PrevEnemyDexPage()
     if state.enemyDexIndex < 1 then
         state.enemyDexIndex = #state.enemyDexEntries
     end
+
+    UpdateEnemyDexPreview(true)
 end
 
 local function NextEnemyDexPage()
@@ -515,6 +647,8 @@ local function NextEnemyDexPage()
     if state.enemyDexIndex > #state.enemyDexEntries then
         state.enemyDexIndex = 1
     end
+
+    UpdateEnemyDexPreview(true)
 end
 
 -- ============================================================================
@@ -537,6 +671,8 @@ local function DestroyPauseUI()
     -- Clear all buttons (created with CreateButton)
     ClearAllButtons()
     state.buttonIDs = {}
+    state.enemyDexButtonIDs = {}
+    DestroyEnemyDexPreview()
     
     Log("[PauseMenu] UI destroyed")
 end
@@ -736,6 +872,7 @@ function PauseMenu.OnEnemyDex()
     ClearAllButtons()
     state.buttonIDs = {}
     CreateEnemyDexButtons()
+    UpdateEnemyDexPreview(true)
 end
 
 function PauseMenu.OnEnemyDexPrev()

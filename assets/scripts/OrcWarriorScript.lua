@@ -1,8 +1,22 @@
 --[[
- Orc Warrior
- - 6 HP, 2 MP, 2 AP
- - Strong Swing: 2 AP, self-damage 2 HP, deal 2 damage in a 3-tile sweep.
- - Regenerate: 2 AP, heal 1 HP, cooldown 2 turns, used at HP <= 3.
+===============================================================================
+ File:          OrcWarriorScript.lua
+ Authors:       Ethan Ng
+ Email:         n.ethanyongle@digipen.edu
+ Date:          03/13/2026
+ ------------------------------------------------------------------------------
+
+ ORC SHAMAN BOSS (Boss 2) - Orc Summoning Ritual encounter
+
+ Summary:
+    - Contains visual and gameplay logic for the basic melee orc warriors summoned by the Orc Shaman boss in the second encounter.
+    - Each orc warrior will attempt to move toward the closest player and perform a melee attack when in range. 
+    - Displays a health bar above the orc that updates in real-time.
+    - Uses Boss Minion sprite sheets for animations.
+    - Implements a smooth gliding movement effect when the orc moves between tiles.
+    - Prioritizes using a self-regeneration ability when HP is at or below 50%, otherwise uses a strong swing attack if it can hit any player.
+
+===============================================================================
 ]]--
 
 local entityID = 0

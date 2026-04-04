@@ -1,7 +1,8 @@
 --[[
 ===============================================================================
  File:          Boss2OrcShaman.lua
- Authors:       GitHub Copilot
+ Authors:       Ethan Ng
+ Email:         n.ethanyongle@digipen.edu
  Date:          03/13/2026
  ------------------------------------------------------------------------------
 

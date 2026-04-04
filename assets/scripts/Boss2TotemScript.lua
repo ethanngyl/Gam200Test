@@ -1,5 +1,20 @@
--- Boss 2 helper script: passive totem actor.
--- Totem behavior is orchestrated by Boss2OrcShaman.lua.
+--[[
+===============================================================================
+ File:          Boss2TotemScript.lua
+ Authors:       Ethan Ng
+ Email:         n.ethanyongle@digipen.edu
+ Date:          03/13/2026
+ ------------------------------------------------------------------------------
+
+ ORC SHAMAN BOSS (Boss 2) - Orc Summoning Ritual encounter
+
+ Summary:
+    - Contains visual and gameplay logic for the totems summoned by the Orc Shaman boss in the second encounter.
+    - Each totem has a type (Unkilling, Massacre, Blight) that determines its texture and HP.
+    - Displays a health bar above the totem that updates in real-time.
+
+===============================================================================
+]]--
 
 local entityID = 0
 local hasActedThisTurn = false

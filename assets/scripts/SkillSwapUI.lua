@@ -1,23 +1,31 @@
 --[[
 ===============================================================================
  File:          SkillSwapUI.lua
- Description:   Between-level skill selection, one character at a time.
+ Authors:       Josh Ong
+ Co-Authors:    
+ Date:          
+ Contribution:  
+ ------------------------------------------------------------------------------
 
- Flow:
-    Warrior -> pick skill -> NEXT -> Mage -> pick -> NEXT -> Berserker -> FINISH
+ Skill Swap UI - A character loadout interface for swapping skills between a fixed set of options.
 
- Layout:
-    Left:       Large animated character sprite + name + scroll backdrop
-    Center:     Current skills (stacked)
-    Right:      "Pick a new skill" label + offer buttons (beside current skills)
-    Bot-Right:  Nav button (NEXT / FINISH)
+ Brief:
+    - Provides a UI for players to customize their skill loadout by swapping out existing skills for new ones.
+    - Displays the current skills and offered alternatives side by side, with character portraits and themed backgrounds.
+    - Offers tooltips with skill descriptions when hovering over options.
+    - Saves the chosen loadout to a JSON file for use in gameplay.
 
- Usage:
-    local SkillSwapUI = require("SkillSwapUI")
-    _G.SkillSwapUI = SkillSwapUI
-    SkillSwapUI.Show(onDoneCallback)
-    SkillSwapUI.Update(dt)
-    SkillSwapUI.Draw()
+ Features:
+    - Character-specific skill pools with random offers that exclude currently equipped skills.
+    - Camera-relative UI elements that maintain consistent positioning even if the camera moves.
+    - Animated character portraits and themed scroll backgrounds for visual flair.
+    - Hover tooltips that show skill names, descriptions, and AP costs in a styled overlay. 
+
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
 ===============================================================================
 ]]--
 
