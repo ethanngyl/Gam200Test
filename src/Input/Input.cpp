@@ -2,7 +2,8 @@
 ===============================================================================
  File:           Input.cpp (FIXED VERSION)
  Author:         Josh Ong (Modified by GE YONGQI)
- Email:          josh.o@digipen.edu
+ Co Author:      Ethan Ng
+ Email:          josh.o@digipen.edu, n.ethanyongle@digipen.edu
  Date:           2025-09-22
  Modification:   2025-11-06
  ------------------------------------------------------------------------------
@@ -13,6 +14,8 @@
  - Changed GetCursorPos() to glfwGetCursorPos()
  - Now returns coordinates relative to window, not screen
 
+ M6 Changes:
+ - Added support for gamepad input using GLFW gamepad API
  Copyright (C) 2026 DigiPen Institute of Technology.
  Reproduction or disclosure of this file or its contents
  without the prior written consent of DigiPen Institute of

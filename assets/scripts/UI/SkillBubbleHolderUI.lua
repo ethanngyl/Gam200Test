@@ -1,10 +1,10 @@
 --[[
 ===============================================================================
 File:        UIManager.lua
-Author:      Padilla Carl Jameson Z.
-Email:       c.Padilla@digipen.edu
-Date:        2026-02-04 
-Contribution: Padilla Carl Jameson Z. (100%)
+Author:      Padilla Carl Jameson Z, Ethan Ng Yong Le
+Email:       c.Padilla@digipen.edu, n.ethanyongle@digipen.edu
+Date:        2026-26-03 
+Contribution: Padilla Carl Jameson Z. (45%), Ethan Ng (55%)
 -------------------------------------------------------------------------------
 
  SKILL BUBBLE HOLDER UI - Skill Slot Display Component
@@ -22,6 +22,8 @@ Contribution: Padilla Carl Jameson Z. (100%)
     - Background sprite using skill_bubble_holder.png
     - 4 circle indicators for skill slots 1-4
     - Dynamic tint based on skill state
+    - Skill icon art rendered on top of circles (if available)
+    - Tooltip display on hover with skill name, description, and AP cost
 
  Usage:
     local SkillBubbleHolderUI = require("UI/SkillBubbleHolderUI")

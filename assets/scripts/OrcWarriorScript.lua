@@ -10,7 +10,7 @@
  ORC SHAMAN BOSS (Boss 2) - Orc Summoning Ritual encounter
 
  Summary:
-    - Contains visual and gameplay logic for the basic melee orc warriors summoned by the Orc Shaman boss in the second encounter.
+    - Contains visual and gameplay logic for the basic melee orc warriors summoned by the Orc Shaman boss in the third level.
     - Each orc warrior will attempt to move toward the closest player and perform a melee attack when in range. 
     - Displays a health bar above the orc that updates in real-time.
     - Uses Boss Minion sprite sheets for animations.
