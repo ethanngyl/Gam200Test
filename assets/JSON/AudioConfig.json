@@ -1,4 +1,4 @@
-{
+﻿{
   "sounds": [
     {
       "name": "walk1",
@@ -73,11 +73,545 @@
       "filepath": "assets/Audio/UI_Sfx/AP_Crystal.wav",
       "volume": 1,
       "preload": true
+    },
+    {
+      "name": "enemy_mage_attack_basic",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Attack/enemy-spiral-bullet.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "mage_fireball",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Attack/fireball.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "GreatSwordSlashBasic",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack1_GreatswordSlashBasic/GreatSwordSlashBasic.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "CrossslashWave",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack2_GreatswordCrosslashWave/CrossslashWave.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "CrossSlashGroundStab",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack2_GreatswordCrossslashGroundStab/CrossSlashGroundStab.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Taunt",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack3_Taunt/Taunt.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "TauntReceived",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack3_TauntReceived/TauntReceived.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "PowerUp",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack4_ChargeState/PowerUp.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Teleport",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack4_Teleport/Teleport.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "ExecuteBloody",
+      "filepath": "assets/Audio/Boss1/Boss1_Attack/Boss1Attack5_ExecuteBloody/ExecuteBloody.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "BossDeath",
+      "filepath": "assets/Audio/Boss1/Boss1_Death/BossDeath.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "BossTakeDamage",
+      "filepath": "assets/Audio/Boss1/Boss1_TakeDamage/BossTakeDamage.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "BossWalk1",
+      "filepath": "assets/Audio/Boss1/Boss1_Walk/BossWalk1.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "BossWalk2",
+      "filepath": "assets/Audio/Boss1/Boss1_Walk/BossWalk2.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "BossWalk3",
+      "filepath": "assets/Audio/Boss1/Boss1_Walk/BossWalk3.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "BossWalk4",
+      "filepath": "assets/Audio/Boss1/Boss1_Walk/BossWalk4.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "BossWalk5",
+      "filepath": "assets/Audio/Boss1/Boss1_Walk/BossWalk5.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarian Attack",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Attack/Barbarian Attack.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarian Death",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Die/Barbarian Death.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "bladed whirlwind",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Skills/bladed_whirlwind/bladed whirlwind.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "bloody warcry",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Skills/bloody_warcry/bloody warcry.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "cannibalism",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Skills/cannibalism/cannibalism.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "dark omens",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Skills/dark_omens/dark omens.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "futile resistance",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Skills/futile_resistance/futile resistance.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "groundshatter",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Skills/groundshatter/groundshatter.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "siphon charge",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Skills/siphon_charge/siphon charge.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarian TakeDamage",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_TakeDamage/Barbarian TakeDamage.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarain Walk 1",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Walk/Barbarain Walk 1.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarain Walk 2",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Walk/Barbarain Walk 2.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarain Walk 3",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Walk/Barbarain Walk 3.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarain Walk 4",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Walk/Barbarain Walk 4.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Barbarain Walk 5",
+      "filepath": "assets/Audio/Characters/Beserker/Beserker_Walk/Barbarain Walk 5.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Attack_01",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Attack/Player_Attack_01.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Knight_DeathGroan",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Die/Knight_DeathGroan.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Bash",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Skills/bash/Bash.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "exploit_weakness",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Skills/exploit_weakness/exploit_weakness.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "guard",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Skills/guard/guard.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "knights_oath",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Skills/knights_oath/knights_oath.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "parry",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Skills/parry/parry.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "sweeping slash",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Skills/sweeping_slash/sweeping slash.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "swift_blow",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Skills/swift_blow/swift_blow.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Knight_TakeDamage",
+      "filepath": "assets/Audio/Characters/Knight/Knight_TakeDamage/Knight_TakeDamage.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_01",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_01.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_02",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_02.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_03",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_03.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_04",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_04.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_05",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_05.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_06",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_06.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_07",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_07.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_Footstep_08",
+      "filepath": "assets/Audio/Characters/Knight/Knight_Walk/Player_Footstep_08.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Mage_Die",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Die/Mage_Die.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "earthen bind",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Skills/earthen_bind/earthen bind.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "lightning strike",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Skills/lightning_strike/lightning strike.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "magic missle",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Skills/magic_missile/magic missle.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "mana drain",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Skills/mana_drain/mana drain.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "overload",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Skills/overload/overload.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "soul merge",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Skills/soul_merge/soul merge.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "soul rend",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Skills/soul_rend/soul rend.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Mage_TakeDamage",
+      "filepath": "assets/Audio/Characters/Mage/Mage_TakeDamage/Mage_TakeDamage.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_01",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_01.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_02",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_02.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_03",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_03.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_04",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_04.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_05",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_05.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_06",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_06.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_07",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_07.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Dig_08",
+      "filepath": "assets/Audio/Characters/Mage/Mage_Walk/Dig_08.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Ehteral layer bs",
+      "filepath": "assets/Audio/Enemies/Etherhal layer thing/Ehteral layer bs.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Enemy_Death_01",
+      "filepath": "assets/Audio/Enemies/Heavy/HeavyEnemy_Death/Enemy_Death_01.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "MenuMusic_BGM",
+      "filepath": "assets/Audio/Music/MenuMusic_BGM.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Moron3BGM (2)",
+      "filepath": "assets/Audio/Music/Moron3BGM (2).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Fx04",
+      "filepath": "assets/Audio/UI/Button_Click/Fx04.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Click_01(8bit) (1)",
+      "filepath": "assets/Audio/UI/Button_Click/UI_Click_01(8bit) (1).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Click_02(8bit) (2)",
+      "filepath": "assets/Audio/UI/Button_Click/UI_Click_02(8bit) (2).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Click_03(8bit) (1)",
+      "filepath": "assets/Audio/UI/Button_Click/UI_Click_03(8bit) (1).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Click_04(8bit) (1)",
+      "filepath": "assets/Audio/UI/Button_Click/UI_Click_04(8bit) (1).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Fx04_Hover",
+      "filepath": "assets/Audio/UI/Button_Hover/Fx04_Hover.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Hover_01(8bit) (1)",
+      "filepath": "assets/Audio/UI/Button_Hover/UI_Hover_01(8bit) (1).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Hover_01",
+      "filepath": "assets/Audio/UI/Button_Hover/UI_Hover_01.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Hover_02(8bit) (2)",
+      "filepath": "assets/Audio/UI/Button_Hover/UI_Hover_02(8bit) (2).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Hover_03(8bit) (1)",
+      "filepath": "assets/Audio/UI/Button_Hover/UI_Hover_03(8bit) (1).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "UI_Hover_04(8bit) (1)",
+      "filepath": "assets/Audio/UI/Button_Hover/UI_Hover_04(8bit) (1).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Fx31_2",
+      "filepath": "assets/Audio/UI/Invalid_Move/Fx31_2.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Player_TurnStart_01",
+      "filepath": "assets/Audio/UI/Turn_Signals/Player_TurnStart_01.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Turn End Press 8-bittish SFX",
+      "filepath": "assets/Audio/UI/Turn_Signals/Turn End Press 8-bittish SFX.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Defeat",
+      "filepath": "assets/Audio/UI/Victory_Defeat/Defeat.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Defeat_Var2",
+      "filepath": "assets/Audio/UI/Victory_Defeat/Defeat_Var2.wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Victory (1)",
+      "filepath": "assets/Audio/UI/Victory_Defeat/Victory (1).wav",
+      "volume": 1,
+      "preload": true
+    },
+    {
+      "name": "Walk_1",
+      "filepath": "assets/Audio/Walk_Sfx_Random/Walk_1.wav",
+      "volume": 1,
+      "preload": true
     }
   ],
-    "settings": {
-        "masterVolume": 1,
-        "musicVolume": 0.8,
-        "sfxVolume": 1
-    }
+  "settings": {
+    "masterVolume": 1,
+    "musicVolume": 0.8,
+    "sfxVolume": 1
+  }
 }
