@@ -3999,6 +3999,7 @@ namespace Framework {
         int width = static_cast<int>(luaL_checknumber(L, 1));
         int height = static_cast<int>(luaL_checknumber(L, 2));
         const char* algorithm = luaL_checkstring(L, 3);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 4, 1));
 
         LevelLoader* loader = GetLevelLoader(L);
         CoreEngine* core = loader->coreEngine;
@@ -4032,7 +4033,7 @@ namespace Framework {
 
         // Generate and load
         MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
-            config, spawner, em, startPos, spacing, tileSize
+            config, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         s_lastGeneratedMap = map;
@@ -4391,6 +4392,7 @@ namespace Framework {
         }
 
         std::string filepath = lua_tostring(L, 1);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 2, 1));
 
         Framework::MapGen::GeneratedMap map;
         Framework::MapGen::Config config;
@@ -4421,7 +4423,7 @@ namespace Framework {
         MapGen::Generator::printMap(map);
 
         ProceduralMapLoader::LoadFromGeneratedMap(
-            map, spawner, em, startPos, spacing, tileSize
+            map, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         // Build the SAME Lua table as Lua_LoadProceduralMap returns.

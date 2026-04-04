@@ -111,6 +111,7 @@ local bossArenaGridX = nil
 local bossArenaGridY = nil
 local bossArenaWorldX = nil
 local bossArenaWorldY = nil
+local redPortalEntity = nil  -- Red portal indicator shown before players enter boss arena
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
@@ -168,12 +169,12 @@ function OnInit()
     if currentLevel <= 2 then
         math.randomseed(os.time())
         local layoutIndex = math.random(1, 3)
-        local layoutPath = "assets/maps/level" .. currentLevel .. "_layout" .. layoutIndex .. ".map.jso"
+        local layoutPath = "assets/maps/level" .. currentLevel .. "_layout" .. layoutIndex .. ".map.json"
         Log("Loading saved layout: " .. layoutPath)
-        mapData = LoadSavedMap(layoutPath)
+        mapData = LoadSavedMap(layoutPath, currentLevel)
         if not mapData then
             Log("ERROR: Failed to load layout! Falling back to procedural.")
-            mapData = LoadProceduralMap(20, 20, mapAlgorithm)
+            mapData = LoadProceduralMap(20, 20, mapAlgorithm, currentLevel)
         else
             -- Read arena min/max directly from JSON (C++ LoadSavedMap may not pass these)
             local jsonData = LoadJSON(layoutPath)
@@ -193,13 +194,13 @@ function OnInit()
         end
     elseif USE_SAVED_MAP then
         Log("Loading saved map: " .. SAVED_MAP_PATH)
-        mapData = LoadSavedMap(SAVED_MAP_PATH)
+        mapData = LoadSavedMap(SAVED_MAP_PATH, currentLevel)
         if not mapData then
             Log("ERROR: Failed! Falling back to procedural.")
-            mapData = LoadProceduralMap(20, 20, mapAlgorithm)
+            mapData = LoadProceduralMap(20, 20, mapAlgorithm, currentLevel)
         end
     else
-        mapData = LoadProceduralMap(20, 20, mapAlgorithm)
+        mapData = LoadProceduralMap(20, 20, mapAlgorithm, currentLevel)
     end
 
     -- For open arena levels (level 3+), synthesize arena data covering the whole map
@@ -522,17 +523,6 @@ function SpawnProceduralBoss(mapData)
         return false
     end
 
-    -- Store arena boundaries in shared C++ store so BossScript can access them
-    -- Spawn boss as an enemy entity (same stats as regular enemies)
-    local bossID = SpawnEnemyAt(bx, by)
-
-    if not bossID or bossID == 0 then
-        Log("ERROR: Failed to spawn boss!")
-        return false
-    end
-
-    Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
-
     -- Store arena boundaries BEFORE attaching the script so that BossScript's OnInit
     -- can read correct bounds via GetSharedInt.  (Attaching the script calls OnInit
     -- immediately; if bounds are set afterwards OnInit reads stale -1 values.)
@@ -591,15 +581,8 @@ function SpawnProceduralBoss(mapData)
         Log("Boss " .. i .. " (Entity " .. bossID .. ") script attached (" .. scriptPath .. ") + target set to " .. tostring(playerID))
     end
 
-    -- Track arena position so portal spawns here after all bosses die
-    -- Attach configurable boss script (OnInit now sees correct arena bounds above).
-    AddScriptComponentToEntity(bossID, BOSS_SCRIPT_PATH)
-
-    -- Set target (C++ side)
-    SetEnemyTarget(bossID, playerID)
-
     -- Track boss entity and arena position so portal spawns here after boss dies
-    bossEntityID = bossID
+    bossEntityID = bossEntityIDs[#bossEntityIDs]
     bossArenaGridX = mapData.arenaX
     bossArenaGridY = mapData.arenaY
     bossArenaWorldX = bx
@@ -639,6 +622,12 @@ function QueueBossSpawnIfArena(mapData)
 
     bossEntityID = nil
     bossDefeated = false
+
+    -- Spawn red portal at arena center as a visual indicator
+    local portalSize = 0.09
+    redPortalEntity = SpawnSprite("assets/Menu/Portal_Red.png", bx, by, portalSize, portalSize, 1)
+    Log("Red portal indicator spawned at arena center (" .. tostring(bx) .. ", " .. tostring(by) .. ")")
+
     Log("Boss spawn queued: boss will appear once all surviving players enter arena")
     return true
 end
@@ -688,6 +677,13 @@ local function TrySpawnQueuedBoss()
     if GetCurrentTurn and GetCurrentTurn() == "Enemy" then
         Log("[ProceduralMapLevel] Boss spawn deferred: enemy turn in progress, will spawn next player-turn frame")
         return
+    end
+
+    -- Remove the red portal indicator now that boss is about to spawn
+    if redPortalEntity and redPortalEntity ~= 0 then
+        DestroyEntity(redPortalEntity)
+        redPortalEntity = nil
+        Log("Red portal indicator removed - boss spawning")
     end
 
     local spawnData = pendingBossSpawn
@@ -995,6 +991,21 @@ function OnUpdate(dt)
     -- ========================================
     if IsKeyDown("F3") then
         SetNextGameState("WIN_SCREEN")
+        return
+    end
+
+    -- CHEAT: Skip to level 2 (press F4)
+    -- ========================================
+    if IsKeyDown("F4") and currentLevel ~= 2 then
+        local f = io.open("assets/JSON/LevelProgress.json", "w")
+        if f then
+            f:write("{\n")
+            f:write("  \"currentLevel\": 2,\n")
+            f:write("  \"totalLevels\": " .. totalLevels .. "\n")
+            f:write("}\n")
+            f:close()
+        end
+        SetNextGameState("LEVEL_3")
         return
     end
     

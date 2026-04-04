@@ -49,6 +49,70 @@ local CONFIG = {
     strongSwingAPCost = 2
 }
 
+-- ============================================================================
+-- ANIMATION (Boss Minion sprite sheets)
+-- ============================================================================
+local ORC_ANIM = {
+    idleFront = { tex = "assets/enemy/Boss_Minion_Idle_Front-Sheet.png",  rows = 1, cols = 4, frames = 4, time = 0.12, loop = true  },
+    idleBack  = { tex = "assets/enemy/Boss_Minion_Idle_Back-Sheet.png",   rows = 1, cols = 4, frames = 4, time = 0.12, loop = true  },
+    idleSide  = { tex = "assets/enemy/Boss_Minion_Idle_Side-Sheet.png",   rows = 1, cols = 4, frames = 4, time = 0.12, loop = true  },
+
+    walkFront = { tex = "assets/enemy/Boss_Minion_Walk_Front-Sheet.png",  rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+    walkBack  = { tex = "assets/enemy/Boss_Minion_Walk_Back-Sheet.png",   rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+    walkSide  = { tex = "assets/enemy/Boss_Minion_Walk_Side-Sheet.png",   rows = 1, cols = 6, frames = 6, time = 0.10, loop = true  },
+
+    atkFront  = { tex = "assets/enemy/Boss_Minion_Attack_Front-Sheet.png", rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkBack   = { tex = "assets/enemy/Boss_Minion_Attack_Back-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false },
+    atkSide   = { tex = "assets/enemy/Boss_Minion_Attack_Side-Sheet.png",  rows = 1, cols = 8, frames = 8, time = 0.07, loop = false }
+}
+
+local lastAnimKey = nil
+local lastFlipX = false
+
+local function ApplyOrcSheet(animKey, flipX)
+    if not SetSpriteAnimationSheet then return end
+    if animKey == lastAnimKey and flipX == lastFlipX then return end
+
+    local a = ORC_ANIM[animKey]
+    if not a then return end
+
+    local ok = SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    if not ok and SetSpriteTexture then
+        SetSpriteTexture(entityID, a.tex)
+    end
+
+    if SetSpriteFlip and flipX ~= lastFlipX then
+        SetSpriteFlip(entityID, flipX, false)
+    end
+
+    lastAnimKey = animKey
+    lastFlipX = flipX
+end
+
+local function UpdateOrcAnimation(isMoving, isAttacking)
+    local key, flipX
+    if facingDY < 0 then
+        -- facing down = front
+        if isAttacking then key = "atkFront"
+        elseif isMoving then key = "walkFront"
+        else key = "idleFront" end
+        flipX = false
+    elseif facingDY > 0 then
+        -- facing up = back
+        if isAttacking then key = "atkBack"
+        elseif isMoving then key = "walkBack"
+        else key = "idleBack" end
+        flipX = false
+    else
+        -- facing left/right = side
+        if isAttacking then key = "atkSide"
+        elseif isMoving then key = "walkSide"
+        else key = "idleSide" end
+        flipX = (facingDX < 0)
+    end
+    ApplyOrcSheet(key, flipX)
+end
+
 local function IsAlive(eid)
     if not eid or eid == 0 then return false end
     if IsEntityValid and not IsEntityValid(eid) then return false end
@@ -301,6 +365,9 @@ function OnInit()
     end
 
     targetPlayerID = FindClosestPlayer()
+
+    -- Set initial Boss Minion appearance
+    ApplyOrcSheet("idleFront", false)
 end
 
 function OnDestroy()
@@ -318,6 +385,7 @@ function OnUpdate(dt)
     UpdateHealthBar()
 
     if glideActive then
+        UpdateOrcAnimation(true, false)
         glideElapsed = glideElapsed + dt
         local t = glideElapsed / glideDuration
         if t > 1.0 then t = 1.0 end
@@ -387,9 +455,12 @@ function OnUpdate(dt)
         return
     end
 
-    if CanUseStrongSwingOnAnyPlayer() and UseStrongSwing() then
-        FinishTurn()
-        return
+    if CanUseStrongSwingOnAnyPlayer() then
+        UpdateOrcAnimation(false, true)
+        if UseStrongSwing() then
+            FinishTurn()
+            return
+        end
     end
 
     if moveTimer <= 0 then
@@ -401,10 +472,14 @@ function OnUpdate(dt)
         return
     end
 
-    if CanUseStrongSwingOnAnyPlayer() and UseStrongSwing() then
-        FinishTurn()
-        return
+    if CanUseStrongSwingOnAnyPlayer() then
+        UpdateOrcAnimation(false, true)
+        if UseStrongSwing() then
+            FinishTurn()
+            return
+        end
     end
 
+    UpdateOrcAnimation(false, false)
     FinishTurn()
 end

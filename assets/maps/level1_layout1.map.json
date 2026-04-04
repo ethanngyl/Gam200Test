@@ -17,10 +17,9 @@
   "playerSpawn": { "x": 0, "y": 9 },
   "goalSpawn": { "x": 9, "y": 9 },
   "enemySpawns": [
-    { "x": 7, "y": 6 },
     { "x": 8, "y": 4 },
-    { "x": 6, "y": 1 },
-    { "x": 0, "y": 5 }
+    { "x": 4, "y": 4 },
+    { "x": 7, "y": 2 }
   ],
   "chestSpawns": [],
   "arena": {

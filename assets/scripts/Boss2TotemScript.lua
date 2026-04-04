@@ -54,6 +54,24 @@ function OnInit()
 
     if SetEntityMaxAP then SetEntityMaxAP(entityID, 0) end
 
+    -- Set totem texture based on type
+    local totemTextures = {
+        [1] = "assets/enemy/totem_of_unkilling.png",
+        [2] = "assets/enemy/totem_of_massacre.png",
+        [3] = "assets/enemy/totem_of_blight.png"
+    }
+    local texPath = totemTextures[totemType]
+    if texPath then
+        -- Use a 1-frame animation sheet to override the default enemy sprite.
+        -- SetSpriteTexture alone is overridden by the SpriteAnimation component each frame.
+        if SetSpriteAnimationSheet then
+            SetSpriteAnimationSheet(entityID, texPath, 1, 1, 1, 1.0, false)
+        end
+        if SetSpriteTexture then
+            SetSpriteTexture(entityID, texPath)
+        end
+    end
+
     local wx, wy = GetEntityWorldPosition(entityID)
     if wx and wy then
         local barY = wy + healthBarOffsetY

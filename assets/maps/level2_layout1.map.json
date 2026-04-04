@@ -24,21 +24,21 @@
     "FFFFFFFFFFFWWFFFFFFF",
     "FFFFFFWFFFFFFFFFFFFF"
   ],
-  "playerSpawn": { "x": 1, "y": 1 },
+  "playerSpawn": { "x": 1, "y": 19 },
   "goalSpawn": { "x": 18, "y": 19 },
   "enemySpawns": [
     { "x": 15, "y": 16 },
     { "x": 3, "y": 12 },
     { "x": 17, "y": 10 },
     { "x": 8, "y": 5 },
-    { "x": 14, "y": 3 },
+    { "x": 6, "y": 3 },
     { "x": 1, "y": 9 }
   ],
   "chestSpawns": [],
   "arena": {
     "hasArena": true,
-    "center": { "x": 10, "y": 9 },
-    "min": { "x": 6, "y": 5 },
-    "max": { "x": 15, "y": 14 }
+    "center": { "x": 16, "y": 2 },
+    "min": { "x": 13, "y": 0 },
+    "max": { "x": 20, "y": 6 }
   }
 }
