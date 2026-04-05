@@ -50,6 +50,7 @@
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
 local SkillSwapUI = require("SkillSwapUI")
+local SavePath = require("SavePath")
 _G.SkillSwapUI = SkillSwapUI
 
 local BOSS_SCRIPT_PATH = "assets/scripts/BossScript.lua"
@@ -121,7 +122,11 @@ local redPortalGridY = nil
 
 function OnInit()
     -- Read level progression
-    local progress = LoadJSON("assets/JSON/LevelProgress.json")
+    local progress = LoadJSON(SavePath.GetLevelProgressPath())
+    if not progress then
+        -- Fallback: try bundled default
+        progress = LoadJSON("assets/JSON/LevelProgress.json")
+    end
     if progress then
         currentLevel = progress.currentLevel or 1
         totalLevels  = progress.totalLevels  or 3
@@ -870,7 +875,7 @@ function HandleGoalTransition(dt)
                 SkillSwapUI.Show(function()
                     -- Advance level progress
                     local nextLevel = currentLevel + 1
-                    local f = io.open("assets/JSON/LevelProgress.json", "w")
+                    local f = io.open(SavePath.GetLevelProgressPath(), "w")
                     if f then
                         f:write("{\n")
                         f:write("  \"currentLevel\": " .. nextLevel .. ",\n")
@@ -944,7 +949,7 @@ function OnUpdate(dt)
     if IsKeyDown("8") then
         local nextLvl = (currentLevel % totalLevels) + 1
         Log("DEBUG: Jumping to level " .. nextLvl)
-        local f = io.open("assets/JSON/LevelProgress.json", "w")
+        local f = io.open(SavePath.GetLevelProgressPath(), "w")
         if f then
             f:write("{\n")
             f:write("  \"currentLevel\": " .. nextLvl .. ",\n")
@@ -1011,7 +1016,7 @@ function OnUpdate(dt)
     -- CHEAT: Skip to level 2 (press F4)
     -- ========================================
     if IsKeyDown("F4") and currentLevel ~= 2 then
-        local f = io.open("assets/JSON/LevelProgress.json", "w")
+        local f = io.open(SavePath.GetLevelProgressPath(), "w")
         if f then
             f:write("{\n")
             f:write("  \"currentLevel\": 2,\n")

@@ -29,6 +29,7 @@
 ===============================================================================
 ]]--
 
+local SavePath = require("SavePath")
 local SkillSwapUI = {}
 
 -- ============================================================================
@@ -171,7 +172,11 @@ local function loadSkillDefs()
 end
 
 local function loadExistingLoadout()
-    local data = LoadJSON("assets/JSON/SkillLoadout.json")
+    local data = LoadJSON(SavePath.GetSkillLoadoutPath())
+    if not data then
+        -- Fallback: try bundled default
+        data = LoadJSON("assets/JSON/SkillLoadout.json")
+    end
     if data and data.players then
         for i = 1, 3 do
             local p = data.players[tostring(i)]
@@ -437,7 +442,7 @@ end
 
 local function saveLoadout()
     print("[SkillSwapUI] saveLoadout() called")
-    local f = io.open("assets/JSON/SkillLoadout.json", "w")
+    local f = io.open(SavePath.GetSkillLoadoutPath(), "w")
     if not f then
         print("[SkillSwapUI] ERROR: Cannot open assets/JSON/SkillLoadout.json for writing!")
         return

@@ -14,6 +14,7 @@
 
 -- Load ButtonManager module
 local ButtonManager = require("assets/scripts/ButtonManager")
+local SavePath = require("SavePath")
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
@@ -186,7 +187,7 @@ function OnLevel3ButtonClicked()
     Log("DEMO button clicked!")
 
     -- Reset level progress to level 1 when starting a new game
-    local f = io.open("assets/JSON/LevelProgress.json", "w")
+    local f = io.open(SavePath.GetLevelProgressPath(), "w")
     if f then
         f:write("{\n  \"currentLevel\": 1,\n  \"totalLevels\": 3\n}\n")
         f:close()

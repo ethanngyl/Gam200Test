@@ -13,6 +13,7 @@
 
 -- Load ButtonManager module
 local ButtonManager = require("assets/scripts/ButtonManager")
+local SavePath = require("SavePath")
 
 -- ============================================================================
 -- LEVEL STATE VARIABLES
@@ -129,7 +130,10 @@ function OnInit()
     -- ========================================================================
     -- LEVEL PROGRESSION: Add "Next Level" button if more levels remain
     -- ========================================================================
-    local progress = LoadJSON("assets/JSON/LevelProgress.json")
+    local progress = LoadJSON(SavePath.GetLevelProgressPath())
+    if not progress then
+        progress = LoadJSON("assets/JSON/LevelProgress.json")
+    end
     if progress then
         currentLevel = progress.currentLevel or 1
         totalLevels  = progress.totalLevels  or 3
@@ -184,7 +188,7 @@ function OnBackButtonClicked()
     Log("BACK button clicked!")
 
     -- Reset level progress when returning to main menu
-    local f = io.open("assets/JSON/LevelProgress.json", "w")
+    local f = io.open(SavePath.GetLevelProgressPath(), "w")
     if f then
         f:write("{\n  \"currentLevel\": 1,\n  \"totalLevels\": " .. totalLevels .. "\n}\n")
         f:close()

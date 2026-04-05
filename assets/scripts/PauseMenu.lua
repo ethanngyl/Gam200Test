@@ -28,6 +28,7 @@
 
 local PauseMenu = {}
 local SettingsMenu = require("SettingsMenu")
+local SavePath = require("SavePath")
 
 local ENEMY_DEX_BUTTONS = {
     {
@@ -839,7 +840,7 @@ end
 function PauseMenu.OnRestart()
     state.enemyDexActive = false
     -- Reset campaign progress back to level 1
-    local f = io.open("assets/JSON/LevelProgress.json", "w")
+    local f = io.open(SavePath.GetLevelProgressPath(), "w")
     if f then
         f:write("{\n  \"currentLevel\": 1,\n  \"totalLevels\": 3\n}\n")
         f:close()

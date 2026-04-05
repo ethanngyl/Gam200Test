@@ -1171,7 +1171,12 @@ function OnInit(id)
     end
 
     -- Load skill loadout from JSON (written by SkillSwapUI between levels)
-    local loadoutData = LoadJSON("assets/JSON/SkillLoadout.json")
+    local _appdata = os.getenv("APPDATA")
+    local _loadoutPath = _appdata and (_appdata .. "/StructSquad/SkillLoadout.json") or nil
+    local loadoutData = _loadoutPath and LoadJSON(_loadoutPath) or nil
+    if not loadoutData then
+        loadoutData = LoadJSON("assets/JSON/SkillLoadout.json")
+    end
     if loadoutData and loadoutData.players then
         for i = 1, 3 do
             local p = loadoutData.players[tostring(i)]
