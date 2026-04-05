@@ -113,11 +113,12 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
         Framework::DebugConfig::Initialize(window);
     }
 
-#ifdef STRUCTSQUAD_START_IN_EDITOR
-    engine->SetEditorMode(true);
-    Framework::EditorMode::SetEditorMode(true);
-    LOG_INFO("CORE", "Startup override: editor mode enabled by build config");
-#endif
+// INSTALLER: Editor startup disabled for release build
+//#ifdef STRUCTSQUAD_START_IN_EDITOR
+//    engine->SetEditorMode(true);
+//    Framework::EditorMode::SetEditorMode(true);
+//    LOG_INFO("CORE", "Startup override: editor mode enabled by build config");
+//#endif
 
     // ===============================================================================
     // GAME STATE MANAGER

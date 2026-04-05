@@ -149,13 +149,10 @@ function OnInit()
     Log("Camera initialized: pos(0,0,0), zoom=2.0")
 
     -- Configure editor mode
-    if IS_EDITOR_LOAD then
-        Log("Level loaded from Editor - Keeping ImGui ENABLED")
-    else
-        DisableImGui()
-        Log("ImGui disabled (Press F1 to toggle)")
-        SetEnginePlayState(true)
-    end
+    -- INSTALLER: Always disable ImGui for release build
+    DisableImGui()
+    Log("ImGui disabled (release build)")
+    SetEnginePlayState(true)
 
     -- ========================================
     -- PROCEDURAL MAP GENERATION
@@ -1228,6 +1225,8 @@ end
 -- ============================================================================
 
 function HandleEditorToggle(dt)
+    -- INSTALLER: Editor toggle disabled for release build
+    --[[
     if editorToggleCooldown > 0 then
         editorToggleCooldown = editorToggleCooldown - dt
     end
@@ -1246,6 +1245,7 @@ function HandleEditorToggle(dt)
 
         editorToggleCooldown = 0.3
     end
+    --]]
 end
 
 -- ============================================================================

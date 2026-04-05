@@ -812,63 +812,19 @@ namespace Framework {
      * - Calls ImguiSystem::RequestToggle()
      */
     int LevelLoader::Lua_ToggleEditor(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-
-        auto* imgui = loader->coreEngine->GetImGuiSystem();
-        if (imgui) {
-            bool willBeEnabled = !imgui->IsEnabled();
-            imgui->RequestToggle();
-
-            // ========================================
-            // AUTO-PAUSE WHEN EDITOR OPENS
-            // ========================================
-            if (willBeEnabled) {
-                loader->coreEngine->SetPlaying(false);
-                // Game paused (editor mode)
-            }
-            // ========================================
-
-            lua_pushboolean(L, willBeEnabled);
-        }
+        // INSTALLER: Editor toggle disabled for release build
+        lua_pushboolean(L, false);
         return 1;
     }
 
     int LevelLoader::Lua_IsEditorEnabled(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-
-        auto* imgui = loader->coreEngine->GetImGuiSystem();
-        bool enabled = imgui && imgui->IsEnabled();
-        lua_pushboolean(L, enabled);
-
+        // INSTALLER: Editor always disabled for release build
+        lua_pushboolean(L, false);
         return 1;
     }
 
     int LevelLoader::Lua_SetEditorMode(lua_State* L) {
-        LevelLoader* loader = GetLevelLoader(L);
-        if (!loader || !loader->coreEngine) return 0;
-
-        bool enable = lua_toboolean(L, 1);
-
-        auto* imgui = loader->coreEngine->GetImGuiSystem();
-        if (imgui) {
-            if (enable) {
-                imgui->Enable();
-                // Editor enabled
-            }
-            else {
-                imgui->Disable();
-                // Editor disabled
-            }
-        }
-
+        // INSTALLER: Editor mode disabled for release build
         return 0;
     }
 
