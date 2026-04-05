@@ -1,10 +1,10 @@
 /*
 ===============================================================================
 File:        basic.vert
-Author:      Sim Kah Yan
-Email:       kahyan.sim@digipen.edu
+Author:      Sim Kah Yan, Ethan Ng 
+Email:       kahyan.sim@digipen.edu, n.ethanyongle@digipen.edu
 Date:        2026-02-04 (yyyy-mm-dd)
-Contribution: 100%
+Contribution: 80% (Sim Kah Yan), 20% (Ethan Ng)
 -------------------------------------------------------------------------------
 Brief:
 Vertex shader for basic 2D textured/colored quads. Per-vertex attributes
