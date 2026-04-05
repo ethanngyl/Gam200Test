@@ -231,6 +231,13 @@ namespace Framework {
 #endif
 
 #ifdef _WIN32
+    // ============================================================================
+    // Open native folder picker and return selected directory path.
+    // Used by editor features that need a user-selected output folder,
+    // such as exporting selected build assets.
+    // Returns true when a valid folder is chosen, otherwise false.
+    // author:jiahao.zhou@digipen.edu
+    // ============================================================================
     static bool OpenFolderPicker(std::string& outPath)
     {
         char folderPath[MAX_PATH] = { 0 };
@@ -672,6 +679,12 @@ namespace Framework {
         return ext == ".png" || ext == ".jpg" || ext == ".jpeg";
     }
 
+
+    // ============================================================================
+    // Convert a raw byte count into a readable size string (B, KB, MB, GB, etc.).
+    // Used by the build size analyzer UI to display file sizes in a clearer format.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     static std::string FormatBytes(uintmax_t bytes)
     {
         const double kb = 1024.0;
@@ -1065,6 +1078,12 @@ namespace Framework {
         ImGui::End();  // Only one End() call at the very end
     }
 
+    // ============================================================================
+    // Refresh the build size analyzer entry list by rescanning the tracked files.
+    // Rebuilds the cached size data used by the editor UI so the latest asset/file
+    // size information is shown in the build size analyzer window.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     void ImGuiSystem::RefreshBuildSizeEntries()
     {
         buildSizeEntries.clear();
@@ -1113,6 +1132,12 @@ namespace Framework {
         buildSizeNeedsRefresh = false;
     }
 
+    // ============================================================================
+    // Export the currently selected build asset files to the target destination folder.
+    // Copies the selected files from the build size analyzer into destinationRoot and
+    // returns whether the export operation completed successfully.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     bool ImGuiSystem::ExportSelectedBuildAssets(const std::filesystem::path& destinationRoot)
     {
         try
@@ -1149,6 +1174,12 @@ namespace Framework {
         }
     }
 
+    // ============================================================================
+    // Render the build size analyzer editor window and handle its interactions.
+    // Displays build asset size information, selection controls, and export-related
+    // UI used for inspecting and managing build content in the editor.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     void ImGuiSystem::ShowBuildSizeWindow()
     {
         if (buildSizeNeedsRefresh)

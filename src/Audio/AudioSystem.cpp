@@ -420,6 +420,13 @@ namespace Framework {
         }
     }
 
+
+    // ============================================================================
+    // Compute the volume attenuation factor based on source-listener distance.
+    // Used by positional audio playback so sounds become quieter as the sound
+    // source gets farther away from the listener.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     float AudioSystem::ComputeDistanceVolume(const Framework::Vector2D& sourcePos,
         const Framework::Vector2D& listenerPos) const
     {
@@ -437,6 +444,12 @@ namespace Framework {
         return std::clamp(volume, 0.1f, 1.0f);
     }
 
+    // ============================================================================
+    // Compute the stereo pan value from the relative horizontal positions of the
+    // sound source and listener. Used by positional audio playback so sounds can
+    // shift toward the left or right speaker based on in-game spatial placement.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
     float AudioSystem::ComputeStereoPan(const Framework::Vector2D& sourcePos,
         const Framework::Vector2D& listenerPos) const
     {
@@ -446,6 +459,13 @@ namespace Framework {
 
         return std::clamp(pan, -1.0f, 1.0f);
     }
+
+    // ============================================================================
+    // Play a sound using positional audio based on the source and listener positions.
+    // Applies distance attenuation and stereo panning before playing the requested
+    // sound so gameplay audio responds to in-game spatial placement.
+    // author: jiahao.zhou@digipen.edu
+    // ============================================================================
 
     void AudioSystem::PlaySoundPositional(const std::string& soundName,
         const Framework::Vector2D& sourcePos,
