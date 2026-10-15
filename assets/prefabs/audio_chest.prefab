@@ -1,0 +1,9 @@
+{
+  "entity": 3000,
+  "components": {
+    "Transform": {"position":[0.000000,2.000000],"rotation":0.000000,"scale":[0.600000,0.600000]},
+    "MeshRenderer": {"spriteName":"assets/TileMap/Chest_1.png","layer":0,"orderInLayer":0,"tint":[1.000000,1.000000,1.000000,1.000000]},
+    "BoxCollider": {"size":[0.600000,0.600000],"offset":[0.000000,0.000000],"isTrigger":true},
+    "AudioSource": {"soundName":"button","volume":1.000000,"pitch":1.200000,"loop":false,"playOnStart":false}
+  }
+}

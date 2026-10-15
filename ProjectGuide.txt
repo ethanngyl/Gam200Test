@@ -5,6 +5,13 @@ Recommended Platform: Visual Studio 2022
 - Download the community version of visual studio
 - During the installation process, tick "Deskstop Development with C++" under workloads, and under Individual Components, tick "C++ CMake tools for windows"
 - This will allow for C++ capabilities and standard libraries along with CMake utilities
+- Note that the run.bat will not run unless the Visual Studio version is Visual Studio 17 2022
+
+Additional Applications Required:
+- GIT SCM
+GIT SCM is required to import some of the external libraries found in ImportDependencies.cmake
+- Download: https://git-scm.com/downloads
+- Run the installer and just tick all of the default options
 
 Set Up:
 - Once the relevant tools are installed
@@ -17,3 +24,13 @@ Set Up:
 - run.bat clean will delete the build folder
 - run.bat will delete and then create the build
 - clean.bat will perform a deep clean, removing .vs, build, out and the bin folder
+
+CMake Notes:
+- Do note that the current iteration of CMakeLists.txt is now made to run on CMAKE 4.1.2
+- To install CMake, enter "winget install cmake" into your Command Prompt
+- To update CMake, enter "winget upgrade --id Kitware.CMake" into your Command Prompt
+- To check your current version of CMake, enter "cmake --version" into your command prompt
+- After running run.bat, please go to the build->Debug/Release folder and look for the executable file (.exe).
+
+Level Editor:
+- Level editor is enabled on all levels and can be toggled on and off via the f1 key, it is off by default.

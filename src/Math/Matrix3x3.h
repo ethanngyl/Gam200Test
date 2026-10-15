@@ -1,0 +1,99 @@
+/*
+===============================================================================
+ File:           Matrix3x3.h
+ Author:         Josh Ong
+ Email:          josh.o@digipen.edu
+ Date:           2025-09-22
+ Contribution:   100%
+ ------------------------------------------------------------------------------
+ Header file for the Matrix3x3 class, used for 2D affine transformations.
+
+  Design notes:
+  This class defines a 3x3 matrix, primarily for 2D graphics transformations
+  like translation, rotation, and scaling.
+
+  Key features include:
+  -   Data is stored in a row-major float array. A `constexpr` helper
+      `idx(r, c)` is provided for clean, 2D-style element access.
+  -   A dual API is offered for creating transformation matrices:
+      1.  Mutating "set" methods (e.g., `setIdentity()`) modify the object in-place.
+      2.  Static "factory" methods (e.g., `Identity()`) return a new matrix object.
+  -   Core matrix algebra functions are provided: multiplication, in-place
+      transpose, determinant, and in-place inversion.
+  -   The `invert()` method returns a boolean to indicate if the matrix was
+      successfully inverted (i.e., not singular).
+  -   A forward declaration of Vector2D is used to define the matrix-vector
+      multiplication operator, preventing circular header dependencies.
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+*/
+#pragma once
+#include "Precompiled.h"
+
+namespace Framework {
+
+    class Vector2D; // forward declaration
+
+    class Matrix3x3 {
+    public:
+        // Row-major storage: element at (r,c) is m[r*3 + c]
+        float m[9];
+
+        // ----- helpers -----
+        static constexpr std::size_t idx(std::size_t r, std::size_t c) { return r * 3 + c; }
+
+        // ----- ctors/assign -----
+        Matrix3x3();                                   // zero matrix
+        explicit Matrix3x3(float const* pArr);         // copy 9 floats
+        Matrix3x3(float _00, float _01, float _02,
+            float _10, float _11, float _12,
+            float _20, float _21, float _22);    // element-wise
+
+        Matrix3x3(Matrix3x3 const&) = default;
+        Matrix3x3& operator=(Matrix3x3 const&) = default;
+
+        // ----- element access -----
+        float& at(std::size_t r, std::size_t c);
+        float  at(std::size_t r, std::size_t c) const;
+
+        // ----- set builders (mutating) -----
+        Matrix3x3& setIdentity();
+        Matrix3x3& setTranslate(float x, float y);
+        Matrix3x3& setScale(float sx, float sy);
+        Matrix3x3& setRotRad(float radians);
+        Matrix3x3& setRotDeg(float degrees);
+
+        // ----- algebra -----
+        Matrix3x3& operator*=(Matrix3x3 const& rhs);
+        Matrix3x3& transpose();              // in-place
+        float      determinant() const;
+        bool       invert(float* outDet = nullptr); // in-place inverse, false if singular
+
+        // ----- factories -----
+        static Matrix3x3 Identity();
+        static Matrix3x3 Translate(float x, float y);
+        static Matrix3x3 Scale(float sx, float sy);
+        static Matrix3x3 RotRad(float radians);
+        static Matrix3x3 RotDeg(float degrees);
+
+        // friend for mat-mat multiply
+        friend Matrix3x3 operator*(Matrix3x3 const& a, Matrix3x3 const& b);
+    };
+
+    // ----- non-member functions -----
+    Matrix3x3 operator*(Matrix3x3 const& a, Matrix3x3 const& b);
+    Vector2D  operator*(Matrix3x3 const& M, Vector2D const& v);
+
+    void Mtx33Identity(Matrix3x3& out);
+    void Mtx33Translate(Matrix3x3& out, float x, float y);
+    void Mtx33Scale(Matrix3x3& out, float sx, float sy);
+    void Mtx33RotRad(Matrix3x3& out, float radians);
+    void Mtx33RotDeg(Matrix3x3& out, float degrees);
+    void Mtx33Transpose(Matrix3x3& out, Matrix3x3 const& in);
+    void Mtx33Inverse(Matrix3x3* pOut, float* det, Matrix3x3 const& in);
+
+}

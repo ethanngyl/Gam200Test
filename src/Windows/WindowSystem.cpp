@@ -1,0 +1,184 @@
+﻿#include "Precompiled.h"
+#include "ConfigReader/ConfigReader.h"  // Using optimized ConfigReader
+
+/*
+===============================================================================
+File:        WindowSystem.cpp (Optimized Config Version)
+co-Author:   Sim Kah Yan
+co-Author:   TAN WEI LEONG
+Modified by: GE YONGQI (Added optimized config file support)
+Email:       kahyan.sim@digipen.edu
+Date:        2025-10-02
+Contribution: 10%(Kah Yan), 10% (TAN WEI LEONG)
+-------------------------------------------------------------------------------
+Brief:
+Implementation of the WindowSystem class with optimized config loading.
+Uses ConfigReader's unified path and duplicate loading prevention.
+
+Config File Support:
+- window_width: Window width in pixels (default: 1600)
+- window_height: Window height in pixels (default: 800)
+- window_title: Window title string (default: "Struct Squad Game Engine")
+- fullscreen: Enable fullscreen mode (default: false)
+
+ Copyright (C) 2026 DigiPen Institute of Technology.
+ Reproduction or disclosure of this file or its contents
+ without the prior written consent of DigiPen Institute of
+ Technology is prohibited.
+===============================================================================
+*/
+
+namespace Framework
+{
+    /*
+    ------------------------------------------------------------------------------
+    Constructor: Sets default window configuration and loads from config file.
+    ------------------------------------------------------------------------------
+    */
+    WindowSystem::WindowSystem() : window(nullptr),
+        WindowOpen(false),
+        windowWidth(1600),         // default width
+        windowHeight(800),         // default height
+        windowTitle("Struct Squad Game Engine") // default title
+    {
+        // Load window configuration from config file
+        LoadWindowConfig();
+    }
+
+    /*
+    ------------------------------------------------------------------------------
+    Destructor: Cleans up GLFW resources
+    ------------------------------------------------------------------------------
+    */
+    WindowSystem::~WindowSystem()
+    {
+        if (window) {
+            glfwDestroyWindow(window);
+            glfwTerminate();
+        }
+    }
+
+    /*
+    ------------------------------------------------------------------------------
+    LoadWindowConfig: Loads window configuration from game_config.txt
+    Uses ConfigReader's unified path and prevents duplicate loading
+    ------------------------------------------------------------------------------
+    */
+    void WindowSystem::LoadWindowConfig()
+    {
+        // Load config file using unified path
+        ConfigReader::LoadConfig(ConfigReader::CONFIG_FILE_PATH);
+
+        // Read window configuration
+        windowWidth = ConfigReader::GetInt("window_width", 1600);
+        windowHeight = ConfigReader::GetInt("window_height", 800);
+        windowTitle = ConfigReader::GetString("window_title", "Struct Squad Game Engine");
+
+        // Log the configuration
+        LOG_INFO("WINDOW", "Window config loaded:");
+        LOG_INFO("WINDOW", "  Size: %dx%d", windowWidth, windowHeight);
+        LOG_INFO("WINDOW", "  Title: %s", windowTitle.c_str());
+    }
+
+    /*
+    ------------------------------------------------------------------------------
+    Initialize: Initializes GLFW and creates the window
+    ------------------------------------------------------------------------------
+    */
+    void WindowSystem::Initialize()
+    {
+        // WindowSystem initializing
+        static bool alreadyInitialized = false;
+        if (alreadyInitialized) return;
+        alreadyInitialized = true;
+
+        // Initialize GLFW
+        if (!glfwInit()) {
+            std::cerr << "GLFW init failed\n";
+            return;
+        }
+
+        // Specify OpenGL version
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+        // Check if fullscreen is requested
+        bool fullscreen = ConfigReader::GetBool("fullscreen", false);
+        GLFWmonitor* monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
+
+        // Create the window
+        window = glfwCreateWindow(windowWidth, windowHeight, windowTitle.c_str(), monitor, nullptr);
+        if (!window) {
+            std::cerr << "Window creation failed\n";
+            glfwTerminate();
+            return;
+        }
+
+        WindowOpen = true;
+
+        // Window created successfully
+    }
+
+    /*
+    ------------------------------------------------------------------------------
+    Update: Called once per frame to process OS window events
+    ------------------------------------------------------------------------------
+    */
+    void WindowSystem::Update(float dt)
+    {
+        DBG_SCOPE_SYS("Window System", eng::debug::Subsystem::Graphics);
+
+        (void)dt;
+        glfwPollEvents();
+    }
+
+    /*
+    ------------------------------------------------------------------------------
+    SendEngineMessage: Responds to engine-level messages such as Quit
+    ------------------------------------------------------------------------------
+    */
+    void WindowSystem::SendEngineMessage(Message* message)
+    {
+        if (message->MessageId == Status::Quit)
+        {
+            std::cout << "WindowSystem: Received quit message, closing window.\n";
+            WindowOpen = false;
+        }
+        if (window) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
+    }
+
+    /*
+    ------------------------------------------------------------------------------
+    ShouldClose: Returns true if the GLFW window should close
+    ------------------------------------------------------------------------------
+    */
+    bool WindowSystem::ShouldClose() const
+    {
+        return window ? glfwWindowShouldClose(window) : true;
+    }
+
+    //jiahao
+    void WindowSystem::SetFullScreen(bool fullscreen) {
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+        if (fullscreen) {
+            // Switch to exclusive fullscreen at current desktop resolution
+            glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        }
+        else {
+            // Switch to windowed mode 
+            int width = 1920;
+            int height = 1060;
+            int xpos = (mode->width - width) / 2;
+            int ypos = (mode->height - height) / 2;
+            glfwSetWindowMonitor(window, nullptr, xpos, ypos, width, height, 0);
+            glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
+            glfwMaximizeWindow(window);
+        }
+    }
+
+}  // End of Framework namespace

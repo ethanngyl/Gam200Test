@@ -31,7 +31,7 @@ macro(import_glm)
         FetchContent_Declare(
             glm
             GIT_REPOSITORY https://github.com/g-truc/glm.git
-            GIT_TAG 0.9.9.8
+            GIT_TAG 1.0.1
         )
         FetchContent_MakeAvailable(glm)
         target_include_directories(glm SYSTEM INTERFACE 
@@ -46,8 +46,8 @@ macro(import_glew)
         message(STATUS "Importing GLEW...")
         FetchContent_Declare(
             glew
-            URL https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.zip
-            URL_HASH SHA256=a9046a913774395a095edcc0b0ac2d81c3aacca61787b39839b941e9be14e0d4
+            GIT_REPOSITORY https://github.com/Perlmint/glew-cmake.git
+            GIT_TAG d06782b910213d675925e6e51a69ad0fd1fe1f23
         )
         FetchContent_Populate(glew)
         
@@ -86,7 +86,7 @@ macro(import_imgui)
         FetchContent_Declare(
             imgui
             GIT_REPOSITORY https://github.com/ocornut/imgui.git
-            GIT_TAG v1.89.9
+            GIT_TAG v1.89.9-docking
         )
         FetchContent_Populate(imgui)
         
@@ -134,6 +134,186 @@ macro(import_stb)
     endif()
 endmacro()
 
+# Macro to import nlohmann/json (header-only)
+macro(import_nlohmann_json)
+    if(NOT TARGET nlohmann_json::nlohmann_json)
+        message(STATUS "Importing nlohmann_json...")
+        # Official repo provides a proper CMake target via FetchContent
+        FetchContent_Declare(
+            nlohmann_json
+            GIT_REPOSITORY https://github.com/nlohmann/json.git
+            GIT_TAG v3.11.3
+        )
+        FetchContent_MakeAvailable(nlohmann_json)  # defines target nlohmann_json::nlohmann_json
+        message(STATUS "nlohmann_json imported successfully")
+    endif()
+endmacro()
+
+# Macro to import FMOD (Windows only)
+macro(import_fmod)
+    if(NOT TARGET fmod)
+        message(STATUS "Importing FMOD...")
+        
+        # Set FMOD root to your library folder
+        set(FMOD_ROOT "${CMAKE_SOURCE_DIR}/library/FMOD Studio API Windows")
+        
+        # Set paths
+        set(FMOD_CORE_LIB_DIR "${FMOD_ROOT}/api/core/lib/x64")
+        set(FMOD_STUDIO_LIB_DIR "${FMOD_ROOT}/api/studio/lib/x64")
+        set(FMOD_CORE_INCLUDE_DIR "${FMOD_ROOT}/api/core/inc")
+        set(FMOD_STUDIO_INCLUDE_DIR "${FMOD_ROOT}/api/studio/inc")
+        
+        # Find FMOD Core libraries
+        find_library(FMOD_LIBRARY
+            NAMES fmod_vc fmod
+            PATHS ${FMOD_CORE_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        find_library(FMODL_LIBRARY
+            NAMES fmodL_vc fmodL
+            PATHS ${FMOD_CORE_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        if(NOT FMOD_LIBRARY)
+            message(FATAL_ERROR "FMOD library not found at: ${FMOD_CORE_LIB_DIR}")
+        endif()
+        
+        # Create FMOD Core target
+        add_library(fmod INTERFACE)
+        target_include_directories(fmod INTERFACE "${FMOD_CORE_INCLUDE_DIR}")
+        target_link_libraries(fmod INTERFACE 
+            $<$<CONFIG:Debug>:${FMODL_LIBRARY}>
+            $<$<NOT:$<CONFIG:Debug>>:${FMOD_LIBRARY}>
+        )
+        
+        # Find FMOD Studio libraries
+        find_library(FMOD_STUDIO_LIBRARY
+            NAMES fmodstudio_vc fmodstudio
+            PATHS ${FMOD_STUDIO_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        find_library(FMOD_STUDIOL_LIBRARY
+            NAMES fmodstudioL_vc fmodstudioL
+            PATHS ${FMOD_STUDIO_LIB_DIR}
+            NO_DEFAULT_PATH
+        )
+        
+        if(FMOD_STUDIO_LIBRARY)
+            add_library(fmod_studio INTERFACE)
+            target_include_directories(fmod_studio INTERFACE "${FMOD_STUDIO_INCLUDE_DIR}")
+            target_link_libraries(fmod_studio INTERFACE 
+                $<$<CONFIG:Debug>:${FMOD_STUDIOL_LIBRARY}>
+                $<$<NOT:$<CONFIG:Debug>>:${FMOD_STUDIO_LIBRARY}>
+                fmod
+            )
+        endif()
+        
+        message(STATUS "FMOD imported successfully")
+    endif()
+endmacro()
+
+# Macro to import FreeType
+macro(import_freetype)
+    if(NOT TARGET Freetype::Freetype)
+
+        message(STATUS "Importing FreeType...")
+        include(FetchContent)
+        # Pull a stable tag
+        FetchContent_Declare(
+            freetype
+            GIT_REPOSITORY https://github.com/freetype/freetype.git
+            GIT_TAG VER-2-14-1
+        )
+        # Prefer a static library to avoid DLL hassle
+        set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+        set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(freetype)
+
+        # Some versions export target "freetype"; add an alias for consistency
+        if(TARGET freetype AND NOT TARGET Freetype::Freetype)
+            add_library(Freetype::Freetype ALIAS freetype)
+        endif()
+
+        message(STATUS "FreeType imported successfully")
+    endif()
+endmacro()
+
+# Macro to import Lua
+macro(import_lua)
+    if(NOT TARGET lua_static)
+        message(STATUS "Importing Lua...")
+        
+        FetchContent_Declare(
+            lua
+            GIT_REPOSITORY https://github.com/lua/lua.git
+            GIT_TAG v5.4.7
+        )
+        FetchContent_Populate(lua)
+        
+        # Lua source files (core library)
+        set(LUA_CORE_SOURCES
+            ${lua_SOURCE_DIR}/lapi.c
+            ${lua_SOURCE_DIR}/lcode.c
+            ${lua_SOURCE_DIR}/lctype.c
+            ${lua_SOURCE_DIR}/ldebug.c
+            ${lua_SOURCE_DIR}/ldo.c
+            ${lua_SOURCE_DIR}/ldump.c
+            ${lua_SOURCE_DIR}/lfunc.c
+            ${lua_SOURCE_DIR}/lgc.c
+            ${lua_SOURCE_DIR}/llex.c
+            ${lua_SOURCE_DIR}/lmem.c
+            ${lua_SOURCE_DIR}/lobject.c
+            ${lua_SOURCE_DIR}/lopcodes.c
+            ${lua_SOURCE_DIR}/lparser.c
+            ${lua_SOURCE_DIR}/lstate.c
+            ${lua_SOURCE_DIR}/lstring.c
+            ${lua_SOURCE_DIR}/ltable.c
+            ${lua_SOURCE_DIR}/ltm.c
+            ${lua_SOURCE_DIR}/lundump.c
+            ${lua_SOURCE_DIR}/lvm.c
+            ${lua_SOURCE_DIR}/lzio.c
+        )
+        
+        # Lua library sources
+        set(LUA_LIB_SOURCES
+            ${lua_SOURCE_DIR}/lauxlib.c
+            ${lua_SOURCE_DIR}/lbaselib.c
+            ${lua_SOURCE_DIR}/lcorolib.c
+            ${lua_SOURCE_DIR}/ldblib.c
+            ${lua_SOURCE_DIR}/liolib.c
+            ${lua_SOURCE_DIR}/lmathlib.c
+            ${lua_SOURCE_DIR}/loadlib.c
+            ${lua_SOURCE_DIR}/loslib.c
+            ${lua_SOURCE_DIR}/lstrlib.c
+            ${lua_SOURCE_DIR}/ltablib.c
+            ${lua_SOURCE_DIR}/lutf8lib.c
+            ${lua_SOURCE_DIR}/linit.c
+        )
+        
+        # Create Lua static library
+        add_library(lua_static STATIC ${LUA_CORE_SOURCES} ${LUA_LIB_SOURCES})
+        target_include_directories(lua_static PUBLIC ${lua_SOURCE_DIR})
+        
+        # Platform-specific definitions
+        if(UNIX AND NOT APPLE)
+            target_compile_definitions(lua_static PUBLIC LUA_USE_LINUX)
+            target_link_libraries(lua_static PUBLIC m dl)
+        elseif(APPLE)
+            target_compile_definitions(lua_static PUBLIC LUA_USE_MACOSX)
+        elseif(WIN32)
+            target_compile_definitions(lua_static PUBLIC LUA_USE_WINDOWS)
+        endif()
+        
+        # Set C standard
+        set_target_properties(lua_static PROPERTIES C_STANDARD 99)
+        
+        message(STATUS "Lua imported successfully")
+    endif()
+endmacro()
+
 # Main function to import all dependencies
 function(importDependencies)
     message(STATUS "=== Importing Dependencies ===")
@@ -142,7 +322,11 @@ function(importDependencies)
     import_glfw()
     import_glm() 
     import_glew()
+    import_freetype() 
     import_imgui()
     import_stb()
+    import_nlohmann_json()
+    import_fmod()
+    import_lua()
     message(STATUS "=== All Dependencies Imported ===")
 endfunction()

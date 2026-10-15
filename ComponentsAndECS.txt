@@ -1,0 +1,41 @@
+For clarity on engine components:
+- Namespace framework is used to group all of our engine components together
+- All engine related components should be using namespace framework
+In order to create a new component and implement it:
+-Create the relevant component header file and cpp file
+-Include precompiled.h which contains interface.h for all component system class to inherit from
+-class <your system name> : public EngineSystem
+-The list of mandatory functions are:
+-Initialize(), Update(float dt), and SendEngineMEssage(Message* message)
+-Virtual is used to allow for polymorphism in our code and allows our derived class to override our base class, in this case, EngineSystem
+-It is also the reason why override needs to be declared in every system function that has inherited from the base class to prevent the function from the base class being called instead
+-So every function inherited from the base class will be virtual void (function) override 
+-Virtual makes the function call dynamic, so the correct version is chosen based on the actual object type at runtime, not the pointer/reference type
+-Use private to protect data from external modification from other components
+-You do not need to declare virtual or override for any function unique to its component
+- In the function for initialize, across the board, use initialize to load values needed in your system
+- In order to use other components for your component if it is reliant on other components, (Component Name)* (variable name) {nullptr};
+- In order to access the functions within the component, (variable name)->(Function)
+- To loop through the entities in order to make sure that the component only runs for entities that have that component
+- use this: for (Entity e : entityManager->GetAllEntities()) 
+- within the for loop you can use an if statement
+- if(entityManager->HasComponent<ComponentName>(e))
+- It is okay to not use SendEngineMessage, this is meant solely to print out into the console
+
+For clarity on the ECS
+Component.h: Contains the declaration of the structs of the components needed along with the relevant parameters required for each component, inherit from componentbase to allow for id retrieval of the components
+ECSComponent.h: Contains the abstract class componentbase, to be used in order to assign IDs to our components
+std::unordered_map<std::string, int> map: std::string is the the key type, int would be the value type and map would be the variable name of the hashmap, the vector would allow us to store multiple components in each container
+ECSEntity.h: Contains the entity class that serves as an identifier for the components, the class is used in other engine components in order to allow for the component to function for the identity
+ECSEntityManager.h: Contains functions with regards to managing the entity, creating/adding/getting/destroying/removing/validating the components of the entity
+
+In order to add new components to the entity:
+- We are currently using a curiously recurring template pattern, basically meaning that our class inherits from the template class and passes itself as the template arugement to that base class
+- So i.e struct Transform: public Component<Transform>. We can see that the struct is being passed back into Component which it is supposed to be inherting from
+- Curiously Recurring is referring to the class appearing to reference itself before it is defined
+- This enables static polymorphism, which basically means the polymorphism is resolved at compile time rather than runtime, the compiler will figure out which function to call when it is compiling and not when
+our program is running. This is faster but less flexible.
+- This also enables automatic unique IDs for our components
+- Allows for common functionality across our entity components, i.e the automatic assigning, retrieving and searching of IDs
+- Go to the Component.h file and create the relevant struct following the format specified in the example
+- You can define variables you need to use within the struct
