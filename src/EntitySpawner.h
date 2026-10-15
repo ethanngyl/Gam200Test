@@ -329,10 +329,12 @@ namespace Framework {
                         newMat->u0, newMat->v0, newMat->u1, newMat->v1);
 
                     mr.material = playerMat;  // Use unique instance
-                } else {
+                }
+                else {
                     LOG_ERROR("SPAWN_PLAYER", "  FAILED: Material2 is NULL!");
                 }
-            } else {
+            }
+            else {
                 LOG_ERROR("SPAWN_PLAYER", "  FAILED: CORE or GraphicsSystem is NULL!");
             }
 
@@ -343,7 +345,7 @@ namespace Framework {
                 auto& transform = entityManager->GetComponent<Transform>(player);
                 transform.position = position;
                 transform.scale = Vector2D(0.1f, 0.1f);
-			}*/
+            }*/
 
             // Add Movement component so GetAllPlayers() can find this entity
             entityManager->AddComponent<Movement>(player);
@@ -354,15 +356,17 @@ namespace Framework {
             auto& collider = entityManager->GetComponent<CircleCollider>(player);
             collider.radius = 0.15f;
 
-			entityManager->AddComponent<Inventory>(player);
+            entityManager->AddComponent<Inventory>(player);
 
-			entityManager->AddComponent<Health>(player, 5); // max 5 health points
+            entityManager->AddComponent<Health>(player, 5); // max 5 health points
 
-			entityManager->AddComponent<AttackAP>(player, 3); // max 3 attack points
+            entityManager->AddComponent<AttackAP>(player, 3); // max 3 attack points
 
-			entityManager->AddComponent<AP>(player, 5); // max 5 action points
+            entityManager->AddComponent<AP>(player, 5); // max 5 action points
 
-			//entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
+            entityManager->AddComponent<TagComponent>(player, "Player");
+
+            //entityManager->AddComponent<AttackRangeComponent>(player, 1); // 1 attack range
 
             // NOTE: SpriteAnimation component is now loaded via Lua (LoadPlayerAnimation)
             // This allows for more flexible animation management per level
@@ -438,7 +442,7 @@ namespace Framework {
             anim.useJsonConfig = false;   // IMPORTANT: enemy uses manual sheet swaps (not JSON groupMap)
 
             // load texture + compute frame sizes
-            
+
             if (CORE && CORE->GetGraphicsSystem())
             {
                 auto* gfx = CORE->GetGraphicsSystem();
@@ -465,6 +469,8 @@ namespace Framework {
             // This matches what TileMapLoader.cpp does when spawning enemies (lines 286-291)
             entityManager->AddComponent<EnemyAI>(enemy);
 
+            entityManager->AddComponent<TagComponent>(enemy, "Enemy");
+
             // *** Add AP component for turn-based combat ***
             entityManager->AddComponent<AP>(enemy, 3);  // 3 AP by default (matches TileMapLoader)
 
@@ -475,7 +481,10 @@ namespace Framework {
             if (entityManager->HasComponent<BoxCollider>(enemy))
             {
                 auto& collider = entityManager->GetComponent<BoxCollider>(enemy);
-                collider.size = size * 1.2f; // or size * 1.2f if you want slightly bigger
+                // FIX: Collider must fit within one grid tile (spacing = 0.1).
+                // Old value (size * 1.2 = 0.3) spanned 3 tiles, causing projectiles
+                // to hit enemies in adjacent rows/columns.
+                collider.size = Vector2D(0.08f, 0.08f);
             }
 
             std::cout << "[EntitySpawner] Spawned enemy on layer " << RenderLayers::Enemies << " with EnemyAI and AP components\n";
@@ -532,12 +541,28 @@ namespace Framework {
         Entity SpawnProjectile(
             const Vector2D& position,
             const Vector2D& direction,
-            float speed = 0.3f)
+            float speed = 0.15f,
+            const std::string& spritePath = "assets/new assets/bullet.png",
+            const glm::vec4& tint = glm::vec4(1.0f))
         {
-            Entity projectile = SpawnSprite("assets/Bullet.png", position, Vector2D(0.1f, 0.1f));
+            Entity projectile = SpawnSprite(
+                spritePath.empty() ? "quad" : spritePath,
+                position, Vector2D(0.1f, 0.1f));
 
             auto& mr = entityManager->GetComponent<MeshRenderer>(projectile);
             mr.layer = RenderLayers::Projectiles;  // Projectiles above player
+            mr.tint = tint;
+
+            // If no sprite path, clear texture so it renders as a solid-color quad
+            if (spritePath.empty()) {
+                mr.spriteName.clear();
+                mr.texture = INVALID_TEXTURE_HANDLE;
+                if (mr.material.IsValid() && CORE && CORE->GetGraphicsSystem()) {
+                    auto* gs = static_cast<GraphicsSystemV2*>(CORE->GetGraphicsSystem());
+                    Material* mat = gs->GetResourceManager().GetMaterial(mr.material);
+                    if (mat) mat->albedoTexture = INVALID_TEXTURE_HANDLE;
+                }
+            }
 
             entityManager->AddComponent<ProjectileMovement>(projectile);
             auto& movement = entityManager->GetComponent<ProjectileMovement>(projectile);
@@ -546,7 +571,7 @@ namespace Framework {
 
             entityManager->AddComponent<CircleCollider>(projectile);
             auto& collider = entityManager->GetComponent<CircleCollider>(projectile);
-            collider.radius = 0.05f;
+            collider.radius = 0.02f;  // Tight radius to avoid hitting adjacent tile rows
 
             std::cout << "[EntitySpawner] Spawned projectile on layer " << RenderLayers::Projectiles << "\n";
             return projectile;
@@ -764,13 +789,13 @@ namespace Framework {
          * @param radius Distance from center to each spawned entity
          *
          * Spawning Process:
-         * 1. Calculates angular spacing (2π / count radians)
+         * 1. Calculates angular spacing (2pi / count radians)
          * 2. For each entity, computes angle (i * angular spacing)
          * 3. Converts polar coordinates to Cartesian (x, y)
          * 4. Spawns sprite at calculated position
          *
          * Position Calculation:
-         * - Angle: (2π * i) / count (evenly distributed)
+         * - Angle: (2pi * i) / count (evenly distributed)
          * - X Position: center.x + radius * cos(angle)
          * - Y Position: center.y + radius * sin(angle)
          * - Forms perfect circle in world space
@@ -858,7 +883,7 @@ namespace Framework {
     private:
         /// Pointer to entity manager for ECS operations (non-owning)
         EntityManager* entityManager = nullptr;
-        
+
     };
 
 } // namespace Framework

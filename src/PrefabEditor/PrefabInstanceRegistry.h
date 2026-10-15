@@ -12,12 +12,12 @@ Central authority for tracking all entities that were spawned from prefab files.
 Design notes:
 - Singleton-style registry: PrefabInstanceRegistry::Get()
 - Tracks both directions:
-    • entityID           -> prefabPath
-    • prefabPath (file)  -> vector<Entity> instances
+    - entityID           -> prefabPath
+    - prefabPath (file)  -> vector<Entity> instances
 - Used by:
-    • PrefabSerializer::LoadPrefab() to RegisterInstance(...)
-    • (Optional) EntityManager::DestroyEntity() to UnregisterInstance(...)
-    • Editor/tools to query all instances when a prefab changes.
+    - PrefabSerializer::LoadPrefab() to RegisterInstance(...)
+    - (Optional) EntityManager::DestroyEntity() to UnregisterInstance(...)
+    - Editor/tools to query all instances when a prefab changes.
 
  Copyright (C) 2025 DigiPen Institute of Technology.
  Reproduction or disclosure of this file or its contents

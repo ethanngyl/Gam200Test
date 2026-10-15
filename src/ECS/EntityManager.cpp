@@ -16,6 +16,7 @@
 
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
+#include "Memory/MemoryManager.h"
 #include <iostream>
 namespace Framework
 {
@@ -73,10 +74,22 @@ namespace Framework
     {
         EntityID id = entity.GetID();
 
-        // Remove all components for this entity
+        // Remove all components for this entity, deallocating each through
+        // the MemoryManager (returns blocks to pool free list, not to OS)
         for (auto& [type, componentMap] : components)
         {
-            componentMap.erase(id);
+            auto it = componentMap.find(id);
+            if (it != componentMap.end())
+            {
+                ComponentBase* comp = it->second;
+                if (comp)
+                {
+                    size_t allocSize = comp->GetAllocatedSize();
+                    comp->~ComponentBase();  // Virtual destructor
+                    MemoryManager::GetInstance().DeallocateBySize(comp, allocSize);
+                }
+                componentMap.erase(it);
+            }
         }
 
         // Remove from active entities
@@ -99,17 +112,26 @@ namespace Framework
      */
     void EntityManager::ClearAllEntities()
     {
-        // Debug logging removed for performance (was causing severe lag)
-        // size_t entityCount = allEntities.size();
-        // size_t componentTypeCount = components.size();
-        // size_t freeIDCount = freeEntityIDs.size();
+        // Deallocate ALL components through the MemoryManager.
+        // This calls each component's virtual destructor and returns the
+        // memory block to the pool's free list. The actual page memory
+        // is NOT returned to the OS until MemoryManager::Shutdown().
+        for (auto& [type, componentMap] : components)
+        {
+            for (auto& [entityId, comp] : componentMap)
+            {
+                if (comp)
+                {
+                    size_t allocSize = comp->GetAllocatedSize();
+                    comp->~ComponentBase();  // Virtual destructor
+                    MemoryManager::GetInstance().DeallocateBySize(comp, allocSize);
+                }
+            }
+        }
 
         components.clear();
         allEntities.clear();
         freeEntityIDs.clear();
         nextEntityID = 1;
-
-        // Debug: Uncomment for troubleshooting entity cleanup issues
-        // std::cout << "[EntityManager] Cleared " << entityCount << " entities\n";
 	}
 }

@@ -48,6 +48,8 @@
 
 #include "StateMachine.h"
 #include "FSMSystem.h"
+#include "Graphics/ParticleSystemEthan.h"
+#include "Graphics/ParticleSystemManager.h"
 
 namespace Framework
 {
@@ -73,7 +75,9 @@ namespace Framework
         , damageIndicator(nullptr)
         , pathfindingSystem(nullptr)
         , skillSystem(nullptr)
+        , particleSystemManager(nullptr)
         , fsmSystem(nullptr)
+        , particleSystemEthan(nullptr)
     {
         CORE = this;
     }
@@ -140,6 +144,12 @@ namespace Framework
     {
         LOG_INFO("CORE", "[1/5] Creating engine systems...");
 
+        // Initialize the custom Memory Manager BEFORE any entity/component
+        // allocation. This pre-allocates memory pools that will be used by
+        // the ECS for all component storage via placement new.
+        MemoryManager::GetInstance().Initialize();
+        LOG_INFO("CORE", "MemoryManager initialized");
+
         entityManager = new EntityManager();
         windowSystem = new WindowSystem();
         graphicsSystem = new GraphicsSystemV2();
@@ -159,13 +169,15 @@ namespace Framework
         skillSystem = new SkillSystem();
         scriptSystem = new ScriptSystem();
         fsmSystem = new FSMSystem();
+        particleSystemManager = new ParticleSystemManager();
+        particleSystemEthan = new ParticleSystemEthan();
 
         // Check for allocation failures
         if (!entityManager || !windowSystem || !graphicsSystem || !inputSystem ||
             !collisionSystem || !movementSystem || !projectileSystem || !spawner ||
             !playerController || !imguiSystem || !audioSystem || !animationSystem ||
             !uiSystem || !eventSystem || !damageIndicator || !pathfindingSystem ||
-            !scriptSystem || !skillSystem || !fsmSystem) {
+            !scriptSystem || !skillSystem || !fsmSystem || !particleSystemManager || !particleSystemEthan) {
 
             LOG_ERROR("CORE", "Failed to allocate one or more systems!");
 
@@ -189,6 +201,8 @@ namespace Framework
             delete skillSystem;
             delete scriptSystem;
             delete fsmSystem;
+            delete particleSystemManager;
+            delete particleSystemEthan;
 
             throw std::runtime_error("System allocation failure");
         }
@@ -217,6 +231,8 @@ namespace Framework
         pathfindingSystem->SetEntityManager(entityManager);
         skillSystem->SetEntityManager(entityManager);
         fsmSystem->SetEntityManager(entityManager);
+        particleSystemEthan->SetEntityManager(entityManager);
+        particleSystemEthan->SetGraphicsSystem(graphicsSystem);
 
         // Wire InputSystem
         playerController->SetInputSystem(inputSystem);
@@ -284,15 +300,16 @@ namespace Framework
         AddSystem(collisionSystem);
         AddSystem(projectileSystem);
         AddSystem(graphicsSystem);
-        AddSystem(imguiSystem);
         AddSystem(audioSystem);
+        AddSystem(imguiSystem);
         AddSystem(animationSystem);
         AddSystem(uiSystem);
         AddSystem(eventSystem);
         AddSystem(pathfindingSystem);
         AddSystem(skillSystem);
         AddSystem(fsmSystem);
-
+        AddSystem(particleSystemManager);
+        AddSystem(particleSystemEthan);
 
         LOG_INFO("CORE", "%zu systems added", Systems.size());
     }
@@ -400,6 +417,11 @@ namespace Framework
             delete entityManager;
             entityManager = nullptr;
         }
+
+        // Shutdown the custom Memory Manager AFTER all entities/components
+        // have been deallocated. This returns all pool page memory to the OS.
+        MemoryManager::GetInstance().Shutdown();
+        LOG_INFO("CORE", "MemoryManager shut down - all pool memory returned to OS");
 
         // Terminate GLFW
         if (windowSystem) {

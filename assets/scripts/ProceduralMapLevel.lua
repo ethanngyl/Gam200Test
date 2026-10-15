@@ -49,6 +49,8 @@
 ]]--
 local PauseMenu = require("PauseMenu")
 local UIManager = require("UIManager")
+local SkillSwapUI = require("SkillSwapUI")
+_G.SkillSwapUI = SkillSwapUI
 
 -- Export UIManager globally so entity scripts can access it via C++ bridge
 -- (Entity scripts run in separate Lua states and need global access)
@@ -67,6 +69,11 @@ dofile("assets/scripts/EnemyTurnManager.lua")
 local initialized = false
 local editorToggleCooldown = 0
 
+local mapSaveCooldown = 0
+local MAP_SAVE_COOLDOWN_TIME = 1.0
+local USE_SAVED_MAP = false
+local SAVED_MAP_PATH = "assets/maps/my_map.map.json"
+
 -- Party members
 local partyMembers = {}  -- {warrior, mage, rogue}
 local partyUI = nil
@@ -83,21 +90,42 @@ local kSpacingY = 0.1
 -- Audio configuration
 local audioConfig = nil
 
+-- Level progression (read from LevelProgress.json)
+local currentLevel = 1
+local totalLevels  = 3
+
 -- ============================================================================
 -- GOAL STATE
 -- ============================================================================
 local goalPosition = nil  -- {gridX, gridY, worldX, worldY}
 local goalReached = false
 local goalTransitionDelay = 0
---local GOAL_TRANSITION_TIME = 0.5  -- Seconds before transitioning to menu
+
+-- Boss tracking - portal only spawns after boss is defeated
+local bossEntityID = nil
+local bossDefeated = false
+local pendingGoalData = nil  -- Stores goal spawn data until boss dies
 
 -- ============================================================================
 -- LIFECYCLE: OnInit
 -- ============================================================================
 
 function OnInit()
+    -- Read level progression
+    local progress = LoadJSON("assets/JSON/LevelProgress.json")
+    if progress then
+        currentLevel = progress.currentLevel or 1
+        totalLevels  = progress.totalLevels  or 3
+    end
+
+    -- Reset skill loadout on level 1 so PlayerScript uses its defaults (2 skills each)
+    if currentLevel == 1 then
+        os.remove("assets/JSON/SkillLoadout.json")
+        Log("[ProceduralMapLevel] Skill loadout reset for new game")
+    end
+
     Log("========================================")
-    Log("LEVEL 3: PROCEDURAL MAP VERSION")
+    Log("LEVEL " .. currentLevel .. " / " .. totalLevels .. ": PROCEDURAL MAP")
     Log("========================================")
 
     -- Initialize pause menu
@@ -123,8 +151,17 @@ function OnInit()
     -- ========================================
     -- PROCEDURAL MAP GENERATION
     -- ========================================
-    Log("Generating procedural map...")
-    local mapData = LoadProceduralMap(21, 26, "rooms")
+    local mapData = nil
+    if USE_SAVED_MAP then
+         Log("Loading saved map: " .. SAVED_MAP_PATH)
+         mapData = LoadSavedMap(SAVED_MAP_PATH)
+         if not mapData then
+             Log("ERROR: Failed! Falling back to procedural.")
+             mapData = LoadProceduralMap(20, 20, "rooms_arena")
+         end
+     else
+         mapData = LoadProceduralMap(20, 20, "rooms_arena")
+     end
 
     -- Debug output
     Log("DEBUG: mapData = " .. tostring(mapData))
@@ -163,7 +200,10 @@ function OnInit()
 
     -- Setup enemies
     SetupProceduralEnemies(mapData)
-    
+
+    -- Spawn boss in arena
+    SpawnProceduralBoss(mapData)
+
     -- Spawn chests and goal
     SpawnProceduralChestsAndGoal(mapData)
 
@@ -173,19 +213,24 @@ function OnInit()
     -- Setup Party UI
     SetupPartyUI()
 
-    -- CRITICAL: Disable grid movement
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-    Log("!!! DISABLING grid movement !!!")
-    Log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    -- CRITICAL: Disable C++ grid movement (Lua handles movement via PartyTurnManager)
     SetGridMovementEnabled(false)
-    
-    -- IMPORTANT: Set camera to follow first party member
-    -- NOTE: SetCameraFollowEntity may not be registered - check if it exists
-    if partyMembers[1] then
-        -- Try to use the graphics system's follow target if available
-        Log("First party member entity: " .. partyMembers[1])
-        -- SetCameraFollowEntity is not exposed to Lua - camera will stay at 0,0
+
+    -- Remove WASD movement from all players (grid movement handled by Lua scripts)
+    for _, pid in ipairs(partyMembers) do
+        RemoveMovementComponent(pid)
+        Log("Removed Movement component from player " .. pid)
     end
+
+    -- Set camera to follow first party member
+    if partyMembers[1] then
+        SetCameraFollowTarget(partyMembers[1])
+        Log("Camera following player " .. partyMembers[1])
+    end
+
+    -- Initialize turn system (Player phase, not busy)
+    InitializeTurnSystem()
+    Log("Turn system initialized: Player phase")
 
     initialized = true
     Log("========================================")
@@ -244,6 +289,8 @@ function SetupProceduralParty(mapData)
     local player2 = SpawnPlayerAt(mapData.partySpawns[2].worldX, mapData.partySpawns[2].worldY)
     local player3 = SpawnPlayerAt(mapData.partySpawns[3].worldX, mapData.partySpawns[3].worldY)
 
+    SetAnimationPrefix(player2, "Mage_")
+    SetAnimationPrefix(player3, "Berserker_")
     if not player1 or player1 == 0 then
         Log("ERROR: Failed to spawn Player 1!")
         return false
@@ -306,6 +353,21 @@ end
 -- HELPER: Setup Procedural Enemies
 -- ============================================================================
 
+-- Enemy type assignment order: ensures at least one of each new type spawns.
+-- Index 1 = Knight Commander (yellow), 2 = Knight, 3 = Mage (blue),
+-- 4 = Tank (green). Additional enemies cycle through these types.
+-- All enemy types now use EnemyGeneric.lua with JSON configs.
+local ENEMY_TYPE_CONFIGS = {
+    "knight_commander",  -- 1: Knight Commander
+    "knight",            -- 2: Knight
+    "mage",              -- 3: Mage
+    "tank",              -- 4: Tank
+}
+
+local ENEMY_TYPE_NAMES = {
+    "Knight Commander", "Knight", "Mage", "Tank"
+}
+
 function SetupProceduralEnemies(mapData)
     Log("========================================")
     Log("Spawning procedural enemies...")
@@ -322,6 +384,12 @@ function SetupProceduralEnemies(mapData)
         return false
     end
 
+    -- Reset global enemy death counter for this level
+    _G.EnemiesDeadThisLevel = 0
+    _G.KnightCommanderIDs = {}
+    _G.RallyingCryActive = false
+    _G.RallyingCryPending = false
+
     Log("Spawning " .. #mapData.enemies .. " enemies:")
 
     local spawnedEnemies = {}
@@ -330,19 +398,23 @@ function SetupProceduralEnemies(mapData)
         local ex = enemy.worldX
         local ey = enemy.worldY
         local enemyID = SpawnEnemyAt(ex, ey)
-        
+
         if enemyID and enemyID ~= 0 then
-            Log("  Enemy " .. i .. " at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
-            
-            -- Attach enemy script FIRST (so OnInit runs immediately with this setup)
-            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+            -- Assign enemy type: cycle through the 4 types via config
+            local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
+            local configType = ENEMY_TYPE_CONFIGS[typeIndex]
+            local typeName = ENEMY_TYPE_NAMES[typeIndex]
+
+            Log("  Enemy " .. i .. " [" .. typeName .. "] at grid (" .. enemy.x .. ", " .. enemy.y .. ") -> Entity " .. enemyID)
+
+            -- Attach unified enemy script with config type
+            AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
 
             -- Set target (C++ side)
             SetEnemyTarget(enemyID, playerID)
 
-            Log("  Enemy " .. enemyID .. " script attached + target set to " .. tostring(playerID))
+            Log("  Enemy " .. enemyID .. " " .. typeName .. " (" .. configType .. ") script attached + target set to " .. tostring(playerID))
 
-            
             table.insert(spawnedEnemies, enemyID)
         else
             Log("  Enemy " .. i .. " FAILED to spawn!")
@@ -350,6 +422,74 @@ function SetupProceduralEnemies(mapData)
     end
 
     Log("Spawned " .. #spawnedEnemies .. " enemies successfully")
+    Log("========================================")
+    return true
+end
+
+-- ============================================================================
+-- HELPER: Spawn Boss in Arena
+-- ============================================================================
+
+function SpawnProceduralBoss(mapData)
+    if not mapData.hasArena then
+        Log("No boss arena in this level")
+        return true
+    end
+
+    Log("========================================")
+    Log("Spawning boss in arena...")
+    Log("========================================")
+
+    local bx = mapData.arenaWorldX
+    local by = mapData.arenaWorldY
+
+    if not bx or not by then
+        Log("ERROR: Arena world coordinates missing!")
+        return false
+    end
+
+    local playerID = partyMembers[1]
+    if not playerID or playerID == 0 then
+        Log("ERROR: Cannot configure boss without player")
+        return false
+    end
+
+    -- Spawn boss as an enemy entity (same stats as regular enemies)
+    local bossID = SpawnEnemyAt(bx, by)
+
+    if not bossID or bossID == 0 then
+        Log("ERROR: Failed to spawn boss!")
+        return false
+    end
+
+    Log("Boss spawned at grid (" .. mapData.arenaX .. ", " .. mapData.arenaY .. ") -> Entity " .. bossID)
+
+    -- Attach BossScript instead of EnemyScript
+    AddScriptComponentToEntity(bossID, "assets/scripts/BossScript.lua")
+
+    -- Set target (C++ side)
+    SetEnemyTarget(bossID, playerID)
+
+    -- Store arena boundaries in shared C++ store so BossScript can access them
+    local arenaMinX = mapData.arenaMinX or (mapData.arenaX - 3)
+    local arenaMinY = mapData.arenaMinY or (mapData.arenaY - 3)
+    local arenaMaxX = mapData.arenaMaxX or (mapData.arenaX + 4)
+    local arenaMaxY = mapData.arenaMaxY or (mapData.arenaY + 4)
+    SetSharedInt("arenaMinX", arenaMinX)
+    SetSharedInt("arenaMinY", arenaMinY)
+    SetSharedInt("arenaMaxX", arenaMaxX)
+    SetSharedInt("arenaMaxY", arenaMaxY)
+    Log("Arena bounds set: (" .. arenaMinX .. "," .. arenaMinY
+        .. ") to (" .. arenaMaxX .. "," .. arenaMaxY .. ")")
+
+    -- Track boss entity and arena position so portal spawns here after boss dies
+    bossEntityID = bossID
+    bossArenaGridX = mapData.arenaX
+    bossArenaGridY = mapData.arenaY
+    bossArenaWorldX = bx
+    bossArenaWorldY = by
+
+    Log("Boss " .. bossID .. " BossScript attached + target set to " .. tostring(playerID))
     Log("========================================")
     return true
 end
@@ -374,22 +514,21 @@ function SpawnProceduralChestsAndGoal(mapData)
         --end
     --end
 
-    -- Spawn goal
+    -- Defer goal/portal spawn until boss is defeated
     if mapData.goalX and mapData.goalY then
-        local gx = mapData.goalWorldX  -- From C++!
-        local gy = mapData.goalWorldY
-        local goalID = SpawnGoalAt(gx, gy)
-
-        -- Store goal position for collision checking
-        goalPosition = {
-            gridX = mapData.goalX,
-            gridY = mapData.goalY,
-            worldX = gx,
-            worldY = gy,
-            entityID = goalID
+        pendingGoalData = {
+            goalX = mapData.goalX,
+            goalY = mapData.goalY,
+            goalWorldX = mapData.goalWorldX,
+            goalWorldY = mapData.goalWorldY
         }
 
-        Log("Goal spawned at grid (" .. mapData.goalX .. ", " .. mapData.goalY .. ") -> Entity " .. goalID)
+        if bossEntityID then
+            Log("Portal will appear after boss is defeated")
+        else
+            -- No boss on this level, spawn portal immediately
+            SpawnPortalNow()
+        end
     end
 
     Log("========================================")
@@ -413,6 +552,50 @@ function SetupPartyUI()
 
     Log("Party status UI created")
     Log("========================================")
+end
+
+-- ============================================================================
+-- PORTAL SPAWN (deferred until boss defeated)
+-- ============================================================================
+
+function SpawnPortalNow()
+    if not pendingGoalData then return end
+
+    local gx = pendingGoalData.goalWorldX
+    local gy = pendingGoalData.goalWorldY
+    local goalID = SpawnGoalAt(gx, gy)
+
+    goalPosition = {
+        gridX = pendingGoalData.goalX,
+        gridY = pendingGoalData.goalY,
+        worldX = gx,
+        worldY = gy,
+        entityID = goalID
+    }
+
+    Log("Portal spawned at grid (" .. pendingGoalData.goalX .. ", " .. pendingGoalData.goalY .. ") -> Entity " .. goalID)
+    pendingGoalData = nil
+end
+
+function CheckBossDefeated()
+    if bossDefeated or not bossEntityID then return end
+
+    if not IsEntityValid(bossEntityID) then
+        bossDefeated = true
+        Log("BOSS DEFEATED - Spawning portal in boss room!")
+
+        -- Spawn portal at boss arena center
+        local goalID = SpawnGoalAt(bossArenaWorldX, bossArenaWorldY)
+        goalPosition = {
+            gridX = bossArenaGridX,
+            gridY = bossArenaGridY,
+            worldX = bossArenaWorldX,
+            worldY = bossArenaWorldY,
+            entityID = goalID
+        }
+        pendingGoalData = nil
+        Log("Portal spawned in boss room at grid (" .. bossArenaGridX .. ", " .. bossArenaGridY .. ") -> Entity " .. goalID)
+    end
 end
 
 -- ============================================================================
@@ -458,21 +641,46 @@ function HandleGoalTransition(dt)
         -- Check if any player reached the goal
         if CheckGoalReached() then
             goalReached = true
-            
+
             -- Play victory sound if available
             if PlaySound then
                 pcall(function()
                     PlaySound("victory", false, 1.0)
                 end)
             end
-            
-            Log("GOAL REACHED - Transitioning to Main Menu immediately...")
-            
-            -- Transition to main menu immediately
-            if SetNextGameState then
-                SetNextGameState("LEVEL_END")
+
+            Log("GOAL REACHED! Level " .. currentLevel .. " / " .. totalLevels)
+
+            if currentLevel >= totalLevels then
+                -- Final level complete - go to end screen
+                Log("All levels complete - going to end screen")
+                if SetNextGameState then
+                    SetNextGameState("WIN_SCREEN")
+                end
             else
-                Log("ERROR: No game state transition function available!")
+                -- Levels 1-2: show skill swap UI then load next level
+                -- Level 1 fills slot 3, level 2 fills slot 4
+                local skillSlot = currentLevel + 2
+                Log("Opening skill swap for slot " .. skillSlot)
+
+                SkillSwapUI.Show(function()
+                    -- Advance level progress
+                    local nextLevel = currentLevel + 1
+                    local f = io.open("assets/JSON/LevelProgress.json", "w")
+                    if f then
+                        f:write("{\n")
+                        f:write("  \"currentLevel\": " .. nextLevel .. ",\n")
+                        f:write("  \"totalLevels\": " .. totalLevels .. "\n")
+                        f:write("}\n")
+                        f:close()
+                        Log("[LevelProgress] Advanced to level " .. nextLevel .. " / " .. totalLevels)
+                    end
+
+                    Log("Skill swap complete - Loading next procedural map...")
+                    if SetNextGameState then
+                        SetNextGameState("LEVEL_3")
+                    end
+                end, skillSlot)
             end
         end
     end
@@ -483,30 +691,90 @@ end
 -- ============================================================================
 
 function OnUpdate(dt)
+    -- Process deferred deaths FIRST (Dark Omens etc.) - must run when Lua stack is clear
+    if ProcessDeferredDeaths then
+        ProcessDeferredDeaths()
+    end
+
     -- CRITICAL: Force grid movement to stay disabled
     SetGridMovementEnabled(false)
 
-    -- Update audio
-    UpdateAudio(dt)
-
     -- Handle pause menu
     PauseMenu.Update(dt)
+
+    -- Update skill swap UI (runs while paused, handles its own input)
+    SkillSwapUI.Update(dt)
 
     -- Update party UI
     if partyUI then
         partyUI:OnUpdate(dt)
     end
 
-    -- Skip game logic if paused
+    -- Skip game logic if paused (SkillSwapUI pauses the game while active)
     if IsPaused() then
         return
     end
 
+    -- Update audio
+    UpdateAudio(dt)
+
     -- Handle editor toggle
     HandleEditorToggle(dt)
+
+    if IsKeyDown("9") and mapSaveCooldown <= 0 then
+        Log("SAVING MAP (9)...")
+        local success, filepath = SaveCurrentMap()
+        if success then Log("Saved to: " .. tostring(filepath))
+        else Log("ERROR: Save failed!") end
+        mapSaveCooldown = MAP_SAVE_COOLDOWN_TIME
+    end
+
+     -- ========================================
+    -- TEST: Skill Swap UI (press 0)
+    -- ========================================
+    if IsKeyDown("0") and not SkillSwapUI.IsActive() then
+        SkillSwapUI.Show(function()
+            Log("Skill swap done! Would transition to next level here.")
+        end)
+    end
+
+    -- ========================================
+    -- CHEAT: Skip to lose screen (press 6)
+    -- ========================================
+    if IsKeyDown("6") then
+        SetNextGameState("LOSE_SCREEN")
+        return
+    end
+
+    -- ========================================
+    -- CHEAT: Skip to win screen (press 7)
+    -- ========================================
+    if IsKeyDown("7") then
+        SetNextGameState("WIN_SCREEN")
+        return
+    end
+
+    -- ========================================
+    -- CHEAT: Kill all enemies (press K)
+    -- ========================================
+    if IsKeyDown("K") and not goalReached then
+        local enemies = GetAllEnemies()
+        if enemies and #enemies > 0 then
+            for _, eid in ipairs(enemies) do
+                SetEntityHP(eid, 0, 0)
+                DestroyEntity(eid)
+            end
+            Log("[CHEAT] Killed all " .. #enemies .. " enemies")
+        end
+    end
     
     -- Map regeneration disabled - SetNextGameState would work but causes level reload issues
     -- HandleMapRegeneration()
+
+    -- ========================================
+    -- CHECK BOSS DEFEATED -> SPAWN PORTAL
+    -- ========================================
+    CheckBossDefeated()
 
     -- ========================================
     -- CHECK FOR GOAL INTERACTION (NEW)
@@ -533,11 +801,9 @@ function OnUpdate(dt)
     -- Party system turn management
     local currentTurn = GetCurrentTurn()
 
-    -- Reset party when enemy turn ends
-    if previousTurn == "Enemy" and currentTurn == "Player" then
-        Log("[Level3Procedural] Enemy turn ended - resetting party")
-        OnEnemyTurnEnded()
-    end
+    -- NOTE: Do NOT call ResetPartyTurn/OnEnemyTurnEnded here!
+    -- EnemyTurnManager already calls ResetPartyTurn when the last enemy finishes.
+    -- A second call on the next frame would reset hasActed and undo stun-skip (Groundshatter bug).
 
     -- Transition to enemy turn when all party members have acted
     if currentTurn == "Player" then
@@ -550,6 +816,15 @@ function OnUpdate(dt)
         end
     end
 
+    -- Must capture previousTurn BEFORE updating managers, so turn transitions
+    -- are correctly detected on the next frame
+    previousTurn = currentTurn
+
+    -- Update party turn manager (handles turn transition cooldowns and input timing)
+    if UpdatePartyTurnManager then
+        UpdatePartyTurnManager(dt)
+    end
+
     -- Update enemy turn manager (for sequential enemy turns with delays)
     if UpdateEnemyTurnManager then
         if currentTurn == "Enemy" then
@@ -557,8 +832,6 @@ function OnUpdate(dt)
         end
         UpdateEnemyTurnManager(dt)
     end
-
-    previousTurn = currentTurn
 
     -- Update UI system
     UIManager.Update(dt)
@@ -571,18 +844,24 @@ end
 function OnDraw()
     PauseMenu.Draw()
 
+    -- Render skill swap UI overlay
+    SkillSwapUI.Draw()
+
     -- Render UI components (including scroll animation text)
     UIManager.Draw()
+
+    -- Level indicator (top-right corner)
+    local fbW, fbH = GetFramebufferSize()
+    if fbW and fbW > 0 then
+        local scaleRef = fbW / 1920
+        DrawText("Jersey20Regular", "Level " .. currentLevel .. " / " .. totalLevels,
+            fbW - 220 * scaleRef, 30 * scaleRef, 0.6 * scaleRef, 0.9, 0.9, 0.7)
+    end
 
     -- Check if IsEditorMode exists
     if IsEditorMode and IsEditorMode() then
         DrawText("Sans48", "EDITOR MODE", 50, 50, 0.8, 1.0, 0.3, 0.3)
     end
-    
-    -- Show controls
-    --[[
-    DrawText("Playfair48", "WASD to move, P to pause", 50, 100, 0.8, 0.8, 0.8, 1.0)
-    ]]
 end
 
 -- ============================================================================
@@ -601,7 +880,7 @@ function OnDestroy()
     end
 
     -- Stop audio
-    StopAllSounds()
+    StopMusic(0.5)
 
     -- Destroy UI system
     UIManager.Destroy()
@@ -638,7 +917,7 @@ function InitializeAudio()
     end
 
     if bgmSound then
-        PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
+        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)
     end
 end
 

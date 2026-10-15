@@ -1,0 +1,67 @@
+{
+    "type": "tank",
+    "displayName": "Tank",
+    "logTag": "EnemyTank",
+
+    "stats": {
+        "maxHP": 7,
+        "maxAP": 3,
+        "movementPoints": 2
+    },
+
+    "tint": [0.3, 0.9, 0.3, 1.0],
+
+    "healthBarColor": [0.9, 0.75, 0.1, 1.0],
+    "healthBarWidth": 0.12,
+
+    "animations": {
+        "idleFront": { "tex": "assets/Enemy/Enemy_Knight_Idle_Front-Sheet.png",  "rows": 1, "cols": 12, "frames": 12, "time": 0.08, "loop": true  },
+        "idleBack":  { "tex": "assets/Enemy/Enemy_Knight_Idle_Back-Sheet.png",   "rows": 1, "cols": 4,  "frames": 4,  "time": 0.10, "loop": true  },
+        "idleSide":  { "tex": "assets/Enemy/Enemy_Knight_Idle_Side-Sheet.png",   "rows": 1, "cols": 12, "frames": 12, "time": 0.08, "loop": true  },
+        "atkFront":  { "tex": "assets/Enemy/Enemy_Knight_Attack_Front-Sheet.png", "rows": 1, "cols": 8, "frames": 8, "time": 0.07, "loop": false },
+        "atkBack":   { "tex": "assets/Enemy/Enemy_Knight_Attack_Back-Sheet.png",  "rows": 1, "cols": 8, "frames": 8, "time": 0.07, "loop": false },
+        "atkLeft":   { "tex": "assets/Enemy/Enemy_Knight_Attack_Left-Sheet.png",  "rows": 1, "cols": 7, "frames": 7, "time": 0.07, "loop": false }
+    },
+
+    "skills": {
+        "attack": {
+            "name": "Shield Bash",
+            "type": "melee",
+            "range": 1,
+            "damage": 2,
+            "apCost": 3,
+            "multiAttack": false,
+            "statusEffect": "stun",
+            "statusDuration": 1
+        },
+        "special": {
+            "name": "Taunt",
+            "type": "taunt",
+            "apCost": 2,
+            "cooldownMax": 0,
+            "condition": "ally_low_health",
+            "conditionThreshold": 0.5,
+            "statusEffect": "knightsOath",
+            "statusDuration": -1
+        }
+    },
+
+    "ai": {
+        "behavior": "aggressive",
+        "aggroRange": 99,
+        "maxPathLength": 10,
+        "priorityList": ["special", "move", "attack"]
+    },
+
+    "passives": [
+        {
+            "name": "Heavy Armor",
+            "type": "damageReduction",
+            "statusEffect": "damageReduction",
+            "value": 1
+        }
+    ],
+
+    "onInit": null,
+    "onDestroy": "remove_taunt"
+}

@@ -58,9 +58,13 @@ Technology is prohibited.
 #include "UISystem.h"
 #include "Audio/AudioSystem.h"
 #include "GraphicsSystemV2.h"
+#include "Graphics/ParticleSystemManager.h"
 #include "ImguiSystem.h"
 #include "GameStateList.h"
 #include "Pause/GlobalPauseManager.h"
+#include "Component.h"     // CircleCollider, AP components
+#include "ECS/TagHelper.h" // FindFirstByTag, FindAllByTag
+#include "Grid/GridECS.h"  // WorldToTile, SetOccupant for ProcessDeferredDestructions
 
 // Fix for Windows min/max macro conflicts
 #include <algorithm>
@@ -209,19 +213,20 @@ namespace Framework {
         // 1. Fresh load from Open Level menu - editor mode ON, simulation OFF
         // 2. Level transition while playing - editor mode ON, simulation ON (preserve playing state)
         extern bool g_preservePlayingState;
-        
+
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // If game was playing when transitioning, keep it playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Preserving playing state for level transition");
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
             }
-            
+
             GlobalPause::SetPaused(false);
             // Enable ImGui when loading in editor mode
             if (coreEngine->GetImGuiSystem()) {
@@ -244,14 +249,15 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
             }
-            
+
             GlobalPause::SetPaused(false);
             // Ensure ImGui stays enabled
             if (coreEngine->GetImGuiSystem()) {
@@ -287,22 +293,23 @@ namespace Framework {
         if (isEditorMode && coreEngine)
         {
             coreEngine->SetEditorMode(true);
-            
+
             // Preserve playing state if transitioning between levels while playing
             if (g_preservePlayingState) {
                 coreEngine->SetPlaying(true);
                 LOG_INFO("LevelLoader", "Editor mode with playing state preserved");
-            } else {
+            }
+            else {
                 coreEngine->SetPlaying(false);
                 LOG_INFO("LevelLoader", "Editor mode enabled - simulation stopped");
             }
-            
+
             GlobalPause::SetPaused(false);
             // Final ensure ImGui is enabled after OnInit
             if (coreEngine->GetImGuiSystem()) {
                 coreEngine->GetImGuiSystem()->Enable();
             }
-            
+
             // Reset the preserve playing state flag after use
             g_preservePlayingState = false;
         }
@@ -328,6 +335,10 @@ namespace Framework {
         // NEW: Clear entities that were spawned by the Lua level
         if (coreEngine)
         {
+            if (auto* psm = coreEngine->GetParticleSystemManager()) {
+                psm->ClearAllEmitters();
+            }
+
             auto* em = coreEngine->GetEntityManager();
             if (em)
             {
@@ -336,6 +347,7 @@ namespace Framework {
             }
         }
 
+        deferredEntitiesToDestroy.clear();
         levelLoaded = false;
         currentLevelPath.clear();
 
@@ -361,8 +373,70 @@ namespace Framework {
     // LIFECYCLE CALLS
     // ========================================================================
 
+    void LevelLoader::DeferEntityDestruction(uint32_t entityID) {
+        // Deduplicate: prevent double-destruction crash if called multiple times for same entity
+        for (uint32_t existing : deferredEntitiesToDestroy) {
+            if (existing == entityID) {
+                LOG_WARN("LevelLoader", "DeferEntityDestruction: Entity %u already queued, ignoring duplicate", entityID);
+                return;
+            }
+        }
+        deferredEntitiesToDestroy.push_back(entityID);
+    }
+
+    void LevelLoader::ProcessDeferredDestructions() {
+        if (!coreEngine) return;
+        auto* em = coreEngine->GetEntityManager();
+        if (!em) return;
+
+        for (uint32_t id : deferredEntitiesToDestroy) {
+            Entity entity(id);
+            if (em->HasComponent<TagComponent>(entity) &&
+                em->GetComponent<TagComponent>(entity).tag == "Enemy" &&
+                L && HasLuaFunction("SyncEnemyTurnBeforeEntityDestroyed")) {
+                lua_getglobal(L, "SyncEnemyTurnBeforeEntityDestroyed");
+                lua_pushinteger(L, static_cast<lua_Integer>(id));
+                if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+                    const char* err = lua_tostring(L, -1);
+                    LOG_WARN("LevelLoader", "SyncEnemyTurnBeforeEntityDestroyed error: %s", err ? err : "unknown");
+                    lua_pop(L, 1);
+                }
+            }
+            if (em->HasComponent<Transform>(entity)) {
+                auto& transform = em->GetComponent<Transform>(entity);
+                auto tileOpt = Framework::WorldToTile(transform.position);
+                if (tileOpt.has_value()) {
+                    Framework::SetOccupant(tileOpt.value(), Entity{ INVALID_ENTITY });
+                }
+            }
+            // Call OnDestroy before DestroyEntity (Lua call stack is fully unwound now - safe)
+            if (em->HasComponent<ScriptComponent>(entity)) {
+                auto& script = em->GetComponent<ScriptComponent>(entity);
+                if (script.hasOnDestroy && script.L) {
+                    lua_getglobal(script.L, "OnDestroy");
+                    if (lua_isfunction(script.L, -1)) {
+                        if (lua_pcall(script.L, 0, 0, 0) != LUA_OK) {
+                            lua_pop(script.L, 1);
+                        }
+                    }
+                    else {
+                        lua_pop(script.L, 1);
+                    }
+                }
+            }
+            em->DestroyEntity(entity);
+        }
+        deferredEntitiesToDestroy.clear();
+    }
+
     void LevelLoader::UpdateCurrentLevel(float dt) {
         if (!levelLoaded || !L) return;
+
+        // Process entities queued for destruction (avoids crash when Parry/Knight Oath kills caller)
+        ProcessDeferredDestructions();
+
+        // Update tile tints (restore expired tints)
+        UpdateTileTints();
 
         // NOTE: Don't skip OnUpdate when paused - PauseMenu needs to run to handle unpause!
         // The Lua level can check IsPaused() internally if needed.
@@ -419,6 +493,66 @@ namespace Framework {
         return true;
     }
 
+    bool LevelLoader::ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID) {
+        if (!levelLoaded || !L) return false;
+
+        lua_getglobal(L, "ApplyProjectileDamage");
+        if (!lua_isfunction(L, -1)) {
+            lua_pop(L, 1);
+            lua_getglobal(L, "DamageEntity");
+            if (!lua_isfunction(L, -1)) {
+                lua_pop(L, 1);
+                return false;
+            }
+            lua_pushinteger(L, static_cast<lua_Integer>(enemyID));
+            lua_pushinteger(L, static_cast<lua_Integer>(damage));
+            lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
+            int result = lua_pcall(L, 3, 1, 0);
+            bool success = false;
+            if (result == LUA_OK && lua_isboolean(L, -1)) {
+                success = lua_toboolean(L, -1) != 0;
+            }
+            lua_pop(L, 1);
+            return success;
+        }
+        lua_pushinteger(L, static_cast<lua_Integer>(enemyID));
+        lua_pushinteger(L, static_cast<lua_Integer>(damage));
+        lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
+        int result = lua_pcall(L, 3, 1, 0);
+        bool success = false;
+        if (result == LUA_OK && lua_isboolean(L, -1)) {
+            success = lua_toboolean(L, -1) != 0;
+        } else if (result != LUA_OK) {
+            const char* err = lua_tostring(L, -1);
+            LOG_ERROR("LevelLoader", "ApplyProjectileDamage error: %s", err ? err : "unknown");
+        }
+        lua_pop(L, 1);
+        return success;
+    }
+
+    bool LevelLoader::ApplyDamageToEntity(uint32_t targetID, int damage, uint32_t attackerID) {
+        if (!levelLoaded || !L) return false;
+
+        lua_getglobal(L, "DamageEntity");
+        if (!lua_isfunction(L, -1)) {
+            lua_pop(L, 1);
+            return false;
+        }
+        lua_pushinteger(L, static_cast<lua_Integer>(targetID));
+        lua_pushinteger(L, static_cast<lua_Integer>(damage));
+        lua_pushinteger(L, static_cast<lua_Integer>(attackerID));
+        int result = lua_pcall(L, 3, 1, 0);
+        bool success = false;
+        if (result == LUA_OK && lua_isboolean(L, -1)) {
+            success = lua_toboolean(L, -1) != 0;
+        } else if (result != LUA_OK) {
+            const char* err = lua_tostring(L, -1);
+            LOG_ERROR("LevelLoader", "DamageEntity error: %s", err ? err : "unknown");
+        }
+        lua_pop(L, 1);
+        return success;
+    }
+
     LevelLoader* LevelLoader::GetLevelLoader(lua_State* L) {
         lua_getglobal(L, "__level_loader_ptr");
         LevelLoader* loader = static_cast<LevelLoader*>(lua_touserdata(L, -1));
@@ -459,6 +593,8 @@ namespace Framework {
 
         // Audio
         lua_register(L, "PlaySound", Lua_PlaySound);
+        lua_register(L, "PlayMusic", Lua_PlayMusic);
+        lua_register(L, "StopMusic", Lua_StopMusic);
         lua_register(L, "StopSound", Lua_StopSound);
         lua_register(L, "StopAllSounds", Lua_StopAllSounds);
         lua_register(L, "UpdateAudio", Lua_UpdateAudio);
@@ -471,6 +607,7 @@ namespace Framework {
         lua_register(L, "ClearAllButtons", Lua_ClearAllButtons);
         lua_register(L, "DrawButtonText", Lua_DrawButtonText);
         lua_register(L, "DrawText", Lua_DrawText);
+        lua_register(L, "WorldToScreen", Lua_WorldToScreen);
 
         // Input
         lua_register(L, "IsKeyDown", Lua_IsKeyDown);
@@ -491,10 +628,17 @@ namespace Framework {
         lua_register(L, "SetSpriteGray", Lua_SetSpriteGray);
         lua_register(L, "SetSpriteTexture", Lua_SetSpriteTexture);
         lua_register(L, "SetSpritePosition", Lua_SetSpritePosition);
+        lua_register(L, "SetScale", Lua_SetScale);
         lua_register(L, "SetSpriteVisibility", Lua_SetSpriteVisibility);
         lua_register(L, "SetSpriteBlendMode", Lua_SetSpriteBlendMode);
         lua_register(L, "SetSpriteFilterMode", Lua_SetSpriteFilterMode);
+        lua_register(L, "SetSpriteUVRect", Lua_SetSpriteUVRect);
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
+        lua_register(L, "IsEntityValid", Lua_IsEntityValid);
+        lua_register(L, "SetEntityRotation", Lua_SetEntityRotation);
+        lua_register(L, "SetEntityScale", Lua_SetEntityScale);
+        lua_register(L, "SetSharedInt", Lua_SetSharedInt);
+        lua_register(L, "GetSharedInt", Lua_GetSharedInt);
         lua_register(L, "ClearAllEntities", Lua_ClearAllEntities);
 
         lua_register(L, "GetPlayerAP", Lua_GetPlayerAP);
@@ -520,7 +664,12 @@ namespace Framework {
         // Animation
         lua_register(L, "LoadAnimationConfig", Lua_LoadAnimationConfig);
         lua_register(L, "LoadPlayerAnimation", Lua_LoadPlayerAnimation);
-        
+
+        // NEW: Unified Animation Loading API
+        lua_register(L, "LoadAnimationForEntity", Lua_LoadAnimationForEntity);
+        lua_register(L, "LoadAnimationForAllPlayers", Lua_LoadAnimationForAllPlayers);
+        lua_register(L, "LoadAnimationForAllEnemies", Lua_LoadAnimationForAllEnemies);
+
         // Scroll Animation API (for TurnScrollUI)
         lua_register(L, "PlayAnimationByName", Lua_PlayAnimationByName);
         lua_register(L, "SetAnimationFrame", Lua_SetAnimationFrame);
@@ -532,6 +681,7 @@ namespace Framework {
         lua_register(L, "SetAnimationDirection", Lua_SetAnimationDirection);
         lua_register(L, "SetAnimationFlipX", Lua_SetAnimationFlipX);
         lua_register(L, "SetAnimationPlaying", Lua_SetAnimationPlaying);
+        lua_register(L, "SetAnimationPrefix", Lua_SetAnimationPrefix);
         lua_register(L, "SetAnimationLoop", Lua_SetAnimationLoop);
         lua_register(L, "SetAnimationFrameRange", Lua_SetAnimationFrameRange);
         lua_register(L, "GetAnimationGroup", Lua_GetAnimationGroup);
@@ -556,6 +706,7 @@ namespace Framework {
         lua_register(L, "GetPlayerGridPosition", Lua_GetPlayerGridPosition);
         lua_register(L, "IsValidGridPosition", Lua_IsValidGridPosition);
         lua_register(L, "IsWalkableTile", Lua_IsWalkableTile);
+        lua_register(L, "IsTileWall", Lua_IsTileWall);
         lua_register(L, "MovePlayerToTile", Lua_MovePlayerToTile);
         lua_register(L, "SetGridMovementEnabled", Lua_SetGridMovementEnabled);
         lua_register(L, "ShowTileBorder", Lua_ShowTileBorder);
@@ -565,6 +716,7 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", Lua_EndEnemyTurn);
+        lua_register(L, "CallLevelFunction", Lua_CallLevelFunction);
         lua_register(L, "SetPlayerFlipX", Lua_SetPlayerFlipX);
         lua_register(L, "HasChestAtTile", Lua_HasChestAtTile);
         lua_register(L, "CollectChest", Lua_CollectChest);
@@ -578,6 +730,8 @@ namespace Framework {
         lua_register(L, "MoveEntityToTile", Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", Lua_DamageEntity);
+        lua_register(L, "GetDamageModifier", Lua_GetDamageModifier);
+        lua_register(L, "SetDamageModifier", Lua_SetDamageModifier);
         lua_register(L, "FindPathToTarget", Lua_FindPathToTarget);
 
         // Tile Occupancy API
@@ -587,11 +741,13 @@ namespace Framework {
 
         // Grid Conversion API
         lua_register(L, "TileToWorld", Lua_TileToWorld);
+        lua_register(L, "ScreenToTile", Lua_ScreenToTile);
 
         // Entity-specific APIs (proper naming)
         lua_register(L, "GetEntityAP", Lua_GetEntityAP);
         lua_register(L, "GetEntityHP", Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", Lua_SetEntityHP);
+        lua_register(L, "SetEntityMaxAP", Lua_SetEntityMaxAP);
         lua_register(L, "RefillEntityAP", Lua_RefillEntityAP);
         lua_register(L, "RefillEntityAttackAP", Lua_RefillEntityAttackAP);
         lua_register(L, "ConsumeEntityAP", Lua_ConsumeEntityAP);
@@ -613,12 +769,43 @@ namespace Framework {
         // Procedural Map API
         lua_register(L, "LoadProceduralMap", Lua_LoadProceduralMap);
 
+        // Map Serializer API
+        lua_register(L, "SaveCurrentMap",  Lua_SaveCurrentMap);
+        lua_register(L, "LoadSavedMap",    Lua_LoadSavedMap);
+        lua_register(L, "ListSavedMaps",   Lua_ListSavedMaps);
+
         // Entity Spawning API
         lua_register(L, "SpawnPlayerAt", Lua_SpawnPlayerAt);
+        lua_register(L, "RemoveMovementComponent", Lua_RemoveMovementComponent);
+        lua_register(L, "InitializeTurnSystem", Lua_InitializeTurnSystem);
         lua_register(L, "SpawnEnemyAt", Lua_SpawnEnemyAt);
         lua_register(L, "SpawnChestAt", Lua_SpawnChestAt);
         lua_register(L, "SpawnGoalAt", Lua_SpawnGoalAt);
 
+        // Status Effect API
+        lua_register(L, "ApplyStatusEffect", Lua_ApplyStatusEffect);
+        lua_register(L, "HasStatusEffect", Lua_HasStatusEffect);
+        lua_register(L, "RemoveStatusEffect", Lua_RemoveStatusEffect);
+        lua_register(L, "DecrementStatusEffects", Lua_DecrementStatusEffects);
+        lua_register(L, "GetStatusEffectSource", Lua_GetStatusEffectSource);
+        lua_register(L, "GetEffectDuration", Lua_GetEffectDuration);
+
+        // Unified Skill Database API
+        lua_register(L, "GetSkillByID", Lua_GetSkillByID);
+        lua_register(L, "GetClassSkills", Lua_GetClassSkills);
+        lua_register(L, "GetSkillCount", Lua_GetSkillCount);
+
+        // Particle Emitter API (legacy)
+        lua_register(L, "SpawnParticleEmitter", Lua_SpawnParticleEmitter);
+
+        // Particles (new ParticleSystemManager API)
+        lua_register(L, "SpawnParticleEmitterEthan", Lua_SpawnParticleEmitterEthan);
+        lua_register(L, "SpawnParticleEmitterActive", Lua_SpawnParticleEmitterActive);
+        lua_register(L, "SetUseEthanParticles", Lua_SetUseEthanParticles);
+        lua_register(L, "GetUseEthanParticles", Lua_GetUseEthanParticles);
+        lua_register(L, "ToggleUseEthanParticles", Lua_ToggleUseEthanParticles);
+        lua_register(L, "ClearAllParticleEmitters", Lua_ClearAllParticleEmitters);
+        
         LOG_INFO("LevelLoader", "API registered");
     }
 
@@ -738,11 +925,34 @@ namespace Framework {
         if (strcmp(stateName, "TUTORIAL") == 0) {
             next = TUTORIAL;
         }
+        else if (strcmp(stateName, "CONTROL") == 0) {
+            next = CONTROL;
+        }
+        else if (strcmp(stateName, "CONTROL2") == 0) {
+            next = CONTROL2;
+        }
+        else if (strcmp(stateName, "SETTINGS") == 0) {
+            next = settingsMenu;
+        }
+        else if (strcmp(stateName, "SKILL_SETS") == 0) {
+            next = SKILL_SETS;
+        }
+        else if (strcmp(stateName, "WIN_SCREEN") == 0) {
+            next = WIN_SCREEN;
+        }
+        else if (strcmp(stateName, "LOSE_SCREEN") == 0) {
+            next = LOSE_SCREEN;
+        }
         else if (strcmp(stateName, "LEVEL_2") == 0) {
             next = LEVEL_2;
         }
         else if (strcmp(stateName, "LEVEL_3") == 0) {
-            next = LEVEL_3;
+            // If already in LEVEL_3, use GS_RESTART to trigger full reload
+            if (current == LEVEL_3) {
+                next = GS_RESTART;
+            } else {
+                next = LEVEL_3;
+            }
         }
         else if (strcmp(stateName, "LEVEL_END") == 0) {
             next = LEVEL_END;
@@ -824,38 +1034,101 @@ namespace Framework {
         const char* animName = luaL_checkstring(L, 1);
         LOG_INFO("LOAD_ANIM", "=== LoadPlayerAnimation called: '%s' ===", animName);
 
-        // Find player entity (CircleCollider)
-        Entity player{ INVALID_ENTITY };
-        for (Entity e : em->GetAllEntities()) {
-            if (em->HasComponent<CircleCollider>(e)) {
-                player = e;
-                LOG_INFO("LOAD_ANIM", "Found player entity: %u", player.GetID());
-                break;
-            }
+        // Find ALL player entities by tag
+        auto players = Framework::FindAllByTag(em, "Player");
+        for (Entity e : players) {
+            LOG_INFO("LOAD_ANIM", "Found player entity: %u", e.GetID());
         }
 
-        if (player.GetID() == INVALID_ENTITY) {
-            LOG_ERROR("LOAD_ANIM", "Player not found!");
+        if (players.empty()) {
+            LOG_ERROR("LOAD_ANIM", "No players found!");
             return 0;
         }
 
-        // Check player's current material
-        if (em->HasComponent<MeshRenderer>(player)) {
-            auto& mr = em->GetComponent<MeshRenderer>(player);
-            LOG_INFO("LOAD_ANIM", "Player material handle: %u", mr.material.GetID());
+        LOG_INFO("LOAD_ANIM", "Processing animations for %zu players", players.size());
+
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (!animSys || !gfx) {
+            LOG_ERROR("LOAD_ANIM", "AnimationSystem or GraphicsSystem not available");
+            return 0;
         }
+
+        // Apply animation to ALL players
+        for (Entity player : players) {
+            LOG_INFO("LOAD_ANIM", "--- Processing player %u ---", player.GetID());
+
+            // Check player's current material
+            if (em->HasComponent<MeshRenderer>(player)) {
+                auto& mr = em->GetComponent<MeshRenderer>(player);
+                LOG_INFO("LOAD_ANIM", "  Material handle: %u", mr.material.GetID());
+            }
+
+            // Add SpriteAnimation component if not present
+            if (!em->HasComponent<SpriteAnimation>(player)) {
+                em->AddComponent<SpriteAnimation>(player);
+                LOG_INFO("LOAD_ANIM", "  Added SpriteAnimation component");
+            }
+            else {
+                LOG_INFO("LOAD_ANIM", "  Already has SpriteAnimation");
+            }
+
+            // Get animation component
+            auto& anim = em->GetComponent<SpriteAnimation>(player);
+            anim.playing = true;
+
+            // Load animation
+            animSys->LoadAnimation(player, anim, gfx, animName);
+            LOG_INFO("LOAD_ANIM", "  Animation loaded:");
+            LOG_INFO("LOAD_ANIM", "    - Name: '%s'", anim.animName.c_str());
+            LOG_INFO("LOAD_ANIM", "    - Grid: %dx%d", anim.rows, anim.columns);
+            LOG_INFO("LOAD_ANIM", "    - Frames: %d", anim.frameCount);
+            LOG_INFO("LOAD_ANIM", "    - SpriteSheet: %u", anim.spriteSheet.GetID());
+            LOG_INFO("LOAD_ANIM", "    - Playing: %d", anim.playing);
+        }
+
+        LOG_INFO("LOAD_ANIM", "=== Successfully loaded animations for all %zu players ===", players.size());
+        return 0;
+    }
+
+    // ========================================================================
+    // UNIFIED ANIMATION LOADING API
+    // ========================================================================
+
+    /**
+     * @brief Load animation for a specific entity
+     * Lua usage: LoadAnimationForEntity(entityID, animName)
+     * Example: LoadAnimationForEntity(player1, "Warrior")
+     */
+    int LevelLoader::Lua_LoadAnimationForEntity(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("ANIM_API", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("ANIM_API", "EntityManager not available");
+            return 0;
+        }
+
+        // Get parameters
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+        const char* animName = luaL_checkstring(L, 2);
+
+        Entity entity(static_cast<uint32_t>(entityID));
+
+        LOG_INFO("ANIM_API", "Loading animation '%s' for entity %u", animName, entityID);
 
         // Add SpriteAnimation component if not present
-        if (!em->HasComponent<SpriteAnimation>(player)) {
-            em->AddComponent<SpriteAnimation>(player);
-            LOG_INFO("LOAD_ANIM", " Added SpriteAnimation component");
-        }
-        else {
-            LOG_INFO("LOAD_ANIM", "Player already has SpriteAnimation");
+        if (!em->HasComponent<SpriteAnimation>(entity)) {
+            em->AddComponent<SpriteAnimation>(entity);
+            LOG_INFO("ANIM_API", "  Added SpriteAnimation component to entity %u", entityID);
         }
 
-        // Get animation component
-        auto& anim = em->GetComponent<SpriteAnimation>(player);
+        auto& anim = em->GetComponent<SpriteAnimation>(entity);
         anim.playing = true;
 
         // Load animation
@@ -863,18 +1136,129 @@ namespace Framework {
         auto* gfx = loader->graphicsSystem;
 
         if (animSys && gfx) {
-            animSys->LoadAnimation(player, anim, gfx, animName);
-            LOG_INFO("LOAD_ANIM", " Animation loaded:");
-            LOG_INFO("LOAD_ANIM", "  - Name: '%s'", anim.animName.c_str());
-            LOG_INFO("LOAD_ANIM", "  - Grid: %dx%d", anim.rows, anim.columns);
-            LOG_INFO("LOAD_ANIM", "  - Frames: %d", anim.frameCount);
-            LOG_INFO("LOAD_ANIM", "  - SpriteSheet: %u", anim.spriteSheet.GetID());
-            LOG_INFO("LOAD_ANIM", "  - Playing: %d", anim.playing);
+            animSys->LoadAnimation(entity, anim, gfx, animName);
+            LOG_INFO("ANIM_API", "  Animation '%s' loaded successfully for entity %u", animName, entityID);
         }
         else {
-            LOG_ERROR("LOAD_ANIM", "AnimationSystem or GraphicsSystem not available");
+            LOG_ERROR("ANIM_API", "AnimationSystem or GraphicsSystem not available");
         }
 
+        return 0;
+    }
+
+    /**
+     * @brief Load SAME animation for ALL players
+     * Lua usage: LoadAnimationForAllPlayers(animName)
+     * Example: LoadAnimationForAllPlayers("Warrior") -- All 3 players use Warrior animations
+     */
+    int LevelLoader::Lua_LoadAnimationForAllPlayers(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("ANIM_API", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("ANIM_API", "EntityManager not available");
+            return 0;
+        }
+
+        const char* animName = luaL_checkstring(L, 1);
+        LOG_INFO("ANIM_API", "=== LoadAnimationForAllPlayers: '%s' ===", animName);
+
+        // Find ALL players by tag
+        auto players = Framework::FindAllByTag(em, "Player");
+        for (Entity e : players) {
+            LOG_INFO("ANIM_API", "  Found player entity: %u", e.GetID());
+        }
+
+        if (players.empty()) {
+            LOG_ERROR("ANIM_API", "No players found!");
+            return 0;
+        }
+
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (!animSys || !gfx) {
+            LOG_ERROR("ANIM_API", "AnimationSystem or GraphicsSystem not available");
+            return 0;
+        }
+
+        // Load animation for EACH player
+        for (Entity player : players) {
+            // Add SpriteAnimation component if not present
+            if (!em->HasComponent<SpriteAnimation>(player)) {
+                em->AddComponent<SpriteAnimation>(player);
+            }
+
+            auto& anim = em->GetComponent<SpriteAnimation>(player);
+            anim.playing = true;
+
+            animSys->LoadAnimation(player, anim, gfx, animName);
+            LOG_INFO("ANIM_API", "  Animation '%s' loaded for player %u", animName, player.GetID());
+        }
+
+        LOG_INFO("ANIM_API", "Successfully loaded animation '%s' for %zu players", animName, players.size());
+        return 0;
+    }
+
+    /**
+     * @brief Load SAME animation for ALL enemies
+     * Lua usage: LoadAnimationForAllEnemies(animName)
+     * Example: LoadAnimationForAllEnemies("Skeleton") -- All enemies use Skeleton animations
+     */
+    int LevelLoader::Lua_LoadAnimationForAllEnemies(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine) {
+            LOG_ERROR("ANIM_API", "Invalid loader state");
+            return 0;
+        }
+
+        auto* em = loader->coreEngine->GetEntityManager();
+        if (!em) {
+            LOG_ERROR("ANIM_API", "EntityManager not available");
+            return 0;
+        }
+
+        const char* animName = luaL_checkstring(L, 1);
+        LOG_INFO("ANIM_API", "=== LoadAnimationForAllEnemies: '%s' ===", animName);
+
+        // Find ALL enemies by tag
+        auto enemies = Framework::FindAllByTag(em, "Enemy");
+        for (Entity e : enemies) {
+            LOG_INFO("ANIM_API", "  Found enemy entity: %u", e.GetID());
+        }
+
+        if (enemies.empty()) {
+            LOG_WARN("ANIM_API", "No enemies found (this is okay if level has no enemies)");
+            return 0;
+        }
+
+        auto* animSys = loader->coreEngine->GetAnimationSystem();
+        auto* gfx = loader->graphicsSystem;
+
+        if (!animSys || !gfx) {
+            LOG_ERROR("ANIM_API", "AnimationSystem or GraphicsSystem not available");
+            return 0;
+        }
+
+        // Load animation for EACH enemy
+        for (Entity enemy : enemies) {
+            // Add SpriteAnimation component if not present
+            if (!em->HasComponent<SpriteAnimation>(enemy)) {
+                em->AddComponent<SpriteAnimation>(enemy);
+            }
+
+            auto& anim = em->GetComponent<SpriteAnimation>(enemy);
+            anim.playing = true;
+
+            animSys->LoadAnimation(enemy, anim, gfx, animName);
+            LOG_INFO("ANIM_API", "  Animation '%s' loaded for enemy %u", animName, enemy.GetID());
+        }
+
+        LOG_INFO("ANIM_API", "Successfully loaded animation '%s' for %zu enemies", animName, enemies.size());
         return 0;
     }
 

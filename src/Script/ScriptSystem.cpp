@@ -238,6 +238,13 @@ namespace Framework {
         script->initialized = false;
         lua_pushinteger(script->L, entity.GetID());
         lua_setglobal(script->L, "self");
+
+        // Pass configType to script's Lua state if set
+        if (!script->configType.empty()) {
+            lua_pushstring(script->L, script->configType.c_str());
+            lua_setglobal(script->L, "configType");
+        }
+
         // Load the script file
         if (luaL_dofile(script->L, scriptPath.c_str()) != LUA_OK) {
             const char* error = lua_tostring(script->L, -1);
@@ -473,6 +480,10 @@ namespace Framework {
         lua_register(L, "DestroyEntity", Lua_DestroyEntity);
         lua_register(L, "IsEntityValid", Lua_IsEntityValid);
 
+        // Shared state (cross-script communication)
+        lua_register(L, "SetSharedInt", LevelLoader::Lua_SetSharedInt);
+        lua_register(L, "GetSharedInt", LevelLoader::Lua_GetSharedInt);
+
         // Utility
         lua_register(L, "Log", Lua_Log);
         lua_register(L, "GetDeltaTime", Lua_GetDeltaTime);
@@ -488,6 +499,7 @@ namespace Framework {
         lua_register(L, "GetTurnIndex", LevelLoader::Lua_GetTurnIndex);
         lua_register(L, "EndPlayerTurn", LevelLoader::Lua_EndPlayerTurn);
         lua_register(L, "EndEnemyTurn", LevelLoader::Lua_EndEnemyTurn);
+        lua_register(L, "CallLevelFunction", LevelLoader::Lua_CallLevelFunction);  // Generic entitylevel bridge
         lua_register(L, "EndCharacterTurn", LevelLoader::Lua_EndCharacterTurn);  // Party system
         lua_register(L, "IsUIAnimating", LevelLoader::Lua_IsUIAnimating);  // Check UI animation state
         lua_register(L, "IsInTurnTransition", LevelLoader::Lua_IsInTurnTransition);  // Check turn transition cooldown
@@ -506,8 +518,10 @@ namespace Framework {
         // Game API - Grid/Tiles
         lua_register(L, "IsValidGridPosition", LevelLoader::Lua_IsValidGridPosition);
         lua_register(L, "IsWalkableTile", LevelLoader::Lua_IsWalkableTile);
+        lua_register(L, "IsTileWall", LevelLoader::Lua_IsTileWall);
         lua_register(L, "MovePlayerToTile", LevelLoader::Lua_MovePlayerToTile);
         lua_register(L, "SetGridMovementEnabled", LevelLoader::Lua_SetGridMovementEnabled);
+        lua_register(L, "SetSkillPreviewActive", LevelLoader::Lua_SetSkillPreviewActive);
         lua_register(L, "ShowTileBorder", LevelLoader::Lua_ShowTileBorder);
         lua_register(L, "PulseTile", LevelLoader::Lua_PulseTile);
         lua_register(L, "TintTile", LevelLoader::Lua_TintTile);  // Tile tinting for attack preview
@@ -521,9 +535,12 @@ namespace Framework {
         lua_register(L, "GetEnemyAP", LevelLoader::Lua_GetEnemyAP);
         lua_register(L, "RefillEnemyAP", LevelLoader::Lua_RefillEnemyAP);
         lua_register(L, "GetEntityGridPosition", LevelLoader::Lua_GetEntityGridPosition);
+        lua_register(L, "GetEntityWorldPosition", LevelLoader::Lua_GetEntityWorldPosition);
         lua_register(L, "MoveEntityToTile", LevelLoader::Lua_MoveEntityToTile);
         lua_register(L, "ConsumeEnemyAP", LevelLoader::Lua_ConsumeEnemyAP);
         lua_register(L, "DamageEntity", LevelLoader::Lua_DamageEntity);
+        lua_register(L, "GetDamageModifier", LevelLoader::Lua_GetDamageModifier);
+        lua_register(L, "SetDamageModifier", LevelLoader::Lua_SetDamageModifier);
         lua_register(L, "FindPathToTarget", LevelLoader::Lua_FindPathToTarget);
         lua_register(L, "GetAllPlayers", LevelLoader::Lua_GetAllPlayers);
         lua_register(L, "GetAllEnemies", LevelLoader::Lua_GetAllEnemies);
@@ -558,6 +575,7 @@ namespace Framework {
         lua_register(L, "SetSpriteVisibility", LevelLoader::Lua_SetSpriteVisibility);
         lua_register(L, "SetSpritePosition", LevelLoader::Lua_SetSpritePosition);
         lua_register(L, "SetSpriteColor", LevelLoader::Lua_SetSpriteColor);
+        lua_register(L, "SetSpriteTexture", LevelLoader::Lua_SetSpriteTexture);
 
         // Game API - Party System (Entity-Based APIs)
         lua_register(L, "GetEntityAP", LevelLoader::Lua_GetEntityAP);
@@ -569,6 +587,36 @@ namespace Framework {
         lua_register(L, "GetEntityHP", LevelLoader::Lua_GetEntityHP);
         lua_register(L, "SetEntityHP", LevelLoader::Lua_SetEntityHP);
         lua_register(L, "IsActiveCharacter", LevelLoader::Lua_IsActiveCharacter);
+
+        // Game API - Projectile Skills
+        lua_register(L, "SpawnSkillProjectile", LevelLoader::Lua_SpawnSkillProjectile);
+
+        // JSON Loading (shared with LevelLoader)
+        lua_register(L, "LoadJSON", LevelLoader::Lua_LoadJSON);
+
+        // Status Effect API
+        lua_register(L, "ApplyStatusEffect", LevelLoader::Lua_ApplyStatusEffect);
+        lua_register(L, "HasStatusEffect", LevelLoader::Lua_HasStatusEffect);
+        lua_register(L, "RemoveStatusEffect", LevelLoader::Lua_RemoveStatusEffect);
+        lua_register(L, "DecrementStatusEffects", LevelLoader::Lua_DecrementStatusEffects);
+        lua_register(L, "GetStatusEffectSource", LevelLoader::Lua_GetStatusEffectSource);
+        lua_register(L, "GetEffectDuration", LevelLoader::Lua_GetEffectDuration);
+
+        // Unified Skill Database API
+        lua_register(L, "GetSkillByID", LevelLoader::Lua_GetSkillByID);
+        lua_register(L, "GetClassSkills", LevelLoader::Lua_GetClassSkills);
+        lua_register(L, "GetSkillCount", LevelLoader::Lua_GetSkillCount);
+
+        // Particle Emitter API (legacy)
+        lua_register(L, "SpawnParticleEmitter", LevelLoader::Lua_SpawnParticleEmitter);
+
+        // Particles Emitter API
+        lua_register(L, "SpawnParticleEmitterEthan", LevelLoader::Lua_SpawnParticleEmitterEthan);
+        lua_register(L, "SpawnParticleEmitterActive", LevelLoader::Lua_SpawnParticleEmitterActive);
+        lua_register(L, "SetUseEthanParticles", LevelLoader::Lua_SetUseEthanParticles);
+        lua_register(L, "GetUseEthanParticles", LevelLoader::Lua_GetUseEthanParticles);
+        lua_register(L, "ToggleUseEthanParticles", LevelLoader::Lua_ToggleUseEthanParticles);
+        lua_register(L, "ClearAllParticleEmitters", LevelLoader::Lua_ClearAllParticleEmitters);
     }
 
     /**

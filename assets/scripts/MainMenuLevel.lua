@@ -42,6 +42,175 @@ local backgroundSpriteID = 0  -- Store background sprite entity ID
 local logoSpriteID = 0        -- Store logo sprite entity ID
 local cornerSpriteIDs = {}    -- Store corner sprite entity IDs
 
+-- Settings button (custom animated sprite)
+local settingsButton = {
+    spriteID = 0,
+    config = nil,
+    state = "idle",
+    releaseTimer = 0.0,
+    releaseDuration = 0.15,
+    wasMouseDown = false,
+    position = { x = 0.0, y = 0.0 },
+    scaleX = 0.18,
+    scaleY = 0.18,
+    layer = 2,
+    rows = 2,
+    cols = 2,
+    frameCount = 4,
+    frameTime = 0.15,
+    useViewportCoords = false
+}
+
+local SETTINGS_FRAME = {
+    idle = 0,     -- top-left wrench
+    pressed = 1,  -- top-right wrench
+    released = 2  -- bottom-left wrench
+}
+
+local function ApplySettingsButtonFrame(state)
+    if not settingsButton.spriteID or settingsButton.spriteID <= 0 then
+        return
+    end
+    local frame = SETTINGS_FRAME[state]
+    if frame == nil then
+        frame = SETTINGS_FRAME.idle
+    end
+    if SetAnimationFrame then
+        SetAnimationFrame(settingsButton.spriteID, frame)
+    end
+end
+
+local function CreateSettingsButton()
+    if not settingsButton.config then
+        return
+    end
+    local cfg = settingsButton.config
+    local pos = cfg.position or { x = 0.0, y = 0.0 }
+    local scale = cfg.scale or { x = 0.18, y = 0.18 }
+    local uniformScale = math.min(scale.x or 0.18, scale.y or 0.18)
+    local layer = cfg.layer or 2
+    local texture = cfg.texture or "assets/UI/Settings_ParchmentButtonSettings.png"
+
+    settingsButton.position = { x = pos.x, y = pos.y }
+    settingsButton.scaleX = uniformScale
+    settingsButton.scaleY = uniformScale
+    settingsButton.layer = layer
+    settingsButton.state = "idle"
+    settingsButton.releaseTimer = 0.0
+    settingsButton.wasMouseDown = false
+
+    if SpawnAnimatedSprite then
+        settingsButton.spriteID = SpawnAnimatedSprite(
+            texture,
+            settingsButton.position.x,
+            settingsButton.position.y,
+            settingsButton.scaleX,
+            settingsButton.scaleY,
+            settingsButton.layer,
+            settingsButton.rows,
+            settingsButton.cols,
+            settingsButton.frameCount,
+            settingsButton.frameTime,
+            false
+        )
+        if settingsButton.spriteID and settingsButton.spriteID > 0 then
+            SetAnimationFrameRange(settingsButton.spriteID, 0, settingsButton.frameCount, true)
+            SetAnimationLoop(settingsButton.spriteID, false)
+            SetAnimationPlaying(settingsButton.spriteID, false)
+        end
+    else
+        settingsButton.spriteID = SpawnSprite(
+            texture,
+            settingsButton.position.x,
+            settingsButton.position.y,
+            settingsButton.scaleX,
+            settingsButton.scaleY,
+            settingsButton.layer
+        )
+    end
+
+    ApplySettingsButtonFrame("idle")
+end
+
+local function IsMouseOverSettingsButton()
+    if not settingsButton.spriteID or settingsButton.spriteID <= 0 then
+        return false
+    end
+    if not WorldToScreen or not GetMousePosition or not GetFramebufferSize then
+        return false
+    end
+
+    local fbW, fbH = GetFramebufferSize()
+    if not fbW or fbW <= 0 or not fbH or fbH <= 0 then
+        return false
+    end
+
+    local mouseX, mouseY = GetMousePosition()
+    local mouseFbX = mouseX
+    local mouseFbY = fbH - mouseY
+
+    local halfW = settingsButton.scaleX * 0.5
+    local halfH = settingsButton.scaleY * 0.5
+
+    local leftWorld = settingsButton.position.x - halfW
+    local rightWorld = settingsButton.position.x + halfW
+    local bottomWorld = settingsButton.position.y - halfH
+    local topWorld = settingsButton.position.y + halfH
+
+    local leftScreen, bottomScreen = WorldToScreen(leftWorld, bottomWorld, settingsButton.useViewportCoords)
+    local rightScreen, topScreen = WorldToScreen(rightWorld, topWorld, settingsButton.useViewportCoords)
+    if not leftScreen or not bottomScreen or not rightScreen or not topScreen then
+        return false
+    end
+
+    local minX = math.min(leftScreen, rightScreen)
+    local maxX = math.max(leftScreen, rightScreen)
+    local minY = math.min(bottomScreen, topScreen)
+    local maxY = math.max(bottomScreen, topScreen)
+
+    return mouseFbX >= minX and mouseFbX <= maxX and mouseFbY >= minY and mouseFbY <= maxY
+end
+
+local function UpdateSettingsButton(dt)
+    if not settingsButton.spriteID or settingsButton.spriteID <= 0 then
+        return
+    end
+
+    if settingsButton.releaseTimer and settingsButton.releaseTimer > 0 then
+        settingsButton.releaseTimer = settingsButton.releaseTimer - dt
+        if settingsButton.releaseTimer <= 0 then
+            settingsButton.state = "idle"
+            ApplySettingsButtonFrame("idle")
+        end
+        settingsButton.wasMouseDown = IsMouseButtonDown and IsMouseButtonDown("Left") or false
+        return
+    end
+
+    local hovering = IsMouseOverSettingsButton()
+    local mouseDown = IsMouseButtonDown and IsMouseButtonDown("Left") or false
+
+    if hovering and mouseDown then
+        if settingsButton.state ~= "pressed" then
+            settingsButton.state = "pressed"
+            ApplySettingsButtonFrame("pressed")
+        end
+    else
+        if settingsButton.state ~= "idle" then
+            settingsButton.state = "idle"
+            ApplySettingsButtonFrame("idle")
+        end
+    end
+
+    if settingsButton.wasMouseDown and not mouseDown and hovering then
+        settingsButton.state = "released"
+        ApplySettingsButtonFrame("released")
+        settingsButton.releaseTimer = settingsButton.releaseDuration
+        OnSettingsButtonClicked()
+    end
+
+    settingsButton.wasMouseDown = mouseDown
+end
+
 -- ============================================================================
 -- LEVEL LIFECYCLE: OnInit
 -- ============================================================================
@@ -152,13 +321,24 @@ function OnInit()
 
     -- Start menu background music from JSON config
     local music = config.menu.music
-    PlaySound(music.name, music.loop, music.volume)
+    PlayMusic(music.name, 0.8, music.loop)
     Log("Playing menu music: " .. music.name)
 
     -- ========================================================================
     -- INITIALIZE BUTTON MANAGER
     -- ========================================================================
-    ButtonManager.Initialize(config.menu.buttons)
+    local menuButtons = {}
+    if config.menu.buttons then
+        for _, button in ipairs(config.menu.buttons) do
+            if button.id == "settings" then
+                settingsButton.config = button
+            else
+                table.insert(menuButtons, button)
+            end
+        end
+    end
+    ButtonManager.Initialize(menuButtons)
+    CreateSettingsButton()
 
     initialized = true
     Log("MainMenu initialization complete")
@@ -177,6 +357,26 @@ function OnPlayButtonClicked()
 
     Log("PLAY button clicked!")
     ButtonManager.TransitionTo("TUTORIAL")
+end
+
+function OnHowToPlayButtonClicked()
+    -- Check if button can execute (handled by ButtonManager)
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    Log("HOW TO PLAY button clicked!")
+    ButtonManager.TransitionTo("CONTROL")
+end
+
+function OnSettingsButtonClicked()
+    -- Check if button can execute (handled by ButtonManager)
+    if not ButtonManager.CanExecuteCallback() then
+        return
+    end
+
+    Log("SETTINGS button clicked!")
+    ButtonManager.TransitionTo("SETTINGS")
 end
 
 function OnExitButtonClicked()
@@ -198,6 +398,7 @@ function OnUpdate(dt)
 
     -- ButtonManager handles F1 toggle and state transitions
     ButtonManager.Update(dt)
+    UpdateSettingsButton(dt)
 end
 
 -- ============================================================================
@@ -221,10 +422,16 @@ function OnDestroy()
     Log("MainMenu cleanup...")
 
     -- Stop all sounds
-    StopAllSounds()
+    StopMusic(0.5)
 
     -- ButtonManager handles button cleanup
     ButtonManager.Cleanup()
+
+    -- Destroy settings button sprite
+    if settingsButton.spriteID and settingsButton.spriteID > 0 then
+        DestroyEntity(settingsButton.spriteID)
+        settingsButton.spriteID = 0
+    end
 
     -- Destroy background sprite
     if backgroundSpriteID > 0 then

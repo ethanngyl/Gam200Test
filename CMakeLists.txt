@@ -31,7 +31,7 @@ add_definitions(-DUSE_CSD3151_AUTOMATION=0) # Used for instructor's automation
 # ======================= Source Configuration =========================
 
 set(SRC_DIR ./src)
-file(GLOB_RECURSE APP_SRC 
+file(GLOB_RECURSE APP_SRC CONFIGURE_DEPENDS
    "${SRC_DIR}/*.cpp"
    "${SRC_DIR}/*.h"
    "${SRC_DIR}/*.hpp"
@@ -68,7 +68,6 @@ if (MSVC)
         /wd4305 # 'truncation from type1 to type2' (for constants/initializers)
         /wd4456 # Suppress 'hides previous local'
         /wd4459 # Suppress 'hides global'
-        /wd4005 # Supress Macro Redefinition by lua
         /wd26819 # Supress Unannotated Fallthrough Caused by lexer.hpp
     )
 endif()
@@ -131,6 +130,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/LevelEditor
     ${CMAKE_SOURCE_DIR}/src/Pause
     ${CMAKE_SOURCE_DIR}/src/fsm
+    ${CMAKE_SOURCE_DIR}/src/Memory
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

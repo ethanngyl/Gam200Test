@@ -1,4 +1,4 @@
-/**
+﻿/**
 ===============================================================================
 File:        SaveLoadSystem.h
 Author:      GE YONGQI
@@ -39,10 +39,10 @@ JSON Format Example:
 Usage:
     // Save current scene
     SaveLoadSystem::SaveToJSON("assets/saves/level3_save.json", entityManager, "Level3");
-    
+
     // Load scene
     SaveLoadSystem::LoadFromJSON("assets/saves/level3_save.json", entityManager);
-    
+
     // Auto-save (uses default path)
     SaveLoadSystem::AutoSave(entityManager, "Level3");
 
@@ -78,20 +78,22 @@ namespace Framework {
          * @param levelName Name of the current level (for metadata)
          * @return true if save was successful, false otherwise
          */
-        static bool SaveToJSON(const std::string& filepath, 
-                               EntityManager* entityManager,
-                               const std::string& levelName = "Unknown");
+        static bool SaveToJSON(const std::string& filepath,
+            EntityManager* entityManager,
+            const std::string& levelName = "Unknown");
 
         /**
          * @brief Loads entities from a JSON file
          * @param filepath Path to the input JSON file
          * @param entityManager Pointer to the EntityManager
          * @param clearExisting If true, clears all existing entities before loading
+         * @param applyPrefabUpdates If true, applies latest prefab values to prefab instances
          * @return true if load was successful, false otherwise
          */
-        static bool LoadFromJSON(const std::string& filepath, 
-                                 EntityManager* entityManager, 
-                                 bool clearExisting = true);
+        static bool LoadFromJSON(const std::string& filepath,
+            EntityManager* entityManager,
+            bool clearExisting = true,
+            bool applyPrefabUpdates = false);
 
         /**
          * @brief Gets the auto-save file path for a specific level
@@ -143,12 +145,28 @@ namespace Framework {
          */
         static void SetGraphicsSystem(GraphicsSystemV2* graphics);
 
+        /**
+         * @brief Apply prefab changes to all scene files that contain instances of the prefab
+         * @param prefabPath Path to the prefab file
+         * @param scenesDirectory Directory containing scene JSON files to scan
+         * @return Number of scenes that were updated
+         */
+        static int ApplyPrefabToAllScenes(const std::string& prefabPath,
+            const std::string& scenesDirectory = "assets/saves/");
+
+        /**
+         * @brief Get list of all scene files in a directory
+         * @param directory Directory to scan
+         * @return Vector of scene file paths
+         */
+        static std::vector<std::string> GetAllSceneFiles(const std::string& directory);
+
     private:
         static GraphicsSystemV2* s_graphicsSystem;
 
         // Serialization helpers - Entity level
         static nlohmann::json SerializeEntity(Entity entity, EntityManager* entityManager);
-        
+
         // Serialization helpers - Component level
         static nlohmann::json SerializeTransform(const Transform& transform);
         static nlohmann::json SerializeSprite(const Sprite& sprite);
@@ -167,6 +185,7 @@ namespace Framework {
         static nlohmann::json SerializeAttackRangeComponent(const AttackRangeComponent& range);
         static nlohmann::json SerializeMeshRenderer(EntityManager* em, Entity entity);
         static nlohmann::json SerializeGridTiles(EntityManager* em, Entity entity);
+        static nlohmann::json SerializePrefabSource(const std::string& prefabPath);
 
         // Deserialization helpers
         static Entity DeserializeEntity(const nlohmann::json& json, EntityManager* entityManager);

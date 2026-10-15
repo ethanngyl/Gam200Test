@@ -82,6 +82,12 @@ namespace Framework {
             const Vector2D& tileSize
         );
 
+        static void LoadFromGeneratedMap(
+            const MapGen::GeneratedMap& map,
+            EntitySpawner* spawner, EntityManager* em,
+            const Vector2D& startPos, const Vector2D& spacing, const Vector2D& tileSize
+        );
+
     private:
         static void ConfigureGrid(
             const MapGen::GeneratedMap& map,

@@ -135,18 +135,16 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int)
         // ===============================================================================
         // STATE TRANSITION
         // ===============================================================================
-        if (current != GS_RESTART)
-        {
-            GSM_Update();
-
-            if (fpLoad) {
-                fpLoad();
-            }
-        }
-        else
+        if (current == GS_RESTART)
         {
             next = previous;
             current = previous;
+        }
+
+        GSM_Update();
+
+        if (fpLoad) {
+            fpLoad();
         }
 
         if (fpInitialize) {

@@ -53,6 +53,11 @@
 #include "RenderComponents.h"
 #include "GraphicsSystemV2.h"
 
+//Particles
+#include "Graphics/ParticleSystem.h"
+#include "Graphics/ParticleSystemManager.h"
+#include "Graphics/ParticleSystemEthan.h"
+
 //Animations
 #include "AnimationSystem.h"
 
@@ -102,6 +107,9 @@
 
 //ConfigReader
 #include "ConfigReader\ConfigReader.h"
+
+//Memory Manager (custom pool allocator for game objects)
+#include "Memory/MemoryManager.h"
 
 //ECS
 #include "ECSComponent.h"

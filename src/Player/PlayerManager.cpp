@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
 ===============================================================================
  File:           PlayerManager.cpp
  Author:         ETHAN NG YONG LE
@@ -44,6 +44,7 @@
 #include "Vector2D.h"
 #include "Pathfinding.h"
 #include "Turn.h"
+#include "TagHelper.h"
 #include <Windows.h>
 
 namespace Framework {
@@ -192,21 +193,6 @@ namespace Framework {
             return;
         }
 
-        //// --- NEW, SIMPLER TURN LOGIC ---
-        //if (IsPlayerTurn())
-        //{
-        //    // Check if player is out of actions and auto-end turn
-        //    if (entityManager->HasComponent<AP>(playerEntity))
-        //    {
-        //        auto& stats = entityManager->GetComponent<AP>(playerEntity);
-        //        if (stats.actionPoints <= 0)
-        //        {
-        //            EndPlayerTurn();
-        //            LOG_INFO("PlayerTurn", "Player out of AP. Auto-ending turn.");
-        //        }
-        //    }
-        //}
-
         if (IsPlayerTurn()) {
             // IMPORTANT: Only run C++ turn management when gridMovementEnabled is true
             // When false, Lua scripts (PartyTurnManager) handle turn management
@@ -254,21 +240,6 @@ namespace Framework {
             }
 
             HandleAttackAction();
-
-            //// --- (Optional) PLAYER ATTACK on SPACE ---
-            //if (inputSystem->IsKeyPressed(KEY_SPACE))
-            //{
-            //    if (entityManager->HasComponent<AP>(playerEntity))
-            //    {
-            //        auto& stats = entityManager->GetComponent<AP>(playerEntity);
-            //        if (stats.actionPoints > 0)
-            //        {
-            //            stats.actionPoints--; // Spend 1 AP to attack
-            //            LOG_INFO("Player", "Player ATTACKS! AP remaining: %d", stats.actionPoints);
-            //            // !! Add attack logic here (find nearby enemy, deal damage) !!
-            //        }
-            //    }
-            //}
         } // --- End IsPlayerTurn() ---
 
 
@@ -284,7 +255,6 @@ namespace Framework {
                 rend.visible = true;
                 rend.layer = RenderLayers::Player;  // Use standard player layer (4)
 
-                //rend.tint = glm::vec4(1.0f, 0.85f, 0.2f, 1.0f);    // yellow/gold
 
                 tinted = true; // don't set it every frame
             }
@@ -680,6 +650,14 @@ namespace Framework {
         LOG_INFO("PlayerController", "Grid movement %s", enabled ? "ENABLED" : "DISABLED");
     }
 
+    void PlayerControllerSystem::SetLuaSkillPreviewActive(bool active) {
+        luaSkillPreviewActive = active;
+        // Clear any stale C++ attack preview when Lua skill system takes over
+        if (active && attackPreviewActive) {
+            ClearAttackPreview();
+        }
+    }
+
     /**
  * @brief Checks and handles chest collection and goal interaction
  * @param nextTile The tile the player is moving to
@@ -720,8 +698,7 @@ namespace Framework {
                 //gridTile.blocked = false;
 
                 // Visual feedback: hide chest or change appearance
-                if (entityManager->HasComponent<Framework::Renderable>(occupant) && entityManager->HasComponent<Framework::Chest>(occupant)
-                    && !entityManager->HasComponent<EnemyAI>(occupant)) {
+                if (entityManager->HasComponent<Framework::Renderable>(occupant) && entityManager->HasComponent<Framework::Chest>(occupant)) {
                     auto& chest = entityManager->GetComponent<Framework::Chest>(occupant);
 
                     // only hide the same entity you just marked collected
@@ -765,7 +742,7 @@ namespace Framework {
 
                     // Trigger level completion (you can customize this)
                     // Option 1: Return to main menu
-                    GSM_SetNextState(LEVEL_END);
+                    GSM_SetNextState(WIN_SCREEN);
 
                     // Option 2: Load next level
                     // GSM_SetNextState(LEVEL_4);
@@ -830,7 +807,8 @@ namespace Framework {
                 Entity occ = tile.occupant;
                 if (!occ.IsValid()) continue;
 
-                if (entityManager->HasComponent<EnemyAI>(occ) &&
+                if (entityManager->HasComponent<TagComponent>(occ) &&
+                    entityManager->GetComponent<TagComponent>(occ).tag == "Enemy" &&
                     entityManager->HasComponent<Health>(occ)) {
                     return occ; // found enemy in cross range
                 }
@@ -905,6 +883,9 @@ namespace Framework {
     void PlayerControllerSystem::HandleAttackAction() {
         if (!inputSystem || !entityManager) return;
         if (!IsPlayerTurn()) return;
+
+        // Skip C++ basic attack when Lua skill system is handling input
+        if (luaSkillPreviewActive) return;
 
         if (spaceAttackCooldown > 0.0f) {
             LOG_INFO("PlayerAttack", "SPACE attack blocked by cooldown (%.3fs remaining)", spaceAttackCooldown);

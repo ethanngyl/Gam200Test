@@ -16,9 +16,9 @@ Key Points:
 - Thread-safe via a single mutex guarding all resource maps/caches.
 - Ref-counting for release semantics; resources are freed when count hits 0.
 - Cache keys:
-  � Shaders: combined vert+frag path key
-  � Textures: normalized path string
-  � Meshes: logical name key (e.g., "quad")
+  - Shaders: combined vert+frag path key
+  - Textures: normalized path string
+  - Meshes: logical name key (e.g., "quad")
 - Utility stats and a master Clear() for shutdown.
 
 Safety:

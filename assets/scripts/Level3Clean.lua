@@ -134,13 +134,95 @@ function OnInit()
         return
     end
 
-    -- Load animations
+    -- Load animation configuration
     LoadAnimationConfig("assets/JSON/animations.json")
-    LoadPlayerAnimation("Idle_front")
 
-    -- Setup entities
+    -- Setup entities FIRST (must exist before loading animations)
     SetupParty()  -- Changed from SetupPlayer() to SetupParty()
     SetupEnemies()
+
+    -- ========================================================================
+    -- UNIFIED ANIMATION SYSTEM - Warrior animations for all 3 players
+    -- ========================================================================
+
+    -- DEBUG: Check if new function exists
+    print("[Level3Clean] ========================================")
+    print("[Level3Clean] ANIMATION LOADING DEBUG")
+    print("[Level3Clean] ========================================")
+
+    if LoadAnimationForAllPlayers then
+        print("[Level3Clean] LoadAnimationForAllPlayers function EXISTS - calling it...")
+        LoadAnimationForAllPlayers("Idle_front")
+        print("[Level3Clean] LoadAnimationForAllPlayers RETURNED")
+    elseif LoadAnimationForEntity then
+        print("[Level3Clean] LoadAnimationForAllPlayers NOT FOUND")
+        print("[Level3Clean] Using LoadAnimationForEntity fallback...")
+        local players = GetAllPlayers()
+        if players then
+            for i = 1, #players do
+                local pid = players[i]
+                if pid and pid ~= 0 then
+                    print("[Level3Clean]   Loading animation for player " .. i .. " (Entity " .. pid .. ")")
+                    LoadAnimationForEntity(pid, "Idle_front")
+                    print("[Level3Clean]   Animation loaded for player " .. i)
+                end
+            end
+        end
+    else
+        print("[Level3Clean] NEW FUNCTIONS NOT FOUND - using manual workaround...")
+        dofile("assets/scripts/ApplyAnimationsToAllPlayers.lua")
+        ApplyAnimationsToAllPlayers()
+    end
+
+    -- Re-initialize animation state for all players (critical!)
+    print("[Level3Clean] Re-initializing animation state for all players...")
+    local players = GetAllPlayers()
+    if players then
+        for i = 1, #players do
+            local pid = players[i]
+            if pid and pid ~= 0 then
+                print("[Level3Clean]   Player " .. i .. " (Entity " .. pid .. ") - Setting animation state...")
+                -- Set initial animation state (Idle, Front-facing)
+                SetAnimationGroup(pid, 0)           -- 0 = Idle
+                SetAnimationDirection(pid, 0)       -- 0 = Front
+                SetAnimationFlipX(pid, false)
+                SetAnimationPlaying(pid, true)
+                print("[Level3Clean]   Player " .. i .. " animation state set - Group:0, Dir:0, Playing:true")
+            end
+        end
+    end
+    print("[Level3Clean] All players animation initialization complete")
+    print("[Level3Clean] ========================================")
+
+    -- ALTERNATIVE: Explicit per-player approach (same result)
+    -- Uncomment to load explicitly for each player:
+    --[[
+    local players = GetAllPlayers()
+    if players and #players >= 3 then
+        LoadAnimationForEntity(players[1], "Idle_front")  -- Player 1 = Warrior
+        LoadAnimationForEntity(players[2], "Idle_front")  -- Player 2 = Warrior
+        LoadAnimationForEntity(players[3], "Idle_front")  -- Player 3 = Warrior
+        Log("[Level3Clean] Applied Warrior animations to each player explicitly")
+    end
+    --]]
+
+    -- FUTURE: Load UNIQUE animations for each player (when other character sheets exist)
+    -- Uncomment when you have Mage/Rogue/etc sprite sheets:
+    --[[
+    local players = GetAllPlayers()
+    if players and #players >= 3 then
+        LoadAnimationForEntity(players[1], "Warrior")  -- Player 1 = Warrior animations
+        LoadAnimationForEntity(players[2], "Mage")     -- Player 2 = Mage animations (needs Mage sprite sheet)
+        LoadAnimationForEntity(players[3], "Rogue")    -- Player 3 = Rogue animations (needs Rogue sprite sheet)
+        Log("[Level3Clean] Loaded unique animations per player")
+    end
+    --]]
+
+    -- OPTION 3: Load animations for enemies (if enemies have sprite sheets)
+    -- Uncomment to enable enemy animations:
+    -- LoadAnimationForAllEnemies("Skeleton")
+    -- Log("[Level3Clean] Loaded 'Skeleton' animation for all enemies")
+    -- ========================================================================
 
     -- Initialize UI system (replaces 500+ lines of UI code!)
     UIManager.Init()
@@ -182,9 +264,6 @@ function OnUpdate(dt)
     -- Something keeps re-enabling it, so we force it off continuously
     SetGridMovementEnabled(false)
 
-    -- Update audio
-    UpdateAudio(dt)
-
     -- Handle pause menu (always runs)
     PauseMenu.Update(dt)
 
@@ -198,17 +277,18 @@ function OnUpdate(dt)
         return
     end
 
+    -- Update audio
+    UpdateAudio(dt)
+
     -- Handle editor toggle
     HandleEditorToggle(dt)
 
     -- Party system turn management
     local currentTurn = GetCurrentTurn()
 
-    -- Reset party when enemy turn ends and player turn begins
-    if previousTurn == "Enemy" and currentTurn == "Player" then
-        Log("[Level3Clean] Enemy turn ended - resetting party for new player turn")
-        OnEnemyTurnEnded()
-    end
+    -- NOTE: Do NOT call ResetPartyTurn/OnEnemyTurnEnded here!
+    -- EnemyTurnManager already calls ResetPartyTurn when the last enemy finishes.
+    -- A second call on the next frame would reset hasActed and undo stun-skip (Groundshatter bug).
 
     -- Transition to enemy turn when all party members have acted
     if currentTurn == "Player" then
@@ -280,7 +360,7 @@ function OnDestroy()
     end
 
     -- Stop audio
-    StopAllSounds()
+    StopMusic(0.5)
     Log(" All audio stopped")
 
     -- Destroy UI system (replaces 100+ lines of UI cleanup code!)
@@ -325,8 +405,7 @@ function InitializeAudio()
 
     if bgmSound then
         Log("Starting background music: " .. bgmSound.name)
-        PlaySound(bgmSound.name, bgmSound.loop or false, bgmSound.volume or 1.0)
-        Log(" Background music started: " .. bgmSound.filepath)
+        PlayMusic(bgmSound.name, 0.8, bgmSound.loop or false)        Log(" Background music started: " .. bgmSound.filepath)
     else
         Log("WARNING: Background music 'igbgm' not found")
     end
@@ -512,18 +591,33 @@ function SetupEnemies()
 
     print("[SetupEnemies] Step 3: Configuring " .. enemyCount .. " enemies...")
 
+    -- Enemy type configs for unified EnemyGeneric.lua
+    local ENEMY_TYPE_CONFIGS = {
+        "knight_commander",
+        "knight",
+        "mage",
+        "tank",
+    }
+    local ENEMY_TYPE_NAMES = {
+        "Knight Commander", "Knight", "Mage", "Tank"
+    }
+
     -- Configure each enemy
     for i, enemyID in ipairs(enemies) do
-        print("[SetupEnemies]   === Configuring Enemy " .. i .. " (Entity " .. enemyID .. ") ===")
+        local typeIndex = ((i - 1) % #ENEMY_TYPE_CONFIGS) + 1
+        local configType = ENEMY_TYPE_CONFIGS[typeIndex]
+        local typeName = ENEMY_TYPE_NAMES[typeIndex]
+
+        print("[SetupEnemies]   === Configuring Enemy " .. i .. " [" .. typeName .. "] (Entity " .. enemyID .. ") ===")
 
         -- Set target
         print("[SetupEnemies]     Calling SetEnemyTarget(" .. enemyID .. ", " .. playerID .. ")...")
         local targetSuccess = SetEnemyTarget(enemyID, playerID)
         print("[SetupEnemies]     SetEnemyTarget result: " .. tostring(targetSuccess))
 
-        -- Attach enemy script
-        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", 'EnemyScript.lua')...")
-        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyScript.lua")
+        -- Attach unified enemy script with config type passed as 3rd parameter
+        print("[SetupEnemies]     Calling AddScriptComponentToEntity(" .. enemyID .. ", '" .. typeName .. "' config=" .. configType .. ")...")
+        local scriptSuccess = AddScriptComponentToEntity(enemyID, "assets/scripts/EnemyGeneric.lua", configType)
         print("[SetupEnemies]     AddScriptComponentToEntity result: " .. tostring(scriptSuccess))
 
         if targetSuccess and scriptSuccess then

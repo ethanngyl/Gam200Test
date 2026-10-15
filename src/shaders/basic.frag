@@ -42,10 +42,17 @@ uniform vec3 uColor;
 uniform vec4 uUVRect;
 uniform bool uUseAlphaDiscard;  // Control alpha-based discard
 uniform bool uForceOpaqueAlpha; // Force alpha to 1.0, ignore texture alpha
+uniform bool uUseTexture;       // false = no texture, render solid color from uColor
 uniform float uGrayAmount;      // 0 = normal, 1 = grayscale
 
 void main()
 {
+    // No texture bound - render as a solid colored shape using uColor
+    if (!uUseTexture) {
+        FragColor = vec4(uColor, 1.0);
+        return;
+    }
+
     vec2 uv = vec2(
         mix(uUVRect.x, uUVRect.z, TexCoord.x),
         mix(uUVRect.y, uUVRect.w, TexCoord.y)
@@ -66,5 +73,5 @@ void main()
     if (uUseAlphaDiscard && texColor.a < 0.1)
         discard;
 
-    FragColor = texColor * vec4(uColor,1.0);
+    FragColor = texColor * vec4(uColor, 1.0);
 }

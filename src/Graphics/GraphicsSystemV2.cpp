@@ -658,6 +658,23 @@ namespace Framework {
             wireframeQMat->depthWrite = false;
         }
 
+        // Particle material (additive blend for glowing particles)
+        particleMaterial = resourceManager.CreateMaterial("particle_mat", defaultShader);
+        auto* particleMat = resourceManager.GetMaterial(particleMaterial);
+        if (particleMat) {
+            particleMat->blendMode = BlendMode::Additive;
+            particleMat->depthTest = false;
+            particleMat->depthWrite = false;
+        }
+
+        // Particle material with alpha blend (for smoke, dust, etc.)
+        particleAlphaMaterial = resourceManager.CreateMaterial("particle_alpha_mat", defaultShader);
+        auto* particleAlphaMat = resourceManager.GetMaterial(particleAlphaMaterial);
+        if (particleAlphaMat) {
+            particleAlphaMat->blendMode = BlendMode::AlphaBlend;
+            particleAlphaMat->depthTest = false;
+            particleAlphaMat->depthWrite = false;
+        }
         std::cout << "Created " << 5 << " default materials\n";
     }
 
@@ -877,7 +894,7 @@ namespace Framework {
             // Layer provides major depth separation (0.01 per layer = 100x precision margin)
             // OrderInLayer provides minor separation (0.0001 per order = 1.67x precision margin)
             // Entity ID provides guaranteed uniqueness (0.000001 per ID = 16.7x precision margin)
-            // 24-bit depth precision ≈ 0.00000006, these values are well above that threshold
+            // 24-bit depth precision ~= 0.00000006, these values are well above that threshold
             float zDepth = (cmd.layer * 0.01f) + (cmd.orderInLayer * 0.0001f) + (e.GetID() * 0.000001f);
             model = glm::translate(model, { transform.position.x, transform.position.y, zDepth });
             model = glm::rotate(model, glm::radians(transform.rotation), { 0, 0, 1 });
@@ -893,11 +910,20 @@ namespace Framework {
             // ---------- SPRITE SHEET UV ANIMATION ----------
             if (!entityManager->HasComponent<SpriteAnimation>(e))
             {
+                // Non-animated entities: Enforce defaultMaterial for shader compatibility
+                // This ensures tiles and static sprites render correctly
                 Material* mat = resourceManager.GetMaterial(cmd.material);
-                mat->u1 = mat->v1 = 1.f;
-                mat->u0 = mat->v0 = 0.f;
+                if (!mat || mat->shader != defaultShader) {
+                    cmd.material = defaultMaterial;
+                    mat = resourceManager.GetMaterial(cmd.material);
+                }
 
-                // Entity has no animation  safe to submit as-is
+                if (mat) {
+                    mat->u1 = mat->v1 = 1.f;
+                    mat->u0 = mat->v0 = 0.f;
+                }
+
+                // Entity has no animation - safe to submit as-is
                 renderQueue.Submit(cmd);
                 continue;
             }
@@ -909,12 +935,22 @@ namespace Framework {
             // Get the material for this command
             Material* mat = resourceManager.GetMaterial(cmd.material);
 
-            // If the material is missing, or using the wrong shader (color-only),
-            // reroute this command to use the default textured material instead.
-            if (!mat || mat->shader != defaultShader)
+            // ANIMATED ENTITIES: Ensure material has correct shader for texture rendering
+            // Players are spawned with Shader2 (color-only) which doesn't support textures
+            // We need to switch to defaultShader (textured) for animations to work
+            if (!mat)
             {
+                // Material is missing - use default
                 cmd.material = defaultMaterial;
                 mat = resourceManager.GetMaterial(cmd.material);
+            }
+            else if (mat->shader != defaultShader)
+            {
+                // Material exists but has wrong shader (e.g., Shader2/color-only)
+                // Fix the shader to support textures/UV coordinates
+                LOG_INFO("ANIM_FIX", "Entity %u: Switching material shader from %u to defaultShader %u for animation support",
+                    e.GetID(), mat->shader.GetID(), defaultShader.GetID());
+                mat->shader = defaultShader;
             }
 
             // If still failed for some reason, skip this entity
@@ -1037,6 +1073,54 @@ namespace Framework {
                 mat->albedoTexture = anim.spriteSheet;
 
             renderQueue.Submit(cmd);
+        }
+        // ---------- PARTICLE EMITTER PASS ----------
+        // Each alive particle becomes its own RenderCommand (quad)
+        for (Entity e : entityManager->GetAllEntities()) {
+            if (!entityManager->HasComponent<ParticleEmitter>(e)) continue;
+            if (!entityManager->HasComponent<Transform>(e)) continue;
+
+            auto& emitter = entityManager->GetComponent<ParticleEmitter>(e);
+            auto& emitterTransform = entityManager->GetComponent<Transform>(e);
+            // Choose material: user-specified, or default based on blend mode
+            MaterialHandle matHandle = emitter.material;
+            if (!matHandle.IsValid()) {
+                matHandle = (emitter.blendMode == BlendMode::Additive)
+                    ? particleMaterial
+                    : particleAlphaMaterial;
+            }
+
+            for (const auto& p : emitter.particles) {
+                if (!p.alive) continue;
+
+                RenderCommand cmd;
+                cmd.mesh = quadMesh;
+                cmd.material = matHandle;
+                cmd.texture = emitter.texture;
+                cmd.layer = emitter.layer;
+                cmd.tint = p.color;
+                cmd.visible = true;
+
+                // Local-space particles are offset by the emitter's current transform
+                glm::vec2 worldPos = p.position;
+                if (!emitter.worldSpace) {
+                    worldPos += glm::vec2(emitterTransform.position.x, emitterTransform.position.y);
+                }
+
+                glm::mat4 model(1.0f);
+                float zDepth = emitter.layer * 0.01f;
+                model = glm::translate(model, { worldPos.x, worldPos.y, zDepth });
+                model = glm::rotate(model, p.rotation, { 0, 0, 1 });
+                model = glm::scale(model, { p.size, p.size, 1.0f });
+                cmd.modelMatrix = model;
+
+                cmd.depth = glm::distance(
+                    glm::vec3(worldPos.x, worldPos.y, zDepth),
+                    mainCamera.GetPosition()
+                );
+
+                renderQueue.Submit(cmd);
+            }
         }
     }
 

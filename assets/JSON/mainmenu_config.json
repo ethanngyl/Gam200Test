@@ -127,11 +127,54 @@
         "callback": "OnPlayButtonClicked"
       },
       {
+        "id": "howToPlay",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 0.0,
+          "y": -0.55
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 0.2
+        },
+        "layer": 2,
+        "text": {
+          "content": "HOW TO PLAY",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -112.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          },
+          "layer": 11
+        },
+        "callback": "OnHowToPlayButtonClicked"
+      },
+      {
+        "id": "settings",
+        "texture": "assets/UI/Settings_ParchmentButtonSettings.png",
+        "position": {
+          "x": 1.45,
+          "y": -0.85
+        },
+        "scale": {
+          "x": 0.18,
+          "y": 0.18
+        },
+        "layer": 2,
+        "callback": "OnSettingsButtonClicked"
+      },
+      {
         "id": "exit",
         "texture": "assets/Menu/Ui_btn.png",
         "position": {
           "x": 0.0,
-          "y": -0.6
+          "y": -0.8
         },
         "scale": {
           "x": 1.0,
