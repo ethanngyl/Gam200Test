@@ -132,7 +132,8 @@ namespace Framework {
     ===============================================================================
      */
     void AnimationSystem::Initialize() {
-        ConfigReader::LoadConfig("valueloader.txt");
+        ConfigReader::LoadConfig(
+            ConfigReader::GetProjectPath("value_loader", "assets/valueloader.txt"));
         max_static_threshold = ConfigReader::GetFloat("max_static_threshold", 0.001f);
         default_zero = ConfigReader::GetFloat("default_zero", 0.0);
         anim_current_frame = ConfigReader::GetInt("anim_current_frame", 0);

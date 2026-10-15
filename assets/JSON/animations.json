@@ -54,7 +54,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Walk_back": {
@@ -64,7 +64,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Walk_side": {
@@ -74,7 +74,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Attack_front": {
@@ -147,7 +147,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Mage_Walk_back": {
@@ -157,7 +157,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Mage_Walk_side": {
@@ -167,7 +167,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Mage_Attack_front": {
@@ -244,7 +244,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Berserker_Walk_back": {
@@ -254,7 +254,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Berserker_Walk_side": {
@@ -264,7 +264,7 @@
       "rows": 1,
       "columns": 6,
       "frameCount": 6,
-      "frameTime": 0.1,
+      "frameTime": 0.03,
       "loop": true
     },
     "Berserker_Attack_front": {

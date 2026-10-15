@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          ScriptSystem.cpp
  Author:        ETHAN NG
@@ -552,6 +552,13 @@ namespace Framework {
         lua_register(L, "MarkEnemyActionComplete", LevelLoader::Lua_MarkEnemyActionComplete);
         lua_register(L, "UpdateEnemyTurnManager", LevelLoader::Lua_UpdateEnemyTurnManager);
 
+        // Entity Spawning & Script Management (needed by boss scripts that spawn minions)
+        lua_register(L, "SpawnEnemyAt", LevelLoader::Lua_SpawnEnemyAt);
+        lua_register(L, "AddScriptComponentToEntity", LevelLoader::Lua_AddScriptComponentToEntity);
+        lua_register(L, "SetEnemyTarget", LevelLoader::Lua_SetEnemyTarget);
+        lua_register(L, "SetEntityMaxAP", LevelLoader::Lua_SetEntityMaxAP);
+        lua_register(L, "SetTileOccupant", LevelLoader::Lua_SetTileOccupant);
+
         // Grid Conversion API
         lua_register(L, "TileToWorld", LevelLoader::Lua_TileToWorld);
 
@@ -562,6 +569,8 @@ namespace Framework {
         lua_register(L, "SetAnimationGroup", LevelLoader::Lua_SetAnimationGroup);
         lua_register(L, "SetAnimationDirection", LevelLoader::Lua_SetAnimationDirection);
         lua_register(L, "SetAnimationFlipX", LevelLoader::Lua_SetAnimationFlipX);
+        lua_register(L, "GetAnimationDirection", LevelLoader::Lua_GetAnimationDirection);
+        lua_register(L, "GetAnimationFlipX", LevelLoader::Lua_GetAnimationFlipX);
         lua_register(L, "SetAnimationPlaying", LevelLoader::Lua_SetAnimationPlaying);
         lua_register(L, "SetAnimationLoop", LevelLoader::Lua_SetAnimationLoop);
         lua_register(L, "SetAnimationFrameRange", LevelLoader::Lua_SetAnimationFrameRange);  // Set startFrame and frameCount for sprite sheet animations
@@ -617,6 +626,11 @@ namespace Framework {
         lua_register(L, "GetUseEthanParticles", LevelLoader::Lua_GetUseEthanParticles);
         lua_register(L, "ToggleUseEthanParticles", LevelLoader::Lua_ToggleUseEthanParticles);
         lua_register(L, "ClearAllParticleEmitters", LevelLoader::Lua_ClearAllParticleEmitters);
+
+        // UI / Rendering helpers (needed by per-entity UI panels spawned from scripts)
+        lua_register(L, "GetCameraPosition",   LevelLoader::Lua_GetCameraPosition);
+        lua_register(L, "DrawText",            LevelLoader::Lua_DrawText);
+        lua_register(L, "GetFramebufferSize",  LevelLoader::Lua_GetFramebufferSize);
     }
 
     /**

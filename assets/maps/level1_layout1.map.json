@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "dimensions": { "width": 10, "height": 10 },
+  "algorithm": "saved",
+  "tiles": [
+    "FFWFFFFFFF",
+    "FFWFFFFFFF",
+    "FFFFFWFFWW",
+    "FFFFFWFFFF",
+    "FFWWWWWFFF",
+    "FFWWWWWWFF",
+    "FFWWWFFFFF",
+    "FFWWWFFFFF",
+    "FFFFWFFFFF",
+    "FFFFWFFFFF"
+  ],
+  "playerSpawn": { "x": 0, "y": 9 },
+  "goalSpawn": { "x": 9, "y": 9 },
+  "enemySpawns": [
+    { "x": 8, "y": 4 },
+    { "x": 4, "y": 3 },
+    { "x": 7, "y": 2 }
+  ],
+  "chestSpawns": [],
+  "arena": {
+    "hasArena": true,
+    "center": { "x": 7, "y": 8 },
+    "min": { "x": 5, "y": 6 },
+    "max": { "x": 10, "y": 10 }
+  }
+}

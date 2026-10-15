@@ -37,7 +37,8 @@ namespace Framework {
         EntityManager* em,
         const Vector2D& startPos,
         const Vector2D& spacing,
-        const Vector2D& tileSize
+        const Vector2D& tileSize,
+        int levelIndex
     ) {
         std::cout << "[ProceduralMapLoader] Loading procedural level...\n";
 
@@ -52,7 +53,7 @@ namespace Framework {
         ConfigureGrid(map, em, startPos, spacing, tileSize);
 
         // Spawn tile entities with decorations
-        SpawnTiles(map, spawner, em);
+        SpawnTiles(map, spawner, em, levelIndex);
 
         std::cout << "[ProceduralMapLoader] Level loaded!\n";
         return map;
@@ -89,7 +90,8 @@ namespace Framework {
     void ProceduralMapLoader::SpawnTiles(
         const MapGen::GeneratedMap& map,
         EntitySpawner* spawner,
-        EntityManager* em
+        EntityManager* em,
+        int levelIndex
     ) {
         Grid& grid = GetGrid();
 
@@ -103,9 +105,10 @@ namespace Framework {
         // ========================================
         // TEXTURE PATHS - Update these to match your asset locations
         // ========================================
-        const std::string grassDark = "assets/TileMap/Grass_Block_dark_2.png";
-        const std::string grassLight = "assets/TileMap/Grass_Block_light_1.png";
-        const std::string wallTexture = "assets/TileMap/Tree_Block.png";
+        const bool isDesertLevel = (levelIndex >= 3);
+        const std::string grassDark  = isDesertLevel ? "assets/TileMap/desert-texture.png" : "assets/TileMap/Grass_Block_dark_2.png";
+        const std::string grassLight = isDesertLevel ? "assets/TileMap/desert-texture.png" : "assets/TileMap/Grass_Block_light_1.png";
+        const std::string wallTexture = isDesertLevel ? "assets/TileMap/Brickstone_Wall.png" : "assets/TileMap/Tree_Block.png";
 
         // Rock textures - dark variants match dark grass, light match light grass
         const std::string rocksDark[3] = {
@@ -244,12 +247,13 @@ namespace Framework {
     void ProceduralMapLoader::LoadFromGeneratedMap(
                  const MapGen::GeneratedMap& map,
                  EntitySpawner* spawner, EntityManager* em,
-                 const Vector2D& startPos, const Vector2D& spacing, const Vector2D& tileSize
+                 const Vector2D& startPos, const Vector2D& spacing, const Vector2D& tileSize,
+                 int levelIndex
     ) {
         std::cout << "[ProceduralMapLoader] Loading saved map...\n";
         MapGen::Generator::printMap(map);
         ConfigureGrid(map, em, startPos, spacing, tileSize);
-        SpawnTiles(map, spawner, em);
+        SpawnTiles(map, spawner, em, levelIndex);
         std::cout << "[ProceduralMapLoader] Saved map loaded!\n";
     }
 

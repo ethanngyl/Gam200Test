@@ -71,7 +71,7 @@ function UIComponent:New()
         lastCamX = nil,         -- Cache for optimization
         lastCamY = nil,
         lastCamZ = nil,
-        updateThreshold = 0.01  -- Only update when camera moves > this amount
+        updateThreshold = 0.0   -- 0 = update every frame for screen-snapped HUD
     }
     setmetatable(instance, self)
     return instance
@@ -106,6 +106,13 @@ end
 -- ============================================================================
 
 function UIComponent:ShouldUpdatePosition(cameraPos)
+    if self.updateThreshold <= 0.0 then
+        self.lastCamX = cameraPos.x
+        self.lastCamY = cameraPos.y
+        self.lastCamZ = cameraPos.z
+        return true
+    end
+
     -- Check if camera moved enough to warrant position update
     if self.lastCamX == nil then
         self.lastCamX = cameraPos.x

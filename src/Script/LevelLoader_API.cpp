@@ -278,6 +278,50 @@ namespace Framework {
         return 1;
     }
 
+    int LevelLoader::Lua_SetMusicVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetMusicVolume(volume);
+        return 0;
+    }
+
+    int LevelLoader::Lua_GetMusicVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetMusicVolume());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SaveMusicVolume(lua_State* L) {
+        return Lua_SaveMasterVolume(L);
+    }
+
+    int LevelLoader::Lua_SetSfxVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) return 0;
+        float volume = luaL_checknumber(L, 1);
+        loader->audioSystem->SetSfxVolume(volume);
+        return 0;
+    }
+
+    int LevelLoader::Lua_GetSfxVolume(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->audioSystem) {
+            lua_pushnumber(L, 1.0f);
+            return 1;
+        }
+        lua_pushnumber(L, loader->audioSystem->GetSfxVolume());
+        return 1;
+    }
+
+    int LevelLoader::Lua_SaveSfxVolume(lua_State* L) {
+        return Lua_SaveMasterVolume(L);
+    }
+
     // ========================================================================
     // UI BUTTON API
     // ========================================================================
@@ -499,28 +543,21 @@ namespace Framework {
 
         glm::vec3 textColor(colorR, colorG, colorB);
 
-        // CRITICAL FIX: Bind viewport FBO if editor is enabled
-        // This ensures text renders to the game viewport, not the main window
+        // Bind viewport FBO when rendering in editor viewport mode.
         GLuint previousFBO = 0;
         bool needsRestore = false;
 
         if (imgui && imgui->IsEnabled() && imgui->IsRenderingToViewport()) {
             GLuint viewportFBO = imgui->GetViewportFBO();
             if (viewportFBO != 0) {
-                // Save current FBO and bind viewport FBO
                 glGetIntegerv(GL_FRAMEBUFFER_BINDING, reinterpret_cast<GLint*>(&previousFBO));
                 glBindFramebuffer(GL_FRAMEBUFFER, viewportFBO);
                 needsRestore = true;
-
-                // Rendering text to viewport FBO
             }
         }
 
-        // Draw text to the currently bound framebuffer (viewport or main window)
-        // Use centered coordinates and finalScale for responsive, centered text
         loader->graphicsSystem->DrawText4(font, text, centeredX, centeredY, finalScale, textColor);
 
-        // Restore previous framebuffer
         if (needsRestore) {
             glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
         }
@@ -612,18 +649,21 @@ namespace Framework {
         // Map to Framework::KeyCode (from Input.h)
         KeyCode keyCode = KEY_UNKNOWN;
 
-        // Letters
-        if (strcmp(keyName, "W") == 0) keyCode = KEY_W;
-        else if (strcmp(keyName, "A") == 0) keyCode = KEY_A;
-        else if (strcmp(keyName, "S") == 0) keyCode = KEY_S;
-        else if (strcmp(keyName, "D") == 0) keyCode = KEY_D;
-        else if (strcmp(keyName, "E") == 0) keyCode = KEY_E;
-        else if (strcmp(keyName, "Q") == 0) keyCode = KEY_Q;
-        else if (strcmp(keyName, "R") == 0) keyCode = KEY_R;
-        else if (strcmp(keyName, "P") == 0) keyCode = KEY_P;
+        // Support any single-letter key (A-Z) and single digit (0-9).
+        // This keeps Lua key strings predictable and avoids one-off mapping gaps.
+        if (keyName && keyName[0] != '\0' && keyName[1] == '\0') {
+            const unsigned char raw = static_cast<unsigned char>(keyName[0]);
+            const char c = static_cast<char>(std::toupper(raw));
+            if (c >= 'A' && c <= 'Z') {
+                keyCode = static_cast<KeyCode>(c);
+            }
+            else if (c >= '0' && c <= '9') {
+                keyCode = static_cast<KeyCode>(c);
+            }
+        }
 
         // Special keys
-        else if (strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
+        if (keyCode == KEY_UNKNOWN && strcmp(keyName, "Space") == 0) keyCode = KEY_SPACE;
         else if (strcmp(keyName, "Escape") == 0) keyCode = KEY_ESCAPE;
         else if (strcmp(keyName, "Enter") == 0) keyCode = KEY_ENTER;
         else if (strcmp(keyName, "Shift") == 0) keyCode = KEY_SHIFT;
@@ -635,17 +675,6 @@ namespace Framework {
         else if (strcmp(keyName, "Left") == 0) keyCode = KEY_LEFT;
         else if (strcmp(keyName, "Right") == 0) keyCode = KEY_RIGHT;
 
-        // Number keys
-        else if (strcmp(keyName, "1") == 0) keyCode = KEY_1;
-        else if (strcmp(keyName, "2") == 0) keyCode = KEY_2;
-        else if (strcmp(keyName, "3") == 0) keyCode = KEY_3;
-        else if (strcmp(keyName, "4") == 0) keyCode = KEY_4;
-        else if (strcmp(keyName, "5") == 0) keyCode = KEY_5;
-        else if (strcmp(keyName, "6") == 0) keyCode = KEY_6;
-        else if (strcmp(keyName, "7") == 0) keyCode = KEY_7;
-        else if (strcmp(keyName, "8") == 0) keyCode = KEY_8;
-        else if (strcmp(keyName, "9") == 0) keyCode = KEY_9;
-        else if (strcmp(keyName, "0") == 0) keyCode = KEY_0;
         else if (strcmp(keyName, "F1") == 0) keyCode = KEY_F1;
         else if (strcmp(keyName, "F2") == 0) keyCode = KEY_F2;
         else if (strcmp(keyName, "F3") == 0) keyCode = KEY_F3;
@@ -716,6 +745,43 @@ namespace Framework {
         input->GetMousePosition(x, y);
         lua_pushnumber(L, x);
         lua_pushnumber(L, y);
+        return 2;
+    }
+
+    int LevelLoader::Lua_GetMouseWorldPosition(lua_State* L) {
+        LevelLoader* loader = GetLevelLoader(L);
+        if (!loader || !loader->coreEngine || !loader->uiSystem) {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        auto* input = loader->coreEngine->GetInputSystem();
+        auto* imguiSystem = loader->coreEngine->GetImGuiSystem();
+
+        float mouseScreenX = 0, mouseScreenY = 0;
+        bool useViewportCoords = false;
+
+        if (imguiSystem && imguiSystem->IsRenderingToViewport()) {
+            ImVec2 mousePos = ImGui::GetMousePos();
+            ImVec2 viewportOffset = imguiSystem->GetViewportPos();
+            mouseScreenX = mousePos.x - viewportOffset.x;
+            mouseScreenY = mousePos.y - viewportOffset.y;
+            useViewportCoords = true;
+        }
+        else if (input) {
+            input->GetMousePosition(mouseScreenX, mouseScreenY);
+        }
+        else {
+            lua_pushnumber(L, 0);
+            lua_pushnumber(L, 0);
+            return 2;
+        }
+
+        Framework::Vector2D worldPos = loader->uiSystem->ScreenToWorld(
+            mouseScreenX, mouseScreenY, useViewportCoords);
+        lua_pushnumber(L, worldPos.x);
+        lua_pushnumber(L, worldPos.y);
         return 2;
     }
 
@@ -1850,9 +1916,19 @@ namespace Framework {
     int LevelLoader::Lua_SetActiveCharacter(lua_State* L)
     {
         int entityID = static_cast<int>(luaL_checknumber(L, 1));
-        // NOTE: Active character tracking is fully managed in Lua (PartyTurnManager).
-        // IsActiveCharacter() bridges directly to the level Lua state, so no C++ state needed.
         LOG_INFO("LevelLoader", "SetActiveCharacter: Active character set to entity %d", entityID);
+
+        // Sync the C++ PlayerControllerSystem so arrow-key facing (and any other
+        // C++-side per-frame logic) always operates on the currently active unit.
+        LevelLoader* loader = GetLevelLoader(L);
+        if (loader && loader->coreEngine) {
+            auto* pc = loader->coreEngine->GetPlayerController();
+            if (pc) {
+                pc->SetPlayerEntity(Framework::Entity(static_cast<Framework::EntityID>(entityID)));
+                LOG_INFO("LevelLoader", "SetActiveCharacter: PlayerControllerSystem synced to entity %d", entityID);
+            }
+        }
+
         return 0;
     }
 
@@ -2318,7 +2394,7 @@ namespace Framework {
      * @param configType (string, optional) Config type passed to the script as a global
      * @return true if successful
      *
-     * Usage: AddScriptComponentToEntity(entityID, "assets/scripts/EnemyGeneric.lua", "mage")
+    * Usage: AddScriptComponentToEntity(entityID, "<script_root>/EnemyGeneric.lua", "mage")
      */
     int LevelLoader::Lua_AddScriptComponentToEntity(lua_State* L) {
         // Get parameters
@@ -3468,21 +3544,33 @@ namespace Framework {
                 uint32_t knightID = oathEffect->sourceEntity;
                 Entity knight(knightID);
                 if (em->HasComponent<Health>(knight)) {
-                    LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
-                        amount, entity.GetID(), knightID);
-
                     auto& knightHP = em->GetComponent<Health>(knight);
-                    knightHP.currentHealth -= amount;
 
-                    if (knightHP.currentHealth <= 0) {
-                        knightHP.currentHealth = 0;
-                        knightHP.isDead = true;
-                        LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
-                        loader->DeferEntityDestruction(knightID);
+                    if (knightHP.isDead) {
+                        // The protecting knight is already dead but not yet removed from the
+                        // entity manager (deferred destruction pending).  The oath is stale —
+                        // remove it so subsequent hits deal damage normally to this entity.
+                        effects.RemoveEffect("knightsOath");
+                        LOG_INFO("StatusEffect",
+                            "Knight's Oath on entity %u: knight %u already dead, removing stale effect",
+                            entity.GetID(), knightID);
+                        // Fall through to apply damage normally to the original target.
+                    } else {
+                        LOG_INFO("StatusEffect", "Knight's Oath: redirecting %d damage from entity %u to knight %u",
+                            amount, entity.GetID(), knightID);
+
+                        knightHP.currentHealth -= amount;
+
+                        if (knightHP.currentHealth <= 0) {
+                            knightHP.currentHealth = 0;
+                            knightHP.isDead = true;
+                            LOG_WARN("LevelLoader", "!!! Knight %u DIED from redirected damage !!!", knightID);
+                            loader->DeferEntityDestruction(knightID);
+                        }
+
+                        lua_pushboolean(L, 1);
+                        return 1;
                     }
-
-                    lua_pushboolean(L, 1);
-                    return 1;
                 }
             }
 
@@ -3929,6 +4017,7 @@ namespace Framework {
         int width = static_cast<int>(luaL_checknumber(L, 1));
         int height = static_cast<int>(luaL_checknumber(L, 2));
         const char* algorithm = luaL_checkstring(L, 3);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 4, 1));
 
         LevelLoader* loader = GetLevelLoader(L);
         CoreEngine* core = loader->coreEngine;
@@ -3962,7 +4051,7 @@ namespace Framework {
 
         // Generate and load
         MapGen::GeneratedMap map = ProceduralMapLoader::LoadProceduralLevel(
-            config, spawner, em, startPos, spacing, tileSize
+            config, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         s_lastGeneratedMap = map;
@@ -4321,6 +4410,7 @@ namespace Framework {
         }
 
         std::string filepath = lua_tostring(L, 1);
+        int levelIndex = static_cast<int>(luaL_optinteger(L, 2, 1));
 
         Framework::MapGen::GeneratedMap map;
         Framework::MapGen::Config config;
@@ -4351,7 +4441,7 @@ namespace Framework {
         MapGen::Generator::printMap(map);
 
         ProceduralMapLoader::LoadFromGeneratedMap(
-            map, spawner, em, startPos, spacing, tileSize
+            map, spawner, em, startPos, spacing, tileSize, levelIndex
         );
 
         // Build the SAME Lua table as Lua_LoadProceduralMap returns.
@@ -4460,6 +4550,10 @@ namespace Framework {
             lua_pushstring(L, "arenaY");      lua_pushnumber(L, map.arenaCenter.y);                                lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldX"); lua_pushnumber(L, startPos.x + (map.arenaCenter.x * spacing.x));     lua_settable(L, -3);
             lua_pushstring(L, "arenaWorldY"); lua_pushnumber(L, startPos.y + (map.arenaCenter.y * spacing.y));     lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinX");   lua_pushnumber(L, map.arenaMin.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMinY");   lua_pushnumber(L, map.arenaMin.y);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxX");   lua_pushnumber(L, map.arenaMax.x);                                   lua_settable(L, -3);
+            lua_pushstring(L, "arenaMaxY");   lua_pushnumber(L, map.arenaMax.y);                                   lua_settable(L, -3);
         }
 
         return 1;
@@ -4551,7 +4645,8 @@ namespace Framework {
         auto& turn = Framework::Turn();
         turn.phase = Framework::TurnPhase::Player;
         turn.busy = false;
-        LOG_INFO("LevelLoader", "InitializeTurnSystem: Phase=Player, Busy=false");
+        turn.turnIndex = 0;
+        LOG_INFO("LevelLoader", "InitializeTurnSystem: Phase=Player, Busy=false, TurnIndex=0");
         return 0;
     }
 
@@ -5187,6 +5282,52 @@ namespace Framework {
     }
 
     /**
+     * @brief Read the current AnimDirection from an entity's SpriteAnimation component.
+     * Lua usage: local dir = GetAnimationDirection(entityID)
+     * Returns: integer (0=Front, 1=Back, 2=Side, 3=None), or 0 on failure.
+     * Lets Lua re-sync its local facing variable after C++ arrow-key changes.
+     */
+    int LevelLoader::Lua_GetAnimationDirection(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) { lua_pushinteger(L, 0); return 1; }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushinteger(L, 0);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushinteger(L, static_cast<lua_Integer>(anim.direction));
+        return 1;
+    }
+
+    /**
+     * @brief Read the current flipX flag from an entity's SpriteAnimation component.
+     * Lua usage: local flip = GetAnimationFlipX(entityID)
+     * Returns: boolean, or false on failure.
+     * Lets Lua re-sync its local isFlippedX variable after C++ arrow-key changes.
+     */
+    int LevelLoader::Lua_GetAnimationFlipX(lua_State* L) {
+        lua_Integer entityID = luaL_checkinteger(L, 1);
+
+        auto* em = CORE ? CORE->GetEntityManager() : nullptr;
+        if (!em) { lua_pushboolean(L, false); return 1; }
+
+        Entity e(static_cast<EntityID>(entityID));
+        if (!em->HasComponent<SpriteAnimation>(e)) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        auto& anim = em->GetComponent<SpriteAnimation>(e);
+        lua_pushboolean(L, anim.flipX ? 1 : 0);
+        return 1;
+    }
+
+    /**
      * @brief Set whether animation is playing
      * Lua usage: SetAnimationPlaying(entityID, playing)
      * @param entityID Entity ID
@@ -5374,6 +5515,32 @@ namespace Framework {
         static float actionDelay = 0.5f;  // 0.5 seconds between enemies
         static std::vector<int> enemyList;
         static bool needsReinitialize = true;
+
+        void Reset() {
+            turnActive = false;
+            activeEnemyIndex = 0;
+            actionTimer = 0.0f;
+            actionDelay = 0.5f;
+            enemyList.clear();
+            needsReinitialize = true;
+        }
+    }
+
+    // ============================================================================
+    // LEVEL STATE RESET (called between level transitions)
+    // ============================================================================
+
+    void LevelLoader::ResetCppLevelState() {
+        auto& turn = Framework::Turn();
+        turn.phase = Framework::TurnPhase::Player;
+        turn.busy = false;
+        turn.turnIndex = 0;
+
+        LevelLoader::GetInstance().sharedIntStore.clear();
+
+        EnemyTurnState::Reset();
+
+        LOG_INFO("LevelLoader", "ResetCppLevelState: Turn, sharedIntStore, and EnemyTurnState all reset");
     }
 
     /**

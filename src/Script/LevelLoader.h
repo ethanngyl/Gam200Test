@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
 File:        LevelLoader.h
 Author:      GE YONGQI, Sim Kah Yan
@@ -33,7 +33,7 @@ Editor Mode:
 Usage:
   Instead of: mainMenu_Load(), mainMenu_Initialize(), mainMenu_Update(),
   mainMenu_Draw(), mainMenu_Free(), mainMenu_Unload()
-  Use: LevelLoader::LoadLevel("assets/scripts/MainMenuLevel.lua"),
+  Use: LevelLoader::LoadLevel("<script_root>/MainMenuLevel.lua"),
   UpdateCurrentLevel(dt), DrawCurrentLevel(), UnloadCurrentLevel()
 
 Safety:
@@ -94,6 +94,10 @@ namespace Framework {
         bool IsLevelLoaded() const { return levelLoaded; }
         std::string GetCurrentLevelPath() const { return currentLevelPath; }
 
+        // Reset all C++ static state that persists across level transitions.
+        // Called by Level3StateHooks::OnFree() before loading the next level.
+        static void ResetCppLevelState();
+
         // Called from ProjectileSystem when player projectile hits enemy (Soul Rend, Soul Merge)
         bool ApplyProjectileDamageToEnemy(uint32_t enemyID, int damage, uint32_t attackerID);
 
@@ -116,7 +120,6 @@ namespace Framework {
         lua_State* L = nullptr;
         void CreateLuaState();
         void DestroyLuaState();
-        static int Lua_ClearAllEntities(lua_State* L);
         // API registration
         void RegisterLevelAPI();
 
@@ -180,6 +183,12 @@ namespace Framework {
         static int Lua_SetMasterVolume(lua_State* L);
         static int Lua_GetMasterVolume(lua_State* L);
         static int Lua_SaveMasterVolume(lua_State* L);
+        static int Lua_SetMusicVolume(lua_State* L);
+        static int Lua_GetMusicVolume(lua_State* L);
+        static int Lua_SaveMusicVolume(lua_State* L);
+        static int Lua_SetSfxVolume(lua_State* L);
+        static int Lua_GetSfxVolume(lua_State* L);
+        static int Lua_SaveSfxVolume(lua_State* L);
 
         // UI Button API
         static int Lua_CreateButton(lua_State* L);
@@ -193,6 +202,7 @@ namespace Framework {
         static int Lua_IsMouseButtonDown(lua_State* L);
         static int Lua_IsMouseButtonPressed(lua_State* L);
         static int Lua_GetMousePosition(lua_State* L);
+        static int Lua_GetMouseWorldPosition(lua_State* L);
 
         // JSON API
         static int Lua_LoadJSON(lua_State* L);
@@ -201,6 +211,7 @@ namespace Framework {
         static int Lua_LoadTileMap(lua_State* L);
 
         // AP Indicator / Entity Management API
+        static int Lua_ClearAllEntities(lua_State* L);
         static int Lua_SpawnSprite(lua_State* L);
         static int Lua_SpawnAnimatedSprite(lua_State* L);  // Spawn sprite with animation sheet
         static int Lua_SetSpriteAnimationSheet(lua_State* L);  // Add animation to existing sprite
@@ -246,6 +257,8 @@ namespace Framework {
         static int Lua_SetAnimationGroup(lua_State* L);
         static int Lua_SetAnimationDirection(lua_State* L);
         static int Lua_SetAnimationFlipX(lua_State* L);
+        static int Lua_GetAnimationDirection(lua_State* L);
+        static int Lua_GetAnimationFlipX(lua_State* L);
         static int Lua_SetAnimationPlaying(lua_State* L);
         static int Lua_SetAnimationPrefix(lua_State* L);
         static int Lua_SetAnimationLoop(lua_State* L);

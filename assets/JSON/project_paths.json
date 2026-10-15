@@ -1,0 +1,10 @@
+{
+  "paths": {
+    "game_config": "assets/game_config.txt",
+    "state_registry": "assets/JSON/state_registry.json",
+    "audio_config": "assets/JSON/AudioConfig.json",
+    "audio_root": "assets/Audio/",
+    "script_root": "assets/scripts/",
+    "value_loader": "assets/valueloader.txt"
+  }
+}

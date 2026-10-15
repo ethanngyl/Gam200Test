@@ -70,7 +70,7 @@ namespace Framework {
      * Usage Pattern:
      * @code
      * // Init
-     * AudioLoader::LoadAudioConfig("assets/JSON/AudioConfig.json", audioSystem);
+    * AudioLoader::LoadAudioConfig(ConfigReader::GetProjectPath("audio_config", "<default>"), audioSystem);
      * * // Runtime Volume Change (Auto-saves)
      * AudioLoader::SetMasterVolume(0.5f);
      * @endcode
@@ -107,7 +107,7 @@ namespace Framework {
         /**
          * @brief Sets the master volume and immediately saves it to the config file
          * @param volume Desired master volume (clamped 0.0 to 1.0)
-         * @param filepath Path to audio config JSON (defaults to "assets/JSON/AudioConfig.json")
+         * @param filepath Path to audio config JSON (empty uses project path manifest)
          * @return true if the configuration was successfully saved to disk
          *
          * Implementation Details:
@@ -115,11 +115,11 @@ namespace Framework {
          * - Updates internal settings state
          * - Triggers SaveAudioConfig to persist changes
          */
-        static bool SetMasterVolume(float volume, const std::string& filepath = "assets/JSON/AudioConfig.json");
+        static bool SetMasterVolume(float volume, const std::string& filepath = "");
 
         /**
          * @brief Serializes the current audio settings back to the JSON file
-         * @param filepath Path to audio config JSON (defaults to "assets/JSON/AudioConfig.json")
+         * @param filepath Path to audio config JSON (empty uses project path manifest)
          * @return true if file writing was successful
          *
          * Save Process:
@@ -127,7 +127,7 @@ namespace Framework {
          * 2. Updates the "settings" object with current volume values
          * 3. Writes the modified JSON back to disk with pretty-printing
          */
-        static bool SaveAudioConfig(const std::string& filepath = "assets/JSON/AudioConfig.json");
+        static bool SaveAudioConfig(const std::string& filepath = "");
 
         /**
          * @brief Clean up static resources and free memory

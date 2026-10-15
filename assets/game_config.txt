@@ -13,7 +13,7 @@
 #   - level2    : Level 2
 #   - quit      : Exit immediately (for testing)
 # ============================================================================
-initial_state = mainmenu
+initial_state = splash_screen
 
 # ============================================================================
 # WINDOW SETTINGS

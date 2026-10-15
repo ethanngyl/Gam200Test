@@ -62,7 +62,7 @@ namespace Framework {
      * scripts.SetEntityManager(entityManager);
      * scripts.Initialize();
      * * // Load a script onto an entity
-     * scripts.LoadScript(myEntity, "assets/scripts/enemy_ai.lua");
+    * scripts.LoadScript(myEntity, "<script_root>/enemy_ai.lua");
      *
      * // Main Loop
      * scripts.Update(deltaTime); // Calls 'OnUpdate(dt)' in Lua

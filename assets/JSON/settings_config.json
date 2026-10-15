@@ -71,6 +71,62 @@
         "callback": ""
       },
       {
+        "id": "toggle_music",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 0.0,
+          "y": 0.18
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "MUSIC: ON",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -90.0,
+            "y": -16.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnToggleMusicClicked"
+      },
+      {
+        "id": "toggle_sfx",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 0.0,
+          "y": -0.02
+        },
+        "scale": {
+          "x": 1.0,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "SFX: ON",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -70.0,
+            "y": -16.0
+          },
+          "scale": 0.9,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnToggleSfxClicked"
+      },
+      {
         "id": "back",
         "texture": "assets/Menu/Ui_btn.png",
         "position": {

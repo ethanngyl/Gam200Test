@@ -148,31 +148,74 @@ local localArenaBounds = nil  -- Set in OnInit from shared C++ store
 -- ANIMATION (reuses enemy knight sheets)
 -- ============================================================================
 
-local BOSS_ANIM = {
-    idleFront = { tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
-    idleBack  = { tex = "assets/Enemy/Boss1_Idle_Back-Sheet.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
-    idleSide  = { tex = "assets/Enemy/Boss1_Idle_Side-Sheet.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
-
-    walkFront = { tex = "assets/Enemy/Boss1_Walk_Front2-Sheet.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
-    walkBack  = { tex = "assets/Enemy/Boss1_Walk_Back2.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
-    walkSide  = { tex = "assets/Enemy/Boss1_Walk_Side-Sheet.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
-
-    atkFront  = { tex = "assets/Enemy/Boss1_Attack_Front-Sheet.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
-    atkBack   = { tex = "assets/Enemy/Boss1_Attack_Back-Sheet.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
-    atkLeft   = { tex = "assets/Enemy/Boss1_Attack_Left-Sheet.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+local BOSS_SKINS = {
+    -- Skin 0: default Boss1 (level 1)
+    [0] = {
+        idleFront = { tex = "assets/Enemy/Boss1_Idle_Front-Sheet.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        idleBack  = { tex = "assets/Enemy/Boss1_Idle_Back-Sheet.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
+        idleSide  = { tex = "assets/Enemy/Boss1_Idle_Side-Sheet.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        walkFront = { tex = "assets/Enemy/Boss1_Walk_Front2-Sheet.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkBack  = { tex = "assets/Enemy/Boss1_Walk_Back2.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkSide  = { tex = "assets/Enemy/Boss1_Walk_Side-Sheet.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        atkFront  = { tex = "assets/Enemy/Boss1_Attack_Front-Sheet.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkBack   = { tex = "assets/Enemy/Boss1_Attack_Back-Sheet.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkLeft   = { tex = "assets/Enemy/Boss1_Attack_Left-Sheet.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+    },
+    -- Skin 1: Blue boss (level 2 boss 1)
+    [1] = {
+        idleFront = { tex = "assets/Enemy/Boss2_blue_Idle_Front-Sheet.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        idleBack  = { tex = "assets/Enemy/Boss2_blue_Idle_Back-Sheet.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
+        idleSide  = { tex = "assets/Enemy/Boss2_blue_Idle_Side-Sheet.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        walkFront = { tex = "assets/Enemy/Boss2_blue_Walk_Front2-Sheet.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkBack  = { tex = "assets/Enemy/Boss2_blue_Walk_Back2.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkSide  = { tex = "assets/Enemy/Boss2_blue_Walk_Side-Sheet.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        atkFront  = { tex = "assets/Enemy/Boss2_blue_Attack_Front-Sheet.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkBack   = { tex = "assets/Enemy/Boss2_blue_Attack_Back-Sheet.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkLeft   = { tex = "assets/Enemy/Boss2_blue_Attack_Left-Sheet.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+    },
+    -- Skin 2: Yellow boss (level 2 boss 2)
+    [2] = {
+        idleFront = { tex = "assets/Enemy/Boss2_yellow_Idle_Front-Sheet_Y.png",  rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        idleBack  = { tex = "assets/Enemy/Boss2_yellow_Idle_Back-Sheet_Y.png",   rows = 3, cols = 3, frames = 7,  time = 0.10, loop = true  },
+        idleSide  = { tex = "assets/Enemy/Boss2_yellow_Idle_Side-Sheet_Y.png",   rows = 4, cols = 3, frames = 12, time = 0.08, loop = true  },
+        walkFront = { tex = "assets/Enemy/Boss2_yellow_Walk_Front2-Sheet_Y.png", rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkBack  = { tex = "assets/Enemy/Boss2_yellow_Walk_Back2_Y.png",        rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        walkSide  = { tex = "assets/Enemy/Boss2_yellow_Walk_Side-Sheet_Y.png",   rows = 3, cols = 2, frames = 6,  time = 0.08, loop = true  },
+        atkFront  = { tex = "assets/Enemy/Boss2_yellow_Attack_Front-Sheet_Y.png", rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkBack   = { tex = "assets/Enemy/Boss2_yellow_Attack_Back-Sheet_Y.png",  rows = 3, cols = 3, frames = 8, time = 0.07, loop = false },
+        atkLeft   = { tex = "assets/Enemy/Boss2_yellow_Attack_Left-Sheet_Y.png",  rows = 3, cols = 3, frames = 7, time = 0.07, loop = false }
+    }
 }
+
+local BOSS_ANIM = BOSS_SKINS[0]  -- default, overridden in OnInit
 
 local lastAnimKey = nil
 local lastFlipX = false
+local warnedMissingAnimAPI = false
 
 local function ApplySheet(animKey, flipX)
-    if not SetSpriteAnimationSheet then return end
+    if not SetSpriteAnimationSheet then
+        if not warnedMissingAnimAPI then
+            print("[BossScript] SetSpriteAnimationSheet is NIL; boss animation sheets unavailable")
+            warnedMissingAnimAPI = true
+        end
+        return
+    end
     if animKey == lastAnimKey and flipX == lastFlipX then return end
 
     local a = BOSS_ANIM[animKey]
-    if not a then return end
+    if not a then
+        print("[BossScript] Missing BOSS_ANIM key: " .. tostring(animKey))
+        return
+    end
 
-    SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    local ok = SetSpriteAnimationSheet(entityID, a.tex, a.rows, a.cols, a.frames, a.time, a.loop)
+    if not ok then
+        print("[BossScript] ApplySheet failed for key=" .. tostring(animKey) .. ", tex=" .. tostring(a.tex))
+        if SetSpriteTexture then
+            SetSpriteTexture(entityID, a.tex)
+        end
+    end
     if SetAnimationFlipX then
         SetAnimationFlipX(entityID, flipX and true or false)
     end
@@ -338,6 +381,36 @@ local function GetMarkBonus(targetID)
 end
 
 -- ============================================================================
+-- ARENA CHECK (must be defined before OnInit so OnInit can call it as a local)
+-- ============================================================================
+
+-- Check if all living players are inside the arena bounds
+local function AreAllPlayersInArena()
+    local arena = localArenaBounds
+    if not arena then return false end
+
+    local players = GetAllPlayers()
+    if not players or #players == 0 then return false end
+
+    local count = 0
+    local alive = 0
+    for _, pid in ipairs(players) do
+        local hp = GetEntityHP(pid)
+        if hp and hp > 0 then
+            alive = alive + 1
+            local px, py = GetEntityGridPosition(pid)
+            if px and py
+               and px >= arena.minX and px < arena.maxX
+               and py >= arena.minY and py < arena.maxY then
+                count = count + 1
+            end
+        end
+    end
+
+    return alive > 0 and count == alive
+end
+
+-- ============================================================================
 -- LIFECYCLE CALLBACKS
 -- ============================================================================
 
@@ -348,6 +421,14 @@ function OnInit()
         return
     end
     Log("[BossScript] Boss " .. entityID .. " initialized")
+
+    -- Select skin based on SharedInt (0=Boss1, 1=blue, 2=yellow)
+    local skinID = 0
+    if GetSharedInt then
+        skinID = GetSharedInt("boss_skin_" .. tostring(entityID), 0)
+    end
+    BOSS_ANIM = BOSS_SKINS[skinID] or BOSS_SKINS[0]
+    Log("[BossScript] Boss " .. entityID .. " using skin " .. skinID)
 
     currentPath = {}
     pathIndex = 1
@@ -382,10 +463,20 @@ function OnInit()
         print("[Boss " .. entityID .. "] WARNING: No arena bounds in shared store!")
     end
 
-    -- Boss starts immune until all players enter the arena
-    if ApplyStatusEffect then
-        ApplyStatusEffect(entityID, "immune", -1, entityID)
-        print("[Boss " .. entityID .. "] Immune until all players enter arena")
+    -- Boss is spawned by ProceduralMapLevel only when AreAllSurvivingPlayersInArena() is true.
+    -- Activate immediately if players are already in the arena (covers the case where a player
+    -- died elsewhere to satisfy the "all surviving players in arena" condition, after which the
+    -- remaining players may move out before the first enemy turn, causing AreAllPlayersInArena()
+    -- in OnUpdate to return false and permanently block boss activation).
+    if AreAllPlayersInArena() then
+        bossActivated = true
+        print("[Boss " .. entityID .. "] Immediately activated (all surviving players confirmed in arena at spawn time)")
+    else
+        -- Players not yet in arena (safety fallback - apply immune and wait)
+        if ApplyStatusEffect then
+            ApplyStatusEffect(entityID, "immune", -1, entityID)
+            print("[Boss " .. entityID .. "] Immune until all players enter arena")
+        end
     end
 
     -- Spawn health bar sprites above boss
@@ -458,32 +549,6 @@ local function UpdateHealthBar()
     SetSpriteColor(healthBarFG, r, g, b, 1.0)
 end
 
--- Check if all living players are inside the arena bounds
-local function AreAllPlayersInArena()
-    local arena = localArenaBounds
-    if not arena then return false end
-
-    local players = GetAllPlayers()
-    if not players or #players == 0 then return false end
-
-    local count = 0
-    local alive = 0
-    for _, pid in ipairs(players) do
-        local hp = GetEntityHP(pid)
-        if hp and hp > 0 then
-            alive = alive + 1
-            local px, py = GetEntityGridPosition(pid)
-            if px and py
-               and px >= arena.minX and px < arena.maxX
-               and py >= arena.minY and py < arena.maxY then
-                count = count + 1
-            end
-        end
-    end
-
-    return alive > 0 and count == alive
-end
-
 function OnUpdate(dt)
     -- Update health bar every frame
     UpdateHealthBar()
@@ -497,13 +562,16 @@ function OnUpdate(dt)
             end
             print("[Boss " .. entityID .. "] All players in arena - BOSS ACTIVATED!")
         else
-            -- Still need to finish our turn action so the turn system doesn't softlock
-            local currentTurn = GetCurrentTurn()
+            -- Players not yet in arena.  If the enemy turn system has made us the
+            -- active enemy we MUST still finish our action, otherwise the whole
+            -- enemy turn hangs permanently.  Skip any real action but release the turn.
+            local currentTurn = GetCurrentTurn and GetCurrentTurn()
             if currentTurn == "Enemy" then
-                local ok, isActive = pcall(IsActiveEnemy, entityID)
-                if ok and isActive then
+                local ok1, isActive = pcall(IsActiveEnemy, entityID)
+                if ok1 and isActive then
                     local ok2, actionReady = pcall(IsEnemyActionReady)
-                    if ok2 and actionReady then
+                    if ok2 and actionReady and not hasActedThisTurn then
+                        print("[Boss " .. entityID .. "] Not yet activated — passing turn to unblock enemy phase")
                         FinishBossAction()
                     end
                 end

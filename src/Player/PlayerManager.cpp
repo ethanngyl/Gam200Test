@@ -1,4 +1,4 @@
-/******************************************************************************
+﻿/******************************************************************************
 ===============================================================================
  File:           PlayerManager.cpp
  Author:         ETHAN NG YONG LE
@@ -192,6 +192,9 @@ namespace Framework {
         if (!entityManager->HasComponent<Transform>(playerEntity)) {
             return;
         }
+
+        // Arrow-key facing: free direction change, no AP cost, works in all states
+        HandleArrowKeyFacing();
 
         if (IsPlayerTurn()) {
             // IMPORTANT: Only run C++ turn management when gridMovementEnabled is true
@@ -617,6 +620,56 @@ namespace Framework {
         // LOG_INFO("PlayerManager", "Arrow move cooldown activated (0.2s)");
     }
 
+    /**
+    * @brief Arrow-key in-place facing change. Updates the entity's AnimDirection
+    *        so AnimationSystem::Update picks the correct prefixed animation on the
+    *        next frame (e.g. "Mage_Idle_back" for Player2). Does NOT call
+    *        LoadAnimation directly — that would bypass the per-entity animPrefix
+    *        and load the wrong sprite from the global animation config.
+    *        No movement, no AP cost, works with both C++ and Lua turn systems.
+    */
+    void PlayerControllerSystem::HandleArrowKeyFacing() {
+        if (!inputSystem || !entityManager) return;
+        if (!entityManager->HasComponent<Transform>(playerEntity)) return;
+
+        AnimDirection newDir  = AnimDirection::None;
+        bool          flipAnim = false;
+        bool          anyPressed = false;
+
+        if (inputSystem->IsKeyPressed(KEY_UP)) {
+            newDir = AnimDirection::Back;
+            anyPressed = true;
+        }
+        else if (inputSystem->IsKeyPressed(KEY_DOWN)) {
+            newDir = AnimDirection::Front;
+            anyPressed = true;
+        }
+        else if (inputSystem->IsKeyPressed(KEY_LEFT)) {
+            newDir  = AnimDirection::Side;
+            flipAnim = false;   // false = facing left (natural sprite orientation)
+            anyPressed = true;
+        }
+        else if (inputSystem->IsKeyPressed(KEY_RIGHT)) {
+            newDir  = AnimDirection::Side;
+            flipAnim = true;    // true = facing right (mirrored)
+            anyPressed = true;
+        }
+
+        if (!anyPressed) return;
+
+        if (entityManager->HasComponent<SpriteAnimation>(playerEntity)) {
+            auto& anim    = entityManager->GetComponent<SpriteAnimation>(playerEntity);
+            anim.group    = AnimGroup::Idle;
+            anim.direction = newDir;
+            anim.flipX    = flipAnim;
+            // Clear animName so AnimationSystem::Update detects the change and
+            // reloads the correctly-prefixed sprite (e.g. "Mage_Idle_back") next frame.
+            anim.animName.clear();
+            LOG_INFO("PlayerManager", "Facing changed [no AP cost]: direction=%d flip=%d",
+                static_cast<int>(newDir), static_cast<int>(flipAnim));
+        }
+    }
+
     void PlayerControllerSystem::ResetGridState() {
         // Clear tile pulse state
         s_pulseEnt = Framework::Entity{};
@@ -994,8 +1047,14 @@ namespace Framework {
         // PLAY TAKE DAMAGE SOUND EFFECT (Enemy gets hit)
         // ========================================================================
         if (audioSystem && !hp.isDead) {
-            audioSystem->PlaySound("takedmg", false);  // Play take damage sound
-            LOG_INFO("PlayerAttack", "Playing take damage sound 'takedmg'");
+            const auto& enemyTransform = entityManager->GetComponent<Transform>(target);
+            const auto& playerTransform = entityManager->GetComponent<Transform>(playerEntity);
+
+            Framework::Vector2D sourcePos(enemyTransform.position.x, enemyTransform.position.y);
+            Framework::Vector2D listenerPos(playerTransform.position.x, playerTransform.position.y);
+
+            audioSystem->PlaySoundPositional("takedmg", sourcePos, listenerPos, false);
+            LOG_INFO("PlayerAttack", "Playing positional take damage sound 'takedmg'");
         }
 
         LOG_INFO("PlayerAttack", "Hit enemy %u for 1. Enemy HP now %d/%d. AttackAP=%d/%d",

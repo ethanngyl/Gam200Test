@@ -28,7 +28,7 @@
 #include "Precompiled.h"
 #include "ECSEntityManager.h"
 #include "GlobalPauseManager.h"
-
+#include <fmod_dsp.h>
 namespace Framework {
 
     /**
@@ -114,6 +114,15 @@ namespace Framework {
             CheckFMODError(result, "masterGroup->addGroup(Music)");
         }
 
+        // Create SFX group under master
+        result = fmodSystem->createChannelGroup("SFX", &sfxGroup);
+        CheckFMODError(result, "createChannelGroup(SFX)");
+
+        if (result == FMOD_OK && masterGroup && sfxGroup)
+        {
+            result = masterGroup->addGroup(sfxGroup);
+            CheckFMODError(result, "masterGroup->addGroup(SFX)");
+        }
 
         std::cout << "[Audio] FMOD initialized successfully\n";
     }
@@ -381,13 +390,99 @@ namespace Framework {
         FMOD::Channel* channel = nullptr;
         FMOD_RESULT result = fmodSystem->playSound(
             it->second,
-            nullptr,
+            sfxGroup,
             false,
             &channel
         );
 
         if (result == FMOD_OK && channel) {
             channel->setMode(loop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF);
+
+            // M6 1207: apply a simple echo effect to one isolated UI SFX only
+            if (soundName == "button2") {
+                FMOD::DSP* echoDSP = nullptr;
+                FMOD_RESULT dspResult = fmodSystem->createDSPByType(FMOD_DSP_TYPE_ECHO, &echoDSP);
+                CheckFMODError(dspResult, "createDSPByType(ECHO)");
+
+                if (dspResult == FMOD_OK && echoDSP) {
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_DELAY, 180.0f);      // ms
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_FEEDBACK, 25.0f);    // %
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_DRYLEVEL, 0.0f);     // dB
+                    echoDSP->setParameterFloat(FMOD_DSP_ECHO_WETLEVEL, -12.0f);   // dB
+
+                    FMOD_RESULT addResult = channel->addDSP(0, echoDSP);
+                    CheckFMODError(addResult, "channel->addDSP(ECHO)");
+
+                    // FMOD keeps its own reference after addDSP, so release local handle
+                    echoDSP->release();
+                }
+            }
+        }
+    }
+
+    float AudioSystem::ComputeDistanceVolume(const Framework::Vector2D& sourcePos,
+        const Framework::Vector2D& listenerPos) const
+    {
+        const float maxDistance = 4.0f;
+        float dist = Framework::Vector2D::distance(sourcePos, listenerPos);
+
+        if (dist >= maxDistance)
+        {
+            return 0.1f;
+        }
+
+        float t = dist / maxDistance;
+        float volume = 1.0f - (0.9f * t); // 1.0 near, 0.1 far
+
+        return std::clamp(volume, 0.1f, 1.0f);
+    }
+
+    float AudioSystem::ComputeStereoPan(const Framework::Vector2D& sourcePos,
+        const Framework::Vector2D& listenerPos) const
+    {
+        const float maxPanDistance = 2.5f;
+        float dx = sourcePos.x - listenerPos.x;
+        float pan = dx / maxPanDistance;
+
+        return std::clamp(pan, -1.0f, 1.0f);
+    }
+
+    void AudioSystem::PlaySoundPositional(const std::string& soundName,
+        const Framework::Vector2D& sourcePos,
+        const Framework::Vector2D& listenerPos,
+        bool loop)
+    {
+        if (!fmodSystem)
+        {
+            return;
+        }
+
+        auto it = sounds.find(soundName);
+        if (it == sounds.end())
+        {
+            std::cerr << "[Audio] Sound not found: " << soundName << "\n";
+            return;
+        }
+
+        FMOD::Channel* channel = nullptr;
+        FMOD::ChannelGroup* group = loop ? musicGroup : sfxGroup;
+
+        FMOD_RESULT result = fmodSystem->playSound(
+            it->second,
+            group ? group : nullptr,
+            false,
+            &channel
+        );
+
+        if (result == FMOD_OK && channel)
+        {
+            channel->setMode(loop ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF);
+
+            float volume = ComputeDistanceVolume(sourcePos, listenerPos);
+            float pan = ComputeStereoPan(sourcePos, listenerPos);
+
+            channel->setVolume(volume);
+            channel->setPan(pan);
         }
     }
 
@@ -403,6 +498,7 @@ namespace Framework {
             masterGroup->stop();
         }
         musicChannel = nullptr;
+        currentMusicName.clear();
         musicFadeActive = false;
         musicStopWhenFadeDone = false;
         pendingMusicName.clear();
@@ -421,157 +517,35 @@ namespace Framework {
         }
     }
 
-    /*void AudioSystem::ReloadAudioLibrary() {
-        std::cout << "[AudioSystem] ============================================\n";
-        std::cout << "[AudioSystem] Reloading audio library from audio.json...\n";
-        std::cout << "[AudioSystem] ============================================\n";
-
-        // ========================================================================
-        // STEP 1: Stop all currently playing sounds
-        // ========================================================================
-        std::cout << "[AudioSystem] Stopping all currently playing sounds...\n";
-        StopAllSounds();
-
-        // ========================================================================
-        // STEP 2: Release all loaded FMOD sounds
-        // ========================================================================
-        std::cout << "[AudioSystem] Releasing " << sounds.size() << " loaded sounds...\n";
-
-        for (auto& [name, sound] : sounds) {
-            if (sound) {
-                std::cout << "[AudioSystem] Releasing: " << name << "\n";
-                FMOD_RESULT result = sound->release();
-                if (result != FMOD_OK) {
-                    std::cerr << "[AudioSystem] Warning: Failed to release sound '"
-                        << name << "': " << FMOD_ErrorString(result) << "\n";
-                }
-            }
+    void AudioSystem::SetMusicVolume(float volume) {
+        if (musicGroup) {
+            musicGroup->setVolume(volume);
         }
+    }
 
-        // Clear the sound map
-        sounds.clear();
-        std::cout << "[AudioSystem] All sounds released and map cleared\n";
-
-        // ========================================================================
-        // STEP 3: Re-read audio.json and parse it
-        // ========================================================================
-        std::cout << "[AudioSystem] Reading audio.json...\n";
-
-        const std::string jsonPath = "assets/JSON/AudioConfig.json";
-        std::ifstream file(jsonPath);
-
-        if (!file.is_open()) {
-            std::cerr << "[AudioSystem] ERROR: Could not open " << jsonPath << "\n";
-            std::cerr << "[AudioSystem] No audio will be available!\n";
-            return;
+    float AudioSystem::GetMusicVolume() const {
+        float vol = 1.0f;
+        if (musicGroup) {
+            musicGroup->getVolume(&vol);
         }
+        return vol;
+    }
 
-        // Read entire file into string
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        file.close();
-
-        std::string jsonContent = buffer.str();
-        std::cout << "[AudioSystem] Successfully read audio.json\n";
-
-        // ========================================================================
-        // STEP 4: Parse JSON manually (simple key-value format)
-        // ========================================================================
-        // Expected format:
-        // {
-        //     "audioName": "filename.wav",
-        //     "explosion": "explosion.wav"
-        // }
-
-        std::cout << "[AudioSystem] Parsing JSON...\n";
-
-        int loadedCount = 0;
-        int failedCount = 0;
-
-        // Simple JSON parser for key-value pairs
-        size_t pos = 0;
-        while ((pos = jsonContent.find("\"", pos)) != std::string::npos) {
-            // Find audio name (key)
-            size_t nameStart = pos + 1;
-            size_t nameEnd = jsonContent.find("\"", nameStart);
-
-            if (nameEnd == std::string::npos) break;
-
-            std::string audioName = jsonContent.substr(nameStart, nameEnd - nameStart);
-
-            // Skip if this is just a comment or empty
-            if (audioName.empty() || audioName[0] == '#') {
-                pos = nameEnd + 1;
-                continue;
-            }
-
-            // Find colon separator
-            pos = jsonContent.find(":", nameEnd);
-            if (pos == std::string::npos) break;
-
-            // Find filename (value)
-            pos = jsonContent.find("\"", pos);
-            if (pos == std::string::npos) break;
-
-            size_t fileStart = pos + 1;
-            size_t fileEnd = jsonContent.find("\"", fileStart);
-
-            if (fileEnd == std::string::npos) break;
-
-            std::string fileName = jsonContent.substr(fileStart, fileEnd - fileStart);
-
-            // ====================================================================
-            // STEP 5: Load this sound into FMOD
-            // ====================================================================
-            std::string fullPath = "assets/Audio/" + fileName;
-
-            std::cout << "[AudioSystem] Loading: \"" << audioName << "\" -> " << fullPath << "\n";
-
-            FMOD::Sound* sound = nullptr;
-            FMOD_RESULT result = fmodSystem->createSound(
-                fullPath.c_str(),
-                FMOD_DEFAULT,  // or FMOD_LOOP_NORMAL for looping sounds
-                nullptr,
-                &sound
-            );
-
-            if (result == FMOD_OK && sound != nullptr) {
-                sounds[audioName] = sound;
-                loadedCount++;
-                std::cout << "[AudioSystem]  Loaded: " << audioName << "\n";
-            }
-            else {
-                failedCount++;
-                std::cerr << "[AudioSystem] Failed to load: " << fullPath << "\n";
-                std::cerr << "[AudioSystem]    FMOD Error: " << FMOD_ErrorString(result) << "\n";
-            }
-
-            pos = fileEnd + 1;
+    void AudioSystem::SetSfxVolume(float volume) {
+        if (sfxGroup) {
+            sfxGroup->setVolume(volume);
         }
+    }
 
-        // ========================================================================
-        // STEP 6: Update FMOD system
-        // ========================================================================
-        if (fmodSystem) {
-            fmodSystem->update();
+    float AudioSystem::GetSfxVolume() const {
+        float vol = 1.0f;
+        if (sfxGroup) {
+            sfxGroup->getVolume(&vol);
         }
+        return vol;
+    }
 
-        // ========================================================================
-        // STEP 7: Report results
-        // ========================================================================
-        std::cout << "[AudioSystem] ============================================\n";
-        std::cout << "[AudioSystem] Reload complete!\n";
-        std::cout << "[AudioSystem] Successfully loaded: " << loadedCount << " sounds\n";
-
-        if (failedCount > 0) {
-            std::cout << "[AudioSystem] Failed to load: " << failedCount << " sounds\n";
-        }
-
-        std::cout << "[AudioSystem] Total sounds available: " << sounds.size() << "\n";
-        std::cout << "[AudioSystem] ============================================\n";
-    }*/
-    // This function converts the mouse cursor's screen position (pixels) into 
-    // Game World coordinates, accounting for the camera and editor viewport.
+    // Reload all runtime sounds from the configured audio manifest path.
     void AudioSystem::ReloadAudioLibrary() {
         std::cout << "[AudioSystem] Reloading from AudioConfig.json...\n";
 
@@ -583,9 +557,11 @@ namespace Framework {
         sounds.clear();
 
         // 2. Read File
-        std::ifstream file("assets/JSON/AudioConfig.json");
+        const std::string audioConfigPath =
+            ConfigReader::GetProjectPath("audio_config", "assets/JSON/AudioConfig.json");
+        std::ifstream file(audioConfigPath);
         if (!file.is_open()) {
-            std::cerr << "[AudioSystem] Failed to open config file!\n";
+            std::cerr << "[AudioSystem] Failed to open config file: " << audioConfigPath << "\n";
             return;
         }
 
@@ -689,6 +665,11 @@ namespace Framework {
             musicChannel->isPlaying(&isPlaying);
         }
 
+        // Already playing this exact track: keep current playback and do nothing.
+        if (isPlaying && currentMusicName == soundName) {
+            return;
+        }
+
         // If already playing, fade out then swap
         if (isPlaying) {
             pendingMusicName = soundName;
@@ -714,6 +695,7 @@ namespace Framework {
         channel->setPaused(false);
 
         musicChannel = channel;
+        currentMusicName = soundName;
 
         // Fade in
         musicFadeActive = true;
@@ -751,6 +733,7 @@ namespace Framework {
 
         if (!isPlaying) {
             musicChannel = nullptr;
+            currentMusicName.clear();
             return;
         }
 
@@ -760,6 +743,7 @@ namespace Framework {
         if (fadeOutSec <= 0.0f) {
             musicChannel->stop();
             musicChannel = nullptr;
+            currentMusicName.clear();
             musicFadeActive = false;
             musicStopWhenFadeDone = false;
             return;
@@ -814,6 +798,7 @@ namespace Framework {
             {
                 musicChannel->stop();
                 musicChannel = nullptr;
+                currentMusicName.clear();
                 musicStopWhenFadeDone = false;
 
                 // If a track was queued during fade-out, start it now

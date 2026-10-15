@@ -23,13 +23,20 @@ namespace Framework {
 	}
 
 	int ParticleSystemManager::CreateEmitterRaw(const ParticleSystem::Settings& s, float x, float y, EntityID followTarget) {
-		auto& ps = AddParticleSystem();
-		ps.SetSettings(s);
-		ps.SetEmitter(x, y);
-		if (followTarget != INVALID_ENTITY) ps.SetFollowEntity(followTarget);
-		if (s.burstCnt > 0) ps.SpawnBurst(s.burstCnt);
+		// Reserve before emplace_back so the vector doesn't reallocate and
+		// invalidate any live references into particleSystems
+		particleSystems.reserve(particleSystems.size() + 1);
+		particleSystems.emplace_back();
+
+		// Use index not reference — a reference would dangle after future push_backs
+		size_t idx = particleSystems.size() - 1;
+		particleSystems[idx].SetSettings(s);
+		particleSystems[idx].SetEmitter(x, y);
+		if (followTarget != INVALID_ENTITY) particleSystems[idx].SetFollowEntity(followTarget);
+		if (s.burstCnt > 0) particleSystems[idx].SpawnBurst(s.burstCnt);
+
 		int emitterId = nextEmitterId++;
-		emitterIdToIndex[emitterId] = particleSystems.size() - 1;
+		emitterIdToIndex[emitterId] = idx;
 		return emitterId;
 	}
 
@@ -47,12 +54,17 @@ namespace Framework {
 
 		particleSystems.clear();
 		emitterIdToIndex.clear();
-		nextEmitterId = 1;
+		// nextEmitterId intentionally NOT reset — keeps IDs unique across level loads
+		// to prevent stale Lua emitter IDs from silently hitting new emitters
+		// nextEmitterId = 1;
 	}
 
 	void ParticleSystemManager::Initialize() {}
 
 	void ParticleSystemManager::Update(float dt) {
+		// Do not update particles while the window is suspended
+		if (suspended) return;
+
 		// Loop through all emitters | Update all particle systems
 		for (auto& particleSystem : particleSystems) {
 			particleSystem.UpdateParticle(dt);
@@ -60,7 +72,8 @@ namespace Framework {
 	}
 
 	void ParticleSystemManager::SendEngineMessage(Message* msg) {
-	// Optional: print debug info
-		std::cout << "[ParticleSystemManager] " << msg->MessageId << std::endl;
+		// ALT+TAB pause is handled by GlobalPauseManager — Update() is gated
+		// by Core.cpp before this system is ticked, so no action needed here.
+		(void)msg;  // suppress unused parameter warning
 	}
 } // namespace Framework

@@ -1,8 +1,9 @@
 --[[
 ===============================================================================
- File:           AnimationController.lua
- Author:         Ethan Ng Yong Le (Work In Progress for M5, not implemented in M4)
- Date:           2026-01-16
+ File:          Boss2OrcShaman.lua
+ Authors:       Ethan Ng
+ Email:         n.ethanyongle@digipen.edu
+ Date:          03/13/2026
  ------------------------------------------------------------------------------
  Animation Controller Script
 

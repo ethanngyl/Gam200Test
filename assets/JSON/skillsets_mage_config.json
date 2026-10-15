@@ -1,0 +1,401 @@
+{
+  "menu": {
+    "name": "SkillSets_Mage",
+    "music": {
+      "name": "mmbgm",
+      "volume": 1.0,
+      "loop": true
+    },
+    "camera": {
+      "position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "zoom": 1.0
+    },
+    "background": {
+      "texture": "assets/Menu/WoodBackground.png",
+      "position": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "scale": {
+        "x": 4.0,
+        "y": 4.0
+      },
+      "layer": 1
+    },
+    "overlaySprites": [
+      {
+        "id": "scrollOverlay",
+        "texture": "assets/Menu/Scroll Overlay.png",
+        "position": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "scale": {
+          "x": 4.7,
+          "y": 2.5
+        },
+        "layer": 2
+      },
+      {
+        "id": "icon_bg_mage_fireball",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.46 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_mage_piercing",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.33 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_mage_lightning",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.20 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_mage_earthen",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": 0.07 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_mage_mana",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.06 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_mage_overload",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.19 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_mage_soul_rend",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.32 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_bg_mage_soul_merge",
+        "texture": "assets/UI/skill_circle.png",
+        "position": { "x": -0.98, "y": -0.45 },
+        "scale": { "x": 0.13, "y": 0.13 },
+        "layer": 8,
+        "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+      },
+      {
+        "id": "icon_mage_fireball",
+        "texture": "assets/SkillIcons/Fireball.png",
+        "position": { "x": -0.98, "y": 0.46 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_mage_piercing",
+        "texture": "assets/SkillIcons/PiercingShot.png",
+        "position": { "x": -0.98, "y": 0.33 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_mage_lightning",
+        "texture": "assets/SkillIcons/LightningStrike.png",
+        "position": { "x": -0.98, "y": 0.20 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_mage_earthen",
+        "texture": "assets/SkillIcons/EarthenBind.png",
+        "position": { "x": -0.98, "y": 0.07 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_mage_mana",
+        "texture": "assets/SkillIcons/ManaDrain.png",
+        "position": { "x": -0.98, "y": -0.06 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_mage_overload",
+        "texture": "assets/SkillIcons/Overload.png",
+        "position": { "x": -0.98, "y": -0.19 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_mage_soul_rend",
+        "texture": "assets/SkillIcons/SoulRend.png",
+        "position": { "x": -0.98, "y": -0.32 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      },
+      {
+        "id": "icon_mage_soul_merge",
+        "texture": "assets/SkillIcons/SoulMerge.png",
+        "position": { "x": -0.98, "y": -0.45 },
+        "scale": { "x": 0.115, "y": 0.115 },
+        "layer": 9
+      }
+    ],
+    "buttons": [
+      {
+        "id": "text_title",
+        "texture": "assets/Menu/transparent.png",
+        "position": {
+          "x": -1.27,
+          "y": 0.54
+        },
+        "scale": {
+          "x": 0.01,
+          "y": 0.01
+        },
+        "layer": 10,
+        "text": {
+          "content": "SKILL SETS GUIDE",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": 0.0,
+            "y": 70
+          },
+          "scale": 1.25,
+          "color": {
+            "r": 0.0,
+            "g": 0.0,
+            "b": 0.0
+          }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_page",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": 1.05, "y": 0.54 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "PAGE 2/3",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.6,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_header",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.44 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Caster (Mage)",
+          "font": "Jersey20Regular",
+          "offset": { "x": 0.0, "y": 70 },
+          "scale": 0.9,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_1",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.33 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Fireball: straight ranged shot.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_2",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.20 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Piercing Shot: long line shot that goes through enemies.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_3",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": 0.07 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Lightning Strike: damages all enemies on map.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_4",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.06 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Earthen Bind: slows enemy movement next turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_5",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.19 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Mana Drain: cuts enemy AP next turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_6",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.32 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Overload: gain AP now, but lose AP refill next turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_7",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.45 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Soul Rend: team gains healing effect from damage this turn.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "text_mage_8",
+        "texture": "assets/Menu/transparent.png",
+        "position": { "x": -0.80, "y": -0.58 },
+        "scale": { "x": 0.01, "y": 0.01 },
+        "layer": 10,
+        "text": {
+          "content": "Soul Merge: sacrifice caster to permanently super-buff an ally.",
+          "font": "Jersey20Regular",
+          "offset": { "x": 30.0, "y": 70 },
+          "scale": 0.7,
+          "color": { "r": 0.0, "g": 0.0, "b": 0.0 }
+        },
+        "callback": ""
+      },
+      {
+        "id": "back",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": -1.0,
+          "y": -0.66
+        },
+        "scale": {
+          "x": 0.8,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "BACK",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -50.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnBackButtonClicked"
+      },
+      {
+        "id": "next",
+        "texture": "assets/Menu/Ui_btn.png",
+        "position": {
+          "x": 1.0,
+          "y": -0.66
+        },
+        "scale": {
+          "x": 0.8,
+          "y": 0.2
+        },
+        "layer": 10,
+        "text": {
+          "content": "NEXT",
+          "font": "Jersey20Regular",
+          "offset": {
+            "x": -40.0,
+            "y": -16.0
+          },
+          "scale": 1.0,
+          "color": {
+            "r": 1.0,
+            "g": 1.0,
+            "b": 1.0
+          }
+        },
+        "callback": "OnNextButtonClicked"
+      }
+    ]
+  }
+}

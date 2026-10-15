@@ -1,4 +1,4 @@
-﻿/*
+/*
 ===============================================================================
  File:          Core.cpp (FIXED - ALT+TAB Text Rendering Issue)
  Author:        GE YONGQI
@@ -118,7 +118,9 @@ namespace Framework
             // Load audio configuration from JSON
             if (audioSystem) {
                 LOG_INFO("CORE", "Loading audio configuration...");
-                bool audioLoaded = AudioLoader::LoadAudioConfig("assets/JSON/AudioConfig.json", audioSystem);
+                const std::string audioConfigPath =
+                    ConfigReader::GetProjectPath("audio_config", "assets/JSON/AudioConfig.json");
+                bool audioLoaded = AudioLoader::LoadAudioConfig(audioConfigPath, audioSystem);
                 if (audioLoaded) {
                     LOG_INFO("CORE", " Audio configuration loaded successfully");
                 }
@@ -623,7 +625,6 @@ namespace Framework
                 imguiSystem->GetViewportWidth(),
                 imguiSystem->GetViewportHeight()
             );
-            graphicsSystem->Update(dt);
             glViewport(0, 0, imguiSystem->GetViewportWidth(), imguiSystem->GetViewportHeight());
 
             graphicsSystem->GetTextRenderer().setScreenSize(
@@ -631,7 +632,9 @@ namespace Framework
                 imguiSystem->GetViewportHeight()
             );
 
+            // Queue script/UI text first so graphics update renders it in the same pass.
             LevelLoader::GetInstance().DrawCurrentLevel();
+            graphicsSystem->Update(dt);
 
             graphicsSystem->ClearRenderTarget();
 
@@ -643,13 +646,12 @@ namespace Framework
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         else {
-            graphicsSystem->Update(dt);
-
             int winWidth, winHeight;
             glfwGetWindowSize(windowSystem->GetWindow(), &winWidth, &winHeight);
             graphicsSystem->GetTextRenderer().setScreenSize(winWidth, winHeight);
 
             LevelLoader::GetInstance().DrawCurrentLevel();
+            graphicsSystem->Update(dt);
         }
 
         // === IMGUI ===
